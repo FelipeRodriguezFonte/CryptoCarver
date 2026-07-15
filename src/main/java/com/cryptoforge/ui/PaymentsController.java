@@ -1,49 +1,31 @@
 package com.cryptoforge.ui;
 
 import com.cryptoforge.crypto.PaymentOperations;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.crypto.DukptKsn;
+import com.cryptoforge.crypto.AesDukpt;
+import com.cryptoforge.model.OperationResult;
+import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controller for Payments tab
  */
 public class PaymentsController {
 
-    private Object mainController; // Can be MainController or ModernMainController
+    private static final Logger LOG = LoggerFactory.getLogger(PaymentsController.class);
+
+    private StatusReporter mainController;
 
     // Helper methods to call methods on MainController or ModernMainController
     private void updateStatus(String message) {
-        try {
-            if (mainController instanceof MainController) {
-                ((MainController) mainController).updateStatus(message);
-            } else {
-                // Use reflection for ModernMainController
-                java.lang.reflect.Method method = mainController.getClass().getDeclaredMethod("updateStatus",
-                        String.class);
-                method.setAccessible(true);
-                method.invoke(mainController, message);
-            }
-        } catch (Exception e) {
-            System.err.println("Error calling updateStatus: " + e.getMessage());
-        }
+        if (mainController != null) mainController.updateStatus(message);
     }
 
     private void showError(String title, String message) {
-        try {
-            if (mainController instanceof MainController) {
-                ((MainController) mainController).showError(title, message);
-            } else {
-                // Use reflection for ModernMainController
-                java.lang.reflect.Method method = mainController.getClass().getDeclaredMethod("showError", String.class,
-                        String.class);
-                method.setAccessible(true);
-                method.invoke(mainController, title, message);
-            }
-        } catch (Exception e) {
-            System.err.println("Error calling showError: " + e.getMessage());
-            e.printStackTrace();
-        }
+        if (mainController != null) mainController.showError(title, message);
     }
 
     // PIN Block controls
@@ -116,8 +98,90 @@ public class PaymentsController {
     private TextField derivePvvTargetPvvField;
     private TextField derivePvvKeyIndexField;
     private TextArea derivePvvResultArea;
+    private TextField dukptBdkField, dukptKsnField, dukptAesPinBlockField;
+    private TextArea dukptResultArea;
+    private ComboBox<String> dukptSchemeCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
 
-    public void initialize(Object mainController,
+    public void initializeDukptControls(TextField bdkField, TextField ksnField, TextArea resultArea,
+            ComboBox<String> schemeCombo, ComboBox<String> aesUsageCombo, ComboBox<String> aesKeyTypeCombo,
+            TextField aesPinBlockField, ComboBox<String> aesPinOperationCombo) {
+        this.dukptBdkField = bdkField; this.dukptKsnField = ksnField; this.dukptResultArea = resultArea;
+        this.dukptSchemeCombo = schemeCombo; this.dukptAesUsageCombo = aesUsageCombo; this.dukptAesKeyTypeCombo = aesKeyTypeCombo;
+        this.dukptAesPinBlockField = aesPinBlockField; this.dukptAesPinOperationCombo = aesPinOperationCombo;
+        if (schemeCombo != null) { schemeCombo.getItems().setAll("TDES (legacy, 10-byte KSN)", "AES (X9.24-3, 12-byte KSN)"); schemeCombo.setValue("TDES (legacy, 10-byte KSN)"); }
+        if (aesUsageCombo != null) { aesUsageCombo.getItems().setAll("Data encryption (encrypt)", "Data encryption (decrypt)", "PIN encryption", "MAC generation", "MAC verification", "MAC both ways", "Key encryption", "Key derivation"); aesUsageCombo.setValue("Data encryption (encrypt)"); }
+        if (aesKeyTypeCombo != null) { aesKeyTypeCombo.getItems().setAll("AES-128", "AES-192", "AES-256"); aesKeyTypeCombo.setValue("AES-128"); }
+        if (aesPinOperationCombo != null) { aesPinOperationCombo.getItems().setAll("Encrypt formatted PIN block", "Decrypt encrypted PIN block"); aesPinOperationCombo.setValue("Encrypt formatted PIN block"); }
+    }
+
+    public void handleInspectDukpt() {
+        try {
+            if (dukptSchemeCombo != null && dukptSchemeCombo.getValue().startsWith("AES")) { inspectAesDukpt(); return; }
+            DukptKsn.Parsed ksn = DukptKsn.parseTdes(dukptKsnField.getText());
+            String result = "--- DUKPT TDES KSN ---\nKSN: " + ksn.ksnHex() + "\nBase KSN: " + ksn.baseKsnHex()
+                    + "\nDevice ID: " + ksn.deviceIdentifierHex() + "\nTransaction counter: " + ksn.transactionCounter()
+                    + "\nCounter exhausted: " + DukptKsn.isTdesCounterExhausted(ksn.ksnHex())
+                    + "\nNext KSN: " + (DukptKsn.isTdesCounterExhausted(ksn.ksnHex()) ? "not available" : DukptKsn.nextTdesKsn(ksn.ksnHex()));
+            if (!dukptBdkField.getText().isBlank()) result += "\nIPEK: " + DukptKsn.deriveIpek(dukptBdkField.getText(), ksn.ksnHex());
+            dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true);
+            updateStatus("DUKPT KSN inspected");
+        } catch (Exception e) { showError("DUKPT", e.getMessage()); }
+    }
+
+    private void inspectAesDukpt() throws Exception {
+        AesDukpt.ParsedKsn ksn = AesDukpt.parseKsn(dukptKsnField.getText());
+        String result = "--- AES DUKPT (ANSI X9.24-3) ---\nKSN: " + ksn.ksnHex() + "\nInitial Key ID: " + ksn.initialKeyIdHex()
+                + "\nBase KSN: " + ksn.baseKsnHex() + "\nTransaction counter: " + String.format("%08X", ksn.transactionCounter())
+                + "\nCounter exhausted: " + AesDukpt.isCounterExhausted(ksn.ksnHex())
+                + "\nNext KSN: " + (AesDukpt.isCounterExhausted(ksn.ksnHex()) ? "not available" : AesDukpt.nextKsn(ksn.ksnHex()));
+        if (!dukptBdkField.getText().isBlank()) {
+            AesDukpt.KeyUsage usage = selectedAesUsage(); AesDukpt.KeyType type = selectedAesKeyType();
+            AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), ksn.ksnHex(), usage, type);
+            result += "\n\nBDK type: " + AesDukpt.KeyType.fromBytes(dukptBdkField.getText().replaceAll("\\s+", "").length() / 2)
+                    + "\nInitial Key: " + derived.initialKeyHex() + "\nIntermediate key: " + derived.intermediateKeyHex()
+                    + "\nWorking-key usage: " + usage.label() + "\nWorking-key derivation data: " + derived.derivationDataHex()
+                    + "\nDerived " + type + " working key: " + derived.workingKeyHex();
+        }
+        dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus("AES DUKPT KSN inspected");
+    }
+    private AesDukpt.KeyUsage selectedAesUsage() {
+        String selection = dukptAesUsageCombo == null ? "Data encryption (encrypt)" : dukptAesUsageCombo.getValue();
+        return switch (selection) {
+            case "Data encryption (decrypt)" -> AesDukpt.KeyUsage.DATA_ENCRYPTION_DECRYPT;
+            case "PIN encryption" -> AesDukpt.KeyUsage.PIN_ENCRYPTION;
+            case "MAC generation" -> AesDukpt.KeyUsage.MAC_GENERATION;
+            case "MAC verification" -> AesDukpt.KeyUsage.MAC_VERIFICATION;
+            case "MAC both ways" -> AesDukpt.KeyUsage.MAC_BOTH_WAYS;
+            case "Key encryption" -> AesDukpt.KeyUsage.KEY_ENCRYPTION;
+            case "Key derivation" -> AesDukpt.KeyUsage.KEY_DERIVATION;
+            default -> AesDukpt.KeyUsage.DATA_ENCRYPTION_ENCRYPT;
+        };
+    }
+    private AesDukpt.KeyType selectedAesKeyType() {
+        String selection = dukptAesKeyTypeCombo == null ? "AES-128" : dukptAesKeyTypeCombo.getValue();
+        return "AES-192".equals(selection) ? AesDukpt.KeyType.AES192 : "AES-256".equals(selection) ? AesDukpt.KeyType.AES256 : AesDukpt.KeyType.AES128;
+    }
+
+    public void handleAesDukptPinBlock() {
+        try {
+            if (dukptSchemeCombo == null || !dukptSchemeCombo.getValue().startsWith("AES")) {
+                throw new IllegalArgumentException("Select AES (X9.24-3, 12-byte KSN) before processing an AES PIN block");
+            }
+            if (dukptBdkField == null || dukptBdkField.getText().isBlank()) throw new IllegalArgumentException("An AES DUKPT BDK is required");
+            boolean decrypt = dukptAesPinOperationCombo != null && dukptAesPinOperationCombo.getValue().startsWith("Decrypt");
+            AesDukpt.KeyType type = selectedAesKeyType();
+            AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), dukptKsnField.getText(), AesDukpt.KeyUsage.PIN_ENCRYPTION, type);
+            String output = AesDukpt.cryptPinBlock(dukptBdkField.getText(), dukptKsnField.getText(), type, dukptAesPinBlockField.getText(), decrypt);
+            dukptResultArea.setText("--- AES DUKPT PIN block (lab operation) ---\nKSN: " + AesDukpt.parseKsn(dukptKsnField.getText()).ksnHex()
+                    + "\nPIN key type: " + type + "\nDerived PIN key: " + derived.workingKeyHex()
+                    + "\nInput " + (decrypt ? "encrypted" : "formatted") + " PIN block: " + dukptAesPinBlockField.getText().replaceAll("\\s+", "").toUpperCase()
+                    + "\nOutput " + (decrypt ? "formatted" : "encrypted") + " PIN block: " + output
+                    + "\n\nNote: this uses AES/ECB/NoPadding over a 16-byte preformatted ISO 9564-4 PIN block.");
+            updateStatus("AES DUKPT PIN block " + (decrypt ? "decrypted" : "encrypted"));
+        } catch (Exception e) { showError("AES DUKPT PIN block", e.getMessage()); }
+    }
+
+    public void initialize(StatusReporter mainController,
             TextField pinField,
             TextField panFieldEncode,
             TextField pinBlockField,
@@ -378,14 +442,13 @@ public class PaymentsController {
             pinBlockResultArea.setText(result.toString());
             pinBlockResultArea.setManaged(true);
             pinBlockResultArea.setVisible(true);
-            updateStatus("PIN Block encoded successfully");
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "PIN Block",
-                    "Encode - " + format,
-                    "PIN: " + pin + ", PAN: " + pan,
-                    pinBlock);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Format", format);
+            details.put("PAN", maskPan(pan));
+            details.put("PIN Length", pin.length() + " digits");
+            mainController.publish(OperationResult.forOperation("Encode PIN Block")
+                    .output(DataConverter.hexToBytes(pinBlock)).details(details)
+                    .status("PIN Block encoded successfully").build());
 
         } catch (Exception e) {
             pinBlockResultArea.setText("Error encoding PIN block: " + e.getMessage());
@@ -452,7 +515,14 @@ public class PaymentsController {
             pinBlockResultArea.setText(result.toString());
             pinBlockResultArea.setManaged(true);
             pinBlockResultArea.setVisible(true);
-            updateStatus("PIN Block decoded successfully");
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Format", format);
+            details.put("PAN", maskPan(pan));
+            details.put("PIN Length", pin.length() + " digits");
+            mainController.publish(OperationResult.forOperation("Decode PIN Block")
+                    .input(DataConverter.hexToBytes(pinBlock))
+                    .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("PIN Block decoded successfully").build());
 
         } catch (Exception e) {
             pinBlockResultArea.setText("Error decoding PIN block: " + e.getMessage());
@@ -574,12 +644,14 @@ public class PaymentsController {
             result.append("CVV:          ").append(cvv).append("\n");
 
             cvvResultArea.setText(result.toString());
-            updateStatus("CVV generated successfully");
-
-            // Add to history
-            OperationHistory.getInstance().addOperation("CVV", "Generate " + cvvType,
-                    "PAN: " + pan + ", Exp: " + expiry + ", SC: " + serviceCode,
-                    cvv);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Type", cvvType);
+            details.put("PAN", maskPan(pan));
+            details.put("Expiry", expiry);
+            details.put("Service Code", serviceCode);
+            mainController.publish(OperationResult.forOperation("Generate CVV")
+                    .output(cvv.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("CVV generated successfully").build());
 
         } catch (Exception e) {
             cvvResultArea.setText("Error generating CVV: " + e.getMessage());
@@ -652,17 +724,24 @@ public class PaymentsController {
                 result.append("Result:       ").append(isValid ? "✓ MATCH" : "✗ MISMATCH").append("\n");
 
                 cvvResultArea.setText(result.toString());
-                updateStatus(isValid ? "CVV Verified: Valid" : "CVV Verified: Invalid");
-
-                OperationHistory.getInstance().addOperation("CVV", "Verify CVV",
-                        "PAN: " + pan + ", CVV: " + inputCvv,
-                        isValid ? "VALID" : "INVALID");
+                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+                details.put("Type", cvvTypeCombo.getSelectionModel().getSelectedItem());
+                details.put("PAN", maskPan(pan));
+                details.put("Result", isValid ? "VALID" : "INVALID");
+                mainController.publish(OperationResult.forOperation("Verify CVV")
+                        .output(calculated.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                        .status(isValid ? "CVV verified: valid" : "CVV verified: invalid").build());
             }
 
         } catch (Exception e) {
             cvvResultArea.setText("Error verifying CVV: " + e.getMessage());
             updateStatus("Error: " + e.getMessage());
         }
+    }
+
+    private String maskPan(String pan) {
+        if (pan == null || pan.length() < 5) return "[redacted]";
+        return "*".repeat(Math.max(0, pan.length() - 4)) + pan.substring(pan.length() - 4);
     }
 
     // ==================== MAC HANDLERS ====================
@@ -1111,6 +1190,7 @@ public class PaymentsController {
             // 1. Create clear PIN block using PaymentOperations (which supports all
             // formats)
             String clearPinBlock = PaymentOperations.encodePinBlock(pin, pan, format);
+            String publishedBlock = clearPinBlock;
 
             String result = "Format: " + format + "\n";
             result += "Clear PIN Block:\n" + clearPinBlock;
@@ -1124,7 +1204,8 @@ public class PaymentsController {
                     // Encrypt with TDES
                     byte[] encrypted = PaymentOperations.encryptDesEcb(clearBytes, key);
 
-                    result += "\n\nEncrypted PIN Block:\n" + DataConverter.bytesToHex(encrypted).toUpperCase();
+                    publishedBlock = DataConverter.bytesToHex(encrypted).toUpperCase();
+                    result += "\n\nEncrypted PIN Block:\n" + publishedBlock;
                 } catch (Exception e) {
                     result += "\n\nEncryption Error: " + e.getMessage();
                 }
@@ -1134,15 +1215,18 @@ public class PaymentsController {
             encResultArea.setManaged(true);
             encResultArea.setVisible(true);
 
-            updateStatus("Encrypted PIN Block encoded successfully");
-
-            OperationHistory.getInstance().addOperation("Payments", "Encode Encrypted PIN Block",
-                    "Format: " + format + ", PIN: [HIDDEN]",
-                    "Block: " + clearPinBlock.substring(0, 8) + "...");
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Format", format);
+            details.put("PAN", maskPan(pan));
+            details.put("PIN", "[not persisted]");
+            details.put("Protected", keyHex.isEmpty() ? "No key supplied" : "TDES ECB");
+            mainController.publish(OperationResult.forOperation("Encode Encrypted PIN Block")
+                    .output(DataConverter.hexToBytes(publishedBlock)).details(details)
+                    .status("Encrypted PIN Block encoded successfully").build());
 
         } catch (Exception e) {
             showError("Encoding Error", "Error encoding Encrypted PIN Block: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Encrypted PIN block encoding failed", e);
         }
     }
 
@@ -1192,15 +1276,19 @@ public class PaymentsController {
             encResultArea.setManaged(true);
             encResultArea.setVisible(true);
 
-            updateStatus("Encrypted PIN Block decoded successfully");
-
-            OperationHistory.getInstance().addOperation("Payments", "Decode Encrypted PIN Block",
-                    "Format: " + format + ", Block: " + pinBlockHex.substring(0, 8) + "...",
-                    "PIN: " + pin);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Format", format);
+            details.put("PAN", maskPan(pan));
+            details.put("PIN", "[not persisted]");
+            details.put("Protected", keyHex.isEmpty() ? "No key supplied" : "TDES ECB");
+            mainController.publish(OperationResult.forOperation("Decode Encrypted PIN Block")
+                    .input(DataConverter.hexToBytes(pinBlockHex))
+                    .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("Encrypted PIN Block decoded successfully").build());
 
         } catch (Exception e) {
             showError("Decoding Error", "Error decoding Encrypted PIN Block: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Encrypted PIN block decoding failed", e);
         }
     }
 
@@ -1306,15 +1394,18 @@ public class PaymentsController {
             ibm3624ResultArea.setManaged(true);
             ibm3624ResultArea.setVisible(true);
 
-            updateStatus("PIN generated successfully (IBM 3624)");
-
-            OperationHistory.getInstance().addOperation("Payments", "Generate PIN (IBM 3624)",
-                    "PAN: " + pan.substring(0, Math.min(8, pan.length())) + "..., Offset: " + offset,
-                    "PIN: " + pin);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Method", "IBM 3624");
+            details.put("PAN", maskPan(pan));
+            details.put("Offset", offset);
+            details.put("PIN", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("Generate PIN (IBM 3624)")
+                    .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("PIN generated successfully (IBM 3624)").build());
 
         } catch (Exception e) {
             showError("Generation Error", "Error generating PIN: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("IBM 3624 PIN generation failed", e);
         }
     }
 
@@ -1416,15 +1507,18 @@ public class PaymentsController {
             ibm3624ResultArea.setManaged(true);
             ibm3624ResultArea.setVisible(true);
 
-            updateStatus("PIN verification: " + (isValid ? "VALID" : "INVALID"));
-
-            OperationHistory.getInstance().addOperation("Payments", "Verify PIN (IBM 3624)",
-                    "PAN: " + pan.substring(0, Math.min(8, pan.length())) + "...",
-                    "Result: " + (isValid ? "VALID" : "INVALID"));
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Method", "IBM 3624");
+            details.put("PAN", maskPan(pan));
+            details.put("Result", isValid ? "VALID" : "INVALID");
+            details.put("PIN", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("Verify PIN (IBM 3624)")
+                    .output(expectedPin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("PIN verification: " + (isValid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {
             showError("Verification Error", "Error verifying PIN: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("IBM 3624 PIN verification failed", e);
         }
     }
 
@@ -1534,10 +1628,13 @@ public class PaymentsController {
             genOffsetResultArea.setManaged(true);
             genOffsetResultArea.setVisible(true);
 
-            updateStatus("Offset generated successfully");
-
-            OperationHistory.getInstance().addOperation("Payments", "Generate Offset",
-                    "PIN: [HIDDEN]", "Offset: " + offset);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Method", "IBM 3624 offset");
+            details.put("PAN", maskPan(pan));
+            details.put("PIN", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("Generate Offset")
+                    .output(offset.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("Offset generated successfully").build());
 
         } catch (Exception e) {
             showError("Generation Error", "Error generating Offset: " + e.getMessage());
@@ -1573,10 +1670,14 @@ public class PaymentsController {
             genPvvResultArea.setManaged(true);
             genPvvResultArea.setVisible(true);
 
-            updateStatus("PVV generated successfully");
-
-            OperationHistory.getInstance().addOperation("Payments", "Generate PVV",
-                    "PIN: [HIDDEN]", "PVV: " + pvv);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Method", "VISA PVV");
+            details.put("PAN", maskPan(pan));
+            details.put("Key Index", keyIndex);
+            details.put("PIN", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("Generate PVV")
+                    .output(pvv.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("PVV generated successfully").build());
 
         } catch (Exception e) {
             showError("Generation Error", "Error generating PVV: " + e.getMessage());
@@ -1625,7 +1726,15 @@ public class PaymentsController {
             derivePvvResultArea.setManaged(true);
             derivePvvResultArea.setVisible(true);
 
-            updateStatus("PIN derivation completed");
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Method", "Derive PIN from PVV");
+            details.put("PAN", maskPan(pan));
+            details.put("PVV", targetPvv);
+            details.put("Matches", String.valueOf(matches.size()));
+            details.put("PINs", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("Derive PIN from PVV")
+                    .output(res.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("PIN derivation completed").build());
 
         } catch (Exception e) {
             showError("Derivation Error", "Error deriving PIN: " + e.getMessage());

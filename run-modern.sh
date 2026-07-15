@@ -1,13 +1,11 @@
 #!/bin/bash
 
 echo "================================================"
-echo "  CryptoForge - MODERN UI PROTOTYPE"
+echo "  CryptoCarver - MODERN UI"
 echo "================================================"
 echo ""
-echo "Cleaning and rebuilding..."
-rm -rf target
-mvn clean compile
-
-echo ""
 echo "Launching modern UI..."
-mvn clean javafx:run
+MAVEN_BIN="${MAVEN_BIN:-$(command -v mvn || true)}"
+if [ -z "$MAVEN_BIN" ] && [ -x /opt/homebrew/bin/mvn ]; then MAVEN_BIN=/opt/homebrew/bin/mvn; fi
+if [ -z "$MAVEN_BIN" ]; then echo "Maven was not found. Set MAVEN_BIN or add mvn to PATH." >&2; exit 127; fi
+"$MAVEN_BIN" javafx:run

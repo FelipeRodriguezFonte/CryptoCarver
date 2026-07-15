@@ -25,8 +25,13 @@ public class SavedSessionsManager {
                 userHome = System.getProperty("java.io.tmpdir");
             }
 
-            Path configDir = Paths.get(userHome, ".crypto-calculator");
+            Path configDir = Paths.get(userHome, ".cryptocarver");
             sessionsFilePath = configDir.resolve("saved_sessions.json");
+            Path legacyFile = Paths.get(userHome, ".crypto-calculator", "saved_sessions.json");
+            if (!Files.exists(sessionsFilePath) && Files.exists(legacyFile)) {
+                Files.createDirectories(configDir);
+                Files.copy(legacyFile, sessionsFilePath);
+            }
 
             loadSessions();
         } catch (Exception e) {

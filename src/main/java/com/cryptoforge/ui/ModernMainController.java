@@ -1,8 +1,11 @@
 package com.cryptoforge.ui;
 
 import javafx.application.Platform;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.io.File;
@@ -17,6 +20,9 @@ import java.util.Map;
 import javafx.scene.text.TextFlow;
 import com.cryptoforge.asn1.ASN1Parser;
 import com.cryptoforge.asn1.ASN1TreeNode;
+import com.cryptoforge.model.AppDiagnostics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 // Attempt to use DataConverter if available, otherwise will rely on local helpers or standard libs
 import com.cryptoforge.util.DataConverter;
 
@@ -24,6 +30,9 @@ import com.cryptoforge.util.DataConverter;
  * Modern Main Controller for Rail + SidePanel navigation
  */
 public class ModernMainController implements StatusReporter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
+    private final PauseTransition statusResetTimer = new PauseTransition(Duration.seconds(3));
 
     @FXML
     private BorderPane mainPane;
@@ -58,6 +67,10 @@ public class ModernMainController implements StatusReporter {
     @FXML
     private ComboBox<String> paddingCombo;
     @FXML
+    private ComboBox<String> symKeySourceCombo;
+    @FXML
+    private ComboBox<String> symHsmKeyCombo;
+    @FXML
     private TextField symmetricKeyField;
     @FXML
     private TextField ivField;
@@ -65,6 +78,16 @@ public class ModernMainController implements StatusReporter {
     private TextField gcmTagField;
     @FXML
     private TextField aadField;
+
+    // Cipher - Streaming files
+    @FXML private ComboBox<String> fileCipherAlgorithmCombo;
+    @FXML private TextField fileCipherSourceField;
+    @FXML private TextField fileCipherDestinationField;
+    @FXML private TextField fileCipherTagField;
+    @FXML private TextField fileCipherKeyField;
+    @FXML private TextField fileCipherNonceField;
+    @FXML private TextField fileCipherAadField;
+    @FXML private TextArea fileCipherResultArea;
     @FXML
     private ComboBox<String> rsaPaddingCombo;
     @FXML
@@ -234,6 +257,14 @@ public class ModernMainController implements StatusReporter {
     private TextArea jwtDecodedPayloadArea;
     @FXML
     private Label jwtStatusLabel;
+    @FXML private TextArea detachedPayloadArea, detachedTokenArea, detachedSigningKeyArea, detachedVerificationKeyArea;
+    @FXML private ComboBox<String> detachedAlgoCombo;
+    @FXML private Label detachedStatusLabel;
+
+    @FXML
+    private void handleGenerateDetachedJWS() { if (joseController != null) joseController.generateDetachedJWS(detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedSigningKeyArea.getText(), detachedTokenArea); }
+    @FXML
+    private void handleVerifyDetachedJWS() { if (joseController != null) joseController.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel); }
 
     // Enterprise Features
     @FXML
@@ -279,6 +310,20 @@ public class ModernMainController implements StatusReporter {
     private TextField keyInputField;
     @FXML
     private TextArea validationResultArea;
+    @FXML
+    private TextArea keyMaterialInputArea;
+    @FXML
+    private TextArea keyMaterialReportArea;
+    @FXML private TextArea keyComparePublicArea;
+    @FXML private TextArea keyComparePrivateArea;
+    @FXML private TextArea keyCompareResultArea;
+    @FXML private ComboBox<String> keyStoreTypeCombo;
+    @FXML private PasswordField keyStorePasswordField;
+    @FXML private CheckBox keyStoreUnsafeExtractCheck;
+    @FXML private TextField keyStorePathField;
+    @FXML private TextArea keyStoreReportArea;
+    @FXML private ComboBox<String> keyStoreProfileCombo;
+    @FXML private TextField keyStoreProfileNameField;
 
     // Symmetric Keys - Key Sharing
     @FXML
@@ -320,6 +365,18 @@ public class ModernMainController implements StatusReporter {
     @FXML
     private TextArea kdfResultArea;
 
+    // Symmetric Keys - AES Key Wrap
+    @FXML
+    private ComboBox<String> keyWrapModeCombo;
+    @FXML
+    private CheckBox keyWrapUnwrapCheck;
+    @FXML
+    private TextField keyWrapKekField;
+    @FXML
+    private TextField keyWrapDataField;
+    @FXML
+    private TextArea keyWrapResultArea;
+
     // TR-31 Key Blocks
     @FXML
     private TextField tr31KbpkExportField;
@@ -335,6 +392,8 @@ public class ModernMainController implements StatusReporter {
     private ComboBox<String> tr31ModeCombo;
     @FXML
     private ComboBox<String> tr31ExportabilityCombo;
+    @FXML
+    private TextField tr31OptionalBlocksField;
     @FXML
     private TextArea tr31ExportResultArea;
     @FXML
@@ -399,10 +458,24 @@ public class ModernMainController implements StatusReporter {
     private ComboBox<String> certSignAlgoCombo;
     @FXML
     private TextArea certOutputArea;
+    @FXML private TextField certSanDnsField;
+    @FXML private TextField certSanIpField;
+    @FXML private CheckBox certRootCaCheck;
     @FXML
     private TextArea certInputArea;
     @FXML
     private TextArea certParseResultArea;
+    @FXML private TextArea certCompareLeftArea;
+    @FXML private TextArea certCompareRightArea;
+    @FXML private TextArea certCompareResultArea;
+    @FXML private TextArea certIssueCsrArea;
+    @FXML private TextArea certIssueCaCertArea;
+    @FXML private TextArea certIssueCaKeyArea;
+    @FXML private TextField certIssueValidityField;
+    @FXML private TextField certIssueSignatureField;
+    @FXML private TextArea certIssueResultArea;
+    @FXML private CheckBox certIssueIntermediateCaCheck;
+    @FXML private TextField certIssuePathLengthField;
 
     // Certificate Chain
     @FXML
@@ -465,6 +538,22 @@ public class ModernMainController implements StatusReporter {
     // Generic Tab FXML Fields
     @FXML
     private Accordion genericContainer;
+
+    // Post-Quantum UI
+    @FXML private VBox postQuantumContainer;
+    @FXML private PostQuantumController postQuantumContainerController;
+
+    // XML Security UI
+    @FXML private VBox xmlSecurityContainer;
+    @FXML private TextField xmlSignInputPathField;
+    @FXML private TextField xmlSignKeyPathField;
+    @FXML private PasswordField xmlSignKeyPasswordField;
+    @FXML private ComboBox<String> xmlSignKeyAliasCombo;
+    @FXML private ComboBox<String> xmlSignLevelCombo;
+    @FXML private ComboBox<String> xmlSignPackagingCombo;
+    // New Controllers
+    @FXML private XMLSignatureController xmlSecurityContainerController;
+
     // Generic Utilities
     // Hashing
     @FXML
@@ -474,12 +563,38 @@ public class ModernMainController implements StatusReporter {
     @FXML
     private TextArea hashOutputArea;
 
+    // Batch Runner (safe, repeatable generic operations)
+    @FXML private ComboBox<String> batchInputFormatCombo;
+    @FXML private ComboBox<String> batchOperationCombo;
+    @FXML private ComboBox<String> batchExportFormatCombo;
+    @FXML private TextArea batchInputArea;
+    @FXML private TextArea batchResultArea;
+    @FXML private ProgressBar batchProgressBar;
+    @FXML private Label batchStatusLabel;
+    private volatile javafx.concurrent.Task<com.cryptoforge.model.batch.BatchRunner.Report> activeBatchTask;
+    private com.cryptoforge.model.batch.BatchRunner.Report lastBatchReport;
+
     // Manual Conversion
 
     @FXML
     private TextArea manualInputArea;
     @FXML
     private TextArea manualOutputArea;
+    @FXML
+    private CheckBox ebcdicConversionCheck;
+    @FXML
+    private ComboBox<String> ebcdicCodePageCombo;
+    @FXML
+    private ComboBox<String> ebcdicDirectionCombo;
+    @FXML
+    private ComboBox<String> endianWordSizeCombo;
+    @FXML
+    private TextArea xorSecondInputArea;
+    @FXML private TextField hexOffsetField;
+    @FXML private TextField hexLengthField;
+    @FXML private TextField hexSelectionOffsetField;
+    @FXML private TextField hexSelectionLengthField;
+    @FXML private ComboBox<String> compressionFormatCombo;
 
     // Random
     @FXML
@@ -512,6 +627,7 @@ public class ModernMainController implements StatusReporter {
     // Generic - File Converter
     @FXML
     private TextField fileInputPathField;
+    @FXML private TextField fileComparePathField;
     @FXML
     private TextField fileOutputPathField;
     @FXML
@@ -542,9 +658,15 @@ public class ModernMainController implements StatusReporter {
     @FXML
     private ComboBox<String> authMacAlgorithmCombo;
     @FXML
+    private ComboBox<String> macKeySourceCombo;
+    @FXML
+    private ComboBox<String> macHsmKeyCombo;
+    @FXML
     private TextField authMacKeyField;
     @FXML
     private Label authMacKeyInfoLabel;
+    @FXML
+    private TextField authMacNonceField;
     @FXML
     private ComboBox<String> authMacTruncationCombo;
     @FXML
@@ -618,6 +740,9 @@ public class ModernMainController implements StatusReporter {
     // Derive PIN from PVV Fields
     @FXML
     private TextField derivePvvPvkField;
+    @FXML private TextField dukptBdkField, dukptKsnField, dukptAesPinBlockField;
+    @FXML private ComboBox<String> dukptSchemeCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
+    @FXML private TextArea dukptResultArea;
     @FXML
     private TextField derivePvvPanField;
     @FXML
@@ -765,6 +890,9 @@ public class ModernMainController implements StatusReporter {
 
     @FXML
     private VBox emvContainer;
+    @FXML private TextArea emvTlvInputArea, emvTlvResultArea;
+    @FXML private TextField emvDolTemplateField;
+    @FXML private TextArea emvDolValuesArea, emvDolResultArea;
 
     // Controllers
     private KeysController keysController;
@@ -780,6 +908,7 @@ public class ModernMainController implements StatusReporter {
 
     @FXML
     public void initialize() {
+        if (detachedAlgoCombo != null) { detachedAlgoCombo.getItems().setAll("HS256", "RS256", "ES256", "ES384", "ES512"); detachedAlgoCombo.setValue("ES256"); }
         System.out.println("ModernMainController initializing...");
 
         // Populate ComboBox items
@@ -850,6 +979,8 @@ public class ModernMainController implements StatusReporter {
         loadPaymentsContent();
         loadEMVContent();
         loadGenericContent();
+        loadPostQuantumContent();
+        loadXMLSecurityContent();
 
         // Show the symmetric keys by default
         showSymmetricKeys();
@@ -872,9 +1003,13 @@ public class ModernMainController implements StatusReporter {
             cipherController.setCipherModeCombo(cipherModeCombo);
             cipherController.setPaddingCombo(paddingCombo);
             cipherController.setSymmetricKeyField(symmetricKeyField);
+            cipherController.setSymKeySourceCombo(symKeySourceCombo);
+            cipherController.setSymHsmKeyCombo(symHsmKeyCombo);
             cipherController.setIVField(ivField);
             cipherController.setGcmTagField(gcmTagField);
             cipherController.setAADField(aadField);
+            cipherController.setFileCipherFields(fileCipherAlgorithmCombo, fileCipherSourceField, fileCipherDestinationField,
+                    fileCipherTagField, fileCipherKeyField, fileCipherNonceField, fileCipherAadField, fileCipherResultArea);
 
             // Set asymmetric components
             cipherController.setRSACombos(rsaPaddingCombo, asymmetricInputFormatCombo, asymmetricOutputFormatCombo);
@@ -904,10 +1039,13 @@ public class ModernMainController implements StatusReporter {
                     authMacKeyField,
                     authMacKeyInfoLabel,
                     authMacTruncationCombo,
-                    authMacVerifyField);
+                    authMacVerifyField,
+                    authMacNonceField,
+                    macKeySourceCombo,
+                    macHsmKeyCombo);
         } catch (Exception e) {
             System.err.println("Error initializing AuthenticationController: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Modern UI operation failed", e);
         }
     }
 
@@ -923,6 +1061,8 @@ public class ModernMainController implements StatusReporter {
                     skARPCField, arqcField, arcField, csuField, propAuthDataField, arpcMethodCombo, arpcResultArea,
                     panTrack2Field, expiryTrack2Field, serviceCodeFieldTrack2, discretionaryDataField, track2InputField,
                     track2ResultArea);
+            emvController.initializeTlvInspector(emvTlvInputArea, emvTlvResultArea);
+            emvController.initializeDolBuilder(emvDolTemplateField, emvDolValuesArea, emvDolResultArea);
         }
     }
 
@@ -995,6 +1135,7 @@ public class ModernMainController implements StatusReporter {
                     ibm3624StartField,
                     ibm3624LengthField,
                     ibm3624PadField);
+            paymentsController.initializeDukptControls(dukptBdkField, dukptKsnField, dukptResultArea, dukptSchemeCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinBlockField, dukptAesPinOperationCombo);
 
             // Populate PIN Block format combos
             if (pinBlockFormatCombo != null) {
@@ -1025,7 +1166,7 @@ public class ModernMainController implements StatusReporter {
             System.out.println("PaymentsController initialized successfully!");
         } catch (Exception e) {
             System.err.println("Error initializing PaymentsController: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Modern UI operation failed", e);
         }
     }
 
@@ -1048,6 +1189,10 @@ public class ModernMainController implements StatusReporter {
                     component3Field,
                     component4Field,
                     component5Field);
+            keysController.initializeKeyMaterialInspector(keyMaterialInputArea, keyMaterialReportArea);
+            keysController.initializeKeyPairComparator(keyComparePublicArea, keyComparePrivateArea, keyCompareResultArea);
+            keysController.initializeKeyStoreInspector(keyStoreTypeCombo, keyStorePasswordField, keyStoreUnsafeExtractCheck,
+                    keyStorePathField, keyStoreReportArea, keyStoreProfileCombo, keyStoreProfileNameField);
 
             // Initialize KDF
             keysController.initializeKDF(
@@ -1062,6 +1207,9 @@ public class ModernMainController implements StatusReporter {
                     kdfOutputLengthField,
                     kdfResultArea);
 
+            keysController.initializeKeyWrap(keyWrapModeCombo, keyWrapUnwrapCheck, keyWrapKekField,
+                    keyWrapDataField, keyWrapResultArea);
+
             // Initialize TR-31
             keysController.initializeTR31(
                     tr31KbpkExportField,
@@ -1071,6 +1219,7 @@ public class ModernMainController implements StatusReporter {
                     tr31AlgorithmCombo,
                     tr31ModeCombo,
                     tr31ExportabilityCombo,
+                    tr31OptionalBlocksField,
                     tr31ExportResultArea,
                     tr31KbpkImportField,
                     tr31KeyBlockField,
@@ -1088,9 +1237,13 @@ public class ModernMainController implements StatusReporter {
                     certCNField, certOrgField, certOUField,
                     certLocalityField, certStateField, certCountryField,
                     certEmailField, certValidityField,
-                    certKeyTypeCombo, certSignAlgoCombo, certOutputArea);
+                    certKeyTypeCombo, certSignAlgoCombo, certOutputArea, certSanDnsField, certSanIpField, certRootCaCheck);
             keysController.initializeCertificateChain(chainInputArea, chainResultArea);
             keysController.initializeCertificateParse(certInputArea, certParseResultArea);
+            keysController.initializeCertificateComparator(certCompareLeftArea, certCompareRightArea, certCompareResultArea);
+            keysController.initializeCertificateIssuer(certIssueCsrArea, certIssueCaCertArea, certIssueCaKeyArea,
+                    certIssueValidityField, certIssueSignatureField, certIssueResultArea, certIssueIntermediateCaCheck,
+                    certIssuePathLengthField);
             keysController.initializeValidateCertificate(valCertInput, valIssuerInput, valResultArea);
 
             initializeASN1();
@@ -1109,7 +1262,7 @@ public class ModernMainController implements StatusReporter {
                     .println("KeysController (with TR-31 + Asymmetric + Certificates + CMS) initialized successfully!");
         } catch (Exception e) {
             System.err.println("Error initializing KeysController: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Modern UI operation failed", e);
         }
     }
 
@@ -1294,6 +1447,65 @@ public class ModernMainController implements StatusReporter {
         updateInspector("Key Derivation (KDF)", input, output, details);
         addToHistory("Derive Key", details);
 
+    }
+
+    @FXML
+    private void handleInspectKeyMaterial() {
+        if (keysController == null) return;
+        keysController.handleInspectKeyMaterial();
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Input", "PEM material");
+        addToHistory("Inspect Key Material", details);
+        updateInspector("Key Material Inspector");
+    }
+
+    @FXML
+    private void handleCompareKeyPair() {
+        if (keysController == null) return;
+        keysController.handleCompareKeyPair();
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Action", "Cryptographic public/private comparison");
+        addToHistory("Compare Key Pair", details);
+        updateInspector("Compare Key Pair");
+    }
+
+    @FXML
+    private void handleInspectKeyStore() {
+        if (keysController == null) return;
+        keysController.handleInspectKeyStore();
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Type", keyStoreTypeCombo == null ? "" : keyStoreTypeCombo.getValue());
+        addToHistory("Inspect KeyStore", details);
+        updateInspector("KeyStore Inspector");
+    }
+
+    @FXML
+    private void handleChooseKeyStore() {
+        if (keysController != null) keysController.chooseKeyStore();
+    }
+
+    @FXML
+    private void handleSaveKeyStoreProfile() {
+        if (keysController != null) keysController.saveKeyStoreProfile();
+    }
+
+    @FXML
+    private void handleLoadKeyStoreProfile() {
+        if (keysController != null) keysController.loadKeyStoreProfile();
+    }
+
+    @FXML
+    private void handleAesKeyWrap() {
+        if (isRestoring) return;
+        keysController.handleKeyWrap();
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Mode", keyWrapModeCombo == null ? "" : keyWrapModeCombo.getValue());
+        details.put("Action", keyWrapUnwrapCheck != null && keyWrapUnwrapCheck.isSelected() ? "Unwrap" : "Wrap");
+        if (keyWrapResultArea != null && !keyWrapResultArea.getText().isBlank()) {
+            details.put("Result", "Available in result panel");
+        }
+        updateInspector("AES Key Wrap", new byte[0], new byte[0], details);
+        addToHistory("AES Key Wrap", details);
     }
 
     @FXML
@@ -1756,6 +1968,36 @@ public class ModernMainController implements StatusReporter {
     }
 
     @FXML
+    private void handleGenerateCSR() {
+        if (keysController == null) return;
+        keysController.handleGenerateCSR();
+        updateInspector("Generate CSR");
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Action", "PKCS#10 CSR with SAN request");
+        addToHistory("Generate CSR", details);
+    }
+
+    @FXML
+    private void handleCompareCertificates() {
+        if (keysController == null) return;
+        keysController.handleCompareCertificates();
+        updateInspector("Compare Certificates");
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Action", "X.509 field comparison");
+        addToHistory("Compare Certificates", details);
+    }
+
+    @FXML
+    private void handleIssueCertificateFromCsr() {
+        if (keysController == null) return;
+        keysController.handleIssueCertificateFromCsr();
+        updateInspector("Issue Certificate from CSR");
+        java.util.Map<String, String> details = new java.util.HashMap<>();
+        details.put("Action", "Laboratory CA issuance from validated CSR");
+        addToHistory("Issue Certificate from CSR", details);
+    }
+
+    @FXML
     private void handleValidateCertificateChain() {
         if (keysController != null) {
             keysController.handleValidateCertificateChain();
@@ -1795,73 +2037,21 @@ public class ModernMainController implements StatusReporter {
     @FXML
     private void handleCMSSign() {
         keysController.handleCMSSign();
-        updateInspector("CMS Sign");
-        java.util.Map<String, String> details = new java.util.HashMap<>();
-        details.put("Action", "CMS Sign");
-        if (cmsDetachedCheck != null) {
-            details.put("Detached", cmsDetachedCheck.isSelected() ? "Yes" : "No");
-        }
-        if (cmsInputArea != null && !cmsInputArea.getText().isEmpty()) {
-            details.put("Input Length", cmsInputArea.getText().length() + " chars");
-        }
-        if (cmsSignKeyArea != null && !cmsSignKeyArea.getText().isEmpty()) {
-            details.put("Private Key", "Present");
-        }
-        if (cmsOutputArea != null && !cmsOutputArea.getText().isEmpty()) {
-            details.put("Output", cmsOutputArea.getText());
-        }
-        addToHistory("CMS Sign", details);
     }
 
     @FXML
     private void handleCMSVerify() {
         keysController.handleCMSVerify();
-        updateInspector("CMS Verify");
-        java.util.Map<String, String> details = new java.util.HashMap<>();
-        details.put("Action", "CMS Verify");
-        if (cmsInputArea != null && !cmsInputArea.getText().isEmpty()) {
-            details.put("Input Length", cmsInputArea.getText().length() + " chars");
-        }
-        if (cmsSignCertArea != null && !cmsSignCertArea.getText().isEmpty()) {
-            details.put("Certificate", "Present");
-        }
-        if (cmsOutputArea != null && !cmsOutputArea.getText().isEmpty()) {
-            details.put("Output", cmsOutputArea.getText());
-        }
-        addToHistory("CMS Verify", details);
     }
 
     @FXML
     private void handleCMSEncrypt() {
         keysController.handleCMSEncrypt();
-        updateInspector("CMS Encrypt (Enveloped)");
-        java.util.Map<String, String> details = new java.util.HashMap<>();
-        details.put("Action", "CMS EnvelopedData Encrypt");
-        if (cmsInputArea != null && !cmsInputArea.getText().isEmpty()) {
-            details.put("Input Length", cmsInputArea.getText().length() + " chars");
-        }
-        if (cmsEncryptCertArea != null && !cmsEncryptCertArea.getText().isEmpty()) {
-            details.put("Recipient Cert", "Present");
-        }
-        if (cmsOutputArea != null && !cmsOutputArea.getText().isEmpty()) {
-            details.put("Output", cmsOutputArea.getText());
-        }
-        addToHistory("CMS Encrypt", details);
     }
 
     @FXML
     private void handleCMSDecrypt() {
         keysController.handleCMSDecrypt();
-        updateInspector("CMS Decrypt (Enveloped)");
-        java.util.Map<String, String> details = new java.util.HashMap<>();
-        details.put("Action", "CMS EnvelopedData Decrypt");
-        if (cmsInputArea != null && !cmsInputArea.getText().isEmpty()) {
-            details.put("Input Length", cmsInputArea.getText().length() + " chars");
-        }
-        if (cmsDecryptKeyArea != null && !cmsDecryptKeyArea.getText().isEmpty()) {
-            details.put("Private Key", "Present");
-        }
-        addToHistory("CMS Decrypt", details);
     }
 
     // ============================================================================
@@ -1919,6 +2109,7 @@ public class ModernMainController implements StatusReporter {
 
             // Parse ASN.1 (with truncation for display)
             ASN1TreeNode tree = ASN1Parser.parse(data);
+            com.cryptoforge.asn1.DerValidator.Report derReport = com.cryptoforge.asn1.DerValidator.validate(data);
 
             // Display tree
             String treeString = tree.toIndentedString();
@@ -1932,6 +2123,8 @@ public class ModernMainController implements StatusReporter {
             details.append("Detected Type: ").append(detectedType).append("\n");
             details.append("Total Size: ").append(data.length).append(" bytes\n");
             details.append("Root Element: ").append(tree.getLabel()).append("\n");
+            details.append("DER Validation: ").append(derReport.validDer() ? "PASS" : "NOT CANONICAL / INVALID")
+                    .append(" — ").append(derReport.message()).append("\n");
             details.append("Structure parsed successfully.");
 
             asn1DetailsArea.setText(details.toString());
@@ -1954,7 +2147,7 @@ public class ModernMainController implements StatusReporter {
             showError("Parse Error", "Failed to parse ASN.1 data: " + e.getMessage());
             asn1StatusLabel.setText("✗ Parse failed: " + e.getMessage());
             asn1StatusLabel.setStyle("-fx-text-fill: #e74c3c;");
-            e.printStackTrace();
+            LOG.error("Modern UI operation failed", e);
         }
     }
 
@@ -2084,7 +2277,7 @@ public class ModernMainController implements StatusReporter {
 
         } catch (Exception e) {
             showError("ASN.1 Encode Error", e.getMessage());
-            e.printStackTrace();
+            LOG.error("Modern UI operation failed", e);
         }
     }
 
@@ -2141,9 +2334,53 @@ public class ModernMainController implements StatusReporter {
                 updateStatus("Full tree exported to " + file.getName());
             } catch (Exception e) {
                 showError("Export Failed", "Could not save file: " + e.getMessage());
-                e.printStackTrace();
+                LOG.error("Modern UI operation failed", e);
             }
         }
+    }
+
+    @FXML
+    private void handleExportASN1Json() { exportASN1Structured("ASN.1 JSON", "asn1_tree.json", "JSON Files", "*.json", true); }
+
+    @FXML
+    private void handleExportASN1Markdown() { exportASN1Structured("ASN.1 Markdown", "asn1_tree.md", "Markdown Files", "*.md", false); }
+
+    @FXML
+    private void handleLoadASN1OidRegistry() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Load ASN.1 OID Registry");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+        File file = chooser.showOpenDialog(null);
+        if (file == null) return;
+        try {
+            int loaded = ASN1Parser.loadCustomOidNames(file.toPath());
+            updateStatus("Loaded " + loaded + " custom ASN.1 OID name(s)");
+            if (asn1DetailsArea != null) asn1DetailsArea.appendText("\nCustom OID registry loaded: " + loaded + " definitions. Re-parse to apply names.\n");
+        } catch (Exception e) { showError("OID Registry", "Could not load OID registry: " + e.getMessage()); }
+    }
+
+    @FXML
+    private void handleCanonicalizeASN1Der() {
+        try {
+            byte[] input = parseASN1InputData(asn1InputArea.getText().trim());
+            byte[] der = com.cryptoforge.asn1.DerValidator.canonicalize(input);
+            asn1DetailsArea.appendText("\nCanonical DER: " + der.length + " bytes (input: " + input.length + " bytes)\nDER hex: "
+                    + DataConverter.bytesToHex(der) + "\n");
+            updateStatus("ASN.1 canonical DER generated (input unchanged)");
+        } catch (Exception e) { showError("Canonical DER", "Unable to canonicalize ASN.1: " + e.getMessage()); }
+    }
+
+    private void exportASN1Structured(String title, String name, String filterName, String extension, boolean json) {
+        if (asn1LastParsedData == null || asn1LastParsedData.length == 0) { showError("Export Error", "Parse ASN.1 data before exporting."); return; }
+        FileChooser chooser = new FileChooser(); chooser.setTitle(title); chooser.setInitialFileName(name);
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(filterName, extension));
+        File file = chooser.showSaveDialog(null); if (file == null) return;
+        try {
+            ASN1TreeNode tree = ASN1Parser.parse(asn1LastParsedData, -1);
+            String content = json ? com.cryptoforge.asn1.ASN1TreeExporter.toJson(tree) : com.cryptoforge.asn1.ASN1TreeExporter.toMarkdown(tree);
+            java.nio.file.Files.writeString(file.toPath(), content, java.nio.charset.StandardCharsets.UTF_8);
+            updateStatus("ASN.1 export saved: " + file.getName());
+        } catch (Exception e) { showError("Export Failed", "Could not export ASN.1 tree: " + e.getMessage()); }
     }
 
     private byte[] parseASN1InputData(String input) throws Exception {
@@ -2261,6 +2498,18 @@ public class ModernMainController implements StatusReporter {
                 showSymmetricKeys();
                 expandAccordionPane("Validation & KCV");
                 break;
+            case "Key Material Inspector":
+                showSymmetricKeys();
+                expandAccordionPane("Key Material Inspector");
+                break;
+            case "KeyStore Inspector":
+                showSymmetricKeys();
+                expandAccordionPane("KeyStore Inspector");
+                break;
+            case "Compare Public / Private Key":
+                showSymmetricKeys();
+                expandAccordionPane("Compare Public / Private Key");
+                break;
             case "Key Sharing (XOR Split/Combine)":
             case "Split Key":
             case "Combine Components":
@@ -2271,6 +2520,10 @@ public class ModernMainController implements StatusReporter {
             case "Derive Key":
                 showSymmetricKeys();
                 expandAccordionPane("Key Derivation");
+                break;
+            case "AES Key Wrap":
+                showSymmetricKeys();
+                expandAccordionPane("AES Key Wrap");
                 break;
             case "TR-31 Key Blocks":
             case "TR-31 Export":
@@ -2306,6 +2559,14 @@ public class ModernMainController implements StatusReporter {
             case "Generate Certificate":
                 showCertificates();
                 expandCertificatesAccordionPane("Generate Certificate");
+                break;
+            case "Issue Certificate from CSR":
+                showCertificates();
+                expandCertificatesAccordionPane("Issue Certificate from CSR");
+                break;
+            case "Compare Certificates":
+                showCertificates();
+                expandCertificatesAccordionPane("Compare Certificates");
                 break;
             case "Parse Certificate":
                 showCertificates();
@@ -2365,8 +2626,14 @@ public class ModernMainController implements StatusReporter {
                 expandGenericAccordionPane("File Conversion");
                 break;
             case "Manual Conversion":
+            case "Decode EBCDIC":
+            case "Encode EBCDIC":
                 showGeneric();
                 expandGenericAccordionPane("Manual Conversion");
+                break;
+            case "Batch Runner":
+                showGeneric();
+                expandGenericAccordionPane("Batch Runner");
                 break;
             case "Random Number Generator":
             case "Random Generation":
@@ -2388,6 +2655,51 @@ public class ModernMainController implements StatusReporter {
             case "Modular Arithmetic":
                 showGeneric();
                 expandGenericAccordionPane("Modular Arithmetic");
+                break;
+
+            // Post-Quantum
+            case "Post-Quantum Cryptography":
+            case "PQC Key Generation":
+            case "PQC Key Import":
+            case "PQC Key Export":
+            case "Kyber (ML-KEM)":
+            case "Dilithium (ML-DSA)":
+                showPostQuantum();
+                expandPQCAccordionPane("Key Generation");
+                break;
+            case "PQC Sign/Verify":
+            case "PQC Sign":
+            case "PQC Verify":
+                showPostQuantum();
+                expandPQCAccordionPane("Sign");
+                break;
+            case "ML-KEM Encapsulate":
+            case "ML-KEM Decapsulate":
+                showPostQuantum();
+                expandPQCAccordionPane("ML-KEM");
+                break;
+
+            // XML Security
+            case "XML Security":
+            case "Sign XML (XAdES)":
+            case "XAdES Sign":
+            case "Save XAdES XML":
+                showXMLSecurity();
+                expandXMLAccordionPane("Sign XML");
+                break;
+            case "Verify XML (XAdES)":
+            case "XAdES Verify":
+                showXMLSecurity();
+                expandXMLAccordionPane("Verify XML");
+                break;
+            case "Inspect Signed XML":
+                showXMLSecurity();
+                expandXMLAccordionPane("Inspect Signed XML");
+                break;
+
+            case "RFC 3161 Timestamp":
+                showXMLSecurity();
+                expandXMLAccordionPane("RFC 3161 Timestamp");
                 break;
 
             case "EMV Operations":
@@ -2427,6 +2739,10 @@ public class ModernMainController implements StatusReporter {
             case "Symmetric Decrypt":
                 showCipher();
                 expandCipherAccordionPane("Symmetric Cipher");
+                break;
+            case "File Cipher (Streaming)":
+                showCipher();
+                expandCipherAccordionPane("File Cipher");
                 break;
             case "Asymmetric Ciphers":
             case "RSA Encryption": // Keep legacy
@@ -2480,6 +2796,15 @@ public class ModernMainController implements StatusReporter {
                 showPayments();
                 expandPaymentsAccordionPane("PIN Generation");
                 break;
+            case "DUKPT TDES":
+            case "DUKPT TDES / AES":
+                showPayments();
+                expandPaymentsAccordionPane("DUKPT KSN");
+                break;
+            case "EMV TLV Inspector":
+                showEMV();
+                expandEMVAccordionPane("EMV TLV Inspector");
+                break;
             case "CVV Operations":
             case "CVV Generation":
             case "PIN Block Operations":
@@ -2512,10 +2837,17 @@ public class ModernMainController implements StatusReporter {
         String section = "Cryptographic Operations";
         String subsection = itemName;
 
-        if (itemName.contains("Key")) {
-            section = "Symmetric Keys";
+        if (itemName.contains("Post-Quantum") || itemName.contains("PQC")
+                || itemName.contains("ML-KEM") || itemName.contains("ML-DSA")
+                || itemName.contains("SLH-DSA") || itemName.contains("Kyber")
+                || itemName.contains("Dilithium") || itemName.contains("SPHINCS")) {
+            section = "Post-Quantum";
+        } else if (itemName.contains("XML") || itemName.contains("XAdES")) {
+            section = "XML Security";
         } else if (itemName.contains("RSA") || itemName.contains("ECDSA") || itemName.contains("DSA")) {
             section = "Asymmetric Keys";
+        } else if (itemName.contains("Key")) {
+            section = "Symmetric Keys";
         } else if (itemName.contains("Certificate") || itemName.contains("CMS")) {
             section = "Certificates";
         } else if (itemName.contains("EMV") || itemName.contains("TR-31")) {
@@ -2538,15 +2870,23 @@ public class ModernMainController implements StatusReporter {
     // deleted duplicate cmsKeyArea and syntax error
 
     private void updateInspector(String operation) {
-        updateInspector(operation, null, null, null);
+        updateInspector(operation, null, null, (java.util.List<com.cryptoforge.model.OperationDetail>) null);
     }
 
     private void updateInspector(String operation, byte[] input, byte[] output) {
-        updateInspector(operation, input, output, null);
+        updateInspector(operation, input, output, (java.util.List<com.cryptoforge.model.OperationDetail>) null);
+    }
+
+    public void updateInspector(String operation, byte[] input, byte[] output, java.util.Map<String, String> details) {
+        java.util.List<com.cryptoforge.model.OperationDetail> list = new java.util.ArrayList<>();
+        if (details != null) {
+            details.forEach((k, v) -> list.add(com.cryptoforge.model.OperationDetail.publicDetail(k, v)));
+        }
+        updateInspector(operation, input, output, list);
     }
 
     @Override
-    public void updateInspector(String operation, byte[] input, byte[] output, java.util.Map<String, String> details) {
+    public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptoforge.model.OperationDetail> details) {
         operationLabel.setText(operation);
 
         // Update byte counts if provided
@@ -2583,11 +2923,11 @@ public class ModernMainController implements StatusReporter {
         if (inspectorDetailsContainer != null) {
             inspectorDetailsContainer.getChildren().clear();
             if (details != null && !details.isEmpty()) {
-                for (java.util.Map.Entry<String, String> entry : details.entrySet()) {
+                for (com.cryptoforge.model.OperationDetail detail : details) {
                     HBox row = new HBox(10);
-                    Label key = new Label(entry.getKey() + ":");
+                    Label key = new Label(detail.name() + ":");
                     key.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 10px;");
-                    Label value = new Label(entry.getValue());
+                    Label value = new Label(detail.value());
                     value.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 10px;");
                     row.getChildren().addAll(key, value);
                     inspectorDetailsContainer.getChildren().add(row);
@@ -2668,14 +3008,16 @@ public class ModernMainController implements StatusReporter {
                     Object validValue = entry.getValue();
 
                     if (control instanceof TextInputControl) {
-                        ((TextInputControl) control).setText((String) validValue);
+                        ((TextInputControl) control).setText(validValue == null ? "" : String.valueOf(validValue));
                     } else if (control instanceof ComboBox) {
                         // Safe cast since we stored it as generic object
                         ((ComboBox<Object>) control).setValue(validValue);
                     } else if (control instanceof CheckBox) {
-                        ((CheckBox) control).setSelected((Boolean) validValue);
+                        ((CheckBox) control).setSelected(validValue instanceof Boolean
+                                ? (Boolean) validValue : Boolean.parseBoolean(String.valueOf(validValue)));
                     } else if (control instanceof RadioButton) {
-                        ((RadioButton) control).setSelected((Boolean) validValue);
+                        ((RadioButton) control).setSelected(validValue instanceof Boolean
+                                ? (Boolean) validValue : Boolean.parseBoolean(String.valueOf(validValue)));
                     }
                 } catch (NoSuchFieldException e) {
                     // Field might have been renamed or removed, ignore
@@ -2791,8 +3133,16 @@ public class ModernMainController implements StatusReporter {
         }
     }
 
-    @Override
     public void addToHistory(String operation, java.util.Map<String, String> details) {
+        java.util.List<com.cryptoforge.model.OperationDetail> list = new java.util.ArrayList<>();
+        if (details != null) {
+            details.forEach((k, v) -> list.add(com.cryptoforge.model.OperationDetail.publicDetail(k, v)));
+        }
+        addToHistory(operation, list);
+    }
+
+    @Override
+    public void addToHistory(String operation, java.util.List<com.cryptoforge.model.OperationDetail> details) {
         // Capture current state when adding to history
         java.util.Map<String, Object> state = captureUIState();
 
@@ -2808,6 +3158,7 @@ public class ModernMainController implements StatusReporter {
         }
 
         com.cryptoforge.model.HistoryItem item = new com.cryptoforge.model.HistoryItem(operation, detailsJson, state);
+        item.setStructuredDetails(details);
 
         if (historyManager == null) {
             initializeHistory();
@@ -2925,10 +3276,31 @@ public class ModernMainController implements StatusReporter {
                     "-fx-background-color: #e53935; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;");
             clearBtn.setOnAction(e -> handleClearHistory());
 
+            Button exportRecipeBtn = new Button("Export Recipe");
+            exportRecipeBtn.setStyle("-fx-background-color: #0288d1; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;");
+            exportRecipeBtn.setTooltip(new Tooltip("Select an operation first. Exports its non-secret settings as a reusable JSON recipe."));
+            exportRecipeBtn.setOnAction(e -> exportSelectedHistoryRecipe());
+
+            Button importRecipeBtn = new Button("Import Recipe");
+            importRecipeBtn.setStyle("-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;");
+            importRecipeBtn.setOnAction(e -> importOperationRecipe());
+
+            Button compareBtn = new Button("Compare");
+            compareBtn.setStyle("-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;");
+            compareBtn.setOnAction(e -> handleCompareHistory());
+
+            ComboBox<com.cryptoforge.model.SecretVisibility> visibilityCombo = new ComboBox<>();
+            visibilityCombo.getItems().setAll(com.cryptoforge.model.SecretVisibility.values());
+            visibilityCombo.setValue(com.cryptoforge.model.AppSettings.getInstance().getSecretVisibility());
+            visibilityCombo.setOnAction(e -> {
+                com.cryptoforge.model.AppSettings.getInstance().setSecretVisibility(visibilityCombo.getValue());
+            });
+            visibilityCombo.setTooltip(new Tooltip("Global secret visibility (affects recipe export)"));
+
             HBox header = new HBox(10, title);
             javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
             HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-            header.getChildren().addAll(spacer, clearBtn);
+            header.getChildren().addAll(spacer, new Label("Secrets:"), visibilityCombo, compareBtn, importRecipeBtn, exportRecipeBtn, clearBtn);
             header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
             // SplitPane for Table and Details
@@ -2938,6 +3310,7 @@ public class ModernMainController implements StatusReporter {
 
             // TABLE
             historyTable = new TableView<>();
+            historyTable.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
             historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
             TableColumn<com.cryptoforge.model.HistoryItem, String> timeCol = new TableColumn<>("Time");
@@ -2973,28 +3346,51 @@ public class ModernMainController implements StatusReporter {
             historyTable.getColumns().add(opCol);
             historyTable.getColumns().add(actionCol);
 
-            // DETAILS
+            // DETAILS TABLE
             VBox detailsBox = new VBox(5);
             Label detailsLabel = new Label("Operation Details");
             detailsLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #b0bec5;");
 
-            TextArea detailsArea = new TextArea();
-            detailsArea.setEditable(false);
-            detailsArea.setStyle(
-                    "-fx-font-family: 'Monospaced'; -fx-text-fill: #333333; -fx-font-size: 13px;");
-            VBox.setVgrow(detailsArea, javafx.scene.layout.Priority.ALWAYS);
-            detailsArea.setPromptText("Select an operation to view details...");
+            TableView<com.cryptoforge.model.OperationDetail> detailsTable = new TableView<>();
+            detailsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            VBox.setVgrow(detailsTable, javafx.scene.layout.Priority.ALWAYS);
 
-            detailsBox.getChildren().addAll(detailsLabel, detailsArea);
+            TableColumn<com.cryptoforge.model.OperationDetail, String> nameCol = new TableColumn<>("Property");
+            nameCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().name()));
+
+            TableColumn<com.cryptoforge.model.OperationDetail, String> valCol = new TableColumn<>("Value");
+            valCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().value()));
+
+            TableColumn<com.cryptoforge.model.OperationDetail, String> classCol = new TableColumn<>("Class");
+            classCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().classification().name()));
+            classCol.setMaxWidth(80);
+
+            detailsTable.getColumns().addAll(nameCol, valCol, classCol);
+
+            detailsBox.getChildren().addAll(detailsLabel, detailsTable);
 
             // Selection Listener
             historyTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal != null) {
-                    detailsArea.setText(newVal.getDetails());
+                if (newVal != null && newVal.getStructuredDetails() != null) {
+                    detailsTable.getItems().setAll(newVal.getStructuredDetails());
+                } else if (newVal != null && newVal.getDetails() != null && !newVal.getDetails().isEmpty()) {
+                    // Fallback for old history string json
+                    detailsTable.getItems().clear();
+                    detailsTable.getItems().add(com.cryptoforge.model.OperationDetail.publicDetail("Raw JSON", newVal.getDetails()));
                 } else {
-                    detailsArea.clear();
+                    detailsTable.getItems().clear();
                 }
             });
+
+            exportRecipeBtn.disableProperty().bind(javafx.beans.binding.Bindings.createBooleanBinding(
+                () -> historyTable.getSelectionModel().getSelectedItems().size() != 1,
+                historyTable.getSelectionModel().getSelectedItems()
+            ));
+
+            compareBtn.disableProperty().bind(javafx.beans.binding.Bindings.createBooleanBinding(
+                () -> historyTable.getSelectionModel().getSelectedItems().size() != 2,
+                historyTable.getSelectionModel().getSelectedItems()
+            ));
 
             splitPane.getItems().addAll(historyTable, detailsBox);
             splitPane.setDividerPositions(0.6); // Table takes 60%
@@ -3018,6 +3414,118 @@ public class ModernMainController implements StatusReporter {
                 historyTable.getItems().setAll(historyManager.getHistoryItems());
             }
         }
+    }
+
+    private void exportSelectedHistoryRecipe() {
+        if (historyTable == null || historyTable.getSelectionModel().getSelectedItem() == null) {
+            showError("Recipe Export", "Select a history entry first."); return;
+        }
+        com.cryptoforge.model.HistoryItem item = historyTable.getSelectionModel().getSelectedItem();
+        com.cryptoforge.model.OperationRecipe recipe;
+        if (item.getStructuredDetails() != null && !item.getStructuredDetails().isEmpty()) {
+            recipe = new com.cryptoforge.model.OperationRecipe(
+                item.getOperation(),
+                item.getStructuredDetails(),
+                com.cryptoforge.model.AppSettings.getInstance().getSecretVisibility()
+            );
+        } else {
+            showError("Recipe Export", "Legacy operations without structured details cannot be exported securely.");
+            return;
+        }
+        FileChooser chooser = new FileChooser(); chooser.setTitle("Export Operation Recipe"); chooser.setInitialFileName("cryptocarver-recipe.json");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Recipe JSON", "*.json"));
+        File file = chooser.showSaveDialog(mainPane == null || mainPane.getScene() == null ? null : mainPane.getScene().getWindow()); if (file == null) return;
+        try {
+            java.nio.file.Files.writeString(file.toPath(), recipe.toJson(), java.nio.charset.StandardCharsets.UTF_8);
+            updateStatus("Recipe exported: " + file.getName());
+            Alert confirmation = new Alert(Alert.AlertType.INFORMATION, "Recipe saved to:\n" + file.getAbsolutePath(), ButtonType.OK);
+            confirmation.setTitle("Recipe exported"); confirmation.setHeaderText("Reusable non-secret configuration saved"); confirmation.showAndWait();
+        }
+        catch (Exception e) { showError("Recipe Export", "Unable to write recipe: " + e.getMessage()); }
+    }
+
+    private void handleCompareHistory() {
+        java.util.List<com.cryptoforge.model.HistoryItem> selected = historyTable.getSelectionModel().getSelectedItems();
+        if (selected == null || selected.size() != 2) return;
+
+        java.util.List<com.cryptoforge.utils.HistoryComparator.DiffEntry> diffs = com.cryptoforge.utils.HistoryComparator.compare(selected.get(0), selected.get(1));
+
+        TableView<com.cryptoforge.utils.HistoryComparator.DiffEntry> diffTable = new TableView<>();
+        diffTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<com.cryptoforge.utils.HistoryComparator.DiffEntry, String> keyCol = new TableColumn<>("Property");
+        keyCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().key));
+
+        TableColumn<com.cryptoforge.utils.HistoryComparator.DiffEntry, String> val1Col = new TableColumn<>("Item 1\n" + selected.get(0).getTimestamp());
+        val1Col.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().value1));
+
+        TableColumn<com.cryptoforge.utils.HistoryComparator.DiffEntry, String> val2Col = new TableColumn<>("Item 2\n" + selected.get(1).getTimestamp());
+        val2Col.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().value2));
+
+        diffTable.getColumns().addAll(keyCol, val1Col, val2Col);
+        diffTable.getItems().setAll(diffs);
+
+        // Highlight differences
+        diffTable.setRowFactory(tv -> new javafx.scene.control.TableRow<com.cryptoforge.utils.HistoryComparator.DiffEntry>() {
+            @Override
+            protected void updateItem(com.cryptoforge.utils.HistoryComparator.DiffEntry item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item == null || empty) {
+                    setStyle("");
+                } else if (item.isDifferent) {
+                    setStyle("-fx-background-color: #ffcdd2;");
+                } else {
+                    setStyle("");
+                }
+            }
+        });
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("History Comparison");
+        alert.setHeaderText("Comparing:\n1) " + selected.get(0).getOperation() + "\n2) " + selected.get(1).getOperation());
+
+        VBox content = new VBox(diffTable);
+        content.setPrefSize(600, 400);
+        alert.getDialogPane().setContent(content);
+        alert.showAndWait();
+    }
+
+    private void importOperationRecipe() {
+        FileChooser chooser = new FileChooser(); chooser.setTitle("Import Operation Recipe");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Recipe JSON", "*.json"));
+        File file = chooser.showOpenDialog(null); if (file == null) return;
+        try {
+            com.cryptoforge.model.OperationRecipe recipe = com.cryptoforge.model.OperationRecipe.fromJson(
+                    java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8));
+            java.util.Set<String> variableNames = new java.util.TreeSet<>();
+            recipe.parameters().values().forEach(value -> variableNames.addAll(
+                    com.cryptoforge.model.RecipeVariables.referencedVariables(value)));
+            java.util.Map<String, String> variables = new java.util.LinkedHashMap<>();
+            for (String name : variableNames) {
+                javafx.scene.control.TextInputDialog variableDialog = new javafx.scene.control.TextInputDialog();
+                variableDialog.setTitle("Recipe variable");
+                variableDialog.setHeaderText("Value required for ${" + name + "}");
+                variableDialog.setContentText(name + ":");
+                java.util.Optional<String> value = variableDialog.showAndWait();
+                if (value.isEmpty()) return;
+                variables.put(name, value.get());
+            }
+            java.util.Map<String, String> resolvedParameters = new java.util.LinkedHashMap<>();
+            recipe.parameters().forEach((key, value) -> resolvedParameters.put(key,
+                    com.cryptoforge.model.RecipeVariables.resolve(value, variables)));
+            StringBuilder preview = new StringBuilder("Operation: ").append(recipe.operation())
+                    .append("\nVersion: ").append(recipe.version()).append("\nCreated: ").append(recipe.createdAt()).append("\n\nParameters:\n");
+            resolvedParameters.forEach((key, value) -> preview.append(key).append(" = ").append(value).append('\n'));
+            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION, preview.toString(), ButtonType.CANCEL, ButtonType.OK);
+            confirmation.setTitle("Load Operation Recipe");
+            confirmation.setHeaderText("Review recipe before restoring its state");
+            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            java.util.Map<String, Object> state = new java.util.LinkedHashMap<>();
+            resolvedParameters.forEach((key, value) -> { if (!"historyTimestamp".equals(key)) state.put(key, value); });
+            restoreUIState(state);
+            handleItemSelected(recipe.operation());
+            updateStatus("Recipe loaded: " + recipe.operation() + " (review inputs before running)");
+        } catch (Exception e) { showError("Recipe Import", "Invalid or unsupported recipe: " + e.getMessage()); }
     }
 
     private void showSymmetricKeys() {
@@ -3383,17 +3891,15 @@ public class ModernMainController implements StatusReporter {
 
     @Override
     public void updateStatus(String message) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> updateStatus(message));
+            return;
+        }
+        if (statusLabel == null) return;
         statusLabel.setText(message);
-
-        // Clear status after 3 seconds
-        new Thread(() -> {
-            try {
-                Thread.sleep(3000);
-                Platform.runLater(() -> statusLabel.setText("Ready"));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        statusResetTimer.stop();
+        statusResetTimer.setOnFinished(event -> statusLabel.setText("Ready"));
+        statusResetTimer.playFromStart();
     }
 
     // Menu handlers
@@ -3574,8 +4080,8 @@ public class ModernMainController implements StatusReporter {
     @FXML
     private void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About CryptoForge");
-        alert.setHeaderText("CryptoForge");
+        alert.setTitle("About CryptoCarver");
+        alert.setHeaderText("CryptoCarver");
         alert.setContentText("A comprehensive tool for cryptographic operations.\n\n" +
                 "Version: 1.0.0\n" +
                 "Author: Felipe Rodríguez Fonte\n" +
@@ -3587,6 +4093,32 @@ public class ModernMainController implements StatusReporter {
                 "- JOSE (JWT, JWE, JWK)\n" +
                 "- ASN.1 Analysis");
         alert.showAndWait();
+    }
+
+    @FXML
+    private void handleDiagnostics() {
+        String diagnosticText = AppDiagnostics.report();
+        TextArea report = new TextArea(diagnosticText);
+        report.setEditable(false);
+        report.setWrapText(false);
+        report.setPrefColumnCount(68);
+        report.setPrefRowCount(15);
+        report.setStyle("-fx-font-family: monospace; -fx-font-size: 11px;");
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("CryptoCarver diagnostics");
+        alert.setHeaderText("Runtime information (safe to copy)");
+        alert.getDialogPane().setContent(report);
+        alert.getDialogPane().setPrefWidth(680);
+        ButtonType copyButton = new ButtonType("Copy report", ButtonBar.ButtonData.LEFT);
+        alert.getDialogPane().getButtonTypes().add(copyButton);
+        java.util.Optional<ButtonType> selected = alert.showAndWait();
+        if (selected.isPresent() && selected.get() == copyButton) {
+            javafx.scene.input.ClipboardContent clipboard = new javafx.scene.input.ClipboardContent();
+            clipboard.putString(diagnosticText);
+            javafx.scene.input.Clipboard.getSystemClipboard().setContent(clipboard);
+            updateStatus("Diagnostics copied to clipboard");
+        }
     }
 
     // ============================================================================
@@ -3615,17 +4147,6 @@ public class ModernMainController implements StatusReporter {
     private void handleSymmetricEncrypt() {
         if (cipherController != null) {
             cipherController.handleSymmetricEncrypt();
-
-            // Inspector update handled by CipherController
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", symmetricAlgorithmCombo.getValue());
-            details.put("Mode", cipherModeCombo.getValue());
-            details.put("Padding", paddingCombo.getValue());
-            if (cipherInputArea != null)
-                details.put("Input", cipherInputArea.getText());
-            if (cipherOutputArea != null)
-                details.put("Output", cipherOutputArea.getText());
-            addToHistory("Symmetric Encrypt", details);
         }
     }
 
@@ -3633,17 +4154,6 @@ public class ModernMainController implements StatusReporter {
     private void handleSymmetricDecrypt() {
         if (cipherController != null) {
             cipherController.handleSymmetricDecrypt();
-
-            // Inspector update handled by CipherController
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", symmetricAlgorithmCombo.getValue());
-            details.put("Mode", cipherModeCombo.getValue());
-            details.put("Padding", paddingCombo.getValue());
-            if (cipherInputArea != null)
-                details.put("Input", cipherInputArea.getText());
-            if (cipherOutputArea != null)
-                details.put("Output", cipherOutputArea.getText());
-            addToHistory("Symmetric Decrypt", details);
         }
     }
 
@@ -3660,16 +4170,6 @@ public class ModernMainController implements StatusReporter {
             }
 
             cipherController.handleAsymmetricEncrypt();
-
-            // Inspector update handled by CipherController
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", "RSA"); // Currently hardcoded or implied by tab
-            details.put("Padding", rsaPaddingCombo.getValue());
-            if (cipherInputArea != null)
-                details.put("Input", cipherInputArea.getText());
-            if (cipherOutputArea != null)
-                details.put("Output", cipherOutputArea.getText());
-            addToHistory("Asymmetric Encrypt", details);
         }
     }
 
@@ -3686,16 +4186,6 @@ public class ModernMainController implements StatusReporter {
             }
 
             cipherController.handleAsymmetricDecrypt();
-
-            // Inspector update handled by CipherController
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", "RSA");
-            details.put("Padding", rsaPaddingCombo.getValue());
-            if (cipherInputArea != null)
-                details.put("Input", cipherInputArea.getText());
-            if (cipherOutputArea != null)
-                details.put("Output", cipherOutputArea.getText());
-            addToHistory("Asymmetric Decrypt", details);
         }
     }
 
@@ -3712,7 +4202,8 @@ public class ModernMainController implements StatusReporter {
         alert.showAndWait();
     }
 
-    protected void showInfo(String title, String message) {
+    @Override
+    public void showInfo(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
@@ -3734,10 +4225,19 @@ public class ModernMainController implements StatusReporter {
                     modModulusField, modResultArea);
             genericController.initializeFileConverter(fileInputPathField, fileOutputPathField, fileInputFormatCombo,
                     fileOutputFormatCombo, fileEncodingCombo, fileResultArea);
+            genericController.setFileComparePathField(fileComparePathField);
+            enableFileDrop(fileInputPathField);
+            enableFileDrop(fileOutputPathField);
+            enableFileDrop(fileComparePathField);
             genericController.setUUIDOutputField(uuidOutputField);
             genericController.setRandomOutputArea(randomOutputArea);
             genericController.setCheckDigitOutputArea(checkDigitOutput);
             genericController.setManualConversionFields(manualInputArea, manualOutputArea);
+            genericController.initializeEBCDICConverter(ebcdicConversionCheck, ebcdicDirectionCombo, ebcdicCodePageCombo);
+            endianWordSizeCombo.getItems().setAll("16 bits (2 bytes)", "32 bits (4 bytes)", "64 bits (8 bytes)", "128 bits (16 bytes)");
+            endianWordSizeCombo.setValue("32 bits (4 bytes)");
+            compressionFormatCombo.getItems().setAll("gzip", "zlib", "deflate");
+            compressionFormatCombo.setValue("gzip");
 
             // Initialize combos
             // We need to populate the combos. unique GenericController methods or manual
@@ -3754,6 +4254,17 @@ public class ModernMainController implements StatusReporter {
             hashAlgorithmCombo.getItems().setAll("MD5", "SHA-1", "SHA-256", "SHA-384", "SHA-512", "SHA3-256",
                     "SHA3-512", "RIPEMD160");
             hashAlgorithmCombo.getSelectionModel().select("SHA-256");
+
+            if (batchInputFormatCombo != null) {
+                batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
+                batchInputFormatCombo.setValue("CSV");
+                batchOperationCombo.getItems().setAll("SHA-256 (UTF-8 → Hex)", "UTF-8 → Base64URL", "Base64URL → UTF-8");
+                batchOperationCombo.setValue("SHA-256 (UTF-8 → Hex)");
+                batchExportFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
+                batchExportFormatCombo.setValue("CSV");
+                batchProgressBar.setProgress(0);
+                batchStatusLabel.setText("Ready — provide CSV or JSON Lines (.jsonl) with an input column.");
+            }
 
             // Random Format
             randomFormatCombo.getItems().setAll("Hex", "Base64", "Decimal");
@@ -3801,7 +4312,7 @@ public class ModernMainController implements StatusReporter {
             System.out.println("GenericController initialized (Modern UI)");
         } catch (Exception e) {
             System.err.println("Error initializing GenericController: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Modern UI operation failed", e);
             showError("Initialization Error", "Failed to initialize Generic tab: " + e.getMessage());
         }
     }
@@ -3812,26 +4323,116 @@ public class ModernMainController implements StatusReporter {
         if (genericController != null) {
             String input = hashInputArea.getText();
             String algo = hashAlgorithmCombo.getValue();
-
-            String inputFormat = inputFormatCombo.getValue();
-            genericController.calculateHash(input, inputFormat, algo, hashOutputArea);
-
-            // Inspector
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", algo);
-            byte[] inBytes = input.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            // Output is hex (usually), so output bytes is length / 2
-            String outHex = hashOutputArea.getText();
-            byte[] outBytes = new byte[outHex.length() / 2]; // Rough approx if valid hex
-
-            updateInspector("Hashing", inBytes, outBytes, details);
-
-            // Add to history with details
-            details.put("Input", input);
-            details.put("Output", outHex);
-            addToHistory("Hashing: " + algo, details);
+            genericController.calculateHash(input, inputFormatCombo.getValue(), algo, hashOutputArea);
         }
     }
+
+    @FXML
+    private void handleBrowseBatchInput() {
+        FileChooser chooser = new FileChooser(); chooser.setTitle("Load Batch Input");
+        chooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Batch data", "*.csv", "*.jsonl", "*.ndjson", "*.txt"),
+                new FileChooser.ExtensionFilter("All files", "*.*"));
+        File file = chooser.showOpenDialog(mainPane == null || mainPane.getScene() == null ? null : mainPane.getScene().getWindow());
+        if (file == null) return;
+        try {
+            batchInputArea.setText(Files.readString(file.toPath(), StandardCharsets.UTF_8));
+            String lower = file.getName().toLowerCase(java.util.Locale.ROOT);
+            batchInputFormatCombo.setValue(lower.endsWith(".csv") ? "CSV" : "JSON Lines (.jsonl)");
+            batchStatusLabel.setText("Loaded " + file.getName() + ". Review the input before running.");
+        } catch (IOException e) { showError("Batch input", "Unable to read file: " + e.getMessage()); }
+    }
+
+    @FXML
+    private void handleRunBatch() {
+        if (activeBatchTask != null && activeBatchTask.isRunning()) { showError("Batch Runner", "A batch is already running."); return; }
+        final java.util.List<java.util.Map<String, String>> rows;
+        try {
+            rows = isCsvBatchFormat(batchInputFormatCombo.getValue())
+                    ? com.cryptoforge.model.batch.BatchInputCodec.parseCsv(batchInputArea.getText())
+                    : com.cryptoforge.model.batch.BatchInputCodec.parseJsonLines(batchInputArea.getText());
+            if (rows.isEmpty()) throw new IllegalArgumentException("No batch rows found");
+            if (rows.stream().anyMatch(row -> !row.containsKey("input"))) throw new IllegalArgumentException("Every row must contain an input field");
+        } catch (Exception e) { showError("Batch input", e.getMessage()); return; }
+        final String operation = batchOperationCombo.getValue();
+        javafx.concurrent.Task<com.cryptoforge.model.batch.BatchRunner.Report> task = new javafx.concurrent.Task<>() {
+            @Override protected com.cryptoforge.model.batch.BatchRunner.Report call() {
+                return com.cryptoforge.model.batch.BatchRunner.run(rows, row -> runSafeBatchOperation(operation, row), this::isCancelled,
+                        (completed, total) -> updateProgress(completed, total));
+            }
+        };
+        activeBatchTask = task;
+        batchProgressBar.progressProperty().unbind(); batchProgressBar.progressProperty().bind(task.progressProperty());
+        batchStatusLabel.setText("Processing " + rows.size() + " rows…"); batchResultArea.clear();
+        task.setOnSucceeded(event -> {
+            batchProgressBar.progressProperty().unbind(); batchProgressBar.setProgress(1);
+            lastBatchReport = task.getValue();
+            batchResultArea.setText(renderBatchReport(lastBatchReport));
+            batchStatusLabel.setText("Completed: " + lastBatchReport.succeeded() + " succeeded, " + lastBatchReport.failed() + " failed.");
+            java.util.Map<String, String> batchDetails = new java.util.LinkedHashMap<>();
+            batchDetails.put("Operation", operation);
+            batchDetails.put("Rows", String.valueOf(lastBatchReport.results().size()));
+            batchDetails.put("Succeeded", String.valueOf(lastBatchReport.succeeded()));
+            batchDetails.put("Failed", String.valueOf(lastBatchReport.failed()));
+            addToHistory("Batch Runner", batchDetails);
+            activeBatchTask = null;
+        });
+        task.setOnCancelled(event -> {
+            batchProgressBar.progressProperty().unbind(); batchStatusLabel.setText("Batch cancelled. Completed rows were discarded; run again to obtain an exportable report.");
+            activeBatchTask = null;
+        });
+        task.setOnFailed(event -> {
+            batchProgressBar.progressProperty().unbind(); Throwable error = task.getException();
+            batchStatusLabel.setText("Batch failed: " + (error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
+        });
+        Thread worker = new Thread(task, "cryptocarver-batch-runner"); worker.setDaemon(true); worker.start();
+    }
+
+    private java.util.Map<String, String> runSafeBatchOperation(String operation, java.util.Map<String, String> row) throws Exception {
+        String input = row.get("input");
+        if (input == null) throw new IllegalArgumentException("input field is required");
+        if ("SHA-256 (UTF-8 → Hex)".equals(operation)) {
+            return java.util.Map.of("result", com.cryptoforge.model.SafeTransformations.sha256(input));
+        }
+        if ("UTF-8 → Base64URL".equals(operation)) return java.util.Map.of("result", com.cryptoforge.model.SafeTransformations.encodeBase64Url(input));
+        if ("Base64URL → UTF-8".equals(operation)) return java.util.Map.of("result", com.cryptoforge.model.SafeTransformations.decodeBase64Url(input));
+        throw new IllegalArgumentException("Unsupported batch operation: " + operation);
+    }
+
+    private String renderBatchReport(com.cryptoforge.model.batch.BatchRunner.Report report) {
+        StringBuilder text = new StringBuilder("Rows processed: ").append(report.results().size()).append("\nSucceeded: ")
+                .append(report.succeeded()).append("\nFailed: ").append(report.failed()).append("\n\n");
+        int displayed = Math.min(50, report.results().size());
+        for (int i = 0; i < displayed; i++) {
+            com.cryptoforge.model.batch.BatchRunner.RowResult row = report.results().get(i);
+            text.append("#").append(row.rowNumber()).append(" ").append(row.succeeded() ? "OK  " : "ERR ")
+                    .append(row.succeeded() ? row.output().getOrDefault("result", "") : row.error()).append('\n');
+        }
+        if (report.results().size() > displayed) text.append("… ").append(report.results().size() - displayed).append(" additional rows; export the report for all results.\n");
+        return text.toString();
+    }
+
+    @FXML
+    private void handleCancelBatch() {
+        if (activeBatchTask != null && activeBatchTask.isRunning()) { activeBatchTask.cancel(); batchStatusLabel.setText("Cancelling batch…"); }
+        else batchStatusLabel.setText("No batch is running.");
+    }
+
+    @FXML
+    private void handleExportBatchResults() {
+        if (lastBatchReport == null) { showError("Batch export", "Run a batch successfully before exporting its results."); return; }
+        boolean csv = isCsvBatchFormat(batchExportFormatCombo.getValue());
+        FileChooser chooser = new FileChooser(); chooser.setTitle("Export Batch Results");
+        chooser.setInitialFileName(csv ? "cryptocarver-batch-results.csv" : "cryptocarver-batch-results.jsonl");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(csv ? "CSV" : "JSON Lines", csv ? "*.csv" : "*.jsonl"));
+        File file = chooser.showSaveDialog(mainPane == null || mainPane.getScene() == null ? null : mainPane.getScene().getWindow()); if (file == null) return;
+        try {
+            String output = csv ? com.cryptoforge.model.batch.BatchOutputCodec.toCsv(lastBatchReport)
+                    : com.cryptoforge.model.batch.BatchOutputCodec.toJsonLines(lastBatchReport);
+            Files.writeString(file.toPath(), output, StandardCharsets.UTF_8); batchStatusLabel.setText("Batch results exported: " + file.getName());
+        } catch (IOException e) { showError("Batch export", "Unable to save results: " + e.getMessage()); }
+    }
+
+    private boolean isCsvBatchFormat(String format) { return "CSV".equals(format); }
 
     @FXML
     private void handleManualConvert() {
@@ -3840,26 +4441,121 @@ public class ModernMainController implements StatusReporter {
             String inFmt = inputFormatCombo.getValue();
             String outFmt = outputFormatCombo.getValue();
 
-            genericController.convert(input, inFmt, outFmt, manualOutputArea);
+            boolean decodeEBCDIC = ebcdicConversionCheck.isSelected();
+            if (decodeEBCDIC) {
+                genericController.convertEBCDIC(input, inFmt, outFmt, ebcdicDirectionCombo.getValue(),
+                        ebcdicCodePageCombo.getValue(), manualOutputArea);
+            } else {
+                genericController.convert(input, inFmt, outFmt, manualOutputArea);
+            }
 
-            // Inspector
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Input Format", inFmt);
-            details.put("Output Format", outFmt);
-            details.put("Input", input);
-            details.put("Output", manualOutputArea.getText());
-
-            byte[] inBytes = input.getBytes(); // Approximation
-            byte[] outBytes = manualOutputArea.getText().getBytes(); // Approximation
-
-            updateInspector("Manual Conversion", inBytes, outBytes, details);
-            addToHistory("Manual Conversion", details);
         }
     }
 
     @FXML
+    private void handleEncodeBase64Url() {
+        if (genericController != null) {
+            genericController.convertBase64Url(manualInputArea.getText(), true, manualOutputArea);
+        }
+    }
+
+    @FXML
+    private void handleDecodeBase64Url() {
+        if (genericController != null) {
+            genericController.convertBase64Url(manualInputArea.getText(), false, manualOutputArea);
+        }
+    }
+
+    @FXML
+    private void handleEncodeBase32() {
+        if (genericController != null) genericController.convertBase32(manualInputArea.getText(), true, manualOutputArea);
+    }
+
+    @FXML
+    private void handleDecodeBase32() {
+        if (genericController != null) genericController.convertBase32(manualInputArea.getText(), false, manualOutputArea);
+    }
+
+    @FXML
+    private void handleConvertEndian() {
+        if (genericController == null) return;
+        String selected = endianWordSizeCombo.getValue();
+        int wordBytes = selected == null ? 4 : Integer.parseInt(selected.replaceAll(".*\\((\\d+) bytes\\)", "$1"));
+        genericController.convertEndian(manualInputArea.getText(), inputFormatCombo.getValue(), outputFormatCombo.getValue(),
+                wordBytes, manualOutputArea);
+    }
+
+    @FXML private void handleAnalyzeBytes() {
+        if (genericController != null) genericController.analyzeBytes(manualInputArea.getText(), inputFormatCombo.getValue(), manualOutputArea);
+    }
+
+    @FXML private void handleEncodeUrl() {
+        if (genericController != null) genericController.convertUrlEncoding(manualInputArea.getText(), true, manualOutputArea);
+    }
+
+    @FXML private void handleDecodeUrl() {
+        if (genericController != null) genericController.convertUrlEncoding(manualInputArea.getText(), false, manualOutputArea);
+    }
+
+    @FXML private void handleXorBuffers() {
+        if (genericController != null) genericController.xorBuffers(manualInputArea.getText(), xorSecondInputArea.getText(),
+                inputFormatCombo.getValue(), outputFormatCombo.getValue(), manualOutputArea);
+    }
+
+    @FXML private void handleCompareBuffers() {
+        if (genericController != null) genericController.compareBuffers(manualInputArea.getText(), xorSecondInputArea.getText(),
+                inputFormatCombo.getValue(), manualOutputArea);
+    }
+
+    @FXML private void handleVisualizeBytes() {
+        if (genericController != null) genericController.visualizeControlCharacters(manualInputArea.getText(),
+                inputFormatCombo.getValue(), manualOutputArea);
+    }
+
+    @FXML private void handleInspectHex() {
+        try {
+            int offset = hexOffsetField.getText().isBlank() ? 0 : Integer.parseInt(hexOffsetField.getText().trim());
+            int length = hexLengthField.getText().isBlank() ? Integer.MAX_VALUE : Integer.parseInt(hexLengthField.getText().trim());
+            int selectionOffset = hexSelectionOffsetField.getText().isBlank() ? -1 : Integer.parseInt(hexSelectionOffsetField.getText().trim());
+            int selectionLength = hexSelectionLengthField.getText().isBlank() ? 0 : Integer.parseInt(hexSelectionLengthField.getText().trim());
+            if (selectionOffset < 0 && selectionLength != 0) throw new NumberFormatException("Selection requires an offset");
+            if (genericController != null) genericController.inspectHex(manualInputArea.getText(), inputFormatCombo.getValue(), offset, length, selectionOffset, selectionLength, manualOutputArea);
+        } catch (NumberFormatException e) {
+            showError("Hex Inspector Error", "Offset and length must be decimal integers");
+        }
+    }
+
+    @FXML private void handleCompressData() {
+        if (genericController != null) genericController.convertCompression(manualInputArea.getText(), inputFormatCombo.getValue(), outputFormatCombo.getValue(), compressionFormatCombo.getValue(), true, manualOutputArea);
+    }
+
+    @FXML private void handleDecompressData() {
+        if (genericController != null) genericController.convertCompression(manualInputArea.getText(), inputFormatCombo.getValue(), outputFormatCombo.getValue(), compressionFormatCombo.getValue(), false, manualOutputArea);
+    }
+
+    @FXML private void handleCompareCharsets() {
+        if (genericController != null) genericController.compareCharsets(manualInputArea.getText(), inputFormatCombo.getValue(), ebcdicCodePageCombo.getValue(), manualOutputArea);
+    }
+
+    @FXML private void handleEncodeBcd() { if (genericController != null) genericController.convertPackedDecimal(manualInputArea.getText(), false, true, manualOutputArea); }
+    @FXML private void handleDecodeBcd() { if (genericController != null) genericController.convertPackedDecimal(manualInputArea.getText(), false, false, manualOutputArea); }
+    @FXML private void handleEncodeComp3() { if (genericController != null) genericController.convertPackedDecimal(manualInputArea.getText(), true, true, manualOutputArea); }
+    @FXML private void handleDecodeComp3() { if (genericController != null) genericController.convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
+
+    @FXML
     private void handleConvertFile() {
         if (genericController != null) {
+            String outputPath = fileOutputPathField == null ? "" : fileOutputPathField.getText().trim();
+            if (!outputPath.isEmpty() && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                confirm.setTitle("Overwrite existing file?");
+                confirm.setHeaderText("The selected output file already exists.");
+                confirm.setContentText(outputPath);
+                if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+                    updateStatus("File conversion cancelled");
+                    return;
+                }
+            }
             genericController.handleFileConvert();
             // Log intent (result is async/file system based, so we log the request)
             java.util.Map<String, String> details = new java.util.HashMap<>();
@@ -3871,6 +4567,31 @@ public class ModernMainController implements StatusReporter {
                 details.put("Output Format", fileOutputFormatCombo.getValue());
             addToHistory("File Conversion", details);
         }
+    }
+
+    @FXML private void handleCompareFiles() { if (genericController != null) genericController.compareFiles(); }
+    @FXML private void handleHashFileStreaming() { if (genericController != null) genericController.hashFileStreaming(); }
+    @FXML private void handlePreviewFileStreaming() { if (genericController != null) genericController.previewFileStreaming(); }
+
+    @FXML private void handleBrowseCompareFile() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select File to Compare");
+        java.io.File file = chooser.showOpenDialog(genericContainer.getScene().getWindow());
+        if (file != null) fileComparePathField.setText(file.getAbsolutePath());
+    }
+
+    private void enableFileDrop(TextField field) {
+        if (field == null) return;
+        field.setOnDragOver(event -> {
+            if (event.getDragboard().hasFiles()) event.acceptTransferModes(javafx.scene.input.TransferMode.COPY);
+            event.consume();
+        });
+        field.setOnDragDropped(event -> {
+            boolean accepted = event.getDragboard().hasFiles() && !event.getDragboard().getFiles().isEmpty();
+            if (accepted) field.setText(event.getDragboard().getFiles().get(0).getAbsolutePath());
+            event.setDropCompleted(accepted);
+            event.consume();
+        });
     }
 
     @FXML
@@ -3897,12 +4618,6 @@ public class ModernMainController implements StatusReporter {
     private void handleGenerateUUID() {
         if (genericController != null) {
             genericController.handleGenerateUUID();
-            // Add history
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Type", "UUID v4");
-            if (uuidOutputField != null)
-                details.put("Output", uuidOutputField.getText());
-            addToHistory("Generate UUID", details);
         }
     }
 
@@ -3910,22 +4625,6 @@ public class ModernMainController implements StatusReporter {
     private void handleGenerateRandom() {
         if (genericController != null) {
             genericController.handleGenerateRandom();
-
-            // Inspector
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Format", randomFormatCombo.getValue());
-            if (randomBytesField != null) {
-                details.put("Requested Bytes", randomBytesField.getText());
-            }
-
-            String output = randomOutputArea.getText();
-            byte[] outBytes = output.getBytes(); // Approx
-
-            // Add output to details
-            details.put("Output", output);
-
-            updateInspector("Random Generation", null, outBytes, details);
-            addToHistory("Random Generation", details);
         }
     }
 
@@ -3937,15 +4636,6 @@ public class ModernMainController implements StatusReporter {
 
             genericController.calculateCheckDigit(input, algo, checkDigitOutput);
 
-            // Inspector
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", algo);
-            details.put("Mode", "Calculate");
-            details.put("Input", input);
-            details.put("Output", checkDigitOutput.getText());
-
-            updateInspector("Check Digits", input.getBytes(), checkDigitOutput.getText().getBytes(), details);
-            addToHistory("Check Digits", details);
         }
     }
 
@@ -3956,14 +4646,6 @@ public class ModernMainController implements StatusReporter {
             String algo = checkDigitAlgorithmCombo.getValue();
 
             genericController.validateCheckDigit(input, algo, checkDigitOutput);
-
-            // Inspector
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", algo);
-            details.put("Mode", "Validate");
-
-            updateInspector("Check Digits", input.getBytes(), checkDigitOutput.getText().getBytes(), details);
-            addToHistory("Check Digits: Validate", details);
         }
     }
 
@@ -3971,26 +4653,6 @@ public class ModernMainController implements StatusReporter {
     private void handleModularCalculate() {
         if (genericController != null) {
             genericController.handleModularCalculate();
-
-            // Inspector
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            if (modOperationCombo != null) {
-                details.put("Operation", modOperationCombo.getValue());
-            }
-            // Inputs are hard to get as they are in GenericController fields (a, b, m)
-            // But we can show the operation at least.
-
-            updateInspector("Modular Arithmetic", null, null, details);
-            // Enrich with inputs if possible
-            if (modOperandAField != null)
-                details.put("Operand A", modOperandAField.getText());
-            if (modOperandBField != null)
-                details.put("Operand B", modOperandBField.getText());
-            if (modModulusField != null)
-                details.put("Modulus", modModulusField.getText());
-            if (modResultArea != null)
-                details.put("Result", modResultArea.getText());
-            addToHistory("Modular Arithmetic", details);
         }
     }
 
@@ -4048,16 +4710,50 @@ public class ModernMainController implements StatusReporter {
         }
     }
 
+    @FXML
+    private void handleFileCipherEncrypt() {
+        if (cipherController != null) cipherController.handleFileCipherEncrypt();
+    }
+
+    @FXML
+    private void handleFileCipherDecrypt() {
+        if (cipherController != null) cipherController.handleFileCipherDecrypt();
+    }
+
+    @FXML
+    private void handleChooseFileCipherSource() {
+        if (cipherController != null) cipherController.chooseFileCipherSource();
+    }
+
+    @FXML
+    private void handleChooseFileCipherDestination() {
+        if (cipherController != null) cipherController.chooseFileCipherDestination();
+    }
+
+    @FXML
+    private void handleChooseFileCipherTag() {
+        if (cipherController != null) cipherController.chooseFileCipherTag();
+    }
+
+    @FXML
+    private void handleGenerateFileCipherNonce() {
+        if (cipherController != null) cipherController.generateFileCipherNonce();
+    }
+
     // ============================================================
     // EVENT HANDLERS - Payments Operations
     // ============================================================
 
     @FXML
+    private void handleInspectEMVTLV() { if (emvController != null) emvController.handleInspectTlv(); }
+
+    @FXML
+    private void handleBuildEMVDOL() { if (emvController != null) emvController.handleBuildDol(); }
+
+    @FXML
     private void handleEncodePinBlock() {
         if (paymentsController != null) {
             paymentsController.handleEncodePinBlock();
-            updateInspector("Encode PIN Block");
-            addToHistory("PIN Block Encoded", new java.util.HashMap<>());
         }
     }
 
@@ -4065,8 +4761,6 @@ public class ModernMainController implements StatusReporter {
     private void handleDecodePinBlock() {
         if (paymentsController != null) {
             paymentsController.handleDecodePinBlock();
-            updateInspector("Decode PIN Block");
-            addToHistory("PIN Block Decoded", new java.util.HashMap<>());
         }
     }
 
@@ -4074,8 +4768,6 @@ public class ModernMainController implements StatusReporter {
     private void handleGenerateCvv() {
         if (paymentsController != null) {
             paymentsController.handleGenerateCvv();
-            updateInspector("Generate CVV");
-            addToHistory("CVV Generated", new java.util.HashMap<>());
         }
     }
 
@@ -4083,8 +4775,6 @@ public class ModernMainController implements StatusReporter {
     private void handleVerifyCvv() {
         if (paymentsController != null) {
             paymentsController.handleVerifyCvv();
-            updateInspector("Verify CVV");
-            addToHistory("CVV Verified", new java.util.HashMap<>());
         }
     }
 
@@ -4092,8 +4782,6 @@ public class ModernMainController implements StatusReporter {
     private void handleEncodeEncryptedPinBlock() {
         if (paymentsController != null) {
             paymentsController.handleEncodeEncryptedPinBlock();
-            updateInspector("Encode Encrypted PIN Block");
-            addToHistory("Encrypted PIN Block Encoded", new java.util.HashMap<>());
         }
     }
 
@@ -4101,8 +4789,6 @@ public class ModernMainController implements StatusReporter {
     private void handleDecodeEncryptedPinBlock() {
         if (paymentsController != null) {
             paymentsController.handleDecodeEncryptedPinBlock();
-            updateInspector("Decode Encrypted PIN Block");
-            addToHistory("Encrypted PIN Block Decoded", new java.util.HashMap<>());
         }
     }
 
@@ -4110,8 +4796,6 @@ public class ModernMainController implements StatusReporter {
     private void handleGenerateIbm3624Pin() {
         if (paymentsController != null) {
             paymentsController.handleGenerateIbm3624Pin();
-            updateInspector("Generate PIN (IBM 3624)");
-            addToHistory("PIN Generated (IBM 3624)", new java.util.HashMap<>());
         }
     }
 
@@ -4119,8 +4803,6 @@ public class ModernMainController implements StatusReporter {
     private void handleVerifyIbm3624Pin() {
         if (paymentsController != null) {
             paymentsController.handleVerifyIbm3624Pin();
-            updateInspector("Verify PIN (IBM 3624)");
-            addToHistory("PIN Verified (IBM 3624)", new java.util.HashMap<>());
         }
     }
 
@@ -4167,6 +4849,14 @@ public class ModernMainController implements StatusReporter {
         if (genericContainer != null) {
             genericContainer.setVisible(false);
             genericContainer.setManaged(false);
+        }
+        if (postQuantumContainer != null) {
+            postQuantumContainer.setVisible(false);
+            postQuantumContainer.setManaged(false);
+        }
+        if (xmlSecurityContainer != null) {
+            xmlSecurityContainer.setVisible(false);
+            xmlSecurityContainer.setManaged(false);
         }
         if (exportHistoryContainer != null) {
             exportHistoryContainer.setVisible(false);
@@ -4478,6 +5168,16 @@ public class ModernMainController implements StatusReporter {
         }
     }
 
+    @FXML
+    public void handleInspectDUKPT() {
+        if (paymentsController != null) paymentsController.handleInspectDukpt();
+    }
+
+    @FXML
+    public void handleAesDukptPinBlock() {
+        if (paymentsController != null) paymentsController.handleAesDukptPinBlock();
+    }
+
     // ============================================================
     // EMV HANDLERS
     // ============================================================
@@ -4594,6 +5294,31 @@ public class ModernMainController implements StatusReporter {
         }
         updateContentHeader("Saved Sessions");
         updateContentSubtitle("Load or manage your saved workspaces");
+    }
+
+    @FXML
+    private void handleClearLabKeyCache() {
+        com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().clear();
+        showInfo("Success", "Lab Key Cache cleared");
+        // refresh combos
+        if (cipherController != null) cipherController.refreshHsmKeys();
+        if (authenticationController != null) authenticationController.refreshHsmKeys();
+    }
+
+    @FXML
+    private void handleSaveSymKeyToHsm() {
+        if (cipherController != null) {
+            cipherController.saveCurrentKeyToHsm();
+            authenticationController.refreshHsmKeys();
+        }
+    }
+
+    @FXML
+    private void handleSaveMacKeyToHsm() {
+        if (authenticationController != null) {
+            authenticationController.saveCurrentKeyToHsm();
+            if (cipherController != null) cipherController.refreshHsmKeys();
+        }
     }
 
     @FXML
@@ -4872,6 +5597,63 @@ public class ModernMainController implements StatusReporter {
             showError("Tool Error", e.getMessage());
         }
     }
+
+    @FXML
+    private void handleByteInspector() {
+        ByteInspectorWindow.show((Stage) mainPane.getScene().getWindow());
+    }
+
+    // ============================================================
+    // POST-QUANTUM HANDLERS
+    // ============================================================
+
+    private void loadPostQuantumContent() {
+        if (postQuantumContainerController != null) {
+            postQuantumContainerController.initModule(this);
+        }
+    }
+
+    private void showPostQuantum() {
+        hideAllContainers();
+        if (postQuantumContainer != null) {
+            postQuantumContainer.setManaged(true);
+            postQuantumContainer.setVisible(true);
+        }
+        if (mainScrollPane != null) mainScrollPane.setVvalue(0);
+    }
+
+    private void expandPQCAccordionPane(String itemName) {
+        if (postQuantumContainerController != null) {
+            postQuantumContainerController.expandAccordionPane(itemName);
+        }
+    }
+
+    // ============================================================
+    // XML SECURITY HANDLERS
+    // ============================================================
+
+    private void loadXMLSecurityContent() {
+        if (xmlSecurityContainerController != null) {
+            xmlSecurityContainerController.initModule(this);
+        }
+    }
+
+    private void showXMLSecurity() {
+        hideAllContainers();
+        if (xmlSecurityContainer != null) {
+            xmlSecurityContainer.setManaged(true);
+            xmlSecurityContainer.setVisible(true);
+        }
+        if (mainScrollPane != null) mainScrollPane.setVvalue(0);
+    }
+
+    private void expandXMLAccordionPane(String itemName) {
+        if (xmlSecurityContainerController != null) {
+            xmlSecurityContainerController.expandAccordionPane(itemName);
+        }
+    }
+
+
 
     private void initJWATable() {
         if (jwaTable == null)

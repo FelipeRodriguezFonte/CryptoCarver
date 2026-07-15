@@ -3,11 +3,13 @@ package com.cryptoforge.ui;
 import com.cryptoforge.crypto.AsymmetricCipher;
 import com.cryptoforge.crypto.AsymmetricKeyOperations;
 import com.cryptoforge.crypto.SymmetricCipher;
-import com.cryptoforge.utils.DataConverter;
-import com.cryptoforge.utils.OperationHistory;
+import com.cryptoforge.crypto.StreamingCipher;
+import com.cryptoforge.model.OperationResult;
+import com.cryptoforge.util.DataConverter;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.stage.FileChooser;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -27,10 +29,22 @@ public class CipherController {
     private ComboBox<String> symmetricAlgorithmCombo;
     private ComboBox<String> cipherModeCombo;
     private ComboBox<String> paddingCombo;
+    private ComboBox<String> symKeySourceCombo;
+    private ComboBox<String> symHsmKeyCombo;
     private TextField symmetricKeyField;
     private TextField ivField;
     private TextField gcmTagField;
     private TextField aadField; // Added AAD field
+
+    // Streaming file cipher UI components
+    private ComboBox<String> fileCipherAlgorithmCombo;
+    private TextField fileCipherSourceField;
+    private TextField fileCipherDestinationField;
+    private TextField fileCipherTagField;
+    private TextField fileCipherKeyField;
+    private TextField fileCipherNonceField;
+    private TextField fileCipherAadField;
+    private TextArea fileCipherResultArea;
 
     // Asymmetric cipher UI components
     private ComboBox<String> rsaPaddingCombo;
@@ -42,6 +56,7 @@ public class CipherController {
     // Key Input Areas (Manual Loading)
     private TextArea publicKeyArea;
     private TextArea privateKeyArea;
+    private final java.util.Set<String> usedAeadNonces = new java.util.HashSet<>();
 
     public CipherController(StatusReporter statusReporter,
             TextArea inputArea,
@@ -189,6 +204,125 @@ public class CipherController {
         symmetricAlgorithmCombo.setOnAction(e -> updateStreamCipherState());
     }
 
+    /** Connects the independent file-cipher panel. */
+    public void setFileCipherFields(ComboBox<String> algorithmCombo, TextField sourceField, TextField destinationField,
+            TextField tagField, TextField keyField, TextField nonceField, TextField aadField, TextArea resultArea) {
+        this.fileCipherAlgorithmCombo = algorithmCombo;
+        this.fileCipherSourceField = sourceField;
+        this.fileCipherDestinationField = destinationField;
+        this.fileCipherTagField = tagField;
+        this.fileCipherKeyField = keyField;
+        this.fileCipherNonceField = nonceField;
+        this.fileCipherAadField = aadField;
+        this.fileCipherResultArea = resultArea;
+        algorithmCombo.getItems().setAll("AES-256-GCM", "AES-256-CTR", "AES-256-CBC", "ChaCha20-Poly1305");
+        algorithmCombo.setValue("AES-256-GCM");
+    }
+
+    public void handleFileCipherEncrypt() {
+        executeFileCipher(true);
+    }
+
+    public void handleFileCipherDecrypt() {
+        executeFileCipher(false);
+    }
+
+    public void chooseFileCipherSource() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select source file");
+        java.io.File selected = chooser.showOpenDialog(null);
+        if (selected != null) fileCipherSourceField.setText(selected.getAbsolutePath());
+    }
+
+    public void chooseFileCipherDestination() {
+        chooseSavePath(fileCipherDestinationField, "Save encrypted/decrypted file", "output.bin");
+    }
+
+    public void chooseFileCipherTag() {
+        chooseSavePath(fileCipherTagField, "Save/load detached AEAD tag", "output.tag");
+    }
+
+    public void generateFileCipherNonce() {
+        if (fileCipherAlgorithmCombo == null) return;
+        String selected = fileCipherAlgorithmCombo.getValue();
+        int length = selected != null && (selected.contains("GCM") || selected.startsWith("ChaCha")) ? 12 : 16;
+        byte[] nonce = new byte[length];
+        new java.security.SecureRandom().nextBytes(nonce);
+        fileCipherNonceField.setText(DataConverter.bytesToHex(nonce));
+        statusReporter.updateStatus("Generated fresh " + length + "-byte IV/nonce for file cipher");
+    }
+
+    private void executeFileCipher(boolean encrypt) {
+        try {
+            FileCipherParameters parameters = readFileCipherParameters();
+            java.nio.file.Path source = java.nio.file.Path.of(fileCipherSourceField.getText().trim());
+            java.nio.file.Path destination = java.nio.file.Path.of(fileCipherDestinationField.getText().trim());
+            if (!java.nio.file.Files.isRegularFile(source)) throw new IllegalArgumentException("Source file does not exist or is not a regular file");
+            if (source.toAbsolutePath().normalize().equals(destination.toAbsolutePath().normalize())) {
+                throw new IllegalArgumentException("Source and output file must be different");
+            }
+            java.nio.file.Path tag = parameters.aead ? requiredPath(fileCipherTagField.getText(), "Tag file path") : null;
+            if (!encrypt && parameters.aead && !java.nio.file.Files.isRegularFile(tag)) {
+                throw new IllegalArgumentException("Detached tag file does not exist");
+            }
+            if (encrypt && parameters.aead) warnIfNonceReused(parameters.algorithm, parameters.mode, parameters.key, parameters.nonce);
+            StreamingCipher.Result result = encrypt
+                    ? StreamingCipher.encrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
+                            parameters.nonce, parameters.aad, tag, com.cryptoforge.util.ProgressMonitor.NO_OP)
+                    : StreamingCipher.decrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
+                            parameters.nonce, parameters.aad, tag, com.cryptoforge.util.ProgressMonitor.NO_OP);
+            String operation = encrypt ? "encrypted" : "decrypted";
+            fileCipherResultArea.setText("File " + operation + " successfully\nAlgorithm: " + fileCipherAlgorithmCombo.getValue()
+                    + "\nInput: " + result.inputBytes() + " bytes\nOutput: " + result.outputBytes() + " bytes"
+                    + (parameters.aead ? "\nAEAD tag: " + tag : ""));
+            java.util.Map<String, String> details = new java.util.HashMap<>();
+            details.put("Algorithm", fileCipherAlgorithmCombo.getValue());
+            details.put("Input bytes", Long.toString(result.inputBytes()));
+            details.put("Output bytes", Long.toString(result.outputBytes()));
+            details.put("Authenticated", Boolean.toString(result.authenticated()));
+            statusReporter.publish(OperationResult.forOperation("File " + (encrypt ? "Encrypt" : "Decrypt"))
+                    .details(details).status("File " + operation + " using " + fileCipherAlgorithmCombo.getValue()).build());
+        } catch (Exception e) {
+            statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
+        }
+    }
+
+    private FileCipherParameters readFileCipherParameters() {
+        String selected = fileCipherAlgorithmCombo.getValue();
+        String algorithm = selected.startsWith("ChaCha") ? "ChaCha20-Poly1305" : "AES-256";
+        String mode = selected.contains("GCM") ? "GCM" : selected.contains("CTR") ? "CTR" : selected.contains("CBC") ? "CBC" : "";
+        byte[] key = requiredHex(fileCipherKeyField.getText(), "Key");
+        byte[] nonce = requiredHex(fileCipherNonceField.getText(), "IV / nonce");
+        byte[] aad = optionalHex(fileCipherAadField.getText(), "AAD");
+        return new FileCipherParameters(algorithm, mode, key, nonce, aad, "GCM".equals(mode) || "ChaCha20-Poly1305".equals(algorithm));
+    }
+
+    private byte[] requiredHex(String value, String label) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " is required");
+        return DataConverter.hexToBytes(value.replaceAll("\\s+", ""));
+    }
+
+    private byte[] optionalHex(String value, String label) {
+        if (value == null || value.isBlank()) return null;
+        try { return DataConverter.hexToBytes(value.replaceAll("\\s+", "")); }
+        catch (Exception e) { throw new IllegalArgumentException(label + " must be hexadecimal"); }
+    }
+
+    private java.nio.file.Path requiredPath(String value, String label) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " is required");
+        return java.nio.file.Path.of(value.trim());
+    }
+
+    private void chooseSavePath(TextField target, String title, String initialFileName) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(title);
+        chooser.setInitialFileName(initialFileName);
+        java.io.File selected = chooser.showSaveDialog(null);
+        if (selected != null) target.setText(selected.getAbsolutePath());
+    }
+
+    private record FileCipherParameters(String algorithm, String mode, byte[] key, byte[] nonce, byte[] aad, boolean aead) { }
+
     /**
      * Set cipher mode ComboBox
      */
@@ -231,6 +365,67 @@ public class CipherController {
     public void setSymmetricKeyField(TextField field) {
         this.symmetricKeyField = field;
         symmetricKeyField.setPromptText("Key (Hex) - e.g., for AES-256: 64 hex characters");
+    }
+
+    public void setSymKeySourceCombo(ComboBox<String> combo) {
+        this.symKeySourceCombo = combo;
+        combo.getItems().addAll("Manual Input", "Simulated HSM");
+        combo.setValue("Manual Input");
+        combo.setOnAction(e -> updateKeySourceVisibility());
+    }
+
+    public void setSymHsmKeyCombo(ComboBox<String> combo) {
+        this.symHsmKeyCombo = combo;
+        refreshHsmKeys();
+    }
+
+    private void updateKeySourceVisibility() {
+        boolean isHsm = "Simulated HSM".equals(symKeySourceCombo.getValue());
+        if (symmetricKeyField != null) {
+            symmetricKeyField.setVisible(!isHsm);
+            symmetricKeyField.setManaged(!isHsm);
+        }
+        if (symHsmKeyCombo != null) {
+            symHsmKeyCombo.setVisible(isHsm);
+            symHsmKeyCombo.setManaged(isHsm);
+        }
+    }
+
+    public void refreshHsmKeys() {
+        if (symHsmKeyCombo != null) {
+            String current = symHsmKeyCombo.getValue();
+            symHsmKeyCombo.getItems().clear();
+            symHsmKeyCombo.getItems().addAll(com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds());
+            if (current != null && symHsmKeyCombo.getItems().contains(current)) {
+                symHsmKeyCombo.setValue(current);
+            } else if (!symHsmKeyCombo.getItems().isEmpty()) {
+                symHsmKeyCombo.setValue(symHsmKeyCombo.getItems().get(0));
+            }
+        }
+    }
+
+    public void saveCurrentKeyToHsm() {
+        try {
+            if (symmetricKeyField == null || symmetricKeyField.getText().trim().isEmpty()) {
+                statusReporter.showError("Save Error", "No key to save");
+                return;
+            }
+            byte[] keyBytes = DataConverter.hexToBytes(symmetricKeyField.getText().trim());
+            String algo = symmetricAlgorithmCombo.getValue();
+            if (algo == null) algo = "AES";
+            javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, algo);
+            com.cryptoforge.crypto.hsm.KeyMaterial km = com.cryptoforge.crypto.hsm.KeyMaterialFactory.fromSecretKey(
+                null, secretKey, 
+                com.cryptoforge.crypto.hsm.KeyExportability.NON_EXPORTABLE, 
+                java.util.Set.of(com.cryptoforge.crypto.hsm.KeyUsage.ENCRYPT, com.cryptoforge.crypto.hsm.KeyUsage.DECRYPT)
+            );
+            com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
+            statusReporter.showInfo("Success", "Key saved to Lab Cache as " + km.getId());
+            refreshHsmKeys();
+            symKeySourceCombo.setValue("Simulated HSM");
+        } catch (Exception e) {
+            statusReporter.showError("Save Error", "Failed to save key: " + e.getMessage());
+        }
     }
 
     /**
@@ -299,6 +494,23 @@ public class CipherController {
         rsaPaddingCombo.setValue("RSA/ECB/PKCS1Padding");
     }
 
+    private byte[] getSymmetricKey(com.cryptoforge.crypto.hsm.KeyUsage usage) {
+        if (symKeySourceCombo != null && "Simulated HSM".equals(symKeySourceCombo.getValue())) {
+            String keyId = symHsmKeyCombo.getValue();
+            if (keyId == null || keyId.isEmpty()) {
+                throw new IllegalArgumentException("Please select a key from the Lab Cache");
+            }
+            java.security.Key k = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().getRawKeyForInternalUse(keyId, usage);
+            return k.getEncoded();
+        } else {
+            String keyHex = symmetricKeyField.getText().trim();
+            if (keyHex.isEmpty()) {
+                throw new IllegalArgumentException("Please enter symmetric key in hexadecimal");
+            }
+            return DataConverter.hexToBytes(keyHex);
+        }
+    }
+
     /**
      * Handle symmetric encryption
      */
@@ -316,13 +528,7 @@ public class CipherController {
             String padding = paddingCombo.getValue();
 
             // Get key
-            String keyHex = symmetricKeyField.getText().trim();
-            if (keyHex.isEmpty()) {
-                statusReporter.showError("Key Error", "Please enter encryption key in hexadecimal");
-                return;
-            }
-
-            byte[] key = DataConverter.hexToBytes(keyHex);
+            byte[] key = getSymmetricKey(com.cryptoforge.crypto.hsm.KeyUsage.ENCRYPT);
 
             // Handle stream ciphers separately
             if (algorithm.equals("Salsa20")) {
@@ -364,6 +570,8 @@ public class CipherController {
                 }
             }
 
+            warnIfNonceReused(algorithm, mode, key, iv);
+
             // Encrypt with block cipher
             byte[] ciphertext = SymmetricCipher.encrypt(plaintext, key, algorithm, mode, padding, iv, aadBytes);
 
@@ -375,10 +583,6 @@ public class CipherController {
                 setOutputData(ciphertext);
             }
 
-            statusReporter.updateStatus(String.format("Encrypted using %s/%s/%s",
-                    algorithm, mode, padding));
-
-            // Update Inspector
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", algorithm);
             details.put("Mode", mode);
@@ -386,26 +590,33 @@ public class CipherController {
             if (symmetricKeyField != null) {
                 details.put("Key Size", (symmetricKeyField.getText().trim().length() * 4) + " bits");
             }
-            statusReporter.updateInspector("Symmetric Encrypt", plaintext, ciphertext, details);
-
-            // Add to history
-            String output = mode.equalsIgnoreCase("GCM")
-                    ? outputArea.getText().substring(0, Math.min(100, outputArea.getText().length()))
-                    : DataConverter.bytesToHex(ciphertext).substring(0,
-                            Math.min(100, DataConverter.bytesToHex(ciphertext).length()));
-
-            OperationHistory.getInstance().addOperation(
-                    "Cipher",
-                    "Encrypt - " + algorithm + "/" + mode,
-                    DataConverter.bytesToHex(plaintext).substring(0,
-                            Math.min(50, DataConverter.bytesToHex(plaintext).length())),
-                    output);
+            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
+                    .input(plaintext).output(ciphertext).details(details)
+                    .status(String.format("Encrypted using %s/%s/%s", algorithm, mode, padding)).build());
 
         } catch (IllegalArgumentException e) {
             statusReporter.showError("Validation Error", e.getMessage());
         } catch (Exception e) {
             statusReporter.showError("Encryption Error",
                     "Error encrypting data: " + e.getMessage());
+        }
+    }
+
+    private void warnIfNonceReused(String algorithm, String mode, byte[] key, byte[] iv) {
+        boolean aead = "GCM".equalsIgnoreCase(mode)
+                || "ChaCha20-Poly1305".equals(algorithm)
+                || "XChaCha20-Poly1305".equals(algorithm);
+        if (!aead || iv == null) return;
+        try {
+            byte[] fingerprint = java.security.MessageDigest.getInstance("SHA-256").digest(
+                    java.nio.ByteBuffer.allocate(key.length + iv.length).put(key).put(iv).array());
+            String id = DataConverter.bytesToHex(fingerprint);
+            if (!usedAeadNonces.add(id)) {
+                statusReporter.showInfo("Nonce reuse warning",
+                        "This IV/nonce has already been used with the same key in this session. Generate a fresh value before encrypting.");
+            }
+        } catch (java.security.NoSuchAlgorithmException ignored) {
+            // SHA-256 is mandatory in the Java runtime; no warning is preferable to blocking encryption.
         }
     }
 
@@ -426,13 +637,7 @@ public class CipherController {
             String padding = paddingCombo.getValue();
 
             // Get key
-            String keyHex = symmetricKeyField.getText().trim();
-            if (keyHex.isEmpty()) {
-                statusReporter.showError("Key Error", "Please enter decryption key in hexadecimal");
-                return;
-            }
-
-            byte[] key = DataConverter.hexToBytes(keyHex);
+            byte[] key = getSymmetricKey(com.cryptoforge.crypto.hsm.KeyUsage.DECRYPT);
 
             // Handle stream ciphers separately
             if (algorithm.equals("Salsa20")) {
@@ -504,28 +709,13 @@ public class CipherController {
                 setOutputData(plaintext);
             }
 
-            statusReporter.updateStatus(String.format("Decrypted using %s/%s/%s",
-                    algorithm, mode, padding));
-
-            // Update Inspector
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", algorithm);
             details.put("Mode", mode);
             details.put("Padding", padding);
-            statusReporter.updateInspector("Symmetric Decrypt", ciphertext, plaintext, details);
-
-            // Add to history
-            String output = mode.equalsIgnoreCase("GCM")
-                    ? outputArea.getText().substring(0, Math.min(100, outputArea.getText().length()))
-                    : DataConverter.bytesToHex(plaintext).substring(0,
-                            Math.min(100, DataConverter.bytesToHex(plaintext).length()));
-
-            OperationHistory.getInstance().addOperation(
-                    "Cipher",
-                    "Decrypt - " + algorithm + "/" + mode,
-                    DataConverter.bytesToHex(ciphertext).substring(0,
-                            Math.min(50, DataConverter.bytesToHex(ciphertext).length())),
-                    output);
+            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
+                    .input(ciphertext).output(plaintext).details(details)
+                    .status(String.format("Decrypted using %s/%s/%s", algorithm, mode, padding)).build());
 
         } catch (IllegalArgumentException e) {
             statusReporter.showError("Validation Error", e.getMessage());
@@ -633,8 +823,6 @@ public class CipherController {
             }
 
             outputArea.setText(output);
-            outputArea.setText(output);
-            statusReporter.updateStatus("RSA encryption successful (" + padding + ")");
 
             // Update Inspector
             java.util.Map<String, String> details = new java.util.HashMap<>();
@@ -644,13 +832,9 @@ public class CipherController {
                 details.put("Key Size",
                         ((java.security.interfaces.RSAPublicKey) currentPublicKey).getModulus().bitLength() + " bits");
             }
-            statusReporter.updateInspector("Asymmetric Encrypt", plaintext, ciphertext, details);
-
-            OperationHistory.getInstance().addOperation(
-                    "Cipher",
-                    "RSA Encrypt - " + padding,
-                    inputFormat + ": " + inputText.substring(0, Math.min(30, inputText.length())),
-                    outputFormat + ": " + output.substring(0, Math.min(50, output.length())));
+            statusReporter.publish(OperationResult.forOperation("Asymmetric Encrypt")
+                    .input(plaintext).output(ciphertext).details(details)
+                    .status("RSA encryption successful (" + padding + ")").build());
 
         } catch (IllegalArgumentException e) {
             statusReporter.showError("Validation Error", e.getMessage());
@@ -735,9 +919,6 @@ public class CipherController {
             }
 
             outputArea.setText(output);
-            statusReporter.updateStatus("RSA decryption successful (" + padding + ")");
-
-            // Update Inspector
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", "RSA");
             details.put("Padding", padding);
@@ -746,14 +927,9 @@ public class CipherController {
                         ((java.security.interfaces.RSAPrivateKey) currentPrivateKey).getModulus().bitLength()
                                 + " bits");
             }
-            statusReporter.updateInspector("Asymmetric Decrypt", ciphertext, plaintext, details);
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Cipher",
-                    "RSA Decrypt - " + padding,
-                    inputFormat + ": " + inputText.substring(0, Math.min(30, inputText.length())),
-                    outputFormat + ": " + output.substring(0, Math.min(50, output.length())));
+            statusReporter.publish(OperationResult.forOperation("Asymmetric Decrypt")
+                    .input(ciphertext).output(plaintext).details(details)
+                    .status("RSA decryption successful (" + padding + ")").build());
 
         } catch (Exception e) {
             statusReporter.showError("Decryption Error",

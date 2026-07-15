@@ -7,8 +7,12 @@ import org.bouncycastle.crypto.engines.DESEngine;
 import org.bouncycastle.crypto.engines.DESedeEngine;
 import org.bouncycastle.crypto.macs.CBCBlockCipherMac;
 import org.bouncycastle.crypto.macs.CMac;
+import org.bouncycastle.crypto.macs.GMac;
 import org.bouncycastle.crypto.macs.ISO9797Alg3Mac;
+import org.bouncycastle.crypto.macs.Poly1305;
+import org.bouncycastle.crypto.modes.GCMBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -58,6 +62,10 @@ public class MACOperations {
      * @return MAC value
      */
     public static byte[] generate(byte[] data, byte[] key, String algorithm) throws Exception {
+        return generate(data, key, algorithm, com.cryptoforge.util.ProgressMonitor.NO_OP);
+    }
+
+    public static byte[] generate(byte[] data, byte[] key, String algorithm, com.cryptoforge.util.ProgressMonitor monitor) throws Exception {
         validateKeySize(key, algorithm);
 
         if (algorithm.startsWith("HMAC-")) {
@@ -82,6 +90,79 @@ public class MACOperations {
     }
 
     /**
+     * Generate MAC for a file via streaming
+     */
+    public static byte[] generate(java.nio.file.Path file, byte[] key, String algorithm) throws Exception {
+        return generate(file, key, algorithm, com.cryptoforge.util.ProgressMonitor.NO_OP);
+    }
+
+    /**
+     * Generate MAC for a file via streaming with progress monitoring
+     */
+    public static byte[] generate(java.nio.file.Path file, byte[] key, String algorithm, com.cryptoforge.util.ProgressMonitor monitor) throws Exception {
+        if (monitor == null) monitor = com.cryptoforge.util.ProgressMonitor.NO_OP;
+        validateKeySize(key, algorithm);
+
+        boolean isJceHmac = algorithm.startsWith("HMAC-");
+        javax.crypto.Mac jceMac = null;
+        org.bouncycastle.crypto.Mac bcMac = null;
+
+        if (isJceHmac) {
+            String javaAlgorithm = algorithm;
+            jceMac = javax.crypto.Mac.getInstance(javaAlgorithm, "BC");
+            SecretKeySpec keySpec = new SecretKeySpec(key, javaAlgorithm);
+            jceMac.init(keySpec);
+        } else {
+            if (algorithm.startsWith("CMAC-")) {
+                BlockCipher cipher = algorithm.equals("CMAC-AES") ? new AESEngine() : new DESedeEngine();
+                bcMac = new CMac(cipher);
+                bcMac.init(new KeyParameter(key));
+            } else if (algorithm.startsWith("CBC-MAC-") || algorithm.equals("ISO-9797-1-ALG1") || algorithm.equals("ANSI-X9.9")) {
+                BlockCipher cipher;
+                String effectiveAlg = algorithm.equals("ISO-9797-1-ALG1") || algorithm.equals("ANSI-X9.9") ? "CBC-MAC-DES" : algorithm;
+                if (effectiveAlg.equals("CBC-MAC-DES") || effectiveAlg.equals("Retail-MAC-DES")) cipher = new DESEngine();
+                else if (effectiveAlg.equals("CBC-MAC-3DES") || effectiveAlg.equals("Retail-MAC-3DES")) cipher = new DESedeEngine();
+                else cipher = new AESEngine();
+                bcMac = new CBCBlockCipherMac(cipher);
+                bcMac.init(new KeyParameter(key));
+            } else if (algorithm.equals("ANSI-X9.19") || algorithm.equals("AS2805.4.1")) {
+                bcMac = new ISO9797Alg3Mac(new DESEngine());
+                bcMac.init(new KeyParameter(key));
+            } else if (algorithm.startsWith("Retail-MAC-")) {
+                BlockCipher cipher = algorithm.equals("Retail-MAC-DES") ? new DESEngine() : new DESedeEngine();
+                bcMac = new CBCBlockCipherMac(cipher);
+                bcMac.init(new KeyParameter(key));
+            } else {
+                throw new IllegalArgumentException("Unknown MAC algorithm: " + algorithm);
+            }
+        }
+
+        long bytesProcessed = 0;
+        long totalBytes = java.nio.file.Files.size(file);
+        try (var input = new java.io.BufferedInputStream(java.nio.file.Files.newInputStream(file), StreamingFileTools.getBufferSize())) {
+            byte[] buffer = new byte[StreamingFileTools.getBufferSize()];
+            for (int read; (read = input.read(buffer)) != -1;) {
+                if (monitor.isCancelled()) throw new java.util.concurrent.CancellationException("MAC operation cancelled");
+                if (isJceHmac) {
+                    jceMac.update(buffer, 0, read);
+                } else {
+                    bcMac.update(buffer, 0, read);
+                }
+                bytesProcessed += read;
+                monitor.updateProgress(bytesProcessed, totalBytes);
+            }
+        }
+
+        if (isJceHmac) {
+            return jceMac.doFinal();
+        } else {
+            byte[] output = new byte[bcMac.getMacSize()];
+            bcMac.doFinal(output, 0);
+            return output;
+        }
+    }
+
+    /**
      * Verify MAC value
      * 
      * @param data      Original data
@@ -92,17 +173,46 @@ public class MACOperations {
      */
     public static boolean verify(byte[] data, byte[] mac, byte[] key, String algorithm) throws Exception {
         byte[] computed = generate(data, key, algorithm);
+        return constantTimeEquals(computed, mac);
+    }
 
-        if (computed.length != mac.length) {
-            return false;
+    /** Generates AES-GMAC, authenticating data as AAD without encrypting a payload. */
+    public static byte[] generateGmac(byte[] data, byte[] aesKey, byte[] iv) {
+        validateAesKey(aesKey, "GMAC");
+        if (iv == null || iv.length < 12) {
+            throw new IllegalArgumentException("GMAC IV must be at least 12 bytes; use a unique 12-byte nonce by default");
         }
+        GMac gmac = new GMac(new GCMBlockCipher(new AESEngine()));
+        gmac.init(new ParametersWithIV(new KeyParameter(aesKey), iv));
+        if (data != null) gmac.update(data, 0, data.length);
+        byte[] output = new byte[gmac.getMacSize()];
+        gmac.doFinal(output, 0);
+        return output;
+    }
 
-        // Constant-time comparison to prevent timing attacks
-        int result = 0;
-        for (int i = 0; i < computed.length; i++) {
-            result |= computed[i] ^ mac[i];
+    /** Generates a one-time-key Poly1305 tag (RFC 8439). */
+    public static byte[] generatePoly1305(byte[] data, byte[] oneTimeKey) {
+        if (oneTimeKey == null || oneTimeKey.length != 32) {
+            throw new IllegalArgumentException("Poly1305 requires a unique 32-byte one-time key");
         }
+        Poly1305 poly1305 = new Poly1305();
+        poly1305.init(new KeyParameter(oneTimeKey));
+        if (data != null) poly1305.update(data, 0, data.length);
+        byte[] output = new byte[poly1305.getMacSize()];
+        poly1305.doFinal(output, 0);
+        return output;
+    }
 
+    /** Constant-time byte comparison, including the length check. */
+    public static boolean constantTimeEquals(byte[] expected, byte[] actual) {
+        if (expected == null || actual == null) return false;
+        int result = expected.length ^ actual.length;
+        int max = Math.max(expected.length, actual.length);
+        for (int i = 0; i < max; i++) {
+            byte left = i < expected.length ? expected[i] : 0;
+            byte right = i < actual.length ? actual[i] : 0;
+            result |= left ^ right;
+        }
         return result == 0;
     }
 
@@ -323,6 +433,12 @@ public class MACOperations {
             if (keyBits != 64) {
                 throw new IllegalArgumentException("DES key must be 64 bits (8 bytes). Got: " + keyBits + " bits");
             }
+        }
+    }
+
+    private static void validateAesKey(byte[] key, String operation) {
+        if (key == null || (key.length != 16 && key.length != 24 && key.length != 32)) {
+            throw new IllegalArgumentException(operation + " AES key must be 16, 24, or 32 bytes");
         }
     }
 

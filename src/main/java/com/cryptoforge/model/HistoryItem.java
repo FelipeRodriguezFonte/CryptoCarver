@@ -12,6 +12,7 @@ public class HistoryItem implements Serializable {
     private String timestamp;
     private String operation;
     private String details;
+    private java.util.List<OperationDetail> structuredDetails;
     private Map<String, Object> uiState;
 
     public HistoryItem(String operation, String details, Map<String, Object> uiState) {
@@ -20,6 +21,14 @@ public class HistoryItem implements Serializable {
         this.operation = operation;
         this.details = details;
         this.uiState = uiState;
+    }
+
+    public void setStructuredDetails(java.util.List<OperationDetail> structuredDetails) {
+        this.structuredDetails = structuredDetails;
+    }
+
+    public java.util.List<OperationDetail> getStructuredDetails() {
+        return structuredDetails;
     }
 
     public String getId() {

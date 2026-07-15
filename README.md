@@ -1,4 +1,4 @@
-# CryptoForge 🔐
+# CryptoCarver 🔐
 
 **Calculadora Criptográfica Avanzada con Interfaz Gráfica**
 
@@ -10,9 +10,9 @@
 
 ## 📖 Sobre el Proyecto
 
-CryptoForge es una aplicación que llevaba años queriendo desarrollar. Gracias a la ayuda de **Gemini** y **Claude AI**, finalmente he podido llevarla a cabo en tiempo récord.
+CryptoCarver es una aplicación que llevaba años queriendo desarrollar. Gracias a la ayuda de **Gemini** y **Claude AI**, finalmente he podido llevarla a cabo en tiempo récord.
 
-### ¿Por qué CryptoForge?
+### ¿Por qué CryptoCarver?
 
 El objetivo principal es **facilitar cálculos criptográficos** a todos aquellos profesionales y estudiantes que necesitan realizarlos de forma **rápida y sencilla**, sin tener que estar codificando cada vez que necesitan:
 
@@ -103,7 +103,7 @@ La idea es ir **evolucionando las capacidades** de la herramienta según las nec
 
 ```bash
 # Clonar o descargar el proyecto
-cd CryptoForge
+cd CryptoCarver
 
 # Compilar con Maven
 mvn clean package
@@ -114,7 +114,40 @@ mvn javafx:run
 
 O ejecutar el JAR directamente:
 ```bash
-java -jar target/crypto-calculator-1.0.0.jar
+java -jar target/cryptocarver-2.3.0.jar
+```
+
+Consulta la [guía operativa](docs/GUIA_OPERATIVA_CRYPTOCARVER.md) para EBCDIC, XAdES/TSA, histórico, diagnóstico y logs.
+
+### CLI local
+
+La CLI usa las mismas operaciones locales y deterministas que el Batch Runner. No inicia
+la interfaz ni un servicio de red.
+
+```bash
+# macOS / Linux
+./run-cli.sh sha256 abc
+./run-cli.sh base64url-encode "hola"
+./run-cli.sh batch sha256 datos.csv --format csv --output jsonl
+```
+
+```bat
+:: Windows (cmd.exe)
+run-cli.bat sha256 abc
+run-cli.bat batch sha256 datos.csv --format csv --output jsonl
+```
+
+Los lotes CSV/JSON Lines (`.jsonl`) requieren una columna o propiedad `input`. JSON Lines
+no es un documento JSON único: contiene un objeto JSON independiente por línea. Añade
+`--json` a las operaciones individuales para obtener una respuesta JSON estable.
+
+La API local es opcional y se inicia explícitamente desde la CLI; solo escucha en
+`127.0.0.1` y no acepta claves ni operaciones de cifrado:
+
+```bash
+./run-cli.sh serve --port 8787
+curl -s http://127.0.0.1:8787/health
+curl -s -X POST http://127.0.0.1:8787/v1/sha256 -H 'Content-Type: application/json' -d '{"input":"abc"}'
 ```
 
 ---
@@ -176,7 +209,7 @@ Este proyecto no habría sido posible sin:
 
 ### Estructura del Proyecto
 ```
-CryptoForge/
+CryptoCarver/
 ├── src/
 │   ├── main/
 │   │   ├── java/com/cryptoforge/

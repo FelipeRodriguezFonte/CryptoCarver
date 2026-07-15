@@ -26,7 +26,7 @@ public class CryptoCalculatorModern extends Application {
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
 
             // Setup stage
-            primaryStage.setTitle("CryptoForge");
+            primaryStage.setTitle("CryptoCarver");
             primaryStage.setScene(scene);
             primaryStage.setMinWidth(1200);
             primaryStage.setMinHeight(700);
@@ -80,7 +80,7 @@ public class CryptoCalculatorModern extends Application {
 
     public static void main(String[] args) {
         System.out.println("================================================");
-        System.out.println("  CryptoForge - Modern UI Prototype");
+        System.out.println("  CryptoCarver - Modern UI");
         System.out.println("================================================");
         System.out.println();
 

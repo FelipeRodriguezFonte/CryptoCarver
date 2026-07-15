@@ -1,13 +1,25 @@
 package com.cryptoforge.ui;
 
 import com.cryptoforge.crypto.CheckDigitCalculator;
+import com.cryptoforge.crypto.EBCDICConverter;
 import com.cryptoforge.crypto.HashOperations;
 import com.cryptoforge.crypto.ModularArithmetic;
 import com.cryptoforge.crypto.UUIDGenerator;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.crypto.ByteStatistics;
+import com.cryptoforge.crypto.HexInspector;
+import com.cryptoforge.crypto.StreamingFileTools;
+import com.cryptoforge.crypto.CompressionCodec;
+import com.cryptoforge.crypto.CharsetInspector;
+import com.cryptoforge.model.OperationResult;
+import com.cryptoforge.model.AppSettings;
+import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.FileConverter;
 import com.cryptoforge.utils.OperationHistory;
+import com.cryptoforge.codec.ByteFormat;
+import com.cryptoforge.codec.CodecRegistry;
+import com.cryptoforge.codec.CodecException;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
@@ -53,6 +65,7 @@ public class GenericController {
     private TextInputControl checkDigitOutputArea;
 
     private TextArea fileResultArea;
+    private TextField fileComparePathField;
 
     // Manual Conversion Components
     private TextArea manualInputArea;
@@ -142,6 +155,313 @@ public class GenericController {
         this.manualOutputArea = output;
     }
 
+    public void initializeEBCDICConverter(CheckBox enabledCheck, ComboBox<String> directionCombo,
+                                         ComboBox<String> codePageCombo) {
+        codePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
+        AppSettings settings = AppSettings.getInstance();
+        String savedCodePage = settings.getEBCDICCodePage();
+        codePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
+                ? savedCodePage : "IBM037 — US/Canada");
+        directionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
+        String savedDirection = settings.getEBCDICDirection();
+        directionCombo.setValue(directionCombo.getItems().contains(savedDirection)
+                ? savedDirection : "Decode EBCDIC → UTF-8");
+        codePageCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICCodePage(selected));
+        directionCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICDirection(selected));
+        directionCombo.disableProperty().bind(enabledCheck.selectedProperty().not());
+        codePageCombo.disableProperty().bind(enabledCheck.selectedProperty().not());
+    }
+
+    public void convertEBCDIC(String input, String inputFormat, String outputFormat, String direction, String codePage,
+                              TextInputControl targetOutputArea) {
+        try {
+            byte[] sourceBytes = parseInput(input, inputFormat);
+            if (sourceBytes == null) throw new IllegalArgumentException("Input cannot be empty");
+            boolean encoding = "Encode UTF-8 → EBCDIC".equals(direction);
+            String operation = encoding ? "UTF-8 → EBCDIC Conversion" : "EBCDIC → UTF-8 Conversion";
+            byte[] resultBytes;
+            String result;
+
+            if (encoding) {
+                if ("Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)) {
+                    throw new IllegalArgumentException("Choose Hexadecimal, Base64, Binary or Decimal to represent EBCDIC bytes");
+                }
+                resultBytes = EBCDICConverter.encode(DataConverter.utf8BytesToString(sourceBytes), codePage);
+                result = formatBytes(resultBytes, outputFormat);
+            } else {
+                String decodedText = EBCDICConverter.decode(sourceBytes, codePage);
+                resultBytes = decodedText.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                result = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
+                        ? decodedText : formatBytes(resultBytes, outputFormat);
+            }
+            targetOutputArea.setText(result);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Input Format", inputFormat);
+            details.put("Output Format", outputFormat);
+            details.put("EBCDIC Code Page", codePage);
+            details.put("Direction", direction);
+            statusReporter.publish(OperationResult.forOperation(operation)
+                    .input(sourceBytes).output(resultBytes).details(details)
+                    .status(operation + " using " + codePage).build());
+        } catch (Exception e) {
+            statusReporter.showError("EBCDIC Conversion Error", e.getMessage());
+        }
+    }
+
+    private String formatBytes(byte[] bytes, String outputFormat) {
+        try {
+            return CodecRegistry.getInstance().encode(bytes, ByteFormat.fromDisplayName(outputFormat));
+        } catch (IllegalArgumentException | CodecException e) {
+            throw new IllegalArgumentException("Unsupported or invalid byte output format: " + outputFormat, e);
+        }
+    }
+
+    /** Explicit Base64URL text conversion for JOSE-style payloads. */
+    public void convertBase64Url(String input, boolean encode, TextInputControl targetOutputArea) {
+        try {
+            byte[] inputBytes;
+            byte[] outputBytes;
+            String output;
+            if (encode) {
+                inputBytes = CodecRegistry.getInstance().decode(input, ByteFormat.TEXT_UTF8);
+                output = CodecRegistry.getInstance().encode(inputBytes, ByteFormat.BASE64_URL);
+                outputBytes = CodecRegistry.getInstance().decode(output, ByteFormat.TEXT_ASCII);
+            } else {
+                inputBytes = CodecRegistry.getInstance().decode(input, ByteFormat.BASE64_URL);
+                output = CodecRegistry.getInstance().encode(inputBytes, ByteFormat.TEXT_UTF8);
+                outputBytes = inputBytes;
+            }
+            targetOutputArea.setText(output);
+            String operation = encode ? "UTF-8 → Base64URL" : "Base64URL → UTF-8";
+            statusReporter.publish(OperationResult.forOperation(operation)
+                    .input(encode ? inputBytes : input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
+                    .output(outputBytes).detail("Padding", "None (RFC 4648 / JOSE)")
+                    .status(operation + " conversion completed").build());
+        } catch (Exception e) {
+            statusReporter.showError("Base64URL Conversion Error", e.getMessage());
+        }
+    }
+
+    /** Explicit Base32 conversion for RFC 4648 interoperability. */
+    public void convertBase32(String input, boolean encode, TextInputControl targetOutputArea) {
+        try {
+            byte[] decoded;
+            String output;
+            if (encode) {
+                decoded = CodecRegistry.getInstance().decode(input, ByteFormat.TEXT_UTF8);
+                output = CodecRegistry.getInstance().encode(decoded, ByteFormat.BASE32);
+            } else {
+                decoded = CodecRegistry.getInstance().decode(input, ByteFormat.BASE32);
+                output = CodecRegistry.getInstance().encode(decoded, ByteFormat.TEXT_UTF8);
+            }
+            targetOutputArea.setText(output);
+            String operation = encode ? "UTF-8 → Base32" : "Base32 → UTF-8";
+            statusReporter.publish(OperationResult.forOperation(operation)
+                    .input(encode ? input.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                            : input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
+                    .output(encode ? output.getBytes(java.nio.charset.StandardCharsets.US_ASCII) : decoded)
+                    .detail("Standard", "RFC 4648 Base32")
+                    .status(operation + " conversion completed").build());
+        } catch (Exception e) {
+            statusReporter.showError("Base32 Conversion Error", e.getMessage());
+        }
+    }
+
+    /** Reverses byte order inside each fixed-width integer (16/32/64/128 bits). */
+    public void convertEndian(String input, String inputFormat, String outputFormat, int wordBytes,
+                              TextInputControl targetOutputArea) {
+        try {
+            byte[] source = parseInput(input, inputFormat);
+            if (source == null || source.length == 0) throw new IllegalArgumentException("Input cannot be empty");
+            if (wordBytes != 2 && wordBytes != 4 && wordBytes != 8 && wordBytes != 16) {
+                throw new IllegalArgumentException("Word size must be 2, 4, 8 or 16 bytes");
+            }
+            if (source.length % wordBytes != 0) {
+                throw new IllegalArgumentException("Input length must be a multiple of " + wordBytes + " bytes");
+            }
+            byte[] converted = source.clone();
+            for (int offset = 0; offset < converted.length; offset += wordBytes) {
+                for (int left = offset, right = offset + wordBytes - 1; left < right; left++, right--) {
+                    byte temporary = converted[left];
+                    converted[left] = converted[right];
+                    converted[right] = temporary;
+                }
+            }
+            String output = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
+                    ? DataConverter.utf8BytesToString(converted) : formatBytes(converted, outputFormat);
+            targetOutputArea.setText(output);
+            statusReporter.publish(OperationResult.forOperation("Endian Conversion")
+                    .input(source).output(converted)
+                    .detail("Word Size", (wordBytes * 8) + " bits")
+                    .detail("Input Format", inputFormat).detail("Output Format", outputFormat)
+                    .status("Byte order converted for " + (wordBytes * 8) + "-bit words").build());
+        } catch (Exception e) {
+            statusReporter.showError("Endian Conversion Error", e.getMessage());
+        }
+    }
+
+    public void analyzeBytes(String input, String inputFormat, TextInputControl targetOutputArea) {
+        try {
+            byte[] bytes = parseInput(input, inputFormat);
+            String result = ByteStatistics.analyze(bytes);
+            targetOutputArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Byte Statistics")
+                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("Input Format", inputFormat).status("Byte statistics calculated").build());
+        } catch (Exception e) {
+            statusReporter.showError("Byte Analysis Error", e.getMessage());
+        }
+    }
+
+    public void convertUrlEncoding(String input, boolean encode, TextInputControl targetOutputArea) {
+        try {
+            String result = encode
+                    ? java.net.URLEncoder.encode(input, java.nio.charset.StandardCharsets.UTF_8)
+                    : java.net.URLDecoder.decode(input, java.nio.charset.StandardCharsets.UTF_8);
+            targetOutputArea.setText(result);
+            String operation = encode ? "UTF-8 → URL Encoding" : "URL Encoding → UTF-8";
+            statusReporter.publish(OperationResult.forOperation(operation)
+                    .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .status(operation + " completed").build());
+        } catch (Exception e) {
+            statusReporter.showError("URL Encoding Error", e.getMessage());
+        }
+    }
+
+    public void xorBuffers(String left, String right, String inputFormat, String outputFormat,
+                           TextInputControl targetOutputArea) {
+        try {
+            byte[] leftBytes = parseInput(left, inputFormat);
+            byte[] rightBytes = parseInput(right, inputFormat);
+            byte[] result = DataConverter.xor(leftBytes, rightBytes);
+            String rendered = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
+                    ? DataConverter.utf8BytesToString(result) : formatBytes(result, outputFormat);
+            targetOutputArea.setText(rendered);
+            statusReporter.publish(OperationResult.forOperation("XOR Buffers")
+                    .input(leftBytes).output(result)
+                    .detail("Input Format", inputFormat).detail("Output Format", outputFormat)
+                    .detail("Second Buffer Bytes", String.valueOf(rightBytes.length))
+                    .status("XOR completed for " + result.length + " bytes").build());
+        } catch (Exception e) {
+            statusReporter.showError("XOR Error", e.getMessage());
+        }
+    }
+
+    public void compareBuffers(String left, String right, String inputFormat, TextInputControl targetOutputArea) {
+        try {
+            byte[] leftBytes = parseInput(left, inputFormat);
+            byte[] rightBytes = parseInput(right, inputFormat);
+            int limit = Math.min(leftBytes.length, rightBytes.length);
+            int firstDifference = -1;
+            for (int i = 0; i < limit; i++) {
+                if (leftBytes[i] != rightBytes[i]) { firstDifference = i; break; }
+            }
+            boolean equal = firstDifference < 0 && leftBytes.length == rightBytes.length;
+            String result;
+            if (equal) {
+                result = "Buffers are identical (" + leftBytes.length + " bytes).";
+            } else if (firstDifference >= 0) {
+                result = String.format("Buffers differ at offset %d (0x%X): left=%02X, right=%02X", firstDifference,
+                        firstDifference, leftBytes[firstDifference] & 0xFF, rightBytes[firstDifference] & 0xFF);
+            } else {
+                result = "Buffers match for " + limit + " bytes but lengths differ: left=" + leftBytes.length
+                        + ", right=" + rightBytes.length;
+            }
+            targetOutputArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Compare Buffers")
+                    .input(leftBytes).output(rightBytes)
+                    .detail("Input Format", inputFormat).detail("Left Length", String.valueOf(leftBytes.length))
+                    .detail("Right Length", String.valueOf(rightBytes.length))
+                    .detail("Result", equal ? "IDENTICAL" : "DIFFERENT")
+                    .status(equal ? "Buffers are identical" : "Buffers differ").build());
+        } catch (Exception e) {
+            statusReporter.showError("Buffer Comparison Error", e.getMessage());
+        }
+    }
+
+    public void visualizeControlCharacters(String input, String inputFormat, TextInputControl targetOutputArea) {
+        try {
+            byte[] bytes = parseInput(input, inputFormat);
+            String result = DataConverter.visualizeBytes(bytes);
+            targetOutputArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Visualize Control Characters")
+                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("Input Format", inputFormat).status("Control characters visualized").build());
+        } catch (Exception e) {
+            statusReporter.showError("Byte Visualization Error", e.getMessage());
+        }
+    }
+
+    public void inspectHex(String input, String inputFormat, int offset, int length, TextInputControl targetOutputArea) {
+        inspectHex(input, inputFormat, offset, length, -1, 0, targetOutputArea);
+    }
+
+    public void inspectHex(String input, String inputFormat, int offset, int length, int selectionOffset, int selectionLength, TextInputControl targetOutputArea) {
+        try {
+            byte[] bytes = parseInput(input, inputFormat);
+            String result = HexInspector.render(bytes, offset, length, selectionOffset, selectionLength);
+            targetOutputArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Hexadecimal Inspector")
+                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("Offset", String.valueOf(offset)).detail("Length", String.valueOf(length))
+                    .detail("Selection", selectionOffset < 0 ? "None" : selectionOffset + "+" + selectionLength)
+                    .status("Hexadecimal view rendered").build());
+        } catch (Exception e) {
+            statusReporter.showError("Hex Inspector Error", e.getMessage());
+        }
+    }
+
+    public void convertCompression(String input, String inputFormat, String outputFormat, String format, boolean compress,
+                                  TextInputControl targetOutputArea) {
+        try {
+            byte[] source = parseInput(input, inputFormat);
+            byte[] converted = compress ? CompressionCodec.compress(source, format) : CompressionCodec.decompress(source, format);
+            String output = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
+                    ? DataConverter.utf8BytesToString(converted) : formatBytes(converted, outputFormat);
+            targetOutputArea.setText(output);
+            String operation = (compress ? "Compress " : "Decompress ") + format;
+            statusReporter.publish(OperationResult.forOperation(operation)
+                    .input(source).output(converted).detail("Format", format)
+                    .detail("Input Bytes", String.valueOf(source.length)).detail("Output Bytes", String.valueOf(converted.length))
+                    .status(operation + " completed").build());
+        } catch (Exception e) {
+            statusReporter.showError("Compression Error", e.getMessage());
+        }
+    }
+
+    public void compareCharsets(String input, String inputFormat, String ebcdicCodePage, TextInputControl targetOutputArea) {
+        try {
+            byte[] bytes = parseInput(input, inputFormat);
+            String result = CharsetInspector.compare(bytes, ebcdicCodePage);
+            targetOutputArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Charset Comparison")
+                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("EBCDIC Code Page", ebcdicCodePage).status("Charset interpretations generated").build());
+        } catch (Exception e) { statusReporter.showError("Charset Comparison Error", e.getMessage()); }
+    }
+
+    public void convertPackedDecimal(String input, boolean comp3, boolean encode, TextInputControl targetOutputArea) {
+        try {
+            byte[] bytes;
+            String output;
+            if (encode) {
+                bytes = comp3 ? DataConverter.decimalToComp3(input) : DataConverter.decimalToPackedBcd(input);
+                output = DataConverter.bytesToHex(bytes);
+            } else {
+                bytes = DataConverter.hexToBytes(input);
+                output = comp3 ? DataConverter.comp3ToDecimal(bytes) : DataConverter.packedBcdToDecimal(bytes);
+            }
+            targetOutputArea.setText(output);
+            String name = comp3 ? "COMP-3" : "Packed BCD";
+            String operation = encode ? "Decimal → " + name : name + " → Decimal";
+            statusReporter.publish(OperationResult.forOperation(operation)
+                    .input(encode ? input.getBytes(java.nio.charset.StandardCharsets.US_ASCII) : bytes)
+                    .output(encode ? bytes : output.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
+                    .status(operation + " conversion completed").build());
+        } catch (Exception e) { statusReporter.showError("Packed Decimal Error", e.getMessage()); }
+    }
+
     /**
      * Calculate hash of input data
      * 
@@ -184,14 +504,10 @@ public class GenericController {
 
             // Display result
             targetOutputArea.setText(hashHex);
-            statusReporter.updateStatus("Hash calculated using " + algorithm);
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Generic",
-                    "Hash - " + algorithm,
-                    input.substring(0, Math.min(100, input.length())),
-                    hashHex);
+            statusReporter.publish(OperationResult.forOperation("Hashing: " + algorithm)
+                    .input(inputData).output(hash)
+                    .detail("Algorithm", algorithm).detail("Input Format", inputFormat)
+                    .status("Hash calculated using " + algorithm).build());
 
         } catch (NoSuchAlgorithmException e) {
             statusReporter.showError("Algorithm Error", "Algorithm not supported: " + e.getMessage());
@@ -242,17 +558,10 @@ public class GenericController {
                     inputData = DataConverter.hexToBytes(cleanHex);
                     break;
                 case "Base64":
-                    try {
-                        inputData = java.util.Base64.getDecoder().decode(input.trim());
-                    } catch (IllegalArgumentException e) {
-                        try {
-                            // Try URL-safe Base64 (common in JWT/JWE)
-                            inputData = java.util.Base64.getUrlDecoder().decode(input.trim());
-                        } catch (IllegalArgumentException ex) {
-                            statusReporter.showError("Input Error", "Invalid Base64 input.");
-                            return;
-                        }
-                    }
+                    inputData = DataConverter.decodeBase64Flexible(input);
+                    break;
+                case "Base64URL":
+                    inputData = DataConverter.decodeBase64Url(input);
                     break;
                 case "Text (UTF-8)":
                 case "Text":
@@ -267,17 +576,7 @@ public class GenericController {
                     }
                     break;
                 case "Decimal":
-                    // Assuming space-separated or comma-separated decimals
-                    try {
-                        String[] parts = input.replaceAll("[,\\s]+", " ").trim().split(" ");
-                        inputData = new byte[parts.length];
-                        for (int i = 0; i < parts.length; i++) {
-                            inputData[i] = (byte) Integer.parseInt(parts[i]);
-                        }
-                    } catch (NumberFormatException e) {
-                        statusReporter.showError("Input Error", "Invalid decimal input: " + e.getMessage());
-                        return;
-                    }
+                    inputData = DataConverter.decimalToBytes(input);
                     break;
                 default:
                     statusReporter.showError("Format Error", "Unsupported input format: " + inputFormat);
@@ -293,6 +592,9 @@ public class GenericController {
                 case "Base64":
                     outputResult = java.util.Base64.getEncoder().encodeToString(inputData);
                     break;
+                case "Base64URL":
+                    outputResult = DataConverter.bytesToBase64Url(inputData);
+                    break;
                 case "Text (UTF-8)":
                 case "Text":
                     outputResult = new String(inputData, java.nio.charset.StandardCharsets.UTF_8);
@@ -301,11 +603,7 @@ public class GenericController {
                     outputResult = DataConverter.bytesToBinary(inputData);
                     break;
                 case "Decimal":
-                    StringBuilder decSb = new StringBuilder();
-                    for (byte b : inputData) {
-                        decSb.append(String.format("%d ", b & 0xFF));
-                    }
-                    outputResult = decSb.toString().trim();
+                    outputResult = DataConverter.bytesToDecimal(inputData);
                     break;
                 default:
                     statusReporter.showError("Format Error", "Unsupported output format: " + outputFormat);
@@ -313,14 +611,10 @@ public class GenericController {
             }
 
             targetOutputArea.setText(outputResult);
-            statusReporter.updateStatus(String.format("Converted from %s to %s", inputFormat, outputFormat));
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Generic",
-                    "Convert - " + inputFormat + " → " + outputFormat,
-                    input.substring(0, Math.min(100, input.length())),
-                    outputResult.substring(0, Math.min(100, outputResult.length())));
+            statusReporter.publish(OperationResult.forOperation("Manual Conversion")
+                    .input(inputData).output(inputData)
+                    .detail("Input Format", inputFormat).detail("Output Format", outputFormat)
+                    .status(String.format("Converted from %s to %s", inputFormat, outputFormat)).build());
 
         } catch (Exception e) {
             statusReporter.showError("Conversion Error", "Error converting data: " + e.getMessage());
@@ -351,10 +645,12 @@ public class GenericController {
             String result = CheckDigitCalculator.formatWithCheckDigit(input, algorithm);
 
             targetOutputArea.setText("Check Digit: " + checkDigit + "\nComplete: " + result);
-            statusReporter.updateStatus("Check digit calculated using " + algorithm);
-
-            OperationHistory.getInstance().addOperation("Generic", "Check Digit - " + algorithm, input,
-                    "Digit: " + checkDigit);
+            statusReporter.publish(OperationResult.forOperation("Check Digits")
+                    .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("Algorithm", algorithm).detail("Mode", "Calculate")
+                    .detail("Check Digit", String.valueOf(checkDigit))
+                    .status("Check digit calculated using " + algorithm).build());
 
         } catch (Exception e) {
             statusReporter.showError("Check Digit Error", "Error calculating check digit: " + e.getMessage());
@@ -394,7 +690,12 @@ public class GenericController {
             String resultText = isValid ? "✅ VALID" : "❌ INVALID";
 
             targetOutputArea.setText("Validation Result: " + resultText);
-            statusReporter.updateStatus("Check digit validation: " + resultText);
+            statusReporter.publish(OperationResult.forOperation("Check Digits")
+                    .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .output(resultText.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("Algorithm", algorithm).detail("Mode", "Validate")
+                    .detail("Result", isValid ? "VALID" : "INVALID")
+                    .status("Check digit validation: " + resultText).build());
 
         } catch (Exception e) {
             statusReporter.showError("Validation Error", "Error validating: " + e.getMessage());
@@ -422,54 +723,13 @@ public class GenericController {
         }
 
         try {
-            switch (format) {
-                case "Hexadecimal":
-                    // Validate hex first
-                    String cleanHex = input.replaceAll("\\s+", "");
-                    if (!DataConverter.isValidHex(cleanHex)) {
-                        throw new IllegalArgumentException(
-                                "Invalid hexadecimal format. Use pairs of hex digits (0-9, A-F)");
-                    }
-                    return DataConverter.hexToBytes(cleanHex);
-
-                case "Base64":
-                    try {
-                        return org.apache.commons.codec.binary.Base64.decodeBase64(input.trim());
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("Invalid Base64 format: " + e.getMessage());
-                    }
-
-                case "Text":
-                case "Text (UTF-8)":
-                    return input.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-
-                case "Binary":
-                    // Parse binary string (e.g., "01001000 01100101")
-                    String binary = input.replaceAll("\\s", "");
-                    if (!binary.matches("[01]+")) {
-                        throw new IllegalArgumentException("Invalid binary format. Use only 0 and 1");
-                    }
-                    if (binary.length() % 8 != 0) {
-                        throw new IllegalArgumentException("Binary string length must be multiple of 8");
-                    }
-                    byte[] data = new byte[binary.length() / 8];
-                    for (int i = 0; i < data.length; i++) {
-                        String byteStr = binary.substring(i * 8, (i + 1) * 8);
-                        data[i] = (byte) Integer.parseInt(byteStr, 2);
-                    }
-                    return data;
-
-                default:
-                    // Default fallback to hex if unknown but try to be safe
-                    // Actually default should probably be error or Text?
-                    // Let's stick to previous logical fallback or error.
-                    // Previous code defaulted to Hex.
-                    return DataConverter.hexToBytes(input.replaceAll("\\s+", ""));
-            }
+            ByteFormat byteFormat = ByteFormat.fromDisplayName(format);
+            return CodecRegistry.getInstance().decode(input, byteFormat);
+        } catch (CodecException e) {
+            throw new IllegalArgumentException("Error parsing " + format + " input: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Error parsing " + format + " input: " + e.getMessage());
+            // Default fallback if format unknown but we try to be safe
+            return CodecRegistry.getInstance().decode(input, ByteFormat.HEX);
         }
     }
 
@@ -571,14 +831,10 @@ public class GenericController {
             } else {
                 statusReporter.showError("System Error", "No output area defined for random generator");
             }
-            statusReporter.updateStatus("Generated " + numBytes + " random bytes");
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Generic",
-                    "Generate Random - " + numBytes + " bytes",
-                    "Format: " + format,
-                    output.substring(0, Math.min(100, output.length())));
+            statusReporter.publish(OperationResult.forOperation("Random Generation")
+                    .output(randomBytes).detail("Format", format)
+                    .detail("Requested Bytes", String.valueOf(numBytes))
+                    .status("Generated " + numBytes + " random bytes").build());
 
         } catch (NumberFormatException e) {
             statusReporter.showError("Input Error", "Please enter a valid number");
@@ -812,13 +1068,12 @@ public class GenericController {
                         modResultArea.setText("Unknown operation");
                 }
 
-                statusReporter.updateStatus("Modular operation completed");
-
-                OperationHistory.getInstance().addOperation(
-                        "Generic",
-                        "Modular Arithmetic - " + operation,
-                        "a=" + aHex.substring(0, Math.min(16, aHex.length())),
-                        "Result calculated");
+                statusReporter.publish(OperationResult.forOperation("Modular Arithmetic")
+                        .input((aHex + " " + bHex + " " + mHex).getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(modResultArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Operation", operation).detail("Operand A", aHex)
+                        .detail("Operand B", bHex).detail("Modulus", mHex)
+                        .status("Modular operation completed").build());
 
             } catch (ArithmeticException e) {
                 modResultArea.setText("ERROR: " + e.getMessage());
@@ -888,6 +1143,58 @@ public class GenericController {
         fileInputFormatCombo.valueProperty().addListener(encodingListener);
         fileOutputFormatCombo.valueProperty().addListener(encodingListener);
         fileEncodingCombo.setDisable(true); // Initially disabled
+    }
+
+    public void setFileComparePathField(TextField field) { this.fileComparePathField = field; }
+
+    public void compareFiles() {
+        try {
+            String left = fileInputPathField.getText().trim();
+            String right = fileComparePathField.getText().trim();
+            if (left.isEmpty() || right.isEmpty()) throw new IllegalArgumentException("Select both files to compare");
+            long difference = StreamingFileTools.firstDifference(java.nio.file.Paths.get(left), java.nio.file.Paths.get(right), com.cryptoforge.util.ProgressMonitor.NO_OP);
+            String result = difference < 0 ? "Files are identical."
+                    : "Files differ at byte offset " + difference + " (0x" + Long.toHexString(difference).toUpperCase() + ").";
+            fileResultArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Compare Files")
+                    .detail("Left File", java.nio.file.Paths.get(left).getFileName().toString())
+                    .detail("Right File", java.nio.file.Paths.get(right).getFileName().toString())
+                    .detail("Result", difference < 0 ? "IDENTICAL" : "DIFFERENT")
+                    .status(result).build());
+        } catch (Exception e) {
+            statusReporter.showError("File Comparison Error", e.getMessage());
+        }
+    }
+
+    public void hashFileStreaming() {
+        try {
+            String source = fileInputPathField.getText().trim();
+            if (source.isEmpty()) throw new IllegalArgumentException("Select a source file first");
+            java.nio.file.Path path = java.nio.file.Paths.get(source);
+            String hash = StreamingFileTools.hash(path, "SHA-256", com.cryptoforge.util.ProgressMonitor.NO_OP);
+            String result = "SHA-256\n" + hash + "\n\nBytes: " + java.nio.file.Files.size(path);
+            fileResultArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Hash File (streaming)")
+                    .output(DataConverter.hexToBytes(hash)).detail("Algorithm", "SHA-256")
+                    .detail("File", path.getFileName().toString()).detail("Bytes", String.valueOf(java.nio.file.Files.size(path)))
+                    .status("File hash calculated").build());
+        } catch (Exception e) {
+            statusReporter.showError("File Hash Error", e.getMessage());
+        }
+    }
+
+    public void previewFileStreaming() {
+        try {
+            String source = fileInputPathField.getText().trim();
+            if (source.isEmpty()) throw new IllegalArgumentException("Select a source file first");
+            java.nio.file.Path path = java.nio.file.Paths.get(source);
+            byte[] preview = StreamingFileTools.preview(path, 4096, com.cryptoforge.util.ProgressMonitor.NO_OP);
+            String result = com.cryptoforge.crypto.HexInspector.render(preview, 0, preview.length);
+            fileResultArea.setText(result);
+            statusReporter.publish(OperationResult.forOperation("Preview File (streaming)")
+                    .output(preview).detail("File", path.getFileName().toString()).detail("Preview", preview.length + " bytes")
+                    .status("File preview loaded").build());
+        } catch (Exception e) { statusReporter.showError("File Preview Error", e.getMessage()); }
     }
 
     /**
@@ -1061,13 +1368,15 @@ public class GenericController {
             String uuid = UUIDGenerator.generateUUID();
             if (uuidOutputField != null) {
                 uuidOutputField.setText(uuid);
-                statusReporter.updateStatus("Generated UUID v4");
+                // Output is reported below through OperationResult.
             } else if (outputArea != null) {
                 outputArea.setText(uuid);
-                statusReporter.updateStatus("Generated UUID v4");
+                // Output is reported below through OperationResult.
             }
 
-            OperationHistory.getInstance().addOperation("Generic", "UUID Generation", "v4", uuid);
+            statusReporter.publish(OperationResult.forOperation("UUID Generation")
+                    .output(uuid.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("Type", "UUID v4").status("Generated UUID v4").build());
         } catch (Exception e) {
             statusReporter.showError("UUID Error", "Error generating UUID: " + e.getMessage());
         }

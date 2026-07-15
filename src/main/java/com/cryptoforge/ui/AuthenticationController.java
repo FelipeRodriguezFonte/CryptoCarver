@@ -3,10 +3,12 @@ package com.cryptoforge.ui;
 import com.cryptoforge.crypto.SignatureOperations;
 import com.cryptoforge.crypto.AsymmetricKeyOperations;
 import com.cryptoforge.crypto.MACOperations;
-import com.cryptoforge.utils.DataConverter;
-import com.cryptoforge.utils.OperationHistory;
+import com.cryptoforge.util.DataConverter;
+import com.cryptoforge.model.OperationResult;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.security.PrivateKey;
@@ -25,7 +27,9 @@ import java.util.Map;
  */
 public class AuthenticationController {
 
-    private ModernMainController mainController;
+    private static final Logger LOG = LoggerFactory.getLogger(AuthenticationController.class);
+
+    private final StatusReporter mainController;
 
     // Shared UI components
     private TextArea inputArea;
@@ -50,11 +54,14 @@ public class AuthenticationController {
     private Label authMacKeyInfoLabel;
     private ComboBox<String> authMacTruncationCombo;
     private TextField authMacVerifyField;
+    private TextField authMacNonceField;
+    private ComboBox<String> macKeySourceCombo;
+    private ComboBox<String> macHsmKeyCombo;
 
     /**
      * Constructor
      */
-    public AuthenticationController(ModernMainController mainController,
+    public AuthenticationController(StatusReporter mainController,
             TextArea inputArea,
             TextArea outputArea,
             ComboBox<String> inputFormatCombo,
@@ -92,15 +99,30 @@ public class AuthenticationController {
             TextField keyField,
             Label keyInfoLabel,
             ComboBox<String> truncationCombo,
-            TextField verifyField) {
+            TextField verifyField,
+            TextField nonceField,
+            ComboBox<String> keySourceCombo,
+            ComboBox<String> hsmKeyCombo) {
         this.authMacAlgorithmCombo = algorithmCombo;
         this.authMacKeyField = keyField;
         this.authMacKeyInfoLabel = keyInfoLabel;
         this.authMacTruncationCombo = truncationCombo;
         this.authMacVerifyField = verifyField;
+        this.authMacNonceField = nonceField;
+        this.macKeySourceCombo = keySourceCombo;
+        this.macHsmKeyCombo = hsmKeyCombo;
+
+        if (macKeySourceCombo != null) {
+            macKeySourceCombo.getItems().addAll("Manual Input", "Simulated HSM");
+            macKeySourceCombo.setValue("Manual Input");
+            macKeySourceCombo.setOnAction(e -> updateMacKeySourceVisibility());
+        }
+
+        refreshHsmKeys();
 
         // Populate MAC algorithms
         authMacAlgorithmCombo.getItems().addAll(MACOperations.SUPPORTED_ALGORITHMS);
+        authMacAlgorithmCombo.getItems().addAll("GMAC-AES", "Poly1305");
         authMacAlgorithmCombo.setValue("HMAC-SHA256");
 
         // Populate truncation options
@@ -390,30 +412,23 @@ public class AuthenticationController {
             // Format output
             setOutputData(signature);
 
-            mainController.updateStatus("Signature created with " + algorithm);
             mainController.showInfo("Success",
                     String.format("Signature created successfully!\nAlgorithm: %s\nSignature size: %d bytes",
                             algorithm, signature.length));
 
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Authentication",
-                    "Sign - " + algorithm,
-                    "Data: " + data.length + " bytes",
-                    "Signature: " + signature.length + " bytes");
-
-            // Add to Modern History
             Map<String, String> details = new HashMap<>();
             details.put("Algorithm", algorithm);
             details.put("Data Size", data.length + " bytes");
             details.put("Signature Size", signature.length + " bytes");
             details.put("Key Type", currentPrivateKey != null ? currentPrivateKey.getAlgorithm() : "Unknown");
-            mainController.addToHistory("Data Signed", details);
+            mainController.publish(OperationResult.forOperation("Data Signed")
+                    .input(data).output(signature).details(details)
+                    .status("Signature created with " + algorithm).build());
 
         } catch (Exception e) {
             mainController.showError("Signature Error",
                     "Error creating signature: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Digital signature creation failed", e);
         }
     }
 
@@ -484,27 +499,19 @@ public class AuthenticationController {
                         "❌ Signature is INVALID!\n\nThe data may have been tampered with or the wrong key was used.");
             }
 
-            mainController.updateStatus("Signature verification: " + (valid ? "VALID" : "INVALID"));
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Authentication",
-                    "Verify - " + algorithm,
-                    "Result: " + (valid ? "VALID" : "INVALID"),
-                    "Data: " + data.length + " bytes");
-
-            // Add to Modern History
             Map<String, String> details = new HashMap<>();
             details.put("Algorithm", algorithm);
             details.put("Result", valid ? "VALID" : "INVALID");
             details.put("Data Size", data.length + " bytes");
             details.put("Key Type", currentPublicKey != null ? currentPublicKey.getAlgorithm() : "Unknown");
-            mainController.addToHistory("Signature Verified", details);
+            mainController.publish(OperationResult.forOperation("Signature Verified")
+                    .input(data).output(signature).details(details)
+                    .status("Signature verification: " + (valid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {
             mainController.showError("Verification Error",
                     "Error verifying signature: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Digital signature verification failed", e);
         }
     }
 
@@ -516,8 +523,91 @@ public class AuthenticationController {
      * Update MAC key info label
      */
     private void updateMacKeyInfo(String algorithm) {
-        String info = MACOperations.getExpectedKeySize(algorithm);
-        authMacKeyInfoLabel.setText("Expected key size: " + info);
+        if ("GMAC-AES".equals(algorithm)) {
+            authMacKeyInfoLabel.setText("GMAC: AES key 16/24/32 bytes; nonce must be unique (12 bytes recommended)");
+            authMacNonceField.setDisable(false);
+        } else if ("Poly1305".equals(algorithm)) {
+            authMacKeyInfoLabel.setText("Poly1305: a unique one-time 32-byte key is required for every message");
+            authMacNonceField.clear();
+            authMacNonceField.setDisable(true);
+        } else {
+            String info = MACOperations.getExpectedKeySize(algorithm);
+            authMacKeyInfoLabel.setText("Expected key size: " + info);
+            authMacNonceField.clear();
+            authMacNonceField.setDisable(true);
+        }
+
+        boolean isGmac = "GMAC-AES".equals(algorithm);
+        if (authMacNonceField != null) {
+            authMacNonceField.setVisible(isGmac);
+            authMacNonceField.setManaged(isGmac);
+        }
+    }
+
+    private void updateMacKeySourceVisibility() {
+        boolean isHsm = "Simulated HSM".equals(macKeySourceCombo.getValue());
+        if (authMacKeyField != null) {
+            authMacKeyField.setVisible(!isHsm);
+            authMacKeyField.setManaged(!isHsm);
+        }
+        if (macHsmKeyCombo != null) {
+            macHsmKeyCombo.setVisible(isHsm);
+            macHsmKeyCombo.setManaged(isHsm);
+        }
+    }
+
+    public void refreshHsmKeys() {
+        if (macHsmKeyCombo != null) {
+            String current = macHsmKeyCombo.getValue();
+            macHsmKeyCombo.getItems().clear();
+            macHsmKeyCombo.getItems().addAll(com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds());
+            if (current != null && macHsmKeyCombo.getItems().contains(current)) {
+                macHsmKeyCombo.setValue(current);
+            } else if (!macHsmKeyCombo.getItems().isEmpty()) {
+                macHsmKeyCombo.setValue(macHsmKeyCombo.getItems().get(0));
+            }
+        }
+    }
+
+    public void saveCurrentKeyToHsm() {
+        try {
+            if (authMacKeyField == null || authMacKeyField.getText().trim().isEmpty()) {
+                mainController.showError("Save Error", "No key to save");
+                return;
+            }
+            byte[] keyBytes = DataConverter.hexToBytes(authMacKeyField.getText().trim());
+            String algo = authMacAlgorithmCombo.getValue();
+            if (algo == null) algo = "HMAC";
+            javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, algo);
+            com.cryptoforge.crypto.hsm.KeyMaterial km = com.cryptoforge.crypto.hsm.KeyMaterialFactory.fromSecretKey(
+                null, secretKey, 
+                com.cryptoforge.crypto.hsm.KeyExportability.NON_EXPORTABLE, 
+                java.util.Set.of(com.cryptoforge.crypto.hsm.KeyUsage.MAC)
+            );
+            com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
+            mainController.showInfo("Success", "Key saved to Lab Cache as " + km.getId());
+            refreshHsmKeys();
+            macKeySourceCombo.setValue("Simulated HSM");
+        } catch (Exception e) {
+            mainController.showError("Save Error", "Failed to save key: " + e.getMessage());
+        }
+    }
+
+    private byte[] getMacKey() {
+        if (macKeySourceCombo != null && "Simulated HSM".equals(macKeySourceCombo.getValue())) {
+            String keyId = macHsmKeyCombo.getValue();
+            if (keyId == null || keyId.isEmpty()) {
+                throw new IllegalArgumentException("Please select a key from the Lab Cache");
+            }
+            java.security.Key k = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().getRawKeyForInternalUse(keyId, com.cryptoforge.crypto.hsm.KeyUsage.MAC);
+            return k.getEncoded();
+        } else {
+            String keyHex = authMacKeyField.getText().trim();
+            if (keyHex.isEmpty()) {
+                throw new IllegalArgumentException("Please enter MAC key in hexadecimal");
+            }
+            return DataConverter.hexToBytes(keyHex);
+        }
     }
 
     /**
@@ -532,19 +622,7 @@ public class AuthenticationController {
             }
 
             // Get MAC key
-            String keyHex = authMacKeyField.getText().trim();
-            if (keyHex.isEmpty()) {
-                mainController.showError("Key Error", "Please enter a MAC key in hexadecimal");
-                return;
-            }
-
-            byte[] key;
-            try {
-                key = DataConverter.hexToBytes(keyHex);
-            } catch (Exception e) {
-                mainController.showError("Key Error", "Invalid hexadecimal key: " + e.getMessage());
-                return;
-            }
+            byte[] key = getMacKey();
 
             // Get data
             byte[] data = getInputDataAsBytes();
@@ -557,7 +635,7 @@ public class AuthenticationController {
             int truncation = getTruncationBytes();
 
             // Generate MAC using MACOperations
-            byte[] mac = MACOperations.generate(data, key, algorithm);
+            byte[] mac = generateMac(data, key, algorithm);
 
             // Truncate if needed
             if (truncation > 0 && truncation < mac.length) {
@@ -569,19 +647,10 @@ public class AuthenticationController {
             // Format output
             setOutputData(mac);
 
-            mainController.updateStatus("MAC generated with " + algorithm);
             mainController.showInfo("Success",
                     String.format("MAC generated successfully!\nAlgorithm: %s\nMAC size: %d bytes",
                             algorithm, mac.length));
 
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Authentication",
-                    "Generate MAC - " + algorithm,
-                    "Data: " + data.length + " bytes",
-                    "MAC: " + mac.length + " bytes");
-
-            // Add to Modern History
             Map<String, String> details = new HashMap<>();
             details.put("Algorithm", algorithm);
             details.put("Data Size", data.length + " bytes");
@@ -590,12 +659,14 @@ public class AuthenticationController {
             // Add MAC Output preview
             details.put("Output", DataConverter.bytesToHex(mac));
 
-            mainController.addToHistory("MAC Generated", details);
+            mainController.publish(OperationResult.forOperation("MAC Generated")
+                    .input(data).output(mac).details(details)
+                    .status("MAC generated with " + algorithm).build());
 
         } catch (Exception e) {
             mainController.showError("MAC Error",
                     "Error generating MAC: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("MAC generation failed", e);
         }
     }
 
@@ -611,19 +682,7 @@ public class AuthenticationController {
             }
 
             // Get MAC key
-            String keyHex = authMacKeyField.getText().trim();
-            if (keyHex.isEmpty()) {
-                mainController.showError("Key Error", "Please enter a MAC key in hexadecimal");
-                return;
-            }
-
-            byte[] key;
-            try {
-                key = DataConverter.hexToBytes(keyHex);
-            } catch (Exception e) {
-                mainController.showError("Key Error", "Invalid hexadecimal key: " + e.getMessage());
-                return;
-            }
+            byte[] key = getMacKey();
 
             // Get MAC from verify field
             String macText = authMacVerifyField.getText().trim();
@@ -648,7 +707,7 @@ public class AuthenticationController {
             }
 
             // Generate MAC to compare
-            byte[] calculatedMac = MACOperations.generate(data, key, algorithm);
+            byte[] calculatedMac = generateMac(data, key, algorithm);
 
             // Truncate if needed (match provided MAC length)
             if (providedMac.length < calculatedMac.length) {
@@ -658,7 +717,7 @@ public class AuthenticationController {
             }
 
             // Verify
-            boolean valid = java.util.Arrays.equals(calculatedMac, providedMac);
+            boolean valid = MACOperations.constantTimeEquals(calculatedMac, providedMac);
 
             if (valid) {
                 mainController.showInfo("Verification Success",
@@ -668,27 +727,19 @@ public class AuthenticationController {
                         "❌ MAC is INVALID!\n\nThe data may have been tampered with or the wrong key was used.");
             }
 
-            mainController.updateStatus("MAC verification: " + (valid ? "VALID" : "INVALID"));
-
-            // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Authentication",
-                    "Verify MAC - " + algorithm,
-                    "Result: " + (valid ? "VALID" : "INVALID"),
-                    "Data: " + data.length + " bytes");
-
-            // Add to Modern History
             Map<String, String> details = new HashMap<>();
             details.put("Algorithm", algorithm);
             details.put("Result", valid ? "VALID" : "INVALID");
             details.put("Data Size", data.length + " bytes");
             details.put("Truncation", providedMac.length + " bytes (provided)");
-            mainController.addToHistory("MAC Verified", details);
+            mainController.publish(OperationResult.forOperation("MAC Verified")
+                    .input(data).output(providedMac).details(details)
+                    .status("MAC verification: " + (valid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {
             mainController.showError("Verification Error",
                     "Error verifying MAC: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("MAC verification failed", e);
         }
     }
 
@@ -709,6 +760,21 @@ public class AuthenticationController {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    private byte[] generateMac(byte[] data, byte[] key, String algorithm) throws Exception {
+        if ("GMAC-AES".equals(algorithm)) {
+            String nonceHex = authMacNonceField.getText().trim();
+            if (nonceHex.isEmpty()) {
+                throw new IllegalArgumentException("GMAC requires a unique nonce/IV in hexadecimal");
+            }
+            byte[] nonce = DataConverter.hexToBytes(nonceHex.replaceAll("\\s+", ""));
+            return MACOperations.generateGmac(data, key, nonce);
+        }
+        if ("Poly1305".equals(algorithm)) {
+            return MACOperations.generatePoly1305(data, key);
+        }
+        return MACOperations.generate(data, key, algorithm);
     }
 
     // ============================================================

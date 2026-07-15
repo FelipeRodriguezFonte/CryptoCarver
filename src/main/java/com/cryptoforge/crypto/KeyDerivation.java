@@ -11,6 +11,7 @@ import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.HKDFParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.Argon2Parameters;
+import org.bouncycastle.crypto.macs.HMac;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -36,6 +37,10 @@ public class KeyDerivation {
      * @return Derived key
      */
     public static byte[] hkdf(byte[] ikm, byte[] salt, byte[] info, int outputLength, Digest digest) {
+        if (ikm == null) throw new IllegalArgumentException("IKM cannot be null");
+        if (outputLength < 0 || outputLength > 255 * digest.getDigestSize()) {
+            throw new IllegalArgumentException("Invalid HKDF output length");
+        }
         HKDFBytesGenerator hkdf = new HKDFBytesGenerator(digest);
         
         // If no salt provided, HKDF spec says to use zeros
@@ -54,6 +59,103 @@ public class KeyDerivation {
         hkdf.generateBytes(output, 0, outputLength);
         
         return output;
+    }
+
+    /**
+     * NIST SP 800-108 Counter Mode KDF using HMAC as the PRF.
+     * The fixed input is {@code label || 0x00 || context || [L]32}.
+     */
+    public static byte[] sp800108Counter(byte[] key, byte[] label, byte[] context,
+                                          int outputLength, Digest digest) {
+        if (key == null || key.length == 0) throw new IllegalArgumentException("KDF key cannot be empty");
+        if (outputLength < 0 || (long) outputLength * 8 > 0xFFFFFFFFL) {
+            throw new IllegalArgumentException("Invalid SP 800-108 output length");
+        }
+        byte[] actualLabel = label == null ? new byte[0] : label;
+        byte[] actualContext = context == null ? new byte[0] : context;
+        byte[] lengthBits = intToBytes(outputLength * 8);
+        HMac mac = new HMac(digest);
+        mac.init(new KeyParameter(key));
+        byte[] output = new byte[outputLength];
+        int written = 0;
+        for (int counter = 1; written < outputLength; counter++) {
+            mac.reset();
+            mac.update(intToBytes(counter), 0, 4);
+            mac.update(actualLabel, 0, actualLabel.length);
+            mac.update((byte) 0);
+            mac.update(actualContext, 0, actualContext.length);
+            mac.update(lengthBits, 0, lengthBits.length);
+            byte[] block = new byte[mac.getMacSize()];
+            mac.doFinal(block, 0);
+            int copy = Math.min(block.length, outputLength - written);
+            System.arraycopy(block, 0, output, written, copy);
+            written += copy;
+        }
+        return output;
+    }
+
+    /** ANSI X9.63 / concatenation KDF: Hash(shared secret || counter || shared info). */
+    public static byte[] x963(byte[] sharedSecret, byte[] sharedInfo, int outputLength, Digest digest) {
+        if (sharedSecret == null || sharedSecret.length == 0) throw new IllegalArgumentException("Shared secret cannot be empty");
+        if (outputLength < 0 || (long) outputLength > 0xFFFFFFFFL * digest.getDigestSize()) {
+            throw new IllegalArgumentException("Invalid X9.63 output length");
+        }
+        byte[] info = sharedInfo == null ? new byte[0] : sharedInfo;
+        byte[] output = new byte[outputLength];
+        int written = 0;
+        for (int counter = 1; written < outputLength; counter++) {
+            digest.reset();
+            digest.update(sharedSecret, 0, sharedSecret.length);
+            byte[] counterBytes = intToBytes(counter);
+            digest.update(counterBytes, 0, counterBytes.length);
+            digest.update(info, 0, info.length);
+            byte[] block = new byte[digest.getDigestSize()];
+            digest.doFinal(block, 0);
+            int copy = Math.min(block.length, outputLength - written);
+            System.arraycopy(block, 0, output, written, copy);
+            written += copy;
+        }
+        return output;
+    }
+
+    /** RFC 5869 Extract step, returning a pseudorandom key (PRK). */
+    public static byte[] hkdfExtract(byte[] ikm, byte[] salt, Digest digest) {
+        if (ikm == null) throw new IllegalArgumentException("IKM cannot be null");
+        byte[] actualSalt = (salt == null || salt.length == 0) ? new byte[digest.getDigestSize()] : salt;
+        HMac mac = new HMac(digest);
+        mac.init(new KeyParameter(actualSalt));
+        mac.update(ikm, 0, ikm.length);
+        byte[] prk = new byte[mac.getMacSize()];
+        mac.doFinal(prk, 0);
+        return prk;
+    }
+
+    /** RFC 5869 Expand step. The PRK must be at least digest-length bytes. */
+    public static byte[] hkdfExpand(byte[] prk, byte[] info, int outputLength, Digest digest) {
+        if (prk == null || prk.length < digest.getDigestSize()) throw new IllegalArgumentException("PRK is shorter than the digest output");
+        if (outputLength < 0 || outputLength > 255 * digest.getDigestSize()) throw new IllegalArgumentException("Invalid HKDF output length");
+        byte[] context = info == null ? new byte[0] : info;
+        HMac mac = new HMac(digest);
+        mac.init(new KeyParameter(prk));
+        byte[] output = new byte[outputLength], previous = new byte[0];
+        int written = 0;
+        for (int counter = 1; written < outputLength; counter++) {
+            mac.reset();
+            mac.update(previous, 0, previous.length);
+            mac.update(context, 0, context.length);
+            mac.update((byte) counter);
+            previous = new byte[mac.getMacSize()];
+            mac.doFinal(previous, 0);
+            int copy = Math.min(previous.length, outputLength - written);
+            System.arraycopy(previous, 0, output, written, copy);
+            written += copy;
+        }
+        return output;
+    }
+
+    private static byte[] intToBytes(int value) {
+        return new byte[] { (byte) (value >>> 24), (byte) (value >>> 16),
+                (byte) (value >>> 8), (byte) value };
     }
 
     /**

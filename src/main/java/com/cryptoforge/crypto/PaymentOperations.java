@@ -1,6 +1,6 @@
 package com.cryptoforge.crypto;
 
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.crypto.Cipher;

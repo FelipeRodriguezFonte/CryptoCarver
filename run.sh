@@ -1,12 +1,12 @@
 #!/bin/bash
-# CryptoForge Launcher for macOS/Linux
+# CryptoCarver Launcher for macOS/Linux
 
 # Colors
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 echo "${GREEN}"
-echo "  CryptoForge - Advanced Crypto Tool"
+echo "  CryptoCarver - Advanced Crypto Test Tool"
 echo "================================================"
 echo ""
 
@@ -23,7 +23,7 @@ if [ "$JAVA_VERSION" -lt 21 ]; then
     echo "WARNING: Java version $JAVA_VERSION detected. Java 21+ recommended."
 fi
 
-echo "Starting CryptoForge..."
+echo "Starting CryptoCarver..."
 echo ""
 
 cd "$(dirname "$0")"

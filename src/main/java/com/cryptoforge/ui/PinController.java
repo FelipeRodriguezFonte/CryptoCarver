@@ -2,7 +2,7 @@ package com.cryptoforge.ui;
 
 import com.cryptoforge.pin.Pin;
 import com.cryptoforge.pin.PinBlock;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
 

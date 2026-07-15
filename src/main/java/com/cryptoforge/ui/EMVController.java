@@ -1,6 +1,9 @@
 package com.cryptoforge.ui;
 
+import com.cryptoforge.crypto.EmvTlv;
+
 import com.cryptoforge.crypto.EMVOperations;
+import com.cryptoforge.model.OperationResult;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -12,6 +15,78 @@ import javafx.scene.control.*;
  * @author Felipe
  */
 public class EMVController {
+    private TextArea emvTlvInputArea, emvTlvResultArea;
+    private TextField emvDolTemplateField;
+    private TextArea emvDolValuesArea, emvDolResultArea;
+
+    public void initializeTlvInspector(TextArea input, TextArea output) { this.emvTlvInputArea = input; this.emvTlvResultArea = output; }
+    public void initializeDolBuilder(TextField template, TextArea values, TextArea output) { this.emvDolTemplateField = template; this.emvDolValuesArea = values; this.emvDolResultArea = output; }
+
+    public void handleBuildDol() {
+        try {
+            java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
+            for (String line : emvDolValuesArea.getText().split("\\R")) {
+                if (line.isBlank()) continue;
+                String[] pair = line.split("=", 2);
+                if (pair.length != 2) throw new IllegalArgumentException("Use one TAG=HEX value per line");
+                values.put(pair[0].trim().toUpperCase(java.util.Locale.ROOT), pair[1].trim());
+            }
+            EmvTlv.DolBuildResult result = EmvTlv.buildDolDetailed(emvDolTemplateField.getText(), values);
+            StringBuilder report = new StringBuilder("CDOL/DDOL data (").append(result.data().length() / 2).append(" bytes):\n")
+                    .append(result.data()).append("\n\nFIELDS:\n");
+            for (EmvTlv.DolField field : result.fields()) {
+                report.append(field.supplied() ? "[provided] " : "[zero-fill] ").append(field.tag()).append(" — ")
+                        .append(field.name()).append(" (" ).append(field.length()).append(" bytes): ").append(field.value()).append("\n");
+            }
+            if (!result.warnings().isEmpty()) {
+                report.append("WARNINGS:\n");
+                for (String warning : result.warnings()) report.append("- ").append(warning).append("\n");
+            }
+            emvDolResultArea.setText(report.toString());
+        } catch (Exception e) { emvDolResultArea.setText("DOL error: " + e.getMessage()); }
+    }
+
+    public void handleInspectTlv() {
+        try {
+            java.util.List<EmvTlv.Item> items = EmvTlv.parse(emvTlvInputArea.getText());
+            EmvTlv.Analysis analysis = EmvTlv.analyze(emvTlvInputArea.getText());
+            StringBuilder report = new StringBuilder("--- EMV BER-TLV Inspector ---\n")
+                    .append("Top-level objects: ").append(analysis.topLevelItems()).append(" | Total objects: ").append(analysis.totalItems())
+                    .append(" | Value bytes: ").append(analysis.totalValueBytes()).append("\n\n")
+                    .append("TRANSACTION SUMMARY (informative; not cryptogram validation)\n")
+                    .append(EmvTlv.transactionSummary(analysis)).append("\n");
+            if (!analysis.warnings().isEmpty()) {
+                report.append("STRUCTURAL WARNINGS\n");
+                for (String warning : analysis.warnings()) report.append("- ").append(warning).append("\n");
+                report.append("\n");
+            }
+            report.append("TLV TREE\n");
+            appendTlv(report, items, "");
+            emvTlvResultArea.setText(report.toString());
+        } catch (Exception e) { emvTlvResultArea.setText("TLV error: " + e.getMessage()); }
+    }
+
+    private void appendTlv(StringBuilder out, java.util.List<EmvTlv.Item> items, String indent) {
+        for (EmvTlv.Item item : items) {
+            out.append(indent).append(item.tag()).append(" — ").append(item.name()).append(" (" ).append(item.length()).append(" bytes)\n");
+            if (item.constructed()) appendTlv(out, item.children(), indent + "  ");
+            else {
+                out.append(indent).append("  Value: ").append(item.value()).append("\n");
+                String interpretation = EmvTlv.interpretation(item);
+                if (!interpretation.isBlank()) out.append(indent).append("  Interpreted: ").append(interpretation).append("\n");
+                if ("8C".equals(item.tag()) || "8D".equals(item.tag())) {
+                    out.append(indent).append("  DOL fields:\n");
+                    int total = 0;
+                    for (EmvTlv.Item field : EmvTlv.parseDol(item.value())) {
+                        total += field.length();
+                        out.append(indent).append("    ").append(field.tag()).append(" — ").append(field.name())
+                                .append(" (request ").append(field.length()).append(" bytes)\n");
+                    }
+                    out.append(indent).append("  Required concatenated data: ").append(total).append(" bytes\n");
+                }
+            }
+        }
+    }
 
     private StatusReporter mainController;
 
@@ -33,6 +108,10 @@ public class EMVController {
     private TextField txTypeField;
     private TextField unField;
     private TextArea arqcResultArea;
+    /** Captures the exact bytes and padding used by the last local ARQC calculation. */
+    private String lastArqcTransactionData;
+    private int lastArqcPaddingMethod = 1;
+    private String lastArqcValue;
 
     // ARPC Generation controls
     private TextField skARPCField;
@@ -204,12 +283,14 @@ public class EMVController {
             sessionKeyResultArea.setVisible(true);
             sessionKeyResultArea.setManaged(true);
 
-            // Add to history
-            java.util.Map<String, String> historyMap = new java.util.HashMap<>();
-            historyMap.put("Input",
-                    "IMK: " + imk.substring(0, Math.min(8, imk.length())) + "..., PAN: " + pan + ", ATC: " + atc);
-            historyMap.put("Output", "Keys derived successfully");
-            mainController.addToHistory("Session Key Derivation", historyMap);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("PAN", maskPan(pan));
+            details.put("PAN Sequence", panSeq);
+            details.put("ATC", atc);
+            details.put("IMK", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("Session Key Derivation")
+                    .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .status("EMV session key derivation completed").build());
 
         } catch (Exception e) {
             sessionKeyResultArea.setText("Error: " + e.getMessage());
@@ -333,6 +414,9 @@ public class EMVController {
             result.append("Padding Method: ").append(paddingMethod == 2 ? "Method 2" : "Method 1").append("\n");
 
             String arqc = EMVOperations.generateARQC(sk, txData, paddingMethod);
+            lastArqcTransactionData = txData;
+            lastArqcPaddingMethod = paddingMethod;
+            lastArqcValue = arqc;
             result.append("➜ ARQC: ").append(arqc).append("\n\n");
 
             result.append("✅ ARQC generated successfully\n");
@@ -341,11 +425,13 @@ public class EMVController {
             arqcResultArea.setVisible(true);
             arqcResultArea.setManaged(true);
 
-            // Add to history
-            java.util.Map<String, String> historyMap = new java.util.HashMap<>();
-            historyMap.put("Input", "Data: " + txData.substring(0, Math.min(20, txData.length())) + "...");
-            historyMap.put("Output", "ARQC: " + arqc);
-            mainController.addToHistory("ARQC Generation", historyMap);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Padding", "Method " + paddingMethod);
+            details.put("Transaction Data", txData.substring(0, Math.min(20, txData.length())) + "...");
+            details.put("Session Key", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("ARQC Generation")
+                    .output(com.cryptoforge.util.DataConverter.hexToBytes(arqc)).details(details)
+                    .status("ARQC generated successfully").build());
 
         } catch (Exception e) {
             arqcResultArea.setText("Error: " + e.getMessage());
@@ -374,37 +460,42 @@ public class EMVController {
                 return;
             }
 
-            // Rebuild transaction data
-            String currency = currencyField.getText().trim().replaceAll("\\s+", "");
-            String country = countryField.getText().trim().replaceAll("\\s+", "");
-            String atc = atcARQCField.getText().trim().replaceAll("\\s+", "");
-            String tvr = tvrField.getText().trim().replaceAll("\\s+", "");
-            String txDate = txDateField.getText().trim().replaceAll("\\s+", "");
-            String txType = txTypeField.getText().trim().replaceAll("\\s+", "");
-            String un = unField.getText().trim().replaceAll("\\s+", "");
+            String txData;
+            int paddingMethod;
+            if (lastArqcTransactionData != null && arqcToVerify.equalsIgnoreCase(lastArqcValue)) {
+                txData = lastArqcTransactionData;
+                paddingMethod = lastArqcPaddingMethod;
+            } else {
+                if (amount.isEmpty()) throw new IllegalArgumentException("Amount is required to reconstruct ARQC data");
+                String amountOther = amountOtherField == null ? "" : amountOtherField.getText().trim().replaceAll("\\s+", "");
+                String currency = currencyField.getText().trim().replaceAll("\\s+", "");
+                String country = countryField.getText().trim().replaceAll("\\s+", "");
+                String tvr = tvrField.getText().trim().replaceAll("\\s+", "");
+                String txDate = txDateField.getText().trim().replaceAll("\\s+", "");
+                String txType = txTypeField.getText().trim().replaceAll("\\s+", "");
+                String un = unField.getText().trim().replaceAll("\\s+", "");
+                if (amountOther.isEmpty()) amountOther = "000000000000";
+                if (currency.isEmpty()) currency = "0978";
+                if (country.isEmpty()) country = "0724";
+                if (tvr.isEmpty()) tvr = "0000000000";
+                if (txDate.isEmpty()) txDate = "251207";
+                if (txType.isEmpty()) txType = "00";
+                if (un.isEmpty()) un = "12345678";
+                txData = EMVOperations.buildARQCData(amount, amountOther, country, tvr, currency, txDate, txType, un);
+                String iccData = iccDataField == null ? "" : iccDataField.getText().trim().replaceAll("\\s+", "");
+                if (!iccData.isEmpty()) txData += iccData;
+                paddingMethod = arqcPaddingMethodCombo != null && arqcPaddingMethodCombo.getValue() != null
+                        && arqcPaddingMethodCombo.getValue().contains("Method 2") ? 2 : 1;
+            }
 
-            if (currency.isEmpty())
-                currency = "0978";
-            if (country.isEmpty())
-                country = "0724";
-            if (tvr.isEmpty())
-                tvr = "0000000000";
-            if (txDate.isEmpty())
-                txDate = "251207";
-            if (txType.isEmpty())
-                txType = "00";
-            if (un.isEmpty())
-                un = "12345678";
-
-            String txData = EMVOperations.buildARQCData(
-                    amount, currency, country, atc, tvr, txDate, txType, un);
-
-            boolean valid = EMVOperations.verifyARQC(sk, arqcToVerify, txData);
+            boolean valid = EMVOperations.verifyARQC(sk, arqcToVerify, txData, paddingMethod);
 
             StringBuilder result = new StringBuilder();
             result.append("ARQC VERIFICATION\n");
             result.append("═════════════════\n\n");
             result.append("ARQC to Verify: ").append(arqcToVerify).append("\n");
+            result.append("Padding Method: ").append(paddingMethod).append("\n");
+            result.append("MAC input bytes: ").append(txData.length() / 2).append("\n");
             result.append("Session Key: ").append(sk).append("\n\n");
 
             if (valid) {
@@ -477,17 +568,24 @@ public class EMVController {
             arpcResultArea.setVisible(true);
             arpcResultArea.setManaged(true);
 
-            // Add to history
-            java.util.Map<String, String> historyMap = new java.util.HashMap<>();
-            historyMap.put("Input", "ARQC: " + arqc + ", ARC: " + arc);
-            historyMap.put("Output", "ARPC: " + arpc);
-            mainController.addToHistory("ARPC Generation", historyMap);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Method", arpcMethodCombo == null ? "Default" : arpcMethodCombo.getValue());
+            details.put("ARC", arc);
+            details.put("Session Key", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("ARPC Generation")
+                    .output(com.cryptoforge.util.DataConverter.hexToBytes(arpc)).details(details)
+                    .status("ARPC generated successfully").build());
 
         } catch (Exception e) {
             arpcResultArea.setText("Error: " + e.getMessage());
             arpcResultArea.setVisible(true);
             arpcResultArea.setManaged(true);
         }
+    }
+
+    private String maskPan(String pan) {
+        if (pan == null || pan.length() < 5) return "[redacted]";
+        return "*".repeat(Math.max(0, pan.length() - 4)) + pan.substring(pan.length() - 4);
     }
 
     // ============================================================================
@@ -533,11 +631,13 @@ public class EMVController {
             track2ResultArea.setVisible(true);
             track2ResultArea.setManaged(true);
 
-            // Add to history
-            java.util.Map<String, String> historyMap = new java.util.HashMap<>();
-            historyMap.put("Input", "PAN: " + pan);
-            historyMap.put("Output", "Track 2: " + track2);
-            mainController.addToHistory("Track 2 Encoding", historyMap);
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("PAN", maskPan(pan));
+            details.put("Expiry", expiry);
+            details.put("Service Code", serviceCode);
+            mainController.publish(OperationResult.forOperation("Track 2 Encoding")
+                    .output(track2.getBytes(java.nio.charset.StandardCharsets.US_ASCII)).details(details)
+                    .status("Track 2 encoded successfully").build());
 
         } catch (Exception e) {
             track2ResultArea.setText("Error: " + e.getMessage());
@@ -558,11 +658,11 @@ public class EMVController {
             track2ResultArea.setVisible(true);
             track2ResultArea.setManaged(true);
 
-            // Add to history
-            java.util.Map<String, String> historyMap = new java.util.HashMap<>();
-            historyMap.put("Input", "Track 2: " + track2Input.substring(0, Math.min(20, track2Input.length())) + "...");
-            historyMap.put("Output", "Decoded successfully");
-            mainController.addToHistory("Track 2 Decoding", historyMap);
+            mainController.publish(OperationResult.forOperation("Track 2 Decoding")
+                    .input(track2Input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
+                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .detail("PAN", "[contained in Track 2; not persisted]")
+                    .status("Track 2 decoded successfully").build());
 
         } catch (Exception e) {
             track2ResultArea.setText("Error: " + e.getMessage());

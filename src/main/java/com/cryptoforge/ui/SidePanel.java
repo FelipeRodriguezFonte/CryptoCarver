@@ -1,5 +1,7 @@
 package com.cryptoforge.ui;
 
+import com.cryptoforge.model.OperationDescriptor;
+import com.cryptoforge.model.OperationRegistry;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -7,7 +9,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
+import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Side Panel - Hierarchical navigation with search
@@ -16,10 +20,23 @@ import java.util.function.Consumer;
 public class SidePanel extends VBox {
 
     private final TextField searchField;
-    private final TreeView<String> navigationTree;
+    private final TreeView<OperationNode> navigationTree;
     private final Button collapseButton;
     private Consumer<String> onItemSelected;
-    private TreeItem<String> rootItem;
+    private TreeItem<OperationNode> rootItem;
+    private NavigationRail.Section currentSection = NavigationRail.Section.KEYS;
+
+    // Helper wrapper for TreeView
+    private static class OperationNode {
+        String label;
+        OperationDescriptor descriptor;
+
+        OperationNode(String label) { this.label = label; }
+        OperationNode(OperationDescriptor desc) { this.descriptor = desc; this.label = desc.getTitle(); }
+
+        @Override
+        public String toString() { return label; }
+    }
 
     public SidePanel() {
         // Panel styling via CSS
@@ -34,23 +51,19 @@ public class SidePanel extends VBox {
         header.setPadding(new Insets(8));
         header.getStyleClass().add("side-panel-header");
 
-        // Search icon (simple text for now, could be icon)
         Label searchIcon = new Label("🔍");
         searchIcon.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px;");
 
-        // Search field
         searchField = new TextField();
         searchField.setPromptText("Search");
         searchField.getStyleClass().add("search-field");
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
-        // Search functionality
         searchField.textProperty().addListener((obs, old, newVal) -> filterTree(newVal));
 
-        // Collapse button (optional, can stay or go depending on visual preference)
         collapseButton = new Button("«");
         collapseButton.setTooltip(new Tooltip("Collapse panel"));
-        collapseButton.getStyleClass().add("button"); // Standard button
+        collapseButton.getStyleClass().add("button");
         collapseButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #7f8c8d; -fx-font-weight: bold;");
         collapseButton.setOnAction(e -> collapse());
 
@@ -61,15 +74,69 @@ public class SidePanel extends VBox {
         navigationTree.setShowRoot(false);
         navigationTree.getStyleClass().add("navigation-tree");
 
+        // Custom Cell Factory for visual states
+        navigationTree.setCellFactory(tv -> new TreeCell<>() {
+            @Override
+            protected void updateItem(OperationNode item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setTooltip(null);
+                } else {
+                    if (item.descriptor != null) {
+                        HBox content = new HBox(5);
+                        content.setAlignment(Pos.CENTER_LEFT);
+                        Label iconLabel = new Label(item.descriptor.getIcon());
+                        Label textLabel = new Label(item.descriptor.getTitle());
+                        content.getChildren().addAll(iconLabel, textLabel);
+
+                        if (item.descriptor.getStatus() == OperationDescriptor.Status.EXPERIMENTAL) {
+                            Label expBadge = new Label("EXP");
+                            expBadge.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
+                            content.getChildren().add(expBadge);
+                        } else if (item.descriptor.getStatus() == OperationDescriptor.Status.PLANNED) {
+                            Label planBadge = new Label("PLANNED");
+                            planBadge.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
+                            content.getChildren().add(planBadge);
+                            textLabel.setStyle("-fx-text-fill: #7f8c8d;");
+                        }
+
+                        setGraphic(content);
+                        setText(null);
+
+                        // Tooltip with subtitle
+                        String tooltipText = item.descriptor.getSubtitle();
+                        if (item.descriptor.getStatus() != OperationDescriptor.Status.STABLE) {
+                            tooltipText += " (" + item.descriptor.getStatus() + ")";
+                        }
+                        setTooltip(new Tooltip(tooltipText));
+
+                    } else {
+                        setText(item.label);
+                        setGraphic(null);
+                        setTooltip(null);
+                    }
+                }
+            }
+        });
+
         VBox.setVgrow(navigationTree, Priority.ALWAYS);
 
         // Item selection handler
         navigationTree.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
             if (newVal != null && newVal.isLeaf()) {
-                String selected = newVal.getValue();
-                System.out.println("TreeView item selected: " + selected);
+                OperationNode selected = newVal.getValue();
+
+                // Do not navigate to PLANNED operations
+                if (selected.descriptor != null && selected.descriptor.getStatus() == OperationDescriptor.Status.PLANNED) {
+                    return;
+                }
+
+                String navigationPath = selected.descriptor != null ? selected.descriptor.getNavigationPath() : selected.label;
+                System.out.println("TreeView item selected: " + navigationPath);
                 if (onItemSelected != null) {
-                    onItemSelected.accept(selected);
+                    onItemSelected.accept(navigationPath);
                 }
             }
         });
@@ -81,136 +148,86 @@ public class SidePanel extends VBox {
     }
 
     public void updateContent(NavigationRail.Section section) {
-        rootItem = new TreeItem<>(section.getLabel());
+        if (section != NavigationRail.Section.SEARCH) {
+            this.currentSection = section;
+        }
+
+        rootItem = new TreeItem<>(new OperationNode(section.getLabel()));
 
         switch (section) {
             case CIPHER:
-                buildCipherTree();
+                buildCategoryTree("Cipher");
                 break;
             case GENERIC:
-                buildGenericTree();
+                buildCategoryTree("Generic");
                 break;
             case AUTHENTICATION:
-                buildAuthenticationTree();
+                buildCategoryTree("Authentication");
                 break;
             case KEYS:
-                buildKeysTree();
+                buildKeysTree(); // Custom grouping for keys
+                break;
+            case POST_QUANTUM:
+                buildCategoryTree("Post-Quantum");
+                break;
+            case XML_SECURITY:
+                buildCategoryTree("XML Security");
                 break;
             case CERTIFICATES:
-                buildCertificatesTree();
+                buildCategoryTree("Certificates");
                 break;
             case JOSE:
-                buildJOSETree();
+                buildCategoryTree("JOSE");
                 break;
             case PAYMENTS:
-                buildPaymentsTree();
+                buildCategoryTree("Payments");
                 break;
             case ASN1:
-                buildASN1Tree();
+                buildCategoryTree("ASN1");
                 break;
             case HISTORY:
-                buildHistoryTree();
+                buildCategoryTree("History");
                 break;
             case SEARCH:
-                buildSearchTree();
+                rootItem.getChildren().add(new TreeItem<>(new OperationNode("Quick search across all operations")));
                 break;
-
         }
 
         navigationTree.setRoot(rootItem);
         expandAll(rootItem);
     }
 
-    private void buildCipherTree() {
-        TreeItem<String> symmetric = new TreeItem<>("Symmetric");
-        symmetric.getChildren().addAll(
-                new TreeItem<>("Symmetric Ciphers"));
-
-        TreeItem<String> asymmetric = new TreeItem<>("Asymmetric");
-        asymmetric.getChildren().addAll(
-                new TreeItem<>("Asymmetric Ciphers"));
-
-        rootItem.getChildren().addAll(symmetric, asymmetric);
-    }
-
-    private void buildAuthenticationTree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("Digital Signatures"),
-                new TreeItem<>("Message Authentication Codes"));
-    }
-
-    private void buildGenericTree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("Hashing"),
-                new TreeItem<>("Manual Conversion"),
-                new TreeItem<>("File Conversion"),
-                new TreeItem<>("Random Number Generator"),
-                new TreeItem<>("Check Digits"),
-                new TreeItem<>("Modular Arithmetic"));
+    private void buildCategoryTree(String category) {
+        List<OperationDescriptor> ops = OperationRegistry.getInstance().getAll().stream()
+                .filter(o -> category.equals(o.getCategory()))
+                .collect(Collectors.toList());
+        for (OperationDescriptor op : ops) {
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode(op)));
+        }
     }
 
     private void buildKeysTree() {
-        TreeItem<String> symmetric = new TreeItem<>("Symmetric");
-        symmetric.getChildren().addAll(
-                new TreeItem<>("Key Generation"),
-                new TreeItem<>("Validation & KCV"),
-                new TreeItem<>("Key Sharing (XOR Split/Combine)"),
-                new TreeItem<>("Key Derivation (KDF)"),
-                new TreeItem<>("TR-31 Key Blocks"));
+        TreeItem<OperationNode> symmetric = new TreeItem<>(new OperationNode("Symmetric"));
+        TreeItem<OperationNode> asymmetric = new TreeItem<>(new OperationNode("Asymmetric"));
+        TreeItem<OperationNode> tools = new TreeItem<>(new OperationNode("Tools"));
 
-        TreeItem<String> asymmetric = new TreeItem<>("Asymmetric");
-        asymmetric.getChildren().addAll(
-                new TreeItem<>("RSA Key Generation"),
-                new TreeItem<>("ECDSA Key Generation"),
-                new TreeItem<>("DSA Key Generation"),
-                new TreeItem<>("EdDSA Key Generation"));
+        List<OperationDescriptor> keysOps = OperationRegistry.getInstance().getAll().stream()
+                .filter(o -> "Keys".equals(o.getCategory()))
+                .collect(Collectors.toList());
 
-        rootItem.getChildren().addAll(symmetric, asymmetric);
-    }
+        for (OperationDescriptor op : keysOps) {
+            if (op.getId().startsWith("op_keys_rsa") || op.getId().startsWith("op_keys_ecdsa") ||
+                op.getId().startsWith("op_keys_dsa") || op.getId().startsWith("op_keys_eddsa") ||
+                op.getId().startsWith("op_keys_compare")) {
+                asymmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));
+            } else if (op.getId().startsWith("op_keys_material") || op.getId().startsWith("op_keys_store")) {
+                tools.getChildren().add(new TreeItem<>(new OperationNode(op)));
+            } else {
+                symmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));
+            }
+        }
 
-    private void buildCertificatesTree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("Generate Certificate"),
-                new TreeItem<>("Parse Certificate"),
-                new TreeItem<>("Validate Certificate"),
-                new TreeItem<>("Certificate Chain"),
-                new TreeItem<>("CMS/PKCS#7 Operations"));
-    }
-
-    private void buildJOSETree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("JWT (Signed)"),
-                new TreeItem<>("JWE (Encrypted)"),
-                new TreeItem<>("JWK (Keys)"),
-                new TreeItem<>("JWA (Algorithms)"),
-                new TreeItem<>("Token Inspector"));
-    }
-
-    private void buildPaymentsTree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("Clear PIN Blocks"),
-                new TreeItem<>("Encrypted PIN Blocks"),
-                new TreeItem<>("PIN Generation"),
-                new TreeItem<>("CVV Operations"),
-                new TreeItem<>("EMV Operations"));
-    }
-
-    private void buildASN1Tree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("Decode ASN.1"),
-                new TreeItem<>("Encode ASN.1"));
-    }
-
-    private void buildHistoryTree() {
-        rootItem.getChildren().addAll(
-                new TreeItem<>("Recent Operations"),
-                new TreeItem<>("Saved Sessions"),
-                new TreeItem<>("Export History"));
-    }
-
-    private void buildSearchTree() {
-        rootItem.getChildren().add(
-                new TreeItem<>("Quick search across all operations"));
+        rootItem.getChildren().addAll(symmetric, asymmetric, tools);
     }
 
     private void expandAll(TreeItem<?> item) {
@@ -224,70 +241,22 @@ public class SidePanel extends VBox {
 
     private void filterTree(String filter) {
         if (filter == null || filter.trim().isEmpty()) {
-            // Show current section items
-            navigationTree.setRoot(rootItem);
-            expandAll(rootItem);
+            updateContent(this.currentSection);
         } else {
-            // Global Search: Search across ALL operations
-            TreeItem<String> allOperationsRoot = new TreeItem<>("Search Results");
-            populateAllItems(allOperationsRoot);
+            List<OperationDescriptor> results = OperationRegistry.getInstance().search(filter);
+            TreeItem<OperationNode> filteredRoot = new TreeItem<>(new OperationNode("Search Results"));
 
-            String lowerFilter = filter.toLowerCase();
-            TreeItem<String> filteredRoot = new TreeItem<>("Search Results");
-
-            if (filterItems(allOperationsRoot, filteredRoot, lowerFilter)) {
-                navigationTree.setRoot(filteredRoot);
-                expandAll(filteredRoot);
-            } else {
-                // No matches found
-                navigationTree.setRoot(new TreeItem<>("No operations found"));
-            }
-        }
-    }
-
-    // Helper to populate a root with ALL available operations for global search
-    private void populateAllItems(TreeItem<String> targetRoot) {
-        TreeItem<String> originalRoot = this.rootItem;
-        this.rootItem = targetRoot; // Temporarily direct build methods to targetRoot
-
-        try {
-            buildKeysTree();
-            buildCipherTree();
-            buildAuthenticationTree();
-            buildCertificatesTree();
-            buildJOSETree();
-            buildGenericTree();
-            buildPaymentsTree();
-            buildASN1Tree();
-        } finally {
-            this.rootItem = originalRoot; // Restore original root
-        }
-    }
-
-    private boolean filterItems(TreeItem<String> source, TreeItem<String> target, String filter) {
-        boolean hasMatch = false;
-
-        for (TreeItem<String> child : source.getChildren()) {
-            TreeItem<String> newChild = new TreeItem<>(child.getValue());
-            boolean childHasMatch = false;
-
-            if (child.isLeaf()) {
-                if (child.getValue().toLowerCase().contains(filter)) {
-                    childHasMatch = true;
-                }
-            } else {
-                if (filterItems(child, newChild, filter)) {
-                    childHasMatch = true;
-                }
+            for (OperationDescriptor res : results) {
+                filteredRoot.getChildren().add(new TreeItem<>(new OperationNode(res)));
             }
 
-            if (childHasMatch) {
-                target.getChildren().add(newChild);
-                hasMatch = true;
+            if (results.isEmpty()) {
+                filteredRoot.getChildren().add(new TreeItem<>(new OperationNode("No operations found")));
             }
-        }
 
-        return hasMatch;
+            navigationTree.setRoot(filteredRoot);
+            expandAll(filteredRoot);
+        }
     }
 
     private void collapse() {

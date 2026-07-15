@@ -1,7 +1,9 @@
 package com.cryptoforge.ui;
 
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import javafx.fxml.FXML;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.geometry.Insets;
@@ -11,9 +13,16 @@ import javafx.geometry.Insets;
  */
 public class MainController implements StatusReporter {
 
+    private final PauseTransition statusResetTimer = new PauseTransition(Duration.seconds(3));
+
     @Override
-    public void updateInspector(String operation, byte[] input, byte[] output, java.util.Map<String, String> details) {
-        // No-op for legacy UI
+    public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptoforge.model.OperationDetail> details) {
+        // Implementación legada (simulada o redirigida si es necesario)
+    }
+
+    @Override
+    public void addToHistory(String operation, java.util.List<com.cryptoforge.model.OperationDetail> details) {
+        // Implementación legada
     }
 
     @FXML
@@ -638,7 +647,7 @@ public class MainController implements StatusReporter {
             keysController.initializeTR31(
                     tr31KbpkExportField, tr31KeyToWrapField, tr31VersionCombo,
                     tr31UsageCombo, tr31AlgorithmCombo, tr31ModeCombo,
-                    tr31ExportabilityCombo, tr31ExportResultArea,
+                    tr31ExportabilityCombo, null, tr31ExportResultArea,
                     tr31KbpkImportField, tr31KeyBlockField, tr31KeyLengthField,
                     tr31ImportResultArea);
         }
@@ -922,17 +931,15 @@ public class MainController implements StatusReporter {
 
     @Override
     public void updateStatus(String message) {
+        if (!javafx.application.Platform.isFxApplicationThread()) {
+            javafx.application.Platform.runLater(() -> updateStatus(message));
+            return;
+        }
+        if (statusLabel == null) return;
         statusLabel.setText(message);
-
-        // Reset status after 3 seconds
-        new Thread(() -> {
-            try {
-                Thread.sleep(3000);
-                javafx.application.Platform.runLater(() -> statusLabel.setText("Ready"));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        statusResetTimer.stop();
+        statusResetTimer.setOnFinished(event -> statusLabel.setText("Ready"));
+        statusResetTimer.playFromStart();
     }
 
     @Override
@@ -944,7 +951,8 @@ public class MainController implements StatusReporter {
         alert.showAndWait();
     }
 
-    protected void showInfo(String title, String message) {
+    @Override
+    public void showInfo(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
@@ -1843,8 +1851,8 @@ public class MainController implements StatusReporter {
     @FXML
     private void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About CryptoForge");
-        alert.setHeaderText("CryptoForge v1.0.0");
+        alert.setTitle("About CryptoCarver");
+        alert.setHeaderText("CryptoCarver v1.0.0");
         alert.setContentText(
                 "Advanced Cryptographic Tool\n\n" +
                         "A modern evolution of BP-Tools with enhanced features:\n" +

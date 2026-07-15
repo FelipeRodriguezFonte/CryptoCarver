@@ -1,8 +1,8 @@
 @echo off
-REM CryptoForge Launcher for Windows
+REM CryptoCarver Launcher for Windows
 
 echo ================================================
-echo   CryptoForge - Advanced Crypto Tool
+echo   CryptoCarver - Advanced Crypto Test Tool
 echo ================================================
 echo.
 
@@ -15,7 +15,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo Starting CryptoForge...
+echo Starting CryptoCarver...
 echo.
 
 cd /d "%~dp0"

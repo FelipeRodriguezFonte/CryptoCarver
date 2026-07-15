@@ -1,9 +1,12 @@
 package com.cryptoforge.ui;
 
 import com.cryptoforge.crypto.*;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.model.OperationResult;
+import com.cryptoforge.model.AppSettings;
+import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
+import javafx.stage.FileChooser;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -14,12 +17,12 @@ import java.util.List;
 
 /**
  * Controller for Keys tab - Enhanced with asymmetric cryptography
- * 
+ *
  * @author Felipe
  */
 public class KeysController {
 
-    private Object mainController; // Can be MainController or ModernMainController
+    private StatusReporter mainController;
 
     // Symmetric Key Generation components
     private ComboBox<String> keyTypeCombo;
@@ -29,6 +32,20 @@ public class KeysController {
     // Key Validation components
     private TextField keyInputField;
     private TextArea validationResultArea;
+
+    // Key material inspection
+    private TextArea keyMaterialInputArea;
+    private TextArea keyMaterialReportArea;
+    private TextArea keyComparePublicArea;
+    private TextArea keyComparePrivateArea;
+    private TextArea keyCompareResultArea;
+    private ComboBox<String> keyStoreTypeCombo;
+    private PasswordField keyStorePasswordField;
+    private CheckBox keyStoreUnsafeExtractCheck;
+    private TextField keyStorePathField;
+    private TextArea keyStoreReportArea;
+    private ComboBox<String> keyStoreProfileCombo;
+    private TextField keyStoreProfileNameField;
 
     // Key Sharing components
     private ComboBox<String> numComponentsCombo;
@@ -51,6 +68,13 @@ public class KeysController {
     private TextField kdfIterationsField;
     private TextField kdfOutputLengthField;
     private TextArea kdfResultArea;
+
+    // AES Key Wrap components
+    private ComboBox<String> keyWrapModeCombo;
+    private CheckBox keyWrapUnwrapCheck;
+    private TextField keyWrapKekField;
+    private TextField keyWrapDataField;
+    private TextArea keyWrapResultArea;
 
     // RSA Generation components
     private ComboBox<Integer> rsaKeySizeCombo;
@@ -83,10 +107,24 @@ public class KeysController {
     private ComboBox<String> certKeyTypeCombo;
     private ComboBox<String> certSignAlgoCombo;
     private TextArea certOutputArea;
+    private TextField certSanDnsField;
+    private TextField certSanIpField;
+    private CheckBox certRootCaCheck;
 
     // Certificate Parsing components
     private TextArea certInputArea;
     private TextArea certParseResultArea;
+    private TextArea certCompareLeftArea;
+    private TextArea certCompareRightArea;
+    private TextArea certCompareResultArea;
+    private TextArea certIssueCsrArea;
+    private TextArea certIssueCaCertArea;
+    private TextArea certIssueCaKeyArea;
+    private TextField certIssueValidityField;
+    private TextField certIssueSignatureField;
+    private TextArea certIssueResultArea;
+    private CheckBox certIssueIntermediateCaCheck;
+    private TextField certIssuePathLengthField;
 
     // Validate Certificate components
     private TextArea valCertInput;
@@ -101,44 +139,18 @@ public class KeysController {
         return lastGeneratedKeyPair;
     }
 
-    // Helper methods to call methods on MainController or ModernMainController
     private void showError(String title, String message) {
-        try {
-            if (mainController instanceof MainController) {
-                ((MainController) mainController).showError(title, message);
-            } else {
-                // Use reflection for ModernMainController
-                java.lang.reflect.Method method = mainController.getClass().getDeclaredMethod("showError", String.class,
-                        String.class);
-                method.setAccessible(true);
-                method.invoke(mainController, title, message);
-            }
-        } catch (Exception e) {
-            System.err.println("Error calling showError: " + e.getMessage());
-            e.printStackTrace();
-        }
+        if (mainController != null) mainController.showError(title, message);
     }
 
     private void updateStatus(String message) {
-        try {
-            if (mainController instanceof MainController) {
-                ((MainController) mainController).updateStatus(message);
-            } else {
-                // Use reflection for ModernMainController
-                java.lang.reflect.Method method = mainController.getClass().getDeclaredMethod("updateStatus",
-                        String.class);
-                method.setAccessible(true);
-                method.invoke(mainController, message);
-            }
-        } catch (Exception e) {
-            System.err.println("Error calling updateStatus: " + e.getMessage());
-        }
+        if (mainController != null) mainController.updateStatus(message);
     }
 
     /**
      * Initialize the controller - Symmetric keys
      */
-    public void initialize(Object mainController,
+    public void initialize(StatusReporter mainController,
             ComboBox<String> keyTypeCombo,
             javafx.scene.control.CheckBox forceOddParityCheck,
             TextArea generatedKeyField,
@@ -174,6 +186,156 @@ public class KeysController {
 
         numComponentsCombo.getItems().addAll("2", "3", "4", "5");
         numComponentsCombo.setValue("2");
+    }
+
+    public void initializeKeyMaterialInspector(TextArea inputArea, TextArea reportArea) {
+        this.keyMaterialInputArea = inputArea;
+        this.keyMaterialReportArea = reportArea;
+    }
+
+    public void initializeKeyPairComparator(TextArea publicArea, TextArea privateArea, TextArea resultArea) {
+        this.keyComparePublicArea = publicArea;
+        this.keyComparePrivateArea = privateArea;
+        this.keyCompareResultArea = resultArea;
+    }
+
+    public void initializeKeyStoreInspector(ComboBox<String> typeCombo, PasswordField passwordField, CheckBox unsafeExtractCheck,
+            TextField pathField, TextArea reportArea, ComboBox<String> profileCombo, TextField profileNameField) {
+        this.keyStoreTypeCombo = typeCombo;
+        this.keyStorePasswordField = passwordField;
+        this.keyStoreUnsafeExtractCheck = unsafeExtractCheck;
+        this.keyStorePathField = pathField;
+        this.keyStoreReportArea = reportArea;
+        this.keyStoreProfileCombo = profileCombo;
+        this.keyStoreProfileNameField = profileNameField;
+        typeCombo.getItems().setAll("Auto", "PKCS12", "JKS", "JCEKS");
+        typeCombo.setValue("Auto");
+        refreshKeyStoreProfiles();
+    }
+
+    /** Inspects PEM keys and certificates without modifying them. */
+    public void handleInspectKeyMaterial() {
+        try {
+            String pem = keyMaterialInputArea.getText().trim();
+            if (pem.isEmpty()) throw new IllegalArgumentException("Paste PEM key or certificate material first");
+            String report;
+            if (pem.contains("BEGIN CERTIFICATE")) {
+                var factory = java.security.cert.CertificateFactory.getInstance("X.509");
+                var certificate = (java.security.cert.X509Certificate) factory.generateCertificate(
+                        new java.io.ByteArrayInputStream(pem.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+                report = KeyMaterialInspector.describeCertificate(certificate);
+            } else if (pem.contains("PRIVATE KEY")) {
+                java.security.PrivateKey key = AsymmetricKeyOperations.importPrivateKeyPEMAuto(pem);
+                report = KeyMaterialInspector.describeKey(key);
+            } else if (pem.contains("BEGIN PUBLIC KEY")) {
+                java.security.PublicKey key = AsymmetricKeyOperations.importPublicKeyPEMAuto(pem);
+                report = KeyMaterialInspector.describeKey(key);
+            } else {
+                throw new IllegalArgumentException("Recognized PEM headers are PUBLIC KEY, EC/PRIVATE KEY and CERTIFICATE");
+            }
+            keyMaterialReportArea.setText(report);
+            updateStatus("Key material inspected successfully");
+        } catch (Exception e) {
+            showError("Key Material Inspector", "Cannot inspect material: " + e.getMessage());
+        }
+    }
+
+    public void handleCompareKeyPair() {
+        try {
+            java.security.PublicKey publicKey = parsePublicMaterial(keyComparePublicArea.getText().trim());
+            java.security.PrivateKey privateKey = parsePrivateMaterial(keyComparePrivateArea.getText().trim());
+            boolean matches = KeyMaterialInspector.matches(publicKey, privateKey);
+            keyCompareResultArea.setText("========================================\nKEY PAIR COMPARISON\n========================================\n\n"
+                    + "Public algorithm: " + publicKey.getAlgorithm() + "\nPrivate algorithm: " + privateKey.getAlgorithm() + "\n"
+                    + "Public SHA-256: " + KeyMaterialInspector.fingerprint(publicKey.getEncoded()) + "\n\n"
+                    + (matches ? "✓ MATCH: the private key successfully signed a challenge verified by the public key."
+                            : "✗ NO MATCH: signature verification failed or the algorithms are incompatible."));
+            updateStatus(matches ? "Key pair comparison: match" : "Key pair comparison: no match");
+        } catch (Exception e) {
+            showError("Compare Key Pair", "Cannot compare material: " + e.getMessage());
+        }
+    }
+
+    public void handleInspectKeyStore() {
+        char[] password = keyStorePasswordField.getText().toCharArray();
+        try {
+            boolean unsafe = keyStoreUnsafeExtractCheck.isSelected();
+            var report = KeyStoreInspector.inspect(java.nio.file.Path.of(keyStorePathField.getText().trim()), password,
+                    keyStoreTypeCombo.getValue(), unsafe);
+            StringBuilder text = new StringBuilder("========================================\nKEYSTORE REPORT\n========================================\n\n")
+                    .append("Type: ").append(report.type()).append("\nEntries: ").append(report.entries().size()).append("\n")
+                    .append(unsafe ? "⚠️ UNSAFE EXTRACTION ENABLED — do not use this mode in production.\n\n" : "\n");
+            for (var entry : report.entries()) {
+                text.append("Alias: ").append(entry.alias()).append("\nType: ").append(entry.kind())
+                        .append("\nAlgorithm: ").append(entry.algorithm());
+                if (!entry.subject().isEmpty()) text.append("\nSubject: ").append(entry.subject());
+                if (!entry.fingerprint().equals("Not exposed")) text.append("\nSHA-256: ").append(entry.fingerprint());
+                if (unsafe && !entry.keyMaterial().equals("Not requested")) text.append("\nEXPORTED KEY (HEX): ").append(entry.keyMaterial());
+                text.append("\n----------------------------------------\n");
+            }
+            keyStoreReportArea.setText(text.toString());
+            updateStatus("KeyStore inspected: " + report.entries().size() + " entries");
+        } catch (Exception e) {
+            showError("KeyStore Inspector", "Cannot inspect keystore: " + e.getMessage());
+        } finally {
+            java.util.Arrays.fill(password, '\0');
+            keyStorePasswordField.clear();
+        }
+    }
+
+    public void chooseKeyStore() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select PKCS#12, JKS or JCEKS KeyStore");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("KeyStores", "*.p12", "*.pfx", "*.jks", "*.jceks"),
+                new FileChooser.ExtensionFilter("All files", "*"));
+        java.io.File selected = chooser.showOpenDialog(null);
+        if (selected != null) keyStorePathField.setText(selected.getAbsolutePath());
+    }
+
+    public void saveKeyStoreProfile() {
+        try {
+            AppSettings.getInstance().saveTrustStoreProfile(keyStoreProfileNameField.getText(), keyStorePathField.getText(), keyStoreTypeCombo.getValue());
+            refreshKeyStoreProfiles();
+            keyStoreProfileCombo.setValue(keyStoreProfileNameField.getText().trim());
+            updateStatus("KeyStore profile saved (password not stored)");
+        } catch (Exception e) {
+            showError("KeyStore Profile", e.getMessage());
+        }
+    }
+
+    public void loadKeyStoreProfile() {
+        String name = keyStoreProfileCombo.getValue();
+        if (name == null || name.isBlank()) return;
+        AppSettings.getInstance().getTrustStoreProfiles().stream().filter(profile -> name.equals(profile.name())).findFirst().ifPresent(profile -> {
+            keyStorePathField.setText(profile.path());
+            keyStoreTypeCombo.setValue(profile.type());
+            keyStorePasswordField.clear();
+            updateStatus("KeyStore profile loaded; enter password to inspect");
+        });
+    }
+
+    private void refreshKeyStoreProfiles() {
+        if (keyStoreProfileCombo == null) return;
+        keyStoreProfileCombo.getItems().setAll(AppSettings.getInstance().getTrustStoreProfiles().stream()
+                .map(AppSettings.TrustStoreProfile::name).sorted(String.CASE_INSENSITIVE_ORDER).toList());
+    }
+
+    private java.security.PublicKey parsePublicMaterial(String pem) throws Exception {
+        if (pem.isBlank()) throw new IllegalArgumentException("Public key or certificate is required");
+        if (pem.contains("BEGIN CERTIFICATE")) {
+            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
+            return ((java.security.cert.X509Certificate) factory.generateCertificate(
+                    new java.io.ByteArrayInputStream(pem.getBytes(java.nio.charset.StandardCharsets.US_ASCII)))).getPublicKey();
+        }
+        return AsymmetricKeyOperations.importPublicKeyPEMAuto(pem);
+    }
+
+    private java.security.PrivateKey parsePrivateMaterial(String pem) throws Exception {
+        if (pem.isBlank()) throw new IllegalArgumentException("Private key is required");
+        if (pem.contains("ED25519")) return AsymmetricKeyOperations.importEd25519PrivateKeyPEM(pem);
+        if (pem.contains("EC PRIVATE")) return AsymmetricKeyOperations.importECPrivateKeyPEM(pem);
+        return AsymmetricKeyOperations.importPrivateKeyPEMAuto(pem);
     }
 
     /**
@@ -231,7 +393,7 @@ public class KeysController {
             TextField cnField, TextField orgField, TextField ouField,
             TextField localityField, TextField stateField, TextField countryField,
             TextField emailField, TextField validityField, ComboBox<String> keyTypeCombo,
-            ComboBox<String> signAlgoCombo, TextArea outputArea) {
+            ComboBox<String> signAlgoCombo, TextArea outputArea, TextField sanDnsField, TextField sanIpField, CheckBox rootCaCheck) {
 
         this.certCNField = cnField;
         this.certOrgField = orgField;
@@ -244,6 +406,9 @@ public class KeysController {
         this.certKeyTypeCombo = keyTypeCombo;
         this.certSignAlgoCombo = signAlgoCombo;
         this.certOutputArea = outputArea;
+        this.certSanDnsField = sanDnsField;
+        this.certSanIpField = sanIpField;
+        this.certRootCaCheck = rootCaCheck;
 
         certKeyTypeCombo.getItems().addAll("RSA-2048", "RSA-4096", "ECDSA-P256", "ECDSA-P384");
         certKeyTypeCombo.setValue("RSA-2048");
@@ -254,12 +419,84 @@ public class KeysController {
         certValidityField.setText("365");
     }
 
+    /** Compatibility entry point for the classic UI, which has no SAN controls. */
+    public void initializeCertificateGen(
+            TextField cnField, TextField orgField, TextField ouField,
+            TextField localityField, TextField stateField, TextField countryField,
+            TextField emailField, TextField validityField, ComboBox<String> keyTypeCombo,
+            ComboBox<String> signAlgoCombo, TextArea outputArea) {
+        initializeCertificateGen(cnField, orgField, ouField, localityField, stateField, countryField, emailField,
+                validityField, keyTypeCombo, signAlgoCombo, outputArea, null, null, null);
+    }
+
     /**
      * Initialize Certificate Parsing components
      */
     public void initializeCertificateParse(TextArea inputArea, TextArea resultArea) {
         this.certInputArea = inputArea;
         this.certParseResultArea = resultArea;
+    }
+
+    public void initializeCertificateComparator(TextArea leftArea, TextArea rightArea, TextArea resultArea) {
+        this.certCompareLeftArea = leftArea;
+        this.certCompareRightArea = rightArea;
+        this.certCompareResultArea = resultArea;
+    }
+
+    public void initializeCertificateIssuer(TextArea csrArea, TextArea caCertArea, TextArea caKeyArea,
+            TextField validityField, TextField signatureField, TextArea resultArea, CheckBox intermediateCaCheck,
+            TextField pathLengthField) {
+        this.certIssueCsrArea = csrArea;
+        this.certIssueCaCertArea = caCertArea;
+        this.certIssueCaKeyArea = caKeyArea;
+        this.certIssueValidityField = validityField;
+        this.certIssueSignatureField = signatureField;
+        this.certIssueResultArea = resultArea;
+        this.certIssueIntermediateCaCheck = intermediateCaCheck;
+        this.certIssuePathLengthField = pathLengthField;
+    }
+
+    public void handleIssueCertificateFromCsr() {
+        try {
+            String csrPem = certIssueCsrArea.getText().trim();
+            String compact = csrPem.replaceAll("-----[^-]+-----|\\s", "");
+            var csr = new org.bouncycastle.pkcs.PKCS10CertificationRequest(java.util.Base64.getDecoder().decode(compact));
+            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
+            var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
+                    certIssueCaCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+            var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(certIssueCaKeyArea.getText().trim());
+            int validity = Integer.parseInt(certIssueValidityField.getText().trim());
+            String requestedSignature = certIssueSignatureField.getText().trim();
+            String signatureAlgorithm = requestedSignature.isEmpty() || "automatic".equalsIgnoreCase(requestedSignature)
+                    ? CertificateAuthorityOperations.suggestSignatureAlgorithm(issuerKey) : requestedSignature;
+            certIssueSignatureField.setText(signatureAlgorithm);
+            boolean intermediate = certIssueIntermediateCaCheck.isSelected();
+            var issued = intermediate
+                    ? CertificateAuthorityOperations.issueIntermediateCaFromCsr(csr, issuerCert, issuerKey, validity,
+                            signatureAlgorithm, Integer.parseInt(certIssuePathLengthField.getText().trim()))
+                    : CertificateAuthorityOperations.issueFromCsr(csr, issuerCert, issuerKey, validity,
+                            signatureAlgorithm);
+            certIssueResultArea.setText(intermediate ? "=== ISSUED INTERMEDIATE CA ===\n\n" : "=== ISSUED END-ENTITY CERTIFICATE ===\n\n"
+                    + CertificateGenerator.getCertificateInfo(issued)
+                    + "\n\n" + CertificateGenerator.exportCertificatePEM(issued));
+            updateStatus("Certificate issued from validated CSR");
+        } catch (Exception e) {
+            showError("Issue Certificate", "Cannot issue certificate: " + e.getMessage());
+        }
+    }
+
+    public void handleCompareCertificates() {
+        try {
+            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
+            var left = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
+                    certCompareLeftArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+            var right = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
+                    certCompareRightArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+            certCompareResultArea.setText(CertificateComparator.compare(left, right));
+            updateStatus("Certificates compared");
+        } catch (Exception e) {
+            showError("Compare Certificates", "Cannot compare certificates: " + e.getMessage());
+        }
     }
 
     /**
@@ -315,26 +552,24 @@ public class KeysController {
             }
 
             // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Key Type", keyType);
-                    details.put("Generated Key", keyHex);
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Key Type", keyType));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Generated Key", keyHex));
                     try {
                         if (keyType.contains("DES") || keyType.contains("3DES")) {
                             byte[] kcv = KeyOperations.calculateKCV_VISA(key);
-                            details.put("KCV (VISA)", DataConverter.bytesToHex(kcv));
+                            details.add(com.cryptoforge.model.OperationDetail.publicDetail("KCV (VISA)", DataConverter.bytesToHex(kcv)));
                         } else {
                             byte[] kcv = KeyOperations.calculateKCV_AES(key);
-                            details.put("KCV (AES)", DataConverter.bytesToHex(kcv));
+                            details.add(com.cryptoforge.model.OperationDetail.publicDetail("KCV (AES)", DataConverter.bytesToHex(kcv)));
                         }
                     } catch (Exception e) {
-                        details.put("KCV", "Error calculating");
+                        details.add(com.cryptoforge.model.OperationDetail.publicDetail("KCV", "Error calculating"));
                     }
 
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "Generate Symmetric Key", details);
+                    mainController.addToHistory("Generate Symmetric Key", details);
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
@@ -683,17 +918,14 @@ public class KeysController {
 
             updateStatus("RSA-" + keySize + " key pair generated successfully");
 
-            // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Key Size", keySize + " bits");
-                    details.put("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-                    details.put("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Key Size", keySize + " bits"));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
 
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "Generate RSA Key", details);
+                    mainController.addToHistory("Generate RSA Key", details);
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
@@ -741,17 +973,14 @@ public class KeysController {
 
             updateStatus("DSA-" + keySize + " key pair generated successfully");
 
-            // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Key Size", keySize);
-                    details.put("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-                    details.put("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Key Size", keySize));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
 
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "Generate DSA Key", details);
+                    mainController.addToHistory("Generate DSA Key", details);
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
@@ -799,17 +1028,14 @@ public class KeysController {
 
             updateStatus("ECDSA F(p) key pair generated on curve " + curve);
 
-            // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Curve", curve);
-                    details.put("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-                    details.put("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Curve", curve));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
 
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "Generate ECDSA Key", details);
+                    mainController.addToHistory("Generate ECDSA Key", details);
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
@@ -940,17 +1166,21 @@ public class KeysController {
             config.country = certCountryField != null ? certCountryField.getText().trim() : "ES";
             config.validityDays = validity;
             config.signatureAlgorithm = certSignAlgoCombo.getValue();
+            applySanConfiguration(config);
 
             // Email is optional - only add if provided
             String email = certEmailField != null ? certEmailField.getText().trim() : "";
             config.email = email.isEmpty() ? null : email;
 
             // Generate certificate
-            X509Certificate certificate = CertificateGenerator.generateSelfSignedCertificate(keyPair, config);
+            boolean rootCa = certRootCaCheck != null && certRootCaCheck.isSelected();
+            X509Certificate certificate = rootCa
+                    ? CertificateGenerator.generateRootCA(keyPair, config, 1)
+                    : CertificateGenerator.generateSelfSignedCertificate(keyPair, config);
 
             // Build output
             StringBuilder output = new StringBuilder();
-            output.append("=== SELF-SIGNED X.509 CERTIFICATE ===\n\n");
+            output.append(rootCa ? "=== SELF-SIGNED ROOT CA (LABORATORY) ===\n\n" : "=== SELF-SIGNED X.509 CERTIFICATE ===\n\n");
             output.append(CertificateGenerator.getCertificateInfo(certificate));
             output.append("\n\n=== CERTIFICATE (PEM) ===\n");
             output.append(CertificateGenerator.exportCertificatePEM(certificate));
@@ -976,6 +1206,47 @@ public class KeysController {
             showError("Generation Error", "Error generating certificate: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /** Generates a PKCS#10 request and a fresh laboratory key pair using the certificate form parameters. */
+    public void handleGenerateCSR() {
+        try {
+            String cn = certCNField.getText().trim();
+            if (cn.isEmpty()) throw new IllegalArgumentException("Common Name (CN) is required");
+            String selected = certKeyTypeCombo.getValue();
+            KeyPair pair;
+            if (selected.startsWith("RSA")) pair = AsymmetricKeyOperations.generateRSAKeyPair(Integer.parseInt(selected.substring(4)));
+            else if (selected.startsWith("ECDSA")) pair = AsymmetricKeyOperations.generateECDSAFpKeyPair(selected.equals("ECDSA-P256") ? "secp256r1" : "secp384r1");
+            else throw new IllegalArgumentException("Unsupported CSR key type");
+            CertificateGenerator.CertificateConfig config = new CertificateGenerator.CertificateConfig();
+            config.commonName = cn;
+            config.organization = certOrgField.getText().trim();
+            config.organizationalUnit = certOUField.getText().trim();
+            config.locality = certLocalityField.getText().trim();
+            config.state = certStateField.getText().trim();
+            config.country = certCountryField.getText().trim();
+            config.email = certEmailField.getText().trim().isEmpty() ? null : certEmailField.getText().trim();
+            config.signatureAlgorithm = certSignAlgoCombo.getValue();
+            applySanConfiguration(config);
+            certOutputArea.setText("=== PKCS#10 CERTIFICATE SIGNING REQUEST ===\n\n" + CertificateGenerator.generateCSR(pair, config)
+                    + "\n=== PRIVATE KEY (LABORATORY ONLY) ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(pair.getPrivate()));
+            certOutputArea.setManaged(true);
+            certOutputArea.setVisible(true);
+            updateStatus("CSR generated with requested SANs");
+        } catch (Exception e) {
+            showError("CSR Generation", "Cannot generate CSR: " + e.getMessage());
+        }
+    }
+
+    private void applySanConfiguration(CertificateGenerator.CertificateConfig config) {
+        config.sanDnsNames = commaSeparatedValues(certSanDnsField == null ? null : certSanDnsField.getText());
+        config.sanIpAddresses = commaSeparatedValues(certSanIpField == null ? null : certSanIpField.getText());
+        config.addSubjectAlternativeNames = !config.sanDnsNames.isEmpty() || !config.sanIpAddresses.isEmpty();
+    }
+
+    private List<String> commaSeparatedValues(String value) {
+        if (value == null || value.isBlank()) return new ArrayList<>();
+        return Arrays.stream(value.split(",")).map(String::trim).filter(part -> !part.isEmpty()).toList();
     }
 
     /**
@@ -1113,6 +1384,7 @@ public class KeysController {
     private ComboBox<String> tr31ModeCombo;
     private ComboBox<String> tr31VersionCombo;
     private ComboBox<String> tr31ExportabilityCombo;
+    private TextField tr31OptionalBlocksField;
     private TextArea tr31ExportResultArea;
 
     private TextField tr31KbpkImportField;
@@ -1127,6 +1399,7 @@ public class KeysController {
             ComboBox<String> tr31VersionCombo, ComboBox<String> tr31UsageCombo,
             ComboBox<String> tr31AlgorithmCombo, ComboBox<String> tr31ModeCombo,
             ComboBox<String> tr31ExportabilityCombo,
+            TextField tr31OptionalBlocksField,
             TextArea tr31ExportResultArea, TextField tr31KbpkImportField,
             TextArea tr31KeyBlockField, TextField tr31KeyLengthField,
             TextArea tr31ImportResultArea) {
@@ -1138,6 +1411,7 @@ public class KeysController {
         this.tr31AlgorithmCombo = tr31AlgorithmCombo;
         this.tr31ModeCombo = tr31ModeCombo;
         this.tr31ExportabilityCombo = tr31ExportabilityCombo;
+        this.tr31OptionalBlocksField = tr31OptionalBlocksField;
         this.tr31ExportResultArea = tr31ExportResultArea;
 
         this.tr31KbpkImportField = tr31KbpkImportField;
@@ -1264,7 +1538,8 @@ public class KeysController {
             char exportability = exportStr.charAt(0); // 'E', 'N', or 'S'
 
             // Wrap key
-            String keyBlock = TR31Operations.wrapKey(kbpk, key, usage, version, algorithm, mode, exportability);
+            String optionalBlocks = tr31OptionalBlocksField == null ? "" : tr31OptionalBlocksField.getText();
+            String keyBlock = TR31Operations.wrapKey(kbpk, key, usage, version, algorithm, mode, exportability, optionalBlocks);
 
             // Parse header for display
             TR31Operations.TR31Header header = TR31Operations.TR31Header.parse(keyBlock);
@@ -1292,6 +1567,13 @@ public class KeysController {
             result.append(" (").append(TR31Operations.getExportabilityDescription(header.exportability.charAt(0)))
                     .append(")\n");
             result.append("Optional Blocks:   ").append(header.numOptionalBlocks).append("\n\n");
+            if (!header.optionalBlockDetails.isEmpty()) {
+                result.append("OPTIONAL BLOCKS:\n");
+                for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
+                    result.append("  ").append(block.id()).append(" (" ).append(block.dataLength()).append(" bytes): ").append(block.data()).append("\n");
+                }
+                result.append("\n");
+            }
 
             result.append("KEY BLOCK:\n");
             result.append("------------------\n");
@@ -1327,18 +1609,16 @@ public class KeysController {
             updateStatus("TR-31 key wrapped successfully");
 
             // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Version", header.versionId);
-                    details.put("Usage", usage);
-                    details.put("KBPK", kbpk);
-                    details.put("Key to Wrap", key);
-                    details.put("Key Block", keyBlock);
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Version", header.versionId));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Usage", usage));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("KBPK", kbpk));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Key to Wrap", key));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Key Block", keyBlock));
 
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "TR-31 Export", details);
+                    mainController.addToHistory("TR-31 Export", details);
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
@@ -1446,9 +1726,6 @@ public class KeysController {
             // Parse header
             TR31Operations.TR31Header header = TR31Operations.TR31Header.parse(keyBlock);
 
-            // Optional blocks parsing not yet implemented
-            java.util.Map<String, String> optBlocks = new java.util.HashMap<>();
-
             // Build result
             StringBuilder result = new StringBuilder();
             result.append("========================================\n");
@@ -1468,16 +1745,28 @@ public class KeysController {
             result.append(" (").append(TR31Operations.getModeOfUseDescription(header.modeOfUse.charAt(0)))
                     .append(")\n");
             result.append("Key Version:       ").append(header.keyVersionNumber).append("\n");
-            result.append("Exportability:     ").append(header.exportability).append("\n");
+            result.append("Exportability:     ").append(header.exportability).append(" (")
+                    .append(TR31Operations.getExportabilityDescription(header.exportability.charAt(0))).append(")\n");
             result.append("Optional Blocks:   ").append(header.numOptionalBlocks).append("\n");
             result.append("Reserved:          ").append(header.reserved).append("\n\n");
 
-            if (!optBlocks.isEmpty()) {
+            result.append("INPUT LENGTH:       ").append(keyBlock.length()).append(" characters\n");
+
+            if (!header.optionalBlockDetails.isEmpty()) {
                 result.append("OPTIONAL BLOCKS:\n");
                 result.append("------------------\n");
-                for (java.util.Map.Entry<String, String> entry : optBlocks.entrySet()) {
-                    result.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
+                    result.append(block.id()).append(": ").append(block.dataLength()).append(" bytes\n");
+                    result.append("  Data: ").append(block.data()).append("\n");
                 }
+                result.append("\n");
+            }
+
+            result.append("DIAGNOSTICS:\n");
+            result.append("------------------\n");
+            if (header.getDiagnostics().isEmpty()) result.append("No structural warnings detected.\n\n");
+            else {
+                for (String diagnostic : header.getDiagnostics()) result.append(diagnostic).append("\n");
                 result.append("\n");
             }
 
@@ -1530,6 +1819,8 @@ public class KeysController {
                 "HKDF-SHA1",
                 "HKDF-SHA256",
                 "HKDF-SHA512",
+                "NIST-800-108-SHA256",
+                "X9.63-SHA256",
                 "PBKDF2-SHA1",
                 "PBKDF2-SHA256",
                 "PBKDF2-SHA512",
@@ -1565,23 +1856,99 @@ public class KeysController {
         if (algorithm.startsWith("HKDF")) {
             kdfIterationsField.setText("1");
             kdfIterationsField.setDisable(true);
+            kdfSaltField.setDisable(false);
+            kdfSaltFormatCombo.setDisable(false);
+            kdfSaltField.setPromptText("Optional salt (zeros if omitted)");
             kdfInfoField.setDisable(false);
             kdfInfoFormatCombo.setDisable(false);
+            kdfInfoField.setPromptText("Optional application context");
+        } else if (algorithm.startsWith("NIST-800-108")) {
+            kdfIterationsField.setText("1");
+            kdfIterationsField.setDisable(true);
+            kdfSaltField.setDisable(false);
+            kdfSaltFormatCombo.setDisable(false);
+            kdfSaltField.setPromptText("Label (optional)");
+            kdfInfoField.setDisable(false);
+            kdfInfoFormatCombo.setDisable(false);
+            kdfInfoField.setPromptText("Context (optional)");
+        } else if (algorithm.startsWith("X9.63")) {
+            kdfIterationsField.setText("1");
+            kdfIterationsField.setDisable(true);
+            kdfSaltField.setDisable(true);
+            kdfSaltFormatCombo.setDisable(true);
+            kdfSaltField.setPromptText("Not used by X9.63");
+            kdfInfoField.setDisable(false);
+            kdfInfoFormatCombo.setDisable(false);
+            kdfInfoField.setPromptText("Shared info (optional)");
         } else if (algorithm.startsWith("PBKDF2")) {
             kdfIterationsField.setText("600000");
             kdfIterationsField.setDisable(false);
             kdfInfoField.setDisable(true);
             kdfInfoFormatCombo.setDisable(true);
+            kdfSaltField.setDisable(false);
+            kdfSaltFormatCombo.setDisable(false);
+            kdfSaltField.setPromptText("Required salt");
         } else if (algorithm.equals("SCrypt")) {
             kdfIterationsField.setText("32768");
             kdfIterationsField.setDisable(false);
             kdfInfoField.setDisable(true);
             kdfInfoFormatCombo.setDisable(true);
+            kdfSaltField.setDisable(false);
+            kdfSaltFormatCombo.setDisable(false);
         } else if (algorithm.equals("Argon2id")) {
             kdfIterationsField.setText("3");
             kdfIterationsField.setDisable(false);
             kdfInfoField.setDisable(true);
             kdfInfoFormatCombo.setDisable(true);
+            kdfSaltField.setDisable(false);
+            kdfSaltFormatCombo.setDisable(false);
+        }
+    }
+
+    /** Initializes the standalone AES Key Wrap laboratory panel. */
+    public void initializeKeyWrap(ComboBox<String> modeCombo, CheckBox unwrapCheck, TextField kekField,
+            TextField dataField, TextArea resultArea) {
+        this.keyWrapModeCombo = modeCombo;
+        this.keyWrapUnwrapCheck = unwrapCheck;
+        this.keyWrapKekField = kekField;
+        this.keyWrapDataField = dataField;
+        this.keyWrapResultArea = resultArea;
+        modeCombo.getItems().setAll("RFC 3394 - AES Key Wrap", "RFC 5649 - AES Key Wrap with Padding");
+        modeCombo.setValue("RFC 3394 - AES Key Wrap");
+    }
+
+    /** Executes wrapping or authenticated unwrapping of hexadecimal key material. */
+    public void handleKeyWrap() {
+        try {
+            byte[] kek = DataConverter.hexToBytes(keyWrapKekField.getText().replaceAll("\\s+", ""));
+            byte[] data = DataConverter.hexToBytes(keyWrapDataField.getText().replaceAll("\\s+", ""));
+            boolean unwrap = keyWrapUnwrapCheck.isSelected();
+            boolean padded = keyWrapModeCombo.getValue().startsWith("RFC 5649");
+            byte[] result;
+            if (unwrap) {
+                result = padded ? KeyWrapOperations.unwrapRfc5649(kek, data) : KeyWrapOperations.unwrapRfc3394(kek, data);
+            } else {
+                result = padded ? KeyWrapOperations.wrapRfc5649(kek, data) : KeyWrapOperations.wrapRfc3394(kek, data);
+            }
+            String operation = unwrap ? "UNWRAP" : "WRAP";
+            StringBuilder text = new StringBuilder("========================================\nAES KEY ")
+                    .append(operation).append("\n========================================\n\n")
+                    .append("Mode: ").append(keyWrapModeCombo.getValue()).append("\n")
+                    .append("KEK: ").append(kek.length * 8).append(" bits\n")
+                    .append("Input: ").append(data.length).append(" bytes\n")
+                    .append("Output: ").append(result.length).append(" bytes\n\n")
+                    .append(unwrap ? "UNWRAPPED:" : "WRAPPED:").append("\n")
+                    .append(DataConverter.bytesToHex(result)).append("\n\n")
+                    .append("✓ Integrity is verified during unwrapping.");
+            keyWrapResultArea.setText(text.toString());
+            keyWrapResultArea.setManaged(true);
+            keyWrapResultArea.setVisible(true);
+            updateStatus("AES Key Wrap " + operation.toLowerCase() + " completed");
+            OperationHistory.getInstance().addOperation("Keys", "AES Key " + operation,
+                    "Mode: " + (padded ? "RFC 5649" : "RFC 3394") + ", KEK: " + kek.length * 8 + " bits",
+                    "Input: " + data.length + " bytes, output: " + result.length + " bytes");
+        } catch (Exception e) {
+            showError("AES Key Wrap", "Cannot execute operation: " + e.getMessage());
         }
     }
 
@@ -1674,6 +2041,16 @@ public class KeysController {
                 org.bouncycastle.crypto.Digest digest = com.cryptoforge.crypto.KeyDerivation.getDigest(hashAlgo);
                 derivedKey = com.cryptoforge.crypto.KeyDerivation.hkdf(input, salt, info, outputLength, digest);
                 resultInfo = buildHKDFResult(input, salt, info, outputLength, derivedKey, hashAlgo);
+            } else if (algorithm.startsWith("NIST-800-108")) {
+                org.bouncycastle.crypto.Digest digest = com.cryptoforge.crypto.KeyDerivation.getDigest(hashAlgo);
+                derivedKey = com.cryptoforge.crypto.KeyDerivation.sp800108Counter(input, salt, info, outputLength, digest);
+                resultInfo = buildContextKdfResult("NIST SP 800-108 Counter KDF", "Key", input,
+                        "Label", salt, "Context", info, outputLength, derivedKey, hashAlgo);
+            } else if (algorithm.startsWith("X9.63")) {
+                org.bouncycastle.crypto.Digest digest = com.cryptoforge.crypto.KeyDerivation.getDigest(hashAlgo);
+                derivedKey = com.cryptoforge.crypto.KeyDerivation.x963(input, info, outputLength, digest);
+                resultInfo = buildContextKdfResult("ANSI X9.63 / Concatenation KDF", "Shared secret", input,
+                        null, null, "Shared info", info, outputLength, derivedKey, hashAlgo);
             } else if (algorithm.startsWith("PBKDF2")) {
                 // PBKDF2 requires salt
                 if (salt == null || salt.length == 0) {
@@ -1773,6 +2150,34 @@ public class KeysController {
         result.append("✓ HKDF is deterministic: same inputs always produce same output\n");
         result.append("✓ Used in: TLS 1.3, Signal Protocol, WireGuard\n");
         return result.toString();
+    }
+
+    private String buildContextKdfResult(String name, String inputLabel, byte[] input, String firstLabel,
+            byte[] firstValue, String secondLabel, byte[] secondValue, int outputLength, byte[] derivedKey,
+            String hashAlgorithm) {
+        StringBuilder result = new StringBuilder();
+        result.append("========================================\n");
+        result.append(name.toUpperCase()).append("\n");
+        result.append("========================================\n\n");
+        result.append("Hash/PRF: HMAC-").append(hashAlgorithm).append("\n");
+        result.append(inputLabel).append(" (").append(input.length).append(" bytes):\n")
+                .append(DataConverter.bytesToHex(input)).append("\n\n");
+        appendKdfField(result, firstLabel, firstValue);
+        appendKdfField(result, secondLabel, secondValue);
+        result.append("Output Length: ").append(outputLength).append(" bytes\n\nDERIVED KEY:\n")
+                .append(DataConverter.bytesToHex(derivedKey)).append("\n\n")
+                .append("✓ Deterministic: preserve every input to reproduce this result\n");
+        return result.toString();
+    }
+
+    private void appendKdfField(StringBuilder result, String label, byte[] value) {
+        if (label == null) return;
+        result.append(label).append(": ");
+        if (value == null || value.length == 0) {
+            result.append("(empty)\n\n");
+        } else {
+            result.append(value.length).append(" bytes\n").append(DataConverter.bytesToHex(value)).append("\n\n");
+        }
     }
 
     private String buildPBKDF2Result(byte[] password, byte[] salt, int iterations, int outputLength, byte[] derivedKey,
@@ -1927,10 +2332,13 @@ public class KeysController {
                     "\n-----END PKCS7-----";
 
             cmsOutputArea.setText(output);
-            updateStatus("CMS Signature generated successfully");
-
-            OperationHistory.getInstance().addOperation("CMS", "Sign", "Data len: " + data.length,
-                    "Signature generated");
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+            details.put("Type", detached ? "Detached SignedData" : "Encapsulated SignedData");
+            details.put("Certificate", "Present");
+            details.put("Private Key", "[not persisted]");
+            mainController.publish(OperationResult.forOperation("CMS Sign")
+                    .input(data).output(signature).details(details)
+                    .status("CMS signature generated successfully").build());
 
         } catch (Exception e) {
             showError("Signing Error", "Error signing data: " + e.getMessage());
@@ -1979,10 +2387,10 @@ public class KeysController {
             }
 
             cmsOutputArea.setText(output.toString());
-            updateStatus("Verification complete: " + (result.verified ? "Valid" : "Invalid"));
-
-            OperationHistory.getInstance().addOperation("CMS", "Verify", "Input len: " + pkcs7Bytes.length,
-                    result.verified ? "Valid" : "Invalid");
+            mainController.publish(OperationResult.forOperation("CMS Verify")
+                    .input(pkcs7Bytes).output(result.content)
+                    .detail("Result", result.verified ? "VALID" : "INVALID")
+                    .status("CMS verification: " + (result.verified ? "valid" : "invalid")).build());
 
         } catch (Exception e) {
             cmsOutputArea.setText("Verification Failed: " + e.getMessage());
@@ -2016,10 +2424,9 @@ public class KeysController {
                     "\n-----END PKCS7-----";
 
             cmsOutputArea.setText(output);
-            updateStatus("Data encrypted successfully");
-
-            OperationHistory.getInstance().addOperation("CMS", "Encrypt", "Data len: " + data.length,
-                    "Encrypted " + encrypted.length + " bytes");
+            mainController.publish(OperationResult.forOperation("CMS Encrypt")
+                    .input(data).output(encrypted).detail("Recipient Certificate", "Present")
+                    .status("CMS data encrypted successfully").build());
 
         } catch (Exception e) {
             showError("Encryption Error", "Error encrypting data: " + e.getMessage());
@@ -2055,10 +2462,9 @@ public class KeysController {
             String output = new String(decrypted, java.nio.charset.StandardCharsets.UTF_8);
 
             cmsOutputArea.setText(output);
-            updateStatus("Data decrypted successfully");
-
-            OperationHistory.getInstance().addOperation("CMS", "Decrypt", "Input len: " + pkcs7Bytes.length,
-                    "Decrypted " + decrypted.length + " bytes");
+            mainController.publish(OperationResult.forOperation("CMS Decrypt")
+                    .input(pkcs7Bytes).output(decrypted).detail("Private Key", "[not persisted]")
+                    .status("CMS data decrypted successfully").build());
 
         } catch (Exception e) {
             cmsOutputArea.setText("Decryption Failed: " + e.getMessage());

@@ -11,7 +11,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 /**
- * Manages operation history for the CryptoForge
+ * Manages operation history for CryptoCarver.
  */
 public class OperationHistory {
 
@@ -29,8 +29,13 @@ public class OperationHistory {
                 userHome = System.getProperty("java.io.tmpdir");
             }
 
-            Path configDir = Paths.get(userHome, ".crypto-calculator");
+            Path configDir = Paths.get(userHome, ".cryptocarver");
             historyFilePath = configDir.resolve("history.json");
+            Path legacyFile = Paths.get(userHome, ".crypto-calculator", "history.json");
+            if (!Files.exists(historyFilePath) && Files.exists(legacyFile)) {
+                Files.createDirectories(configDir);
+                Files.copy(legacyFile, historyFilePath);
+            }
 
             loadHistory();
         } catch (Exception e) {
@@ -172,7 +177,7 @@ public class OperationHistory {
     public String exportToText() {
         StringBuilder sb = new StringBuilder();
         sb.append("========================================\n");
-        sb.append("CRYPTOFORGE - OPERATION HISTORY\n");
+        sb.append("CRYPTOCARVER - OPERATION HISTORY\n");
         sb.append("========================================\n\n");
 
         for (OperationEntry entry : history) {

@@ -434,6 +434,39 @@ public class AsymmetricKeyOperations {
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePrivate(spec);
     }
+
+    /** Imports a PKCS#8 PEM key by trying the supported asymmetric key factories. */
+    public static PrivateKey importPrivateKeyPEMAuto(String pem) throws Exception {
+        byte[] encoded = decodePem(pem);
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(encoded);
+        Exception last = null;
+        for (String algorithm : new String[] { "RSA", "EC", "Ed25519", "DSA" }) {
+            try {
+                return KeyFactory.getInstance(algorithm, "BC").generatePrivate(spec);
+            } catch (Exception e) { last = e; }
+        }
+        throw new IllegalArgumentException("Unsupported or invalid PKCS#8 private key", last);
+    }
+
+    /** Imports an X.509 SubjectPublicKeyInfo PEM key by trying supported factories. */
+    public static PublicKey importPublicKeyPEMAuto(String pem) throws Exception {
+        byte[] encoded = decodePem(pem);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(encoded);
+        Exception last = null;
+        for (String algorithm : new String[] { "RSA", "EC", "Ed25519", "DSA" }) {
+            try {
+                return KeyFactory.getInstance(algorithm, "BC").generatePublic(spec);
+            } catch (Exception e) { last = e; }
+        }
+        throw new IllegalArgumentException("Unsupported or invalid public key", last);
+    }
+
+    private static byte[] decodePem(String pem) {
+        if (pem == null || pem.isBlank()) throw new IllegalArgumentException("PEM material is required");
+        String base64 = pem.replaceAll("-----BEGIN [^-]+-----", "")
+                .replaceAll("-----END [^-]+-----", "").replaceAll("\\s+", "");
+        return java.util.Base64.getDecoder().decode(base64);
+    }
     
     /**
      * Export public key to PEM format

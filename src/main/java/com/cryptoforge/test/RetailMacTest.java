@@ -1,7 +1,7 @@
 package com.cryptoforge.test;
 
 import com.cryptoforge.crypto.MACOperations;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 
 public class RetailMacTest {
     public static void main(String[] args) {

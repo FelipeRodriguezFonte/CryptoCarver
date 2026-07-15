@@ -1,6 +1,6 @@
 package com.cryptoforge.crypto;
 
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import org.apache.commons.codec.binary.Hex;
 
 import javax.crypto.Cipher;
@@ -172,6 +172,10 @@ public class EMVOperations {
      * @return ARQC (16 hex characters)
      */
     public static String generateARQC(String sk, String transactionData, int paddingMethod) throws Exception {
+        sk = normalizeHex(sk, "Session Key", 16);
+        transactionData = normalizeHex(transactionData, "ARQC transaction data", -1);
+        if (transactionData.isEmpty()) throw new IllegalArgumentException("ARQC transaction data must not be empty");
+        if (paddingMethod != 1 && paddingMethod != 2) throw new IllegalArgumentException("ARQC padding method must be 1 or 2");
         // Use MAC ISO 9797-1 Algorithm 3 (DES Retail MAC)
         byte[] skBytes = DataConverter.hexToBytes(sk);
         byte[] data = DataConverter.hexToBytes(transactionData);
@@ -246,6 +250,14 @@ public class EMVOperations {
     public static String buildARQCData(String amount, String amountOther, String country,
             String tvr, String currency, String txDate,
             String txType, String un) {
+        amount = normalizeHex(amount, "Amount", 6);
+        amountOther = normalizeHex(amountOther, "Amount Other", 6);
+        country = normalizeHex(country, "Terminal Country Code", 2);
+        tvr = normalizeHex(tvr, "TVR", 5);
+        currency = normalizeHex(currency, "Transaction Currency Code", 2);
+        txDate = normalizeHex(txDate, "Transaction Date", 3);
+        txType = normalizeHex(txType, "Transaction Type", 1);
+        un = normalizeHex(un, "Unpredictable Number", 4);
         StringBuilder data = new StringBuilder();
         data.append(amount); // 6 bytes
         data.append(amountOther); // 6 bytes
@@ -349,10 +361,21 @@ public class EMVOperations {
      * @return true if ARQC is valid
      */
     public static boolean verifyARQC(String sk, String arqcReceived, String transactionData) throws Exception {
-        // Assume default EMV Padding (Method 2) for verification unless stated
-        // otherwise
-        String arqcCalculated = generateARQC(sk, transactionData, 2);
+        return verifyARQC(sk, arqcReceived, transactionData, 2);
+    }
+
+    /** Verifies using the same ISO 9797-1 padding method used during generation. */
+    public static boolean verifyARQC(String sk, String arqcReceived, String transactionData, int paddingMethod) throws Exception {
+        arqcReceived = normalizeHex(arqcReceived, "ARQC", 8);
+        String arqcCalculated = generateARQC(sk, transactionData, paddingMethod);
         return arqcCalculated.equalsIgnoreCase(arqcReceived);
+    }
+
+    private static String normalizeHex(String input, String label, int expectedBytes) {
+        String value = input == null ? "" : input.replaceAll("\\s+", "").toUpperCase();
+        if (!value.matches("[0-9A-F]*") || (value.length() & 1) != 0) throw new IllegalArgumentException(label + " must be even-length hexadecimal");
+        if (expectedBytes >= 0 && value.length() != expectedBytes * 2) throw new IllegalArgumentException(label + " must be exactly " + expectedBytes + " bytes");
+        return value;
     }
 
     // ============================================================================

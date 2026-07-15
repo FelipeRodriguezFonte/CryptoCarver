@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.security.Security;
 
 /**
- * CryptoForge - Advanced Cryptographic Tool
+ * CryptoCarver - Advanced Cryptographic Test Tool
  * Multi-platform cryptographic calculator with GUI
  */
 public class CryptoCalculatorApp extends Application {
@@ -30,7 +30,7 @@ public class CryptoCalculatorApp extends Application {
         scene.getStylesheets().add(
                 CryptoCalculatorApp.class.getResource("/css/styles.css").toExternalForm());
 
-        stage.setTitle("CryptoForge - Advanced Cryptographic Tool");
+        stage.setTitle("CryptoCarver - Advanced Cryptographic Test Tool");
         stage.setScene(scene);
         stage.setMinWidth(1000);
         stage.setMinHeight(700);

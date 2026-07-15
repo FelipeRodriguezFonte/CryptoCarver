@@ -131,12 +131,13 @@ public class TR31 {
     }
 
     private UnwrapResult unwrapVersionC(String keyBlock) throws Exception {
-        // Parse header (now it has the correct length)
-        String header = keyBlock.substring(0, 16);
+        // Parse the fixed header plus any authenticated optional blocks.
+        int headerLength = headerLength(keyBlock);
+        String header = keyBlock.substring(0, headerLength);
         int length = Integer.parseInt(keyBlock.substring(1, 5));
 
         // Extract encrypted key and MAC (4 bytes = 8 chars)
-        String encryptedKeyHex = keyBlock.substring(16, length - 8);
+        String encryptedKeyHex = keyBlock.substring(headerLength, length - 8);
         String macHex = keyBlock.substring(length - 8);
 
         byte[] encryptedKey = hexToBytes(encryptedKeyHex);
@@ -234,12 +235,13 @@ public class TR31 {
     }
 
     private UnwrapResult unwrapVersionB(String keyBlock) throws Exception {
-        // Parse header
-        String header = keyBlock.substring(0, 16);
+        // Parse the fixed header plus any authenticated optional blocks.
+        int headerLength = headerLength(keyBlock);
+        String header = keyBlock.substring(0, headerLength);
         int length = Integer.parseInt(keyBlock.substring(1, 5));
 
         // Extract encrypted key and MAC (8 bytes = 16 chars)
-        String encryptedKeyHex = keyBlock.substring(16, length - 16);
+        String encryptedKeyHex = keyBlock.substring(headerLength, length - 16);
         String macHex = keyBlock.substring(length - 16);
 
         byte[] encryptedKey = hexToBytes(encryptedKeyHex);
@@ -403,15 +405,16 @@ public class TR31 {
     }
 
     private UnwrapResult unwrapVersionD(String keyBlock) throws Exception {
-        // Parse header
-        String header = keyBlock.substring(0, 16);
+        // Parse the fixed header plus any authenticated optional blocks.
+        int headerLength = headerLength(keyBlock);
+        String header = keyBlock.substring(0, headerLength);
         int length = Integer.parseInt(keyBlock.substring(1, 5));
 
         // Version D ALWAYS uses 16-byte MAC
         int macLenChars = 32;
 
         // Extract encrypted key and MAC
-        String encryptedKeyHex = keyBlock.substring(16, length - macLenChars);
+        String encryptedKeyHex = keyBlock.substring(headerLength, length - macLenChars);
         String macHex = keyBlock.substring(length - macLenChars);
 
         byte[] encryptedKey = hexToBytes(encryptedKeyHex);
@@ -769,8 +772,8 @@ public class TR31 {
             macLen = 16; // 16 bytes for D
         }
 
-        // Calculate total length in characters: header (16) + keyData + MAC
-        int totalLenChars = 16 + (keyDataLen * 2) + (macLen * 2);
+        // Include the fixed header and its optional blocks in the protected total.
+        int totalLenChars = header.length() + (keyDataLen * 2) + (macLen * 2);
 
         // Update length in header
         String lengthStr = String.format("%04d", totalLenChars);
@@ -780,6 +783,30 @@ public class TR31 {
     private String updateHeaderLength(String header, int keyDataLen, char algorithm) {
         // Version D always uses 16-byte MAC regardless of algorithm
         return updateHeaderLength(header, keyDataLen);
+    }
+
+    /** Returns the ASCII-header length, including compact optional blocks. */
+    private static int headerLength(String keyBlock) {
+        if (keyBlock == null || keyBlock.length() < 16) throw new IllegalArgumentException("TR-31 key block too short for its fixed header");
+        final int optionalCount;
+        try {
+            optionalCount = Integer.parseInt(keyBlock.substring(12, 14), 16);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("TR-31 optional-block count is not hexadecimal", e);
+        }
+        int position = 16;
+        for (int index = 0; index < optionalCount; index++) {
+            if (position + 4 > keyBlock.length()) throw new IllegalArgumentException("TR-31 optional block " + (index + 1) + " header is truncated");
+            final int dataBytes;
+            try {
+                dataBytes = Integer.parseInt(keyBlock.substring(position + 2, position + 4), 16);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("TR-31 optional block length is not hexadecimal", e);
+            }
+            position += 4 + (dataBytes * 2);
+            if (position > keyBlock.length()) throw new IllegalArgumentException("TR-31 optional block " + (index + 1) + " is truncated");
+        }
+        return position;
     }
 
     // ==================== Helper Classes ====================

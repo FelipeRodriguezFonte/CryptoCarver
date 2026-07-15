@@ -24,6 +24,8 @@ public class NavigationRail extends VBox {
         CIPHER("🔒", "Cipher"),
         AUTHENTICATION("🛡", "Authentication"),
         KEYS("🔑", "Keys"),
+        POST_QUANTUM("⚛", "Post-Quantum"),
+        XML_SECURITY("📝", "XML Security"),
         CERTIFICATES("📜", "Certificates"),
         JOSE("🌐", "JOSE"),
         PAYMENTS("💳", "Payments"),

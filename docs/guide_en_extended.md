@@ -1,8 +1,8 @@
-# CryptoForge - Complete Technical Guide
+# CryptoCarver - Complete Technical Guide
 
 **Version 2.5.0** - Extended Technical Documentation
 
-This document provides a comprehensive technical guide to CryptoForge, detailing all cryptographic implementations, standards compliance, and implementation details.
+This document provides a comprehensive technical guide to CryptoCarver, detailing all cryptographic implementations, standards compliance, and implementation details.
 
 ---
 
@@ -41,7 +41,7 @@ This document provides a comprehensive technical guide to CryptoForge, detailing
 
 **MVC Architecture:**
 ```
-CryptoForge/
+CryptoCarver/
 ├── ui/                    # Controllers (View)
 │   ├── MainController.java
 │   ├── GenericController.java
@@ -1071,7 +1071,7 @@ boolean valid = signature.verify(signatureBytes);
 
 ### 9.2 Validation Packages
 
-CryptoForge includes pre-configured packages with:
+CryptoCarver includes pre-configured packages with:
 - Test message
 - Signature (various algorithms)
 - Public key

@@ -2,7 +2,7 @@ package com.cryptoforge.ui;
 
 import com.cryptoforge.crypto.SignatureOperations;
 import com.cryptoforge.crypto.AsymmetricKeyOperations;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
 

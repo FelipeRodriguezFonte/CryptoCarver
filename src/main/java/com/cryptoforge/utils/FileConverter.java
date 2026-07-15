@@ -1,5 +1,7 @@
 package com.cryptoforge.utils;
 
+import com.cryptoforge.util.DataConverter;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;

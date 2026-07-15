@@ -10,6 +10,10 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 /**
  * ASN.1 Parser using BouncyCastle
@@ -71,6 +75,21 @@ public class ASN1Parser {
         OID_NAMES.put("2.16.840.1.101.3.4.2.1", "sha-256 (NIST Algorithm)");
         OID_NAMES.put("2.16.840.1.101.3.4.2.2", "sha-384 (NIST Algorithm)");
         OID_NAMES.put("2.16.840.1.101.3.4.2.3", "sha-512 (NIST Algorithm)");
+    }
+
+    /** Loads local OID descriptions from a JSON object such as {"1.2.3.4":"My OID"}. */
+    public static synchronized int loadCustomOidNames(Path file) throws java.io.IOException {
+        if (file == null || !Files.isRegularFile(file)) throw new java.io.IOException("OID registry file not found");
+        Map<String, String> custom = new Gson().fromJson(Files.readString(file), new TypeToken<Map<String, String>>() {}.getType());
+        if (custom == null) return 0;
+        int count = 0;
+        for (Map.Entry<String, String> entry : custom.entrySet()) {
+            String oid = entry.getKey() == null ? "" : entry.getKey().trim();
+            String name = entry.getValue() == null ? "" : entry.getValue().trim();
+            if (!oid.matches("[0-2](?:\\.[0-9]+)+") || name.isEmpty()) continue;
+            OID_NAMES.put(oid, name); count++;
+        }
+        return count;
     }
 
     /**

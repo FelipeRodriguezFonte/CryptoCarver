@@ -1,7 +1,7 @@
 package com.cryptoforge.test;
 
 import com.cryptoforge.crypto.MACOperations;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import org.bouncycastle.crypto.macs.CBCBlockCipherMac;
 import org.bouncycastle.crypto.engines.DESedeEngine;
 import org.bouncycastle.crypto.modes.CBCBlockCipher;

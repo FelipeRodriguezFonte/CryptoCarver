@@ -1,6 +1,7 @@
 package com.cryptoforge.ui;
 
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
+import com.cryptoforge.model.OperationResult;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.*;
@@ -16,6 +17,8 @@ import javafx.scene.text.Text;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -37,7 +40,45 @@ import java.util.ArrayList;
 
 public class JOSEController {
 
+    private static final Logger LOG = LoggerFactory.getLogger(JOSEController.class);
+
     private final StatusReporter statusReporter;
+
+    public void generateDetachedJWS(String payload, String algorithm, String key, TextArea output) {
+        try {
+            JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(algorithm);
+            JWSObject object = new JWSObject(new JWSHeader(jwsAlgorithm), new Payload(payload));
+            if (JWSAlgorithm.Family.HMAC_SHA.contains(jwsAlgorithm)) object.sign(new PromiscuousMACSigner(key, jwsAlgorithm));
+            else if (JWSAlgorithm.Family.RSA.contains(jwsAlgorithm)) object.sign(new RSASSASigner(parseRSAPrivateKey(key)));
+            else if (JWSAlgorithm.Family.EC.contains(jwsAlgorithm)) object.sign(new ECDSASigner(requireEcPrivateKey(jwsAlgorithm, key)));
+            else throw new IllegalArgumentException("Unsupported detached JWS algorithm: " + algorithm);
+            String serialized = object.serialize(true);
+            output.setText(serialized);
+            statusReporter.publish(OperationResult.forOperation("Detached JWS Generation")
+                    .input(payload.getBytes(StandardCharsets.UTF_8)).output(serialized.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Algorithm", jwsAlgorithm.getName()).detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", key))
+                    .status("Detached JWS generated").build());
+        } catch (Exception e) { statusReporter.showError("Detached JWS", e.getMessage()); }
+    }
+
+    public void verifyDetachedJWS(String detached, String payload, String algorithm, String key, Label status) {
+        try {
+            JWSObject object = JWSObject.parse(detached, new Payload(payload));
+            JWSAlgorithm actual = object.getHeader().getAlgorithm();
+            if (!actual.equals(JWSAlgorithm.parse(algorithm))) throw new IllegalArgumentException("Header algorithm does not match selection");
+            boolean valid;
+            if (JWSAlgorithm.Family.HMAC_SHA.contains(actual)) valid = object.verify(new PromiscuousMACVerifier(key, actual));
+            else if (JWSAlgorithm.Family.RSA.contains(actual)) valid = object.verify(new RSASSAVerifier((RSAPublicKey) parseRSAPublicKey(key)));
+            else if (JWSAlgorithm.Family.EC.contains(actual)) valid = object.verify(new ECDSAVerifier(requireEcPublicKey(actual, key)));
+            else throw new IllegalArgumentException("Unsupported detached JWS algorithm: " + actual);
+            status.setText(valid ? "VALID DETACHED SIGNATURE" : "INVALID DETACHED SIGNATURE");
+            status.setStyle(valid ? "-fx-text-fill: green;" : "-fx-text-fill: red;");
+            statusReporter.publish(OperationResult.forOperation("Detached JWS Verification")
+                    .input(detached.getBytes(StandardCharsets.US_ASCII)).detail("Algorithm", actual.getName())
+                    .detail("Result", valid ? "VALID" : "INVALID").detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", key))
+                    .status("Detached JWS verification: " + (valid ? "valid" : "invalid")).build());
+        } catch (Exception e) { status.setText("ERROR: " + e.getMessage()); status.setStyle("-fx-text-fill: red;"); }
+    }
 
     public JOSEController(StatusReporter statusReporter) {
         this.statusReporter = statusReporter;
@@ -67,7 +108,7 @@ public class JOSEController {
                 PrivateKey privateKey = parseRSAPrivateKey(secretOrKey);
                 signer = new RSASSASigner(privateKey);
             } else if (JWSAlgorithm.Family.EC.contains(jwsAlgo)) {
-                throw new UnsupportedOperationException("EC Signing not yet fully implemented in this demo.");
+                signer = new ECDSASigner(requireEcPrivateKey(jwsAlgo, secretOrKey));
             } else {
                 throw new IllegalArgumentException("Unsupported algorithm family: " + algorithm);
             }
@@ -76,12 +117,17 @@ public class JOSEController {
             SignedJWT signedJWT = new SignedJWT(header, claimsSet);
             signedJWT.sign(signer);
 
-            outputArea.setText(signedJWT.serialize());
-            statusReporter.updateStatus("Signed JWT generated successfully (" + algorithm + ")");
+            String serialized = signedJWT.serialize();
+            outputArea.setText(serialized);
+            statusReporter.publish(OperationResult.forOperation("Signed JWT Generation")
+                    .input(payloadJson.getBytes(StandardCharsets.UTF_8))
+                    .output(serialized.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Algorithm", algorithm).detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", secretOrKey))
+                    .status("Signed JWT generated successfully (" + algorithm + ")").build());
 
         } catch (Exception e) {
             statusReporter.showError("JWT Generation Error", e.getMessage());
-            e.printStackTrace();
+            LOG.error("Signed JWT generation failed", e);
         }
     }
 
@@ -104,6 +150,8 @@ public class JOSEController {
             } else if (JWSAlgorithm.Family.RSA.contains(algo)) {
                 PublicKey pubKey = parseRSAPublicKey(keyString);
                 verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
+            } else if (JWSAlgorithm.Family.EC.contains(algo)) {
+                verifier = new ECDSAVerifier(requireEcPublicKey(algo, keyString));
             } else {
                 statusLabel.setText("Unsupported Algo for Verification");
                 statusLabel.setStyle("-fx-text-fill: orange;");
@@ -118,6 +166,11 @@ public class JOSEController {
                 statusLabel.setText("INVALID SIGNATURE");
                 statusLabel.setStyle("-fx-text-fill: red;");
             }
+            statusReporter.publish(OperationResult.forOperation("JWT Validation")
+                    .input(tokenString.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Algorithm", algo.getName()).detail("Result", verified ? "VALID" : "INVALID")
+                    .detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", keyString))
+                    .status("JWT validation: " + (verified ? "valid" : "invalid")).build());
 
         } catch (Exception e) {
             statusLabel.setText("ERROR: " + e.getMessage());
@@ -148,6 +201,8 @@ public class JOSEController {
             } else if (JWSAlgorithm.Family.RSA.contains(signAlgo)) {
                 PrivateKey privateKey = parseRSAPrivateKey(signKey);
                 signer = new RSASSASigner(privateKey);
+            } else if (JWSAlgorithm.Family.EC.contains(signAlgo)) {
+                signer = new ECDSASigner(requireEcPrivateKey(signAlgo, signKey));
             } else {
                 throw new IllegalArgumentException("Unsupported signing algo: " + signAlgoStr);
             }
@@ -174,17 +229,21 @@ public class JOSEController {
             jweObject.encrypt(new RSAEncrypter((RSAPublicKey) pubKey));
 
             // 3. Output
-            outputArea.setText(jweObject.serialize());
-            // 3. Output
-            outputArea.setText(jweObject.serialize());
+            String serialized = jweObject.serialize();
+            outputArea.setText(serialized);
             String status = "Nested JWT Generated (Signed: " + signAlgoStr + ", Encrypted: " + keyAlgoStr + ")";
             if (compress)
                 status += " [Compressed]";
-            statusReporter.updateStatus(status);
+            statusReporter.publish(OperationResult.forOperation("Nested JWT Generation")
+                    .input(payloadJson.getBytes(StandardCharsets.UTF_8))
+                    .output(serialized.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Signature Algorithm", signAlgoStr).detail("Key Algorithm", keyAlgoStr)
+                    .detail("Compression", String.valueOf(compress)).detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", signKey + " / " + encKeyPEM))
+                    .status(status).build());
 
         } catch (Exception e) {
             statusReporter.showError("Nested JWT Error", e.getMessage());
-            e.printStackTrace();
+            LOG.error("Nested JWT generation failed", e);
         }
     }
 
@@ -213,17 +272,21 @@ public class JOSEController {
             jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
 
             // 6. Output
-            outputArea.setText(jweObject.serialize());
-            // 6. Output
-            outputArea.setText(jweObject.serialize());
+            String serialized = jweObject.serialize();
+            outputArea.setText(serialized);
             String status = "JWE Encrypted (" + keyAlgo + " / " + contentAlgo + ")";
             if (compress)
                 status += " [Compressed]";
-            statusReporter.updateStatus(status);
+            statusReporter.publish(OperationResult.forOperation("JWE Encryption")
+                    .input(payload.getBytes(StandardCharsets.UTF_8))
+                    .output(serialized.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Key Algorithm", keyAlgo).detail("Content Algorithm", contentAlgo)
+                    .detail("Compression", String.valueOf(compress)).detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", publicKeyPEM))
+                    .status(status).build());
 
         } catch (Exception e) {
             statusReporter.showError("JWE Encryption Error", e.getMessage());
-            e.printStackTrace();
+            LOG.error("JWE encryption failed", e);
         }
     }
 
@@ -296,14 +359,14 @@ public class JOSEController {
 
             jweIVArea.setText(jweObject.getIV() != null
                     ? jweObject.getIV().toString() + " \n[Hex: "
-                            + com.cryptoforge.utils.DataConverter.bytesToHex(jweObject.getIV().decode()) + "]"
+                            + com.cryptoforge.util.DataConverter.bytesToHex(jweObject.getIV().decode()) + "]"
                     : "");
             jweCiphertextArea.setText(jweObject.getCipherText() != null ? jweObject.getCipherText().toString() : "");
             jweAuthTagArea
                     .setText(
                             jweObject.getAuthTag() != null
                                     ? jweObject.getAuthTag().toString() + " \n[Hex: "
-                                            + com.cryptoforge.utils.DataConverter
+                                            + com.cryptoforge.util.DataConverter
                                                     .bytesToHex(jweObject.getAuthTag().decode())
                                             + "]"
                                     : "");
@@ -311,13 +374,20 @@ public class JOSEController {
             statusLabel.setText("DECRYPTION SUCCESSFUL");
             statusLabel.setStyle("-fx-text-fill: green;");
 
-            statusReporter.updateStatus("JWE Decrypted");
+            String payload = jweObject.getPayload().toString();
+            statusReporter.publish(OperationResult.forOperation("JWE Decryption")
+                    .input(jweString.getBytes(StandardCharsets.US_ASCII))
+                    .output(payload.getBytes(StandardCharsets.UTF_8))
+                    .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
+                    .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
+                    .detail(com.cryptoforge.model.OperationDetail.secretDetail("Key Material", privateKeyPEM))
+                    .status("JWE decrypted").build());
 
         } catch (Exception e) {
             statusLabel.setText("DECRYPTION FAILED");
             statusLabel.setStyle("-fx-text-fill: red;");
             statusReporter.showError("JWE Decryption Error", e.getMessage());
-            e.printStackTrace();
+            LOG.error("JWE decryption failed", e);
         }
     }
 
@@ -349,6 +419,22 @@ public class JOSEController {
         return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(encoded));
     }
 
+    /** Loads an EC private key encoded as PEM PKCS#8 for ES256/ES384/ES512. */
+    private java.security.interfaces.ECPrivateKey parseECPrivateKey(String pem) throws Exception {
+        if (pem.contains("-----BEGIN EC PRIVATE KEY-----")) {
+            throw new IllegalArgumentException("EC private keys must be PEM PKCS#8 (BEGIN PRIVATE KEY), not SEC1 (BEGIN EC PRIVATE KEY)");
+        }
+        String base64 = pem.replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s", "");
+        byte[] encoded = DataConverter.decodeBase64Flexible(base64);
+        PrivateKey key = KeyFactory.getInstance("EC").generatePrivate(new PKCS8EncodedKeySpec(encoded));
+        if (!(key instanceof java.security.interfaces.ECPrivateKey ecKey)) {
+            throw new IllegalArgumentException("The supplied PKCS#8 key is not an EC private key");
+        }
+        return ecKey;
+    }
+
     private PublicKey parseRSAPublicKey(String pem) throws Exception {
         String publicKeyPEM = pem
                 .replace("-----BEGIN PUBLIC KEY-----", "")
@@ -360,6 +446,33 @@ public class JOSEController {
         byte[] encoded = DataConverter.decodeBase64Flexible(publicKeyPEM);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
+    }
+
+    /** Loads an EC public key encoded as PEM SubjectPublicKeyInfo for ES verification. */
+    private java.security.interfaces.ECPublicKey parseECPublicKey(String pem) throws Exception {
+        String base64 = pem.replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
+        PublicKey key = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(DataConverter.decodeBase64Flexible(base64)));
+        if (!(key instanceof java.security.interfaces.ECPublicKey ecKey)) throw new IllegalArgumentException("The supplied key is not an EC public key");
+        return ecKey;
+    }
+
+    private java.security.interfaces.ECPrivateKey requireEcPrivateKey(JWSAlgorithm algorithm, String pem) throws Exception {
+        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
+        validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
+        return key;
+    }
+
+    private java.security.interfaces.ECPublicKey requireEcPublicKey(JWSAlgorithm algorithm, String pem) throws Exception {
+        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
+        validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
+        return key;
+    }
+
+    private void validateEcCurve(JWSAlgorithm algorithm, int fieldSize) {
+        int expected = JWSAlgorithm.ES256.equals(algorithm) ? 256 : JWSAlgorithm.ES384.equals(algorithm) ? 384 : JWSAlgorithm.ES512.equals(algorithm) ? 521 : -1;
+        if (expected < 0) throw new IllegalArgumentException("Unsupported EC JWS algorithm: " + algorithm);
+        if (fieldSize != expected) throw new IllegalArgumentException(algorithm + " requires a P-" + expected + " EC key; supplied key has a " + fieldSize + "-bit field");
     }
 
     // --- Internal Permissive Implementations ---
@@ -485,13 +598,13 @@ public class JOSEController {
 
             JWK key;
             if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
-                System.out.println("Generating Symmetric Key for alg: " + alg);
+                LOG.debug("Generating symmetric JWK for algorithm {}", alg);
                 key = new OctetSequenceKeyGenerator(bitLength)
                         .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
                         .algorithm(new Algorithm(alg))
                         .keyID(UUID.randomUUID().toString())
                         .generate();
-                System.out.println("Generated Key: " + key.toJSONString());
+                LOG.debug("Generated symmetric JWK (key material intentionally omitted from logs)");
                 return key;
             } else {
                 return null;
@@ -618,7 +731,7 @@ public class JOSEController {
         } catch (Exception e) {
             statusLabel.setText("Error: " + e.getMessage());
             statusLabel.setStyle("-fx-text-fill: red;");
-            e.printStackTrace();
+            LOG.error("JWK generation failed", e);
         }
     }
 
@@ -701,7 +814,7 @@ public class JOSEController {
                     .replace("-----END EC PRIVATE KEY-----", "")
                     .replaceAll("\\s+", "");
 
-            byte[] keyBytes = com.cryptoforge.utils.DataConverter.decodeBase64Flexible(cleanPem);
+            byte[] keyBytes = com.cryptoforge.util.DataConverter.decodeBase64Flexible(cleanPem);
 
             com.nimbusds.jose.jwk.JWK jwk = null;
 
@@ -775,7 +888,7 @@ public class JOSEController {
 
         } catch (Exception e) {
             outputArea.setText("Error converting to JWK: " + e.getMessage());
-            e.printStackTrace(); // Consider using a logger
+            LOG.error("PEM key import failed", e);
         }
     }
 

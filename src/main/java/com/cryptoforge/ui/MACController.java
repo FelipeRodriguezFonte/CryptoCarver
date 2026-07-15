@@ -1,7 +1,7 @@
 package com.cryptoforge.ui;
 
 import com.cryptoforge.crypto.MACOperations;
-import com.cryptoforge.utils.DataConverter;
+import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
 

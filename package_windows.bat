@@ -1,16 +1,16 @@
 @echo off
 setlocal
 
-set APP_NAME=CryptoForge
-set APP_VERSION=1.0.0
-set MAIN_JAR=cryptoforge-1.0.0.jar
+set APP_NAME=CryptoCarver
+set APP_VERSION=2.3.0
+set MAIN_JAR=cryptocarver-2.3.0.jar
 set MAIN_CLASS=com.cryptoforge.CryptoCalculatorModern
 set ICON_PATH=src\main\resources\icons\app-icon.png
 set INPUT_DIR=target
 set OUTPUT_DIR=dist
 
 echo ==========================================
-echo   Building CryptoForge (Windows)
+echo   Building CryptoCarver (Windows)
 echo ==========================================
 
 REM Check if jpackage is in PATH

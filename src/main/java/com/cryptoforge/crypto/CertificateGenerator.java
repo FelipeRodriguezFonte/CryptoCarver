@@ -1,6 +1,7 @@
 package com.cryptoforge.crypto;
 
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
@@ -164,6 +165,24 @@ public class CertificateGenerator {
         return new JcaX509CertificateConverter()
                 .setProvider("BC")
                 .getCertificate(certHolder);
+    }
+
+    /** Generates a self-signed root CA certificate for laboratory chains. */
+    public static X509Certificate generateRootCA(KeyPair keyPair, CertificateConfig config, int pathLength) throws Exception {
+        if (pathLength < 0) throw new IllegalArgumentException("CA path length cannot be negative");
+        X500Name name = new X500Name(buildDistinguishedName(config));
+        Date notBefore = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(notBefore);
+        calendar.add(Calendar.DAY_OF_YEAR, config.validityDays);
+        X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(name,
+                config.serialNumber == null ? new BigInteger(128, new SecureRandom()) : new BigInteger(config.serialNumber, 16),
+                notBefore, calendar.getTime(), name, keyPair.getPublic());
+        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(pathLength));
+        builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign | KeyUsage.digitalSignature));
+        builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(keyPair.getPublic()));
+        ContentSigner signer = new JcaContentSignerBuilder(config.signatureAlgorithm).setProvider("BC").build(keyPair.getPrivate());
+        return new JcaX509CertificateConverter().setProvider("BC").getCertificate(builder.build(signer));
     }
 
     /**
@@ -385,6 +404,14 @@ public class CertificateGenerator {
         PKCS10CertificationRequestBuilder csrBuilder = new JcaPKCS10CertificationRequestBuilder(subject,
                 keyPair.getPublic());
 
+        // Request SANs through the PKCS#9 extensionRequest attribute so a CA can
+        // honor them. They are not certificate extensions until the CA issues it.
+        if (config.addSubjectAlternativeNames && (!config.sanDnsNames.isEmpty() || !config.sanIpAddresses.isEmpty())) {
+            ExtensionsGenerator extensions = new ExtensionsGenerator();
+            extensions.addExtension(Extension.subjectAlternativeName, false, buildSubjectAlternativeNames(config));
+            csrBuilder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extensions.generate());
+        }
+
         ContentSigner signer = new JcaContentSignerBuilder(config.signatureAlgorithm)
                 .setProvider("BC")
                 .build(keyPair.getPrivate());
@@ -463,10 +490,17 @@ public class CertificateGenerator {
      */
     public static boolean verifyCertificateSignature(X509Certificate certificate) {
         try {
-            certificate.verify(certificate.getPublicKey(), "BC");
+            // Prefer the JCA-selected provider: it interoperates with the
+            // provider that materialized the certificate from CertificateFactory.
+            certificate.verify(certificate.getPublicKey());
             return true;
         } catch (Exception e) {
-            return false;
+            try {
+                certificate.verify(certificate.getPublicKey(), "BC");
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
         }
     }
 
@@ -664,6 +698,7 @@ public class CertificateGenerator {
         }
 
         ChainValidationResult result = new ChainValidationResult(true, "Chain is valid");
+        boolean trustedRootPresent = false;
 
         // 1. Try to order the chain (End Entity -> Intermediate -> Root)
         // Basic simplistic ordering: find one whose issuer matches another's subject
@@ -707,25 +742,34 @@ public class CertificateGenerator {
                 result.details.add("Certificate [" + i + "] Subject: " + current.getSubjectDN() + " - Dates VALID");
 
                 // Find issuer
-                if (isSelfSigned(current)) {
-                    if (verifyCertificateSignature(current)) {
-                        result.details.add("Certificate [" + i + "] is Root/Self-signed - Signature VALID");
-                        continue; // Valid root
+                if (isSelfSigned(current) && verifyCertificateSignature(current)) {
+                    if (current.getBasicConstraints() < 0) {
+                        return new ChainValidationResult(false, "Certificate [" + i + "] is self-signed but is not a CA");
                     } else {
-                        return new ChainValidationResult(false, "Certificate [" + i + "] (Root) - Invalid signature");
+                        trustedRootPresent = true;
+                        result.details.add("Certificate [" + i + "] Root CA - self-signature VALID, pathLen=" + current.getBasicConstraints());
+                        continue; // Valid root
                     }
                 }
 
                 // Look for issuer in the rest of the chain
                 X509Certificate issuerCert = null;
                 for (X509Certificate potentialIssuer : chain) {
-                    if (potentialIssuer.getSubjectX500Principal().equals(current.getIssuerX500Principal())) {
+                    if (potentialIssuer != current
+                            && potentialIssuer.getSubjectX500Principal().equals(current.getIssuerX500Principal())) {
                         issuerCert = potentialIssuer;
                         break;
                     }
                 }
 
                 if (issuerCert != null) {
+                    if (issuerCert.getBasicConstraints() < 0) {
+                        return new ChainValidationResult(false, "Certificate [" + i + "] issuer is not a CA: " + issuerCert.getSubjectX500Principal());
+                    }
+                    boolean[] issuerUsage = issuerCert.getKeyUsage();
+                    if (issuerUsage != null && (issuerUsage.length <= 5 || !issuerUsage[5])) {
+                        return new ChainValidationResult(false, "Certificate [" + i + "] issuer lacks keyCertSign usage");
+                    }
                     // Verify signature using issuer's public key
                     try {
                         current.verify(issuerCert.getPublicKey(), "BC");
@@ -743,6 +787,12 @@ public class CertificateGenerator {
             } catch (Exception e) {
                 return new ChainValidationResult(false, "Certificate [" + i + "] check failed: " + e.getMessage());
             }
+        }
+
+        if (!trustedRootPresent) {
+            result.isValid = false;
+            result.message = "Incomplete Chain: no self-signed CA root was provided";
+            result.details.add("Root CA: NOT PRESENT");
         }
 
         return result;

@@ -1,24 +1,24 @@
 #!/bin/bash
-# Simple runner for CryptoForge
+# Simple runner for CryptoCarver
 
 # Ensure we are in the script directory
 cd "$(dirname "$0")"
 
 # Path to the executable JAR
 # Check if JAR exists in current directory (portable mode)
-if [ -f "cryptoforge-1.0.0.jar" ]; then
-    JAR_FILE="cryptoforge-1.0.0.jar"
+if [ -f "cryptocarver-2.3.0.jar" ]; then
+    JAR_FILE="cryptocarver-2.3.0.jar"
 # Check if JAR exists in target directory (maven project mode)
-elif [ -f "target/cryptoforge-1.0.0.jar" ]; then
-    JAR_FILE="target/cryptoforge-1.0.0.jar"
+elif [ -f "target/cryptocarver-2.3.0.jar" ]; then
+    JAR_FILE="target/cryptocarver-2.3.0.jar"
 else
-    JAR_FILE="target/cryptoforge-1.0.0.jar" # Default for error message
+    JAR_FILE="target/cryptocarver-2.3.0.jar" # Default for error message
 fi
 
 if [ ! -f "$JAR_FILE" ]; then
     echo "Error: $JAR_FILE not found."
     echo "Please run 'mvn clean package -DskipTests' to build the project,"
-    echo "OR copy 'cryptoforge-1.0.0.jar' to this directory."
+    echo "OR copy 'cryptocarver-2.3.0.jar' to this directory."
     exit 1
 fi
 
@@ -36,5 +36,5 @@ else
     JAVA_CMD="$JAVA_HOME/bin/java"
 fi
 
-echo "Starting CryptoForge..."
+echo "Starting CryptoCarver..."
 "$JAVA_CMD" -jar "$JAR_FILE"
