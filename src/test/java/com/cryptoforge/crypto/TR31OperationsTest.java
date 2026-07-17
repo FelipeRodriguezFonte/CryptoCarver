@@ -66,4 +66,23 @@ class TR31OperationsTest {
         assertEquals("0100KS02ABCD", TR31Operations.normalizeOptionalBlocks("01 00 KS02ABCD"));
         assertThrows(IllegalArgumentException.class, () -> TR31Operations.normalizeOptionalBlocks("0100KS02AB"));
     }
+
+    @Test
+    void validatesMatrixCombinations() {
+        // Impossible: Symmetric TDES algorithm ('T') with Asymmetric Signature mode ('S')
+        assertThrows(IllegalArgumentException.class, () -> TR31.validateMatrix('B', 'T', "P0", 'S', 'E'));
+
+        // Impossible: Asymmetric RSA algorithm ('R') with Symmetric Derivation mode ('X')
+        assertThrows(IllegalArgumentException.class, () -> TR31.validateMatrix('B', 'R', "P0", 'X', 'E'));
+
+        // Impossible: AES algorithm ('A') using legacy TDES version ('B')
+        assertThrows(IllegalArgumentException.class, () -> TR31.validateMatrix('B', 'A', "M3", 'G', 'E'));
+
+        // Legacy warning on DUKPT usage but allowed
+        // System.err will print the warning, but no exception thrown
+        TR31.validateMatrix('B', 'T', "B1", 'E', 'E');
+
+        // Valid combination
+        TR31.validateMatrix('D', 'A', "M3", 'G', 'E');
+    }
 }

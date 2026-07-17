@@ -47,7 +47,7 @@ class ModernMainControllerUITest {
     private void runAndWait(Runnable action) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
-        
+
         Platform.runLater(() -> {
             try {
                 action.run();
@@ -57,11 +57,11 @@ class ModernMainControllerUITest {
                 latch.countDown();
             }
         });
-        
+
         if (!latch.await(10, TimeUnit.SECONDS)) {
             throw new IllegalStateException("JavaFX runLater execution timed out");
         }
-        
+
         if (exceptionRef.get() != null) {
             if (exceptionRef.get() instanceof Exception) {
                 throw (Exception) exceptionRef.get();
@@ -73,7 +73,7 @@ class ModernMainControllerUITest {
     @Test
     void testFxmlLoadAndInjection() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
-        
+
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
@@ -82,7 +82,7 @@ class ModernMainControllerUITest {
                 FXMLLoader loader = new FXMLLoader(resource);
                 Parent root = loader.load();
                 assertNotNull(root, "Root should not be null");
-                
+
                 ModernMainController controller = loader.getController();
                 assertNotNull(controller, "Controller should be injected");
                 controllerRef.set(controller);
@@ -90,16 +90,82 @@ class ModernMainControllerUITest {
                 throw new RuntimeException("Failed to load FXML", e);
             }
         });
-        
+
         ModernMainController controller = controllerRef.get();
         assertNotNull(getField(controller, "sidePanel"));
         assertNotNull(getField(controller, "navigationRail"));
     }
 
     @Test
+    void testLaboratoryMenuIntegration() throws Exception {
+        System.setProperty("test.mode", "true");
+        try {
+            AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+            AtomicReference<javafx.scene.control.MenuBar> menuBarRef = new AtomicReference<>();
+
+            runAndWait(() -> {
+                try {
+                    URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                    FXMLLoader loader = new FXMLLoader(resource);
+                    Parent root = loader.load();
+                    ModernMainController controller = loader.getController();
+                    controllerRef.set(controller);
+                    menuBarRef.set((javafx.scene.control.MenuBar) getField(controller, "mainMenuBar"));
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to load FXML", e);
+                }
+            });
+
+            ModernMainController controller = controllerRef.get();
+            javafx.scene.control.MenuBar menuBar = menuBarRef.get();
+            assertNotNull(menuBar, "mainMenuBar should be injected");
+
+            runAndWait(() -> {
+                boolean hasLabMenu = menuBar.getMenus().stream().anyMatch(m -> "Laboratory".equals(m.getText()));
+                assertTrue(hasLabMenu, "Laboratory menu should exist");
+
+                javafx.scene.control.Menu labMenu = menuBar.getMenus().stream()
+                        .filter(m -> "Laboratory".equals(m.getText()))
+                        .findFirst().orElseThrow();
+
+                assertFalse(labMenu.getItems().isEmpty(), "Laboratory menu should contain profiles");
+
+                // Find a PIN profile
+                javafx.scene.control.Menu pinProfile = labMenu.getItems().stream()
+                        .map(i -> (javafx.scene.control.Menu) i)
+                        .filter(m -> m.getText().startsWith("PIN - "))
+                        .findFirst().orElseThrow();
+
+                javafx.scene.control.MenuItem loadData = pinProfile.getItems().stream()
+                        .filter(i -> "Load Data".equals(i.getText())).findFirst().orElseThrow();
+                javafx.scene.control.MenuItem runAndVerify = pinProfile.getItems().stream()
+                        .filter(i -> "Run and Verify".equals(i.getText())).findFirst().orElseThrow();
+
+                assertNotNull(loadData);
+                assertNotNull(runAndVerify);
+
+                loadData.getOnAction().handle(new javafx.event.ActionEvent());
+
+                try {
+                    PaymentsController paymentsController = getField(controller, "paymentsController");
+                    javafx.scene.control.TextField pinField = getField(paymentsController, "pinField");
+                    assertNotNull(pinField.getText());
+                    assertFalse(pinField.getText().isEmpty(), "Load Data should populate pinField");
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                // Execute verify. Since test.mode is true, the Alert is bypassed.
+                runAndVerify.getOnAction().handle(new javafx.event.ActionEvent());
+            });
+        } finally {
+            System.clearProperty("test.mode");
+        }
+    }
+    @Test
     void testNavigationRoutingCoverage() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
-        
+
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
@@ -110,7 +176,7 @@ class ModernMainControllerUITest {
                 throw new RuntimeException(e);
             }
         });
-        
+
         ModernMainController controller = controllerRef.get();
         Method handleItemMethod = ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class);
         handleItemMethod.setAccessible(true);
@@ -148,7 +214,7 @@ class ModernMainControllerUITest {
     @Test
     void testSmokeHandlersNoSilentFailures() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
-        
+
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
@@ -159,9 +225,9 @@ class ModernMainControllerUITest {
                 throw new RuntimeException(e);
             }
         });
-        
+
         ModernMainController controller = controllerRef.get();
-        
+
         // Only deterministic handlers with no FileChoosers, Alerts or Networking
         String[] deterministicHandlers = {
             "handlePemToJwk",
@@ -191,7 +257,7 @@ class ModernMainControllerUITest {
     @Test
     void testPqcAndXmlInjections() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
-        
+
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
@@ -226,10 +292,10 @@ class ModernMainControllerUITest {
         // 3. Verify PQC fields and deterministic flow
         Object pqcKemCiphertextArea = getField(pqcController, "pqcKemCiphertextArea");
         assertNotNull(pqcKemCiphertextArea, "PQC KEM Ciphertext area must be injected");
-        
+
         Object pqcSignAlgoCombo = getField(pqcController, "pqcSignAlgoCombo");
         assertNotNull(pqcSignAlgoCombo, "PQC Sign Algo Combo must be injected");
-        
+
         Object xmlSignLevelCombo = getField(xmlController, "xmlSignLevelCombo");
         assertNotNull(xmlSignLevelCombo, "XML Sign Level Combo must be injected");
     }

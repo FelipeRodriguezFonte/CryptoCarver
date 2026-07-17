@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * EMV cryptographic operations for chip card transactions
  * Implements ARQC/ARPC, session key derivation, and related EMV functions
- * 
+ *
  * @author Felipe
  */
 public class EMVOperations {
@@ -27,12 +27,12 @@ public class EMVOperations {
     /**
      * Derive ICC Master Key from Issuer Master Key (IMK) and PAN
      * Uses ANSI X9.24 method (Option A)
-     * 
+     *
      * /**
      * Derive ICC Master Key from Issuer Master Key (IMK) and PAN
      * Uses EMV Option A Method (Master Key Derivation)
      * Generates a 16-byte (Double Length) UDK
-     * 
+     *
      * @param imk         Issuer Master Key (16 bytes hex)
      * @param pan         Primary Account Number
      * @param panSequence PAN Sequence Number (00-99)
@@ -111,7 +111,7 @@ public class EMVOperations {
      * Derive Application Cryptogram Session Key (SK)
      * Method: EMV Book 2 - Common Session Key Derivation (CSK)
      * Generates a 16-byte (Double Length) Session Key
-     * 
+     *
      * @param mkac Master Key for Application Cryptogram (16 bytes hex)
      * @param atc  Application Transaction Counter (2 bytes hex)
      * @param un   Unpredictable Number from terminal (4 bytes hex, optional -
@@ -164,7 +164,7 @@ public class EMVOperations {
     /**
      * Generate ARQC (Application Request Cryptogram)
      * EMV Book 2 - Section 8.1
-     * 
+     *
      * @param sk              Session Key (16 bytes hex)
      * @param transactionData Transaction data for MAC (hex)
      * @param paddingMethod   Padding method (1 for ISO 9797-1 Method 1, 2 for ISO
@@ -236,7 +236,7 @@ public class EMVOperations {
      * Structure matches observed BP Tools CDOL1:
      * Amount (6) + Amount Other (6) + Country (2) + TVR (5) + Currency (2) + Date
      * (3) + Type (1) + UN (4)
-     * 
+     *
      * @param amount      Transaction amount (6 bytes BCD)
      * @param amountOther Amount Other (6 bytes BCD)
      * @param country     Country code (2 bytes)
@@ -278,7 +278,7 @@ public class EMVOperations {
     /**
      * Generate ARPC Method 1 (EMV 4.3 specification)
      * ARPC = Encrypt(ARQC XOR ARC)
-     * 
+     *
      * @param sk   Session Key (16 bytes hex)
      * @param arqc ARQC from card (8 bytes hex)
      * @param arc  Authorization Response Code (2 bytes hex)
@@ -300,8 +300,17 @@ public class EMVOperations {
             xorResult[i] = (byte) (arqcBytes[i] ^ arcPadded[i]);
         }
 
+        // Handle 16-byte vs 24-byte key for Java DESede
+        byte[] tdesKey = new byte[24];
+        if (skBytes.length == 16) {
+            System.arraycopy(skBytes, 0, tdesKey, 0, 16);
+            System.arraycopy(skBytes, 0, tdesKey, 16, 8);
+        } else {
+            tdesKey = skBytes;
+        }
+
         // Encrypt with Session Key
-        SecretKeySpec key = new SecretKeySpec(skBytes, "DESede");
+        SecretKeySpec key = new SecretKeySpec(tdesKey, "DESede");
         Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key);
 
@@ -312,7 +321,7 @@ public class EMVOperations {
     /**
      * Generate ARPC Method 2 (EMV 4.3 specification)
      * ARPC = Encrypt(ARC || Proprietary Authentication Data)
-     * 
+     *
      * @param sk  Session Key (16 bytes hex)
      * @param arc Authorization Response Code (2 chars alphanumeric)
      * @param csu Card Status Update (4 bytes hex, optional)
@@ -343,8 +352,17 @@ public class EMVOperations {
 
         byte[] dataBytes = DataConverter.hexToBytes(data);
 
+        // Handle 16-byte vs 24-byte key for Java DESede
+        byte[] tdesKey = new byte[24];
+        if (skBytes.length == 16) {
+            System.arraycopy(skBytes, 0, tdesKey, 0, 16);
+            System.arraycopy(skBytes, 0, tdesKey, 16, 8);
+        } else {
+            tdesKey = skBytes;
+        }
+
         // Encrypt with Session Key
-        SecretKeySpec key = new SecretKeySpec(skBytes, "DESede");
+        SecretKeySpec key = new SecretKeySpec(tdesKey, "DESede");
         Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key);
 
@@ -354,7 +372,7 @@ public class EMVOperations {
 
     /**
      * Verify ARQC received from card
-     * 
+     *
      * @param sk              Session Key (16 bytes hex)
      * @param arqcReceived    ARQC from card (8 bytes hex)
      * @param transactionData Transaction data used for ARQC (hex)
@@ -384,7 +402,7 @@ public class EMVOperations {
 
     /**
      * Generate Script MAC for Issuer Script
-     * 
+     *
      * @param sk     Session Key for Script (16 bytes hex)
      * @param script Script data (hex)
      * @return Script MAC (8 bytes hex)
@@ -396,7 +414,7 @@ public class EMVOperations {
 
     /**
      * Build Issuer Script Command
-     * 
+     *
      * @param scriptId Script identifier (71 or 72)
      * @param command  APDU command (hex)
      * @return Script command with MAC (hex)
@@ -415,7 +433,7 @@ public class EMVOperations {
     /**
      * Encode Track 2 data
      * Format: PAN, Separator, Expiry, Service Code, Discretionary Data
-     * 
+     *
      * @param pan               Primary Account Number
      * @param expiry            Expiration date YYMM
      * @param serviceCode       Service code (3 digits)
@@ -445,7 +463,7 @@ public class EMVOperations {
 
     /**
      * Decode Track 2 data
-     * 
+     *
      * @param track2Data Track 2 data in hex
      * @return Decoded track 2 information
      */
@@ -482,7 +500,7 @@ public class EMVOperations {
 
     /**
      * Get cryptogram type description
-     * 
+     *
      * @param cryptogramType Cryptogram Information Data byte
      * @return Description of cryptogram type
      */
@@ -509,7 +527,7 @@ public class EMVOperations {
 
     /**
      * Format ATC for display
-     * 
+     *
      * @param atc ATC value (2 bytes hex)
      * @return Formatted ATC information
      */

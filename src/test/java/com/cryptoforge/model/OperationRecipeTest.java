@@ -6,17 +6,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class OperationRecipeTest {
     private SecretVisibility originalVisibility;
-    
+
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
         originalVisibility = AppSettings.getInstance().getSecretVisibility();
     }
-    
+
     @org.junit.jupiter.api.AfterEach
     void tearDown() {
         AppSettings.getInstance().setSecretVisibility(originalVisibility);
     }
-    
+
     @Test void serializesPortableNonSecretParameters() {
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
         java.util.List<OperationDetail> details = java.util.List.of(
@@ -41,7 +41,7 @@ class OperationRecipeTest {
         assertEquals("***MASKED***", loaded.parameters().get("fileCipherKeyField"));
         assertEquals("***MASKED***", loaded.parameters().get("email"));
     }
-    
+
     @Test void testsFullLabVisibility() {
         java.util.List<OperationDetail> details = java.util.List.of(
             OperationDetail.secretDetail("fileCipherKeyField", "super-secret"),
@@ -71,13 +71,13 @@ class OperationRecipeTest {
             OperationDetail.publicDetail("Content Algorithm", "A128GCM"),
             OperationDetail.secretDetail("Key Material", "PEM-PRIVATE-KEY")
         );
-        
+
         OperationRecipe redacted = new OperationRecipe("JWE Encryption", details, SecretVisibility.REDACTED);
         assertFalse(redacted.parameters().containsKey("Key Material"));
-        
+
         OperationRecipe masked = new OperationRecipe("JWE Encryption", details, SecretVisibility.MASKED);
         assertEquals("***MASKED***", masked.parameters().get("Key Material"));
-        
+
         OperationRecipe full = new OperationRecipe("JWE Encryption", details, SecretVisibility.FULL_LAB);
         assertEquals("PEM-PRIVATE-KEY", full.parameters().get("Key Material"));
     }
@@ -87,7 +87,7 @@ class OperationRecipeTest {
             OperationDetail.secretDetail("fileCipherKeyField", "super-secret"),
             OperationDetail.publicDetail("publicField", "value")
         );
-        
+
         OperationRecipe recipe = new OperationRecipe("Op", details, null);
         assertFalse(recipe.parameters().containsKey("fileCipherKeyField"));
         assertEquals("value", recipe.parameters().get("publicField"));

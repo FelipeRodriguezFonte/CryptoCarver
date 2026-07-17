@@ -21,10 +21,10 @@ class OperationRegistryTest {
     @Test
     void testUniqueIdsAndPaths() {
         List<OperationDescriptor> all = OperationRegistry.getInstance().getAll();
-        
+
         Set<String> ids = all.stream().map(OperationDescriptor::getId).collect(Collectors.toSet());
         assertEquals(all.size(), ids.size(), "All operation IDs must be unique");
-        
+
         Set<String> paths = all.stream().map(OperationDescriptor::getNavigationPath).collect(Collectors.toSet());
         assertEquals(all.size(), paths.size(), "All navigation paths must be unique");
     }
@@ -32,7 +32,7 @@ class OperationRegistryTest {
     @Test
     void testRequiredOperationsPresent() {
         OperationRegistry registry = OperationRegistry.getInstance();
-        
+
         assertTrue(registry.search("XAdES").size() > 0, "Missing XAdES");
         assertTrue(registry.search("RFC 3161").size() > 0, "Missing RFC 3161");
         assertTrue(registry.search("ML-KEM").size() > 0, "Missing ML-KEM");
@@ -44,7 +44,7 @@ class OperationRegistryTest {
     @Test
     void testSearchCapabilities() {
         OperationRegistry registry = OperationRegistry.getInstance();
-        
+
         // By Title
         assertFalse(registry.search("Hashing").isEmpty());
         // By Alias
@@ -70,7 +70,7 @@ class OperationRegistryTest {
         assertTrue(markdown.contains("CryptoCarver Operations Catalog"));
         assertTrue(markdown.contains("XAdES"));
         assertTrue(markdown.contains("ML-KEM"));
-        
+
         // Ensure docs/OPERATIONS_CATALOG.md is up to date
         java.nio.file.Path catalogPath = java.nio.file.Paths.get("docs", "OPERATIONS_CATALOG.md");
         if (java.nio.file.Files.exists(catalogPath)) {
@@ -83,7 +83,7 @@ class OperationRegistryTest {
     void testAliasImmutability() {
         OperationDescriptor desc = new OperationDescriptor("test_id", "Title", "Category", "Desc", "Icon",
                 OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Path", List.of("Alias1", "Alias2"));
-        
+
         List<String> aliases = desc.getAliases();
         assertThrows(UnsupportedOperationException.class, () -> aliases.add("NewAlias"), "Aliases list should be unmodifiable");
     }
@@ -93,7 +93,7 @@ class OperationRegistryTest {
         OperationRegistry registry = OperationRegistry.getInstance();
         OperationDescriptor duplicate = new OperationDescriptor("op_sym_ciphers", "Duplicate", "Category", "Desc", "Icon",
                 OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Path", List.of());
-        
+
         assertThrows(IllegalArgumentException.class, () -> registry.register(duplicate), "Registry should reject duplicate IDs");
     }
 }

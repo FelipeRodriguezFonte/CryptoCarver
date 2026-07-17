@@ -21,7 +21,7 @@ import java.security.Security;
 /**
  * Message Authentication Code (MAC) operations
  * Supports: CBC-MAC, HMAC, CMAC, Retail MAC (ISO 9797-1 Algorithm 3)
- * 
+ *
  * @author Felipe
  */
 public class MACOperations {
@@ -55,7 +55,7 @@ public class MACOperations {
 
     /**
      * Generate MAC for data
-     * 
+     *
      * @param data      Data to authenticate
      * @param key       MAC key (size depends on algorithm)
      * @param algorithm MAC algorithm
@@ -164,7 +164,7 @@ public class MACOperations {
 
     /**
      * Verify MAC value
-     * 
+     *
      * @param data      Original data
      * @param mac       MAC value to verify
      * @param key       MAC key

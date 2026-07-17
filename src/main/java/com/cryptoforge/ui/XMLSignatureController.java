@@ -36,6 +36,9 @@ public class XMLSignatureController {
     @FXML private ComboBox<String> xmlSignTsaUrlCombo;
     @FXML private ComboBox<String> xmlSignTsaProfileCombo;
     @FXML private TextField xmlSignTsaProfileNameField;
+    @FXML private ComboBox<String> xmlSignTsaAuthTypeCombo;
+    @FXML private TextField xmlSignTsaUserField;
+    @FXML private PasswordField xmlSignTsaPasswordField;
 
     private static final String NO_TSA = "No TSA (XAdES-BASELINE-B)";
     private static final String DIGICERT_TSA = "DigiCert — http://timestamp.digicert.com";
@@ -57,9 +60,11 @@ public class XMLSignatureController {
     @FXML private ComboBox<String> xmlTimestampHashCombo;
     @FXML private TextField xmlTimestampTokenField;
     @FXML private TextArea xmlTimestampReportArea;
-    
+    @FXML private TextField xmlTimestampTrustStoreField;
+    @FXML private PasswordField xmlTimestampTrustStorePasswordField;
+
     @FXML private Accordion xmlAccordion;
-    
+
     private byte[] lastTimestampToken;
 
     public XMLSignatureController() {
@@ -80,6 +85,11 @@ public class XMLSignatureController {
         xmlSignTsaUrlCombo.setValue(customTsa.isBlank() ? NO_TSA : customTsa);
         reloadTsaProfiles();
 
+        if (xmlSignTsaAuthTypeCombo != null) {
+            xmlSignTsaAuthTypeCombo.getItems().addAll("NONE", "BASIC", "BEARER");
+            xmlSignTsaAuthTypeCombo.setValue("NONE");
+        }
+
         xmlVerifyTrustStoreProfileCombo.getItems().setAll(AppSettings.getInstance().getTrustStoreProfiles().stream()
                 .map(AppSettings.TrustStoreProfile::name).sorted(String.CASE_INSENSITIVE_ORDER).toList());
 
@@ -88,7 +98,7 @@ public class XMLSignatureController {
         String saved = AppSettings.getInstance().getCustomTsaUrl();
         if (!saved.isBlank()) xmlTimestampUrlField.setText(saved);
     }
-    
+
     public void expandAccordionPane(String itemName) {
         if (xmlAccordion == null) return;
         for (TitledPane pane : xmlAccordion.getPanes()) {
@@ -105,6 +115,17 @@ public class XMLSignatureController {
         if (file != null) {
             xmlSignInputPathField.setText(file.getAbsolutePath());
         }
+    }
+
+    private com.cryptoforge.model.TsaAuthCredentials getTsaCredentials() {
+        if (xmlSignTsaAuthTypeCombo == null) return null;
+        String typeStr = xmlSignTsaAuthTypeCombo.getValue();
+        if (typeStr == null || "NONE".equals(typeStr)) return null;
+        com.cryptoforge.model.TsaAuthCredentials.AuthType type =
+            com.cryptoforge.model.TsaAuthCredentials.AuthType.valueOf(typeStr);
+        String user = xmlSignTsaUserField != null ? xmlSignTsaUserField.getText() : "";
+        String pass = xmlSignTsaPasswordField != null ? xmlSignTsaPasswordField.getText() : "";
+        return new com.cryptoforge.model.TsaAuthCredentials(type, user, pass);
     }
 
     @FXML
@@ -128,7 +149,7 @@ public class XMLSignatureController {
 
             java.util.List<String> aliases = XMLSignatureOperations.getKeyAliases(keyPath, password);
             xmlSignKeyAliasCombo.getItems().setAll(aliases);
-            
+
             if (!aliases.isEmpty()) {
                 xmlSignKeyAliasCombo.getSelectionModel().select(0);
                 statusReporter.updateStatus("Keys loaded: " + aliases.size());
@@ -155,9 +176,11 @@ public class XMLSignatureController {
         }
         saveCustomTsa(url);
         statusReporter.updateStatus("Testing TSA…");
+        com.cryptoforge.model.TsaAuthCredentials auth = getTsaCredentials();
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
-                TsaDiagnostics.Report report = TsaDiagnostics.test(url);
+                TsaDiagnostics.TokenResult result = TsaDiagnostics.timestamp(url, "CryptoCarver TSA diagnostic".getBytes(java.nio.charset.StandardCharsets.UTF_8), "SHA-256", 15000, 20000, 1024*1024, auth);
+                TsaDiagnostics.Report report = result.report();
                 javafx.application.Platform.runLater(() -> statusReporter.showInfo("TSA Test Passed",
                         "URL: " + report.url() + "\nHTTP: " + report.httpStatus() + "\nLatency: " + report.latencyMs()
                                 + " ms\nPolicy: " + report.policyOid() + "\nImprint: " + report.imprintAlgorithmOid()
@@ -240,12 +263,12 @@ public class XMLSignatureController {
             String keyPath = xmlSignKeyPathField.getText();
             String password = xmlSignKeyPasswordField.getText();
             int keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
-            
+
             if (inputPath.isEmpty() || keyPath.isEmpty() || password.isEmpty()) {
                 statusReporter.showError("Input Error", "Please provide Input File, KeyStore and Password");
                 return;
             }
-            
+
             if (keyIndex < 0) {
                 // Try to load keys automatically if not selected but credentials provided
                 handleLoadXMLKeys();
@@ -255,7 +278,7 @@ public class XMLSignatureController {
                     return;
                 }
             }
-            
+
             String xmlContent = Files.readString(new File(inputPath).toPath());
             String level = xmlSignLevelCombo.getValue();
             String tsaUrl = getTsaUrl();
@@ -269,12 +292,15 @@ public class XMLSignatureController {
                 return;
             }
             saveCustomTsa(tsaUrl);
-            
+
             String packaging = xmlSignPackagingCombo.getValue();
-            String signedXml = XMLSignatureOperations.signXAdES(xmlContent, keyPath, password, keyIndex, level, tsaUrl, packaging);
-            
+
+            String signedXml = XMLSignatureOperations.signXAdES(
+                    xmlContent,
+                    keyPath, password, keyIndex, level, tsaUrl, packaging, getTsaCredentials());
+
             xmlSignOutputArea.setText(signedXml);
-            
+
             Map<String, String> details = new HashMap<>();
             details.put("Action", "XAdES Sign");
             details.put("Level", xmlSignLevelCombo.getValue());
@@ -291,7 +317,7 @@ public class XMLSignatureController {
                     .details(details)
                     .status("XML signed successfully")
                     .build());
-            
+
         } catch (Exception e) {
             statusReporter.showError("Signing Error", "Error signing XML: " + e.getMessage());
             LOG.error("XAdES signing failed", e);
@@ -306,13 +332,14 @@ public class XMLSignatureController {
                 statusReporter.showError("Input Error", "Please paste XML content to verify");
                 return;
             }
-            
+
             String trustStorePath = xmlVerifyTrustStorePathField.getText().trim();
             String trustStorePassword = xmlVerifyTrustStorePasswordField.getText();
-            String report = XMLSignatureOperations.verifyXAdES(xmlContent, trustStorePath, trustStorePassword);
-            
+            XMLSignatureOperations.VerificationResult result = XMLSignatureOperations.verifyXAdES(xmlContent, trustStorePath, trustStorePassword);
+
+            String report = result.summary();
             xmlVerifyReportArea.setText(report);
-            
+
             Map<String, String> details = new HashMap<>();
             details.put("Action", "XAdES Verify");
             details.put("Trust Policy", trustStorePath.isBlank() ? "Integrity only (no truststore)" : "Truststore configured");
@@ -327,6 +354,24 @@ public class XMLSignatureController {
                     .input(xmlContent.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                     .output(report.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                     .details(details).status(status).build());
+
+            // Prompt to save detailed reports
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Save Diagnostic Reports");
+            alert.setHeaderText("XAdES verification generated detailed XML reports.");
+            alert.setContentText("Do you want to save the Simple, Detailed, and ETSI reports? WARNING: These reports may contain Personal Identifiable Information (PII) from certificates.");
+            java.util.Optional<javafx.scene.control.ButtonType> opt = alert.showAndWait();
+            if (opt.isPresent() && opt.get() == javafx.scene.control.ButtonType.OK) {
+                javafx.stage.DirectoryChooser dc = new javafx.stage.DirectoryChooser();
+                dc.setTitle("Select folder to save reports");
+                java.io.File dir = dc.showDialog(xmlVerifyReportArea.getScene().getWindow());
+                if (dir != null) {
+                    if (result.xmlSimpleReport() != null) Files.writeString(new File(dir, "SimpleReport.xml").toPath(), result.xmlSimpleReport());
+                    if (result.xmlDetailedReport() != null) Files.writeString(new File(dir, "DetailedReport.xml").toPath(), result.xmlDetailedReport());
+                    if (result.xmlEtsiReport() != null) Files.writeString(new File(dir, "ETSIReport.xml").toPath(), result.xmlEtsiReport());
+                    statusReporter.updateStatus("Saved 3 reports to " + dir.getAbsolutePath());
+                }
+            }
 
         } catch (Exception e) {
             statusReporter.showError("Verification Error", "Error verifying XML: " + e.getMessage());
@@ -453,12 +498,43 @@ public class XMLSignatureController {
                     + "\nPolicy: " + info.policyOid() + "\nImprint algorithm: " + info.imprintAlgorithmOid()
                     + "\nImprint: " + info.imprintHex() + "\nGeneration time: " + info.generationTime()
                     + "\nSerial: " + info.serialNumber() + "\nSigner: " + info.signerId()
+                    + "\nCMS Algorithm: " + info.signatureAlgorithm()
                     + "\nTSA certificate subject: " + info.signerSubject() + "\nTSA certificate issuer: " + info.signerIssuer()
-                    + "\nTSA certificate SHA-256: " + info.signerSha256();
+                    + "\nTSA certificate SHA-256: " + info.signerSha256()
+                    + "\nTSA cert validity: " + info.certNotBefore() + " to " + info.certNotAfter()
+                    + "\nTSA timeStamping EKU: " + (info.hasTimeStampingEku() ? "Present" : "Missing")
+                    + "\n\n--- Embedded Certificate Chain ---\n" + info.certificateChainInfo();
             String dataPath = xmlTimestampFileField.getText().trim();
             if (!dataPath.isEmpty()) text += "\nMatches selected file: " + (TsaDiagnostics.tokenMatchesData(token, Files.readAllBytes(new File(dataPath).toPath())) ? "YES" : "NO");
             xmlTimestampReportArea.setText(text + "\n\nNote: imprint matching does not validate the TSA certificate chain.");
         } catch (Exception e) { statusReporter.showError("Timestamp Token", "Unable to inspect token: " + e.getMessage()); }
+    }
+
+    @FXML
+    public void handleValidateTimestampToken() {
+        String tokenPath = xmlTimestampTokenField.getText().trim();
+        if (tokenPath.isEmpty()) { statusReporter.showError("Timestamp Token", "Select a .tsr or .tst token first"); return; }
+        String trustStorePath = xmlTimestampTrustStoreField != null ? xmlTimestampTrustStoreField.getText().trim() : "";
+        String trustStorePassword = xmlTimestampTrustStorePasswordField != null ? xmlTimestampTrustStorePasswordField.getText() : "";
+        String dataPath = xmlTimestampFileField.getText().trim();
+        byte[] data = null;
+        try {
+            if (!dataPath.isEmpty()) data = Files.readAllBytes(new File(dataPath).toPath());
+            byte[] token = Files.readAllBytes(new File(tokenPath).toPath());
+            String report = TsaDiagnostics.validateToken(token, data, trustStorePath.isEmpty() ? null : trustStorePath, trustStorePassword);
+            xmlTimestampReportArea.setText(report);
+            statusReporter.updateStatus("Timestamp token validated.");
+        } catch (Exception e) {
+            statusReporter.showError("Timestamp Token", "Validation failed: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleBrowseTimestampTrustStore() {
+        File file = chooseFile("Select TrustStore (PKCS#12 or JKS)");
+        if (file != null) {
+            if (xmlTimestampTrustStoreField != null) xmlTimestampTrustStoreField.setText(file.getAbsolutePath());
+        }
     }
 
     private File chooseFile(String title) {

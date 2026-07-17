@@ -11,14 +11,14 @@ class KeyMaterialFactoryTest {
     void testFromSecretKey() {
         byte[] keyBytes = new byte[32];
         SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "AES");
-        
+
         KeyMaterial km = KeyMaterialFactory.fromSecretKey(
-                "my-aes-key", 
-                secretKey, 
-                KeyExportability.NON_EXPORTABLE, 
+                "my-aes-key",
+                secretKey,
+                KeyExportability.NON_EXPORTABLE,
                 Set.of(KeyUsage.ENCRYPT, KeyUsage.DECRYPT)
         );
-        
+
         assertEquals("my-aes-key", km.getId());
         assertEquals(KeyType.SYMMETRIC, km.getType());
         assertEquals("AES", km.getAlgorithm());

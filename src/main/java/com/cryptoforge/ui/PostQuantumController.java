@@ -54,18 +54,27 @@ public class PostQuantumController {
     private TextField pqcVerifySignatureField;
 
     // UI Components - KEM
-    @FXML
-    private ComboBox<String> pqcKemAlgoCombo;
-    @FXML
-    private TextArea pqcKemCiphertextArea; // Result
-    @FXML
-    private TextField pqcKemSharedSecretField; // Result
-    @FXML
-    private Label pqcKemStatusLabel;
-    
+    @FXML private ComboBox<String> pqcKemAlgoCombo;
+    @FXML private TextArea pqcKemCiphertextArea;
+    @FXML private TextField pqcKemSharedSecretField;
+    @FXML private TextField pqcAliceSecretField;
+    @FXML private Label pqcKemStatusLabel;
+
+    // Benchmark
+    @FXML private ComboBox<String> pqcBenchmarkAlgoCombo;
+    @FXML private Button pqcBenchmarkBtn;
+    @FXML private ProgressIndicator pqcBenchmarkProgress;
+    @FXML private TextArea pqcBenchmarkArea;
+    private com.cryptoforge.crypto.pqc.PQCBenchmark activeBenchmarkTask;
+
+
     // Internal state
-    private PrivateKey currentPrivateKey;
     private PublicKey currentPublicKey;
+    private PrivateKey currentPrivateKey;
+    private byte[] bobSecret;
+
+    PublicKey getCurrentPublicKey() { return currentPublicKey; }
+    PrivateKey getCurrentPrivateKey() { return currentPrivateKey; }
 
     public PostQuantumController() {
     }
@@ -89,9 +98,17 @@ public class PostQuantumController {
         pqcSignAlgoCombo.getItems().addAll(PostQuantumOperations.SLH_DSA_ALGORITHMS);
         pqcSignAlgoCombo.setValue(PostQuantumOperations.ML_DSA_ALGORITHMS.get(0));
 
-        // Populate KEM combo
-        pqcKemAlgoCombo.getItems().setAll(PostQuantumOperations.ML_KEM_ALGORITHMS);
-        pqcKemAlgoCombo.setValue(PostQuantumOperations.ML_KEM_ALGORITHMS.get(0));
+        if (pqcKemAlgoCombo != null) {
+            pqcKemAlgoCombo.getItems().setAll(PostQuantumOperations.ML_KEM_ALGORITHMS);
+            pqcKemAlgoCombo.setValue("ML-KEM-512");
+        }
+
+        if (pqcBenchmarkAlgoCombo != null) {
+            pqcBenchmarkAlgoCombo.getItems().addAll(PostQuantumOperations.ML_KEM_ALGORITHMS);
+            pqcBenchmarkAlgoCombo.getItems().addAll(PostQuantumOperations.ML_DSA_ALGORITHMS);
+            pqcBenchmarkAlgoCombo.getItems().addAll(PostQuantumOperations.SLH_DSA_ALGORITHMS);
+            pqcBenchmarkAlgoCombo.setValue("ML-KEM-512");
+        }
     }
 
     public void expandAccordionPane(String itemName) {
@@ -119,14 +136,14 @@ public class PostQuantumController {
 
             String pubHex = DataConverter.bytesToHex(currentPublicKey.getEncoded());
             String privHex = DataConverter.bytesToHex(currentPrivateKey.getEncoded());
-            
+
             try {
-                pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" + 
-                    java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) + 
+                pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" +
+                    java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) +
                     "\n-----END PUBLIC KEY-----");
-                
-                pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" + 
-                    java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) + 
+
+                pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" +
+                    java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) +
                     "\n-----END PRIVATE KEY-----");
             } catch (Exception e) {
                 pqcPublicKeyArea.setText(pubHex);
@@ -154,41 +171,87 @@ public class PostQuantumController {
 
     @FXML
     public void handleImportPQCKeys() {
-        String algorithm = pqcAlgorithmCombo.getValue();
-        if (algorithm == null || algorithm.startsWith("---")) {
-            if (statusReporter != null) statusReporter.showError("Algorithm Error", "Select the algorithm that matches the PEM keys.");
-            return;
-        }
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select PQC public and/or private PEM keys");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM files", "*.pem", "*.pub", "*.key"));
         java.util.List<File> files = chooser.showOpenMultipleDialog(null);
         if (files == null || files.isEmpty()) return;
+
+        java.util.List<String> pems = new java.util.ArrayList<>();
         try {
-            for (File file : files) {
-                String pem = Files.readString(file.toPath(), StandardCharsets.US_ASCII);
-                byte[] encoded = decodePem(pem);
-                if (pem.contains("BEGIN PUBLIC KEY")) {
-                    currentPublicKey = PostQuantumOperations.importPublicKey(algorithm, encoded);
-                    pqcPublicKeyArea.setText(pem.trim());
-                } else if (pem.contains("BEGIN PRIVATE KEY")) {
-                    currentPrivateKey = PostQuantumOperations.importPrivateKey(algorithm, encoded);
-                    pqcPrivateKeyArea.setText(pem.trim());
-                } else {
-                    throw new IllegalArgumentException(file.getName() + " is not a PKCS#8 or X.509 PEM key");
-                }
+            for (File f : files) {
+                pems.add(Files.readString(f.toPath(), StandardCharsets.US_ASCII));
             }
-            pqcKeyStatusLabel.setText("Imported PQC key material for " + algorithm);
-            java.util.List<com.cryptoforge.model.OperationDetail> details = describeKeyPair(algorithm, "Imported");
-            if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Key Import")
-                        .details(detailsWithKeyMaterial(details))
-                        .status("PQC key material imported")
-                        .build());
-            }
+            importKeysFromContents(pems);
         } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("PQC Import Error", "Unable to import keys: " + e.getMessage());
+            if (statusReporter != null) statusReporter.showError("Import Error", "Failed to load keys: " + e.getMessage());
+        }
+    }
+
+    public void importKeysFromContents(java.util.List<String> pems) throws Exception {
+        String lastDetectedAlgorithm = null;
+        PublicKey tempPubKey = null;
+        PrivateKey tempPrivKey = null;
+        String tempPubKeyStr = null;
+        String tempPrivKeyStr = null;
+
+        for (String pem : pems) {
+            byte[] encoded = decodePem(pem);
+            boolean isPublic = pem.contains("BEGIN PUBLIC KEY");
+            boolean isPrivate = pem.contains("BEGIN PRIVATE KEY");
+            if (!isPublic && !isPrivate) {
+                throw new IllegalArgumentException("Content is not a PKCS#8 or X.509 PEM key");
+            }
+
+            com.cryptoforge.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult result = PostQuantumOperations.detectAlgorithmFromEncoded(encoded, isPublic);
+            if (result == null || !result.isSupported()) {
+                String oid = result != null ? result.originalOid() : "Unknown";
+                throw new IllegalArgumentException("Cannot detect PQC algorithm from PEM (OID: " + oid + "). Ensure you are using a supported NIST parameter set.");
+            }
+
+            String detectedAlgorithm = result.nistName();
+            if (lastDetectedAlgorithm != null && !lastDetectedAlgorithm.equals(detectedAlgorithm)) {
+                throw new IllegalArgumentException("Mismatched keys: You are trying to load a " + lastDetectedAlgorithm + " key and a " + detectedAlgorithm + " key simultaneously.");
+            }
+            lastDetectedAlgorithm = detectedAlgorithm;
+
+            if (isPublic) {
+                tempPubKey = PostQuantumOperations.importPublicKey(detectedAlgorithm, encoded);
+                tempPubKeyStr = pem.trim();
+            } else {
+                tempPrivKey = PostQuantumOperations.importPrivateKey(detectedAlgorithm, encoded);
+                tempPrivKeyStr = pem.trim();
+            }
+        }
+
+        // All files verified successfully, apply state
+        if (tempPubKey != null) {
+            currentPublicKey = tempPubKey;
+            if (pqcPublicKeyArea != null) pqcPublicKeyArea.setText(tempPubKeyStr);
+        }
+        if (tempPrivKey != null) {
+            currentPrivateKey = tempPrivKey;
+            if (pqcPrivateKeyArea != null) pqcPrivateKeyArea.setText(tempPrivKeyStr);
+        }
+
+        // Update combo if it's one of the known primary names
+        if (lastDetectedAlgorithm != null && pqcAlgorithmCombo != null) {
+            if (PostQuantumOperations.ML_KEM_ALGORITHMS.contains(lastDetectedAlgorithm)) {
+                pqcAlgorithmCombo.setValue(lastDetectedAlgorithm);
+                if (pqcKemAlgoCombo != null) pqcKemAlgoCombo.setValue(lastDetectedAlgorithm);
+            } else if (PostQuantumOperations.ML_DSA_ALGORITHMS.contains(lastDetectedAlgorithm) || PostQuantumOperations.SLH_DSA_ALGORITHMS.contains(lastDetectedAlgorithm)) {
+                pqcAlgorithmCombo.setValue(lastDetectedAlgorithm);
+                if (pqcSignAlgoCombo != null) pqcSignAlgoCombo.setValue(lastDetectedAlgorithm);
+            }
+        }
+
+        if (lastDetectedAlgorithm != null) {
+            if (pqcKeyStatusLabel != null) pqcKeyStatusLabel.setText("Imported PQC key material for " + lastDetectedAlgorithm);
+            java.util.List<com.cryptoforge.model.OperationDetail> details = describeKeyPair(lastDetectedAlgorithm, "Imported");
+            if (statusReporter != null) {
+                statusReporter.publish(OperationResult.forOperation("PQC Import")
+                        .details(details).status("Success").build());
+            }
         }
     }
 
@@ -306,7 +369,7 @@ public class PostQuantumController {
         try {
             String algo = pqcSignAlgoCombo.getValue();
             String inputData = pqcSignInputArea.getText();
-            
+
             if (currentPrivateKey == null) {
                 if (statusReporter != null) statusReporter.showError("Key Error", "Please generate a key pair first (Load from file not yet implemented for PQC)");
                 return;
@@ -324,9 +387,9 @@ public class PostQuantumController {
 
             byte[] data = inputData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             byte[] signature = PostQuantumOperations.sign(currentPrivateKey, data, algo);
-            
+
             pqcSignOutputArea.setText(DataConverter.bytesToHex(signature));
-            
+
             String kpDescription = currentPrivateKey.getAlgorithm();
             java.util.List<com.cryptoforge.model.OperationDetail> details = java.util.List.of(
                 com.cryptoforge.model.OperationDetail.publicDetail("Algorithm", algo),
@@ -370,9 +433,9 @@ public class PostQuantumController {
 
             byte[] data = inputData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             byte[] signature = DataConverter.hexToBytes(signatureHex);
-            
+
             boolean verified = PostQuantumOperations.verify(currentPublicKey, data, signature, algo);
-            
+
             if (verified) {
                 if (statusReporter != null) statusReporter.showInfo("Verification Result", "✓ Signature is VALID");
             } else {
@@ -406,10 +469,13 @@ public class PostQuantumController {
                 if (statusReporter != null) statusReporter.showError("KEM Algorithm Error", "Generate a key pair for the selected ML-KEM/Kyber algorithm first.");
                 return;
             }
-            PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(currentPublicKey);
+            PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(currentPublicKey, selectedAlgorithm);
             pqcKemCiphertextArea.setText(DataConverter.bytesToHex(result.encapsulation()));
             pqcKemSharedSecretField.setText(DataConverter.bytesToHex(result.sharedSecret()));
-            pqcKemStatusLabel.setText("Shared secret encapsulated successfully.");
+            bobSecret = result.sharedSecret();
+            if (pqcAliceSecretField != null) pqcAliceSecretField.clear();
+            pqcKemStatusLabel.setText("Shared secret encapsulated successfully. Send ciphertext to Alice.");
+            pqcKemStatusLabel.setStyle("");
             java.util.List<com.cryptoforge.model.OperationDetail> details = java.util.List.of(
                 com.cryptoforge.model.OperationDetail.publicDetail("Algorithm", selectedAlgorithm),
                 com.cryptoforge.model.OperationDetail.publicDetail("Ciphertext Size", result.encapsulation().length + " bytes"),
@@ -435,20 +501,32 @@ public class PostQuantumController {
                 if (statusReporter != null) statusReporter.showError("KEM Input Error", "Encapsulate first or paste an encapsulation in hexadecimal.");
                 return;
             }
-            byte[] secret = PostQuantumOperations.decapsulate(currentPrivateKey, DataConverter.hexToBytes(ciphertextHex));
-            pqcKemSharedSecretField.setText(DataConverter.bytesToHex(secret));
-            pqcKemStatusLabel.setText("Shared secret decapsulated successfully.");
+            String selectedAlgorithm = pqcKemAlgoCombo.getValue();
+            byte[] secret = PostQuantumOperations.decapsulate(currentPrivateKey, DataConverter.hexToBytes(ciphertextHex), selectedAlgorithm);
+            if (pqcAliceSecretField != null) pqcAliceSecretField.setText(DataConverter.bytesToHex(secret));
+            if (bobSecret != null) {
+                boolean match = java.security.MessageDigest.isEqual(bobSecret, secret);
+                if (match) {
+                    pqcKemStatusLabel.setText("MATCH! Alice and Bob share the same secret.");
+                    pqcKemStatusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+                } else {
+                    pqcKemStatusLabel.setText("MISMATCH! The derived secrets differ.");
+                    pqcKemStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+                }
+            } else {
+                pqcKemStatusLabel.setText("Alice decrypted the secret, but Bob's secret is unknown.");
+            }
             Map<String, String> legacyDetails = new HashMap<>();
             legacyDetails.put("Algorithm", pqcKemAlgoCombo.getValue());
             legacyDetails.put("Encapsulation Length", ciphertextHex.length() / 2 + " bytes");
             legacyDetails.put("Shared Secret", "Recovered (not displayed in history)");
-            
+
             java.util.List<com.cryptoforge.model.OperationDetail> details = java.util.List.of(
                 com.cryptoforge.model.OperationDetail.publicDetail("Algorithm", pqcKemAlgoCombo.getValue()),
                 com.cryptoforge.model.OperationDetail.publicDetail("Encapsulation Length", ciphertextHex.length() / 2 + " bytes"),
                 com.cryptoforge.model.OperationDetail.publicDetail("Shared Secret", "Recovered (not displayed in history)")
             );
-            
+
             if (statusReporter != null) {
                 statusReporter.publish(OperationResult.forOperation("ML-KEM Decapsulate")
                         .input(DataConverter.hexToBytes(ciphertextHex)).output(secret).details(details)
@@ -468,5 +546,56 @@ public class PostQuantumController {
 
     private boolean isKemAlgorithm(String algorithm) {
         return algorithm != null && (algorithm.startsWith("Kyber") || algorithm.startsWith("ML-KEM"));
+    }
+
+    @FXML
+    public void handlePQCBenchmark() {
+        if (activeBenchmarkTask != null && activeBenchmarkTask.isRunning()) {
+            activeBenchmarkTask.cancel();
+            return;
+        }
+
+        String algo = pqcBenchmarkAlgoCombo.getValue();
+        if (algo == null) {
+            if (statusReporter != null) statusReporter.showError("Benchmark Error", "Select an algorithm to benchmark");
+            return;
+        }
+
+        pqcBenchmarkBtn.setText("Cancel Benchmark");
+        pqcBenchmarkProgress.setVisible(true);
+        pqcBenchmarkArea.setText("Benchmarking " + algo + " (1000 iterations). Please wait...\n");
+
+        activeBenchmarkTask = new com.cryptoforge.crypto.pqc.PQCBenchmark(algo, 1000);
+
+        activeBenchmarkTask.setOnSucceeded(e -> {
+            pqcBenchmarkArea.setText(activeBenchmarkTask.getValue());
+            pqcBenchmarkBtn.setText("Run Benchmark");
+            pqcBenchmarkProgress.setVisible(false);
+            activeBenchmarkTask = null;
+        });
+
+        activeBenchmarkTask.setOnCancelled(e -> {
+            String partial = activeBenchmarkTask.getPartialResult();
+            if (partial != null) {
+                pqcBenchmarkArea.setText(partial);
+            } else {
+                pqcBenchmarkArea.setText("Benchmark canceled.");
+            }
+            pqcBenchmarkBtn.setText("Run Benchmark");
+            pqcBenchmarkProgress.setVisible(false);
+            activeBenchmarkTask = null;
+        });
+
+        activeBenchmarkTask.setOnFailed(e -> {
+            pqcBenchmarkArea.setText("Benchmark failed: " + activeBenchmarkTask.getException().getMessage());
+            pqcBenchmarkBtn.setText("Run Benchmark");
+            pqcBenchmarkProgress.setVisible(false);
+            if (statusReporter != null) statusReporter.showError("Benchmark Error", activeBenchmarkTask.getException().getMessage());
+            activeBenchmarkTask = null;
+        });
+
+        Thread th = new Thread(activeBenchmarkTask);
+        th.setDaemon(true);
+        th.start();
     }
 }

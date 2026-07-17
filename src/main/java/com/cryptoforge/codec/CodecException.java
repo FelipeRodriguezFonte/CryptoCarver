@@ -1,7 +1,7 @@
 package com.cryptoforge.codec;
 
 public class CodecException extends RuntimeException {
-    
+
     private final ByteFormat format;
     private final Integer position;
 

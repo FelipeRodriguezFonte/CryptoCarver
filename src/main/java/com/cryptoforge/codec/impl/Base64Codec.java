@@ -13,7 +13,7 @@ public class Base64Codec implements Codec {
         String normalized = value.replaceAll("-----BEGIN [A-Z0-9 ]+-----", "")
                 .replaceAll("-----END [A-Z0-9 ]+-----", "")
                 .replaceAll("\\s", "");
-        
+
         try {
             return Base64.getDecoder().decode(normalized);
         } catch (IllegalArgumentException e) {

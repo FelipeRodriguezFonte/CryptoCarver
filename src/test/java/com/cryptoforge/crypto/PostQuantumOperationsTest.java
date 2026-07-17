@@ -27,8 +27,8 @@ class PostQuantumOperationsTest {
     void kyberEncapsulatesAndDecapsulatesTheSameSecret() throws Exception {
         KeyPair keyPair = PostQuantumOperations.generateKeyPair("Kyber512");
 
-        PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(keyPair.getPublic());
-        byte[] recovered = PostQuantumOperations.decapsulate(keyPair.getPrivate(), result.encapsulation());
+        PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(keyPair.getPublic(), "ML-KEM-512");
+        byte[] recovered = PostQuantumOperations.decapsulate(keyPair.getPrivate(), result.encapsulation(), "ML-KEM-512");
 
         assertArrayEquals(result.sharedSecret(), recovered);
     }
@@ -39,5 +39,17 @@ class PostQuantumOperationsTest {
         assertTrue(PostQuantumOperations.areAlgorithmsCompatible("Dilithium3", "ML-DSA-65"));
         assertFalse(PostQuantumOperations.areAlgorithmsCompatible("ML-KEM-512", "ML-KEM-768"));
         assertFalse(PostQuantumOperations.areAlgorithmsCompatible("ML-DSA-44", "ML-DSA-65"));
+    }
+
+    @Test
+    void rejectsNonPQCKey() throws Exception {
+        java.security.KeyPairGenerator kpg = java.security.KeyPairGenerator.getInstance("RSA");
+        kpg.initialize(2048);
+        java.security.KeyPair kp = kpg.generateKeyPair();
+
+        Exception ex = assertThrows(IllegalArgumentException.class, () -> {
+            PostQuantumOperations.sign(kp.getPrivate(), "Test".getBytes(), "ML-DSA-44");
+        });
+        assertTrue(ex.getMessage().contains("Unknown or unsupported PQC algorithm in key"));
     }
 }

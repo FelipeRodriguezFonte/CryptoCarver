@@ -30,7 +30,7 @@ class StatusReporterTest {
         java.util.List<com.cryptoforge.model.OperationDetail> lastInspectorDetails;
 
         @Override public void updateStatus(String message) { this.lastMessage = message; }
-        
+
         @Override
         public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptoforge.model.OperationDetail> details) {
             this.lastInspectorOp = operation;

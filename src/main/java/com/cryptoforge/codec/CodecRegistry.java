@@ -18,7 +18,7 @@ public class CodecRegistry {
         codecs.put(ByteFormat.BASE58_CHECK, new Base58CheckCodec());
         codecs.put(ByteFormat.BINARY, new BinaryCodec());
         codecs.put(ByteFormat.DECIMAL, new DecimalCodec());
-        
+
         codecs.put(ByteFormat.TEXT_UTF8, new Utf8Codec());
         codecs.put(ByteFormat.TEXT_ASCII, new AsciiCodec());
         codecs.put(ByteFormat.TEXT_ISO_8859_1, new Iso88591Codec());

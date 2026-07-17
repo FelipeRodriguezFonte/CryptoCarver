@@ -16,7 +16,7 @@ public final class KeyMaterial {
     private final KeyFormat format;
     private final Set<KeyUsage> usages;
     private final KeyExportability exportability;
-    
+
     // Internal references (can be null depending on what is stored)
     private final Key key;
     private final Certificate certificate;
@@ -50,7 +50,7 @@ public final class KeyMaterial {
     public Certificate getCertificate() {
         return certificate;
     }
-    
+
     /** Returns a safe copy of this KeyMaterial without the raw Key references. */
     public KeyMaterial withoutRawKey() {
         return new KeyMaterial(id, fingerprint, type, algorithm, size, format, usages, exportability, null, null);

@@ -51,7 +51,7 @@ public class CMSOperations {
 
     /**
      * Generate SignedData PKCS#7 with warnings
-     * 
+     *
      * @param detached If true, creates a detached signature (data not included in
      *                 PKCS#7)
      * @return SignedDataResult with PKCS#7 bytes and attribute warnings
@@ -105,7 +105,7 @@ public class CMSOperations {
 
     /**
      * Generate SignedData PKCS#7
-     * 
+     *
      * @param detached If true, creates a detached signature (data not included in
      *                 PKCS#7)
      */

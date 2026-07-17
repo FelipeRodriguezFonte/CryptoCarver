@@ -37,7 +37,7 @@ public class HashOperations {
 
     /**
      * Calculate hash of data using specified algorithm
-     * 
+     *
      * @param data Data to hash
      * @param algorithm Hash algorithm name
      * @return Hash value as byte array
@@ -56,14 +56,14 @@ public class HashOperations {
         // Normalize algorithm name
         String normalizedAlgorithm = normalizeAlgorithmName(algorithm);
 
-        MessageDigest digest = MessageDigest.getInstance(normalizedAlgorithm, 
+        MessageDigest digest = MessageDigest.getInstance(normalizedAlgorithm,
                                                          new BouncyCastleProvider());
         return digest.digest(data);
     }
 
     /**
      * Calculate CRC32 checksum
-     * 
+     *
      * @param data Data to checksum
      * @return CRC32 value as byte array (4 bytes)
      */
@@ -83,7 +83,7 @@ public class HashOperations {
 
     /**
      * Normalize algorithm name for Java/BouncyCastle
-     * 
+     *
      * @param algorithm User-provided algorithm name
      * @return Normalized algorithm name
      */
@@ -114,7 +114,7 @@ public class HashOperations {
 
     /**
      * Get display name for algorithm (with proper formatting)
-     * 
+     *
      * @param algorithm Algorithm name
      * @return Formatted display name
      */
@@ -124,7 +124,7 @@ public class HashOperations {
 
     /**
      * Validate if algorithm is supported
-     * 
+     *
      * @param algorithm Algorithm name to check
      * @return true if supported
      */
@@ -135,7 +135,7 @@ public class HashOperations {
 
         // Check against supported list
         return SUPPORTED_ALGORITHMS.stream()
-                .anyMatch(algo -> algo.equalsIgnoreCase(algorithm)) 
+                .anyMatch(algo -> algo.equalsIgnoreCase(algorithm))
                 || algorithm.equalsIgnoreCase("CRC32");
     }
 }

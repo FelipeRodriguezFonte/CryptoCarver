@@ -4,7 +4,7 @@ package com.cryptoforge.util;
  * Interface to monitor progress and request cancellation of long-running streaming operations.
  */
 public interface ProgressMonitor {
-    
+
     /**
      * Called periodically during an operation to update the number of bytes processed.
      * @param bytesProcessed The total number of bytes processed so far.

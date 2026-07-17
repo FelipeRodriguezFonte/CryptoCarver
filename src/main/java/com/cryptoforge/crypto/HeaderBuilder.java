@@ -2,12 +2,12 @@ package com.cryptoforge.crypto;
 
 /**
  * Builder para construir headers TR-31 de forma sencilla
- * 
+ *
  * IMPORTANTE - Compatibilidad KBPK/Versión:
  * - Versión A/B/C: Requiere KBPK de 8, 16 o 24 bytes (DES, 2-key TDES, 3-key
  * TDES)
  * - Versión D: Requiere KBPK de 16, 24 o 32 bytes (AES-128, AES-192, AES-256)
- * 
+ *
  * Ejemplo de uso:
  * // Para versión B (TDES)
  * String kbpk = "DA92D6A23B04A81CD05E7FA2089815D68C01B68F1C3BE961"; // 24 bytes
@@ -16,7 +16,7 @@ package com.cryptoforge.crypto;
  * .keyUsage("P0")
  * .algorithm('T')
  * .build();
- * 
+ *
  * // Para versión D (AES)
  * String kbpk =
  * "5DD6D976AEE98552A440089DF8404C8C385BD51C5E1C9702EF7AF23EB632517F"; // 32
@@ -132,18 +132,18 @@ public class HeaderBuilder {
     /**
      * Optional Blocks (longitud variable)
      * Si está vacío, se usa "0000"
-     * 
+     *
      * Formato completo: "NNRRBB..." donde:
      * - NN = número de bloques (2 dígitos hex, ej: "01" para 1 bloque)
      * - RR = reserved (normalmente "00")
      * - BB... = datos de los bloques
-     * 
+     *
      * Cada bloque tiene formato: ID (2 chars) + Length (2 chars hex) + Data
-     * 
+     *
      * Ejemplo:
      * - "0000" = sin optional blocks (default)
      * - "0100KS0600ABCDEF123456" = 1 bloque Key Set ID con 6 bytes de datos
-     * 
+     *
      * NOTA: El usuario debe proporcionar el string completo incluyendo el contador
      * y el byte reserved. Para la mayoría de casos, usar "0000" (sin bloques).
      */
@@ -194,7 +194,7 @@ public class HeaderBuilder {
 
     /**
      * Atajos para casos comunes
-     * 
+     *
      * NOTA: Estos atajos generan el header, pero debes asegurarte de usar
      * el tipo correcto de KBPK:
      * - Métodos *TDES: Requieren KBPK de 8, 16 o 24 bytes (versión A/B/C)

@@ -19,7 +19,7 @@ public class CheckDigitCalculator {
 
     /**
      * Calculate check digit using specified algorithm
-     * 
+     *
      * @param data Input data (numeric string)
      * @param algorithm Algorithm to use
      * @return Check digit
@@ -47,7 +47,7 @@ public class CheckDigitCalculator {
 
     /**
      * Validate data with check digit using specified algorithm
-     * 
+     *
      * @param dataWithCheckDigit Complete data including check digit
      * @param algorithm Algorithm to use
      * @return true if check digit is valid
@@ -168,7 +168,7 @@ public class CheckDigitCalculator {
 
     /**
      * Format data with check digit appended
-     * 
+     *
      * @param data Original data
      * @param algorithm Algorithm used
      * @return Data with check digit appended

@@ -48,7 +48,7 @@ public class XMLSignatureOperations {
         // 1. Try PKCS12
         try {
             Pkcs12SignatureToken p12Token = new Pkcs12SignatureToken(new File(path), new PasswordProtection(password.toCharArray()));
-            p12Token.getKeys(); 
+            p12Token.getKeys();
             return p12Token;
         } catch (Exception e) {
             // 2. Try JKS
@@ -61,8 +61,8 @@ public class XMLSignatureOperations {
                 try {
                     // SD-DSS KeyStoreSignatureTokenConnection supports explicit KeyStore type
                     return new eu.europa.esig.dss.token.KeyStoreSignatureTokenConnection(
-                        new File(path), 
-                        "JCEKS", 
+                        new File(path),
+                        "JCEKS",
                         new PasswordProtection(password.toCharArray())
                     );
                 } catch (Exception exc) {
@@ -81,25 +81,25 @@ public class XMLSignatureOperations {
         try (AbstractKeyStoreTokenConnection token = createToken(p12Path, password)) {
             List<DSSPrivateKeyEntry> keys = token.getKeys();
             List<String> aliases = new java.util.ArrayList<>();
-            
+
             for (DSSPrivateKeyEntry key : keys) {
                 String alias = null;
-                
+
                 // 1. Try to get Alias from KSPrivateKeyEntry
                 if (key instanceof eu.europa.esig.dss.token.KSPrivateKeyEntry) {
                     alias = ((eu.europa.esig.dss.token.KSPrivateKeyEntry) key).getAlias();
                 }
-                
+
                 // 2. Get readable Subject from underlying X509Certificate
                 String subjectLabel = "Unknown Subject";
                 String cn = "Unknown CN";
-                
+
                 try {
                     // Access standard Java X509Certificate
                     java.security.cert.X509Certificate x509 = key.getCertificate().getCertificate();
                     String dn = x509.getSubjectX500Principal().getName();
                     subjectLabel = dn;
-                    
+
                     // Extract Common Name (CN)
                     // Simple parsing, assuming standard formatting (e.g. "CN=Name, O=Org")
                     // Note: LdapName class would be more robust but this suffices for display
@@ -135,21 +135,22 @@ public class XMLSignatureOperations {
      * Sign an XML document using XAdES with specific level and key index
      */
     public static String signXAdES(String xmlContent, String p12Path, String password, int keyIndex, String level, String tsaUrl) throws Exception {
-        return signXAdES(xmlContent, p12Path, password, keyIndex, level, tsaUrl, "ENVELOPED");
+        return signXAdES(xmlContent, p12Path, password, keyIndex, level, tsaUrl, "ENVELOPED", null);
     }
 
-    /**
-     * Sign an XML document using XAdES with explicit packaging.
-     * Supported values are ENVELOPED, ENVELOPING and DETACHED.
-     */
     public static String signXAdES(String xmlContent, String p12Path, String password, int keyIndex,
                                    String level, String tsaUrl, String packaging) throws Exception {
+        return signXAdES(xmlContent, p12Path, password, keyIndex, level, tsaUrl, packaging, null);
+    }
+
+    public static String signXAdES(String xmlContent, String p12Path, String password, int keyIndex,
+                                   String level, String tsaUrl, String packaging, com.cryptoforge.model.TsaAuthCredentials auth) throws Exception {
         // 1. Prepare Document
         DSSDocument toSignDocument = new InMemoryDocument(xmlContent.getBytes("UTF-8"));
 
         // 2. Load Token (Key)
         try (AbstractKeyStoreTokenConnection token = createToken(p12Path, password)) {
-            
+
             List<DSSPrivateKeyEntry> keys = token.getKeys();
             if (keys.isEmpty()) {
                 throw new Exception("No keys found in the keystore");
@@ -161,21 +162,24 @@ public class XMLSignatureOperations {
 
             // 3. Prepare Service
             CommonCertificateVerifier verifier = new CommonCertificateVerifier();
-            
+
             // The signing certificate is deliberately not made a trust anchor here.
             // Trust belongs to the validation policy, configured by the verifier.
 
             XAdESService service = new XAdESService(verifier);
-            
+
             // Configure TSA if URL provided
             if (tsaUrl != null && !tsaUrl.isEmpty()) {
                 OnlineTSPSource tspSource = new OnlineTSPSource(tsaUrl);
+                if (auth != null) {
+                    tspSource.setDataLoader(new TsaAuthDataLoader(auth));
+                }
                 service.setTspSource(tspSource);
             }
 
             // 4. Set Parameters
             XAdESSignatureParameters parameters = new XAdESSignatureParameters();
-            
+
             // Parse level
             SignatureLevel signatureLevel = SignatureLevel.XAdES_BASELINE_B; // default
             if (level != null) {
@@ -194,7 +198,7 @@ public class XMLSignatureOperations {
                 }
             }
             parameters.setSignatureLevel(signatureLevel);
-            
+
             parameters.setSignaturePackaging(parsePackaging(packaging));
             parameters.setDigestAlgorithm(DigestAlgorithm.SHA256);
             parameters.setSigningCertificate(privateKey.getCertificate());
@@ -206,21 +210,21 @@ public class XMLSignatureOperations {
                 dataToSign = service.getDataToSign(toSignDocument, parameters);
             } catch (Exception e) {
                 System.out.println("DEBUG: XML Sign Exception: " + e.getMessage());
-                
+
                 // If validation fails (e.g. self-signed certs), try without including certificate details in TBS
                 // "Signing-certificate token was not found" means SD-DSS rejected the cert for the signature property
                 if (e.getMessage() != null && (
-                    e.getMessage().contains("Signing-certificate token was not found") || 
+                    e.getMessage().contains("Signing-certificate token was not found") ||
                     e.getMessage().contains("Unable to verify its validity") ||
                     e.getMessage().contains("Revocation data is missing"))) {
-                    
+
                     System.out.println("DEBUG: Attempting fallback - GenerateTBSWithoutCertificate=true");
                     parameters.setGenerateTBSWithoutCertificate(true);
-                    
+
                     // Crucial: Clear the signing certificate from parameters so SD-DSS doesn't try to validate it again
                     // The key itself is passed to the token.sign method later
                     parameters.setSigningCertificate(null);
-                    
+
                     dataToSign = service.getDataToSign(toSignDocument, parameters);
                 } else {
                     throw e;
@@ -258,13 +262,13 @@ public class XMLSignatureOperations {
         }
     }
 
+    public record VerificationResult(String summary, String xmlSimpleReport, String xmlDetailedReport, String xmlEtsiReport) {}
+
     /**
-     * Verify an XML document (XAdES)
-     * 
-     * @param xmlContent The signed XML content
-     * @return Verification report summary
+     * Verifies an XML document signature.
+     * @return Verification result containing reports
      */
-    public static String verifyXAdES(String xmlContent) throws Exception {
+    public static VerificationResult verifyXAdES(String xmlContent) throws Exception {
         return verifyXAdES(xmlContent, null, null);
     }
 
@@ -273,7 +277,7 @@ public class XMLSignatureOperations {
      * A missing truststore means that the report must be interpreted as an
      * integrity/format result only, not as a trusted signature decision.
      */
-    public static String verifyXAdES(String xmlContent, String trustStorePath, String trustStorePassword) throws Exception {
+    public static VerificationResult verifyXAdES(String xmlContent, String trustStorePath, String trustStorePassword) throws Exception {
         DSSDocument signedDocument = new InMemoryDocument(xmlContent.getBytes("UTF-8"));
 
         // Configure Validator
@@ -285,13 +289,13 @@ public class XMLSignatureOperations {
             verifier.setOcspSource(new OnlineOCSPSource());
             verifier.setCheckRevocationForUntrustedChains(true);
         }
-        
+
         SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(signedDocument);
         validator.setCertificateVerifier(verifier);
-        
+
         // Validate
         Reports reports = validator.validateDocument();
-        
+
         // Simple report extraction
         StringBuilder sb = new StringBuilder();
         sb.append("--- Verification Report ---\n");
@@ -300,8 +304,13 @@ public class XMLSignatureOperations {
         sb.append("SubIndication: ").append(reports.getSimpleReport().getSubIndication(reports.getSimpleReport().getFirstSignatureId())).append("\n");
         sb.append("Signature Format: ").append(reports.getSimpleReport().getSignatureFormat(reports.getSimpleReport().getFirstSignatureId())).append("\n");
         sb.append("Signed By: ").append(reports.getSimpleReport().getSignedBy(reports.getSimpleReport().getFirstSignatureId())).append("\n");
-        
-        return sb.toString();
+
+        return new VerificationResult(
+            sb.toString(),
+            reports.getXmlSimpleReport(),
+            reports.getXmlDetailedReport(),
+            reports.getXmlValidationReport()
+        );
     }
 
     /**

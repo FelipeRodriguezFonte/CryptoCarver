@@ -25,13 +25,13 @@ import java.util.*;
 
 /**
  * X.509 Certificate Generator
- * 
+ *
  * Supports generation of self-signed certificates in multiple formats:
  * - PEM (Base64 encoded)
  * - DER (Binary)
  * - PKCS#12 (.p12/.pfx with private key)
  * - JKS (Java KeyStore)
- * 
+ *
  * @author Felipe
  */
 public class CertificateGenerator {
@@ -76,7 +76,7 @@ public class CertificateGenerator {
 
     /**
      * Generate self-signed X.509 certificate
-     * 
+     *
      * @param keyPair RSA/DSA/ECDSA key pair
      * @param config  Certificate configuration
      * @return X509Certificate
@@ -259,7 +259,7 @@ public class CertificateGenerator {
 
     /**
      * Export certificate to PEM format
-     * 
+     *
      * @param certificate X509 Certificate
      * @return PEM-encoded string
      */
@@ -280,7 +280,7 @@ public class CertificateGenerator {
 
     /**
      * Export certificate to DER format (binary)
-     * 
+     *
      * @param certificate X509 Certificate
      * @return DER-encoded bytes
      */
@@ -290,7 +290,7 @@ public class CertificateGenerator {
 
     /**
      * Export certificate and private key to PKCS#12 format (.p12/.pfx)
-     * 
+     *
      * @param certificate X509 Certificate
      * @param privateKey  Private key
      * @param password    Password to protect the PKCS#12 file
@@ -317,7 +317,7 @@ public class CertificateGenerator {
 
     /**
      * Export certificate and private key to JKS format (Java KeyStore)
-     * 
+     *
      * @param certificate X509 Certificate
      * @param privateKey  Private key
      * @param password    Password to protect the keystore
@@ -344,7 +344,7 @@ public class CertificateGenerator {
 
     /**
      * Save certificate to file
-     * 
+     *
      * @param certificate X509 Certificate
      * @param filePath    Output file path
      * @param format      Format: "PEM", "DER"
@@ -369,7 +369,7 @@ public class CertificateGenerator {
 
     /**
      * Save PKCS#12 to file
-     * 
+     *
      * @param certificate X509 Certificate
      * @param privateKey  Private key
      * @param filePath    Output file path (.p12 or .pfx)
@@ -392,7 +392,7 @@ public class CertificateGenerator {
 
     /**
      * Generate Certificate Signing Request (CSR)
-     * 
+     *
      * @param keyPair Key pair
      * @param config  Certificate configuration
      * @return PKCS#10 CSR as PEM string
@@ -435,7 +435,7 @@ public class CertificateGenerator {
 
     /**
      * Get detailed certificate information
-     * 
+     *
      * @param certificate X509 Certificate
      * @return Formatted string with certificate details
      */
@@ -484,7 +484,7 @@ public class CertificateGenerator {
 
     /**
      * Verify certificate signature
-     * 
+     *
      * @param certificate X509 Certificate
      * @return true if signature is valid
      */
@@ -506,7 +506,7 @@ public class CertificateGenerator {
 
     /**
      * Get signature algorithm options for key type
-     * 
+     *
      * @param keyAlgorithm Key algorithm (RSA, DSA, ECDSA)
      * @return List of compatible signature algorithms
      */
@@ -551,7 +551,7 @@ public class CertificateGenerator {
 
     /**
      * Parse X.509 certificate from PEM string
-     * 
+     *
      * @param pemCert Certificate in PEM format
      * @return X509Certificate
      */
@@ -586,7 +586,7 @@ public class CertificateGenerator {
 
     /**
      * Validate a certificate chain
-     * 
+     *
      * @param chain List of X509Certificates (End-entity first, Root last, or
      *              unordered)
      * @return ValidationResult with status and details
@@ -620,7 +620,7 @@ public class CertificateGenerator {
 
     /**
      * Validate a single certificate, optionally against an issuer
-     * 
+     *
      * @param cert   The certificate to validate
      * @param issuer The issuer certificate (optional, can be null)
      * @return Validation result

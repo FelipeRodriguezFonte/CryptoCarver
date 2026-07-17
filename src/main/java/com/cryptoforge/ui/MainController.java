@@ -1886,6 +1886,7 @@ public class MainController implements StatusReporter {
                             && vbox.getChildren().get(0) instanceof javafx.scene.control.MenuBar) {
                         javafx.scene.control.MenuBar menuBar = (javafx.scene.control.MenuBar) vbox.getChildren().get(0);
 
+
                         // Apply style directly to MenuBar
                         menuBar.setStyle("-fx-background-color: #2c3e50;");
 

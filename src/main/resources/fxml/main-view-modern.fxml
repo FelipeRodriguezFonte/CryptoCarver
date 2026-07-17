@@ -13,7 +13,7 @@
     <!-- Menu Bar -->
     <top>
         <VBox>
-            <MenuBar styleClass="main-menu-bar">
+            <MenuBar fx:id="mainMenuBar" styleClass="main-menu-bar">
                 <Menu text="File">
                     <MenuItem text="Import Key..." onAction="#handleImportKey" accelerator="Ctrl+O" />
                     <SeparatorMenuItem />
@@ -32,6 +32,8 @@
                 <Menu text="View">
                     <MenuItem text="Toggle Side Panel" onAction="#handleToggleSidePanel" accelerator="Ctrl+B" />
                     <MenuItem text="Toggle Inspector" onAction="#handleToggleInspector" accelerator="Ctrl+I" />
+                    <MenuItem text="Expand Result" onAction="#handleOpenExpandedResultViewer" accelerator="Ctrl+Shift+E" />
+                    <MenuItem text="Expand Table" onAction="#handleOpenExpandedTableViewer" accelerator="Ctrl+Shift+T" />
                     <SeparatorMenuItem/>
                     <MenuItem text="Zoom In (Font)" onAction="#handleIncreaseFontSize" accelerator="Ctrl+PLUS" />
                     <MenuItem text="Zoom Out (Font)" onAction="#handleDecreaseFontSize" accelerator="Ctrl+MINUS" />
@@ -66,6 +68,7 @@
 
                 <Region HBox.hgrow="ALWAYS"/>
 
+                <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="link-button"/>
                 <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="link-button"/>
             </HBox>
         </VBox>
@@ -442,6 +445,7 @@
 
                                 <HBox spacing="10" alignment="CENTER_LEFT">
                                     <Button text="Analyze Token" onAction="#handleInspectToken" styleClass="action-button"/>
+                                    <Button text="Expand Report" onAction="#handleOpenExpandedInspectorReport" styleClass="secondary-button"/>
                                     <Button text="Copy Report" onAction="#handleCopyInspectorOutput" styleClass="secondary-button"/>
                                     <Button text="Clear" onAction="#handleClearInspector" styleClass="secondary-button"/>
                                 </HBox>

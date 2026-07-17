@@ -90,7 +90,7 @@ public class OperationRegistry {
         // ASN1
         register(new OperationDescriptor("op_asn1_dec", "Decode ASN.1", "ASN1", "Decode ASN.1", "📖", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Decode ASN.1", Collections.emptyList()));
         register(new OperationDescriptor("op_asn1_enc", "Encode ASN.1", "ASN1", "Encode ASN.1", "🖋", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Encode ASN.1", Collections.emptyList()));
-        
+
         // History
         register(new OperationDescriptor("op_hist_recent", "Recent Operations", "History", "View recent operations", "🕒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Recent Operations", Collections.emptyList()));
         register(new OperationDescriptor("op_hist_saved", "Saved Sessions", "History", "View saved sessions", "💾", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Saved Sessions", Collections.emptyList()));
@@ -111,7 +111,7 @@ public class OperationRegistry {
     public Optional<OperationDescriptor> getById(String id) {
         return Optional.ofNullable(operations.get(id));
     }
-    
+
     public Optional<OperationDescriptor> getByNavigationPath(String path) {
         return operations.values().stream().filter(op -> op.getNavigationPath().equals(path)).findFirst();
     }
@@ -129,26 +129,26 @@ public class OperationRegistry {
                               op.getAliases().stream().anyMatch(alias -> alias.toLowerCase(Locale.ROOT).contains(q)))
                 .collect(Collectors.toUnmodifiableList());
     }
-    
+
     public String toMarkdownCatalog() {
         StringBuilder sb = new StringBuilder();
         sb.append("# CryptoCarver Operations Catalog\n\n");
         sb.append("This document is generated automatically from `OperationRegistry`. Do not edit manually.\n\n");
-        
+
         Map<String, List<OperationDescriptor>> byCategory = getAll().stream()
                 .collect(Collectors.groupingBy(OperationDescriptor::getCategory));
-        
+
         List<String> sortedCategories = byCategory.keySet().stream().sorted().collect(Collectors.toList());
-        
+
         for (String category : sortedCategories) {
             sb.append("## ").append(category).append("\n\n");
             sb.append("| Icon | Title | ID | Status | Risk | Navigation Path | Aliases |\n");
             sb.append("|------|-------|----|--------|------|-----------------|---------|\n");
-            
+
             List<OperationDescriptor> ops = byCategory.get(category).stream()
                     .sorted(Comparator.comparing(OperationDescriptor::getTitle))
                     .collect(Collectors.toList());
-                    
+
             for (OperationDescriptor op : ops) {
                 String aliases = op.getAliases().isEmpty() ? "-" : String.join(", ", op.getAliases());
                 sb.append(String.format("| %s | %s | `%s` | %s | %s | `%s` | %s |\n",

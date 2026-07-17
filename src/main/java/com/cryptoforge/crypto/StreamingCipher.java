@@ -25,12 +25,12 @@ import java.util.concurrent.CancellationException;
 public final class StreamingCipher {
     private static int bufferSize = 64 * 1024;
     private static final int AEAD_TAG_BYTES = 16;
-    
+
     public static void setBufferSize(int size) {
         if (size <= 0) throw new IllegalArgumentException("Buffer size must be positive");
         bufferSize = size;
     }
-    
+
     public static int getBufferSize() {
         return bufferSize;
     }

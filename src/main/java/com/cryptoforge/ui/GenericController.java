@@ -28,7 +28,7 @@ import java.security.NoSuchAlgorithmException;
 
 /**
  * Controller for Generic cryptography operations - Enhanced
- * 
+ *
  * @author Felipe
  */
 public class GenericController {
@@ -464,14 +464,14 @@ public class GenericController {
 
     /**
      * Calculate hash of input data
-     * 
+     *
      * @param input            The input string
      * @param algorithm        The hash algorithm
      * @param targetOutputArea The TextArea to display the result
      */
     /**
      * Calculate hash of input data with specified format
-     * 
+     *
      * @param input            The input string
      * @param inputFormat      The format of the input string
      * @param algorithm        The hash algorithm

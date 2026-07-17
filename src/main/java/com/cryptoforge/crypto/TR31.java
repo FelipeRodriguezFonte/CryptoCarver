@@ -63,8 +63,36 @@ public class TR31 {
         return wrap(header, hexToBytes(keyHex), null);
     }
 
+    /**
+     * Validates TR-31 combinations, throwing IllegalArgumentException for impossible combinations.
+     * Logs or warns for legacy but permitted combinations.
+     */
+    public static void validateMatrix(char version, char algorithm, String usage, char mode, char exportability) {
+        // Asymmetric modes on symmetric algorithms
+        if ((algorithm == 'T' || algorithm == 'A' || algorithm == 'D') && (mode == 'S' || mode == 'V')) {
+            throw new IllegalArgumentException("Impossible combination: Symmetric algorithm (" + algorithm + ") cannot use asymmetric signature mode (" + mode + ")");
+        }
+        // Symmetric modes on asymmetric algorithms
+        if ((algorithm == 'R' || algorithm == 'E' || algorithm == 'S') && (mode == 'X' || mode == 'Y')) {
+            throw new IllegalArgumentException("Impossible combination: Asymmetric algorithm (" + algorithm + ") cannot use symmetric derivation/MAC mode (" + mode + ")");
+        }
+        // TDES versions with AES algorithm
+        if ((version == 'A' || version == 'B' || version == 'C') && algorithm == 'A') {
+            throw new IllegalArgumentException("Impossible combination: AES algorithm ('A') cannot be wrapped using legacy TDES versions ('A', 'B', 'C')");
+        }
+        // DUKPT usage should typically be derivation (X)
+        if (("B0".equals(usage) || "B1".equals(usage)) && mode != 'X' && mode != 'N' && mode != 'E' && mode != 'G') {
+            System.err.println("WARNING: Legacy DUKPT combination permitted but strictly speaking mode should be 'X'. Mode used: " + mode);
+        }
+    }
+
     public String wrap(String header, byte[] key, Integer maskedKeyLen) throws Exception {
         char version = header.charAt(0);
+        char algorithm = header.charAt(11);
+        String usage = header.substring(5, 7);
+        char mode = header.charAt(12);
+        char exportability = header.charAt(14);
+        validateMatrix(version, algorithm, usage, mode, exportability);
 
         switch (version) {
             case 'A':
@@ -84,6 +112,11 @@ public class TR31 {
      */
     public UnwrapResult unwrap(String keyBlock) throws Exception {
         char version = keyBlock.charAt(0);
+        char algorithm = keyBlock.charAt(11);
+        String usage = keyBlock.substring(5, 7);
+        char mode = keyBlock.charAt(12);
+        char exportability = keyBlock.charAt(14);
+        validateMatrix(version, algorithm, usage, mode, exportability);
 
         switch (version) {
             case 'A':
@@ -269,9 +302,10 @@ public class TR31 {
     }
 
     private byte[] generateMacVersionB(byte[] kbak, String header, byte[] keyData) throws Exception {
-        // DES-CMAC for version B: XOR last 8 bytes with K1, then CBC-MAC
+        // DES-CMAC for version B: XOR last block with K1/K2, then CBC-MAC
         byte[][] subkeys = deriveDESCMACSubkey(kbak);
         byte[] km1 = subkeys[0];
+        byte[] km2 = subkeys[1];
 
         // Build MAC input: header (ASCII) + key data
         byte[] headerBytes = header.getBytes("ASCII");
@@ -279,29 +313,36 @@ public class TR31 {
         System.arraycopy(headerBytes, 0, macInput, 0, headerBytes.length);
         System.arraycopy(keyData, 0, macInput, headerBytes.length, keyData.length);
 
-        // Pad to 8-byte boundary if needed
-        int padLen = (8 - (macInput.length % 8)) % 8;
-        if (padLen > 0) {
-            byte[] padded = new byte[macInput.length + padLen];
-            System.arraycopy(macInput, 0, padded, 0, macInput.length);
-            macInput = padded;
+        int blockSize = 8;
+        boolean isCompleteBlock = (macInput.length > 0 && macInput.length % blockSize == 0);
+
+        byte[] paddedData;
+        byte[] activeKey;
+        if (isCompleteBlock) {
+            paddedData = macInput;
+            activeKey = km1;
+        } else {
+            int padLen = blockSize - (macInput.length % blockSize);
+            paddedData = new byte[macInput.length + padLen];
+            System.arraycopy(macInput, 0, paddedData, 0, macInput.length);
+            paddedData[macInput.length] = (byte) 0x80;
+            activeKey = km2;
         }
 
-        // XOR last 8 bytes with KM1
-        int lastBlockStart = macInput.length - 8;
-        byte[] lastBlock = Arrays.copyOfRange(macInput, lastBlockStart, macInput.length);
-        byte[] xoredLastBlock = xor(lastBlock, km1);
-        System.arraycopy(xoredLastBlock, 0, macInput, lastBlockStart, 8);
+        int lastBlockStart = paddedData.length - blockSize;
+        byte[] lastBlock = Arrays.copyOfRange(paddedData, lastBlockStart, paddedData.length);
+        byte[] xoredLastBlock = xor(lastBlock, activeKey);
+        System.arraycopy(xoredLastBlock, 0, paddedData, lastBlockStart, blockSize);
 
         // Generate CBC-MAC with TDES
         Cipher cipher = Cipher.getInstance("DESede/CBC/NoPadding", "BC");
         SecretKeySpec keySpec = new SecretKeySpec(kbak, "DESede");
-        IvParameterSpec ivSpec = new IvParameterSpec(new byte[8]);
+        IvParameterSpec ivSpec = new IvParameterSpec(new byte[blockSize]);
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
-        byte[] encrypted = cipher.doFinal(macInput);
+        byte[] encrypted = cipher.doFinal(paddedData);
 
         // Return last 8 bytes
-        return Arrays.copyOfRange(encrypted, encrypted.length - 8, encrypted.length);
+        return Arrays.copyOfRange(encrypted, encrypted.length - blockSize, encrypted.length);
     }
 
     private KeyPair deriveKeysVersionB() throws Exception {
@@ -540,32 +581,48 @@ public class TR31 {
     }
 
     private byte[] generateMacVersionD(byte[] kbak, String header, byte[] keyData) throws Exception {
-        // CMAC for version D: XOR last block with KM1, then CBC-MAC
+        // CMAC for version D: XOR last block with K1/K2, then CBC-MAC
         byte[][] subkeys = deriveCMACSubkey(kbak);
         byte[] km1 = subkeys[0];
+        byte[] km2 = subkeys[1];
 
         // Build MAC input: header (ASCII) + key data
-        // Both are already padded to 16-byte boundaries, so total is multiple of 16
         byte[] headerBytes = header.getBytes("ASCII");
         byte[] macInput = new byte[headerBytes.length + keyData.length];
         System.arraycopy(headerBytes, 0, macInput, 0, headerBytes.length);
         System.arraycopy(keyData, 0, macInput, headerBytes.length, keyData.length);
 
-        // XOR last 16 bytes with KM1
-        int lastBlockStart = macInput.length - 16;
-        byte[] lastBlock = Arrays.copyOfRange(macInput, lastBlockStart, macInput.length);
-        byte[] xoredLastBlock = xor(lastBlock, km1);
-        System.arraycopy(xoredLastBlock, 0, macInput, lastBlockStart, 16);
+        int blockSize = 16;
+        boolean isCompleteBlock = (macInput.length > 0 && macInput.length % blockSize == 0);
+
+        byte[] paddedData;
+        byte[] activeKey;
+        if (isCompleteBlock) {
+            paddedData = macInput;
+            activeKey = km1;
+        } else {
+            int padLen = blockSize - (macInput.length % blockSize);
+            paddedData = new byte[macInput.length + padLen];
+            System.arraycopy(macInput, 0, paddedData, 0, macInput.length);
+            paddedData[macInput.length] = (byte) 0x80;
+            activeKey = km2;
+        }
+
+        // XOR last 16 bytes with KM1 or KM2
+        int lastBlockStart = paddedData.length - blockSize;
+        byte[] lastBlock = Arrays.copyOfRange(paddedData, lastBlockStart, paddedData.length);
+        byte[] xoredLastBlock = xor(lastBlock, activeKey);
+        System.arraycopy(xoredLastBlock, 0, paddedData, lastBlockStart, blockSize);
 
         // Generate CBC-MAC with AES
         Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding", "BC");
         SecretKeySpec keySpec = new SecretKeySpec(kbak, "AES");
-        IvParameterSpec ivSpec = new IvParameterSpec(new byte[16]);
+        IvParameterSpec ivSpec = new IvParameterSpec(new byte[blockSize]);
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
-        byte[] encrypted = cipher.doFinal(macInput);
+        byte[] encrypted = cipher.doFinal(paddedData);
 
         // Return last 16 bytes
-        return Arrays.copyOfRange(encrypted, encrypted.length - 16, encrypted.length);
+        return Arrays.copyOfRange(encrypted, encrypted.length - blockSize, encrypted.length);
     }
 
     private byte[] encryptTDES(byte[] key, byte[] data) throws Exception {

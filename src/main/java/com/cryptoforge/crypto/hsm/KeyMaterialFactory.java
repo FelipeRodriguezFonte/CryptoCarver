@@ -14,15 +14,15 @@ public class KeyMaterialFactory {
         if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
         int size = key.getEncoded() != null ? key.getEncoded().length * 8 : 0;
         return new KeyMaterial(
-                id, 
-                generateFingerprint(key.getEncoded()), 
-                KeyType.SYMMETRIC, 
-                key.getAlgorithm(), 
-                size, 
-                KeyFormat.RAW, 
-                usages, 
-                exportability, 
-                key, 
+                id,
+                generateFingerprint(key.getEncoded()),
+                KeyType.SYMMETRIC,
+                key.getAlgorithm(),
+                size,
+                KeyFormat.RAW,
+                usages,
+                exportability,
+                key,
                 null
         );
     }
@@ -30,15 +30,15 @@ public class KeyMaterialFactory {
     public static KeyMaterial fromPrivateKey(String id, PrivateKey key, KeyExportability exportability, Set<KeyUsage> usages, KeyFormat format) {
         if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
         return new KeyMaterial(
-                id, 
-                generateFingerprint(key.getEncoded()), 
-                KeyType.ASYMMETRIC_PRIVATE, 
-                key.getAlgorithm(), 
+                id,
+                generateFingerprint(key.getEncoded()),
+                KeyType.ASYMMETRIC_PRIVATE,
+                key.getAlgorithm(),
                 -1, // size calculation varies by algorithm (RSA modulus, EC curve, etc.)
-                format, 
-                usages, 
-                exportability, 
-                key, 
+                format,
+                usages,
+                exportability,
+                key,
                 null
         );
     }
@@ -46,15 +46,15 @@ public class KeyMaterialFactory {
     public static KeyMaterial fromPublicKey(String id, PublicKey key, KeyExportability exportability, Set<KeyUsage> usages, KeyFormat format) {
         if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
         return new KeyMaterial(
-                id, 
-                generateFingerprint(key.getEncoded()), 
-                KeyType.ASYMMETRIC_PUBLIC, 
-                key.getAlgorithm(), 
-                -1, 
-                format, 
-                usages, 
-                exportability, 
-                key, 
+                id,
+                generateFingerprint(key.getEncoded()),
+                KeyType.ASYMMETRIC_PUBLIC,
+                key.getAlgorithm(),
+                -1,
+                format,
+                usages,
+                exportability,
+                key,
                 null
         );
     }
@@ -65,17 +65,17 @@ public class KeyMaterialFactory {
         try {
             encoded = cert.getEncoded();
         } catch (Exception ignored) {}
-        
+
         return new KeyMaterial(
-                id, 
-                generateFingerprint(encoded), 
-                KeyType.CERTIFICATE, 
-                cert.getType(), 
-                -1, 
-                KeyFormat.DER, 
-                usages, 
-                exportability, 
-                cert.getPublicKey(), 
+                id,
+                generateFingerprint(encoded),
+                KeyType.CERTIFICATE,
+                cert.getType(),
+                -1,
+                KeyFormat.DER,
+                usages,
+                exportability,
+                cert.getPublicKey(),
                 cert
         );
     }

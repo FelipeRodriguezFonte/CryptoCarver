@@ -41,7 +41,7 @@ public final class CharsetInspector {
 
     public static String compare(byte[] bytes, String ebcdicCodePage) {
         StringBuilder result = new StringBuilder("Charset interpretations (diagnostic, not conclusive)\n\n");
-        
+
         CharsetHeuristics heuristics = analyzeHeuristics(bytes, ebcdicCodePage);
         result.append("Heuristic Analysis:\n");
         result.append(String.format("- Valid UTF-8 Sequence: %s\n", heuristics.utf8Valid() ? "Yes" : "No"));
@@ -53,7 +53,7 @@ public final class CharsetInspector {
             result.append(String.format("- EBCDIC Score: %.1f%%\n", heuristics.ebcdicScore()));
         }
         result.append("\nConclusion (Heuristic only): ").append(heuristics.conclusion()).append("\n\n");
-        
+
         result.append("UTF-8: ").append(safeUtf8(bytes)).append('\n');
         result.append("ISO-8859-1: ").append(DataConverter.visualizeBytes(new String(bytes, StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).append('\n');
         result.append("Windows-1252: ").append(new String(bytes, Charset.forName("windows-1252"))).append('\n');
@@ -72,12 +72,12 @@ public final class CharsetInspector {
         if (bytes.length == 0) {
             return new CharsetHeuristics(bytes, true, 0, 0, 0, 0, 0, "Empty buffer. Inconclusive.");
         }
-        
+
         int total = bytes.length;
         int asciiPrintable = 0;
         int extendedLatin = 0;
         int controls = 0;
-        
+
         for (byte b : bytes) {
             int u = b & 0xFF;
             if (u == 0x09 || u == 0x0A || u == 0x0D || (u >= 0x20 && u <= 0x7E)) {
@@ -102,7 +102,7 @@ public final class CharsetInspector {
         double asciiPct = (asciiPrintable * 100.0) / total;
         double latinPct = (extendedLatin * 100.0) / total;
         double controlPct = (controls * 100.0) / total;
-        
+
         // Compute Windows-1252 score
         double windows1252Pct = 0;
         try {
@@ -116,7 +116,7 @@ public final class CharsetInspector {
             }
             windows1252Pct = (readable * 100.0) / decodedWin.length();
         } catch (Exception ignored) {}
-        
+
         // Compute EBCDIC Score by attempting decode and counting valid readable EBCDIC chars
         double ebcdicPct = 0;
         if (ebcdicCodePage != null && !ebcdicCodePage.isBlank()) {
@@ -149,7 +149,7 @@ public final class CharsetInspector {
         } else {
             conclusion = "Inconclusive. Mixed binary/text.";
         }
-        
+
         return new CharsetHeuristics(bytes, isValidUtf8, asciiPct, latinPct, windows1252Pct, ebcdicPct, controlPct, conclusion);
     }
 

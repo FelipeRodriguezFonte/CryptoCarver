@@ -49,7 +49,7 @@ public final class OperationRecipe {
         if (raw.parameters != null) recipe.parameters.putAll(raw.parameters);
         return recipe;
     }
-    
+
     public int version() { return version; }
     public String operation() { return operation; }
     public String createdAt() { return createdAt; }
@@ -57,19 +57,19 @@ public final class OperationRecipe {
 
     private static Map<String, String> sanitizeDetails(java.util.List<OperationDetail> details, SecretVisibility visibility) {
         SecretVisibility effectiveVisibility = visibility == null ? SecretVisibility.REDACTED : visibility;
-        Map<String, String> clean = new LinkedHashMap<>(); 
+        Map<String, String> clean = new LinkedHashMap<>();
         if (details == null) return clean;
         int totalChars = 0;
-        
+
         for (OperationDetail detail : details) {
             if (clean.size() >= MAX_PARAMETERS) throw new IllegalArgumentException("Recipe has too many parameters (maximum " + MAX_PARAMETERS + ")");
-            
+
             String key = detail.name() == null ? "" : detail.name().trim();
             if (key.isEmpty()) continue;
-            
+
             OperationDetail.Classification clazz = detail.classification();
             String value = detail.value() == null ? "" : detail.value();
-            
+
             if (clazz == OperationDetail.Classification.SECRET) {
                 if (effectiveVisibility == SecretVisibility.REDACTED) continue;
                 if (effectiveVisibility == SecretVisibility.MASKED) value = "***MASKED***";
@@ -77,7 +77,7 @@ public final class OperationRecipe {
                 // SENSITIVE policy: MASKED when visibility is REDACTED or MASKED. Kept only on FULL_LAB.
                 if (effectiveVisibility != SecretVisibility.FULL_LAB) value = "***MASKED***";
             }
-            
+
             if (value.length() > MAX_VALUE_CHARS) throw new IllegalArgumentException("Recipe parameter " + key + " exceeds " + MAX_VALUE_CHARS + " characters");
             totalChars += value.length();
             if (totalChars > MAX_TOTAL_CHARS) throw new IllegalArgumentException("Recipe exceeds " + MAX_TOTAL_CHARS + " total characters");

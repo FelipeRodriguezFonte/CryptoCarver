@@ -21,7 +21,7 @@ class StreamingOperationsTest {
     void setUp() throws Exception {
         tempDir = Files.createTempDirectory("crypto_streaming_test");
         largeFile = tempDir.resolve("large_64MiB.bin");
-        
+
         // Generate a 64 MiB file quickly
         try (var out = new BufferedOutputStream(Files.newOutputStream(largeFile))) {
             byte[] chunk = new byte[1024 * 1024]; // 1 MiB chunk
@@ -59,7 +59,7 @@ class StreamingOperationsTest {
         Path tag = tempDir.resolve("tag.bin");
         byte[] key = new byte[32];
         byte[] nonce = new byte[12];
-        
+
         assertThrows(CancellationException.class, () -> {
             StreamingCipher.encrypt(largeFile, dest, key, "AES-256", "GCM", nonce, null, tag, new ProgressMonitor() {
                 long processed = 0;
@@ -74,7 +74,7 @@ class StreamingOperationsTest {
                 }
             });
         });
-        
+
         assertFalse(Files.exists(dest), "Destination file should be cleaned up upon cancellation");
         assertFalse(Files.exists(tag), "Tag file should be cleaned up upon cancellation");
     }
@@ -123,11 +123,11 @@ class StreamingOperationsTest {
         // HMAC
         assertArrayEquals(MACOperations.generate(data, key32, "HMAC-SHA256"),
                           MACOperations.generate(smallFile, key32, "HMAC-SHA256"));
-        
+
         // CMAC-AES
         assertArrayEquals(MACOperations.generate(data, key16, "CMAC-AES"),
                           MACOperations.generate(smallFile, key16, "CMAC-AES"));
-        
+
         // Retail MAC (Payment)
         assertArrayEquals(MACOperations.generate(data, key16, "Retail-MAC-3DES"),
                           MACOperations.generate(smallFile, key16, "Retail-MAC-3DES"));
@@ -165,7 +165,7 @@ class StreamingOperationsTest {
 
         String result = Files.readString(destFile, StandardCharsets.UTF_16);
         assertEquals("Hello, world!", result);
-        
+
         // Test cancellation
         ProgressMonitor cancelMonitor = new ProgressMonitor() {
             @Override
@@ -174,14 +174,14 @@ class StreamingOperationsTest {
             @Override
             public boolean isCancelled() { return true; }
         };
-        
+
         Path destFile2 = tempDir.resolve("text2.utf16.txt");
-        assertThrows(CancellationException.class, () -> 
+        assertThrows(CancellationException.class, () ->
             StreamingFileTools.convertCharset(textFile, destFile2, StandardCharsets.UTF_8, StandardCharsets.UTF_16, cancelMonitor)
         );
-        
+
         assertTrue(Files.notExists(destFile2));
-        
+
         // Temporaries verify
         try (var stream = Files.list(tempDir)) {
             long tmpFiles = stream.filter(p -> p.getFileName().toString().contains(".cryptocarver-")).count();
@@ -202,7 +202,7 @@ class StreamingOperationsTest {
         );
 
         assertEquals("preexisting content", Files.readString(destFile));
-        
+
         try (var stream = Files.list(tempDir)) {
             long tmpFiles = stream.filter(p -> p.getFileName().toString().contains(".cryptocarver-")).count();
             assertEquals(0, tmpFiles, "No temporary files should be left behind");

@@ -33,6 +33,10 @@ public class ModernMainController implements StatusReporter {
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
     private final PauseTransition statusResetTimer = new PauseTransition(Duration.seconds(3));
+    private final ExpandedTextViewer expandedTextViewer = new ExpandedTextViewer();
+    private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
+    private TextArea lastFocusedResultArea;
+    private TableView<?> lastFocusedTable;
 
     @FXML
     private BorderPane mainPane;
@@ -907,9 +911,14 @@ public class ModernMainController implements StatusReporter {
     private byte[] asn1LastParsedData;
 
     @FXML
+    private MenuBar mainMenuBar;
+
+    @FXML
     public void initialize() {
         if (detachedAlgoCombo != null) { detachedAlgoCombo.getItems().setAll("HS256", "RS256", "ES256", "ES384", "ES512"); detachedAlgoCombo.setValue("ES256"); }
         System.out.println("ModernMainController initializing...");
+
+        setupLaboratoryMenu();
 
         // Populate ComboBox items
         inputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Binary", "Decimal");
@@ -987,6 +996,8 @@ public class ModernMainController implements StatusReporter {
 
         // Apply default font size
         applyFontSize();
+        Platform.runLater(this::installResultViewerSupport);
+        Platform.runLater(this::installTableViewerSupport);
 
         System.out.println("ModernMainController initialized successfully!");
     }
@@ -1903,23 +1914,41 @@ public class ModernMainController implements StatusReporter {
 
     @FXML
     private void handleCopyInspectorOutput() {
-        if (inspectorOutputFlow == null)
-            return;
-        StringBuilder sb = new StringBuilder();
-        for (javafx.scene.Node node : inspectorOutputFlow.getChildren()) {
-            if (node instanceof javafx.scene.text.Text) {
-                sb.append(((javafx.scene.text.Text) node).getText());
-            }
-        }
-        if (sb.length() > 0) {
+        String report = getInspectorReportText();
+        if (!report.isBlank()) {
             javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
             javafx.scene.input.ClipboardContent cc = new javafx.scene.input.ClipboardContent();
-            cc.putString(sb.toString());
+            cc.putString(report);
             clipboard.setContent(cc);
             updateStatus("Copied Inspector report to clipboard!");
         } else {
             showError("Copy Error", "Nothing to copy.");
         }
+    }
+
+    @FXML
+    private void handleOpenExpandedInspectorReport() {
+        String report = getInspectorReportText();
+        if (report.isBlank()) {
+            showInfo("No report available", "Analyze a token before opening the expanded viewer.");
+            return;
+        }
+        javafx.stage.Window owner = mainPane == null || mainPane.getScene() == null
+                ? null : mainPane.getScene().getWindow();
+        expandedTextViewer.show(owner, "Expanded Result — Token Inspector", report);
+    }
+
+    private String getInspectorReportText() {
+        if (inspectorOutputFlow == null) {
+            return "";
+        }
+        StringBuilder report = new StringBuilder();
+        for (javafx.scene.Node node : inspectorOutputFlow.getChildren()) {
+            if (node instanceof javafx.scene.text.Text text) {
+                report.append(text.getText());
+            }
+        }
+        return report.toString();
     }
 
     @FXML
@@ -3312,6 +3341,7 @@ public class ModernMainController implements StatusReporter {
             historyTable = new TableView<>();
             historyTable.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
             historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            attachTableViewerSupport(historyTable);
 
             TableColumn<com.cryptoforge.model.HistoryItem, String> timeCol = new TableColumn<>("Time");
             timeCol.setCellValueFactory(
@@ -3353,6 +3383,7 @@ public class ModernMainController implements StatusReporter {
 
             TableView<com.cryptoforge.model.OperationDetail> detailsTable = new TableView<>();
             detailsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            attachTableViewerSupport(detailsTable);
             VBox.setVgrow(detailsTable, javafx.scene.layout.Priority.ALWAYS);
 
             TableColumn<com.cryptoforge.model.OperationDetail, String> nameCol = new TableColumn<>("Property");
@@ -3452,6 +3483,7 @@ public class ModernMainController implements StatusReporter {
 
         TableView<com.cryptoforge.utils.HistoryComparator.DiffEntry> diffTable = new TableView<>();
         diffTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        attachTableViewerSupport(diffTable);
 
         TableColumn<com.cryptoforge.utils.HistoryComparator.DiffEntry, String> keyCol = new TableColumn<>("Property");
         keyCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().key));
@@ -3941,19 +3973,7 @@ public class ModernMainController implements StatusReporter {
 
     @FXML
     private void handleCopyOutput() {
-        String content = "";
-
-        if (isContainerVisible(emvContainer) && emvController != null) {
-            content = emvController.getOutputText();
-        } else if (isContainerVisible(cipherContainer) && cipherController != null) {
-            content = cipherController.getOutputText();
-        } else if (isContainerVisible(symmetricKeysContainer) && keysController != null) {
-            content = keysController.getOutputText();
-        } else if (isContainerVisible(asymmetricKeysContainer) && keysController != null) {
-            content = keysController.getOutputText();
-        } else if (isContainerVisible(genericContainer) && genericController != null) {
-            content = genericController.getOutputText();
-        }
+        String content = resolveCurrentOutputText();
 
         if (content != null && !content.isEmpty()) {
             copyToClipboard(content);
@@ -3961,6 +3981,162 @@ public class ModernMainController implements StatusReporter {
         } else {
             updateStatus("No output available to copy");
         }
+    }
+
+    /** Opens the active operation result in a large, independent viewer. */
+    @FXML
+    private void handleOpenExpandedResultViewer() {
+        String content = resolveCurrentOutputText();
+        if (content == null || content.isBlank()) {
+            showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
+            return;
+        }
+        javafx.stage.Window owner = mainPane == null || mainPane.getScene() == null
+                ? null : mainPane.getScene().getWindow();
+        expandedTextViewer.show(owner, "Expanded Result — " + currentActiveOperation, content);
+    }
+
+    private String resolveCurrentOutputText() {
+        if (isContainerVisible(inspectorSection)) {
+            String inspectorReport = getInspectorReportText();
+            if (!inspectorReport.isBlank()) {
+                return inspectorReport;
+            }
+        }
+        if (lastFocusedResultArea != null && isEffectivelyVisible(lastFocusedResultArea)
+                && !lastFocusedResultArea.getText().isBlank()) {
+            return lastFocusedResultArea.getText();
+        }
+        TextArea visibleResultArea = findVisibleResultArea();
+        if (visibleResultArea != null) {
+            return visibleResultArea.getText();
+        }
+        if (isContainerVisible(emvContainer) && emvController != null) {
+            return emvController.getOutputText();
+        }
+        if (isContainerVisible(cipherContainer) && cipherController != null) {
+            return cipherController.getOutputText();
+        }
+        if (isContainerVisible(symmetricKeysContainer) && keysController != null) {
+            return keysController.getOutputText();
+        }
+        if (isContainerVisible(asymmetricKeysContainer) && keysController != null) {
+            return keysController.getOutputText();
+        }
+        if (isContainerVisible(genericContainer) && genericController != null) {
+            return genericController.getOutputText();
+        }
+        return "";
+    }
+
+    /** Finds the result currently shown in the active pane, even if it has not received focus. */
+    private TextArea findVisibleResultArea() {
+        if (mainPane == null) {
+            return null;
+        }
+        return mainPane.lookupAll(".text-area").stream()
+                .filter(TextArea.class::isInstance)
+                .map(TextArea.class::cast)
+                .filter(this::isLikelyResultArea)
+                .filter(this::isEffectivelyVisible)
+                .filter(area -> !area.getText().isBlank())
+                .max(java.util.Comparator.comparingInt(area -> area.getText().length()))
+                .orElse(null);
+    }
+
+    /**
+     * Result areas can be opened directly even when their feature does not use the
+     * shared global output panel (for example XAdES, PQC and inspectors).
+     */
+    private void installResultViewerSupport() {
+        if (mainPane == null) {
+            return;
+        }
+        for (javafx.scene.Node node : mainPane.lookupAll(".text-area")) {
+            if (!(node instanceof TextArea area) || !isLikelyResultArea(area)) {
+                continue;
+            }
+            area.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
+                if (isFocused) {
+                    lastFocusedResultArea = area;
+                }
+            });
+            area.setContextMenu(createResultContextMenu(area));
+        }
+    }
+
+    private boolean isLikelyResultArea(TextArea area) {
+        String id = area.getId();
+        if (id == null) {
+            return false;
+        }
+        String normalized = id.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("output") || normalized.contains("result")
+                || normalized.contains("report") || normalized.contains("details")
+                || normalized.contains("ciphertext");
+    }
+
+    private ContextMenu createResultContextMenu(TextArea area) {
+        MenuItem expand = new MenuItem("Open in Expanded Viewer");
+        expand.setOnAction(event -> {
+            lastFocusedResultArea = area;
+            handleOpenExpandedResultViewer();
+        });
+        MenuItem copy = new MenuItem("Copy");
+        copy.setOnAction(event -> copyToClipboard(area.getText()));
+        MenuItem selectAll = new MenuItem("Select All");
+        selectAll.setOnAction(event -> area.selectAll());
+        return new ContextMenu(expand, new SeparatorMenuItem(), copy, selectAll);
+    }
+
+    private boolean isEffectivelyVisible(javafx.scene.Node node) {
+        for (javafx.scene.Node current = node; current != null; current = current.getParent()) {
+            if (!current.isVisible()) {
+                return false;
+            }
+            if (current instanceof TitledPane pane && !pane.isExpanded()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @FXML
+    private void handleOpenExpandedTableViewer() {
+        if (lastFocusedTable == null) {
+            showInfo("No table selected", "Right-click a table or select a cell before opening its expanded view.");
+            return;
+        }
+        openExpandedTable(lastFocusedTable);
+    }
+
+    private void installTableViewerSupport() {
+        if (mainPane == null) {
+            return;
+        }
+        for (javafx.scene.Node node : mainPane.lookupAll(".table-view")) {
+            if (node instanceof TableView<?> table) {
+                attachTableViewerSupport(table);
+            }
+        }
+    }
+
+    private void attachTableViewerSupport(TableView<?> table) {
+        table.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
+            if (isFocused) {
+                lastFocusedTable = table;
+            }
+        });
+        MenuItem expand = new MenuItem("Open table in expanded viewer");
+        expand.setOnAction(event -> openExpandedTable(table));
+        table.setContextMenu(new ContextMenu(expand));
+    }
+
+    private void openExpandedTable(TableView<?> table) {
+        lastFocusedTable = table;
+        javafx.stage.Window owner = mainPane == null || mainPane.getScene() == null
+                ? null : mainPane.getScene().getWindow();
+        expandedTableViewer.show(owner, "Expanded Table — " + currentActiveOperation, table);
     }
 
     private boolean isContainerVisible(javafx.scene.Node container) {
@@ -5711,6 +5887,72 @@ public class ModernMainController implements StatusReporter {
 
         public String getDesc() {
             return desc;
+        }
+    }
+
+    private void setupLaboratoryMenu() {
+        if (mainMenuBar == null) return;
+        boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "Laboratory".equals(m.getText()));
+        if (!hasLabMenu) {
+            javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
+            labMenu.setStyle("-fx-text-fill: white;");
+            for (com.cryptoforge.model.payments.PaymentProfile p : com.cryptoforge.model.payments.PaymentProfileManager.getAllProfiles()) {
+                // Si el perfil no tiene aún pantalla funcional, no incluirlo en Laboratory hasta que la tenga.
+                // Currently only TR31, EMV, DUKPT_TDES, DUKPT_AES, PIN and SECURE_MESSAGING have UI or are going to have UI via EMV/Payments/Keys controllers.
+                // We will add all but let's make sure loadProfile handles them.
+
+                javafx.scene.control.Menu profileMenu = new javafx.scene.control.Menu(p.getType().name() + " - " + p.getName());
+
+                javafx.scene.control.MenuItem loadItem = new javafx.scene.control.MenuItem("Load Data");
+                loadItem.setOnAction(e -> {
+                    // Modern UI navigation to the relevant section
+                    if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.TR31) {
+                        handleItemSelected("Symmetric Keys");
+                        if (keysController != null) keysController.loadProfile(p);
+                    } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.EMV) {
+                        handleItemSelected("EMV Tool");
+                        if (emvController != null) emvController.loadProfile(p);
+                    } else {
+                        handleItemSelected("Payments");
+                        if (paymentsController != null) paymentsController.loadProfile(p);
+                    }
+                    System.out.println("Loaded profile: " + p.getName());
+                });
+
+                javafx.scene.control.MenuItem verifyItem = new javafx.scene.control.MenuItem("Run and Verify");
+                verifyItem.setOnAction(e -> {
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                    alert.setTitle("Laboratory Verification");
+                    alert.setHeaderText(p.getName());
+
+                    com.cryptoforge.crypto.VerificationResult result = com.cryptoforge.crypto.PaymentProfileVerifier.verify(p);
+
+                    StringBuilder content = new StringBuilder();
+                    content.append(result.getMessage()).append("\n\n");
+                    content.append("--- Profile Details ---\n");
+                    content.append("Parameters: ").append(p.getParameters()).append("\n");
+                    content.append("Inputs: ").append(p.getInputs()).append("\n");
+                    content.append("Expected Outputs: ").append(p.getOutputs()).append("\n");
+
+                    if (result.isSuccess()) {
+                        alert.setAlertType(javafx.scene.control.Alert.AlertType.INFORMATION);
+                    } else {
+                        alert.setAlertType(javafx.scene.control.Alert.AlertType.ERROR);
+                    }
+                    alert.setContentText(content.toString());
+
+                    if (!System.getProperty("java.awt.headless", "false").equals("true") && !Boolean.getBoolean("test.mode")) {
+                        alert.showAndWait();
+                    } else {
+                        // In test mode or headless mode, print to console to avoid blocking UI tests
+                        System.out.println("TEST MODE: Alert suppressed. Result: " + result.isSuccess() + ", Message: " + result.getMessage());
+                    }
+                });
+
+                profileMenu.getItems().addAll(loadItem, verifyItem);
+                labMenu.getItems().add(profileMenu);
+            }
+            mainMenuBar.getMenus().add(labMenu);
         }
     }
 }

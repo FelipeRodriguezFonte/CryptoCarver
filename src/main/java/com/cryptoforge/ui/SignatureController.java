@@ -11,13 +11,13 @@ import java.security.PublicKey;
 
 /**
  * Controller for digital signature operations
- * 
+ *
  * @author Felipe
  */
 public class SignatureController {
 
     private MainController mainController;
-    
+
     // UI components
     private ComboBox<String> signatureAlgorithmCombo;
     private ComboBox<String> inputFormatCombo;
@@ -26,7 +26,7 @@ public class SignatureController {
     private TextArea outputArea;
     private Label signatureKeyStatusLabel;
     private TextField signatureVerifyField;
-    
+
     // Keys
     private PrivateKey currentPrivateKey;
     private PublicKey currentPublicKey;
@@ -52,7 +52,7 @@ public class SignatureController {
         this.outputArea = outputArea;
         this.signatureKeyStatusLabel = statusLabel;
         this.signatureVerifyField = signatureVerifyField;
-        
+
         // Populate algorithms
         signatureAlgorithmCombo.getItems().addAll(SignatureOperations.SUPPORTED_ALGORITHMS);
         signatureAlgorithmCombo.setValue("RSA-SHA256-PKCS1");  // Classic, widely compatible
@@ -67,38 +67,38 @@ public class SignatureController {
                 mainController.showError("Key Error", "Please load a private key first");
                 return;
             }
-            
+
             String algorithm = signatureAlgorithmCombo.getValue();
             if (algorithm == null) {
                 mainController.showError("Algorithm Error", "Please select a signature algorithm");
                 return;
             }
-            
+
             // Get data to sign
             byte[] data = getInputDataAsBytes();
             if (data == null || data.length == 0) {
                 mainController.showError("Input Error", "Please enter data to sign");
                 return;
             }
-            
+
             // Verify key type matches algorithm
             String expectedKeyType = SignatureOperations.getExpectedKeyType(algorithm);
             String actualKeyType = currentPrivateKey.getAlgorithm();
             if (!actualKeyType.equals(expectedKeyType)) {
-                mainController.showError("Key Mismatch", 
-                    String.format("Algorithm %s requires %s key, but loaded key is %s", 
+                mainController.showError("Key Mismatch",
+                    String.format("Algorithm %s requires %s key, but loaded key is %s",
                     algorithm, expectedKeyType, actualKeyType));
                 return;
             }
-            
+
             // Sign
             byte[] signature = SignatureOperations.sign(data, currentPrivateKey, algorithm);
-            
+
             // Format output
             setOutputData(signature);
-            
+
             mainController.updateStatus("Signature created with " + algorithm);
-            
+
             // Add to history
             OperationHistory.getInstance().addOperation(
                 "Authentication",
@@ -106,9 +106,9 @@ public class SignatureController {
                 "Data: " + data.length + " bytes",
                 "Signature: " + signature.length + " bytes"
             );
-            
+
         } catch (Exception e) {
-            mainController.showError("Signature Error", 
+            mainController.showError("Signature Error",
                 "Error creating signature: " + e.getMessage());
             e.printStackTrace();
         }
@@ -123,70 +123,70 @@ public class SignatureController {
                 mainController.showError("Key Error", "Please load a public key first");
                 return;
             }
-            
+
             String algorithm = signatureAlgorithmCombo.getValue();
             if (algorithm == null) {
                 mainController.showError("Algorithm Error", "Please select a signature algorithm");
                 return;
             }
-            
+
             // Get signature from signatureVerifyField - use OUTPUT format (signature was generated in Output)
             String signatureText = signatureVerifyField.getText().trim();
             if (signatureText.isEmpty()) {
-                mainController.showError("Signature Error", 
+                mainController.showError("Signature Error",
                     "Please paste the signature in the 'Signature' field");
                 return;
             }
-            
+
             byte[] signature = parseDataWithFormat(signatureText, outputFormatCombo.getValue());
             if (signature == null || signature.length == 0) {
                 mainController.showError("Signature Error", "Invalid signature format");
                 return;
             }
-            
+
             // Get original data from input area
             String dataText = inputArea.getText().trim();
             if (dataText.isEmpty()) {
-                mainController.showError("Data Error", 
+                mainController.showError("Data Error",
                     "Please enter the original data in the Input area");
                 return;
             }
-            
+
             byte[] data = parseDataWithFormat(dataText, inputFormatCombo.getValue());
             if (data == null || data.length == 0) {
                 mainController.showError("Data Error", "Invalid data format");
                 return;
             }
-            
+
             // Verify key type matches algorithm
             String expectedKeyType = SignatureOperations.getExpectedKeyType(algorithm);
             String actualKeyType = currentPublicKey.getAlgorithm();
             if (!actualKeyType.equals(expectedKeyType)) {
-                mainController.showError("Key Mismatch", 
-                    String.format("Algorithm %s requires %s key, but loaded key is %s", 
+                mainController.showError("Key Mismatch",
+                    String.format("Algorithm %s requires %s key, but loaded key is %s",
                     algorithm, expectedKeyType, actualKeyType));
                 return;
             }
-            
+
             // Verify
             boolean valid = SignatureOperations.verify(data, signature, currentPublicKey, algorithm);
-            
+
             // Display result
             if (valid) {
-                mainController.showInfo("Signature Verification", 
+                mainController.showInfo("Signature Verification",
                     "✓ SIGNATURE VALID\n\n" +
                     "The signature is authentic and the data has not been modified.\n" +
                     "Algorithm: " + algorithm);
             } else {
-                mainController.showError("Signature Verification", 
+                mainController.showError("Signature Verification",
                     "✗ SIGNATURE INVALID\n\n" +
                     "The signature does not match the data. The data may have been modified " +
                     "or the signature was created with a different key.\n" +
                     "Algorithm: " + algorithm);
             }
-            
+
             mainController.updateStatus("Signature " + (valid ? "VALID" : "INVALID") + " - " + algorithm);
-            
+
             // Add to history
             OperationHistory.getInstance().addOperation(
                 "Authentication",
@@ -194,9 +194,9 @@ public class SignatureController {
                 "Signature: " + signature.length + " bytes",
                 "Result: " + (valid ? "VALID ✓" : "INVALID ✗")
             );
-            
+
         } catch (Exception e) {
-            mainController.showError("Verification Error", 
+            mainController.showError("Verification Error",
                 "Error verifying signature: " + e.getMessage());
             e.printStackTrace();
         }
@@ -208,7 +208,7 @@ public class SignatureController {
     public void handleLoadPrivateKey(String filePath) {
         try {
             String pem = java.nio.file.Files.readString(java.nio.file.Paths.get(filePath));
-            
+
             // Try different key types
             try {
                 currentPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEM(pem);
@@ -221,10 +221,10 @@ public class SignatureController {
                     currentPrivateKey = AsymmetricKeyOperations.importECPrivateKeyPEM(pem);
                 }
             }
-            
+
             // Get detailed key info
             String keyInfo = getKeyInfo(currentPrivateKey);
-            
+
             String status = "✓ Private key loaded (" + keyInfo + ")";
             if (currentPublicKey != null) {
                 String pubKeyInfo = getKeyInfo(currentPublicKey);
@@ -232,15 +232,15 @@ public class SignatureController {
             }
             signatureKeyStatusLabel.setText(status);
             signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
-            
+
             mainController.updateStatus("Private key loaded: " + keyInfo);
             outputArea.setText("PRIVATE KEY LOADED SUCCESSFULLY\n\n" +
                              "File: " + filePath + "\n" +
                              "Key: " + keyInfo + "\n" +
                              "Ready for signing.");
-            
+
         } catch (Exception e) {
-            mainController.showError("Key Loading Error", 
+            mainController.showError("Key Loading Error",
                 "Error loading private key: " + e.getMessage() + "\n\n" +
                 "Supported formats: RSA, Ed25519, ECDSA in PEM format");
         }
@@ -252,7 +252,7 @@ public class SignatureController {
     public void handleLoadPublicKey(String filePath) {
         try {
             String pem = java.nio.file.Files.readString(java.nio.file.Paths.get(filePath));
-            
+
             // Try different key types
             try {
                 currentPublicKey = AsymmetricKeyOperations.importPublicKeyPEM(pem);
@@ -265,10 +265,10 @@ public class SignatureController {
                     currentPublicKey = AsymmetricKeyOperations.importECPublicKeyPEM(pem);
                 }
             }
-            
+
             // Get detailed key info
             String keyInfo = getKeyInfo(currentPublicKey);
-            
+
             String status = "✓ Public key loaded (" + keyInfo + ")";
             if (currentPrivateKey != null) {
                 String privKeyInfo = getKeyInfo(currentPrivateKey);
@@ -276,15 +276,15 @@ public class SignatureController {
             }
             signatureKeyStatusLabel.setText(status);
             signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
-            
+
             mainController.updateStatus("Public key loaded: " + keyInfo);
             outputArea.setText("PUBLIC KEY LOADED SUCCESSFULLY\n\n" +
                              "File: " + filePath + "\n" +
                              "Key: " + keyInfo + "\n" +
                              "Ready for verification.");
-            
+
         } catch (Exception e) {
-            mainController.showError("Key Loading Error", 
+            mainController.showError("Key Loading Error",
                 "Error loading public key: " + e.getMessage() + "\n\n" +
                 "Supported formats: RSA, Ed25519, ECDSA in PEM format");
         }
@@ -355,13 +355,13 @@ public class SignatureController {
 
         outputArea.setText(output);
     }
-    
+
     /**
      * Get detailed key information (algorithm + size for RSA/ECDSA)
      */
     private String getKeyInfo(java.security.Key key) {
         String algorithm = key.getAlgorithm();
-        
+
         if (algorithm.equals("RSA")) {
             if (key instanceof java.security.interfaces.RSAPublicKey) {
                 int bits = ((java.security.interfaces.RSAPublicKey) key).getModulus().bitLength();
@@ -386,7 +386,7 @@ public class SignatureController {
         } else if (algorithm.equals("Ed25519")) {
             return "Ed25519";
         }
-        
+
         return algorithm;
     }
 }

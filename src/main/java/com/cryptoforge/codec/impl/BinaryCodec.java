@@ -9,15 +9,15 @@ public class BinaryCodec implements Codec {
     public byte[] decode(String value) throws CodecException {
         if (value.isBlank()) return new byte[0];
         String normalized = value.replaceAll("[\\s:-]", "");
-        
+
         if (!normalized.matches("[01]+")) {
             throw new CodecException("Binary value contains invalid characters (only 0 and 1 allowed)", ByteFormat.BINARY);
         }
-        
+
         if (normalized.length() % 8 != 0) {
             throw new CodecException("Binary value length must be a multiple of 8 bits (complete bytes)", ByteFormat.BINARY);
         }
-        
+
         byte[] bytes = new byte[normalized.length() / 8];
         for (int i = 0; i < bytes.length; i++) {
             bytes[i] = (byte) Integer.parseInt(normalized.substring(i * 8, i * 8 + 8), 2);

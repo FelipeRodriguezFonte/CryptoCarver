@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * Controller for Authentication operations (Digital Signatures and MAC)
  * Designed for Modern UI
- * 
+ *
  * @author Felipe
  */
 public class AuthenticationController {
@@ -560,7 +560,7 @@ public class AuthenticationController {
         if (macHsmKeyCombo != null) {
             String current = macHsmKeyCombo.getValue();
             macHsmKeyCombo.getItems().clear();
-            macHsmKeyCombo.getItems().addAll(com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds());
+            macHsmKeyCombo.getItems().addAll(com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds(com.cryptoforge.crypto.hsm.KeyUsage.MAC));
             if (current != null && macHsmKeyCombo.getItems().contains(current)) {
                 macHsmKeyCombo.setValue(current);
             } else if (!macHsmKeyCombo.getItems().isEmpty()) {
@@ -580,8 +580,8 @@ public class AuthenticationController {
             if (algo == null) algo = "HMAC";
             javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, algo);
             com.cryptoforge.crypto.hsm.KeyMaterial km = com.cryptoforge.crypto.hsm.KeyMaterialFactory.fromSecretKey(
-                null, secretKey, 
-                com.cryptoforge.crypto.hsm.KeyExportability.NON_EXPORTABLE, 
+                null, secretKey,
+                com.cryptoforge.crypto.hsm.KeyExportability.NON_EXPORTABLE,
                 java.util.Set.of(com.cryptoforge.crypto.hsm.KeyUsage.MAC)
             );
             com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
@@ -593,21 +593,23 @@ public class AuthenticationController {
         }
     }
 
-    private byte[] getMacKey() {
+    private String getHsmMacKeyId() {
         if (macKeySourceCombo != null && "Simulated HSM".equals(macKeySourceCombo.getValue())) {
             String keyId = macHsmKeyCombo.getValue();
             if (keyId == null || keyId.isEmpty()) {
                 throw new IllegalArgumentException("Please select a key from the Lab Cache");
             }
-            java.security.Key k = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().getRawKeyForInternalUse(keyId, com.cryptoforge.crypto.hsm.KeyUsage.MAC);
-            return k.getEncoded();
-        } else {
-            String keyHex = authMacKeyField.getText().trim();
-            if (keyHex.isEmpty()) {
-                throw new IllegalArgumentException("Please enter MAC key in hexadecimal");
-            }
-            return DataConverter.hexToBytes(keyHex);
+            return keyId;
         }
+        return null;
+    }
+
+    private byte[] getManualMacKey() {
+        String keyHex = authMacKeyField.getText().trim();
+        if (keyHex.isEmpty()) {
+            throw new IllegalArgumentException("Please enter MAC key in hexadecimal");
+        }
+        return DataConverter.hexToBytes(keyHex);
     }
 
     /**
@@ -622,7 +624,8 @@ public class AuthenticationController {
             }
 
             // Get MAC key
-            byte[] key = getMacKey();
+            String hsmKeyId = getHsmMacKeyId();
+            byte[] manualKey = hsmKeyId == null ? getManualMacKey() : null;
 
             // Get data
             byte[] data = getInputDataAsBytes();
@@ -634,8 +637,8 @@ public class AuthenticationController {
             // Get truncation
             int truncation = getTruncationBytes();
 
-            // Generate MAC using MACOperations
-            byte[] mac = generateMac(data, key, algorithm);
+            // Generate MAC
+            byte[] mac = generateMac(data, hsmKeyId, manualKey, algorithm);
 
             // Truncate if needed
             if (truncation > 0 && truncation < mac.length) {
@@ -682,7 +685,8 @@ public class AuthenticationController {
             }
 
             // Get MAC key
-            byte[] key = getMacKey();
+            String hsmKeyId = getHsmMacKeyId();
+            byte[] manualKey = hsmKeyId == null ? getManualMacKey() : null;
 
             // Get MAC from verify field
             String macText = authMacVerifyField.getText().trim();
@@ -707,7 +711,7 @@ public class AuthenticationController {
             }
 
             // Generate MAC to compare
-            byte[] calculatedMac = generateMac(data, key, algorithm);
+            byte[] calculatedMac = generateMac(data, hsmKeyId, manualKey, algorithm);
 
             // Truncate if needed (match provided MAC length)
             if (providedMac.length < calculatedMac.length) {
@@ -762,19 +766,28 @@ public class AuthenticationController {
         }
     }
 
-    private byte[] generateMac(byte[] data, byte[] key, String algorithm) throws Exception {
+    private byte[] generateMac(byte[] data, String hsmKeyId, byte[] manualKey, String algorithm) throws Exception {
         if ("GMAC-AES".equals(algorithm)) {
             String nonceHex = authMacNonceField.getText().trim();
             if (nonceHex.isEmpty()) {
                 throw new IllegalArgumentException("GMAC requires a unique nonce/IV in hexadecimal");
             }
             byte[] nonce = DataConverter.hexToBytes(nonceHex.replaceAll("\\s+", ""));
-            return MACOperations.generateGmac(data, key, nonce);
+            if (hsmKeyId != null) {
+                return com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().generateGmac(hsmKeyId, data, nonce);
+            }
+            return MACOperations.generateGmac(data, manualKey, nonce);
         }
         if ("Poly1305".equals(algorithm)) {
-            return MACOperations.generatePoly1305(data, key);
+            if (hsmKeyId != null) {
+                return com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().generatePoly1305(hsmKeyId, data);
+            }
+            return MACOperations.generatePoly1305(data, manualKey);
         }
-        return MACOperations.generate(data, key, algorithm);
+        if (hsmKeyId != null) {
+            return com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().generateMac(hsmKeyId, data, algorithm);
+        }
+        return MACOperations.generate(data, manualKey, algorithm);
     }
 
     // ============================================================

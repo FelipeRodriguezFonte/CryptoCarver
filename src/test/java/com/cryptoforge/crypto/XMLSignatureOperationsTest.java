@@ -42,7 +42,7 @@ class XMLSignatureOperationsTest {
         }
 
         String signed = XMLSignatureOperations.signXAdES("<invoice><amount>100</amount></invoice>", signingStore.toString(), "changeit");
-        String report = XMLSignatureOperations.verifyXAdES(signed, trustStore.toString(), "changeit");
+        String report = XMLSignatureOperations.verifyXAdES(signed, trustStore.toString(), "changeit").summary();
         String inspection = XMLSignatureOperations.inspectSignedXml(signed);
 
         assertTrue(signed.contains("Signature"));

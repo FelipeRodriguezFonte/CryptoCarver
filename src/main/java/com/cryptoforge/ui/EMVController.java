@@ -11,7 +11,7 @@ import javafx.scene.control.*;
 /**
  * Controller for EMV tab operations
  * Handles ARQC/ARPC, session key derivation, and EMV cryptography
- * 
+ *
  * @author Felipe
  */
 public class EMVController {
@@ -751,5 +751,41 @@ public class EMVController {
 
     public String getArpcResultText() {
         return arpcResultArea != null ? arpcResultArea.getText() : "";
+    }
+
+    public void loadProfile(com.cryptoforge.model.payments.PaymentProfile p) {
+        if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.EMV) {
+            if (p.getName().contains("ARQC")) {
+                if (skARQCField != null && p.getInputs().containsKey("sessionKey")) skARQCField.setText(p.getInputs().get("sessionKey"));
+                if (imkField != null && p.getInputs().containsKey("imk")) imkField.setText(p.getInputs().get("imk"));
+                if (panFieldSession != null && p.getInputs().containsKey("pan")) panFieldSession.setText(p.getInputs().get("pan"));
+                if (panSeqFieldSession != null && p.getInputs().containsKey("panSeq")) panSeqFieldSession.setText(p.getInputs().get("panSeq"));
+                if (atcARQCField != null && p.getInputs().containsKey("atc")) atcARQCField.setText(p.getInputs().get("atc"));
+                if (unField != null && p.getInputs().containsKey("unpredictableNumber")) unField.setText(p.getInputs().get("unpredictableNumber"));
+                if (arqcTerminalDataField != null && p.getInputs().containsKey("transactionData")) arqcTerminalDataField.setText(p.getInputs().get("transactionData"));
+                if (arqcPaddingMethodCombo != null && p.getParameters().containsKey("padding")) {
+                    String padding = p.getParameters().get("padding");
+                    for (String item : arqcPaddingMethodCombo.getItems()) {
+                        if (item.contains(padding)) { arqcPaddingMethodCombo.setValue(item); break; }
+                    }
+                }
+            } else if (p.getName().contains("ARPC")) {
+                if (skARPCField != null && p.getInputs().containsKey("sessionKey")) skARPCField.setText(p.getInputs().get("sessionKey"));
+                if (arqcField != null && p.getInputs().containsKey("arqc")) arqcField.setText(p.getInputs().get("arqc"));
+                if (arcField != null && p.getInputs().containsKey("arc")) arcField.setText(p.getInputs().get("arc"));
+                if (csuField != null && p.getInputs().containsKey("csu")) csuField.setText(p.getInputs().get("csu"));
+                if (arpcMethodCombo != null && p.getParameters().containsKey("method")) {
+                    String method = p.getParameters().get("method");
+                    for (String item : arpcMethodCombo.getItems()) {
+                        if (item.contains(method)) { arpcMethodCombo.setValue(item); break; }
+                    }
+                }
+            }
+            System.out.println("Loaded EMV profile: " + p.getName());
+        } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
+            // Secure Messaging uses MAC controls or specific SM UI if added.
+            // Currently EMVController does not have Secure Messaging UI mapped, it relies on MAC in PaymentsController or a future SM tab.
+            System.out.println("Loaded Secure Messaging profile: " + p.getName());
+        }
     }
 }

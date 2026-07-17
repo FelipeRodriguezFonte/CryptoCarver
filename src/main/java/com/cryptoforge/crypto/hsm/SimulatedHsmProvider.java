@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 
 public class SimulatedHsmProvider {
     private static final SimulatedHsmProvider INSTANCE = new SimulatedHsmProvider();
-    
+
     private final Map<String, KeyMaterial> keyStore = new ConcurrentHashMap<>();
 
     private SimulatedHsmProvider() { }
@@ -19,7 +19,14 @@ public class SimulatedHsmProvider {
     }
 
     public void importKey(KeyMaterial keyMaterial) {
+        importKey(keyMaterial, false);
+    }
+
+    public void importKey(KeyMaterial keyMaterial, boolean replace) {
         if (keyMaterial == null) throw new IllegalArgumentException("KeyMaterial cannot be null");
+        if (!replace && keyStore.containsKey(keyMaterial.getId())) {
+            throw new IllegalArgumentException("Key ID already exists in HSM: " + keyMaterial.getId());
+        }
         keyStore.put(keyMaterial.getId(), keyMaterial);
     }
 
@@ -31,9 +38,20 @@ public class SimulatedHsmProvider {
         }
         return km;
     }
-    
-    public Set<String> listKeyIds() {
-        return Collections.unmodifiableSet(keyStore.keySet());
+
+    public Set<String> listKeyIds(KeyUsage... requiredUsages) {
+        if (requiredUsages == null || requiredUsages.length == 0) {
+            return Collections.unmodifiableSet(keyStore.keySet());
+        }
+        return keyStore.entrySet().stream()
+                .filter(e -> {
+                    for (KeyUsage u : requiredUsages) {
+                        if (e.getValue().getUsages().contains(u)) return true;
+                    }
+                    return false;
+                })
+                .map(java.util.Map.Entry::getKey)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     public Key exportKey(String id) {
@@ -50,7 +68,7 @@ public class SimulatedHsmProvider {
         KeyMaterial km = keyStore.get(id);
         if (km == null) throw new IllegalArgumentException("Key not found in HSM: " + id);
         if (!km.getUsages().contains(requiredUsage)) {
-            throw new IllegalStateException("Key " + id + " does not support usage: " + requiredUsage);
+            throw new IllegalArgumentException("Key " + id + " does not support usage: " + requiredUsage);
         }
         return km.getKey();
     }
@@ -63,27 +81,81 @@ public class SimulatedHsmProvider {
                     ((javax.security.auth.Destroyable) k).destroy();
                 } catch (Exception ignored) { }
             } else if (k instanceof SecretKey) {
-                // Best effort zeroization of known raw bytes if we could intercept, 
+                // Best effort zeroization of known raw bytes if we could intercept,
                 // but standard SecretKeySpec doesn't expose byte modification safely.
             }
         }
         keyStore.clear();
     }
-    
-    public byte[] sign(String keyId, byte[] data, String algorithm) {
-        // We will implement this by delegating to some crypto operations class or doing it directly
-        // For now, we will expose the internal method to allow the specific operations to grab the key 
-        // IF they are inside the cryptoforge crypto package, or we can just return the raw key for now
-        // if we add a package-private getter, but HSM shouldn't even do that.
-        // The safest design is for the HSM to actually DO the operation.
-        throw new UnsupportedOperationException("Not implemented yet");
+
+    // ============================================================
+    // CRYPTO OPERATIONS
+    // ============================================================
+
+    private byte[] getBytes(Key key) {
+        return key.getEncoded();
     }
-    
-    // For integration with existing modules without rewriting everything, 
-    // we can provide a package-private method that allows our own crypto utilities 
-    // (like MACOperations, SymmetricCipher) to retrieve the raw Key if they verify the usage.
-    
-    public Key getRawKeyForInternalUse(String id, KeyUsage requiredUsage) {
-        return getUsableKey(id, requiredUsage);
+
+    public byte[] encryptSymmetric(String keyId, byte[] plaintext, String algorithm, String mode, String padding, byte[] iv, byte[] aad) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.ENCRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.encrypt(plaintext, getBytes(key), algorithm, mode, padding, iv, aad);
+    }
+
+    public byte[] encryptSymmetric(String keyId, byte[] plaintext, String algorithm, String mode, String padding, byte[] iv) throws Exception {
+        return encryptSymmetric(keyId, plaintext, algorithm, mode, padding, iv, null);
+    }
+
+    public byte[] decryptSymmetric(String keyId, byte[] ciphertext, String algorithm, String mode, String padding, byte[] iv, byte[] aad) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.DECRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.decrypt(ciphertext, getBytes(key), algorithm, mode, padding, iv, aad);
+    }
+
+    public byte[] decryptSymmetric(String keyId, byte[] ciphertext, String algorithm, String mode, String padding, byte[] iv) throws Exception {
+        return decryptSymmetric(keyId, ciphertext, algorithm, mode, padding, iv, null);
+    }
+
+    public byte[] encryptChaCha20(String keyId, byte[] plaintext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.ENCRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.encryptChaCha20(plaintext, getBytes(key), iv);
+    }
+
+    public byte[] decryptChaCha20(String keyId, byte[] ciphertext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.DECRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.decryptChaCha20(ciphertext, getBytes(key), iv);
+    }
+
+    public byte[] encryptChaCha20Poly1305(String keyId, byte[] plaintext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.ENCRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.encryptChaCha20Poly1305(plaintext, getBytes(key), iv);
+    }
+
+    public byte[] decryptChaCha20Poly1305(String keyId, byte[] ciphertext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.DECRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.decryptChaCha20Poly1305(ciphertext, getBytes(key), iv);
+    }
+
+    public byte[] encryptXChaCha20Poly1305(String keyId, byte[] plaintext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.ENCRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.encryptXChaCha20Poly1305(plaintext, getBytes(key), iv);
+    }
+
+    public byte[] decryptXChaCha20Poly1305(String keyId, byte[] ciphertext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.DECRYPT);
+        return com.cryptoforge.crypto.SymmetricCipher.decryptXChaCha20Poly1305(ciphertext, getBytes(key), iv);
+    }
+
+    public byte[] generateMac(String keyId, byte[] data, String algorithm) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.MAC);
+        return com.cryptoforge.crypto.MACOperations.generate(data, getBytes(key), algorithm);
+    }
+
+    public byte[] generateGmac(String keyId, byte[] data, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.MAC);
+        return com.cryptoforge.crypto.MACOperations.generateGmac(data, getBytes(key), iv);
+    }
+
+    public byte[] generatePoly1305(String keyId, byte[] data) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.MAC);
+        return com.cryptoforge.crypto.MACOperations.generatePoly1305(data, getBytes(key));
     }
 }

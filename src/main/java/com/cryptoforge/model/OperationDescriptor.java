@@ -32,7 +32,7 @@ public final class OperationDescriptor {
         if (title == null || title.isBlank()) throw new IllegalArgumentException("Title cannot be null or blank");
         if (category == null || category.isBlank()) throw new IllegalArgumentException("Category cannot be null or blank");
         if (navigationPath == null || navigationPath.isBlank()) throw new IllegalArgumentException("NavigationPath cannot be null or blank");
-        
+
         this.id = id;
         this.title = title;
         this.category = category;

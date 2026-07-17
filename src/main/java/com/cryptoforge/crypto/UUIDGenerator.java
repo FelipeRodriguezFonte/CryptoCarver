@@ -12,7 +12,7 @@ public class UUIDGenerator {
 
     /**
      * Generate a random UUID (Version 4)
-     * 
+     *
      * @return UUID string
      */
     public static String generateUUID() {
@@ -21,7 +21,7 @@ public class UUIDGenerator {
 
     /**
      * Generate UUID without hyphens
-     * 
+     *
      * @return UUID string without hyphens
      */
     public static String generateUUIDWithoutHyphens() {
@@ -30,7 +30,7 @@ public class UUIDGenerator {
 
     /**
      * Generate multiple UUIDs
-     * 
+     *
      * @param count Number of UUIDs to generate
      * @return Array of UUID strings
      */
@@ -48,7 +48,7 @@ public class UUIDGenerator {
 
     /**
      * Generate uppercase UUID
-     * 
+     *
      * @return Uppercase UUID string
      */
     public static String generateUppercaseUUID() {
@@ -57,7 +57,7 @@ public class UUIDGenerator {
 
     /**
      * Validate if string is a valid UUID
-     * 
+     *
      * @param uuid String to validate
      * @return true if valid UUID format
      */

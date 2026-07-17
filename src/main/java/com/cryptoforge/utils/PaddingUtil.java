@@ -19,7 +19,7 @@ public class PaddingUtil {
 
     /**
      * Add padding to data
-     * 
+     *
      * @param data Data to pad
      * @param blockSize Block size in bytes
      * @param paddingType Type of padding to apply
@@ -29,7 +29,7 @@ public class PaddingUtil {
         if (data == null) {
             throw new IllegalArgumentException("Data cannot be null");
         }
-        
+
         if (blockSize <= 0 || blockSize > 256) {
             throw new IllegalArgumentException("Invalid block size: " + blockSize);
         }
@@ -56,7 +56,7 @@ public class PaddingUtil {
 
     /**
      * Remove padding from data
-     * 
+     *
      * @param paddedData Padded data
      * @param paddingType Type of padding to remove
      * @return Data with padding removed
@@ -97,10 +97,10 @@ public class PaddingUtil {
     private static byte[] addPKCS7Padding(byte[] data, int blockSize) {
         int paddingLength = blockSize - (data.length % blockSize);
         byte[] padded = Arrays.copyOf(data, data.length + paddingLength);
-        
+
         // Fill with padding byte value
         Arrays.fill(padded, data.length, padded.length, (byte) paddingLength);
-        
+
         return padded;
     }
 
@@ -110,19 +110,19 @@ public class PaddingUtil {
         }
 
         int paddingLength = paddedData[paddedData.length - 1] & 0xFF;
-        
+
         // Validate padding
         if (paddingLength < 1 || paddingLength > paddedData.length) {
             throw new IllegalArgumentException("Invalid PKCS#7 padding");
         }
-        
+
         // Verify all padding bytes have the same value
         for (int i = paddedData.length - paddingLength; i < paddedData.length; i++) {
             if ((paddedData[i] & 0xFF) != paddingLength) {
                 throw new IllegalArgumentException("Invalid PKCS#7 padding");
             }
         }
-        
+
         return Arrays.copyOf(paddedData, paddedData.length - paddingLength);
     }
 
@@ -139,10 +139,10 @@ public class PaddingUtil {
     private static byte[] addISO9797Method2(byte[] data, int blockSize) {
         int paddingLength = blockSize - (data.length % blockSize);
         byte[] padded = Arrays.copyOf(data, data.length + paddingLength);
-        
+
         // Add 0x80 byte
         padded[data.length] = (byte) 0x80;
-        
+
         // Rest is already zero (copyOf fills with zeros)
         return padded;
     }
@@ -157,17 +157,17 @@ public class PaddingUtil {
     private static byte[] removeISO7816_4Padding(byte[] paddedData) {
         // Find the 0x80 byte from the end
         int i = paddedData.length - 1;
-        
+
         // Skip trailing zeros
         while (i >= 0 && paddedData[i] == 0) {
             i--;
         }
-        
+
         // Check for 0x80 byte
         if (i < 0 || paddedData[i] != (byte) 0x80) {
             throw new IllegalArgumentException("Invalid ISO 7816-4 padding");
         }
-        
+
         return Arrays.copyOf(paddedData, i);
     }
 
@@ -179,11 +179,11 @@ public class PaddingUtil {
         if (remainder == 0) {
             return data; // No padding needed
         }
-        
+
         int paddingLength = blockSize - remainder;
         byte[] padded = Arrays.copyOf(data, data.length + paddingLength);
         // copyOf automatically fills with zeros
-        
+
         return padded;
     }
 
@@ -193,13 +193,13 @@ public class PaddingUtil {
         while (i >= 0 && paddedData[i] == 0) {
             i--;
         }
-        
+
         return Arrays.copyOf(paddedData, i + 1);
     }
 
     /**
      * Check if data needs padding for given block size
-     * 
+     *
      * @param dataLength Length of data
      * @param blockSize Block size
      * @return true if padding is needed
@@ -210,7 +210,7 @@ public class PaddingUtil {
 
     /**
      * Calculate how many padding bytes are needed
-     * 
+     *
      * @param dataLength Length of data
      * @param blockSize Block size
      * @return Number of padding bytes needed
@@ -222,7 +222,7 @@ public class PaddingUtil {
 
     /**
      * Validate if data has correct padding for given type
-     * 
+     *
      * @param data Data to validate
      * @param blockSize Block size
      * @param paddingType Padding type

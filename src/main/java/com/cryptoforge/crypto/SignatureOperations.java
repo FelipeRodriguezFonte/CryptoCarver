@@ -7,7 +7,7 @@ import java.security.spec.*;
 
 /**
  * Digital signature operations (Ed25519, RSA with various hashes, ECDSA)
- * 
+ *
  * @author Felipe
  */
 public class SignatureOperations {
@@ -39,7 +39,7 @@ public class SignatureOperations {
 
     /**
      * Sign data with private key
-     * 
+     *
      * @param data Data to sign
      * @param privateKey Private key for signing
      * @param algorithm Signature algorithm (e.g., "Ed25519", "RSA-SHA256")
@@ -47,31 +47,31 @@ public class SignatureOperations {
      */
     public static byte[] sign(byte[] data, PrivateKey privateKey, String algorithm) throws Exception {
         String javaAlgorithm = getJavaAlgorithmName(algorithm);
-        
+
         Signature signature = Signature.getInstance(javaAlgorithm, BouncyCastleProvider.PROVIDER_NAME);
         signature.initSign(privateKey);
         signature.update(data);
-        
+
         return signature.sign();
     }
 
     /**
      * Verify signature with public key
-     * 
+     *
      * @param data Original data
      * @param signatureBytes Signature to verify
      * @param publicKey Public key for verification
      * @param algorithm Signature algorithm
      * @return true if signature is valid
      */
-    public static boolean verify(byte[] data, byte[] signatureBytes, PublicKey publicKey, String algorithm) 
+    public static boolean verify(byte[] data, byte[] signatureBytes, PublicKey publicKey, String algorithm)
             throws Exception {
         String javaAlgorithm = getJavaAlgorithmName(algorithm);
-        
+
         Signature signature = Signature.getInstance(javaAlgorithm, BouncyCastleProvider.PROVIDER_NAME);
         signature.initVerify(publicKey);
         signature.update(data);
-        
+
         return signature.verify(signatureBytes);
     }
 

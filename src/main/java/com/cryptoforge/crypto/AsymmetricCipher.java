@@ -31,7 +31,7 @@ public class AsymmetricCipher {
 
     /**
      * Encrypt data using RSA public key
-     * 
+     *
      * @param plaintext Data to encrypt
      * @param publicKey RSA public key
      * @return Encrypted data
@@ -39,7 +39,7 @@ public class AsymmetricCipher {
     public static byte[] encrypt(byte[] plaintext, PublicKey publicKey) throws Exception {
         return encrypt(plaintext, publicKey, "RSA/ECB/PKCS1Padding");
     }
-    
+
     public static byte[] encrypt(byte[] plaintext, PublicKey publicKey, String transformation) throws Exception {
         if (plaintext == null || plaintext.length == 0) {
             throw new IllegalArgumentException("Plaintext cannot be null or empty");
@@ -57,7 +57,7 @@ public class AsymmetricCipher {
 
     /**
      * Decrypt data using RSA private key
-     * 
+     *
      * @param ciphertext Data to decrypt
      * @param privateKey RSA private key
      * @return Decrypted data
@@ -65,7 +65,7 @@ public class AsymmetricCipher {
     public static byte[] decrypt(byte[] ciphertext, PrivateKey privateKey) throws Exception {
         return decrypt(ciphertext, privateKey, "RSA/ECB/PKCS1Padding");
     }
-    
+
     public static byte[] decrypt(byte[] ciphertext, PrivateKey privateKey, String transformation) throws Exception {
         if (ciphertext == null || ciphertext.length == 0) {
             throw new IllegalArgumentException("Ciphertext cannot be null or empty");
@@ -83,7 +83,7 @@ public class AsymmetricCipher {
 
     /**
      * Generate RSA key pair
-     * 
+     *
      * @param keySize Key size (1024, 2048, 4096)
      * @return KeyPair containing public and private keys
      */
@@ -95,7 +95,7 @@ public class AsymmetricCipher {
 
     /**
      * Load public key from bytes (X.509 format)
-     * 
+     *
      * @param keyBytes Public key bytes
      * @return PublicKey
      */
@@ -107,7 +107,7 @@ public class AsymmetricCipher {
 
     /**
      * Load private key from bytes (PKCS#8 format)
-     * 
+     *
      * @param keyBytes Private key bytes
      * @return PrivateKey
      */
@@ -119,7 +119,7 @@ public class AsymmetricCipher {
 
     /**
      * Get maximum data size for RSA encryption
-     * 
+     *
      * @param keySize RSA key size in bits
      * @return Maximum plaintext size in bytes
      */
@@ -130,7 +130,7 @@ public class AsymmetricCipher {
 
     /**
      * Parse key size from algorithm string
-     * 
+     *
      * @param algorithm "RSA-2048" etc.
      * @return Key size in bits
      */

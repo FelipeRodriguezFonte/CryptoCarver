@@ -12,6 +12,9 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.List;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 
 /**
  * Post-Quantum Cryptography Operations
@@ -28,32 +31,29 @@ public class PostQuantumOperations {
         }
     }
 
-    // ============================================================================ 
+    // ============================================================================
     // ALGORITHMS
-    // ============================================================================ 
+    // ============================================================================
 
     // Key Encapsulation Mechanism (KEM)
     public static final List<String> ML_KEM_ALGORITHMS = Arrays.asList(
-        "Kyber512", "Kyber768", "Kyber1024",
         "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024"
     );
 
     // Digital Signatures
     public static final List<String> ML_DSA_ALGORITHMS = Arrays.asList(
-        "Dilithium2", "Dilithium3", "Dilithium5",
         "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"
     );
 
     public static final List<String> SLH_DSA_ALGORITHMS = Arrays.asList(
-        "SPHINCSPlus-SHA2-128s", "SPHINCSPlus-SHA2-128f", 
-        "SPHINCSPlus-SHA2-192s", "SPHINCSPlus-SHA2-192f",
-        "SPHINCSPlus-SHA2-256s", "SPHINCSPlus-SHA2-256f",
-        "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f"
+        "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f",
+        "SLH-DSA-SHA2-192s", "SLH-DSA-SHA2-192f",
+        "SLH-DSA-SHA2-256s", "SLH-DSA-SHA2-256f"
     );
 
-    // ============================================================================ 
+    // ============================================================================
     // KEY GENERATION
-    // ============================================================================ 
+    // ============================================================================
 
     /**
      * Generate PQC Key Pair
@@ -61,20 +61,29 @@ public class PostQuantumOperations {
      * @return KeyPair
      */
     public static KeyPair generateKeyPair(String algorithm) throws Exception {
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance(algorithm, "BCPQC");
+        String bcName = toBouncyCastleAlias(algorithm);
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance(bcName, "BCPQC");
         // Use default parameters for the named algorithm
         return kpg.generateKeyPair();
     }
 
-    // ============================================================================ 
+    // ============================================================================
     // SIGNATURE OPERATIONS (ML-DSA, SLH-DSA)
-    // ============================================================================ 
+    // ============================================================================
 
     /**
      * Sign data using a private key
      */
     public static byte[] sign(PrivateKey privateKey, byte[] data, String algorithm) throws Exception {
-        Signature sig = Signature.getInstance(algorithm, "BCPQC");
+        PqcAlgorithmDetectionResult det = detectAlgorithmFromEncoded(privateKey.getEncoded(), false);
+        if (det == null || !det.isSupported()) {
+            throw new IllegalArgumentException("Unknown or unsupported PQC algorithm in key.");
+        }
+        if (!areAlgorithmsCompatible(algorithm, det.nistName())) {
+            throw new IllegalArgumentException("Key mismatch: Key is " + det.nistName() + " but algorithm requested is " + algorithm);
+        }
+        String bcName = getSignatureAlgorithmName(algorithm);
+        Signature sig = Signature.getInstance(bcName, "BCPQC");
         sig.initSign(privateKey, new SecureRandom());
         sig.update(data);
         return sig.sign();
@@ -84,7 +93,15 @@ public class PostQuantumOperations {
      * Verify signature using a public key
      */
     public static boolean verify(PublicKey publicKey, byte[] data, byte[] signature, String algorithm) throws Exception {
-        Signature sig = Signature.getInstance(algorithm, "BCPQC");
+        PqcAlgorithmDetectionResult det = detectAlgorithmFromEncoded(publicKey.getEncoded(), true);
+        if (det == null || !det.isSupported()) {
+            throw new IllegalArgumentException("Unknown or unsupported PQC algorithm in key.");
+        }
+        if (!areAlgorithmsCompatible(algorithm, det.nistName())) {
+            throw new IllegalArgumentException("Key mismatch: Key is " + det.nistName() + " but algorithm requested is " + algorithm);
+        }
+        String bcName = getSignatureAlgorithmName(algorithm);
+        Signature sig = Signature.getInstance(bcName, "BCPQC");
         sig.initVerify(publicKey);
         sig.update(data);
         return sig.verify(signature);
@@ -93,8 +110,16 @@ public class PostQuantumOperations {
     /**
      * Encapsulates a fresh 256-bit shared secret for an ML-KEM/Kyber public key.
      */
-    public static KEMResult encapsulate(PublicKey publicKey) throws Exception {
-        KeyGenerator keyGenerator = KeyGenerator.getInstance("Kyber", "BCPQC");
+    public static KEMResult encapsulate(PublicKey publicKey, String algorithm) throws Exception {
+        PqcAlgorithmDetectionResult det = detectAlgorithmFromEncoded(publicKey.getEncoded(), true);
+        if (det == null || !det.isSupported()) {
+            throw new IllegalArgumentException("Unknown or unsupported PQC algorithm in key.");
+        }
+        if (!areAlgorithmsCompatible(algorithm, det.nistName())) {
+            throw new IllegalArgumentException("Key mismatch: Key is " + det.nistName() + " but algorithm requested is " + algorithm);
+        }
+        String bcName = toBouncyCastleAlias(algorithm);
+        KeyGenerator keyGenerator = KeyGenerator.getInstance(bcName, "BCPQC");
         keyGenerator.init(new KEMGenerateSpec(publicKey, "AES", 256), new SecureRandom());
         SecretKeyWithEncapsulation secret = (SecretKeyWithEncapsulation) keyGenerator.generateKey();
         return new KEMResult(secret.getEncoded(), secret.getEncapsulation());
@@ -103,8 +128,16 @@ public class PostQuantumOperations {
     /**
      * Recovers the shared secret from an ML-KEM/Kyber encapsulation.
      */
-    public static byte[] decapsulate(PrivateKey privateKey, byte[] encapsulation) throws Exception {
-        KeyGenerator keyGenerator = KeyGenerator.getInstance("Kyber", "BCPQC");
+    public static byte[] decapsulate(PrivateKey privateKey, byte[] encapsulation, String algorithm) throws Exception {
+        PqcAlgorithmDetectionResult det = detectAlgorithmFromEncoded(privateKey.getEncoded(), false);
+        if (det == null || !det.isSupported()) {
+            throw new IllegalArgumentException("Unknown or unsupported PQC algorithm in key.");
+        }
+        if (!areAlgorithmsCompatible(algorithm, det.nistName())) {
+            throw new IllegalArgumentException("Key mismatch: Key is " + det.nistName() + " but algorithm requested is " + algorithm);
+        }
+        String bcName = toBouncyCastleAlias(algorithm);
+        KeyGenerator keyGenerator = KeyGenerator.getInstance(bcName, "BCPQC");
         keyGenerator.init(new KEMExtractSpec(privateKey, encapsulation, "AES", 256));
         return keyGenerator.generateKey().getEncoded();
     }
@@ -119,17 +152,11 @@ public class PostQuantumOperations {
                 .generatePrivate(new PKCS8EncodedKeySpec(encoded));
     }
 
-    /**
-     * Compares parameter sets rather than just PQC families. Bouncy Castle and
-     * NIST names coexist (for example Kyber512 and ML-KEM-512), so equivalent
-     * aliases are accepted while a 512/768 or 44/65 mismatch is rejected.
-     */
     public static boolean areAlgorithmsCompatible(String requested, String keyAlgorithm) {
         if (requested == null || keyAlgorithm == null) return false;
         String expected = canonicalParameterSet(requested);
         String actual = canonicalParameterSet(keyAlgorithm);
         if (expected.equals(actual)) return true;
-        // Some providers return only the family name in Key#getAlgorithm().
         return isGenericFamilyName(actual) && family(expected).equals(actual);
     }
 
@@ -146,28 +173,114 @@ public class PostQuantumOperations {
         };
     }
 
-    private static boolean isGenericFamilyName(String value) { return "KYBER".equals(value) || "DILITHIUM".equals(value) || "SPHINCSPLUS".equals(value) || "SLHDSA".equals(value); }
+    private static boolean isGenericFamilyName(String value) { return "KYBER".equals(value) || "DILITHIUM".equals(value) || "SPHINCSPLUS".equals(value) || "SLHDSA".equals(value) || "MLKEM".equals(value) || "MLDSA".equals(value); }
     private static String family(String canonical) {
         if (canonical.startsWith("MLKEM")) return "KYBER";
         if (canonical.startsWith("MLDSA")) return "DILITHIUM";
-        if (canonical.startsWith("SPHINCSPLUS")) return "SPHINCSPLUS";
-        if (canonical.startsWith("SLHDSA")) return "SLHDSA";
+        if (canonical.startsWith("SPHINCSPLUS") || canonical.startsWith("SLHDSA")) return "SPHINCSPLUS";
         return canonical;
     }
 
     private static String normalizeKeyFactoryAlgorithm(String algorithm) {
+        if (algorithm == null) return null;
         if (algorithm.startsWith("ML-KEM")) return "Kyber";
+        if (algorithm.startsWith("Kyber")) return "Kyber";
         if (algorithm.startsWith("ML-DSA")) return "Dilithium";
+        if (algorithm.startsWith("Dilithium")) return "Dilithium";
         if (algorithm.startsWith("SLH-DSA")) return "SPHINCSPlus";
+        if (algorithm.startsWith("SPHINCSPlus")) return "SPHINCSPlus";
         return algorithm;
+    }
+
+    private static String toBouncyCastleAlias(String algorithm) {
+        if (algorithm == null) return null;
+        return switch (algorithm) {
+            case "ML-KEM-512" -> "Kyber512";
+            case "ML-KEM-768" -> "Kyber768";
+            case "ML-KEM-1024" -> "Kyber1024";
+            case "ML-DSA-44" -> "Dilithium2";
+            case "ML-DSA-65" -> "Dilithium3";
+            case "ML-DSA-87" -> "Dilithium5";
+            case "SLH-DSA-SHA2-128s" -> "SPHINCS+-SHA2-128S";
+            case "SLH-DSA-SHA2-128f" -> "SPHINCS+-SHA2-128F";
+            case "SLH-DSA-SHA2-192s" -> "SPHINCS+-SHA2-192S";
+            case "SLH-DSA-SHA2-192f" -> "SPHINCS+-SHA2-192F";
+            case "SLH-DSA-SHA2-256s" -> "SPHINCS+-SHA2-256S";
+            case "SLH-DSA-SHA2-256f" -> "SPHINCS+-SHA2-256F";
+            default -> algorithm;
+        };
+    }
+
+    private static String getSignatureAlgorithmName(String algorithm) {
+        String bcAlias = toBouncyCastleAlias(algorithm);
+        if (bcAlias != null && bcAlias.startsWith("SPHINCS+-")) {
+            return "SPHINCSPlus";
+        }
+        return bcAlias;
     }
 
     public record KEMResult(byte[] sharedSecret, byte[] encapsulation) { }
 
-    // ============================================================================ 
+    public record PqcAlgorithmDetectionResult(String originalOid, String nistName, boolean isSupported) {}
+
+    // ============================================================================
     // UTILS
-    // ============================================================================ 
-    
+    // ============================================================================
+
+    public static PqcAlgorithmDetectionResult detectAlgorithmFromEncoded(byte[] encoded, boolean isPublic) {
+        try {
+            ASN1ObjectIdentifier oid;
+            if (isPublic) {
+                SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(encoded);
+                oid = spki.getAlgorithm().getAlgorithm();
+            } else {
+                PrivateKeyInfo pki = PrivateKeyInfo.getInstance(encoded);
+                oid = pki.getPrivateKeyAlgorithm().getAlgorithm();
+            }
+            String oidStr = oid.getId();
+
+            // ML-KEM OIDs (FIPS 203)
+            if ("2.16.840.1.101.3.4.4.1".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-KEM-512", true);
+            if ("2.16.840.1.101.3.4.4.2".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-KEM-768", true);
+            if ("2.16.840.1.101.3.4.4.3".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-KEM-1024", true);
+
+            // Kyber OIDs (Pre-standard) -> mapped to ML-KEM
+            if ("1.3.6.1.4.1.2.267.8.3.3".equals(oidStr) || "1.3.6.1.4.1.22554.5.6.1".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-KEM-512", true);
+            if ("1.3.6.1.4.1.2.267.8.4.4".equals(oidStr) || "1.3.6.1.4.1.22554.5.6.2".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-KEM-768", true);
+            if ("1.3.6.1.4.1.2.267.8.8.5".equals(oidStr) || "1.3.6.1.4.1.22554.5.6.3".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-KEM-1024", true);
+
+            // ML-DSA OIDs (FIPS 204)
+            if ("2.16.840.1.101.3.4.3.17".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-DSA-44", true);
+            if ("2.16.840.1.101.3.4.3.18".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-DSA-65", true);
+            if ("2.16.840.1.101.3.4.3.19".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-DSA-87", true);
+
+            // Dilithium OIDs (Pre-standard) -> mapped to ML-DSA
+            if ("1.3.6.1.4.1.2.267.7.4.4".equals(oidStr) || "1.3.6.1.4.1.2.267.1.6.5".equals(oidStr) || "1.3.6.1.4.1.2.267.12.4.4".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-DSA-44", true);
+            if ("1.3.6.1.4.1.2.267.7.6.5".equals(oidStr) || "1.3.6.1.4.1.2.267.1.8.7".equals(oidStr) || "1.3.6.1.4.1.2.267.12.6.5".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-DSA-65", true);
+            if ("1.3.6.1.4.1.2.267.7.8.7".equals(oidStr) || "1.3.6.1.4.1.2.267.1.11.8".equals(oidStr) || "1.3.6.1.4.1.2.267.12.8.7".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "ML-DSA-87", true);
+
+            // SLH-DSA OIDs
+            if ("2.16.840.1.101.3.4.3.20".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-128s", true);
+            if ("2.16.840.1.101.3.4.3.21".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-128f", true);
+            if ("2.16.840.1.101.3.4.3.22".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-192s", true);
+            if ("2.16.840.1.101.3.4.3.23".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-192f", true);
+            if ("2.16.840.1.101.3.4.3.24".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-256s", true);
+            if ("2.16.840.1.101.3.4.3.25".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-256f", true);
+
+            // SPHINCS+ OIDs (Pre-standard) -> mapped to SLH-DSA
+            if ("1.3.9999.6.4.16".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-128s", true);
+            if ("1.3.9999.6.4.13".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-128f", true);
+            if ("1.3.9999.6.5.12".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-192s", true);
+            if ("1.3.9999.6.5.10".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-192f", true);
+            if ("1.3.9999.6.6.12".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-256s", true);
+            if ("1.3.9999.6.6.10".equals(oidStr)) return new PqcAlgorithmDetectionResult(oidStr, "SLH-DSA-SHA2-256f", true);
+
+            return new PqcAlgorithmDetectionResult(oidStr, oidStr, false);
+        } catch (Exception e) {
+            return new PqcAlgorithmDetectionResult("unknown", "unknown", false);
+        }
+    }
+
     public static String getKeyInfo(Key key) {
         StringBuilder sb = new StringBuilder();
         sb.append("Algorithm: ").append(key.getAlgorithm()).append("\n");

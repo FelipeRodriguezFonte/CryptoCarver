@@ -101,7 +101,7 @@ public class ASN1Parser {
 
     /**
      * Parse ASN.1 DER/BER encoded data with custom truncation
-     * 
+     *
      * @param data           ASN.1 encoded data
      * @param maxBytesForHex Maximum bytes to show in hex (-1 for no limit)
      */
@@ -447,7 +447,7 @@ public class ASN1Parser {
 
     /**
      * Convert bytes to hex string with limit
-     * 
+     *
      * @param bytes    Byte array
      * @param maxBytes Maximum bytes to display (-1 for no limit)
      */

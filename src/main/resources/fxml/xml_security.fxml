@@ -41,6 +41,11 @@
                         <Button text="Test TSA" onAction="#handleTestTSA" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
                     </HBox>
                     <HBox spacing="6">
+                        <ComboBox fx:id="xmlSignTsaAuthTypeCombo" promptText="Auth Type" prefWidth="100" style="-fx-font-size: 11px;"/>
+                        <TextField fx:id="xmlSignTsaUserField" promptText="User" prefWidth="100" style="-fx-font-size: 11px;"/>
+                        <PasswordField fx:id="xmlSignTsaPasswordField" promptText="Password/Token (Ephemeral)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                    </HBox>
+                    <HBox spacing="6">
                         <ComboBox fx:id="xmlSignTsaProfileCombo" promptText="Saved TSA profile" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
                         <Button text="Load" onAction="#handleLoadTSASavedProfile" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
                         <Button text="Delete" onAction="#handleDeleteTSASavedProfile" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
@@ -78,8 +83,17 @@
                     <Label text="TSA URL:"/>
                     <TextField fx:id="xmlTimestampUrlField" promptText="https://your-tsa.example/" style="-fx-font-size: 11px;"/>
                     <HBox spacing="8"><Button text="Request Timestamp" onAction="#handleRequestTimestamp" styleClass="action-button" style="-fx-font-size: 10px;"/><Button text="Save Token..." onAction="#handleSaveTimestampToken" styleClass="secondary-button" style="-fx-font-size: 10px;"/></HBox>
-                    <Label text="Saved token to inspect (optional):"/>
-                    <HBox spacing="8"><TextField fx:id="xmlTimestampTokenField" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/><Button text="Open..." onAction="#handleBrowseTimestampToken"/><Button text="Inspect Token" onAction="#handleInspectTimestampToken" styleClass="secondary-button" style="-fx-font-size: 10px;"/></HBox>
+                    <Label text="Saved token to inspect/validate (optional):"/>
+                    <HBox spacing="8"><TextField fx:id="xmlTimestampTokenField" promptText="Path to .tsq/.tst" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/><Button text="Open..." onAction="#handleBrowseTimestampToken"/></HBox>
+                    <HBox spacing="8">
+                        <TextField fx:id="xmlTimestampTrustStoreField" promptText="Truststore path (optional)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <Button text="..." onAction="#handleBrowseTimestampTrustStore"/>
+                        <PasswordField fx:id="xmlTimestampTrustStorePasswordField" promptText="Password" style="-fx-font-size: 11px;"/>
+                    </HBox>
+                    <HBox spacing="8">
+                        <Button text="Inspect Token" onAction="#handleInspectTimestampToken" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                        <Button text="Validate Token" onAction="#handleValidateTimestampToken" styleClass="action-button" style="-fx-font-size: 10px;"/>
+                    </HBox>
                     <Label text="RFC 3161 token report:"/>
                     <TextArea fx:id="xmlTimestampReportArea" prefHeight="220" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
                 </VBox>

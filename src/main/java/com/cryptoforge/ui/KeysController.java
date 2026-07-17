@@ -2640,4 +2640,42 @@ public class KeysController {
 
         return sb.toString();
     }
+
+    public void loadProfile(com.cryptoforge.model.payments.PaymentProfile p) {
+        if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.TR31) {
+            java.util.Map<String, String> params = p.getParameters();
+            if (tr31VersionCombo != null && params.containsKey("version")) {
+                for (String item : tr31VersionCombo.getItems()) {
+                    if (item.startsWith(params.get("version").substring(0, 1))) { tr31VersionCombo.setValue(item); break; }
+                }
+            }
+            if (tr31AlgorithmCombo != null && params.containsKey("algorithm")) {
+                for (String item : tr31AlgorithmCombo.getItems()) {
+                    if (item.startsWith(params.get("algorithm").substring(0, 1))) { tr31AlgorithmCombo.setValue(item); break; }
+                }
+            }
+            if (tr31UsageCombo != null && params.containsKey("usage")) {
+                for (String item : tr31UsageCombo.getItems()) {
+                    if (item.startsWith(params.get("usage").substring(0, 2))) { tr31UsageCombo.setValue(item); break; }
+                }
+            }
+            if (tr31ModeCombo != null && params.containsKey("mode")) {
+                for (String item : tr31ModeCombo.getItems()) {
+                    if (item.startsWith(params.get("mode").substring(0, 1))) { tr31ModeCombo.setValue(item); break; }
+                }
+            }
+            if (tr31ExportabilityCombo != null && params.containsKey("exportability")) {
+                for (String item : tr31ExportabilityCombo.getItems()) {
+                    if (item.startsWith(params.get("exportability").substring(0, 1))) { tr31ExportabilityCombo.setValue(item); break; }
+                }
+            }
+            if (tr31KbpkExportField != null && p.getInputs().containsKey("kbpk")) {
+                tr31KbpkExportField.setText(p.getInputs().get("kbpk"));
+            }
+            if (tr31KeyToWrapField != null && p.getInputs().containsKey("keyToWrap")) {
+                tr31KeyToWrapField.setText(p.getInputs().get("keyToWrap"));
+            }
+            updateStatus("Loaded TR-31 profile: " + p.getName());
+        }
+    }
 }

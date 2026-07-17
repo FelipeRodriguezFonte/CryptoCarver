@@ -9,7 +9,7 @@ public enum ByteFormat {
     BASE58_CHECK("Base58Check"),
     BINARY("Binary"),
     DECIMAL("Decimal"),
-    
+
     // Text encodings
     TEXT_UTF8("Text (UTF-8)"),
     TEXT_ASCII("Text (ASCII)"),
@@ -24,7 +24,7 @@ public enum ByteFormat {
     public String getDisplayName() {
         return displayName;
     }
-    
+
     public static ByteFormat fromDisplayName(String name) {
         if ("Text".equals(name)) return TEXT_UTF8; // Fallback for some old UI names
         for (ByteFormat format : values()) {

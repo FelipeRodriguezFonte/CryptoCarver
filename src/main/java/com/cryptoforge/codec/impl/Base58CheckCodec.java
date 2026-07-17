@@ -20,14 +20,14 @@ public class Base58CheckCodec implements Codec {
         } catch (CodecException e) {
             throw new CodecException(e.getMessage(), e.getCause(), ByteFormat.BASE58_CHECK);
         }
-        
+
         if (complete.length < 4) {
             throw new CodecException("Base58Check value is too short to contain a checksum", ByteFormat.BASE58_CHECK);
         }
-        
+
         byte[] payload = Arrays.copyOf(complete, complete.length - 4);
         byte[] checksum = Arrays.copyOfRange(complete, complete.length - 4, complete.length);
-        
+
         if (!Arrays.equals(checksum, Arrays.copyOf(sha256d(payload), 4))) {
             throw new CodecException("Invalid Base58Check checksum", ByteFormat.BASE58_CHECK);
         }

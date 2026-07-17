@@ -122,7 +122,31 @@ public class PaymentsController {
                     + "\nDevice ID: " + ksn.deviceIdentifierHex() + "\nTransaction counter: " + ksn.transactionCounter()
                     + "\nCounter exhausted: " + DukptKsn.isTdesCounterExhausted(ksn.ksnHex())
                     + "\nNext KSN: " + (DukptKsn.isTdesCounterExhausted(ksn.ksnHex()) ? "not available" : DukptKsn.nextTdesKsn(ksn.ksnHex()));
-            if (!dukptBdkField.getText().isBlank()) result += "\nIPEK: " + DukptKsn.deriveIpek(dukptBdkField.getText(), ksn.ksnHex());
+            if (!dukptBdkField.getText().isBlank()) {
+                String ipek = DukptKsn.deriveIpek(dukptBdkField.getText(), ksn.ksnHex());
+                DukptKsn.TdesDerivedKey derived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.PIN_ENCRYPTION);
+
+                result += "\n\n=== Derivation Tree ===";
+                result += "\n[BDK]\n  └─ " + dukptBdkField.getText().replaceAll("\\s+", "").toUpperCase();
+                result += "\n\n[IPEK (Initial PIN Encryption Key)]\n  └─ " + ipek.toUpperCase();
+
+                result += "\n\n[Counter Steps (Intermediate)]";
+                if (derived.derivationSteps().isEmpty()) {
+                    result += "\n  └─ (None)";
+                } else {
+                    for (String step : derived.derivationSteps()) {
+                        result += "\n  └─ " + step.toUpperCase();
+                    }
+                }
+
+                result += "\n\n[Working Key (PIN Variant)]\n  └─ " + derived.workingKeyHex().toUpperCase();
+
+                DukptKsn.TdesDerivedKey macDerived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.MAC_REQUEST);
+                result += "\n\n[Working Key (MAC Variant)]\n  └─ " + macDerived.workingKeyHex().toUpperCase();
+
+                DukptKsn.TdesDerivedKey dataDerived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.DATA_ENCRYPTION);
+                result += "\n\n[Working Key (Data Variant)]\n  └─ " + dataDerived.workingKeyHex().toUpperCase();
+            }
             dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true);
             updateStatus("DUKPT KSN inspected");
         } catch (Exception e) { showError("DUKPT", e.getMessage()); }
@@ -135,14 +159,23 @@ public class PaymentsController {
                 + "\nCounter exhausted: " + AesDukpt.isCounterExhausted(ksn.ksnHex())
                 + "\nNext KSN: " + (AesDukpt.isCounterExhausted(ksn.ksnHex()) ? "not available" : AesDukpt.nextKsn(ksn.ksnHex()));
         if (!dukptBdkField.getText().isBlank()) {
-            AesDukpt.KeyUsage usage = selectedAesUsage(); AesDukpt.KeyType type = selectedAesKeyType();
+            AesDukpt.KeyUsage usage = AesDukpt.KeyUsage.DATA_ENCRYPTION_ENCRYPT;
+            AesDukpt.KeyType type = AesDukpt.KeyType.AES128;
             AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), ksn.ksnHex(), usage, type);
-            result += "\n\nBDK type: " + AesDukpt.KeyType.fromBytes(dukptBdkField.getText().replaceAll("\\s+", "").length() / 2)
-                    + "\nInitial Key: " + derived.initialKeyHex() + "\nIntermediate key: " + derived.intermediateKeyHex()
-                    + "\nWorking-key usage: " + usage.label() + "\nWorking-key derivation data: " + derived.derivationDataHex()
-                    + "\nDerived " + type + " working key: " + derived.workingKeyHex();
+
+            result += "\n\n=== Derivation Tree ===";
+            result += "\n[BDK]\n  └─ " + dukptBdkField.getText().replaceAll("\\s+", "").toUpperCase() + " (" + AesDukpt.KeyType.fromBytes(dukptBdkField.getText().replaceAll("\\s+", "").length() / 2) + ")";
+            result += "\n\n[Initial Key / IPEK]\n  └─ " + derived.initialKeyHex().toUpperCase();
+
+            if (!derived.initialKeyHex().equalsIgnoreCase(derived.intermediateKeyHex())) {
+                result += "\n\n[Counter Steps (Intermediate)]\n  └─ " + derived.intermediateKeyHex().toUpperCase();
+            }
+
+            result += "\n\n[Final Derivation Data]\n  └─ " + derived.derivationDataHex().toUpperCase();
+            result += "\n\n[Working Key]\n  └─ " + derived.workingKeyHex().toUpperCase();
         }
-        dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus("AES DUKPT KSN inspected");
+
+        dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus("AES DUKPT derivation tree rendered");
     }
     private AesDukpt.KeyUsage selectedAesUsage() {
         String selection = dukptAesUsageCombo == null ? "Data encryption (encrypt)" : dukptAesUsageCombo.getValue();
@@ -1738,6 +1771,63 @@ public class PaymentsController {
 
         } catch (Exception e) {
             showError("Derivation Error", "Error deriving PIN: " + e.getMessage());
+        }
+    }
+    public void loadProfile(com.cryptoforge.model.payments.PaymentProfile p) {
+        if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.DUKPT_TDES) {
+            if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("TDES (legacy, 10-byte KSN)");
+            if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
+            if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
+            updateStatus("Loaded DUKPT TDES profile: " + p.getName());
+        } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.DUKPT_AES) {
+            if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("AES (X9.24-3, 12-byte KSN)");
+            if (dukptAesUsageCombo != null && p.getParameters().containsKey("usage")) {
+                String usageStr = p.getParameters().get("usage");
+                for (String item : dukptAesUsageCombo.getItems()) {
+                    if (item.toLowerCase().contains(usageStr.toLowerCase())) { dukptAesUsageCombo.setValue(item); break; }
+                }
+            }
+            if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
+            if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
+            updateStatus("Loaded DUKPT AES profile: " + p.getName());
+        } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.PIN) {
+            if (p.getParameters().containsKey("format")) {
+                String formatStr = p.getParameters().get("format");
+                if (p.getName().contains("Encrypt") || p.getName().contains("pos_1")) {
+                    if (pinBlockFormatCombo != null) {
+                        for (String item : pinBlockFormatCombo.getItems()) {
+                            if (item.contains(formatStr)) { pinBlockFormatCombo.setValue(item); break; }
+                        }
+                    }
+                    if (pinField != null && p.getInputs().containsKey("pin")) pinField.setText(p.getInputs().get("pin"));
+                    if (panFieldEncode != null && p.getInputs().containsKey("pan")) panFieldEncode.setText(p.getInputs().get("pan"));
+                    // Encriptación (opcional si hay Key) no está en el tab basico de formato, sino en el genérico
+                    if (encPinBlockKeyField != null && p.getInputs().containsKey("key")) encPinBlockKeyField.setText(p.getInputs().get("key"));
+                } else {
+                    if (pinBlockFormatDecodeCombo != null) {
+                        for (String item : pinBlockFormatDecodeCombo.getItems()) {
+                            if (item.contains(formatStr)) { pinBlockFormatDecodeCombo.setValue(item); break; }
+                        }
+                    }
+                    if (pinBlockField != null && p.getInputs().containsKey("pinBlock")) pinBlockField.setText(p.getInputs().get("pinBlock"));
+                    if (panFieldDecode != null && p.getInputs().containsKey("pan")) panFieldDecode.setText(p.getInputs().get("pan"));
+                }
+            }
+            updateStatus("Loaded PIN profile: " + p.getName());
+        } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
+            if (macKeyField != null && p.getInputs().containsKey("sessionKey")) macKeyField.setText(p.getInputs().get("sessionKey"));
+            if (macDataField != null && p.getInputs().containsKey("apdu")) macDataField.setText(p.getInputs().get("apdu"));
+            if (macAlgorithmCombo != null && p.getParameters().containsKey("algorithm")) {
+                String algoStr = p.getParameters().get("algorithm");
+                if (algoStr.contains("Algorithm 3")) {
+                    macAlgorithmCombo.setValue("Retail MAC (ISO 9797-1 Alg 3)");
+                } else {
+                    for (String item : macAlgorithmCombo.getItems()) {
+                        if (item.contains(algoStr)) { macAlgorithmCombo.setValue(item); break; }
+                    }
+                }
+            }
+            updateStatus("Loaded Secure Messaging profile: " + p.getName());
         }
     }
 }

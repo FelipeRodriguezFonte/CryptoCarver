@@ -47,7 +47,7 @@ public class KeyOperations {
     public static byte[] generateKey(String keyType) {
         return generateKey(keyType, true); // Default: force odd parity
     }
-    
+
     public static byte[] generateKey(String keyType, boolean forceOddParity) {
         SecureRandom random = new SecureRandom();
         int keyLength;
@@ -139,7 +139,7 @@ public class KeyOperations {
      * Calculate KCV (Key Check Value) - VISA method
      * For DES/3DES keys: Encrypts 8 zero bytes and returns first 3 bytes
      * For AES keys (32 bytes only): Use AES encryption
-     * 
+     *
      * IMPORTANT: Applies odd parity for DES/3DES keys before calculation
      */
     public static byte[] calculateKCV_VISA(byte[] key) throws Exception {
@@ -151,7 +151,7 @@ public class KeyOperations {
             System.arraycopy(key, 0, workingKey, 0, key.length);
             applyOddParity(workingKey);
         }
-        
+
         // Only use AES for 32-byte keys (AES-256)
         // 16 and 24 byte keys are ambiguous (could be 3DES or AES), so use 3DES
         if (key.length == 32) {
@@ -163,22 +163,22 @@ public class KeyOperations {
 
     /**
      * Calculate KCV - IBM method
-     * 
+     *
      * NOTE: IBM KCV algorithm varies by implementation and HSM vendor.
      * This implementation uses standard 3DES-EDE encryption of zero block
      * and returns the first 2 bytes, which matches some IBM implementations
      * but may differ from BP-Tools which appears to use a proprietary CKCV method.
-     * 
+     *
      * For 8-byte keys: Single DES encryption
      * For 16/24-byte keys: 3DES-EDE encryption
      * Returns: First 2 bytes (16 bits) of encrypted result
-     * 
+     *
      * Reference: IBM CCA (Controlled Cryptographic Access) documentation
      */
     public static byte[] calculateKCV_IBM(byte[] key) throws Exception {
         byte[] zeroBlock = new byte[8];
         byte[] encrypted;
-        
+
         if (key.length == 8) {
             // Single DES - just encrypt
             Cipher cipher = Cipher.getInstance("DES/ECB/NoPadding", "BC");
@@ -194,7 +194,7 @@ public class KeyOperations {
         } else {
             throw new UnsupportedOperationException("IBM KCV requires DES/3DES key (8, 16, or 24 bytes)");
         }
-        
+
         // Return first 2 bytes (IBM CCA standard)
         byte[] kcv = new byte[2];
         System.arraycopy(encrypted, 0, kcv, 0, 2);
@@ -282,7 +282,7 @@ public class KeyOperations {
      */
     public static byte[] calculateKCV_CMAC(byte[] key) throws Exception {
         byte[] aesKey;
-        
+
         if (key.length >= 16) {
             // Use first 16 bytes
             aesKey = new byte[16];
@@ -301,7 +301,7 @@ public class KeyOperations {
         SecretKeySpec keySpec = new SecretKeySpec(aesKey, "AES");
         mac.init(keySpec);
         byte[] cmac = mac.doFinal(new byte[0]);  // Empty input - this is the key!
-        
+
         // Return first 3 bytes
         byte[] kcv = new byte[3];
         System.arraycopy(cmac, 0, kcv, 0, 3);

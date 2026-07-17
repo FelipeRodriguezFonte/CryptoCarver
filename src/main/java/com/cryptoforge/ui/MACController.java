@@ -7,13 +7,13 @@ import javafx.scene.control.*;
 
 /**
  * Controller for Message Authentication Code (MAC) operations
- * 
+ *
  * @author Felipe
  */
 public class MACController {
 
     private MainController mainController;
-    
+
     // UI components
     private ComboBox<String> macAlgorithmCombo;
     private ComboBox<String> inputFormatCombo;
@@ -56,11 +56,11 @@ public class MACController {
         this.macKeyKPrime = keyKPrime;
         this.macTruncationCombo = truncationCombo;
         this.macVerifyField = verifyField;
-        
+
         // Populate algorithms
         macAlgorithmCombo.getItems().addAll(MACOperations.SUPPORTED_ALGORITHMS);
         macAlgorithmCombo.setValue("HMAC-SHA256");
-        
+
         // Populate truncation options (0 = full MAC)
         macTruncationCombo.getItems().addAll(
             "0 (full)",
@@ -72,7 +72,7 @@ public class MACController {
             "48",
             "64"
         );
-        
+
         // Add listener to update key info and truncation when algorithm changes
         macAlgorithmCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
@@ -80,7 +80,7 @@ public class MACController {
                 updateDefaultTruncation(newVal);
             }
         });
-        
+
         // Set initial values
         updateKeyInfo("HMAC-SHA256");
         updateDefaultTruncation("HMAC-SHA256");
@@ -92,18 +92,18 @@ public class MACController {
     private byte[] getMacKey() throws IllegalArgumentException {
         String kText = macKeyK.getText().trim();
         String kPrimeText = macKeyKPrime.getText().trim();
-        
+
         if (!kText.isEmpty() && !kPrimeText.isEmpty()) {
             // Use K and K' fields - concatenate them
             try {
                 byte[] k = DataConverter.hexToBytes(kText);
                 byte[] kPrime = DataConverter.hexToBytes(kPrimeText);
-                
+
                 // Concatenate K||K'
                 byte[] key = new byte[k.length + kPrime.length];
                 System.arraycopy(k, 0, key, 0, k.length);
                 System.arraycopy(kPrime, 0, key, k.length, kPrime.length);
-                
+
                 return key;
             } catch (Exception e) {
                 throw new IllegalArgumentException("Invalid key format in K or K' fields. Please enter hexadecimal (e.g., 0123456789ABCDEF)");
@@ -114,7 +114,7 @@ public class MACController {
             if (keyHex.isEmpty()) {
                 throw new IllegalArgumentException("Please enter a MAC key in hexadecimal (or use K and K' fields)");
             }
-            
+
             try {
                 return DataConverter.hexToBytes(keyHex);
             } catch (Exception e) {
@@ -133,7 +133,7 @@ public class MACController {
                 mainController.showError("Algorithm Error", "Please select a MAC algorithm");
                 return;
             }
-            
+
             // Get MAC key (from K||K' fields or main key field)
             byte[] key;
             try {
@@ -142,33 +142,33 @@ public class MACController {
                 mainController.showError("Key Error", e.getMessage());
                 return;
             }
-            
+
             // Get data
             byte[] data = getInputDataAsBytes();
             if (data == null || data.length == 0) {
                 mainController.showError("Input Error", "Please enter data in the Input area");
                 return;
             }
-            
+
             // Generate MAC
             byte[] mac = MACOperations.generate(data, key, algorithm);
-            
+
             // Apply truncation if needed
             int truncationBytes = getTruncationBytes();
             byte[] finalMac = mac;
             String truncationInfo = "";
-            
+
             if (truncationBytes > 0 && truncationBytes < mac.length) {
                 finalMac = new byte[truncationBytes];
                 System.arraycopy(mac, 0, finalMac, 0, truncationBytes);
                 truncationInfo = " (truncated to " + truncationBytes + " bytes)";
             }
-            
+
             // Format output
             setOutputData(finalMac);
-            
+
             mainController.updateStatus("MAC generated with " + algorithm + " (" + finalMac.length + " bytes)" + truncationInfo);
-            
+
             // Add to history
             OperationHistory.getInstance().addOperation(
                 "Authentication",
@@ -176,11 +176,11 @@ public class MACController {
                 "Data: " + data.length + " bytes, Key: " + (key.length * 8) + " bits",
                 "MAC: " + finalMac.length + " bytes" + truncationInfo
             );
-            
+
         } catch (IllegalArgumentException e) {
             mainController.showError("Validation Error", e.getMessage());
         } catch (Exception e) {
-            mainController.showError("MAC Error", 
+            mainController.showError("MAC Error",
                 "Error generating MAC: " + e.getMessage());
             e.printStackTrace();
         }
@@ -196,7 +196,7 @@ public class MACController {
                 mainController.showError("Algorithm Error", "Please select a MAC algorithm");
                 return;
             }
-            
+
             // Get MAC key (from K||K' fields or main key field)
             byte[] key;
             try {
@@ -205,38 +205,38 @@ public class MACController {
                 mainController.showError("Key Error", e.getMessage());
                 return;
             }
-            
+
             // Get MAC value from verify field - use OUTPUT format (MAC was generated in Output)
             String macText = macVerifyField.getText().trim();
             if (macText.isEmpty()) {
-                mainController.showError("MAC Error", 
+                mainController.showError("MAC Error",
                     "Please paste the MAC value in the 'MAC value' field");
                 return;
             }
-            
+
             byte[] mac = parseDataWithFormat(macText, outputFormatCombo.getValue());
             if (mac == null || mac.length == 0) {
                 mainController.showError("MAC Error", "Invalid MAC format");
                 return;
             }
-            
+
             // Get original data from input area
             String dataText = inputArea.getText().trim();
             if (dataText.isEmpty()) {
-                mainController.showError("Data Error", 
+                mainController.showError("Data Error",
                     "Please enter the original data in the Input area");
                 return;
             }
-            
+
             byte[] data = parseDataWithFormat(dataText, inputFormatCombo.getValue());
             if (data == null || data.length == 0) {
                 mainController.showError("Data Error", "Invalid data format");
                 return;
             }
-            
+
             // Generate MAC with same algorithm
             byte[] generatedMac = MACOperations.generate(data, key, algorithm);
-            
+
             // Apply same truncation as used in generation
             int truncationBytes = getTruncationBytes();
             if (truncationBytes > 0 && truncationBytes < generatedMac.length) {
@@ -244,29 +244,29 @@ public class MACController {
                 System.arraycopy(generatedMac, 0, truncatedMac, 0, truncationBytes);
                 generatedMac = truncatedMac;
             }
-            
+
             // Verify: compare generated MAC with provided MAC
-            boolean valid = (mac.length == generatedMac.length) && 
+            boolean valid = (mac.length == generatedMac.length) &&
                            java.util.Arrays.equals(mac, generatedMac);
-            
+
             // Display result
             if (valid) {
-                mainController.showInfo("MAC Verification", 
+                mainController.showInfo("MAC Verification",
                     "✓ MAC VALID\n\n" +
                     "The MAC is correct and the data has not been modified.\n" +
                     "Algorithm: " + algorithm +
                     (truncationBytes > 0 ? "\nTruncation: " + truncationBytes + " bytes" : ""));
             } else {
-                mainController.showError("MAC Verification", 
+                mainController.showError("MAC Verification",
                     "✗ MAC INVALID\n\n" +
                     "The MAC does not match the data. The data may have been modified " +
                     "or the wrong key was used.\n" +
                     "Algorithm: " + algorithm +
                     (truncationBytes > 0 ? "\nTruncation: " + truncationBytes + " bytes" : ""));
             }
-            
+
             mainController.updateStatus("MAC " + (valid ? "VALID" : "INVALID") + " - " + algorithm);
-            
+
             // Add to history
             OperationHistory.getInstance().addOperation(
                 "Authentication",
@@ -274,11 +274,11 @@ public class MACController {
                 "MAC: " + mac.length + " bytes, Key: " + (key.length * 8) + " bits",
                 "Result: " + (valid ? "VALID ✓" : "INVALID ✗")
             );
-            
+
         } catch (IllegalArgumentException e) {
             mainController.showError("Validation Error", e.getMessage());
         } catch (Exception e) {
-            mainController.showError("Verification Error", 
+            mainController.showError("Verification Error",
                 "Error verifying MAC: " + e.getMessage());
             e.printStackTrace();
         }
@@ -297,7 +297,7 @@ public class MACController {
      */
     private void updateDefaultTruncation(String algorithm) {
         String defaultValue;
-        
+
         switch (algorithm) {
             case "HMAC-SHA1":
                 defaultValue = "0 (full)";  // 20 bytes
@@ -348,7 +348,7 @@ public class MACController {
                 defaultValue = "0 (full)";
                 break;
         }
-        
+
         macTruncationCombo.setValue(defaultValue);
     }
 

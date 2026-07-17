@@ -13,19 +13,19 @@ import java.util.Base64;
 
 /**
  * File Converter Utility
- * 
+ *
  * Supports conversion between:
  * - Binary files ↔ Hexadecimal
  * - Binary files ↔ Base64
  * - Text encodings (ASCII, UTF-8)
- * 
+ *
  * @author Felipe
  */
 public class FileConverter {
-    
+
     /**
      * Read binary file and convert to hexadecimal string
-     * 
+     *
      * @param filePath Path to binary file
      * @return Hexadecimal representation of file contents
      */
@@ -33,10 +33,10 @@ public class FileConverter {
         byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
         return DataConverter.bytesToHex(fileBytes);
     }
-    
+
     /**
      * Read binary file and convert to Base64 string
-     * 
+     *
      * @param filePath Path to binary file
      * @return Base64 representation of file contents
      */
@@ -44,10 +44,10 @@ public class FileConverter {
         byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
         return Base64.getEncoder().encodeToString(fileBytes);
     }
-    
+
     /**
      * Convert hexadecimal string to binary file
-     * 
+     *
      * @param hexData Hexadecimal string
      * @param outputPath Output file path
      */
@@ -55,10 +55,10 @@ public class FileConverter {
         byte[] fileBytes = DataConverter.hexToBytes(hexData);
         Files.write(Paths.get(outputPath), fileBytes);
     }
-    
+
     /**
      * Convert Base64 string to binary file
-     * 
+     *
      * @param base64Data Base64 string
      * @param outputPath Output file path
      */
@@ -66,10 +66,10 @@ public class FileConverter {
         byte[] fileBytes = Base64.getDecoder().decode(base64Data);
         Files.write(Paths.get(outputPath), fileBytes);
     }
-    
+
     /**
      * Read text file with specified encoding
-     * 
+     *
      * @param filePath Path to text file
      * @param encoding Character encoding (ASCII, UTF-8, etc.)
      * @return Text content
@@ -79,10 +79,10 @@ public class FileConverter {
         byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
         return new String(fileBytes, charset);
     }
-    
+
     /**
      * Write text to file with specified encoding
-     * 
+     *
      * @param text Text content
      * @param outputPath Output file path
      * @param encoding Character encoding (ASCII, UTF-8, etc.)
@@ -92,28 +92,28 @@ public class FileConverter {
         byte[] textBytes = text.getBytes(charset);
         Files.write(Paths.get(outputPath), textBytes);
     }
-    
+
     /**
      * Convert text file encoding (e.g., ASCII to UTF-8)
-     * 
+     *
      * @param inputPath Input file path
      * @param outputPath Output file path
      * @param inputEncoding Source encoding
      * @param outputEncoding Target encoding
      */
     public static void convertTextEncoding(
-            String inputPath, 
+            String inputPath,
             String outputPath,
-            String inputEncoding, 
+            String inputEncoding,
             String outputEncoding) throws IOException {
-        
+
         String text = readTextFile(inputPath, inputEncoding);
         writeTextFile(text, outputPath, outputEncoding);
     }
-    
+
     /**
      * Binary file to text (interpret as ASCII/UTF-8)
-     * 
+     *
      * @param filePath Path to binary file
      * @param encoding Encoding to interpret as (ASCII, UTF-8)
      * @return Text interpretation
@@ -121,10 +121,10 @@ public class FileConverter {
     public static String binaryFileToText(String filePath, String encoding) throws IOException {
         return readTextFile(filePath, encoding);
     }
-    
+
     /**
      * Text to binary file
-     * 
+     *
      * @param text Text content
      * @param outputPath Output file path
      * @param encoding Encoding (ASCII, UTF-8)
@@ -132,10 +132,10 @@ public class FileConverter {
     public static void textToBinaryFile(String text, String outputPath, String encoding) throws IOException {
         writeTextFile(text, outputPath, encoding);
     }
-    
+
     /**
      * Hex string to text file
-     * 
+     *
      * @param hexData Hexadecimal string
      * @param outputPath Output file path
      * @param encoding Text encoding for output
@@ -146,10 +146,10 @@ public class FileConverter {
         String text = new String(bytes, charset);
         writeTextFile(text, outputPath, encoding);
     }
-    
+
     /**
      * Base64 string to text file
-     * 
+     *
      * @param base64Data Base64 string
      * @param outputPath Output file path
      * @param encoding Text encoding for output
@@ -160,10 +160,10 @@ public class FileConverter {
         String text = new String(bytes, charset);
         writeTextFile(text, outputPath, encoding);
     }
-    
+
     /**
      * Get file size information
-     * 
+     *
      * @param filePath File path
      * @return Formatted string with file size in bytes, KB, MB
      */
@@ -172,28 +172,28 @@ public class FileConverter {
         long sizeBytes = file.length();
         double sizeKB = sizeBytes / 1024.0;
         double sizeMB = sizeKB / 1024.0;
-        
+
         StringBuilder info = new StringBuilder();
         info.append("File: ").append(file.getName()).append("\n");
         info.append("Size: ").append(sizeBytes).append(" bytes\n");
         info.append("      ").append(String.format("%.2f", sizeKB)).append(" KB\n");
         info.append("      ").append(String.format("%.2f", sizeMB)).append(" MB\n");
-        
+
         return info.toString();
     }
-    
+
     /**
      * Hex dump of file (like hexdump -C)
-     * 
+     *
      * @param filePath File path
      * @param maxBytes Maximum bytes to display (0 = all)
      * @return Formatted hex dump
      */
     public static String hexDump(String filePath, int maxBytes) throws IOException {
         byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
-        
+
         int bytesToShow = (maxBytes > 0 && maxBytes < fileBytes.length) ? maxBytes : fileBytes.length;
-        
+
         StringBuilder dump = new StringBuilder();
         dump.append("Hex Dump of: ").append(Paths.get(filePath).getFileName()).append("\n");
         dump.append("Size: ").append(fileBytes.length).append(" bytes");
@@ -201,14 +201,14 @@ public class FileConverter {
             dump.append(" (showing first ").append(maxBytes).append(" bytes)");
         }
         dump.append("\n\n");
-        
+
         dump.append("Offset    Hex                                              ASCII\n");
         dump.append("--------  -----------------------------------------------  ----------------\n");
-        
+
         for (int i = 0; i < bytesToShow; i += 16) {
             // Offset
             dump.append(String.format("%08X  ", i));
-            
+
             // Hex bytes
             for (int j = 0; j < 16; j++) {
                 if (i + j < bytesToShow) {
@@ -218,9 +218,9 @@ public class FileConverter {
                 }
                 if (j == 7) dump.append(" ");
             }
-            
+
             dump.append(" ");
-            
+
             // ASCII representation
             for (int j = 0; j < 16 && i + j < bytesToShow; j++) {
                 byte b = fileBytes[i + j];
@@ -230,38 +230,38 @@ public class FileConverter {
                     dump.append(".");
                 }
             }
-            
+
             dump.append("\n");
         }
-        
+
         if (maxBytes > 0 && fileBytes.length > maxBytes) {
             dump.append("\n... ").append(fileBytes.length - maxBytes).append(" more bytes ...\n");
         }
-        
+
         return dump.toString();
     }
-    
+
     /**
      * Analyze file and detect if it's text or binary
-     * 
+     *
      * @param filePath File path
      * @return Analysis result
      */
     public static String analyzeFile(String filePath) throws IOException {
         byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
-        
+
         StringBuilder analysis = new StringBuilder();
         analysis.append("File Analysis\n");
         analysis.append("=============\n\n");
-        
+
         File file = new File(filePath);
         analysis.append("Name: ").append(file.getName()).append("\n");
         analysis.append("Size: ").append(fileBytes.length).append(" bytes\n\n");
-        
+
         // Detect if likely text or binary
         int textChars = 0;
         int binaryChars = 0;
-        
+
         int sampleSize = Math.min(1024, fileBytes.length); // Sample first 1KB
         for (int i = 0; i < sampleSize; i++) {
             byte b = fileBytes[i];
@@ -273,21 +273,21 @@ public class FileConverter {
                 binaryChars++;
             }
         }
-        
+
         double textRatio = (double) textChars / sampleSize;
-        
+
         analysis.append("Type Detection (first 1KB):\n");
         analysis.append("  Text characters: ").append(textChars).append(" (").append(String.format("%.1f%%", textRatio * 100)).append(")\n");
         analysis.append("  Binary/Control: ").append(binaryChars).append("\n");
-        
+
         if (textRatio > 0.85) {
             analysis.append("  Verdict: LIKELY TEXT FILE\n\n");
-            
+
             // Try to detect encoding
             try {
                 String asUtf8 = new String(fileBytes, StandardCharsets.UTF_8);
                 String asAscii = new String(fileBytes, StandardCharsets.US_ASCII);
-                
+
                 if (asUtf8.equals(asAscii)) {
                     analysis.append("  Encoding: Likely ASCII\n");
                 } else {
@@ -299,10 +299,10 @@ public class FileConverter {
         } else {
             analysis.append("  Verdict: LIKELY BINARY FILE\n");
         }
-        
+
         return analysis.toString();
     }
-    
+
     /**
      * Get Charset from string name
      */
@@ -324,10 +324,10 @@ public class FileConverter {
                 return Charset.forName(encoding);
         }
     }
-    
+
     /**
      * Batch convert multiple files
-     * 
+     *
      * @param inputFiles Array of input file paths
      * @param outputDir Output directory
      * @param operation Operation: "TO_HEX", "TO_BASE64", "TO_BINARY_FROM_HEX", "TO_BINARY_FROM_BASE64"
@@ -340,16 +340,16 @@ public class FileConverter {
         summary.append("Operation: ").append(operation).append("\n");
         summary.append("Output Directory: ").append(outputDir).append("\n");
         summary.append("Files processed: ").append(inputFiles.length).append("\n\n");
-        
+
         int successful = 0;
         int failed = 0;
-        
+
         for (String inputFile : inputFiles) {
             try {
                 File file = new File(inputFile);
                 String fileName = file.getName();
                 String outputPath = outputDir + File.separator + fileName;
-                
+
                 switch (operation) {
                     case "TO_HEX":
                         String hex = binaryFileToHex(inputFile);
@@ -368,18 +368,18 @@ public class FileConverter {
                         base64ToBinaryFile(base64Input, outputPath + ".bin");
                         break;
                 }
-                
+
                 successful++;
                 summary.append("✓ ").append(fileName).append("\n");
-                
+
             } catch (Exception e) {
                 failed++;
                 summary.append("✗ ").append(inputFiles[successful + failed - 1]).append(" - ").append(e.getMessage()).append("\n");
             }
         }
-        
+
         summary.append("\nSummary: ").append(successful).append(" successful, ").append(failed).append(" failed\n");
-        
+
         return summary.toString();
     }
 }

@@ -50,18 +50,41 @@
                     <Button text="Verify Signature" onAction="#handlePQCVerify" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
                 </VBox>
             </TitledPane>
-            <TitledPane text="🔐 ML-KEM Encapsulate / Decapsulate">
+            <TitledPane text="🎓 KEM Educational Demo (Alice &amp; Bob)">
                 <VBox spacing="10" style="-fx-padding: 10;">
-                    <Label text="ML-KEM key pair generated above is used for this operation." style="-fx-font-size: 11px;"/>
+                    <Label text="This demo illustrates the Key Encapsulation Mechanism (KEM). It is not a full communication protocol." wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
+
+                    <Label text="1. Alice generates a key pair (uses the ML-KEM key generated above)." style="-fx-font-weight: bold;"/>
                     <Label text="KEM algorithm:"/>
                     <ComboBox fx:id="pqcKemAlgoCombo" prefWidth="300" style="-fx-font-size: 11px;"/>
-                    <Button text="Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button" maxWidth="220" style="-fx-font-size: 11px;"/>
-                    <Label text="Encapsulation (Hex):"/>
-                    <TextArea fx:id="pqcKemCiphertextArea" prefHeight="70" editable="false" wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
-                    <Label text="Shared secret (Hex):"/>
+
+                    <Label text="2. Bob uses Alice's public key to encapsulate a shared secret." style="-fx-font-weight: bold;"/>
+                    <Button text="Bob: Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button" maxWidth="240" style="-fx-font-size: 11px;"/>
+                    <Label text="Encapsulation Ciphertext sent to Alice (Hex):"/>
+                    <TextArea fx:id="pqcKemCiphertextArea" prefHeight="50" editable="false" wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                    <Label text="Bob's Shared Secret (Hex):"/>
                     <TextField fx:id="pqcKemSharedSecretField" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
-                    <Button text="Decapsulate Shared Secret" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="220" style="-fx-font-size: 11px;"/>
-                    <Label fx:id="pqcKemStatusLabel" text="Generate an ML-KEM key pair to begin." style="-fx-font-size: 10px;"/>
+
+                    <Separator/>
+
+                    <Label text="3. Alice decapsulates the ciphertext using her private key." style="-fx-font-weight: bold;"/>
+                    <Button text="Alice: Decapsulate Ciphertext" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="240" style="-fx-font-size: 11px;"/>
+                    <Label text="Alice's Shared Secret (Hex):"/>
+                    <TextField fx:id="pqcAliceSecretField" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+
+                    <Label fx:id="pqcKemStatusLabel" text="Generate an ML-KEM key pair to begin." style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="⏱️ Benchmark &amp; Performance">
+                <VBox spacing="10" style="-fx-padding: 10;">
+                    <Label text="Algorithm:"/>
+                    <ComboBox fx:id="pqcBenchmarkAlgoCombo" prefWidth="300" style="-fx-font-size: 11px;"/>
+                    <HBox spacing="10">
+                        <Button fx:id="pqcBenchmarkBtn" text="Run Benchmark" onAction="#handlePQCBenchmark" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                        <ProgressIndicator fx:id="pqcBenchmarkProgress" visible="false" prefWidth="20" prefHeight="20"/>
+                    </HBox>
+                    <TextArea fx:id="pqcBenchmarkArea" prefHeight="150" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
                 </VBox>
             </TitledPane>
         </panes>

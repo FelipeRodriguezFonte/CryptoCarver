@@ -42,9 +42,9 @@ public class Base58Codec implements Codec {
             result.append(ALPHABET.charAt(quotient[1].intValue()));
             number = quotient[0];
         }
-        for (byte value : bytes) { 
-            if (value == 0) result.append('1'); 
-            else break; 
+        for (byte value : bytes) {
+            if (value == 0) result.append('1');
+            else break;
         }
         return result.reverse().toString();
     }

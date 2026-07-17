@@ -12,12 +12,12 @@ import java.util.concurrent.CancellationException;
 /** Streaming file diagnostics suitable for files larger than available memory. */
 public final class StreamingFileTools {
     private static int bufferSize = 64 * 1024;
-    
+
     public static void setBufferSize(int size) {
         if (size <= 0) throw new IllegalArgumentException("Buffer size must be positive");
         bufferSize = size;
     }
-    
+
     public static int getBufferSize() {
         return bufferSize;
     }
@@ -57,23 +57,23 @@ public final class StreamingFileTools {
             long offset = 0;
             byte[] leftBuf = new byte[bufferSize];
             byte[] rightBuf = new byte[bufferSize];
-            
+
             while (true) {
                 if (monitor.isCancelled()) throw new CancellationException("File comparison cancelled");
                 monitor.updateProgress(offset, totalBytes);
-                
+
                 int readLeft = readFully(leftInput, leftBuf);
                 int readRight = readFully(rightInput, rightBuf);
-                
+
                 if (readLeft == 0 && readRight == 0) return -1;
-                
+
                 int compareLen = Math.min(readLeft, readRight);
                 for (int i = 0; i < compareLen; i++) {
                     if (leftBuf[i] != rightBuf[i]) return offset + i;
                 }
-                
+
                 if (readLeft != readRight) return offset + compareLen; // One file is shorter
-                
+
                 offset += compareLen;
             }
         }
@@ -127,49 +127,49 @@ public final class StreamingFileTools {
         if (monitor == null) monitor = ProgressMonitor.NO_OP;
         long totalBytes = Files.size(source);
         long bytesProcessed = 0;
-        
+
         java.nio.charset.CharsetDecoder decoder = from.newDecoder()
                 .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
                 .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT);
-        
+
         java.nio.charset.CharsetEncoder encoder = to.newEncoder()
                 .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
                 .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT);
-        
+
         java.nio.file.Path tempDest = temporarySibling(destination);
         try (var input = new java.io.BufferedInputStream(Files.newInputStream(source), bufferSize);
              var output = new java.io.BufferedOutputStream(Files.newOutputStream(tempDest), bufferSize)) {
-            
+
             byte[] inArray = new byte[bufferSize];
             java.nio.ByteBuffer inBuf = java.nio.ByteBuffer.allocate(bufferSize);
             java.nio.CharBuffer charBuf = java.nio.CharBuffer.allocate(bufferSize);
             java.nio.ByteBuffer outBuf = java.nio.ByteBuffer.allocate((int) (bufferSize * encoder.maxBytesPerChar()));
-            
+
             boolean endOfInput = false;
             while (!endOfInput) {
                 if (monitor.isCancelled()) throw new CancellationException("Conversion operation cancelled");
-                
+
                 int toRead = Math.min(inBuf.remaining(), inArray.length);
                 int read = input.read(inArray, 0, toRead);
-                
+
                 if (read == -1) {
                     endOfInput = true;
                 } else {
                     inBuf.put(inArray, 0, read);
                     bytesProcessed += read;
                 }
-                
+
                 inBuf.flip();
-                
+
                 while (true) {
                     java.nio.charset.CoderResult decodeResult = decoder.decode(inBuf, charBuf, endOfInput);
                     if (decodeResult.isError()) decodeResult.throwException();
-                    
+
                     charBuf.flip();
                     while (true) {
                         java.nio.charset.CoderResult encodeResult = encoder.encode(charBuf, outBuf, endOfInput);
                         if (encodeResult.isError()) encodeResult.throwException();
-                        
+
                         outBuf.flip();
                         if (outBuf.hasRemaining()) {
                             byte[] outArray = new byte[outBuf.remaining()];
@@ -177,7 +177,7 @@ public final class StreamingFileTools {
                             output.write(outArray);
                         }
                         outBuf.clear();
-                        
+
                         if (encodeResult.isOverflow()) {
                             continue;
                         } else {
@@ -185,7 +185,7 @@ public final class StreamingFileTools {
                         }
                     }
                     charBuf.compact();
-                    
+
                     if (decodeResult.isOverflow()) {
                         continue;
                     } else {
@@ -195,17 +195,17 @@ public final class StreamingFileTools {
                 inBuf.compact();
                 monitor.updateProgress(bytesProcessed, totalBytes);
             }
-            
+
             // Flush decoder
             while (true) {
                 java.nio.charset.CoderResult decodeFlush = decoder.flush(charBuf);
                 if (decodeFlush.isError()) decodeFlush.throwException();
-                
+
                 charBuf.flip();
                 while (true) {
                     java.nio.charset.CoderResult encodeResult = encoder.encode(charBuf, outBuf, true);
                     if (encodeResult.isError()) encodeResult.throwException();
-                    
+
                     outBuf.flip();
                     if (outBuf.hasRemaining()) {
                         byte[] outArray = new byte[outBuf.remaining()];
@@ -213,7 +213,7 @@ public final class StreamingFileTools {
                         output.write(outArray);
                     }
                     outBuf.clear();
-                    
+
                     if (encodeResult.isOverflow()) {
                         continue;
                     } else {
@@ -221,19 +221,19 @@ public final class StreamingFileTools {
                     }
                 }
                 charBuf.compact();
-                
+
                 if (decodeFlush.isOverflow()) {
                     continue;
                 } else {
                     break;
                 }
             }
-            
+
             // Flush encoder
             while (true) {
                 java.nio.charset.CoderResult encodeFlush = encoder.flush(outBuf);
                 if (encodeFlush.isError()) encodeFlush.throwException();
-                
+
                 outBuf.flip();
                 if (outBuf.hasRemaining()) {
                     byte[] outArray = new byte[outBuf.remaining()];
@@ -241,19 +241,19 @@ public final class StreamingFileTools {
                     output.write(outArray);
                 }
                 outBuf.clear();
-                
+
                 if (encodeFlush.isOverflow()) {
                     continue;
                 } else {
                     break;
                 }
             }
-            
+
         } catch (Exception e) {
             Files.deleteIfExists(tempDest);
             throw e;
         }
-        
+
         moveAtomically(tempDest, destination);
     }
 

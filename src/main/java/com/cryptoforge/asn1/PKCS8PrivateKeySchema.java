@@ -10,7 +10,7 @@ package com.cryptoforge.asn1;
  * }
  */
 public class PKCS8PrivateKeySchema {
-    
+
     /**
      * Apply contextual labels to PKCS#8 Private Key Info
      */
@@ -18,16 +18,16 @@ public class PKCS8PrivateKeySchema {
         if (root == null || root.getChildren().isEmpty()) {
             return;
         }
-        
+
         // PrivateKeyInfo is a SEQUENCE with 3 or 4 elements
         if (root.getChildren().size() < 3) {
             return;
         }
-        
+
         addContextLabel(root, "PrivateKeyInfo");
-        
+
         int idx = 0;
-        
+
         // version (should be 0)
         if (idx < root.getChildren().size()) {
             ASN1TreeNode version = root.getChildren().get(idx);
@@ -36,7 +36,7 @@ public class PKCS8PrivateKeySchema {
                 idx++;
             }
         }
-        
+
         // privateKeyAlgorithm
         if (idx < root.getChildren().size()) {
             ASN1TreeNode algorithm = root.getChildren().get(idx);
@@ -46,17 +46,17 @@ public class PKCS8PrivateKeySchema {
                 idx++;
             }
         }
-        
+
         // privateKey (OCTET STRING containing DER-encoded key)
         if (idx < root.getChildren().size()) {
             ASN1TreeNode privateKey = root.getChildren().get(idx);
             if (privateKey.getLabel().contains("OCTET")) {
                 addContextLabel(privateKey, "privateKey");
-                
+
                 // If OCTET STRING contains nested ASN.1 (e.g., PKCS#1 RSA key)
                 if (!privateKey.getChildren().isEmpty()) {
                     ASN1TreeNode nestedKey = privateKey.getChildren().get(0);
-                    
+
                     // Try to identify and label nested key structure
                     if (nestedKey.getChildren().size() >= 9) {
                         // Looks like PKCS#1 RSA Private Key
@@ -69,7 +69,7 @@ public class PKCS8PrivateKeySchema {
                 idx++;
             }
         }
-        
+
         // attributes [0] IMPLICIT (optional)
         if (idx < root.getChildren().size()) {
             ASN1TreeNode attributes = root.getChildren().get(idx);
@@ -78,7 +78,7 @@ public class PKCS8PrivateKeySchema {
             }
         }
     }
-    
+
     /**
      * Apply contextual labels to Encrypted Private Key Info
      * EncryptedPrivateKeyInfo ::= SEQUENCE {
@@ -90,18 +90,18 @@ public class PKCS8PrivateKeySchema {
         if (root == null || root.getChildren().size() != 2) {
             return;
         }
-        
+
         addContextLabel(root, "EncryptedPrivateKeyInfo");
-        
+
         ASN1TreeNode encAlg = root.getChildren().get(0);
         ASN1TreeNode encData = root.getChildren().get(1);
-        
+
         addContextLabel(encAlg, "encryptionAlgorithm AlgorithmIdentifier");
         labelAlgorithmIdentifier(encAlg);
-        
+
         addContextLabel(encData, "encryptedData");
     }
-    
+
     /**
      * Label AlgorithmIdentifier structure
      */
@@ -113,22 +113,22 @@ public class PKCS8PrivateKeySchema {
             }
         }
     }
-    
+
     /**
      * Add contextual label to node
      */
     private static void addContextLabel(ASN1TreeNode node, String contextLabel) {
         if (node == null) return;
-        
+
         String currentLabel = node.getLabel();
         String[] parts = currentLabel.split(" ", 2);
         if (parts.length > 1 && !isASN1Type(parts[0])) {
             return;
         }
-        
+
         node.setLabel(contextLabel + " " + currentLabel);
     }
-    
+
     private static boolean isASN1Type(String word) {
         return word.matches("INTEGER|SEQUENCE|SET|OCTET|BIT|OID|UTF8String|UTCTime|GeneralizedTime|BOOLEAN|NULL|\\[\\d+\\]");
     }

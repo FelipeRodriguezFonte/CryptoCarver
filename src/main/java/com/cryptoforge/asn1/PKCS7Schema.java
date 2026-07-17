@@ -5,7 +5,7 @@ package com.cryptoforge.asn1;
  * Maps ASN.1 structure positions to contextual field names
  */
 public class PKCS7Schema {
-    
+
     /**
      * Apply contextual labels to PKCS#7 SignedData structure
      */
@@ -13,32 +13,32 @@ public class PKCS7Schema {
         if (root == null || root.getChildren().isEmpty()) {
             return;
         }
-        
+
         // Root SEQUENCE should have 2 children: contentType OID and [0] EXPLICIT content
         if (root.getChildren().size() < 2) {
             return;
         }
-        
+
         ASN1TreeNode contentType = root.getChildren().get(0);
         ASN1TreeNode content = root.getChildren().get(1);
-        
+
         addContextLabel(contentType, "contentType ContentType");
-        
+
         // Check if it's signedData (1.2.840.113549.1.7.2)
         String oidValue = contentType.getDecodedValue();
         if (oidValue != null && oidValue.contains("1.2.840.113549.1.7.2")) {
             addContextLabel(content, "content");
-            
+
             // Process SignedData inside [0] EXPLICIT
             if (!content.getChildren().isEmpty()) {
                 ASN1TreeNode signedData = content.getChildren().get(0);
                 addContextLabel(signedData, "SignedData");
-                
+
                 labelSignedData(signedData);
             }
         }
     }
-    
+
     /**
      * Label SignedData structure
      * SignedData ::= SEQUENCE {
@@ -54,9 +54,9 @@ public class PKCS7Schema {
         if (signedData.getChildren().size() < 3) {
             return;
         }
-        
+
         int idx = 0;
-        
+
         // version
         if (idx < signedData.getChildren().size()) {
             ASN1TreeNode version = signedData.getChildren().get(idx);
@@ -65,7 +65,7 @@ public class PKCS7Schema {
                 idx++;
             }
         }
-        
+
         // digestAlgorithms
         if (idx < signedData.getChildren().size()) {
             ASN1TreeNode digestAlgs = signedData.getChildren().get(idx);
@@ -78,7 +78,7 @@ public class PKCS7Schema {
                 idx++;
             }
         }
-        
+
         // encapContentInfo
         if (idx < signedData.getChildren().size()) {
             ASN1TreeNode encapContent = signedData.getChildren().get(idx);
@@ -97,7 +97,7 @@ public class PKCS7Schema {
                 idx++;
             }
         }
-        
+
         // certificates [0] IMPLICIT (optional)
         if (idx < signedData.getChildren().size()) {
             ASN1TreeNode certs = signedData.getChildren().get(idx);
@@ -115,7 +115,7 @@ public class PKCS7Schema {
                 idx++;
             }
         }
-        
+
         // signerInfos
         if (idx < signedData.getChildren().size()) {
             ASN1TreeNode signerInfos = signedData.getChildren().get(idx);
@@ -128,7 +128,7 @@ public class PKCS7Schema {
             }
         }
     }
-    
+
     /**
      * Label SignerInfo structure
      * SignerInfo ::= SEQUENCE {
@@ -145,9 +145,9 @@ public class PKCS7Schema {
         if (signerInfo.getChildren().size() < 5) {
             return;
         }
-        
+
         int idx = 0;
-        
+
         // version
         if (idx < signerInfo.getChildren().size()) {
             ASN1TreeNode version = signerInfo.getChildren().get(idx);
@@ -156,7 +156,7 @@ public class PKCS7Schema {
                 idx++;
             }
         }
-        
+
         // sid (SignerIdentifier)
         if (idx < signerInfo.getChildren().size()) {
             ASN1TreeNode sid = signerInfo.getChildren().get(idx);
@@ -167,7 +167,7 @@ public class PKCS7Schema {
             }
             idx++;
         }
-        
+
         // digestAlgorithm
         if (idx < signerInfo.getChildren().size()) {
             ASN1TreeNode digestAlg = signerInfo.getChildren().get(idx);
@@ -175,7 +175,7 @@ public class PKCS7Schema {
             labelAlgorithmIdentifier(digestAlg);
             idx++;
         }
-        
+
         // signedAttrs [0] IMPLICIT (optional)
         if (idx < signerInfo.getChildren().size()) {
             ASN1TreeNode attrs = signerInfo.getChildren().get(idx);
@@ -185,7 +185,7 @@ public class PKCS7Schema {
                 idx++;
             }
         }
-        
+
         // signatureAlgorithm
         if (idx < signerInfo.getChildren().size()) {
             ASN1TreeNode sigAlg = signerInfo.getChildren().get(idx);
@@ -193,12 +193,12 @@ public class PKCS7Schema {
             labelAlgorithmIdentifier(sigAlg);
             idx++;
         }
-        
+
         // signature SignatureValue
         if (idx < signerInfo.getChildren().size()) {
             ASN1TreeNode signature = signerInfo.getChildren().get(idx);
             addContextLabel(signature, "signature SignatureValue");
-            
+
             // If signature contains nested ASN.1 (ECDSA signature is SEQUENCE of 2 INTEGERs)
             if (!signature.getChildren().isEmpty()) {
                 ASN1TreeNode sigSeq = signature.getChildren().get(0);
@@ -211,7 +211,7 @@ public class PKCS7Schema {
             idx++;
         }
     }
-    
+
     /**
      * Label AlgorithmIdentifier structure
      */
@@ -223,7 +223,7 @@ public class PKCS7Schema {
             }
         }
     }
-    
+
     /**
      * Label Attributes (signed or unsigned)
      */
@@ -231,7 +231,7 @@ public class PKCS7Schema {
         if (attrs.getChildren().isEmpty()) {
             return;
         }
-        
+
         // Attributes is a SEQUENCE of Attribute
         ASN1TreeNode attrsSeq = attrs.getChildren().get(0);
         if (attrsSeq.getLabel().contains("SEQUENCE")) {
@@ -244,21 +244,21 @@ public class PKCS7Schema {
             }
         }
     }
-    
+
     /**
      * Add contextual label to node
      */
     private static void addContextLabel(ASN1TreeNode node, String contextLabel) {
         if (node == null) return;
-        
+
         String currentLabel = node.getLabel();
-        
+
         // If label already has multiple words, might already be contextualized
         String[] parts = currentLabel.split(" ", 2);
         if (parts.length > 1 && !parts[0].matches("INTEGER|SEQUENCE|SET|OCTET|BIT|OID|UTF8String|UTCTime|GeneralizedTime|BOOLEAN|NULL|\\[\\d+\\]")) {
             return; // Already contextualized
         }
-        
+
         // Prepend context label
         node.setLabel(contextLabel + " " + currentLabel);
     }

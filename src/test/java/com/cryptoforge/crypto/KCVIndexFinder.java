@@ -57,9 +57,9 @@ public class KCVIndexFinder {
             for (int i = 0; i < encrypted.length; i++) {
                 for (int j = 0; j < encrypted.length; j++) {
                     if (i != j) {
-                        if ((encrypted[i] & 0xFF) == (target[0] & 0xFF) && 
+                        if ((encrypted[i] & 0xFF) == (target[0] & 0xFF) &&
                             (encrypted[j] & 0xFF) == (target[1] & 0xFF)) {
-                            System.out.printf("  ✓ FOUND: bytes[%d,%d] = %02X %02X%n", 
+                            System.out.printf("  ✓ FOUND: bytes[%d,%d] = %02X %02X%n",
                                 i, j, encrypted[i] & 0xFF, encrypted[j] & 0xFF);
                             found = true;
                         }

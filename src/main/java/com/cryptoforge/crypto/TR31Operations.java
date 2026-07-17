@@ -5,7 +5,7 @@ package com.cryptoforge.crypto;
  * Adapts TR31.java interface to KeysController expectations
  */
 public class TR31Operations {
-    
+
     /**
      * Wrap a key into TR-31 format
      */
@@ -16,6 +16,8 @@ public class TR31Operations {
     /** Wraps a key with an optional compact TR-31 optional-block section (NNRR...). */
     public static String wrapKey(String kbpk, String key, String usage, char version, char algorithm, char mode,
             char exportability, String optionalBlocks) throws Exception {
+        TR31.validateMatrix(version, algorithm, usage, mode, exportability);
+
         // Build header with specified version
         HeaderBuilder builder = new HeaderBuilder()
             .version(version)
@@ -25,9 +27,9 @@ public class TR31Operations {
             .exportability(exportability);
         String normalizedOptionalBlocks = normalizeOptionalBlocks(optionalBlocks);
         if (!normalizedOptionalBlocks.isEmpty()) builder.optionalBlocks(normalizedOptionalBlocks);
-        
+
         String header = builder.build();
-        
+
         // Generate key block
         TR31 tr31 = new TR31(kbpk);
         return tr31.wrap(header, key);
@@ -56,7 +58,7 @@ public class TR31Operations {
         if (position != compact.length()) throw new IllegalArgumentException("Optional-block section contains trailing characters after " + count + " declared block(s)");
         return compact;
     }
-    
+
     /**
      * Unwrap a TR-31 key block
      */
@@ -65,7 +67,7 @@ public class TR31Operations {
         TR31.UnwrapResult result = tr31.unwrap(keyBlock);
         return bytesToHex(result.key);
     }
-    
+
     /**
      * Parse TR-31 header from key block
      */
@@ -97,7 +99,7 @@ public class TR31Operations {
             return "Invalid TR-31 key block: " + e.getMessage();
         }
     }
-    
+
     /**
      * Get description for key usage code
      */
@@ -126,7 +128,7 @@ public class TR31Operations {
             default: return usage;
         }
     }
-    
+
     /**
      * Get description for algorithm code
      */
@@ -142,7 +144,7 @@ public class TR31Operations {
             default: return String.valueOf(algorithm);
         }
     }
-    
+
     /**
      * Get description for mode of use code
      */
@@ -162,7 +164,7 @@ public class TR31Operations {
             default: return String.valueOf(mode);
         }
     }
-    
+
     /**
      * Get description for exportability code
      */
@@ -174,7 +176,7 @@ public class TR31Operations {
             default: return String.valueOf(exportability);
         }
     }
-    
+
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
@@ -182,7 +184,7 @@ public class TR31Operations {
         }
         return sb.toString();
     }
-    
+
     /**
      * TR31Header class for compatibility with KeysController
      */
@@ -200,12 +202,12 @@ public class TR31Operations {
         public java.util.List<OptionalBlock> optionalBlockDetails = new java.util.ArrayList<>();
         /** Non-fatal findings. Parsing remains permissive enough to inspect peer key blocks. */
         public java.util.List<String> diagnostics = new java.util.ArrayList<>();
-        
+
         public static TR31Header parse(String keyBlock) throws Exception {
             if (keyBlock.length() < 16) {
                 throw new IllegalArgumentException("TR-31 key block too short");
             }
-            
+
             TR31Header header = new TR31Header();
             header.versionId = String.valueOf(keyBlock.charAt(0));
             if (!"ABCD".contains(header.versionId)) {
@@ -250,7 +252,13 @@ public class TR31Operations {
             if (("A".equals(header.versionId) || "B".equals(header.versionId) || "C".equals(header.versionId)) && "A".equals(header.algorithm)) {
                 header.diagnostics.add("WARNING: AES key material with version " + header.versionId + " needs confirmation against the key-block profile");
             }
-            
+
+            try {
+                TR31.validateMatrix(header.versionId.charAt(0), header.algorithm.charAt(0), header.keyUsage, header.modeOfUse.charAt(0), header.exportability.charAt(0));
+            } catch (IllegalArgumentException e) {
+                header.diagnostics.add("ERROR: " + e.getMessage());
+            }
+
             // Extract optional blocks if present
             int position = 16;
             int limit = Math.min(header.keyBlockLength, keyBlock.length());
@@ -270,14 +278,14 @@ public class TR31Operations {
             }
             header.optionalBlocks = keyBlock.substring(16, position);
             if (position > header.keyBlockLength) throw new IllegalArgumentException("Optional blocks exceed declared key-block length");
-            
+
             return header;
         }
 
         public java.util.List<String> getDiagnostics() {
             return java.util.List.copyOf(diagnostics);
         }
-        
+
         /**
          * Build header string (for compatibility)
          */

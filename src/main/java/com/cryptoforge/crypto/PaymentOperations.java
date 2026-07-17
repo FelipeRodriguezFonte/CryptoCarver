@@ -486,14 +486,14 @@ public class PaymentOperations {
     /**
      * Generate CVV (Card Verification Value)
      * Algorithm: Visa/MasterCard CVV generation as per industry standard
-     * 
+     *
      * @param cvkA        CVK Part A (8 bytes / 16 hex characters)
      * @param cvkB        CVK Part B (8 bytes / 16 hex characters)
      * @param pan         Primary Account Number
      * @param expiry      Expiry date in YYMM format
      * @param serviceCode Service code (3 digits)
      * @return CVV value (3 digits)
-     * 
+     *
      *         Notes:
      *         - CVV1: Magnetic stripe (service code from track data)
      *         - CVV2: Card printed (service code 000)
@@ -804,7 +804,7 @@ public class PaymentOperations {
 
     /**
      * Translate PIN block from one format to another
-     * 
+     *
      * @param pinBlock     Source PIN block (hex)
      * @param pan          Primary Account Number
      * @param sourceFormat Source format name
@@ -855,7 +855,7 @@ public class PaymentOperations {
 
     /**
      * Generate PVV (PIN Verification Value) using IBM algorithm
-     * 
+     *
      * PVV Algorithm:
      * 1. Take rightmost 11 digits of PAN (excluding check digit)
      * 2. Pad with 0 on left to make 16 digits
@@ -863,7 +863,7 @@ public class PaymentOperations {
      * 4. Append PIN to encrypted result
      * 5. Encrypt again with PVK
      * 6. Extract chosen digits from result
-     * 
+     *
      * @param pin       PIN (4-12 digits)
      * @param pan       Primary Account Number
      * @param pvk       PIN Verification Key (hex, 16 or 32 bytes for 3DES)
@@ -1018,7 +1018,7 @@ public class PaymentOperations {
     /**
      * Encode Track 1 data
      * Track 1 format: %B{PAN}^{NAME}^{EXPIRY}{SERVICE_CODE}{DISCRETIONARY}?
-     * 
+     *
      * @param pan         Primary Account Number (13-19 digits)
      * @param name        Cardholder name (2-26 characters)
      * @param expiry      Expiry date YYMM
@@ -1062,7 +1062,7 @@ public class PaymentOperations {
     /**
      * Encode Track 2 data
      * Track 2 format: ;{PAN}={EXPIRY}{SERVICE_CODE}{DISCRETIONARY}?
-     * 
+     *
      * @param pan         Primary Account Number
      * @param expiry      Expiry date YYMM
      * @param serviceCode Service code (3 digits)
@@ -1344,7 +1344,7 @@ public class PaymentOperations {
     /**
      * Generate IBM 3624 Offset
      * Offset = (User PIN - Natural PIN) mod 10
-     * 
+     *
      * @param pin      Desired User PIN (4-16 digits)
      * @param pan      Primary Account Number
      * @param pvk      PIN Verification Key (hex)

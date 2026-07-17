@@ -8,7 +8,7 @@ import java.util.Map;
  * Maps ASN.1 structure positions to contextual field names
  */
 public class X509CertificateSchema {
-    
+
     /**
      * Apply contextual labels to X.509 certificate structure
      * This modifies the tree in-place, adding descriptive labels
@@ -17,25 +17,25 @@ public class X509CertificateSchema {
         if (root == null || root.getChildren().isEmpty()) {
             return;
         }
-        
+
         // Root should be SEQUENCE with 3 children (tbsCertificate, signatureAlgorithm, signature)
         if (root.getChildren().size() < 3) {
             return;
         }
-        
+
         ASN1TreeNode tbsCert = root.getChildren().get(0);
         ASN1TreeNode signatureAlgorithm = root.getChildren().get(1);
         ASN1TreeNode signatureValue = root.getChildren().get(2);
-        
+
         // Label main components
         addContextLabel(tbsCert, "tbsCertificate");
         addContextLabel(signatureAlgorithm, "signatureAlgorithm");
         addContextLabel(signatureValue, "signature");
-        
+
         // Process tbsCertificate fields
         if (tbsCert.getChildren().size() >= 6) {
             int idx = 0;
-            
+
             // Version (optional, TAGGED [0])
             ASN1TreeNode firstChild = tbsCert.getChildren().get(idx);
             if (firstChild.getTag().startsWith("[0]")) {
@@ -45,14 +45,14 @@ public class X509CertificateSchema {
                 }
                 idx++;
             }
-            
+
             // Serial Number (INTEGER)
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode serialNumber = tbsCert.getChildren().get(idx);
                 addContextLabel(serialNumber, "serialNumber CertificateSerialNumber");
                 idx++;
             }
-            
+
             // Signature algorithm (SEQUENCE)
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode signature = tbsCert.getChildren().get(idx);
@@ -65,7 +65,7 @@ public class X509CertificateSchema {
                 }
                 idx++;
             }
-            
+
             // Issuer (SEQUENCE)
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode issuer = tbsCert.getChildren().get(idx);
@@ -73,7 +73,7 @@ public class X509CertificateSchema {
                 labelDistinguishedName(issuer);
                 idx++;
             }
-            
+
             // Validity (SEQUENCE)
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode validity = tbsCert.getChildren().get(idx);
@@ -84,7 +84,7 @@ public class X509CertificateSchema {
                 }
                 idx++;
             }
-            
+
             // Subject (SEQUENCE)
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode subject = tbsCert.getChildren().get(idx);
@@ -92,7 +92,7 @@ public class X509CertificateSchema {
                 labelDistinguishedName(subject);
                 idx++;
             }
-            
+
             // SubjectPublicKeyInfo (SEQUENCE)
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode publicKeyInfo = tbsCert.getChildren().get(idx);
@@ -100,7 +100,7 @@ public class X509CertificateSchema {
                 if (publicKeyInfo.getChildren().size() >= 2) {
                     ASN1TreeNode algorithm = publicKeyInfo.getChildren().get(0);
                     ASN1TreeNode publicKey = publicKeyInfo.getChildren().get(1);
-                    
+
                     addContextLabel(algorithm, "algorithm AlgorithmIdentifier");
                     if (algorithm.getChildren().size() >= 1) {
                         addContextLabel(algorithm.getChildren().get(0), "algorithm");
@@ -108,21 +108,21 @@ public class X509CertificateSchema {
                             addContextLabel(algorithm.getChildren().get(1), "parameters");
                         }
                     }
-                    
+
                     addContextLabel(publicKey, "subjectPublicKey");
-                    
+
                     // If BIT STRING contains nested ASN.1 (RSA public key)
                     if (!publicKey.getChildren().isEmpty()) {
                         ASN1TreeNode nestedKey = publicKey.getChildren().get(0);
-                        
+
                         // Check if it's RSA public key (SEQUENCE with 2 INTEGERs)
-                        if (nestedKey.getLabel().contains("SEQUENCE") && 
+                        if (nestedKey.getLabel().contains("SEQUENCE") &&
                             nestedKey.getChildren().size() == 2) {
-                            
+
                             ASN1TreeNode first = nestedKey.getChildren().get(0);
                             ASN1TreeNode second = nestedKey.getChildren().get(1);
-                            
-                            if (first.getLabel().contains("INTEGER") && 
+
+                            if (first.getLabel().contains("INTEGER") &&
                                 second.getLabel().contains("INTEGER")) {
                                 // This is RSA public key
                                 addContextLabel(nestedKey, "RSAPublicKey");
@@ -134,7 +134,7 @@ public class X509CertificateSchema {
                 }
                 idx++;
             }
-            
+
             // Extensions (optional, TAGGED [3])
             if (idx < tbsCert.getChildren().size()) {
                 ASN1TreeNode extensions = tbsCert.getChildren().get(idx);
@@ -143,14 +143,14 @@ public class X509CertificateSchema {
                     if (!extensions.getChildren().isEmpty()) {
                         ASN1TreeNode extensionsSeq = extensions.getChildren().get(0);
                         addContextLabel(extensionsSeq, "Extensions");
-                        
+
                         // Label each extension
                         for (ASN1TreeNode extension : extensionsSeq.getChildren()) {
                             addContextLabel(extension, "Extension");
                             if (extension.getChildren().size() >= 1) {
                                 addContextLabel(extension.getChildren().get(0), "extnID");
                                 int extIdx = 1;
-                                if (extIdx < extension.getChildren().size() && 
+                                if (extIdx < extension.getChildren().size() &&
                                     extension.getChildren().get(extIdx).getTag().contains("BOOLEAN")) {
                                     addContextLabel(extension.getChildren().get(extIdx), "critical");
                                     extIdx++;
@@ -164,7 +164,7 @@ public class X509CertificateSchema {
                 }
             }
         }
-        
+
         // Label signatureAlgorithm components
         if (signatureAlgorithm.getChildren().size() >= 1) {
             addContextLabel(signatureAlgorithm.getChildren().get(0), "algorithm");
@@ -172,11 +172,11 @@ public class X509CertificateSchema {
                 addContextLabel(signatureAlgorithm.getChildren().get(1), "parameters");
             }
         }
-        
+
         // Label signature value
         addContextLabel(signatureValue, "SignatureValue");
     }
-    
+
     /**
      * Label Distinguished Name components
      */
@@ -184,7 +184,7 @@ public class X509CertificateSchema {
         if (nameNode == null || nameNode.getChildren().isEmpty()) {
             return;
         }
-        
+
         // DN is a SEQUENCE of SETs of SEQUENCES
         for (ASN1TreeNode rdnSet : nameNode.getChildren()) {
             addContextLabel(rdnSet, "RelativeDistinguishedName");
@@ -197,15 +197,15 @@ public class X509CertificateSchema {
             }
         }
     }
-    
+
     /**
      * Add contextual label to node (prepend to existing label)
      */
     private static void addContextLabel(ASN1TreeNode node, String contextLabel) {
         if (node == null) return;
-        
+
         String currentLabel = node.getLabel();
-        
+
         // Don't add if already has context
         if (currentLabel.contains(" ")) {
             String[] parts = currentLabel.split(" ", 2);
@@ -213,10 +213,10 @@ public class X509CertificateSchema {
                 return; // Already has context
             }
         }
-        
+
         // Prepend context label
         String newLabel = contextLabel + " " + currentLabel;
-        
+
         // Update label through reflection or create new node
         // For simplicity, we'll create a wrapper method
         node.setLabel(newLabel);

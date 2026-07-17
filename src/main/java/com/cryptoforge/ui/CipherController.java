@@ -265,7 +265,7 @@ public class CipherController {
             if (!encrypt && parameters.aead && !java.nio.file.Files.isRegularFile(tag)) {
                 throw new IllegalArgumentException("Detached tag file does not exist");
             }
-            if (encrypt && parameters.aead) warnIfNonceReused(parameters.algorithm, parameters.mode, parameters.key, parameters.nonce);
+            if (encrypt && parameters.aead) warnIfNonceReused(parameters.algorithm, parameters.mode, null, parameters.key, parameters.nonce);
             StreamingCipher.Result result = encrypt
                     ? StreamingCipher.encrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
                             parameters.nonce, parameters.aad, tag, com.cryptoforge.util.ProgressMonitor.NO_OP)
@@ -395,7 +395,8 @@ public class CipherController {
         if (symHsmKeyCombo != null) {
             String current = symHsmKeyCombo.getValue();
             symHsmKeyCombo.getItems().clear();
-            symHsmKeyCombo.getItems().addAll(com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds());
+            symHsmKeyCombo.getItems().addAll(com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds(
+                    com.cryptoforge.crypto.hsm.KeyUsage.ENCRYPT, com.cryptoforge.crypto.hsm.KeyUsage.DECRYPT));
             if (current != null && symHsmKeyCombo.getItems().contains(current)) {
                 symHsmKeyCombo.setValue(current);
             } else if (!symHsmKeyCombo.getItems().isEmpty()) {
@@ -415,8 +416,8 @@ public class CipherController {
             if (algo == null) algo = "AES";
             javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, algo);
             com.cryptoforge.crypto.hsm.KeyMaterial km = com.cryptoforge.crypto.hsm.KeyMaterialFactory.fromSecretKey(
-                null, secretKey, 
-                com.cryptoforge.crypto.hsm.KeyExportability.NON_EXPORTABLE, 
+                null, secretKey,
+                com.cryptoforge.crypto.hsm.KeyExportability.NON_EXPORTABLE,
                 java.util.Set.of(com.cryptoforge.crypto.hsm.KeyUsage.ENCRYPT, com.cryptoforge.crypto.hsm.KeyUsage.DECRYPT)
             );
             com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
@@ -494,21 +495,23 @@ public class CipherController {
         rsaPaddingCombo.setValue("RSA/ECB/PKCS1Padding");
     }
 
-    private byte[] getSymmetricKey(com.cryptoforge.crypto.hsm.KeyUsage usage) {
+    private String getHsmKeyId() {
         if (symKeySourceCombo != null && "Simulated HSM".equals(symKeySourceCombo.getValue())) {
             String keyId = symHsmKeyCombo.getValue();
             if (keyId == null || keyId.isEmpty()) {
                 throw new IllegalArgumentException("Please select a key from the Lab Cache");
             }
-            java.security.Key k = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().getRawKeyForInternalUse(keyId, usage);
-            return k.getEncoded();
-        } else {
-            String keyHex = symmetricKeyField.getText().trim();
-            if (keyHex.isEmpty()) {
-                throw new IllegalArgumentException("Please enter symmetric key in hexadecimal");
-            }
-            return DataConverter.hexToBytes(keyHex);
+            return keyId;
         }
+        return null;
+    }
+
+    private byte[] getManualSymmetricKey() {
+        String keyHex = symmetricKeyField.getText().trim();
+        if (keyHex.isEmpty()) {
+            throw new IllegalArgumentException("Please enter symmetric key in hexadecimal");
+        }
+        return DataConverter.hexToBytes(keyHex);
     }
 
     /**
@@ -528,20 +531,21 @@ public class CipherController {
             String padding = paddingCombo.getValue();
 
             // Get key
-            byte[] key = getSymmetricKey(com.cryptoforge.crypto.hsm.KeyUsage.ENCRYPT);
+            String hsmKeyId = getHsmKeyId();
+            byte[] manualKey = hsmKeyId == null ? getManualSymmetricKey() : null;
 
             // Handle stream ciphers separately
             if (algorithm.equals("Salsa20")) {
-                handleSalsa20Encrypt(plaintext, key);
+                handleSalsa20Encrypt(plaintext, hsmKeyId, manualKey);
                 return;
             } else if (algorithm.equals("ChaCha20")) {
-                handleChaCha20Encrypt(plaintext, key);
+                handleChaCha20Encrypt(plaintext, hsmKeyId, manualKey);
                 return;
             } else if (algorithm.equals("ChaCha20-Poly1305")) {
-                handleChaCha20Poly1305Encrypt(plaintext, key);
+                handleChaCha20Poly1305Encrypt(plaintext, hsmKeyId, manualKey);
                 return;
             } else if (algorithm.equals("XChaCha20-Poly1305")) {
-                handleXChaCha20Poly1305Encrypt(plaintext, key);
+                handleXChaCha20Poly1305Encrypt(plaintext, hsmKeyId, manualKey);
                 return;
             }
 
@@ -570,10 +574,15 @@ public class CipherController {
                 }
             }
 
-            warnIfNonceReused(algorithm, mode, key, iv);
+            warnIfNonceReused(algorithm, mode, hsmKeyId, manualKey, iv);
 
             // Encrypt with block cipher
-            byte[] ciphertext = SymmetricCipher.encrypt(plaintext, key, algorithm, mode, padding, iv, aadBytes);
+            byte[] ciphertext;
+            if (hsmKeyId != null) {
+                ciphertext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().encryptSymmetric(hsmKeyId, plaintext, algorithm, mode, padding, iv, aadBytes);
+            } else {
+                ciphertext = SymmetricCipher.encrypt(plaintext, manualKey, algorithm, mode, padding, iv, aadBytes);
+            }
 
             // Special handling for GCM - extract and show TAG separately
             if (mode.equalsIgnoreCase("GCM")) {
@@ -602,14 +611,15 @@ public class CipherController {
         }
     }
 
-    private void warnIfNonceReused(String algorithm, String mode, byte[] key, byte[] iv) {
+    private void warnIfNonceReused(String algorithm, String mode, String hsmKeyId, byte[] manualKey, byte[] iv) {
         boolean aead = "GCM".equalsIgnoreCase(mode)
                 || "ChaCha20-Poly1305".equals(algorithm)
                 || "XChaCha20-Poly1305".equals(algorithm);
         if (!aead || iv == null) return;
         try {
+            byte[] keyToHash = hsmKeyId != null ? hsmKeyId.getBytes(java.nio.charset.StandardCharsets.UTF_8) : manualKey;
             byte[] fingerprint = java.security.MessageDigest.getInstance("SHA-256").digest(
-                    java.nio.ByteBuffer.allocate(key.length + iv.length).put(key).put(iv).array());
+                    java.nio.ByteBuffer.allocate(keyToHash.length + iv.length).put(keyToHash).put(iv).array());
             String id = DataConverter.bytesToHex(fingerprint);
             if (!usedAeadNonces.add(id)) {
                 statusReporter.showInfo("Nonce reuse warning",
@@ -637,20 +647,21 @@ public class CipherController {
             String padding = paddingCombo.getValue();
 
             // Get key
-            byte[] key = getSymmetricKey(com.cryptoforge.crypto.hsm.KeyUsage.DECRYPT);
+            String hsmKeyId = getHsmKeyId();
+            byte[] manualKey = hsmKeyId == null ? getManualSymmetricKey() : null;
 
             // Handle stream ciphers separately
             if (algorithm.equals("Salsa20")) {
-                handleSalsa20Decrypt(ciphertext, key);
+                handleSalsa20Decrypt(ciphertext, hsmKeyId, manualKey);
                 return;
             } else if (algorithm.equals("ChaCha20")) {
-                handleChaCha20Decrypt(ciphertext, key);
+                handleChaCha20Decrypt(ciphertext, hsmKeyId, manualKey);
                 return;
             } else if (algorithm.equals("ChaCha20-Poly1305")) {
-                handleChaCha20Poly1305Decrypt(ciphertext, key);
+                handleChaCha20Poly1305Decrypt(ciphertext, hsmKeyId, manualKey);
                 return;
             } else if (algorithm.equals("XChaCha20-Poly1305")) {
-                handleXChaCha20Poly1305Decrypt(ciphertext, key);
+                handleXChaCha20Poly1305Decrypt(ciphertext, hsmKeyId, manualKey);
                 return;
             }
 
@@ -696,9 +707,17 @@ public class CipherController {
                 System.arraycopy(ciphertext, 0, combined, 0, ciphertext.length);
                 System.arraycopy(tag, 0, combined, ciphertext.length, tag.length);
 
-                plaintext = SymmetricCipher.decrypt(combined, key, algorithm, mode, padding, iv, aadBytes);
+                if (hsmKeyId != null) {
+                    plaintext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, combined, algorithm, mode, padding, iv, aadBytes);
+                } else {
+                    plaintext = SymmetricCipher.decrypt(combined, manualKey, algorithm, mode, padding, iv, aadBytes);
+                }
             } else {
-                plaintext = SymmetricCipher.decrypt(ciphertext, key, algorithm, mode, padding, iv, aadBytes);
+                if (hsmKeyId != null) {
+                    plaintext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, ciphertext, algorithm, mode, padding, iv, aadBytes);
+                } else {
+                    plaintext = SymmetricCipher.decrypt(ciphertext, manualKey, algorithm, mode, padding, iv, aadBytes);
+                }
             }
 
             // Special handling for GCM - show TAG verification message
@@ -1317,11 +1336,16 @@ public class CipherController {
     }
 
     // Helpers to support Salsa20 and ChaCha20
-    private void handleChaCha20Encrypt(byte[] plaintext, byte[] key) {
+    private void handleChaCha20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             String algorithm = "ChaCha20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] ciphertext = SymmetricCipher.encryptChaCha20(plaintext, key, iv);
+            byte[] ciphertext;
+            if (hsmKeyId != null) {
+                ciphertext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().encryptChaCha20(hsmKeyId, plaintext, iv);
+            } else {
+                ciphertext = SymmetricCipher.encryptChaCha20(plaintext, manualKey, iv);
+            }
             setOutputData(ciphertext);
             statusReporter.updateStatus("Encrypted using ChaCha20");
 
@@ -1330,11 +1354,16 @@ public class CipherController {
         }
     }
 
-    private void handleChaCha20Decrypt(byte[] ciphertext, byte[] key) {
+    private void handleChaCha20Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
         try {
             String algorithm = "ChaCha20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] plaintext = SymmetricCipher.decryptChaCha20(ciphertext, key, iv);
+            byte[] plaintext;
+            if (hsmKeyId != null) {
+                plaintext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().decryptChaCha20(hsmKeyId, ciphertext, iv);
+            } else {
+                plaintext = SymmetricCipher.decryptChaCha20(ciphertext, manualKey, iv);
+            }
             setOutputData(plaintext);
             statusReporter.updateStatus("Decrypted using ChaCha20");
         } catch (Exception e) {
@@ -1342,11 +1371,16 @@ public class CipherController {
         }
     }
 
-    private void handleSalsa20Encrypt(byte[] plaintext, byte[] key) {
+    private void handleSalsa20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             String algorithm = "Salsa20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] ciphertext = SymmetricCipher.encrypt(plaintext, key, algorithm, "None", "NoPadding", iv);
+            byte[] ciphertext;
+            if (hsmKeyId != null) {
+                ciphertext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().encryptSymmetric(hsmKeyId, plaintext, algorithm, "None", "NoPadding", iv);
+            } else {
+                ciphertext = SymmetricCipher.encrypt(plaintext, manualKey, algorithm, "None", "NoPadding", iv);
+            }
             setOutputData(ciphertext);
             statusReporter.updateStatus("Encrypted using Salsa20");
 
@@ -1355,12 +1389,16 @@ public class CipherController {
         }
     }
 
-    private void handleChaCha20Poly1305Encrypt(byte[] plaintext, byte[] key) {
+    private void handleChaCha20Poly1305Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
 
-            // Use specialized method which handles 12-byte nonce
-            byte[] combined = SymmetricCipher.encryptChaCha20Poly1305(plaintext, key, iv);
+            byte[] combined;
+            if (hsmKeyId != null) {
+                combined = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().encryptChaCha20Poly1305(hsmKeyId, plaintext, iv);
+            } else {
+                combined = SymmetricCipher.encryptChaCha20Poly1305(plaintext, manualKey, iv);
+            }
 
             // Split for display (last 16 bytes are tag)
             displayGCMResult(combined, true);
@@ -1370,11 +1408,16 @@ public class CipherController {
         }
     }
 
-    private void handleSalsa20Decrypt(byte[] ciphertext, byte[] key) {
+    private void handleSalsa20Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
         try {
             String algorithm = "Salsa20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] plaintext = SymmetricCipher.decrypt(ciphertext, key, algorithm, "None", "NoPadding", iv);
+            byte[] plaintext;
+            if (hsmKeyId != null) {
+                plaintext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, ciphertext, algorithm, "None", "NoPadding", iv);
+            } else {
+                plaintext = SymmetricCipher.decrypt(ciphertext, manualKey, algorithm, "None", "NoPadding", iv);
+            }
             setOutputData(plaintext);
             statusReporter.updateStatus("Decrypted using Salsa20");
         } catch (Exception e) {
@@ -1382,7 +1425,7 @@ public class CipherController {
         }
     }
 
-    private void handleChaCha20Poly1305Decrypt(byte[] ciphertext, byte[] key) {
+    private void handleChaCha20Poly1305Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
 
@@ -1396,7 +1439,12 @@ public class CipherController {
             // Combine ciphertext + tag (SymmetricCipher expects combined)
             byte[] combined = SymmetricCipher.combineChaCha20CiphertextAndTag(ciphertext, tag);
 
-            byte[] plaintext = SymmetricCipher.decryptChaCha20Poly1305(combined, key, iv);
+            byte[] plaintext;
+            if (hsmKeyId != null) {
+                plaintext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().decryptChaCha20Poly1305(hsmKeyId, combined, iv);
+            } else {
+                plaintext = SymmetricCipher.decryptChaCha20Poly1305(combined, manualKey, iv);
+            }
 
             displayGCMResult(plaintext, false);
             statusReporter.updateStatus("Decrypted using ChaCha20-Poly1305");
@@ -1407,12 +1455,17 @@ public class CipherController {
 
     // --- XChaCha20-Poly1305 Handlers ---
 
-    private void handleXChaCha20Poly1305Encrypt(byte[] plaintext, byte[] key) {
+    private void handleXChaCha20Poly1305Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
 
             // XChaCha20-Poly1305 Encryption
-            byte[] combined = SymmetricCipher.encryptXChaCha20Poly1305(plaintext, key, iv);
+            byte[] combined;
+            if (hsmKeyId != null) {
+                combined = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().encryptXChaCha20Poly1305(hsmKeyId, plaintext, iv);
+            } else {
+                combined = SymmetricCipher.encryptXChaCha20Poly1305(plaintext, manualKey, iv);
+            }
 
             // Split for display (last 16 bytes are tag)
             displayGCMResult(combined, true);
@@ -1422,7 +1475,7 @@ public class CipherController {
         }
     }
 
-    private void handleXChaCha20Poly1305Decrypt(byte[] ciphertext, byte[] key) {
+    private void handleXChaCha20Poly1305Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
 
@@ -1436,7 +1489,12 @@ public class CipherController {
             // Combine ciphertext + tag
             byte[] combined = SymmetricCipher.combineChaCha20CiphertextAndTag(ciphertext, tag);
 
-            byte[] plaintext = SymmetricCipher.decryptXChaCha20Poly1305(combined, key, iv);
+            byte[] plaintext;
+            if (hsmKeyId != null) {
+                plaintext = com.cryptoforge.crypto.hsm.SimulatedHsmProvider.getInstance().decryptXChaCha20Poly1305(hsmKeyId, combined, iv);
+            } else {
+                plaintext = SymmetricCipher.decryptXChaCha20Poly1305(combined, manualKey, iv);
+            }
 
             displayGCMResult(plaintext, false);
             statusReporter.updateStatus("Decrypted using XChaCha20-Poly1305");
