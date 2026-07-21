@@ -95,6 +95,13 @@ La idea es ir **evolucionando las capacidades** de la herramienta según las nec
 
 ## 🚀 Inicio Rápido
 
+Para recorridos reproducibles por conversión, claves, XAdES/TSA, PQC, pagos e
+histórico, consulta la [guía de inicio rápido](docs/QUICKSTART.md). Los límites
+explícitos entre laboratorio y producción se recogen en
+[docs/LAB_VS_PRODUCTION.md](docs/LAB_VS_PRODUCTION.md).
+El catálogo exacto de representaciones, charsets y EBCDIC está en
+[docs/FORMATS_AND_CHARSETS.md](docs/FORMATS_AND_CHARSETS.md).
+
 ### Requisitos
 - **Java 17** o superior (LTS recomendado)
 - **Maven 3.8+**
@@ -114,7 +121,7 @@ mvn javafx:run
 
 O ejecutar el JAR directamente:
 ```bash
-java -jar target/cryptocarver-2.3.0.jar
+java -jar target/cryptocarver-<version>.jar
 ```
 
 Consulta la [guía operativa](docs/GUIA_OPERATIVA_CRYPTOCARVER.md) para EBCDIC, XAdES/TSA, histórico, diagnóstico y logs.
@@ -258,13 +265,19 @@ CryptoCarver/
 ## 🛣️ Roadmap
 
 ### Próximas Características
-- [ ] Soporte para más algoritmos de derivación de claves
-- [ ] Operativas PostQuantum
-- [ ] Batch processing de operaciones
-- [ ] Import/Export de configuraciones
-- [ ] Scripts de automatización
-- [ ] Soporte para HSM (simulado)
-- [ ] Más vectores de test integrados
+- [x] Soporte ampliado de derivación de claves (KDF).
+- [x] Operativas post-cuánticas estandarizadas (ML-KEM, ML-DSA y SLH-DSA).
+- [x] Procesamiento batch y recetas encadenadas.
+- [x] Importación/exportación de recetas y perfiles de laboratorio.
+- [x] CLI, automatización y API local con límites seguros.
+- [x] HSM simulado de sesión para laboratorio.
+- [x] Vectores y perfiles reproducibles para PQC, TSA, JOSE y pagos.
+
+### En evolución
+
+- [ ] Manuales reproducibles por módulo y capturas verificadas por plataforma.
+- [ ] Changelog por versión con migraciones y compatibilidades.
+- [~] Integración PKCS#11/HSM real de laboratorio mediante SunPKCS11 y SoftHSM; faltan perfiles de proveedor, mecanismos/slots e integración XAdES.
 
 ---
 

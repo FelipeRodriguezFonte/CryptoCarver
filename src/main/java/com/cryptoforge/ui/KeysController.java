@@ -7,6 +7,7 @@ import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -46,6 +47,24 @@ public class KeysController {
     private TextArea keyStoreReportArea;
     private ComboBox<String> keyStoreProfileCombo;
     private TextField keyStoreProfileNameField;
+    private TextField pkcs11NameField;
+    private TextField pkcs11LibraryField;
+    private TextField pkcs11SlotField;
+    private PasswordField pkcs11PinField;
+    private ComboBox<String> pkcs11ProfileCombo;
+    private TextArea pkcs11ReportArea;
+    private ComboBox<String> pkcs11SigningKeyCombo;
+    private ComboBox<String> pkcs11SignatureAlgorithmCombo;
+    private TextArea pkcs11DataArea;
+    private TextArea pkcs11SignatureArea;
+    private ComboBox<String> pkcs11CertificateAliasCombo;
+    private TextArea pkcs11CertificateArea;
+    private ComboBox<String> pkcs11JwtAlgorithmCombo;
+    private TextArea pkcs11JwtPayloadArea;
+    private TextArea pkcs11JwtOutputArea;
+    private TextArea pkcs11CmsDataArea;
+    private CheckBox pkcs11CmsDetachedCheck;
+    private TextArea pkcs11CmsOutputArea;
 
     // Key Sharing components
     private ComboBox<String> numComponentsCombo;
@@ -211,6 +230,359 @@ public class KeysController {
         typeCombo.getItems().setAll("Auto", "PKCS12", "JKS", "JCEKS");
         typeCombo.setValue("Auto");
         refreshKeyStoreProfiles();
+    }
+
+    public void initializePkcs11Inspector(TextField nameField, TextField libraryField, TextField slotField,
+            PasswordField pinField, ComboBox<String> profileCombo, TextArea reportArea) {
+        this.pkcs11NameField = nameField;
+        this.pkcs11LibraryField = libraryField;
+        this.pkcs11SlotField = slotField;
+        this.pkcs11PinField = pinField;
+        this.pkcs11ProfileCombo = profileCombo;
+        this.pkcs11ReportArea = reportArea;
+        if (pkcs11NameField != null && pkcs11NameField.getText().isBlank()) pkcs11NameField.setText("CryptoCarverToken");
+        if (pkcs11SlotField != null && pkcs11SlotField.getText().isBlank()) pkcs11SlotField.setText("0");
+        refreshPkcs11Profiles();
+        if (pkcs11ProfileCombo != null) {
+            pkcs11ProfileCombo.setOnAction(e -> handlePkcs11ProfileSelection());
+        }
+    }
+
+    /** Initializes direct token signing controls. Data and signatures are hexadecimal. */
+    public void initializePkcs11Signing(ComboBox<String> keyCombo, ComboBox<String> algorithmCombo,
+            TextArea dataArea, TextArea signatureArea) {
+        this.pkcs11SigningKeyCombo = keyCombo;
+        this.pkcs11SignatureAlgorithmCombo = algorithmCombo;
+        this.pkcs11DataArea = dataArea;
+        this.pkcs11SignatureArea = signatureArea;
+        if (pkcs11SignatureAlgorithmCombo != null) {
+            pkcs11SignatureAlgorithmCombo.getItems().setAll(
+                    "SHA256withRSA", "SHA384withRSA", "SHA512withRSA",
+                    "SHA256withECDSA", "SHA384withECDSA", "Ed25519");
+            pkcs11SignatureAlgorithmCombo.setValue("SHA256withRSA");
+        }
+        refreshPkcs11SigningKeys();
+    }
+
+    public void initializePkcs11Certificates(ComboBox<String> certificateAliasCombo, TextArea certificateArea) {
+        this.pkcs11CertificateAliasCombo = certificateAliasCombo;
+        this.pkcs11CertificateArea = certificateArea;
+        refreshPkcs11CertificateAliases();
+    }
+
+    public void initializePkcs11Jwt(ComboBox<String> algorithmCombo, TextArea payloadArea, TextArea outputArea) {
+        this.pkcs11JwtAlgorithmCombo = algorithmCombo;
+        this.pkcs11JwtPayloadArea = payloadArea;
+        this.pkcs11JwtOutputArea = outputArea;
+        if (pkcs11JwtAlgorithmCombo != null) {
+            pkcs11JwtAlgorithmCombo.getItems().setAll("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA");
+            pkcs11JwtAlgorithmCombo.setValue("RS256");
+        }
+    }
+
+    public void initializePkcs11Cms(TextArea dataArea, CheckBox detachedCheck, TextArea outputArea) {
+        this.pkcs11CmsDataArea = dataArea;
+        this.pkcs11CmsDetachedCheck = detachedCheck;
+        this.pkcs11CmsOutputArea = outputArea;
+    }
+
+    /** Opens a real JDK SunPKCS11 session. The PIN is used once and never persisted. */
+    public void connectPkcs11() {
+        char[] pin = pkcs11PinField == null ? new char[0] : pkcs11PinField.getText().toCharArray();
+        try {
+            int slot = Integer.parseInt(pkcs11SlotField.getText().trim());
+            var configuration = new com.cryptoforge.crypto.hsm.Pkcs11Configuration(
+                    pkcs11NameField.getText(), java.nio.file.Path.of(pkcs11LibraryField.getText().trim()), slot);
+            disconnectPkcs11Internal();
+            com.cryptoforge.crypto.hsm.Pkcs11Session pkcs11Session =
+                    com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().connect(configuration, pin);
+            var objects = pkcs11Session.listObjects();
+            StringBuilder report = new StringBuilder("========================================\nPKCS#11 TOKEN SESSION\n========================================\n\n")
+                    .append("Provider: ").append(pkcs11Session.providerName()).append("\n")
+                    .append("Library: ").append(configuration.library()).append("\n")
+                    .append("Slot list index: ").append(configuration.slotListIndex()).append("\n")
+                    .append("Objects: ").append(objects.size()).append("\n\n");
+            for (var object : objects) {
+                report.append("Alias: ").append(object.alias())
+                        .append("\nType: ").append(object.objectType())
+                        .append("\nAlgorithm: ").append(object.algorithm())
+                        .append("\nFormat: ").append(object.format())
+                        .append("\nFingerprint: ").append(object.fingerprint())
+                        .append("\n----------------------------------------\n");
+            }
+
+            report.append("\n========================================\nJCA PROVIDER SERVICES (COMPATIBILITY)\n========================================\n")
+                    .append("Advertised services are not a direct PKCS#11 mechanism list; a selected key may still reject an operation.\n\n");
+            var sigs = pkcs11Session.getSupportedMechanisms("Signature");
+            report.append("Signatures (").append(sigs.size()).append("): ").append(String.join(", ", sigs)).append("\n\n");
+            var ciphers = pkcs11Session.getSupportedMechanisms("Cipher");
+            report.append("Ciphers (").append(ciphers.size()).append("): ").append(String.join(", ", ciphers)).append("\n\n");
+            var macs = pkcs11Session.getSupportedMechanisms("Mac");
+            report.append("MACs (").append(macs.size()).append("): ").append(String.join(", ", macs)).append("\n\n");
+
+            report.append("UI Compatible Signatures:\n");
+            if (pkcs11SignatureAlgorithmCombo != null) {
+                for (String algo : pkcs11SignatureAlgorithmCombo.getItems()) {
+                    if (sigs.contains(algo)) {
+                        report.append(" [YES] ").append(algo).append("\n");
+                    } else {
+                        report.append(" [NO]  ").append(algo).append("\n");
+                    }
+                }
+            }
+
+            pkcs11ReportArea.setText(report.toString());
+            refreshPkcs11SigningKeys();
+            refreshPkcs11CertificateAliases();
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("PKCS#11 Token Connect")
+                        .output(report.toString().getBytes(StandardCharsets.UTF_8))
+                        .detail("Provider", pkcs11Session.providerName())
+                        .detail("Slot list index", String.valueOf(slot))
+                        .detail("Objects", String.valueOf(objects.size()))
+                        .status("PKCS#11 token connected; " + objects.size() + " object(s) discovered")
+                        .build());
+            }
+        } catch (Exception error) {
+            showError("PKCS#11 connection", "Unable to open token: " + safePkcs11Message(error));
+        } finally {
+            java.util.Arrays.fill(pin, '\0');
+            if (pkcs11PinField != null) pkcs11PinField.clear();
+        }
+    }
+
+    public void disconnectPkcs11() {
+        boolean wasConnected = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected();
+        disconnectPkcs11Internal();
+        if (pkcs11ReportArea != null) {
+            pkcs11ReportArea.setText(wasConnected ? "PKCS#11 session closed. Token keys remain on the token." : "No PKCS#11 session is open.");
+        }
+        updateStatus(wasConnected ? "PKCS#11 session closed" : "No PKCS#11 session was open");
+        refreshPkcs11SigningKeys();
+        refreshPkcs11CertificateAliases();
+    }
+
+    public void choosePkcs11Library() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select PKCS#11 native library");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PKCS#11 libraries", "*.dylib", "*.so", "*.dll"),
+                new FileChooser.ExtensionFilter("All files", "*"));
+        java.io.File selected = chooser.showOpenDialog(null);
+        if (selected != null && pkcs11LibraryField != null) pkcs11LibraryField.setText(selected.getAbsolutePath());
+    }
+
+    public void handleSavePkcs11Profile() {
+        if (pkcs11NameField == null || pkcs11LibraryField == null || pkcs11SlotField == null) return;
+        String name = pkcs11NameField.getText().trim();
+        String library = pkcs11LibraryField.getText().trim();
+        String slotStr = pkcs11SlotField.getText().trim();
+        if (name.isEmpty() || library.isEmpty()) {
+            showError("Save Profile", "Profile name and library path are required.");
+            return;
+        }
+        int slot = 0;
+        try {
+            slot = Integer.parseInt(slotStr);
+        } catch (NumberFormatException e) {
+            showError("Save Profile", "Slot must be a valid integer.");
+            return;
+        }
+        if (slot < 0) {
+            showError("Save Profile", "Slot must be zero or greater.");
+            return;
+        }
+        com.cryptoforge.model.AppSettings.getInstance().savePkcs11Profile(name, library, slot);
+        refreshPkcs11Profiles();
+        if (pkcs11ProfileCombo != null) pkcs11ProfileCombo.setValue(name);
+        updateStatus("PKCS#11 profile '" + name + "' saved");
+    }
+
+    public void handleDeletePkcs11Profile() {
+        if (pkcs11ProfileCombo == null || pkcs11ProfileCombo.getValue() == null) return;
+        String name = pkcs11ProfileCombo.getValue();
+        com.cryptoforge.model.AppSettings.getInstance().removePkcs11Profile(name);
+        refreshPkcs11Profiles();
+        updateStatus("PKCS#11 profile '" + name + "' deleted");
+    }
+
+    private void handlePkcs11ProfileSelection() {
+        if (pkcs11ProfileCombo == null || pkcs11ProfileCombo.getValue() == null) return;
+        String name = pkcs11ProfileCombo.getValue();
+        for (var profile : com.cryptoforge.model.AppSettings.getInstance().getPkcs11Profiles()) {
+            if (profile.name().equalsIgnoreCase(name)) {
+                pkcs11NameField.setText(profile.name());
+                pkcs11LibraryField.setText(profile.library());
+                pkcs11SlotField.setText(String.valueOf(profile.slot()));
+                if (pkcs11PinField != null) pkcs11PinField.clear(); // Ensure PIN is blank
+                break;
+            }
+        }
+    }
+
+    private void refreshPkcs11Profiles() {
+        if (pkcs11ProfileCombo == null) return;
+        String current = pkcs11ProfileCombo.getValue();
+        pkcs11ProfileCombo.getItems().clear();
+        for (var profile : com.cryptoforge.model.AppSettings.getInstance().getPkcs11Profiles()) {
+            pkcs11ProfileCombo.getItems().add(profile.name());
+        }
+        if (current != null && pkcs11ProfileCombo.getItems().contains(current)) {
+            pkcs11ProfileCombo.setValue(current);
+        }
+    }
+
+    private void disconnectPkcs11Internal() {
+        com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().disconnect();
+    }
+
+    private String safePkcs11Message(Exception error) {
+        String message = error.getMessage();
+        return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
+    }
+
+    public void refreshPkcs11SigningKeys() {
+        if (pkcs11SigningKeyCombo == null) return;
+        String selected = pkcs11SigningKeyCombo.getValue();
+        pkcs11SigningKeyCombo.getItems().clear();
+        try {
+            pkcs11SigningKeyCombo.getItems().addAll(
+                    com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().listPrivateKeyAliases());
+            if (selected != null && pkcs11SigningKeyCombo.getItems().contains(selected)) {
+                pkcs11SigningKeyCombo.setValue(selected);
+            } else if (!pkcs11SigningKeyCombo.getItems().isEmpty()) {
+                pkcs11SigningKeyCombo.setValue(pkcs11SigningKeyCombo.getItems().get(0));
+            }
+        } catch (Exception ignored) {
+            // No token session is expected before the user connects one.
+        }
+    }
+
+    public void refreshPkcs11CertificateAliases() {
+        if (pkcs11CertificateAliasCombo == null) return;
+        String selected = pkcs11CertificateAliasCombo.getValue();
+        pkcs11CertificateAliasCombo.getItems().clear();
+        try {
+            pkcs11CertificateAliasCombo.getItems().addAll(
+                    com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().listCertificateAliases());
+            if (selected != null && pkcs11CertificateAliasCombo.getItems().contains(selected)) {
+                pkcs11CertificateAliasCombo.setValue(selected);
+            } else if (!pkcs11CertificateAliasCombo.getItems().isEmpty()) {
+                pkcs11CertificateAliasCombo.setValue(pkcs11CertificateAliasCombo.getItems().get(0));
+            }
+        } catch (Exception ignored) {
+            // No token session is expected before the user connects one.
+        }
+    }
+
+    public void showPkcs11CertificateChain() {
+        try {
+            String alias = pkcs11CertificateAliasCombo == null ? null : pkcs11CertificateAliasCombo.getValue();
+            if (alias == null || alias.isBlank()) {
+                throw new IllegalArgumentException("Connect a token and select an alias with a certificate");
+            }
+            String pem = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .certificateChainPem(alias);
+            pkcs11CertificateArea.setText(pem);
+            mainController.publish(OperationResult.forOperation("PKCS#11 Certificate Export")
+                    .output(pem.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Key alias", alias).detail("Content", "Public X.509 certificate chain")
+                    .status("Exported public certificate chain from PKCS#11 token").build());
+        } catch (Exception error) {
+            showError("PKCS#11 certificate", "Unable to load certificate chain: " + safePkcs11Message(error));
+        }
+    }
+
+    public void generatePkcs11Jwt() {
+        try {
+            String alias = requirePkcs11SigningAlias();
+            String payload = requirePkcs11TextPayload(pkcs11JwtPayloadArea, "JWT claims JSON");
+            String algorithm = pkcs11JwtAlgorithmCombo == null ? null : pkcs11JwtAlgorithmCombo.getValue();
+            String compactJws = com.cryptoforge.crypto.JOSEService.generateSignedJwtWithPkcs11(payload, algorithm,
+                    com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession(), alias);
+            pkcs11JwtOutputArea.setText(compactJws);
+            mainController.publish(OperationResult.forOperation("PKCS#11 Signed JWT")
+                    .input(payload.getBytes(StandardCharsets.UTF_8)).output(compactJws.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Key alias", alias).detail("Algorithm", algorithm).detail("Serialization", "Compact JWS")
+                    .status("JWT signed by PKCS#11 token object " + alias).build());
+        } catch (Exception error) {
+            showError("PKCS#11 JWT", "Unable to create signed JWT: " + safePkcs11Message(error));
+        }
+    }
+
+    public void generatePkcs11Cms() {
+        try {
+            String alias = requirePkcs11SigningAlias();
+            byte[] data = DataConverter.hexToBytes(requirePkcs11Text(pkcs11CmsDataArea, "CMS data"));
+            boolean detached = pkcs11CmsDetachedCheck != null && pkcs11CmsDetachedCheck.isSelected();
+            byte[] cms = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .signCms(alias, data, detached);
+            String base64 = java.util.Base64.getEncoder().encodeToString(cms);
+            pkcs11CmsOutputArea.setText(base64);
+            mainController.publish(OperationResult.forOperation("PKCS#11 CMS SignedData")
+                    .input(data).output(cms)
+                    .detail("Key alias", alias).detail("Detached", String.valueOf(detached))
+                    .detail("Encoding", "Base64 CMS/PKCS#7")
+                    .status("CMS SignedData created by PKCS#11 token object " + alias).build());
+        } catch (Exception error) {
+            showError("PKCS#11 CMS", "Unable to create CMS SignedData: " + safePkcs11Message(error));
+        }
+    }
+
+    public void signWithPkcs11() {
+        try {
+            String alias = requirePkcs11SigningAlias();
+            byte[] data = DataConverter.hexToBytes(requirePkcs11Text(pkcs11DataArea, "Data"));
+            String algorithm = pkcs11SignatureAlgorithmCombo.getValue();
+            byte[] signature = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .sign(alias, data, algorithm);
+            pkcs11SignatureArea.setText(DataConverter.bytesToHex(signature));
+            mainController.publish(OperationResult.forOperation("PKCS#11 Sign")
+                    .input(data).output(signature)
+                    .detail("Key alias", alias).detail("Algorithm", algorithm)
+                    .status("Signature created by PKCS#11 token object " + alias).build());
+        } catch (Exception error) {
+            showError("PKCS#11 signing", "Unable to sign: " + safePkcs11Message(error));
+        }
+    }
+
+    public void verifyWithPkcs11() {
+        try {
+            String alias = requirePkcs11SigningAlias();
+            byte[] data = DataConverter.hexToBytes(requirePkcs11Text(pkcs11DataArea, "Data"));
+            byte[] signature = DataConverter.hexToBytes(requirePkcs11Text(pkcs11SignatureArea, "Signature"));
+            String algorithm = pkcs11SignatureAlgorithmCombo.getValue();
+            boolean valid = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .verify(alias, data, signature, algorithm);
+            mainController.publish(OperationResult.forOperation("PKCS#11 Signature Verify")
+                    .input(data).output(signature)
+                    .detail("Key alias", alias).detail("Algorithm", algorithm).detail("Valid", String.valueOf(valid))
+                    .status("PKCS#11 signature verification: " + (valid ? "VALID" : "INVALID")).build());
+            if (valid) updateStatus("PKCS#11 signature is valid");
+            else showError("PKCS#11 verification", "Signature is not valid for the selected token key");
+        } catch (Exception error) {
+            showError("PKCS#11 verification", "Unable to verify: " + safePkcs11Message(error));
+        }
+    }
+
+    private String requirePkcs11SigningAlias() {
+        String alias = pkcs11SigningKeyCombo == null ? null : pkcs11SigningKeyCombo.getValue();
+        if (alias == null || alias.isBlank()) {
+            throw new IllegalArgumentException("Connect a token that exposes a private-key object and select its alias");
+        }
+        return alias;
+    }
+
+    private static String requirePkcs11Text(TextArea area, String name) {
+        String value = area == null ? null : area.getText().replaceAll("\\s+", "");
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " hex is required");
+        return value;
+    }
+
+    private static String requirePkcs11TextPayload(TextArea area, String name) {
+        String value = area == null ? null : area.getText().trim();
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " is required");
+        return value;
     }
 
     /** Inspects PEM keys and certificates without modifying them. */
@@ -534,23 +906,6 @@ public class KeysController {
             String parityStatus = forceParity ? " with odd parity" : " without parity adjustment";
             updateStatus("Generated " + keyType + " key" + parityStatus);
 
-            // Calculate KCVs for history
-            StringBuilder historyDetails = new StringBuilder();
-            historyDetails.append("Key Type: ").append(keyType).append("\n");
-            historyDetails.append("Generated Key: ").append(keyHex).append("\n");
-
-            try {
-                if (keyType.contains("DES") || keyType.contains("3DES")) {
-                    byte[] kcv = KeyOperations.calculateKCV_VISA(key);
-                    historyDetails.append("KCV (VISA): ").append(DataConverter.bytesToHex(kcv));
-                } else {
-                    byte[] kcv = KeyOperations.calculateKCV_AES(key);
-                    historyDetails.append("KCV (AES): ").append(DataConverter.bytesToHex(kcv));
-                }
-            } catch (Exception e) {
-                historyDetails.append("KCV: Error calculating");
-            }
-
             // Delegate to ModernMainController history if available
             if (mainController != null) {
                 try {
@@ -569,16 +924,23 @@ public class KeysController {
                         details.add(com.cryptoforge.model.OperationDetail.publicDetail("KCV", "Error calculating"));
                     }
 
-                    mainController.addToHistory("Generate Symmetric Key", details);
+                    mainController.publish(OperationResult.forOperation("Generate Symmetric Key")
+                            .output(key)
+                            .details(details)
+                            .status("Generated " + keyType + " key" + parityStatus)
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
-                OperationHistory.getInstance().addOperation(
-                        "Keys",
-                        "Generate Symmetric Key",
-                        keyType,
-                        "Key: " + keyHex);
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate Symmetric Key")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", keyType, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Key: " + keyHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (Exception e) {
@@ -671,28 +1033,34 @@ public class KeysController {
             validationResultArea.setManaged(true);
             updateStatus("Key validated successfully");
 
-            // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            // Publish a coherent result so the inspector, history and expanded
+            // viewer contain the actual validation report and the input key is
+            // consistently classified as sensitive.
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Operation", "Validate Symmetric Key");
-                    details.put("Validation Output", result.toString());
-
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "Validate Symmetric Key", details);
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Key", keyHex));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Validation Report", result.toString()));
+                    mainController.publish(OperationResult.forOperation("Validate Symmetric Key")
+                            .input(key)
+                            .output(result.toString().getBytes(StandardCharsets.UTF_8))
+                            .details(details)
+                            .status("Key validated successfully")
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
                 // Add to history (Legacy)
                 String keyType = KeyOperations.getKeyType(key);
-                OperationHistory.getInstance().addOperation(
-                        "Keys",
-                        "Validate - " + keyType,
-                        "Key: " + keyHex,
-                        result.toString() // Full validation results with all KCVs
-                );
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Validate - " + keyType)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Key: " + keyHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", result.toString(), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (IllegalArgumentException e) {
@@ -786,12 +1154,14 @@ public class KeysController {
             updateStatus("Key split into " + numComponents + " components");
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Keys",
-                    "Split - " + numComponents + " components",
-                    "Input Key: " + keyHex,
-                    result.toString() // Full components output
-            );
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Split - " + numComponents + " components")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Input Key: " + keyHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", result.toString(), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (NumberFormatException e) {
             showError("Input Error", "Invalid number of components");
@@ -868,11 +1238,14 @@ public class KeysController {
             componentResultsArea.setManaged(true);
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Keys",
-                    "Combine - " + components.length + " components",
-                    "Components: " + components.length,
-                    combinedKeyHex.substring(0, Math.min(32, combinedKeyHex.length())));
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Combine - " + components.length + " components")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Components: " + components.length, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", combinedKeyHex.substring(0, Math.min(32, combinedKeyHex.length())), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (IllegalArgumentException e) {
             showError("Input Error", e.getMessage());
@@ -925,18 +1298,26 @@ public class KeysController {
                     details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
                     details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
 
-                    mainController.addToHistory("Generate RSA Key", details);
+                    mainController.publish(OperationResult.forOperation("Generate RSA Key")
+                            .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
+                                    .getBytes(StandardCharsets.UTF_8))
+                            .details(details)
+                            .status("RSA-" + keySize + " key pair generated successfully")
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
-                OperationHistory.getInstance().addOperation(
-                        "Keys",
-                        "Generate RSA-" + keySize,
-                        "Key Size: " + keySize + " bits",
-                        "Public Key:\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()) +
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate RSA-" + keySize)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Key Size: " + keySize + " bits", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Public Key:\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()) +
                                 "\n\nPrivate Key:\n"
-                                + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
+                                + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (Exception e) {
@@ -980,16 +1361,24 @@ public class KeysController {
                     details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
                     details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
 
-                    mainController.addToHistory("Generate DSA Key", details);
+                    mainController.publish(OperationResult.forOperation("Generate DSA Key")
+                            .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
+                                    .getBytes(StandardCharsets.UTF_8))
+                            .details(details)
+                            .status("DSA-" + keySize + " key pair generated successfully")
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
-                OperationHistory.getInstance().addOperation(
-                        "Keys",
-                        "Generate DSA-" + keySize,
-                        "N/A",
-                        "Public key generated");
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate DSA-" + keySize)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "N/A", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Public key generated", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (Exception e) {
@@ -1035,16 +1424,24 @@ public class KeysController {
                     details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
                     details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
 
-                    mainController.addToHistory("Generate ECDSA Key", details);
+                    mainController.publish(OperationResult.forOperation("Generate ECDSA Key")
+                            .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
+                                    .getBytes(StandardCharsets.UTF_8))
+                            .details(details)
+                            .status("ECDSA F(p) key pair generated on curve " + curve)
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
-                OperationHistory.getInstance().addOperation(
-                        "Keys",
-                        "Generate ECDSA F(p) - " + curve,
-                        "N/A",
-                        "Curve: " + curve);
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate ECDSA F(p) - " + curve)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "N/A", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Curve: " + curve, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (Exception e) {
@@ -1076,26 +1473,31 @@ public class KeysController {
 
             updateStatus("Ed25519 key pair generated successfully");
 
-            // Delegate to ModernMainController history if available
-            if (mainController != null && mainController.getClass().getSimpleName().equals("ModernMainController")) {
+            if (mainController != null) {
                 try {
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Algorithm", "Ed25519");
-                    details.put("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-                    details.put("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-                    java.lang.reflect.Method method = mainController.getClass().getMethod("addToHistory",
-                            String.class, java.util.Map.class);
-                    method.invoke(mainController, "Generate EdDSA Key", details);
+                    String publicPem = AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic());
+                    java.util.List<com.cryptoforge.model.OperationDetail> details = new java.util.ArrayList<>();
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Algorithm", "Ed25519"));
+                    details.add(com.cryptoforge.model.OperationDetail.publicDetail("Public Key", publicPem));
+                    details.add(com.cryptoforge.model.OperationDetail.secretDetail("Private Key",
+                            AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
+                    mainController.publish(OperationResult.forOperation("Generate EdDSA Key")
+                            .output(publicPem.getBytes(StandardCharsets.UTF_8))
+                            .details(details)
+                            .status("Ed25519 key pair generated successfully")
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
-                OperationHistory.getInstance().addOperation(
-                        "Keys",
-                        "Generate Ed25519",
-                        "N/A",
-                        "Algorithm: Ed25519");
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate Ed25519")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "N/A", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Algorithm: Ed25519", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (Exception e) {
@@ -1195,12 +1597,14 @@ public class KeysController {
 
             updateStatus("Certificate generated successfully with " + keyTypeDesc);
 
-            OperationHistory.getInstance().addOperation(
-                    "Keys",
-                    "Generate Certificate - " + keyTypeDesc,
-                    "CN=" + cn + ", Validity=" + validity + " days",
-                    output.toString() // Full certificate + private key + public key
-            );
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate Certificate - " + keyTypeDesc)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "CN=" + cn + ", Validity=" + validity + " days", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", output.toString(), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             showError("Generation Error", "Error generating certificate: " + e.getMessage());
@@ -1283,11 +1687,14 @@ public class KeysController {
 
             updateStatus("Certificate parsed successfully");
 
-            OperationHistory.getInstance().addOperation(
-                    "Certificates",
-                    "Parse Certificate",
-                    "Subject: " + cert.getSubjectX500Principal().getName(),
-                    "Parsed successfully");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Parse Certificate")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Subject: " + cert.getSubjectX500Principal().getName(), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Parsed successfully", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             certParseResultArea.setText("Error parsing certificate: " + e.getMessage());
@@ -1359,11 +1766,14 @@ public class KeysController {
             valResultArea.setText(sb.toString());
             updateStatus(result.isValid ? "Certificate is valid" : "Certificate is invalid");
 
-            OperationHistory.getInstance().addOperation(
-                    "Certificates",
-                    "Validate Certificate",
-                    "Status: " + result.status,
-                    result.isValid ? "Success" : "Failed");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Validate Certificate")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Status: " + result.status, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", result.isValid ? "Success" : "Failed", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             valResultArea.setText("Error during validation: " + e.getMessage());
@@ -1618,17 +2028,25 @@ public class KeysController {
                     details.add(com.cryptoforge.model.OperationDetail.secretDetail("Key to Wrap", key));
                     details.add(com.cryptoforge.model.OperationDetail.publicDetail("Key Block", keyBlock));
 
-                    mainController.addToHistory("TR-31 Export", details);
+                    mainController.publish(OperationResult.forOperation("TR-31 Export")
+                            .input(DataConverter.hexToBytes(key))
+                            .output(keyBlock.getBytes(StandardCharsets.UTF_8))
+                            .details(details)
+                            .status("TR-31 key wrapped successfully")
+                            .build());
                 } catch (Exception e) {
                     System.err.println("Failed to add to history: " + e.getMessage());
                 }
             } else {
                 // Fallback to old system
-                OperationHistory.getInstance().addOperation(
-                        "Keys/TR-31",
-                        "Wrap Key - " + TR31Operations.getKeyUsageDescription(usage),
-                        "Version: " + header.versionId + " | Usage: " + usage,
-                        "KBPK: " + kbpk + "\nKey to Wrap: " + key + "\nKey Block: " + keyBlock);
+                if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Wrap Key - " + TR31Operations.getKeyUsageDescription(usage))
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Version: " + header.versionId + " | Usage: " + usage, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "KBPK: " + kbpk + "\nKey to Wrap: " + key + "\nKey Block: " + keyBlock, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
             }
 
         } catch (Exception e) {
@@ -1696,11 +2114,14 @@ public class KeysController {
             tr31ImportResultArea.setManaged(true);
             updateStatus("TR-31 key unwrapped successfully");
 
-            OperationHistory.getInstance().addOperation(
-                    "Keys/TR-31",
-                    "Unwrap Key - " + TR31Operations.getKeyUsageDescription(header.keyUsage),
-                    "Version " + header.versionId,
-                    "Key Length: " + (unwrappedKey.length() / 2) + " bytes");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Unwrap Key - " + TR31Operations.getKeyUsageDescription(header.keyUsage))
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Version " + header.versionId, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Key Length: " + (unwrappedKey.length() / 2) + " bytes", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             tr31ImportResultArea.setText("Error unwrapping key: " + e.getMessage());
@@ -1944,9 +2365,14 @@ public class KeysController {
             keyWrapResultArea.setManaged(true);
             keyWrapResultArea.setVisible(true);
             updateStatus("AES Key Wrap " + operation.toLowerCase() + " completed");
-            OperationHistory.getInstance().addOperation("Keys", "AES Key " + operation,
-                    "Mode: " + (padded ? "RFC 5649" : "RFC 3394") + ", KEK: " + kek.length * 8 + " bits",
-                    "Input: " + data.length + " bytes, output: " + result.length + " bytes");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("AES Key " + operation)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Mode: " + (padded ? "RFC 5649" : "RFC 3394") + ", KEK: " + kek.length * 8 + " bits", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Input: " + data.length + " bytes, output: " + result.length + " bytes", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
         } catch (Exception e) {
             showError("AES Key Wrap", "Cannot execute operation: " + e.getMessage());
         }
@@ -2091,12 +2517,15 @@ public class KeysController {
             updateStatus("Key derived successfully using " + algorithm);
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                    "Keys",
-                    "Derive - " + algorithm,
-                    "Input: " + inputText.substring(0, Math.min(30, inputText.length())),
-                    "Derived: " + DataConverter.bytesToHex(derivedKey).substring(0,
-                            Math.min(50, DataConverter.bytesToHex(derivedKey).length())));
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Derive - " + algorithm)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Input: " + inputText.substring(0, Math.min(30, inputText.length())), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Derived: " + DataConverter.bytesToHex(derivedKey).substring(0,
+                            Math.min(50, DataConverter.bytesToHex(derivedKey).length())), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             showError("Derivation Error", "Error deriving key: " + e.getMessage());
@@ -2275,25 +2704,127 @@ public class KeysController {
     private TextArea cmsInputArea;
     private TextArea cmsOutputArea;
     private CheckBox cmsDetachedCheck;
+    private CheckBox cmsCadesBesCheck;
+    private CheckBox cmsCadesTCheck;
+    private TextField cmsCadesTsaUrlField;
+    private javafx.scene.layout.HBox cmsCadesTsaBox;
     // Split fields
     private TextArea cmsSignCertArea;
     private TextArea cmsSignKeyArea;
     private TextArea cmsEncryptCertArea;
     private TextArea cmsDecryptKeyArea;
+    private javafx.scene.control.RadioButton cmsSignSourcePkcs11Radio;
+    private javafx.scene.layout.GridPane cmsSignLocalGrid;
+    private javafx.scene.layout.HBox cmsSignPkcs11Box;
+    private javafx.scene.control.ComboBox<String> cmsSignKeyAliasCombo;
+    private javafx.scene.control.TextArea cmsVerifyDataArea;
+
+    private javafx.scene.control.RadioButton cmsEncryptSourcePkcs11Radio;
+    private javafx.scene.layout.GridPane cmsEncryptLocalGrid;
+    private javafx.scene.layout.HBox cmsEncryptPkcs11Box;
+    private javafx.scene.control.ComboBox<String> cmsEncryptKeyAliasCombo;
 
     /**
      * Initialize CMS components
      */
-    public void initializeCMS(TextArea inputArea, TextArea outputArea, CheckBox detachedCheck,
+    public void initializeCMS(TextArea inputArea, TextArea outputArea, CheckBox detachedCheck, CheckBox cadesBesCheck,
+            CheckBox cadesTCheck, TextField cadesTsaUrlField, javafx.scene.layout.HBox cadesTsaBox,
             TextArea signCertArea, TextArea signKeyArea,
-            TextArea encryptCertArea, TextArea decryptKeyArea) {
+            TextArea encryptCertArea, TextArea decryptKeyArea,
+            javafx.scene.control.RadioButton signSourcePkcs11Radio,
+            javafx.scene.layout.GridPane signLocalGrid,
+            javafx.scene.layout.HBox signPkcs11Box,
+            javafx.scene.control.ComboBox<String> signKeyAliasCombo,
+            TextArea verifyDataArea,
+            javafx.scene.control.RadioButton encryptSourcePkcs11Radio,
+            javafx.scene.layout.GridPane encryptLocalGrid,
+            javafx.scene.layout.HBox encryptPkcs11Box,
+            javafx.scene.control.ComboBox<String> encryptKeyAliasCombo) {
         this.cmsInputArea = inputArea;
         this.cmsOutputArea = outputArea;
         this.cmsDetachedCheck = detachedCheck;
+        this.cmsCadesBesCheck = cadesBesCheck;
+        this.cmsCadesTCheck = cadesTCheck;
+        this.cmsCadesTsaUrlField = cadesTsaUrlField;
+        this.cmsCadesTsaBox = cadesTsaBox;
         this.cmsSignCertArea = signCertArea;
         this.cmsSignKeyArea = signKeyArea;
         this.cmsEncryptCertArea = encryptCertArea;
         this.cmsDecryptKeyArea = decryptKeyArea;
+        this.cmsSignSourcePkcs11Radio = signSourcePkcs11Radio;
+        this.cmsSignLocalGrid = signLocalGrid;
+        this.cmsSignPkcs11Box = signPkcs11Box;
+        this.cmsSignKeyAliasCombo = signKeyAliasCombo;
+        this.cmsVerifyDataArea = verifyDataArea;
+
+        this.cmsEncryptSourcePkcs11Radio = encryptSourcePkcs11Radio;
+        this.cmsEncryptLocalGrid = encryptLocalGrid;
+        this.cmsEncryptPkcs11Box = encryptPkcs11Box;
+        this.cmsEncryptKeyAliasCombo = encryptKeyAliasCombo;
+        handleCadesTimestampOptionChanged();
+    }
+
+    /** Shows the timestamp inputs and keeps CAdES-T dependent on CAdES-BES. */
+    public void handleCadesTimestampOptionChanged() {
+        boolean cadesT = cmsCadesTCheck != null && cmsCadesTCheck.isSelected();
+        if (cadesT && cmsCadesBesCheck != null) {
+            cmsCadesBesCheck.setSelected(true);
+        }
+        if (cmsCadesTsaBox != null) {
+            cmsCadesTsaBox.setVisible(cadesT);
+            cmsCadesTsaBox.setManaged(cadesT);
+        }
+        if (cadesT && cmsCadesTsaUrlField != null && cmsCadesTsaUrlField.getText().isBlank()) {
+            cmsCadesTsaUrlField.setText(AppSettings.getInstance().getCustomTsaUrl());
+        }
+    }
+
+    public void handleCMSourceChanged() {
+        boolean usePkcs11 = cmsSignSourcePkcs11Radio != null && cmsSignSourcePkcs11Radio.isSelected();
+        if (cmsSignLocalGrid != null) cmsSignLocalGrid.setVisible(!usePkcs11);
+        if (cmsSignLocalGrid != null) cmsSignLocalGrid.setManaged(!usePkcs11);
+        if (cmsSignPkcs11Box != null) cmsSignPkcs11Box.setVisible(usePkcs11);
+        if (cmsSignPkcs11Box != null) cmsSignPkcs11Box.setManaged(usePkcs11);
+    }
+
+    public void handleLoadCMSKeys() {
+        if (!com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
+            showError("PKCS#11 Error", "No token is connected. Please connect from the left panel first.");
+            return;
+        }
+        try {
+            java.util.List<String> aliases = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().listPrivateKeysWithCertificate();
+            cmsSignKeyAliasCombo.getItems().setAll(aliases);
+            if (!aliases.isEmpty()) {
+                cmsSignKeyAliasCombo.getSelectionModel().selectFirst();
+            }
+        } catch (Exception error) {
+            showError("PKCS#11 Error", "Unable to list valid signing aliases: " + error.getMessage());
+        }
+    }
+
+    public void handleCMSEncryptSourceChanged() {
+        boolean usePkcs11 = cmsEncryptSourcePkcs11Radio != null && cmsEncryptSourcePkcs11Radio.isSelected();
+        if (cmsEncryptLocalGrid != null) cmsEncryptLocalGrid.setVisible(!usePkcs11);
+        if (cmsEncryptLocalGrid != null) cmsEncryptLocalGrid.setManaged(!usePkcs11);
+        if (cmsEncryptPkcs11Box != null) cmsEncryptPkcs11Box.setVisible(usePkcs11);
+        if (cmsEncryptPkcs11Box != null) cmsEncryptPkcs11Box.setManaged(usePkcs11);
+    }
+
+    public void handleLoadCMSEncryptKeys() {
+        if (!com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
+            showError("PKCS#11 Error", "No token is connected. Please connect from the left panel first.");
+            return;
+        }
+        try {
+            java.util.List<String> aliases = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().listPrivateKeysWithCertificate();
+            cmsEncryptKeyAliasCombo.getItems().setAll(aliases);
+            if (!aliases.isEmpty()) {
+                cmsEncryptKeyAliasCombo.getSelectionModel().selectFirst();
+            }
+        } catch (Exception error) {
+            showError("PKCS#11 Error", "Unable to list valid encrypt/decrypt aliases: " + error.getMessage());
+        }
     }
 
     /**
@@ -2302,43 +2833,82 @@ public class KeysController {
     public void handleCMSSign() {
         try {
             String dataStr = cmsInputArea.getText();
-            String certStr = cmsSignCertArea.getText().trim();
-            String keyStr = cmsSignKeyArea.getText().trim();
             boolean detached = cmsDetachedCheck.isSelected();
+            boolean cadesBes = cmsCadesBesCheck != null && cmsCadesBesCheck.isSelected();
+            boolean cadesT = cmsCadesTCheck != null && cmsCadesTCheck.isSelected();
+            if (cadesT) cadesBes = true;
+            boolean usePkcs11 = cmsSignSourcePkcs11Radio != null && cmsSignSourcePkcs11Radio.isSelected();
 
-            if (dataStr.isEmpty() || certStr.isEmpty() || keyStr.isEmpty()) {
-                showError("Input Error", "Data, Signer Certificate, and Private Key are required");
+            if (dataStr.isEmpty()) {
+                showError("Input Error", "Data to sign is required");
                 return;
             }
 
+            byte[] data = dataStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            byte[] signature;
+            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+
             updateStatus("Signing data...");
 
-            // Parse certificate
-            X509Certificate cert = CertificateGenerator.parseCertificate(certStr);
+            if (usePkcs11) {
+                String alias = cmsSignKeyAliasCombo.getSelectionModel().getSelectedItem();
+                if (alias == null || alias.isEmpty()) {
+                    showError("Input Error", "Please select a token alias with a valid certificate.");
+                    return;
+                }
+                signature = cadesBes
+                        ? com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                                .signCadesBes(alias, data, detached)
+                        : com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                                .signCms(alias, data, detached);
+                details.put("Source", "PKCS#11 Token");
+                details.put("Alias", alias);
+            } else {
+                String certStr = cmsSignCertArea.getText().trim();
+                String keyStr = cmsSignKeyArea.getText().trim();
 
-            // Parse private key (assuming PEM format handled by AsymmetricKeyOperations or
-            // similar helper)
-            // Note: AsymmetricKeyOperations doesn't have a public parsePrivateKey method
-            // shown in previous views
-            // We'll use a local helper or try standard parsing
-            PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
+                if (certStr.isEmpty() || keyStr.isEmpty()) {
+                    showError("Input Error", "Signer Certificate and Private Key are required for local signing");
+                    return;
+                }
 
-            byte[] data = dataStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                // Parse certificate
+                X509Certificate cert = CertificateGenerator.parseCertificate(certStr);
+                PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
 
-            byte[] signature = CMSOperations.generateSignedData(data, cert, privateKey, null, detached);
+                signature = cadesBes
+                        ? CMSOperations.generateCadesBes(data, cert, privateKey, null, detached)
+                        : CMSOperations.generateSignedData(data, cert, privateKey, null, detached);
+                details.put("Source", "Local PEM");
+                details.put("Certificate", "Present");
+                details.put("Private Key", "[not persisted]");
+            }
+
+            if (cadesT) {
+                String tsaUrl = cmsCadesTsaUrlField == null ? "" : cmsCadesTsaUrlField.getText().trim();
+                if (!tsaUrl.startsWith("http://") && !tsaUrl.startsWith("https://")) {
+                    showError("CAdES-T TSA", "Enter a valid http:// or https:// TSA URL for CAdES-T.");
+                    return;
+                }
+                AppSettings.getInstance().setCustomTsaUrl(tsaUrl);
+                byte[] signatureValue = CMSOperations.cadesSignatureValue(signature);
+                TsaDiagnostics.TokenResult timestamp = TsaDiagnostics.timestamp(tsaUrl, signatureValue, "SHA-256");
+                signature = CMSOperations.addCadesTSignatureTimestamp(signature, timestamp.token());
+                details.put("TSA", tsaUrl);
+                details.put("Timestamp", timestamp.report().generationTime());
+            }
 
             String output = "-----BEGIN PKCS7-----\n" +
                     java.util.Base64.getEncoder().encodeToString(signature) +
                     "\n-----END PKCS7-----";
 
             cmsOutputArea.setText(output);
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
             details.put("Type", detached ? "Detached SignedData" : "Encapsulated SignedData");
-            details.put("Certificate", "Present");
-            details.put("Private Key", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("CMS Sign")
+            details.put("Profile", cadesT ? "CAdES-T" : (cadesBes ? "CAdES-BES" : "CMS / PKCS#7"));
+
+            mainController.publish(OperationResult.forOperation(cadesT ? "CAdES-T Sign" : (cadesBes ? "CAdES-BES Sign" : "CMS Sign"))
                     .input(data).output(signature).details(details)
-                    .status("CMS signature generated successfully").build());
+                    .status((cadesT ? "CAdES-T" : (cadesBes ? "CAdES-BES" : "CMS")) + " signature generated successfully").build());
 
         } catch (Exception e) {
             showError("Signing Error", "Error signing data: " + e.getMessage());
@@ -2366,11 +2936,40 @@ public class KeysController {
                     .replaceAll("\\s+", "");
             byte[] pkcs7Bytes = java.util.Base64.getDecoder().decode(base64);
 
+            byte[] detachedData = null;
+            if (cmsVerifyDataArea != null && !cmsVerifyDataArea.getText().trim().isEmpty()) {
+                detachedData = cmsVerifyDataArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            }
+
             // Verify
-            CMSOperations.VerificationResult result = CMSOperations.verifySignedData(pkcs7Bytes, null);
+            CMSOperations.VerificationResult result = CMSOperations.verifySignedData(pkcs7Bytes, null, detachedData);
+            CMSOperations.CadesProfile cadesProfile = CMSOperations.inspectCadesProfile(pkcs7Bytes);
+            CMSOperations.CadesTimestampStatus timestampStatus = CMSOperations.inspectCadesTimestamp(pkcs7Bytes);
+            CMSOperations.CadesLongTermStatus longTerm = CMSOperations.inspectCadesLongTermEvidence(pkcs7Bytes);
+            CMSOperations.CadesLongTermValidation longTermValidation =
+                    CMSOperations.validateCadesLongTermEvidence(pkcs7Bytes, new java.util.Date());
 
             StringBuilder output = new StringBuilder();
             output.append("VERIFICATION RESULT: ").append(result.verified ? "✅ VALID" : "❌ INVALID").append("\n\n");
+            output.append("SIGNATURE PROFILE: ").append(cadesProfile.profile()).append("\n");
+            if (cadesProfile.certificateBindingPresent()) {
+                output.append("CAdES certificate binding: ")
+                        .append(cadesProfile.certificateBindingValid() ? "✅ VALID" : "❌ INVALID")
+                        .append("\n");
+            }
+            output.append(cadesProfile.message()).append("\n\n");
+            if (timestampStatus.present()) {
+                output.append("CAdES signature timestamp: ")
+                        .append(timestampStatus.imprintValid() ? "✅ VALID" : "❌ INVALID").append("\n")
+                        .append(timestampStatus.message()).append("\n\n");
+            }
+            if (cadesProfile.profile().startsWith("CAdES")) {
+                output.append("LONG-TERM EVIDENCE: ").append(longTerm.level()).append("\n")
+                        .append("CRL evidence: ").append(longTermValidation.crlCount())
+                        .append("; signature-valid: ").append(longTermValidation.signatureValidCrlCount())
+                        .append("; within declared validity: ").append(longTermValidation.currentCrlCount()).append("\n")
+                        .append(longTermValidation.message()).append("\n\n");
+            }
 
             if (result.content != null) {
                 output.append("SIGNED CONTENT:\n");
@@ -2387,9 +2986,19 @@ public class KeysController {
             }
 
             cmsOutputArea.setText(output.toString());
-            mainController.publish(OperationResult.forOperation("CMS Verify")
+            mainController.publish(OperationResult.forOperation(
+                            cadesProfile.profile().startsWith("CAdES") ? cadesProfile.profile() + " Verify" : "CMS Verify")
                     .input(pkcs7Bytes).output(result.content)
                     .detail("Result", result.verified ? "VALID" : "INVALID")
+                    .detail("Profile", cadesProfile.profile())
+                    .detail("Certificate binding", cadesProfile.certificateBindingPresent()
+                            ? (cadesProfile.certificateBindingValid() ? "VALID" : "INVALID") : "NOT PRESENT")
+                    .detail("Signature timestamp", timestampStatus.present()
+                            ? (timestampStatus.imprintValid() ? "VALID" : "INVALID") : "NOT PRESENT")
+                    .detail("Long-term evidence", longTerm.level())
+                    .detail("CRLs embedded", String.valueOf(longTermValidation.crlCount()))
+                    .detail("CRLs signature-valid", String.valueOf(longTermValidation.signatureValidCrlCount()))
+                    .detail("CRLs currently valid", String.valueOf(longTermValidation.currentCrlCount()))
                     .status("CMS verification: " + (result.verified ? "valid" : "invalid")).build());
 
         } catch (Exception e) {
@@ -2400,22 +3009,114 @@ public class KeysController {
     }
 
     /**
-     * Handle CMS Encrypt (EnvelopedData)
+     * Upgrades the CAdES-T currently shown in the CMS output area by embedding
+     * user-selected CRL and optional certificate-chain evidence. It is
+     * deliberately offline: CryptoCarver never discovers or downloads
+     * revocation URLs on the user's behalf.
      */
+    public void handleUpgradeCadesLt() {
+        try {
+            String current = cmsOutputArea == null ? "" : cmsOutputArea.getText().trim();
+            if (current.isEmpty()) {
+                showError("CAdES-LT", "Generate or paste a CAdES-T signature into the Output area first.");
+                return;
+            }
+            byte[] cadesT = decodeCmsArmored(current);
+            CMSOperations.CadesLongTermStatus status = CMSOperations.inspectCadesLongTermEvidence(cadesT);
+            if (!"CAdES-T".equals(status.level())) {
+                showError("CAdES-LT", "The selected CMS must be a valid CAdES-T signature without LT evidence.");
+                return;
+            }
+
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Select CAdES-LT Evidence (CRL required; certificates optional)");
+            chooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("CRL or certificate evidence", "*.crl", "*.cer", "*.crt", "*.der", "*.pem"),
+                    new FileChooser.ExtensionFilter("All files", "*.*"));
+            java.util.List<java.io.File> files = chooser.showOpenMultipleDialog(cmsOutputArea.getScene().getWindow());
+            if (files == null || files.isEmpty()) return;
+
+            java.util.List<java.security.cert.X509CRL> crls = new java.util.ArrayList<>();
+            java.util.List<java.security.cert.X509Certificate> certificates = new java.util.ArrayList<>();
+            for (java.io.File file : files) {
+                byte[] evidence = java.nio.file.Files.readAllBytes(file.toPath());
+                try {
+                    crls.add(CMSOperations.parseX509Crl(evidence));
+                } catch (Exception notACrl) {
+                    try {
+                        certificates.addAll(CMSOperations.parseX509Certificates(evidence));
+                    } catch (Exception notACertificate) {
+                        throw new IllegalArgumentException(file.getName()
+                                + " is neither a valid X.509 CRL nor X.509 certificate evidence", notACertificate);
+                    }
+                }
+            }
+            if (crls.isEmpty()) {
+                showError("CAdES-LT", "Select at least one CRL. Certificate files alone are not revocation evidence.");
+                return;
+            }
+            byte[] upgraded = CMSOperations.addCadesLtEvidence(cadesT, certificates, crls);
+            String armored = "-----BEGIN PKCS7-----\n" + java.util.Base64.getEncoder().encodeToString(upgraded)
+                    + "\n-----END PKCS7-----";
+            cmsOutputArea.setText(armored);
+            mainController.publish(OperationResult.forOperation("CAdES-LT Evidence")
+                    .input(cadesT).output(upgraded)
+                    .detail("CRL evidence", String.valueOf(crls.size()))
+                    .detail("Certificate evidence", String.valueOf(certificates.size()))
+                    .detail("Network", "Not used; evidence selected locally")
+                    .status("CAdES-LT evidence embedded; validate freshness and trust separately").build());
+            updateStatus("CAdES-LT evidence embedded from " + crls.size() + " CRL(s) and "
+                    + certificates.size() + " certificate(s).");
+        } catch (Exception error) {
+            showError("CAdES-LT", "Unable to embed LT evidence: " + error.getMessage());
+        }
+    }
+
+    private static byte[] decodeCmsArmored(String input) {
+        String base64 = input.replace("-----BEGIN PKCS7-----", "")
+                .replace("-----END PKCS7-----", "")
+                .replaceAll("\\s+", "");
+        return java.util.Base64.getDecoder().decode(base64);
+    }
+
     public void handleCMSEncrypt() {
         try {
             String dataStr = cmsInputArea.getText();
-            String certStr = cmsEncryptCertArea.getText().trim();
+            boolean usePkcs11 = cmsEncryptSourcePkcs11Radio != null && cmsEncryptSourcePkcs11Radio.isSelected();
 
-            if (dataStr.isEmpty() || certStr.isEmpty()) {
-                showError("Input Error", "Data and Recipient Certificate are required");
+            if (dataStr.isEmpty()) {
+                showError("Input Error", "Data to encrypt is required");
                 return;
             }
 
             updateStatus("Encrypting data...");
-
-            X509Certificate cert = CertificateGenerator.parseCertificate(certStr);
             byte[] data = dataStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            X509Certificate cert;
+            String alias = null;
+
+            if (usePkcs11) {
+                if (!com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
+                    showError("PKCS#11 Error", "No token connected.");
+                    return;
+                }
+                alias = cmsEncryptKeyAliasCombo.getValue();
+                if (alias == null || alias.isEmpty()) {
+                    showError("PKCS#11 Error", "Select an alias from the token.");
+                    return;
+                }
+                cert = (X509Certificate) com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().getCertificateChain(alias)[0];
+                if (cert == null) {
+                    showError("PKCS#11 Error", "No certificate found for the selected alias.");
+                    return;
+                }
+            } else {
+                String certStr = cmsEncryptCertArea.getText().trim();
+                if (certStr.isEmpty()) {
+                    showError("Input Error", "Recipient Certificate is required in Local mode");
+                    return;
+                }
+                cert = CertificateGenerator.parseCertificate(certStr);
+            }
 
             byte[] encrypted = CMSOperations.generateEnvelopedData(data, cert);
 
@@ -2424,26 +3125,25 @@ public class KeysController {
                     "\n-----END PKCS7-----";
 
             cmsOutputArea.setText(output);
-            mainController.publish(OperationResult.forOperation("CMS Encrypt")
-                    .input(data).output(encrypted).detail("Recipient Certificate", "Present")
+            updateStatus("CMS Encrypted (EnvelopedData) successfully");
+            String sourceStr = usePkcs11 ? ("PKCS#11 Token (alias: " + alias + ")") : "Local PEM";
+            mainController.publish(com.cryptoforge.model.OperationResult.forOperation("CMS Encrypt (EnvelopedData)")
+                    .input(data).output(encrypted)
+                    .detail("Source", sourceStr)
                     .status("CMS data encrypted successfully").build());
-
         } catch (Exception e) {
             showError("Encryption Error", "Error encrypting data: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Handle CMS Decrypt (EnvelopedData)
-     */
     public void handleCMSDecrypt() {
         try {
             String pkcs7Str = cmsInputArea.getText().trim();
-            String keyStr = cmsDecryptKeyArea.getText().trim();
+            boolean usePkcs11 = cmsEncryptSourcePkcs11Radio != null && cmsEncryptSourcePkcs11Radio.isSelected();
 
-            if (pkcs7Str.isEmpty() || keyStr.isEmpty()) {
-                showError("Input Error", "PKCS#7 Enveloped Data and Private Key are required");
+            if (pkcs7Str.isEmpty()) {
+                showError("Input Error", "PKCS#7 Enveloped Data is required");
                 return;
             }
 
@@ -2455,17 +3155,38 @@ public class KeysController {
                     .replaceAll("\\s+", "");
             byte[] pkcs7Bytes = java.util.Base64.getDecoder().decode(base64);
 
-            PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
+            byte[] decrypted;
+            String alias = null;
 
-            byte[] decrypted = CMSOperations.decryptEnvelopedData(pkcs7Bytes, privateKey);
+            if (usePkcs11) {
+                if (!com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
+                    showError("PKCS#11 Error", "No token connected.");
+                    return;
+                }
+                alias = cmsEncryptKeyAliasCombo.getValue();
+                if (alias == null || alias.isEmpty()) {
+                    showError("PKCS#11 Error", "Select an alias from the token.");
+                    return;
+                }
+                decrypted = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().decryptCms(alias, pkcs7Bytes);
+            } else {
+                String keyStr = cmsDecryptKeyArea.getText().trim();
+                if (keyStr.isEmpty()) {
+                    showError("Input Error", "Private Key is required in Local mode");
+                    return;
+                }
+                PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
+                decrypted = CMSOperations.decryptEnvelopedData(pkcs7Bytes, privateKey);
+            }
 
-            String output = new String(decrypted, java.nio.charset.StandardCharsets.UTF_8);
-
-            cmsOutputArea.setText(output);
-            mainController.publish(OperationResult.forOperation("CMS Decrypt")
-                    .input(pkcs7Bytes).output(decrypted).detail("Private Key", "[not persisted]")
+            cmsOutputArea.setText(new String(decrypted, java.nio.charset.StandardCharsets.UTF_8));
+            updateStatus("CMS Decrypted successfully");
+            String sourceStr = usePkcs11 ? ("PKCS#11 Token (alias: " + alias + ")") : "Local PEM";
+            mainController.publish(com.cryptoforge.model.OperationResult.forOperation("CMS Decrypt (EnvelopedData)")
+                    .input(pkcs7Bytes).output(decrypted)
+                    .detail("Source", sourceStr)
+                    .detail("Private Key", "[not persisted]")
                     .status("CMS data decrypted successfully").build());
-
         } catch (Exception e) {
             cmsOutputArea.setText("Decryption Failed: " + e.getMessage());
             updateStatus("Decryption failed");
@@ -2563,8 +3284,14 @@ public class KeysController {
             chainResultArea.setManaged(true);
 
             updateStatus("Chain validation complete: " + (result.isValid ? "Valid" : "Invalid"));
-            OperationHistory.getInstance().addOperation("Certificates", "Validate Chain", "Length: " + chain.size(),
-                    result.isValid ? "Valid" : "Invalid");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Validate Chain")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Length: " + chain.size(), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", result.isValid ? "Valid" : "Invalid", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             showError("Validation Error", "Error validating chain: " + e.getMessage());
@@ -2674,6 +3401,9 @@ public class KeysController {
             }
             if (tr31KeyToWrapField != null && p.getInputs().containsKey("keyToWrap")) {
                 tr31KeyToWrapField.setText(p.getInputs().get("keyToWrap"));
+            }
+            if (tr31OptionalBlocksField != null && p.getInputs().containsKey("optionalBlocks")) {
+                tr31OptionalBlocksField.setText(p.getInputs().get("optionalBlocks"));
             }
             updateStatus("Loaded TR-31 profile: " + p.getName());
         }

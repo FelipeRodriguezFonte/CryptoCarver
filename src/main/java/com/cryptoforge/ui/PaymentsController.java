@@ -7,6 +7,8 @@ import com.cryptoforge.model.OperationResult;
 import com.cryptoforge.util.DataConverter;
 import com.cryptoforge.utils.OperationHistory;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,18 +102,60 @@ public class PaymentsController {
     private TextArea derivePvvResultArea;
     private TextField dukptBdkField, dukptKsnField, dukptAesPinBlockField;
     private TextArea dukptResultArea;
-    private ComboBox<String> dukptSchemeCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
+    private ComboBox<String> dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
+    private HBox dukptTdesOptionsBox, dukptAesOptionsBox;
+    private VBox dukptAesPinBox;
+    private DukptKsn.TdesKeyUsage selectedTdesUsage = DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
+    private String loadedDukptProfileName;
+    private String loadedDukptExpectedWorkingKey;
 
     public void initializeDukptControls(TextField bdkField, TextField ksnField, TextArea resultArea,
-            ComboBox<String> schemeCombo, ComboBox<String> aesUsageCombo, ComboBox<String> aesKeyTypeCombo,
-            TextField aesPinBlockField, ComboBox<String> aesPinOperationCombo) {
+            ComboBox<String> schemeCombo, ComboBox<String> tdesUsageCombo, ComboBox<String> aesUsageCombo,
+            ComboBox<String> aesKeyTypeCombo, TextField aesPinBlockField, ComboBox<String> aesPinOperationCombo,
+            HBox tdesOptionsBox, HBox aesOptionsBox, VBox aesPinBox) {
         this.dukptBdkField = bdkField; this.dukptKsnField = ksnField; this.dukptResultArea = resultArea;
-        this.dukptSchemeCombo = schemeCombo; this.dukptAesUsageCombo = aesUsageCombo; this.dukptAesKeyTypeCombo = aesKeyTypeCombo;
+        this.dukptSchemeCombo = schemeCombo; this.dukptTdesUsageCombo = tdesUsageCombo;
+        this.dukptAesUsageCombo = aesUsageCombo; this.dukptAesKeyTypeCombo = aesKeyTypeCombo;
         this.dukptAesPinBlockField = aesPinBlockField; this.dukptAesPinOperationCombo = aesPinOperationCombo;
-        if (schemeCombo != null) { schemeCombo.getItems().setAll("TDES (legacy, 10-byte KSN)", "AES (X9.24-3, 12-byte KSN)"); schemeCombo.setValue("TDES (legacy, 10-byte KSN)"); }
+        this.dukptTdesOptionsBox = tdesOptionsBox; this.dukptAesOptionsBox = aesOptionsBox; this.dukptAesPinBox = aesPinBox;
+        if (schemeCombo != null) {
+            schemeCombo.getItems().setAll("TDES (legacy, 10-byte KSN)", "AES (X9.24-3, 12-byte KSN)");
+            schemeCombo.setValue("TDES (legacy, 10-byte KSN)");
+            schemeCombo.valueProperty().addListener((ignored, oldValue, newValue) -> updateDukptOptionsVisibility());
+        }
+        if (tdesUsageCombo != null) {
+            tdesUsageCombo.getItems().setAll("PIN Encryption", "MAC Request", "MAC Response", "Data Encryption");
+            tdesUsageCombo.setValue(selectedTdesUsage.label());
+            tdesUsageCombo.valueProperty().addListener((ignored, oldValue, newValue) -> selectedTdesUsage = selectedTdesUsage());
+        }
         if (aesUsageCombo != null) { aesUsageCombo.getItems().setAll("Data encryption (encrypt)", "Data encryption (decrypt)", "PIN encryption", "MAC generation", "MAC verification", "MAC both ways", "Key encryption", "Key derivation"); aesUsageCombo.setValue("Data encryption (encrypt)"); }
         if (aesKeyTypeCombo != null) { aesKeyTypeCombo.getItems().setAll("AES-128", "AES-192", "AES-256"); aesKeyTypeCombo.setValue("AES-128"); }
         if (aesPinOperationCombo != null) { aesPinOperationCombo.getItems().setAll("Encrypt formatted PIN block", "Decrypt encrypted PIN block"); aesPinOperationCombo.setValue("Encrypt formatted PIN block"); }
+        updateDukptOptionsVisibility();
+    }
+
+    private void updateDukptOptionsVisibility() {
+        boolean aes = dukptSchemeCombo != null && dukptSchemeCombo.getValue() != null && dukptSchemeCombo.getValue().startsWith("AES");
+        setDukptSectionVisible(dukptTdesOptionsBox, !aes);
+        setDukptSectionVisible(dukptAesOptionsBox, aes);
+        setDukptSectionVisible(dukptAesPinBox, aes);
+    }
+
+    private static void setDukptSectionVisible(javafx.scene.Node node, boolean visible) {
+        if (node != null) {
+            node.setVisible(visible);
+            node.setManaged(visible);
+        }
+    }
+
+    private DukptKsn.TdesKeyUsage selectedTdesUsage() {
+        String selection = dukptTdesUsageCombo == null ? null : dukptTdesUsageCombo.getValue();
+        return switch (selection == null ? "" : selection) {
+            case "MAC Request" -> DukptKsn.TdesKeyUsage.MAC_REQUEST;
+            case "MAC Response" -> DukptKsn.TdesKeyUsage.MAC_RESPONSE;
+            case "Data Encryption" -> DukptKsn.TdesKeyUsage.DATA_ENCRYPTION;
+            default -> DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
+        };
     }
 
     public void handleInspectDukpt() {
@@ -124,7 +168,7 @@ public class PaymentsController {
                     + "\nNext KSN: " + (DukptKsn.isTdesCounterExhausted(ksn.ksnHex()) ? "not available" : DukptKsn.nextTdesKsn(ksn.ksnHex()));
             if (!dukptBdkField.getText().isBlank()) {
                 String ipek = DukptKsn.deriveIpek(dukptBdkField.getText(), ksn.ksnHex());
-                DukptKsn.TdesDerivedKey derived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.PIN_ENCRYPTION);
+                DukptKsn.TdesDerivedKey derived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), selectedTdesUsage);
 
                 result += "\n\n=== Derivation Tree ===";
                 result += "\n[BDK]\n  └─ " + dukptBdkField.getText().replaceAll("\\s+", "").toUpperCase();
@@ -139,7 +183,16 @@ public class PaymentsController {
                     }
                 }
 
-                result += "\n\n[Working Key (PIN Variant)]\n  └─ " + derived.workingKeyHex().toUpperCase();
+                if (loadedDukptProfileName != null) {
+                    result += "\n\n[Laboratory Profile]\n  └─ " + loadedDukptProfileName;
+                }
+                result += "\n\n[Selected Working Key (" + selectedTdesUsage.label() + ")]\n  └─ "
+                        + derived.workingKeyHex().toUpperCase();
+                if (loadedDukptExpectedWorkingKey != null) {
+                    boolean matches = loadedDukptExpectedWorkingKey.equalsIgnoreCase(derived.workingKeyHex());
+                    result += "\n\n[Laboratory Expected Key]\n  └─ " + loadedDukptExpectedWorkingKey.toUpperCase();
+                    result += "\n[Vector Check]\n  └─ " + (matches ? "MATCH" : "MISMATCH");
+                }
 
                 DukptKsn.TdesDerivedKey macDerived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.MAC_REQUEST);
                 result += "\n\n[Working Key (MAC Variant)]\n  └─ " + macDerived.workingKeyHex().toUpperCase();
@@ -159,8 +212,8 @@ public class PaymentsController {
                 + "\nCounter exhausted: " + AesDukpt.isCounterExhausted(ksn.ksnHex())
                 + "\nNext KSN: " + (AesDukpt.isCounterExhausted(ksn.ksnHex()) ? "not available" : AesDukpt.nextKsn(ksn.ksnHex()));
         if (!dukptBdkField.getText().isBlank()) {
-            AesDukpt.KeyUsage usage = AesDukpt.KeyUsage.DATA_ENCRYPTION_ENCRYPT;
-            AesDukpt.KeyType type = AesDukpt.KeyType.AES128;
+            AesDukpt.KeyUsage usage = selectedAesUsage();
+            AesDukpt.KeyType type = selectedAesKeyType();
             AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), ksn.ksnHex(), usage, type);
 
             result += "\n\n=== Derivation Tree ===";
@@ -982,10 +1035,14 @@ public class PaymentsController {
             pinTransResultArea.setText(details);
 
             // Add to history
-            OperationHistory.getInstance().addOperation("PIN Translation",
-                    "Translate " + sourceFormat + " → " + targetFormat,
-                    "Block: " + sourceBlock + ", PAN: " + pan,
-                    PaymentOperations.translatePinBlock(sourceBlock, pan, sourceFormat, targetFormat));
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Translate " + sourceFormat + " → " + targetFormat)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Block: " + sourceBlock + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", PaymentOperations.translatePinBlock(sourceBlock, pan, sourceFormat, targetFormat), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
             updateStatus("PIN block translated successfully");
 
@@ -1023,9 +1080,14 @@ public class PaymentsController {
             pvvValueField.setText(pvv);
 
             // Add to history
-            OperationHistory.getInstance().addOperation("PVV", "Generate PVV",
-                    "PIN: [HIDDEN], PAN: " + pan,
-                    "PVV: " + pvv);
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate PVV")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN: [HIDDEN], PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PVV: " + pvv, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
             updateStatus("PVV generated successfully");
 
@@ -1066,9 +1128,14 @@ public class PaymentsController {
             pvvResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation("PVV", "Verify PVV",
-                    "PAN: " + pan + ", PVV: " + pvvToVerify,
-                    isValid ? "VALID" : "INVALID");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Verify PVV")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PAN: " + pan + ", PVV: " + pvvToVerify, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", isValid ? "VALID" : "INVALID", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
             updateStatus(isValid ? "PVV is valid" : "PVV is invalid");
 
@@ -1107,9 +1174,14 @@ public class PaymentsController {
             trackDataField.setText(track1);
 
             // Add to history
-            OperationHistory.getInstance().addOperation("Track Data", "Encode Track 1",
-                    "PAN: " + pan + ", Name: " + name,
-                    track1);
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Encode Track 1")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PAN: " + pan + ", Name: " + name, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", track1, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
             updateStatus("Track 1 data encoded successfully");
 
@@ -1146,9 +1218,14 @@ public class PaymentsController {
             trackDataField.setText(track2);
 
             // Add to history
-            OperationHistory.getInstance().addOperation("Track Data", "Encode Track 2",
-                    "PAN: " + pan,
-                    track2);
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Encode Track 2")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", track2, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
             updateStatus("Track 2 data encoded successfully");
 
@@ -1181,9 +1258,14 @@ public class PaymentsController {
             trackResultArea.setText(result);
 
             // Add to history
-            OperationHistory.getInstance().addOperation("Track Data", "Parse Track Data",
-                    trackData.substring(0, Math.min(50, trackData.length())) + "...",
-                    "Parsed successfully");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Parse Track Data")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", trackData.substring(0, Math.min(50, trackData.length())) + "...", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Parsed successfully", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
             updateStatus("Track data parsed successfully");
 
@@ -1776,11 +1858,18 @@ public class PaymentsController {
     public void loadProfile(com.cryptoforge.model.payments.PaymentProfile p) {
         if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.DUKPT_TDES) {
             if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("TDES (legacy, 10-byte KSN)");
+            selectedTdesUsage = p.getParameters().getOrDefault("usage", "").toLowerCase().contains("mac")
+                    ? DukptKsn.TdesKeyUsage.MAC_REQUEST : DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
+            if (dukptTdesUsageCombo != null) dukptTdesUsageCombo.setValue(selectedTdesUsage.label());
+            loadedDukptProfileName = p.getName();
+            loadedDukptExpectedWorkingKey = p.getOutputs().get("workingKey");
             if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
             if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
             updateStatus("Loaded DUKPT TDES profile: " + p.getName());
         } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.DUKPT_AES) {
             if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("AES (X9.24-3, 12-byte KSN)");
+            loadedDukptProfileName = p.getName();
+            loadedDukptExpectedWorkingKey = p.getOutputs().get("workingKey");
             if (dukptAesUsageCombo != null && p.getParameters().containsKey("usage")) {
                 String usageStr = p.getParameters().get("usage");
                 for (String item : dukptAesUsageCombo.getItems()) {
@@ -1793,21 +1882,28 @@ public class PaymentsController {
         } else if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.PIN) {
             if (p.getParameters().containsKey("format")) {
                 String formatStr = p.getParameters().get("format");
-                if (p.getName().contains("Encrypt") || p.getName().contains("pos_1")) {
+                boolean encodePinBlock = p.getInputs().containsKey("pin") && !p.getInputs().containsKey("pinBlock");
+                boolean encryptedProfile = p.getInputs().containsKey("key");
+                if (encryptedProfile) {
+                    selectPinFormat(encPinBlockFormatCombo, formatStr);
+                    if (encodePinBlock) {
+                        if (encPinField != null) encPinField.setText(p.getInputs().get("pin"));
+                        if (encPanFieldEncode != null) encPanFieldEncode.setText(p.getInputs().getOrDefault("pan", ""));
+                        if (encPinBlockKeyField != null) encPinBlockKeyField.setText(p.getInputs().get("key"));
+                    } else {
+                        if (encPinBlockFieldDecode != null) encPinBlockFieldDecode.setText(p.getInputs().get("pinBlock"));
+                        if (encPanFieldDecode != null) encPanFieldDecode.setText(p.getInputs().getOrDefault("pan", ""));
+                        if (encPinBlockKeyFieldDecode != null) encPinBlockKeyFieldDecode.setText(p.getInputs().get("key"));
+                    }
+                } else if (encodePinBlock) {
                     if (pinBlockFormatCombo != null) {
-                        for (String item : pinBlockFormatCombo.getItems()) {
-                            if (item.contains(formatStr)) { pinBlockFormatCombo.setValue(item); break; }
-                        }
+                        selectPinFormat(pinBlockFormatCombo, formatStr);
                     }
                     if (pinField != null && p.getInputs().containsKey("pin")) pinField.setText(p.getInputs().get("pin"));
                     if (panFieldEncode != null && p.getInputs().containsKey("pan")) panFieldEncode.setText(p.getInputs().get("pan"));
-                    // Encriptación (opcional si hay Key) no está en el tab basico de formato, sino en el genérico
-                    if (encPinBlockKeyField != null && p.getInputs().containsKey("key")) encPinBlockKeyField.setText(p.getInputs().get("key"));
                 } else {
                     if (pinBlockFormatDecodeCombo != null) {
-                        for (String item : pinBlockFormatDecodeCombo.getItems()) {
-                            if (item.contains(formatStr)) { pinBlockFormatDecodeCombo.setValue(item); break; }
-                        }
+                        selectPinFormat(pinBlockFormatDecodeCombo, formatStr);
                     }
                     if (pinBlockField != null && p.getInputs().containsKey("pinBlock")) pinBlockField.setText(p.getInputs().get("pinBlock"));
                     if (panFieldDecode != null && p.getInputs().containsKey("pan")) panFieldDecode.setText(p.getInputs().get("pan"));
@@ -1828,6 +1924,18 @@ public class PaymentsController {
                 }
             }
             updateStatus("Loaded Secure Messaging profile: " + p.getName());
+        }
+    }
+
+    private void selectPinFormat(ComboBox<String> comboBox, String profileFormat) {
+        if (comboBox == null || profileFormat == null) return;
+        String formatNumber = profileFormat.replaceAll("\\D", "");
+        for (String item : comboBox.getItems()) {
+            if (item.contains(profileFormat)
+                    || (!formatNumber.isEmpty() && item.contains("Format " + formatNumber))) {
+                comboBox.setValue(item);
+                return;
+            }
         }
     }
 }

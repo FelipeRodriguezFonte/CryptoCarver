@@ -4,21 +4,17 @@
 # Ensure we are in the script directory
 cd "$(dirname "$0")"
 
-# Path to the executable JAR
-# Check if JAR exists in current directory (portable mode)
-if [ -f "cryptocarver-2.3.0.jar" ]; then
-    JAR_FILE="cryptocarver-2.3.0.jar"
-# Check if JAR exists in target directory (maven project mode)
-elif [ -f "target/cryptocarver-2.3.0.jar" ]; then
-    JAR_FILE="target/cryptocarver-2.3.0.jar"
-else
-    JAR_FILE="target/cryptocarver-2.3.0.jar" # Default for error message
-fi
+# Locate the executable JAR without duplicating the Maven project version.
+JAR_FILE=""
+for candidate in cryptocarver-*.jar target/cryptocarver-*.jar; do
+    case "$candidate" in *-original.jar) continue ;; esac
+    if [ -f "$candidate" ]; then JAR_FILE="$candidate"; break; fi
+done
 
 if [ ! -f "$JAR_FILE" ]; then
-    echo "Error: $JAR_FILE not found."
+    echo "Error: CryptoCarver executable JAR not found."
     echo "Please run 'mvn clean package -DskipTests' to build the project,"
-    echo "OR copy 'cryptocarver-2.3.0.jar' to this directory."
+    echo "OR copy 'cryptocarver-<version>.jar' to this directory."
     exit 1
 fi
 

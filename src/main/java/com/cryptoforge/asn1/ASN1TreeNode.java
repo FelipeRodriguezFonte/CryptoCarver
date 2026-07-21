@@ -16,9 +16,10 @@ public class ASN1TreeNode {
     private int depth;              // Depth in tree (for formatting)
     private int length;             // Length in bytes
     private List<ASN1TreeNode> children;
+    private int offset;             // Absolute byte offset in the parsed structure
 
     public ASN1TreeNode(String label, String tag, int tagNumber, boolean constructed,
-                       byte[] rawValue, String decodedValue, int depth, int length) {
+                       byte[] rawValue, String decodedValue, int depth, int length, int offset) {
         this.label = label;
         this.tag = tag;
         this.tagNumber = tagNumber;
@@ -27,6 +28,7 @@ public class ASN1TreeNode {
         this.decodedValue = decodedValue;
         this.depth = depth;
         this.length = length;
+        this.offset = offset;
         this.children = new ArrayList<>();
     }
 
@@ -43,6 +45,7 @@ public class ASN1TreeNode {
     public String getDecodedValue() { return decodedValue; }
     public int getDepth() { return depth; }
     public int getLength() { return length; }
+    public int getOffset() { return offset; }
     public List<ASN1TreeNode> getChildren() { return children; }
 
     // Setter for label (for contextual labeling)

@@ -14,14 +14,25 @@
                         <Button text="..." onAction="#handleBrowseXMLSignInput"/>
                     </HBox>
 
-                    <Label text="PKCS#12 KeyStore (.p12/.pfx):"/>
+                    <Label text="Signature Source:"/>
                     <HBox spacing="10">
-                        <TextField fx:id="xmlSignKeyPathField" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
-                        <Button text="..." onAction="#handleBrowseXMLKey"/>
+                        <fx:define>
+                            <ToggleGroup fx:id="xmlSignSourceToggleGroup"/>
+                        </fx:define>
+                        <RadioButton fx:id="xmlSignSourceLocalRadio" text="Local KeyStore / PEM" toggleGroup="$xmlSignSourceToggleGroup" selected="true" onAction="#handleXMLSignSourceChanged"/>
+                        <RadioButton fx:id="xmlSignSourcePkcs11Radio" text="Connected PKCS#11 Token" toggleGroup="$xmlSignSourceToggleGroup" onAction="#handleXMLSignSourceChanged"/>
                     </HBox>
 
-                    <Label text="KeyStore Password:"/>
-                    <PasswordField fx:id="xmlSignKeyPasswordField" style="-fx-font-size: 11px;"/>
+                    <VBox fx:id="xmlSignLocalKeyBox" spacing="8">
+                        <Label fx:id="xmlSignKeyPathLabel" text="PKCS#12 / JKS / PEM KeyStore:"/>
+                        <HBox spacing="10">
+                            <TextField fx:id="xmlSignKeyPathField" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                            <Button text="..." onAction="#handleBrowseXMLKey"/>
+                        </HBox>
+
+                        <Label fx:id="xmlSignKeyPasswordLabel" text="KeyStore Password:"/>
+                        <PasswordField fx:id="xmlSignKeyPasswordField" style="-fx-font-size: 11px;"/>
+                    </VBox>
 
                     <Label text="Key Alias (Select Key):"/>
                     <HBox spacing="10">

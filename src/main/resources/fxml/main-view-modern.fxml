@@ -27,6 +27,7 @@
                     <MenuItem text="Clear Input" onAction="#handleClearInput" accelerator="Ctrl+Shift+I" />
                     <MenuItem text="Clear Output" onAction="#handleClearOutput" accelerator="Ctrl+Shift+O" />
                     <MenuItem text="Copy Output" onAction="#handleCopyOutput" accelerator="Ctrl+C" />
+                    <MenuItem text="Add Output to Clipboard Shelf" onAction="#handleAddCurrentOutputToShelf" />
                 </Menu>
 
                 <Menu text="View">
@@ -69,6 +70,7 @@
                 <Region HBox.hgrow="ALWAYS"/>
 
                 <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="link-button"/>
+                <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="link-button"/>
                 <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="link-button"/>
             </HBox>
         </VBox>
@@ -98,368 +100,13 @@
                     <VBox fx:id="contentContainer" spacing="0" styleClass="content-container-vbox">
 
                         <!-- PLACEHOLDER - Real content will be loaded dynamically -->
-                        <Label text="Select an operation from the side panel" styleClass="placeholder-label"/>
+                        <Label fx:id="contentPlaceholderLabel" text="Select an operation from the side panel"
+                               styleClass="placeholder-label"/>
 
                         <!-- This is where Symmetric Keys Accordion will be loaded -->
                         <!-- Saved Sessions Container -->
-                        <!-- JOSE CONTAINER -->
-                        <VBox fx:id="joseContainer" managed="false" visible="false" spacing="10" style="-fx-padding: 10;">
+                        <!-- JOSE CONTAINER -->                        <fx:include fx:id="jose" source="jose.fxml"/>
 
-
-                            <!-- JWT SECTION -->
-                            <VBox fx:id="jwtSection" spacing="10" managed="false" visible="false">
-                                <Label text="JSON Web Token (JWT)" styleClass="section-header"/>
-
-                                <TabPane tabClosingPolicy="UNAVAILABLE">
-                                    <!-- GENERATE TAB -->
-                                    <Tab text="Generate">
-                                        <VBox spacing="10" style="-fx-padding: 10;">
-                                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                                <Label text="Algorithm:" styleClass="field-label"/>
-                                                <ComboBox fx:id="jwtAlgoCombo" prefWidth="150"/>
-                                                <Label text="Template:" styleClass="field-label"/>
-                                                <ComboBox fx:id="jwtTemplateCombo" prefWidth="150" promptText="Select Template..."/>
-                                            </HBox>
-                                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                                <Label text="Signing Key (Secret / Private PEM):" styleClass="field-label"/>
-                                                <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="link-button"/>
-                                            </HBox>
-                                            <TextArea fx:id="jwtKeyArea" promptText="Enter secret (for HMAC) or paste Private Key PEM (for RSA/EC)..."
-                                                      prefHeight="60" styleClass="code-area"/>
-
-                                            <TitledPane text="Claims Builder (Optional)" expanded="false">
-                                                <VBox spacing="10">
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Issuer (iss):" prefWidth="80"/>
-                                                        <TextField fx:id="jwtIssField" promptText="e.g. auth.server" HBox.hgrow="ALWAYS"/>
-                                                    </HBox>
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Subject (sub):" prefWidth="80"/>
-                                                        <TextField fx:id="jwtSubField" promptText="e.g. user_123" HBox.hgrow="ALWAYS"/>
-                                                    </HBox>
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Audience (aud):" prefWidth="80"/>
-                                                        <TextField fx:id="jwtAudField" promptText="e.g. my-api" HBox.hgrow="ALWAYS"/>
-                                                    </HBox>
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Valid for:" prefWidth="80"/>
-                                                        <TextField fx:id="jwtExpField" promptText="1" prefWidth="50"/>
-                                                        <Label text="hours"/>
-                                                        <Button text="Apply to Payload" onAction="#handleApplyJWTClaims" styleClass="link-button"/>
-                                                    </HBox>
-                                                </VBox>
-                                            </TitledPane>
-
-                                            <Label text="Payload (JSON):" styleClass="field-label"/>
-                                            <TextArea fx:id="jwtPayloadArea" promptText='{"sub":"1234567890", "name":"John Doe", "iat":1516239022}'
-                                                      prefHeight="80" styleClass="code-area"/>
-
-                                            <Button text="Generate Signed JWT" onAction="#handleGenerateSignedJWT" styleClass="action-button"/>
-
-                                            <Separator/>
-                                            <Label text="Output:" styleClass="field-label"/>
-                                            <TextArea fx:id="jwtOutputArea" promptText="Generated JWT will appear here..."
-                                                      prefHeight="60" styleClass="code-area" editable="false"/>
-                                        </VBox>
-                                    </Tab>
-
-                                    <!-- VALIDATE TAB -->
-                                    <Tab text="Validate &amp; Decode">
-                                        <VBox spacing="10" style="-fx-padding: 10;">
-                                            <Label text="JWT Token:" styleClass="field-label"/>
-                                            <TextArea fx:id="jwtValidateTokenArea" promptText="Paste JWT here..."
-                                                      prefHeight="60" styleClass="code-area"/>
-
-                                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                                <Label text="Verification Key (Secret / Public PEM):" styleClass="field-label"/>
-                                                <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="link-button"/>
-                                            </HBox>
-                                            <TextArea fx:id="jwtValidateKeyArea" promptText="Enter secret (for HMAC) or paste Public Key PEM (for RSA/EC)..."
-                                                      prefHeight="60" styleClass="code-area"/>
-
-                                            <TitledPane text="Advanced Validation Settings" expanded="false">
-                                                <VBox spacing="10">
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Expected Issuer (iss):" prefWidth="120"/>
-                                                        <TextField fx:id="jwtExpectedIssField" promptText="e.g. auth.server" HBox.hgrow="ALWAYS"/>
-                                                    </HBox>
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Expected Audience (aud):" prefWidth="120"/>
-                                                        <TextField fx:id="jwtExpectedAudField" promptText="e.g. my-api" HBox.hgrow="ALWAYS"/>
-                                                    </HBox>
-                                                    <HBox spacing="10" alignment="CENTER_LEFT">
-                                                        <Label text="Clock Skew (sec):" prefWidth="120"/>
-                                                        <TextField fx:id="jwtClockSkewField" text="60" prefWidth="60"/>
-                                                        <CheckBox fx:id="jwtCheckExpiryCheck" text="Check Expiration (exp/nbf)" selected="true"/>
-                                                    </HBox>
-                                                </VBox>
-                                            </TitledPane>
-
-                                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                                <Button text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button"/>
-                                                <Label fx:id="jwtStatusLabel" text="" style="-fx-font-weight: bold;"/>
-                                            </HBox>
-
-                                            <Separator/>
-                                            <Label text="Decoded Header:" styleClass="field-label"/>
-                                            <TextArea fx:id="jwtDecodedHeaderArea" promptText="Header JSON..."
-                                                      prefHeight="50" styleClass="code-area" editable="false"/>
-
-                                            <Label text="Decoded Payload:" styleClass="field-label"/>
-                                            <TextArea fx:id="jwtDecodedPayloadArea" promptText="Payload JSON..."
-                                                      prefHeight="80" styleClass="code-area" editable="false"/>
-                                        </VBox>
-                                    </Tab>
-
-
-                                </TabPane>
-                            </VBox>
-
-                            <TitledPane text="🔗 JWS Detached (payload externo)">
-                                <VBox spacing="8" style="-fx-padding: 10;">
-                                    <Label text="Algorithm:"/><ComboBox fx:id="detachedAlgoCombo" prefWidth="180" promptText="HS256 / RS256 / ES256"/>
-                                    <Label text="External payload:"/><TextArea fx:id="detachedPayloadArea" prefHeight="60"/>
-                                    <Label text="Signing key (secret or private PEM):"/><TextArea fx:id="detachedSigningKeyArea" prefHeight="60"/>
-                                    <Label text="Verification key (same secret or public PEM):"/><TextArea fx:id="detachedVerificationKeyArea" prefHeight="60"/>
-                                    <HBox spacing="8"><Button text="Generate detached JWS" onAction="#handleGenerateDetachedJWS" styleClass="action-button"/><Button text="Verify detached JWS" onAction="#handleVerifyDetachedJWS" styleClass="secondary-button"/></HBox>
-                                    <TextArea fx:id="detachedTokenArea" prefHeight="60" promptText="header..signature"/>
-                                    <Label fx:id="detachedStatusLabel"/>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- JWK SECTION -->
-                            <VBox fx:id="jwkSection" spacing="10" managed="false" visible="false">
-                                <Label text="JSON Web Keys (JWK)" styleClass="section-header"/>
-                                <TabPane tabClosingPolicy="UNAVAILABLE">
-                                    <Tab text="JWK Tools">
-                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
-                                            <VBox spacing="10" style="-fx-padding: 10;">
-                                                <Label text="Key Conversion &amp; Analysis" styleClass="field-label"/>
-
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Key Type:" styleClass="field-label"/>
-                                                    <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="100"/>
-                                                    <Label text="Key ID (kid):" styleClass="field-label"/>
-                                                    <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" HBox.hgrow="ALWAYS"/>
-                                                </HBox>
-
-                                                <Label fx:id="jwkInputLabel" text="Input (PEM or JWK JSON):" styleClass="field-label"/>
-                                                <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefHeight="100" styleClass="code-area"/>
-
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Button fx:id="pemToJwkBtn" text="PEM -> JWK" onAction="#handlePemToJwk" styleClass="action-button"/>
-                                                    <Button fx:id="jwkToPemBtn" text="JWK -> PEM" onAction="#handleJwkToPem" styleClass="action-button"/>
-                                                    <Button text="Calc Thumbprint" onAction="#handleCalculateThumbprint" styleClass="secondary-button"/>
-                                                </HBox>
-
-                                                <Separator/>
-                                                <Label text="Output:" styleClass="field-label"/>
-                                                <TextArea fx:id="jwkOutputArea" promptText="Result..." prefHeight="150" styleClass="code-area" editable="false"/>
-                                            </VBox>
-                                        </ScrollPane>
-                                    </Tab>
-
-                                    <!-- JWK SET TAB -->
-                                    <Tab text="JWK Set (JWKS)">
-                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
-                                            <VBox spacing="10" style="-fx-padding: 10;">
-                                                <Label text="JWK Set Management" styleClass="field-label"/>
-
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                     <Button text="New JWKS" onAction="#handleNewJWKS" styleClass="secondary-button"/>
-                                                     <Button text="Load JWKS..." onAction="#handleLoadJWKS" styleClass="link-button"/>
-                                                </HBox>
-
-                                                <TextArea fx:id="jwksArea" promptText="{ &quot;keys&quot;: [] }" prefHeight="200" styleClass="code-area"/>
-
-                                                <TitledPane text="Key Rotation &amp; Operations" expanded="true">
-                                                    <VBox spacing="10">
-                                                        <Label text="Simulate Key Rotation:" styleClass="field-label"/>
-                                                        <HBox spacing="10" alignment="CENTER_LEFT">
-                                                            <ComboBox fx:id="jwksRotateAlgoCombo" prefWidth="100"/>
-                                                            <Button text="Add New Key to Set" onAction="#handleRotateKey" styleClass="action-button"/>
-                                                        </HBox>
-                                                        <Label text="Public Export:" styleClass="field-label"/>
-                                                        <Button text="Show Public JWKS Only" onAction="#handleExportPublicJWKS" styleClass="secondary-button"/>
-                                                    </VBox>
-                                                </TitledPane>
-                                            </VBox>
-                                        </ScrollPane>
-                                    </Tab>
-                                </TabPane>
-                            </VBox>
-
-                            <!-- JWE SECTION -->
-                            <VBox fx:id="jweSection" spacing="10" managed="false" visible="false">
-                                <Label text="JSON Web Encryption (JWE)" styleClass="section-header"/>
-
-                                <TabPane tabClosingPolicy="UNAVAILABLE">
-                                    <!-- ENCRYPT TAB -->
-                                    <Tab text="Encrypt">
-                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
-                                            <VBox spacing="10" style="-fx-padding: 10;">
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Key Management Algo:" styleClass="field-label"/>
-                                                    <ComboBox fx:id="jweKeyAlgoCombo" prefWidth="150"/>
-
-                                                    <Label text="Content Encryption Algo:" styleClass="field-label"/>
-                                                    <ComboBox fx:id="jweContentAlgoCombo" prefWidth="150"/>
-                                                    <CheckBox fx:id="jweCompressCheck" text="Compress (DEF)"/>
-                                                </HBox>
-
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Recipient Public Key (PEM):" styleClass="field-label"/>
-                                                    <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="link-button"/>
-                                                </HBox>
-                                                <TextArea fx:id="jwePublicKeyArea" promptText="Paste RSA Public Key PEM..."
-                                                          prefHeight="60" styleClass="code-area"/>
-
-                                                <Label text="Payload (Any String):" styleClass="field-label"/>
-                                                <TextArea fx:id="jwePayloadArea" promptText="Secret Data..."
-                                                          prefHeight="60" styleClass="code-area"/>
-
-                                                <Button text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button"/>
-
-                                                <Separator/>
-                                                <Label text="Output (JWE):" styleClass="field-label"/>
-                                                <TextArea fx:id="jweOutputArea" promptText="Generated JWE..."
-                                                          prefHeight="60" styleClass="code-area" editable="false"/>
-                                            </VBox>
-                                        </ScrollPane>
-                                    </Tab>
-
-                                    <!-- DECRYPT TAB -->
-                                    <Tab text="Decrypt">
-                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
-                                            <VBox spacing="10" style="-fx-padding: 10;">
-                                                <Label text="JWE Token:" styleClass="field-label"/>
-                                                <TextArea fx:id="jweInputArea" promptText="Paste JWE here..."
-                                                          prefHeight="60" styleClass="code-area"/>
-
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Private Key (PEM):" styleClass="field-label"/>
-                                                    <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="link-button"/>
-                                                </HBox>
-                                                <TextArea fx:id="jwePrivateKeyArea" promptText="Paste RSA Private Key PEM..."
-                                                          prefHeight="60" styleClass="code-area"/>
-
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Button text="Decrypt JWE" onAction="#handleDecryptJWE" styleClass="action-button"/>
-                                                    <Label fx:id="jweStatusLabel" text="" style="-fx-font-weight: bold;"/>
-                                                </HBox>
-
-                                                <Separator/>
-                                                <Label text="Decoded Header:" styleClass="field-label"/>
-                                                <TextArea fx:id="jweDecodedHeaderArea" promptText="Header JSON..."
-                                                          prefHeight="50" styleClass="code-area" editable="false"/>
-
-                                                <Label text="Decoded Payload:" styleClass="field-label"/>
-                                                <TextArea fx:id="jweDecodedPayloadArea" promptText="Payload..."
-                                                          prefHeight="80" styleClass="code-area" editable="false"/>
-
-                                                <TitledPane text="Visual Breakdown (Layer 6)" expanded="false">
-                                                    <VBox spacing="5" style="-fx-padding: 5;">
-                                                        <Label text="Protected Header:" styleClass="field-label-small"/>
-                                                        <TextArea fx:id="jweHeaderArea" prefHeight="40" styleClass="code-area" editable="false"/>
-                                                        <Label text="Encrypted Key:" styleClass="field-label-small"/>
-                                                    <TextArea fx:id="jweEncryptedKeyArea" prefHeight="40" styleClass="code-area" editable="false"/>
-                                                    <Label text="Decrypted CEK (Hex):" styleClass="field-label-small"/>
-                                                    <TextArea fx:id="jweDecryptedKeyArea" prefHeight="30" styleClass="code-area" editable="false"/>
-                                                    <Label text="Initialization Vector (IV):" styleClass="field-label-small"/>
-                                                        <TextArea fx:id="jweIVArea" prefHeight="30" styleClass="code-area" editable="false"/>
-                                                        <Label text="Ciphertext (Truncated):" styleClass="field-label-small"/>
-                                                        <TextArea fx:id="jweCiphertextArea" prefHeight="40" styleClass="code-area" editable="false"/>
-                                                        <Label text="Authentication Tag:" styleClass="field-label-small"/>
-                                                        <TextArea fx:id="jweAuthTagArea" prefHeight="30" styleClass="code-area" editable="false"/>
-                                                    </VBox>
-                                                </TitledPane>
-                                            </VBox>
-                                        </ScrollPane>
-                                    </Tab>
-
-                                    <!-- NESTED TAB -->
-                                    <Tab text="Nested (Sign + Encrypt)">
-                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
-                                            <VBox spacing="10" style="-fx-padding: 10;">
-                                                <Label text="1. Inner Token (Signed):" style="-fx-font-weight: bold;"/>
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Sign Algo:" styleClass="field-label"/>
-                                                    <ComboBox fx:id="nestedSignAlgoCombo" prefWidth="120"/>
-                                                    <Label text="Signing Key (PEM/Secret):" styleClass="field-label"/>
-                                                    <Button text="Import..." onAction="#handleLoadNestedSigningKey" styleClass="link-button"/>
-                                                </HBox>
-                                                <TextArea fx:id="nestedSigningKeyArea" promptText="Private Key or Secret..." prefHeight="40" styleClass="code-area"/>
-
-                                                <Label text="Payload:" styleClass="field-label"/>
-                                                <TextArea fx:id="nestedPayloadArea" promptText="{ 'sub': 'user' }..." prefHeight="40" styleClass="code-area"/>
-
-                                                <Separator/>
-
-                                                <Label text="2. Outer Token (Encrypted):" style="-fx-font-weight: bold;"/>
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Key Algo:" styleClass="field-label"/>
-                                                    <ComboBox fx:id="nestedKeyAlgoCombo" prefWidth="120"/>
-                                                    <Label text="Content Algo:" styleClass="field-label"/>
-                                                    <ComboBox fx:id="nestedContentAlgoCombo" prefWidth="120"/>
-                                                    <CheckBox fx:id="nestedCompressCheck" text="Compress (DEF)"/>
-                                                </HBox>
-                                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                                    <Label text="Recipient Public Key (PEM):" styleClass="field-label"/>
-                                                    <Button text="Import..." onAction="#handleLoadNestedEncryptionKey" styleClass="link-button"/>
-                                                </HBox>
-                                                <TextArea fx:id="nestedEncryptionKeyArea" promptText="RSA Public Key..." prefHeight="40" styleClass="code-area"/>
-
-                                                <Button text="Generate Nested JWT" onAction="#handleGenerateNestedJWT" styleClass="action-button"/>
-
-                                                <Label text="Result (Nested JWE):" styleClass="field-label"/>
-                                                <TextArea fx:id="nestedOutputArea" promptText="Nested Token..." prefHeight="50" styleClass="code-area" editable="false"/>
-                                            </VBox>
-                                        </ScrollPane>
-                                    </Tab>
-                                </TabPane>
-                            </VBox>
-
-
-
-                            <!-- JWA SECTION -->
-                            <!-- JWA SECTION -->
-                            <VBox fx:id="jwaSection" spacing="10" managed="false" visible="false">
-                                <Label text="JSON Web Algorithms (JWA)" styleClass="section-header"/>
-                                <Label text="Supported Algorithms Registry" style="-fx-text-fill: #a0aec0;"/>
-                                <TableView fx:id="jwaTable" styleClass="code-area" VBox.vgrow="ALWAYS" prefHeight="400">
-                                    <columns>
-                                        <TableColumn fx:id="jwaNameCol" text="Algorithm" prefWidth="100"/>
-                                        <TableColumn fx:id="jwaTypeCol" text="Type" prefWidth="100"/>
-                                        <TableColumn fx:id="jwaDescCol" text="Description" prefWidth="300"/>
-                                    </columns>
-                                    <columnResizePolicy>
-                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
-                                    </columnResizePolicy>
-                                </TableView>
-                            </VBox>
-
-                            <!-- INSPECTOR SECTION -->
-                            <VBox fx:id="inspectorSection" spacing="10" managed="false" visible="false">
-                                <Label text="Unified Token Inspector" styleClass="section-header"/>
-                                <Label text="Paste any JOSE token (JWS or JWE) to see a visual breakdown of its components." style="-fx-text-fill: #a0aec0;"/>
-
-                                <HBox spacing="10" alignment="CENTER_LEFT">
-                                    <Button text="Analyze Token" onAction="#handleInspectToken" styleClass="action-button"/>
-                                    <Button text="Expand Report" onAction="#handleOpenExpandedInspectorReport" styleClass="secondary-button"/>
-                                    <Button text="Copy Report" onAction="#handleCopyInspectorOutput" styleClass="secondary-button"/>
-                                    <Button text="Clear" onAction="#handleClearInspector" styleClass="secondary-button"/>
-                                </HBox>
-
-                                <TextArea fx:id="inspectorInputArea" promptText="Paste JWS (eyJ...) or JWE (ey...) here..."
-                                          prefHeight="100" styleClass="code-area" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
-
-                                <Separator/>
-                                <Label text="Visual Breakdown:" styleClass="field-label"/>
-                                <ScrollPane fitToWidth="true" styleClass="edge-to-edge" prefHeight="400">
-                                     <TextFlow fx:id="inspectorOutputFlow" styleClass="code-area" style="-fx-padding: 10; -fx-background-color: #2d3748;"/>
-                                </ScrollPane>
-                            </VBox>
-                        </VBox>
 
                         <VBox fx:id="savedSessionsContainer" managed="false" visible="false" spacing="15" style="-fx-padding: 20;">
                             <!-- Header -->
@@ -530,6 +177,7 @@
                                     </VBox>
                                 </TitledPane>
 
+
                                 <!-- KEYSTORE INSPECTOR -->
                                 <TitledPane text="🗄 KeyStore Inspector">
                                     <VBox spacing="5" style="-fx-padding: 6;">
@@ -554,6 +202,68 @@
                                         <Button text="Inspect KeyStore" onAction="#handleInspectKeyStore" styleClass="action-button" maxWidth="160" style="-fx-font-size: 11px;"/>
                                         <TextArea fx:id="keyStoreReportArea" prefHeight="190" editable="false" wrapText="true"
                                                   style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                    </VBox>
+                                </TitledPane>
+
+                                <!-- PKCS#11 TOKEN (laboratory integration) -->
+                                <TitledPane text="🔐 PKCS#11 Token">
+                                    <VBox spacing="5" style="-fx-padding: 6;">
+                                        <Label text="Connect a real laboratory token through the JVM SunPKCS11 provider. The PIN is used only for this session and is never saved." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                        <HBox spacing="6">
+                                            <TextField fx:id="pkcs11NameField" promptText="Token profile name" prefWidth="180"/>
+                                            <TextField fx:id="pkcs11SlotField" promptText="Slot index" prefWidth="90"/>
+                                            <PasswordField fx:id="pkcs11PinField" promptText="User PIN (not stored)" HBox.hgrow="ALWAYS"/>
+                                        </HBox>
+                                        <HBox spacing="5">
+                                            <TextField fx:id="pkcs11LibraryField" promptText="Native PKCS#11 library (.dylib, .so or .dll)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                                            <Button text="Browse…" onAction="#handleChoosePkcs11Library" styleClass="secondary-button"/>
+                                        </HBox>
+                                        <HBox spacing="5" alignment="CENTER_LEFT">
+                                            <ComboBox fx:id="pkcs11ProfileCombo" promptText="Saved Profiles" prefWidth="200"/>
+                                            <Button text="Save Profile" onAction="#handleSavePkcs11Profile" styleClass="secondary-button"/>
+                                            <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="secondary-button"/>
+                                        </HBox>
+                                        <HBox spacing="6">
+                                            <Button text="Connect &amp; Inspect" onAction="#handleConnectPkcs11" styleClass="action-button"/>
+                                            <Button text="Disconnect" onAction="#handleDisconnectPkcs11" styleClass="secondary-button"/>
+                                        </HBox>
+                                        <TextArea fx:id="pkcs11ReportArea" prefHeight="190" editable="false" wrapText="true"
+                                                  promptText="Token provider and public object metadata will appear here; keys are never exported."
+                                                  style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <Separator/>
+                                        <Label text="Token signature test (hex data)" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Uses the selected private-key object inside the token. It does not read or export the private key." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                        <HBox spacing="6">
+                                            <ComboBox fx:id="pkcs11SigningKeyCombo" promptText="Private key alias" HBox.hgrow="ALWAYS"/>
+                                            <ComboBox fx:id="pkcs11SignatureAlgorithmCombo" prefWidth="175"/>
+                                        </HBox>
+                                        <TextArea fx:id="pkcs11DataArea" prefHeight="55" promptText="Data to sign (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <HBox spacing="6">
+                                            <Button text="Sign Data" onAction="#handlePkcs11Sign" styleClass="action-button"/>
+                                            <Button text="Verify Signature" onAction="#handlePkcs11Verify" styleClass="secondary-button"/>
+                                        </HBox>
+                                        <TextArea fx:id="pkcs11SignatureArea" prefHeight="55" promptText="Signature (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <Separator/>
+                                        <Label text="Public certificate chain" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <HBox spacing="6">
+                                            <ComboBox fx:id="pkcs11CertificateAliasCombo" promptText="Certificate alias" HBox.hgrow="ALWAYS"/>
+                                            <Button text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
+                                        </HBox>
+                                        <TextArea fx:id="pkcs11CertificateArea" prefHeight="90" editable="false" promptText="Only public X.509 certificates can be shown here." wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <Separator/>
+                                        <Label text="JWT / JWS using token key" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Creates a compact JWS with the same selected token private-key alias. Claims must be a JSON object." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                        <ComboBox fx:id="pkcs11JwtAlgorithmCombo" prefWidth="150"/>
+                                        <TextArea fx:id="pkcs11JwtPayloadArea" prefHeight="65" promptText='JWT claims JSON, e.g. {&quot;sub&quot;:&quot;lab&quot;}' wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <Button text="Create Signed JWT" onAction="#handleGeneratePkcs11Jwt" styleClass="action-button"/>
+                                        <TextArea fx:id="pkcs11JwtOutputArea" prefHeight="75" editable="false" promptText="Compact JWS will appear here" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <Separator/>
+                                        <Label text="CMS / PKCS#7 SignedData" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Creates CMS with the selected token private-key and its public X.509 certificate. Output is Base64." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                        <TextArea fx:id="pkcs11CmsDataArea" prefHeight="55" promptText="Content to sign (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <CheckBox fx:id="pkcs11CmsDetachedCheck" text="Detached CMS (do not embed content)" style="-fx-font-size: 10px;"/>
+                                        <Button text="Create CMS SignedData" onAction="#handleGeneratePkcs11Cms" styleClass="action-button"/>
+                                        <TextArea fx:id="pkcs11CmsOutputArea" prefHeight="75" editable="false" promptText="Base64 CMS/PKCS#7 will appear here" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                                     </VBox>
                                 </TitledPane>
 
@@ -1083,6 +793,18 @@
                                         </VBox>
                                     </TitledPane>
 
+                                    <TitledPane text="📄 PAdES PDF Signatures">
+                                        <content>
+                                            <fx:include fx:id="padesContainer" source="pades.fxml"/>
+                                        </content>
+                                    </TitledPane>
+
+                                    <TitledPane text="📦 ASiC-S Containers">
+                                        <content>
+                                            <fx:include fx:id="asicContainer" source="asic.fxml"/>
+                                        </content>
+                                    </TitledPane>
+
                                     <!-- CMS OPERATIONS -->
                                     <TitledPane text="📦 CMS Operations">
                                         <VBox spacing="10" style="-fx-padding: 15;">
@@ -1096,7 +818,16 @@
                                                     <Tab text="Signature (Sign/Verify)">
                                                         <content>
                                                             <VBox spacing="10" style="-fx-padding: 10;">
-                                                                <GridPane hgap="10" vgap="10">
+                                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                                    <Label text="Signing Source: " style="-fx-font-weight: bold;"/>
+                                                                    <fx:define>
+                                                                        <ToggleGroup fx:id="cmsSignSourceToggleGroup"/>
+                                                                    </fx:define>
+                                                                    <RadioButton fx:id="cmsSignSourceLocalRadio" text="Local PEM" toggleGroup="$cmsSignSourceToggleGroup" selected="true" onAction="#handleCMSourceChanged"/>
+                                                                    <RadioButton fx:id="cmsSignSourcePkcs11Radio" text="PKCS#11 Token" toggleGroup="$cmsSignSourceToggleGroup" onAction="#handleCMSourceChanged"/>
+                                                                </HBox>
+
+                                                                <GridPane fx:id="cmsSignLocalGrid" hgap="10" vgap="10">
                                                                     <Label text="Signer Certificate (PEM):" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                                                                     <TextArea fx:id="cmsSignCertArea" promptText="-----BEGIN CERTIFICATE-----..." prefHeight="80" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
 
@@ -1107,11 +838,34 @@
                                                                         <ColumnConstraints percentWidth="50"/>
                                                                     </columnConstraints>
                                                                 </GridPane>
+
+                                                                <HBox fx:id="cmsSignPkcs11Box" spacing="10" alignment="CENTER_LEFT" managed="false" visible="false">
+                                                                    <Label text="Key Alias:" />
+                                                                    <ComboBox fx:id="cmsSignKeyAliasCombo" prefWidth="250"/>
+                                                                    <Button text="Load Token Keys" onAction="#handleLoadCMSKeys" />
+                                                                </HBox>
+
+                                                                <Label text="Detached Data (for verification only):"/>
+                                                                <TextArea fx:id="cmsVerifyDataArea" promptText="Enter original raw data here if verifying a detached signature..." prefHeight="50" style="-fx-font-family: 'Monospaced';"/>
+
                                                                 <HBox spacing="10" alignment="CENTER_LEFT">
                                                                      <CheckBox fx:id="cmsDetachedCheck" text="Detached Signature (Sign)"/>
+                                                                     <CheckBox fx:id="cmsCadesBesCheck" text="CAdES-BES (bind signing certificate)">
+                                                                         <tooltip><Tooltip text="Adds the ETSI CAdES-BES signingCertificateV2 signed attribute. This is not a timestamped or long-term profile."/></tooltip>
+                                                                     </CheckBox>
+                                                                     <CheckBox fx:id="cmsCadesTCheck" text="CAdES-T (RFC 3161 timestamp)" onAction="#handleCadesTimestampOptionChanged">
+                                                                         <tooltip><Tooltip text="Requests a RFC 3161 timestamp over the CAdES signature. Requires a reachable TSA URL."/></tooltip>
+                                                                     </CheckBox>
                                                                      <Region HBox.hgrow="ALWAYS"/>
                                                                      <Button text="Sign" onAction="#handleCMSSign" styleClass="action-button-primary"/>
+                                                                     <Button text="Add LT Evidence..." onAction="#handleUpgradeCadesLt" styleClass="action-button-secondary">
+                                                                         <tooltip><Tooltip text="Embed locally selected CRL files into an existing CAdES-T signature. No CRL is downloaded automatically."/></tooltip>
+                                                                     </Button>
                                                                      <Button text="Verify" onAction="#handleCMSVerify" styleClass="action-button-secondary"/>
+                                                                </HBox>
+                                                                <HBox fx:id="cmsCadesTsaBox" spacing="8" alignment="CENTER_LEFT" visible="false" managed="false">
+                                                                    <Label text="CAdES-T TSA URL:"/>
+                                                                    <TextField fx:id="cmsCadesTsaUrlField" promptText="https://your-tsa.example/" HBox.hgrow="ALWAYS"/>
                                                                 </HBox>
                                                             </VBox>
                                                         </content>
@@ -1119,7 +873,16 @@
                                                     <Tab text="Encryption (EnvelopedData)">
                                                         <content>
                                                             <VBox spacing="10" style="-fx-padding: 10;">
-                                                                <GridPane hgap="10" vgap="10">
+                                                                <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-padding: 0 0 5 0;">
+                                                                    <Label text="Source:" style="-fx-font-weight: bold;"/>
+                                                                    <fx:define>
+                                                                        <ToggleGroup fx:id="cmsEncryptSourceToggleGroup"/>
+                                                                    </fx:define>
+                                                                    <RadioButton fx:id="cmsEncryptSourceLocalRadio" text="Local PEM (Cert/Key)" toggleGroup="$cmsEncryptSourceToggleGroup" selected="true" onAction="#handleCMSEncryptSourceChanged"/>
+                                                                    <RadioButton fx:id="cmsEncryptSourcePkcs11Radio" text="PKCS#11 Token" toggleGroup="$cmsEncryptSourceToggleGroup" onAction="#handleCMSEncryptSourceChanged"/>
+                                                                </HBox>
+
+                                                                <GridPane fx:id="cmsEncryptLocalGrid" hgap="10" vgap="10">
                                                                     <Label text="Recipient Certificate (for Encrypt):" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                                                                     <TextArea fx:id="cmsEncryptCertArea" promptText="-----BEGIN CERTIFICATE-----..." prefHeight="80" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
 
@@ -1130,6 +893,13 @@
                                                                         <ColumnConstraints percentWidth="50"/>
                                                                     </columnConstraints>
                                                                 </GridPane>
+
+                                                                <HBox fx:id="cmsEncryptPkcs11Box" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                                                                    <Label text="Token Key Alias:"/>
+                                                                    <ComboBox fx:id="cmsEncryptKeyAliasCombo" prefWidth="250" />
+                                                                    <Button text="Load Token Keys" onAction="#handleLoadCMSEncryptKeys" />
+                                                                </HBox>
+
                                                                 <HBox spacing="10" alignment="CENTER_RIGHT">
                                                                      <Button text="Encrypt" onAction="#handleCMSEncrypt" styleClass="action-button-warning"/>
                                                                      <Button text="Decrypt" onAction="#handleCMSDecrypt" styleClass="action-button-danger"/>
@@ -1145,128 +915,11 @@
                                         </VBox>
                                     </TitledPane>
 
+                                    <!-- CMS INSPECTOR -->
+                                    <fx:include fx:id="cmsInspector" source="cms_inspector.fxml" />
+
                                     <!-- ASN.1 DECODER -->
-                                    <TitledPane fx:id="asn1Pane" text="🔍 ASN.1 Decoder">
-                                        <content>
-                                            <VBox spacing="10.0">
-                                                <padding>
-                                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                                </padding>
-                                                <children>
-                                                    <TabPane fx:id="asn1TabPane" tabClosingPolicy="UNAVAILABLE">
-                                                        <tabs>
-                                                            <Tab text="Decode">
-                                                                <content>
-                                                                    <VBox spacing="10.0" style="-fx-padding: 10;">
-                                                                        <children>
-                                                                            <GridPane hgap="10.0" vgap="10.0">
-                                                                                <columnConstraints>
-                                                                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="40.0" />
-                                                                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="60.0" />
-                                                                                </columnConstraints>
-                                                                                <rowConstraints>
-                                                                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                                                                                </rowConstraints>
-                                                                                <children>
-                                                                                    <VBox spacing="5.0">
-                                                                                        <children>
-                                                                                            <Label styleClass="section-label" text="Input Format" />
-                                                                                            <ComboBox fx:id="asn1InputFormatCombo" maxWidth="1.7976931348623157E308" />
-                                                                                        </children>
-                                                                                    </VBox>
-                                                                                    <VBox spacing="5.0" GridPane.columnIndex="1">
-                                                                                        <children>
-                                                                                            <Label styleClass="section-label" text="Example / Type" />
-                                                                                            <ComboBox fx:id="asn1TypeCombo" maxWidth="1.7976931348623157E308" onAction="#handleLoadASN1Example" />
-                                                                                        </children>
-                                                                                    </VBox>
-                                                                                </children>
-                                                                            </GridPane>
-
-                                                                            <Label styleClass="section-label" text="ASN.1 Data (Hex, Base64, or PEM)" />
-                                                                            <TextArea fx:id="asn1InputArea" prefHeight="100.0" promptText="Paste ASN.1 data here..." wrapText="true" style="-fx-font-family: 'Monospaced';"/>
-
-                                                                            <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                                                                <children>
-                                                                                    <Button mnemonicParsing="false" onAction="#handleParseASN1" styleClass="action-button" text="Parse ASN.1" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleClearASN1" text="Clear" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleExportASN1Tree" text="Export Tree" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleExportASN1Json" text="Export JSON" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleExportASN1Markdown" text="Export Markdown" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleLoadASN1OidRegistry" text="Load OID Registry" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleCanonicalizeASN1Der" text="Canonicalize DER" />
-                                                                                    <Region HBox.hgrow="ALWAYS" />
-                                                                                    <Label fx:id="asn1StatusLabel" text="Ready" />
-                                                                                </children>
-                                                                            </HBox>
-
-                                                                            <SplitPane dividerPositions="0.6" orientation="VERTICAL" VBox.vgrow="ALWAYS">
-                                                                                <items>
-                                                                                    <VBox>
-                                                                                        <children>
-                                                                                            <Label styleClass="section-label" text="Structure Tree" />
-                                                                                            <TextArea fx:id="asn1TreeArea" editable="false" prefHeight="200.0" style="-fx-font-family: 'Monospaced';" wrapText="false" VBox.vgrow="ALWAYS" />
-                                                                                        </children>
-                                                                                    </VBox>
-                                                                                    <VBox>
-                                                                                        <children>
-                                                                                            <Label styleClass="section-label" text="Details / Analysis" />
-                                                                                            <TextArea fx:id="asn1DetailsArea" editable="false" prefHeight="80.0" wrapText="true" VBox.vgrow="ALWAYS" />
-                                                                                        </children>
-                                                                                    </VBox>
-                                                                                </items>
-                                                                            </SplitPane>
-                                                                        </children>
-                                                                    </VBox>
-                                                                </content>
-                                                            </Tab>
-                                                            <Tab text="Encode">
-                                                                <content>
-                                                                    <VBox spacing="10.0" style="-fx-padding: 10;">
-                                                                        <children>
-                                                                            <GridPane hgap="10.0" vgap="10.0">
-                                                                                <columnConstraints>
-                                                                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="50.0" />
-                                                                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="50.0" />
-                                                                                </columnConstraints>
-                                                                                <children>
-                                                                                    <VBox spacing="5.0">
-                                                                                        <children>
-                                                                                            <Label styleClass="section-label" text="ASN.1 Type" />
-                                                                                            <ComboBox fx:id="asn1EncodeTypeCombo" maxWidth="1.7976931348623157E308" />
-                                                                                        </children>
-                                                                                    </VBox>
-                                                                                    <VBox spacing="5.0" GridPane.columnIndex="1">
-                                                                                        <children>
-                                                                                            <Label styleClass="section-label" text="Value Format" />
-                                                                                            <ComboBox fx:id="asn1EncodeInputFormatCombo" maxWidth="1.7976931348623157E308" />
-                                                                                        </children>
-                                                                                    </VBox>
-                                                                                </children>
-                                                                            </GridPane>
-
-                                                                            <Label styleClass="section-label" text="Value (for Strings/Integers) or Hex Content (for Wrappers)" />
-                                                                            <TextArea fx:id="asn1EncodeInputArea" prefHeight="100.0" promptText="Enter value to encode..." wrapText="true" style="-fx-font-family: 'Monospaced';"/>
-
-                                                                            <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                                                                <children>
-                                                                                    <Button mnemonicParsing="false" onAction="#handleEncodeASN1" styleClass="action-button" text="Encode" />
-                                                                                    <Button mnemonicParsing="false" onAction="#handleCopyASN1Output" text="Copy Output" />
-                                                                                </children>
-                                                                            </HBox>
-
-                                                                            <Label styleClass="section-label" text="Encoded Output (DER Hex)" />
-                                                                            <TextArea fx:id="asn1EncodeOutputArea" editable="false" prefHeight="150.0" style="-fx-font-family: 'Monospaced';" wrapText="true" VBox.vgrow="ALWAYS" />
-                                                                        </children>
-                                                                    </VBox>
-                                                                </content>
-                                                            </Tab>
-                                                        </tabs>
-                                                    </TabPane>
-                                                </children>
-                                            </VBox>
-                                        </content>
-                                    </TitledPane>
+                                    <fx:include fx:id="asn1" source="asn1.fxml" />
                                 </panes>
                             </Accordion>
                         </VBox>
@@ -1296,7 +949,7 @@
 
                                                 <Label text="Key Source:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
                                                 <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="3" alignment="CENTER_LEFT">
-                                                    <ComboBox fx:id="symKeySourceCombo" prefWidth="100" />
+                                                    <ComboBox fx:id="symKeySourceCombo" prefWidth="145" />
                                                     <StackPane HBox.hgrow="ALWAYS">
                                                         <TextField fx:id="symmetricKeyField" promptText="Hex Key" style="-fx-font-family: 'Monospaced';"/>
                                                         <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false"/>
@@ -1354,6 +1007,12 @@
                                             <TextArea fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"
                                                       style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
                                         </VBox>
+                                    </TitledPane>
+
+                                    <TitledPane text="🔐 OpenPGP (GPG compatible)" expanded="false">
+                                        <content>
+                                            <fx:include fx:id="openPgpContainer" source="openpgp.fxml"/>
+                                        </content>
                                     </TitledPane>
 
                                     <!-- ASYMMETRIC CIPHER -->
@@ -1482,7 +1141,7 @@
 
                                             <Label text="Key Source:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
                                             <HBox spacing="10" alignment="CENTER_LEFT">
-                                                <ComboBox fx:id="macKeySourceCombo" prefWidth="100" style="-fx-font-size: 11px;" />
+                                                <ComboBox fx:id="macKeySourceCombo" prefWidth="145" style="-fx-font-size: 11px;" />
                                                 <StackPane HBox.hgrow="ALWAYS">
                                                     <TextField fx:id="authMacKeyField" promptText="Enter MAC key in hexadecimal"
                                                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
@@ -1838,18 +1497,25 @@
                                             <TextField fx:id="dukptBdkField" promptText="TDES: 16/24 bytes; AES: 16/24/32 bytes" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
                                             <Label text="KSN (TDES: 10 bytes; AES: 12 bytes):" style="-fx-font-size: 11px;"/>
                                             <TextField fx:id="dukptKsnField" promptText="TDES FFFF9876543210E00008 · AES 123456789012345600000005" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
-                                            <HBox spacing="6">
+                                            <HBox fx:id="dukptTdesOptionsBox" spacing="6">
+                                                <Label text="TDES key purpose:" style="-fx-font-size: 11px;"/>
+                                                <ComboBox fx:id="dukptTdesUsageCombo" prefWidth="190" style="-fx-font-size: 10px;"/>
+                                            </HBox>
+                                            <HBox fx:id="dukptAesOptionsBox" spacing="6">
+                                                <Label text="AES key usage:" style="-fx-font-size: 11px;"/>
                                                 <ComboBox fx:id="dukptAesUsageCombo" prefWidth="205" style="-fx-font-size: 10px;"/>
                                                 <ComboBox fx:id="dukptAesKeyTypeCombo" prefWidth="100" style="-fx-font-size: 10px;"/>
                                             </HBox>
                                             <Button text="Inspect KSN / Derive Key" onAction="#handleInspectDUKPT" styleClass="action-button" maxWidth="200" style="-fx-font-size: 11px;"/>
-                                            <Separator/>
-                                            <Label text="AES DUKPT PIN block (ISO 9564-4, 16 bytes; lab):" style="-fx-font-size: 11px;"/>
-                                            <TextField fx:id="dukptAesPinBlockField" promptText="04124389999AAAABAAAAAAAAAAAAAAAA" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
-                                            <HBox spacing="6">
-                                                <ComboBox fx:id="dukptAesPinOperationCombo" prefWidth="205" style="-fx-font-size: 10px;"/>
-                                                <Button text="Process AES PIN block" onAction="#handleAesDukptPinBlock" styleClass="action-button" style="-fx-font-size: 10px;"/>
-                                            </HBox>
+                                            <VBox fx:id="dukptAesPinBox" spacing="6">
+                                                <Separator/>
+                                                <Label text="AES DUKPT PIN block (ISO 9564-4, 16 bytes; lab):" style="-fx-font-size: 11px;"/>
+                                                <TextField fx:id="dukptAesPinBlockField" promptText="04124389999AAAABAAAAAAAAAAAAAAAA" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                                                <HBox spacing="6">
+                                                    <ComboBox fx:id="dukptAesPinOperationCombo" prefWidth="205" style="-fx-font-size: 10px;"/>
+                                                    <Button text="Process AES PIN block" onAction="#handleAesDukptPinBlock" styleClass="action-button" style="-fx-font-size: 10px;"/>
+                                                </HBox>
+                                            </VBox>
                                             <TextArea fx:id="dukptResultArea" prefHeight="230" editable="false" wrapText="true" style="-fx-font-family: 'Courier New'; -fx-font-size: 10px;"/>
                                         </VBox>
                                     </TitledPane>
@@ -2078,225 +1744,11 @@
 
                         <!-- Generic Utilities Container -->
                         <!-- GENERIC CONTENT (Hashing, Encoding, etc) -->
-                <Accordion fx:id="genericContainer" managed="false" visible="false">
-                        <panes>
-                            <!-- HASHING -->
-                            <TitledPane text="🔐 Hashing" expanded="true">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <Label text="Algorithm:" style="-fx-font-size: 11px;"/>
-                                    <ComboBox fx:id="hashAlgorithmCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
+                <fx:include fx:id="genericContainer" source="generic.fxml" />
 
-                                    <Label text="Input:" style="-fx-font-size: 11px;"/>
-                                    <TextArea fx:id="hashInputArea" prefRowCount="3" wrapText="true" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Output:" style="-fx-font-size: 11px;"/>
-                                    <TextArea fx:id="hashOutputArea" prefRowCount="2" editable="false" wrapText="true" style="-fx-font-size: 11px; -fx-font-family: monospace;"/>
-
-                                    <Button text="Calculate Hash" onAction="#handleCalculateHash"
-                                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- BATCH RUNNER -->
-                            <TitledPane text="📦 Batch Runner" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <Label text="Runs safe, deterministic transformations. Input must contain an input column; no secret keys are accepted." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
-                                    <HBox spacing="6" alignment="CENTER_LEFT">
-                                        <Label text="Input:" style="-fx-font-size: 11px;"/>
-                                        <ComboBox fx:id="batchInputFormatCombo" prefWidth="90"/>
-                                        <Label text="Operation:" style="-fx-font-size: 11px;"/>
-                                        <ComboBox fx:id="batchOperationCombo" HBox.hgrow="ALWAYS"/>
-                                    </HBox>
-                                    <TextArea fx:id="batchInputArea" prefRowCount="5" wrapText="false" style="-fx-font-family: monospace; -fx-font-size: 10px;" promptText="CSV: input&#10;hello&#10;or JSON Lines (.jsonl): {&quot;input&quot;:&quot;hello&quot;}&#10;{&quot;input&quot;:&quot;world&quot;}"/>
-                                    <Label text="JSON Lines (.jsonl) uses one JSON object per line; it is not a single JSON array/document." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
-                                    <HBox spacing="6">
-                                        <Button text="Load CSV / JSON Lines…" onAction="#handleBrowseBatchInput" styleClass="secondary-button"/>
-                                        <Button text="Run Batch" onAction="#handleRunBatch" styleClass="action-button"/>
-                                        <Button text="Cancel" onAction="#handleCancelBatch" styleClass="secondary-button"/>
-                                        <Region HBox.hgrow="ALWAYS"/>
-                                        <ComboBox fx:id="batchExportFormatCombo" prefWidth="80"/>
-                                        <Button text="Export Results…" onAction="#handleExportBatchResults" styleClass="secondary-button"/>
-                                    </HBox>
-                                    <ProgressBar fx:id="batchProgressBar" prefWidth="420" maxWidth="1.7976931348623157E308"/>
-                                    <Label fx:id="batchStatusLabel" text="Ready" wrapText="true" style="-fx-font-size: 10px;"/>
-                                    <TextArea fx:id="batchResultArea" prefRowCount="5" editable="false" wrapText="false" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- ENCODING/CONVERSION -->
-                            <TitledPane text="🔄 File Conversion" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <GridPane hgap="5" vgap="5">
-                                        <Label text="Source:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 10px;"/>
-                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0" HBox.hgrow="ALWAYS">
-                                            <TextField fx:id="fileInputPathField" promptText="Input File Path" HBox.hgrow="ALWAYS" style="-fx-font-size: 10px;"/>
-                                            <Button text="..." onAction="#handleBrowseInputFile" style="-fx-font-size: 10px; -fx-min-width: 25px;"/>
-                                        </HBox>
-
-                                        <Label text="Target:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 10px;"/>
-                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
-                                            <TextField fx:id="fileOutputPathField" promptText="Output File Path" HBox.hgrow="ALWAYS" style="-fx-font-size: 10px;"/>
-                                            <Button text="..." onAction="#handleBrowseOutputFile" style="-fx-font-size: 10px; -fx-min-width: 25px;"/>
-                                        </HBox>
-
-                                        <Label text="Compare:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-size: 10px;"/>
-                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
-                                            <TextField fx:id="fileComparePathField" promptText="Second File Path" HBox.hgrow="ALWAYS" style="-fx-font-size: 10px;"/>
-                                            <Button text="..." onAction="#handleBrowseCompareFile" style="-fx-font-size: 10px; -fx-min-width: 25px;"/>
-                                        </HBox>
-
-                                        <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-size: 10px;"/>
-                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="3">
-                                            <ComboBox fx:id="fileInputFormatCombo" promptText="In" prefWidth="80" style="-fx-font-size: 10px;"/>
-                                            <Label text="->" style="-fx-font-size: 10px;"/>
-                                            <ComboBox fx:id="fileOutputFormatCombo" promptText="Out" prefWidth="80" style="-fx-font-size: 10px;"/>
-                                        </HBox>
-
-                                        <Label text="Encoding:" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-font-size: 10px;"/>
-                                        <ComboBox fx:id="fileEncodingCombo" prefWidth="120"
-                                                  GridPane.columnIndex="1" GridPane.rowIndex="4" style="-fx-font-size: 10px;"/>
-                                    </GridPane>
-
-                                    <TextArea fx:id="fileResultArea" prefRowCount="2" editable="false"
-                                              wrapText="true" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
-
-                                    <Button text="Convert File" onAction="#handleConvertFile"
-                                            maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
-                                    <Button text="Compare Files (streaming)" onAction="#handleCompareFiles"
-                                            maxWidth="180" style="-fx-font-size: 11px;"/>
-                                    <Button text="Hash File SHA-256 (streaming)" onAction="#handleHashFileStreaming"
-                                            maxWidth="200" style="-fx-font-size: 11px;"/>
-                                    <Button text="Preview First 4 KiB" onAction="#handlePreviewFileStreaming"
-                                            maxWidth="180" style="-fx-font-size: 11px;"/>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- MANUAL CONVERSION (NEW) -->
-                            <TitledPane text="🔤 Manual Conversion" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-
-                                     <Label text="Input:" style="-fx-font-size: 11px;"/>
-                                     <TextArea fx:id="manualInputArea" prefRowCount="3" wrapText="true" style="-fx-font-size: 11px;"/>
-
-                                     <HBox spacing="8" alignment="CENTER_LEFT">
-                                         <CheckBox fx:id="ebcdicConversionCheck" text="Enable EBCDIC conversion" style="-fx-font-size: 11px;"/>
-                                         <ComboBox fx:id="ebcdicDirectionCombo" prefWidth="190" disable="true" style="-fx-font-size: 11px;"/>
-                                         <Label text="Code page:" style="-fx-font-size: 11px;"/>
-                                         <ComboBox fx:id="ebcdicCodePageCombo" prefWidth="205" disable="true" style="-fx-font-size: 11px;"/>
-                                     </HBox>
-
-                                     <Label text="Output:" style="-fx-font-size: 11px;"/>
-                                     <TextArea fx:id="manualOutputArea" prefRowCount="3" editable="false" wrapText="true" style="-fx-font-size: 11px; -fx-font-family: monospace;"/>
-
-                                     <HBox spacing="6">
-                                         <Button text="Convert Data" onAction="#handleManualConvert"
-                                                 maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
-                                         <Button text="UTF-8 → Base64URL" onAction="#handleEncodeBase64Url" style="-fx-font-size: 10px;"/>
-                                         <Button text="Base64URL → UTF-8" onAction="#handleDecodeBase64Url" style="-fx-font-size: 10px;"/>
-                                         <Button text="UTF-8 → Base32" onAction="#handleEncodeBase32" style="-fx-font-size: 10px;"/>
-                                         <Button text="Base32 → UTF-8" onAction="#handleDecodeBase32" style="-fx-font-size: 10px;"/>
-                                     </HBox>
-                                     <HBox spacing="6" alignment="CENTER_LEFT">
-                                         <Label text="Endian word:" style="-fx-font-size: 10px;"/>
-                                         <ComboBox fx:id="endianWordSizeCombo" prefWidth="150" style="-fx-font-size: 10px;"/>
-                                         <Button text="Reverse byte order" onAction="#handleConvertEndian" style="-fx-font-size: 10px;"/>
-                                     </HBox>
-                                     <HBox spacing="6">
-                                         <Button text="UTF-8 → URL" onAction="#handleEncodeUrl" style="-fx-font-size: 10px;"/>
-                                         <Button text="URL → UTF-8" onAction="#handleDecodeUrl" style="-fx-font-size: 10px;"/>
-                                     </HBox>
-                                     <HBox spacing="6" alignment="CENTER_LEFT">
-                                         <Label text="Compression:" style="-fx-font-size: 10px;"/>
-                                         <ComboBox fx:id="compressionFormatCombo" prefWidth="100" style="-fx-font-size: 10px;"/>
-                                         <Button text="Compress" onAction="#handleCompressData" style="-fx-font-size: 10px;"/>
-                                         <Button text="Decompress" onAction="#handleDecompressData" style="-fx-font-size: 10px;"/>
-                                     </HBox>
-                                     <HBox spacing="6">
-                                         <Button text="Decimal → BCD" onAction="#handleEncodeBcd" style="-fx-font-size: 10px;"/>
-                                         <Button text="BCD → Decimal" onAction="#handleDecodeBcd" style="-fx-font-size: 10px;"/>
-                                         <Button text="Decimal → COMP-3" onAction="#handleEncodeComp3" style="-fx-font-size: 10px;"/>
-                                         <Button text="COMP-3 → Decimal" onAction="#handleDecodeComp3" style="-fx-font-size: 10px;"/>
-                                     </HBox>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- UUID GENERATOR -->
-                            <TitledPane text="🆔 UUID Generator" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <Label text="Generate random UUID (v4):" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="uuidOutputField" editable="false" style="-fx-font-size: 11px;"/>
-                                    <Button text="Generate UUID" onAction="#handleGenerateUUID"
-                                            maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- RANDOM NUMBER GENERATOR -->
-                            <TitledPane text="🎲 Random Generator" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <GridPane hgap="5" vgap="5">
-                                        <Label text="Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 11px;"/>
-                                        <TextField fx:id="randomBytesField" text="16" prefWidth="80"
-                                                   GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-size: 11px;"/>
-
-                                        <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 11px;"/>
-                                        <ComboBox fx:id="randomFormatCombo" prefWidth="150"
-                                                  GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-size: 11px;"/>
-                                    </GridPane>
-
-                                    <Label text="Output:" style="-fx-font-size: 11px;"/>
-                                    <TextArea fx:id="randomOutputArea" prefRowCount="3" editable="false" wrapText="true" style="-fx-font-size: 11px; -fx-font-family: monospace;"/>
-
-                                    <Button text="Generate Random" onAction="#handleGenerateRandom"
-                                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- CHECK DIGITS -->
-                            <TitledPane text="✅ Check Digits" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <Label text="Algorithm:" style="-fx-font-size: 11px;"/>
-                                    <ComboBox fx:id="checkDigitAlgorithmCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Input:" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="checkDigitInput" promptText="Enter number" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Output / Validation:" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="checkDigitOutput" editable="false" style="-fx-font-size: 11px;"/>
-
-                                    <HBox spacing="10">
-                                        <Button text="Calculate" onAction="#handleCalculateCheckDigit"
-                                                styleClass="action-button" style="-fx-font-size: 11px;"/>
-                                        <Button text="Validate" onAction="#handleValidateCheckDigit"
-                                                styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                                    </HBox>
-                                </VBox>
-                            </TitledPane>
-
-                            <!-- MODULAR ARITHMETIC -->
-                            <TitledPane text="🔢 Modular Arithmetic" expanded="false">
-                                <VBox spacing="6" style="-fx-padding: 8;">
-                                    <Label text="Operation:" style="-fx-font-size: 11px;"/>
-                                    <ComboBox fx:id="modOperationCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Operand A (Hex):" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="modOperandAField" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Operand B (Hex):" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="modOperandBField" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Modulus (Hex):" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="modModulusField" style="-fx-font-size: 11px;"/>
-
-                                    <Button text="Calculate" onAction="#handleModularCalculate"
-                                            maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
-
-                                    <Label text="Result:" style="-fx-font-size: 11px;"/>
-                                    <TextArea fx:id="modResultArea" prefRowCount="2" editable="false"
-                                              wrapText="true" style="-fx-font-family: monospace; -fx-font-size: 11px;"/>
-                                </VBox>
-                            </TitledPane>
-                        </panes>
-                    </Accordion>
+                    <!-- Recent Operations / History -->
+                    <fx:include fx:id="historyView" source="history.fxml" />
+                    <fx:include fx:id="clipboardShelf" source="clipboard_shelf.fxml" />
 
                     <!-- Post-Quantum Cryptography Container -->
                     <fx:include source="pqc.fxml" fx:id="postQuantumContainer" />

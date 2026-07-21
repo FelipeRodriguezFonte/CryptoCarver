@@ -60,7 +60,7 @@ class TsaDiagnosticsTest {
     @Test
     void sizeLimitExceededThrowsException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            TsaDiagnostics.timestamp("http://127.0.0.1:" + port + "/toolarge", "data".getBytes(), "SHA-256", 1000, 1000, 500, null)
+            TsaDiagnostics.timestamp("http://127.0.0.1:" + port + "/toolarge", "data".getBytes(), "SHA-256", 5000, 5000, 500, null)
         );
         assertTrue(exception.getMessage().contains("exceeded maximum size limit of 500 bytes"));
     }

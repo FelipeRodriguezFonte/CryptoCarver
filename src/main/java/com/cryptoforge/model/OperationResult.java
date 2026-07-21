@@ -17,6 +17,9 @@ public final class OperationResult {
     private final byte[] output;
     private final List<OperationDetail> details;
     private final String statusMessage;
+    private final String enrichedOutput;
+    private final OperationDetail.Classification outputClassification;
+    private final OperationDetail.Classification enrichedOutputClassification;
 
     private OperationResult(Builder builder) {
         this.operation = builder.operation;
@@ -24,6 +27,9 @@ public final class OperationResult {
         this.output = copy(builder.output);
         this.details = Collections.unmodifiableList(new ArrayList<>(builder.details));
         this.statusMessage = builder.statusMessage;
+        this.enrichedOutput = builder.enrichedOutput;
+        this.outputClassification = builder.outputClassification;
+        this.enrichedOutputClassification = builder.enrichedOutputClassification;
     }
 
     public String getOperation() { return operation; }
@@ -31,6 +37,9 @@ public final class OperationResult {
     public byte[] getOutput() { return copy(output); }
     public List<OperationDetail> getDetails() { return details; }
     public String getStatusMessage() { return statusMessage; }
+    public String getEnrichedOutput() { return enrichedOutput; }
+    public OperationDetail.Classification getOutputClassification() { return outputClassification; }
+    public OperationDetail.Classification getEnrichedOutputClassification() { return enrichedOutputClassification; }
 
     public static Builder forOperation(String operation) {
         return new Builder(operation);
@@ -46,6 +55,9 @@ public final class OperationResult {
         private byte[] output;
         private final List<OperationDetail> details = new ArrayList<>();
         private String statusMessage;
+        private String enrichedOutput;
+        private OperationDetail.Classification outputClassification = OperationDetail.Classification.PUBLIC;
+        private OperationDetail.Classification enrichedOutputClassification = OperationDetail.Classification.PUBLIC;
 
         private Builder(String operation) {
             if (operation == null || operation.isBlank()) {
@@ -55,7 +67,14 @@ public final class OperationResult {
         }
 
         public Builder input(byte[] value) { this.input = copy(value); return this; }
-        public Builder output(byte[] value) { this.output = copy(value); return this; }
+        public Builder output(byte[] value) {
+            return output(value, OperationDetail.Classification.PUBLIC);
+        }
+        public Builder output(byte[] value, OperationDetail.Classification classification) {
+            this.output = copy(value);
+            this.outputClassification = classification != null ? classification : OperationDetail.Classification.PUBLIC;
+            return this;
+        }
         public Builder detail(OperationDetail detail) {
             if (detail != null) this.details.add(detail);
             return this;
@@ -77,6 +96,14 @@ public final class OperationResult {
             return this;
         }
         public Builder status(String value) { this.statusMessage = value; return this; }
+        public Builder enrichedOutput(String value) {
+            return enrichedOutput(value, OperationDetail.Classification.PUBLIC);
+        }
+        public Builder enrichedOutput(String value, OperationDetail.Classification classification) {
+            this.enrichedOutput = value;
+            this.enrichedOutputClassification = classification != null ? classification : OperationDetail.Classification.PUBLIC;
+            return this;
+        }
         public OperationResult build() { return new OperationResult(this); }
     }
 }

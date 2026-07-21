@@ -170,12 +170,14 @@ public class MACController {
             mainController.updateStatus("MAC generated with " + algorithm + " (" + finalMac.length + " bytes)" + truncationInfo);
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "Authentication",
-                "Generate MAC - " + algorithm,
-                "Data: " + data.length + " bytes, Key: " + (key.length * 8) + " bits",
-                "MAC: " + finalMac.length + " bytes" + truncationInfo
-            );
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate MAC - " + algorithm)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Data: " + data.length + " bytes, Key: " + (key.length * 8) + " bits", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "MAC: " + finalMac.length + " bytes" + truncationInfo, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (IllegalArgumentException e) {
             mainController.showError("Validation Error", e.getMessage());
@@ -268,12 +270,14 @@ public class MACController {
             mainController.updateStatus("MAC " + (valid ? "VALID" : "INVALID") + " - " + algorithm);
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "Authentication",
-                "Verify MAC - " + algorithm,
-                "MAC: " + mac.length + " bytes, Key: " + (key.length * 8) + " bits",
-                "Result: " + (valid ? "VALID ✓" : "INVALID ✗")
-            );
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Verify MAC - " + algorithm)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "MAC: " + mac.length + " bytes, Key: " + (key.length * 8) + " bits", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Result: " + (valid ? "VALID ✓" : "INVALID ✗"), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (IllegalArgumentException e) {
             mainController.showError("Validation Error", e.getMessage());

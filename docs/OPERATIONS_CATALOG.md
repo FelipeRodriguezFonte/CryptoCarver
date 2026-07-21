@@ -20,11 +20,14 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
 |------|-------|----|--------|------|-----------------|---------|
+| 📦 | ASiC-S Containers | `op_asic_s` | EXPERIMENTAL | HIGH | `ASiC-S Containers` | ASiC, ASiC-S, CAdES |
+| 🕵️ | CMS Inspector | `op_cms_inspector` | STABLE | LOW | `CMS Inspector` | PKCS7, CMS, SignedData, EnvelopedData |
 | 🗃 | CMS/PKCS#7 Operations | `op_cert_cms` | STABLE | HIGH | `CMS/PKCS#7 Operations` | PKCS7, CMS |
 | 🔗 | Certificate Chain | `op_cert_chain` | STABLE | LOW | `Certificate Chain` | - |
 | ⚖ | Compare Certificates | `op_cert_compare` | STABLE | LOW | `Compare Certificates` | - |
 | 📜 | Generate Certificate | `op_cert_gen` | STABLE | HIGH | `Generate Certificate` | - |
 | 🖋 | Issue Certificate from CSR | `op_cert_issue` | STABLE | HIGH | `Issue Certificate from CSR` | CSR |
+| 📄 | PAdES PDF Signatures | `op_pades` | EXPERIMENTAL | HIGH | `PAdES PDF Signatures` | PDF, PAdES |
 | 📖 | Parse Certificate | `op_cert_parse` | STABLE | LOW | `Parse Certificate` | - |
 | ✅ | Validate Certificate | `op_cert_val` | STABLE | LOW | `Validate Certificate` | - |
 
@@ -34,6 +37,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 |------|-------|----|--------|------|-----------------|---------|
 | 🔑 | Asymmetric Ciphers | `op_asym_ciphers` | STABLE | HIGH | `Asymmetric Ciphers` | RSA |
 | 📄 | File Cipher (Streaming) | `op_sym_file` | EXPERIMENTAL | HIGH | `File Cipher (Streaming)` | - |
+| 🔐 | OpenPGP (GPG Compatible) | `op_openpgp` | EXPERIMENTAL | HIGH | `OpenPGP (GPG Compatible)` | GPG, PGP |
 | 🔒 | Symmetric Ciphers | `op_sym_ciphers` | STABLE | HIGH | `Symmetric Ciphers` | AES, DES, 3DES |
 
 ## Generic
@@ -42,8 +46,11 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 |------|-------|----|--------|------|-----------------|---------|
 | ⚙ | Batch Runner | `op_gen_batch` | STABLE | LOW | `Batch Runner` | - |
 | 🔢 | Check Digits | `op_gen_check_digits` | STABLE | NONE | `Check Digits` | Luhn |
+| 📋 | Clipboard Shelf | `op_gen_clipboard` | STABLE | LOW | `Clipboard Shelf` | Clipboard, Copy history, Shelf |
+| ↔️ | Compressed Hex (2-row) | `op_gen_compressed_hex` | STABLE | NONE | `Compressed Hex (2-row)` | Host hex, Interleaved hex, Two-row hex |
 | 📁 | File Conversion | `op_gen_file` | STABLE | NONE | `File Conversion` | - |
 | 🧩 | Hashing | `op_gen_hash` | STABLE | NONE | `Hashing` | SHA, MD5 |
+| 🛠 | Key & Certificate Format Workbench | `op_keys_format_workbench` | STABLE | HIGH | `Key & Certificate Format Workbench` | PEM, DER, JWK, PKCS12 |
 | 🔄 | Manual Conversion | `op_gen_manual` | STABLE | NONE | `Manual Conversion` | Hex, Base64, EBCDIC |
 | 🧮 | Modular Arithmetic | `op_gen_mod` | STABLE | NONE | `Modular Arithmetic` | - |
 | 🎲 | Random Number Generator | `op_gen_random` | STABLE | NONE | `Random Number Generator` | - |
@@ -80,6 +87,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔎 | Key Material Inspector | `op_keys_material` | STABLE | LOW | `Key Material Inspector` | - |
 | ✂ | Key Sharing (XOR Split/Combine) | `op_keys_share` | STABLE | HIGH | `Key Sharing (XOR Split/Combine)` | - |
 | 🗄 | KeyStore Inspector | `op_keys_store` | STABLE | LOW | `KeyStore Inspector` | JKS, PKCS12 |
+| 🔐 | PKCS#11 Token | `op_keys_pkcs11` | EXPERIMENTAL | HIGH | `PKCS#11 Token` | HSM, SunPKCS11, SoftHSM |
 | 🗝 | RSA Key Generation | `op_keys_rsa` | STABLE | HIGH | `RSA Key Generation` | - |
 | 📦 | TR-31 Key Blocks | `op_keys_tr31` | STABLE | HIGH | `TR-31 Key Blocks` | TR-31, TR31 |
 | ✅ | Validation & KCV | `op_keys_val` | STABLE | HIGH | `Validation & KCV` | - |

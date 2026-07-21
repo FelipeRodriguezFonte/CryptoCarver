@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<TitledPane fx:id="compressedHexPane" text="↔️ Compressed Hex (2-row)"
+             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+             fx:controller="com.cryptoforge.ui.CompressedHexController" expanded="false">
+    <content>
+        <VBox spacing="6" style="-fx-padding: 8;">
+            <Label text="Interleave or split the two hexadecimal rows shown by some host tools. Example: AFD12 + CA123 → ACFAD11223."
+                   wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+            <Label text="Input:" style="-fx-font-size: 11px;"/>
+            <TextArea fx:id="compressedHexInputArea" prefRowCount="3" wrapText="false"
+                      promptText="Two rows:&#10;AFD12&#10;CA123&#10;&#10;or a normal hexadecimal value: ACFAD11223"
+                      style="-fx-font-family: monospace; -fx-font-size: 11px;"/>
+            <HBox spacing="6">
+                <Button text="Two rows → Hex" onAction="#handleExpandCompressedHex" styleClass="action-button"/>
+                <Button text="Hex → Two rows" onAction="#handleCompressHex" styleClass="secondary-button"/>
+                <Button text="Clear" onAction="#handleClearCompressedHex" styleClass="secondary-button"/>
+            </HBox>
+            <Label text="Output:" style="-fx-font-size: 11px;"/>
+            <TextArea fx:id="compressedHexOutputArea" prefRowCount="3" editable="false" wrapText="false"
+                      style="-fx-font-family: monospace; -fx-font-size: 11px;"/>
+        </VBox>
+    </content>
+</TitledPane>

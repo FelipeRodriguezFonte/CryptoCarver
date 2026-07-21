@@ -23,6 +23,12 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.Accordion;
+import javafx.fxml.FXML;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.CheckBox;
 
 import java.security.NoSuchAlgorithmException;
 
@@ -33,43 +39,88 @@ import java.security.NoSuchAlgorithmException;
  */
 public class GenericController {
 
-    private final TextArea inputArea;
-    private final TextArea outputArea;
-    private final ComboBox<String> inputFormatCombo;
-    private final ComboBox<String> outputFormatCombo;
-    private final StatusReporter statusReporter;
+    private TextArea inputArea;
+    private TextArea outputArea;
+    private ComboBox<String> inputFormatCombo;
+    private ComboBox<String> outputFormatCombo;
+    private StatusReporter statusReporter;
+    @FXML private Accordion genericContainer;
+    @FXML private TextArea hashInputArea;
+    @FXML private TextArea hashOutputArea;
+
+    @FXML private ComboBox<String> batchInputFormatCombo;
+    @FXML private ComboBox<String> batchOperationCombo;
+    @FXML private TextField batchColumnField;
+    @FXML private TextArea batchInputArea;
+    @FXML private ComboBox<String> batchExportFormatCombo;
+    @FXML private javafx.scene.control.ProgressBar batchProgressBar;
+    @FXML private javafx.scene.control.Label batchStatusLabel;
+    @FXML private TextArea batchResultArea;
+
+    @FXML private CheckBox ebcdicConversionCheck;
+    @FXML private ComboBox<String> ebcdicDirectionCombo;
+    @FXML private ComboBox<String> ebcdicCodePageCombo;
+    @FXML private ComboBox<String> endianWordSizeCombo;
+    @FXML private ComboBox<String> compressionFormatCombo;
+
+    @FXML private TextField checkDigitInput;
+    @FXML private TextField checkDigitOutput;
+
+    @FXML private TitledPane compressedHexPane;
+    @FXML private CompressedHexController compressedHexPaneController;
+
+    @FXML private KeyCertificateWorkbenchController keyCertificateWorkbenchController;
+    @FXML private javafx.scene.layout.VBox keyCertificateWorkbench;
+
+    public KeyCertificateWorkbenchController getKeyCertificateWorkbenchController() {
+        return keyCertificateWorkbenchController;
+    }
+
 
     // UI Components for Generic tab
-    private ComboBox<String> hashAlgorithmCombo;
-    private ComboBox<String> checkDigitAlgorithmCombo;
-    private javafx.scene.control.TextField randomBytesField;
-    private ComboBox<String> randomFormatCombo;
+    @FXML private ComboBox<String> hashAlgorithmCombo;
+    @FXML private ComboBox<String> checkDigitAlgorithmCombo;
+    @FXML private javafx.scene.control.TextField randomBytesField;
+    @FXML private ComboBox<String> randomFormatCombo;
 
     // Modular Arithmetic components
-    private ComboBox<String> modOperationCombo;
-    private TextField modOperandAField;
-    private TextField modOperandBField;
-    private TextField modModulusField;
-    private TextArea modResultArea;
+    @FXML private ComboBox<String> modOperationCombo;
+    @FXML private TextField modOperandAField;
+    @FXML private TextField modOperandBField;
+    @FXML private TextField modModulusField;
+    @FXML private TextArea modResultArea;
 
     // File Converter components
-    private TextField fileInputPathField;
-    private TextField fileOutputPathField;
-    private ComboBox<String> fileInputFormatCombo;
-    private ComboBox<String> fileOutputFormatCombo;
-    private ComboBox<String> fileEncodingCombo;
+    @FXML private TextField fileInputPathField;
+    @FXML private TextField fileOutputPathField;
+    @FXML private ComboBox<String> fileInputFormatCombo;
+    @FXML private ComboBox<String> fileOutputFormatCombo;
+    @FXML private ComboBox<String> fileEncodingCombo;
     // UUID components
-    private TextField uuidOutputField;
+    @FXML private TextField uuidOutputField;
     // Specific Output Areas
-    private TextArea randomOutputArea;
-    private TextInputControl checkDigitOutputArea;
+    @FXML private TextArea randomOutputArea;
+    @FXML private TextInputControl checkDigitOutputArea;
 
-    private TextArea fileResultArea;
-    private TextField fileComparePathField;
+    @FXML private TextArea fileResultArea;
+    @FXML private TextField fileComparePathField;
+
+    public void fillHashInput(String text) {
+        if (hashInputArea != null) {
+            hashInputArea.setText(text);
+        }
+    }
 
     // Manual Conversion Components
-    private TextArea manualInputArea;
-    private TextArea manualOutputArea;
+    @FXML private TextArea manualInputArea;
+    @FXML private TextArea manualOutputArea;
+    @FXML private ComboBox<String> manualInputFormatCombo;
+    @FXML private ComboBox<String> manualOutputFormatCombo;
+
+    // Batch State
+    private javafx.concurrent.Task<com.cryptoforge.model.batch.BatchRunner.Report> activeBatchTask;
+    private com.cryptoforge.model.batch.BatchRunner.Report lastBatchReport;
+
 
     /**
      * Convert hex string to byte array (replacement for
@@ -97,6 +148,330 @@ public class GenericController {
         return sb.toString();
     }
 
+
+    public void setStatusReporter(StatusReporter reporter) {
+        this.statusReporter = reporter;
+        if (compressedHexPaneController != null) {
+            compressedHexPaneController.setReporter(reporter);
+        }
+    }
+
+    public GenericController() {}
+
+        @FXML public void handleBrowseInputFile() {
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Select Input File");
+        java.io.File file = fileChooser.showOpenDialog(null);
+        if (file != null && fileInputPathField != null) fileInputPathField.setText(file.getAbsolutePath());
+    }
+
+        @FXML public void handleBrowseOutputFile() {
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Select Output File");
+        java.io.File file = fileChooser.showSaveDialog(null);
+        if (file != null && fileOutputPathField != null) fileOutputPathField.setText(file.getAbsolutePath());
+    }
+
+        @FXML public void handleBrowseCompareFile() {
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Select File to Compare");
+        java.io.File file = fileChooser.showOpenDialog(null);
+        if (file != null && fileComparePathField != null) fileComparePathField.setText(file.getAbsolutePath());
+    }
+
+    @FXML public void handleConvertFile() {
+        if (fileInputPathField != null && fileOutputPathField != null && fileInputFormatCombo != null && fileOutputFormatCombo != null) {
+            String inputPath = fileInputPathField.getText().trim();
+            String outputPath = fileOutputPathField.getText().trim();
+            if (inputPath.isEmpty() || outputPath.isEmpty()) return;
+
+            boolean isTestMode = "true".equals(System.getProperty("test.mode"));
+            if (!isTestMode && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
+                javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+                confirm.setTitle("Overwrite existing file?");
+                confirm.setHeaderText("The selected output file already exists.");
+                confirm.setContentText(outputPath);
+                if (confirm.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL) != javafx.scene.control.ButtonType.OK) {
+                    if (statusReporter != null) statusReporter.updateStatus("File conversion cancelled");
+                    return;
+                }
+            }
+
+            handleFileConvert();
+
+            if (statusReporter != null) {
+                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+                details.put("Input File", inputPath);
+                details.put("Output File", outputPath);
+                details.put("Input Format", fileInputFormatCombo.getValue());
+                details.put("Output Format", fileOutputFormatCombo.getValue());
+                statusReporter.publish(OperationResult.forOperation("File Conversion").details(details).build());
+            }
+        }
+    }
+
+    @FXML public void handleCompareFiles() { compareFiles(); }
+    @FXML public void handleHashFileStreaming() { hashFileStreaming(); }
+    @FXML public void handlePreviewFileStreaming() { previewFileStreaming(); }
+
+    private boolean isCsvBatchFormat(String format) { return "CSV".equals(format); }
+
+    @FXML public void handleBrowseBatchInput() {
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Load Batch Input");
+        chooser.getExtensionFilters().addAll(
+                new javafx.stage.FileChooser.ExtensionFilter("Batch data", "*.csv", "*.jsonl", "*.ndjson", "*.txt"),
+                new javafx.stage.FileChooser.ExtensionFilter("All files", "*.*"));
+        java.io.File file = chooser.showOpenDialog(genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow());
+        if (file == null) return;
+        try {
+            batchInputArea.setText(java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8));
+            String lower = file.getName().toLowerCase(java.util.Locale.ROOT);
+            batchInputFormatCombo.setValue(lower.endsWith(".csv") ? "CSV" : "JSON Lines (.jsonl)");
+            batchStatusLabel.setText("Loaded " + file.getName() + ". Review the input before running.");
+        } catch (java.io.IOException e) {
+            if (statusReporter != null) statusReporter.showError("Batch input", "Unable to read file: " + e.getMessage());
+        }
+    }
+
+    private java.util.Map<String, String> runSafeBatchOperation(String operation, java.util.Map<String, String> row) throws Exception {
+        String input = row.get("input");
+        if (input == null) throw new IllegalArgumentException("input field is required");
+        if ("SHA-256 (UTF-8 → Hex)".equals(operation)) {
+            return java.util.Map.of("result", com.cryptoforge.model.SafeTransformations.sha256(input));
+        }
+        if ("UTF-8 → Base64URL".equals(operation)) return java.util.Map.of("result", com.cryptoforge.model.SafeTransformations.encodeBase64Url(input));
+        if ("Base64URL → UTF-8".equals(operation)) return java.util.Map.of("result", com.cryptoforge.model.SafeTransformations.decodeBase64Url(input));
+        throw new IllegalArgumentException("Unsupported batch operation: " + operation);
+    }
+
+    private String renderBatchReport(com.cryptoforge.model.batch.BatchRunner.Report report) {
+        StringBuilder text = new StringBuilder("Rows processed: ").append(report.results().size()).append("\nSucceeded: ")
+                .append(report.succeeded()).append("\nFailed: ").append(report.failed()).append("\n\n");
+        int displayed = Math.min(50, report.results().size());
+        for (int i = 0; i < displayed; i++) {
+            com.cryptoforge.model.batch.BatchRunner.RowResult row = report.results().get(i);
+            text.append("#").append(row.rowNumber()).append(" ").append(row.succeeded() ? "OK  " : "ERR ")
+                    .append(row.succeeded() ? row.output().getOrDefault("result", "") : row.error()).append('\n');
+        }
+        if (report.results().size() > displayed) text.append("… ").append(report.results().size() - displayed).append(" additional rows; export the report for all results.\n");
+        return text.toString();
+    }
+
+    @FXML public void handleRunBatch() {
+        if (activeBatchTask != null && activeBatchTask.isRunning()) {
+            if (statusReporter != null) statusReporter.showError("Batch Runner", "A batch is already running.");
+            return;
+        }
+        lastBatchReport = null;
+        final java.util.List<java.util.Map<String, String>> rows;
+        try {
+            rows = isCsvBatchFormat(batchInputFormatCombo.getValue())
+                    ? com.cryptoforge.model.batch.BatchInputCodec.parseCsv(batchInputArea.getText())
+                    : com.cryptoforge.model.batch.BatchInputCodec.parseJsonLines(batchInputArea.getText());
+            if (rows.isEmpty()) throw new IllegalArgumentException("No batch rows found");
+            if (rows.stream().anyMatch(row -> !row.containsKey("input"))) throw new IllegalArgumentException("Every row must contain an input field");
+        } catch (Exception e) {
+            if (statusReporter != null) statusReporter.showError("Batch input", e.getMessage());
+            return;
+        }
+        final String operation = batchOperationCombo.getValue();
+        javafx.concurrent.Task<com.cryptoforge.model.batch.BatchRunner.Report> task = new javafx.concurrent.Task<>() {
+            @Override protected com.cryptoforge.model.batch.BatchRunner.Report call() {
+                return com.cryptoforge.model.batch.BatchRunner.run(rows, row -> runSafeBatchOperation(operation, row), this::isCancelled,
+                        (completed, total) -> updateProgress(completed, total));
+            }
+        };
+        activeBatchTask = task;
+        batchProgressBar.progressProperty().unbind(); batchProgressBar.progressProperty().bind(task.progressProperty());
+        batchStatusLabel.setText("Processing " + rows.size() + " rows…"); batchResultArea.clear();
+        task.setOnSucceeded(event -> {
+            batchProgressBar.progressProperty().unbind(); batchProgressBar.setProgress(1);
+            lastBatchReport = task.getValue();
+            batchResultArea.setText(renderBatchReport(lastBatchReport));
+            batchStatusLabel.setText("Completed: " + lastBatchReport.succeeded() + " succeeded, " + lastBatchReport.failed() + " failed.");
+            if (statusReporter != null) {
+                java.util.Map<String, String> batchDetails = new java.util.LinkedHashMap<>();
+                batchDetails.put("Operation", operation);
+                batchDetails.put("Rows", String.valueOf(lastBatchReport.results().size()));
+                batchDetails.put("Succeeded", String.valueOf(lastBatchReport.succeeded()));
+                batchDetails.put("Failed", String.valueOf(lastBatchReport.failed()));
+                statusReporter.publish(OperationResult.forOperation("Batch Runner").details(batchDetails).build());
+            }
+            activeBatchTask = null;
+        });
+        task.setOnCancelled(event -> {
+            batchProgressBar.progressProperty().unbind(); batchStatusLabel.setText("Batch cancelled. Completed rows were discarded.");
+            activeBatchTask = null;
+        });
+        task.setOnFailed(event -> {
+            batchProgressBar.progressProperty().unbind(); Throwable error = task.getException();
+            batchStatusLabel.setText("Batch failed: " + (error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
+        });
+        Thread worker = new Thread(task, "cryptocarver-batch-runner"); worker.setDaemon(true); worker.start();
+    }
+
+    @FXML public void handleCancelBatch() {
+        if (activeBatchTask != null && activeBatchTask.isRunning()) {
+            activeBatchTask.cancel(); batchStatusLabel.setText("Cancelling batch…");
+        } else {
+            batchStatusLabel.setText("No batch is running.");
+        }
+    }
+
+    @FXML public void handleExportBatchResults() {
+        if (lastBatchReport == null) {
+            if (statusReporter != null) statusReporter.showError("Batch export", "Run a batch successfully before exporting its results.");
+            return;
+        }
+        boolean csv = isCsvBatchFormat(batchExportFormatCombo.getValue());
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser(); chooser.setTitle("Export Batch Results");
+        chooser.setInitialFileName(csv ? "cryptocarver-batch-results.csv" : "cryptocarver-batch-results.jsonl");
+        chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(csv ? "CSV" : "JSON Lines", csv ? "*.csv" : "*.jsonl"));
+        java.io.File file = chooser.showSaveDialog(genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow());
+        if (file == null) return;
+        try {
+            String output = csv ? com.cryptoforge.model.batch.BatchOutputCodec.toCsv(lastBatchReport)
+                    : com.cryptoforge.model.batch.BatchOutputCodec.toJsonLines(lastBatchReport);
+            java.nio.file.Files.writeString(file.toPath(), output, java.nio.charset.StandardCharsets.UTF_8);
+            batchStatusLabel.setText("Batch results exported: " + file.getName());
+        } catch (java.io.IOException e) {
+            if (statusReporter != null) statusReporter.showError("Batch export", "Unable to save results: " + e.getMessage());
+        }
+    }
+
+    private String getManualInputFormat() {
+        return manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null ? manualInputFormatCombo.getValue() : "Text";
+    }
+
+    private String getManualOutputFormat() {
+        return manualOutputFormatCombo != null && manualOutputFormatCombo.getValue() != null ? manualOutputFormatCombo.getValue() : "Text";
+    }
+
+    @FXML public void handleManualConvert() {
+        if (ebcdicConversionCheck != null && ebcdicConversionCheck.isSelected()) {
+            convertEBCDIC(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(),
+                    ebcdicDirectionCombo.getValue(), ebcdicCodePageCombo.getValue(), manualOutputArea);
+        } else {
+            convert(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), manualOutputArea);
+        }
+    }
+
+    @FXML public void handleEncodeBase64Url() { convertBase64Url(manualInputArea.getText(), true, manualOutputArea); }
+    @FXML public void handleDecodeBase64Url() { convertBase64Url(manualInputArea.getText(), false, manualOutputArea); }
+    @FXML public void handleEncodeBase32() { convertBase32(manualInputArea.getText(), true, manualOutputArea); }
+    @FXML public void handleDecodeBase32() { convertBase32(manualInputArea.getText(), false, manualOutputArea); }
+    @FXML public void handleConvertEndian() {
+        int wordSize = 4;
+        if (endianWordSizeCombo != null && endianWordSizeCombo.getValue() != null) {
+            try {
+                wordSize = Integer.parseInt(endianWordSizeCombo.getValue().split(" ")[0]) / 8;
+            } catch (Exception e) {
+                wordSize = 4;
+            }
+        }
+        convertEndian(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), wordSize, manualOutputArea);
+    }
+    @FXML public void handleEncodeUrl() { convertUrlEncoding(manualInputArea.getText(), true, manualOutputArea); }
+    @FXML public void handleDecodeUrl() { convertUrlEncoding(manualInputArea.getText(), false, manualOutputArea); }
+    @FXML public void handleCompressData() { convertCompression(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), compressionFormatCombo.getValue(), true, manualOutputArea); }
+    @FXML public void handleDecompressData() { convertCompression(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), compressionFormatCombo.getValue(), false, manualOutputArea); }
+    @FXML public void handleEncodeBcd() { convertPackedDecimal(manualInputArea.getText(), false, true, manualOutputArea); }
+    @FXML public void handleDecodeBcd() { convertPackedDecimal(manualInputArea.getText(), false, false, manualOutputArea); }
+    @FXML public void handleEncodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, true, manualOutputArea); }
+    @FXML public void handleDecodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
+
+    @FXML public void initialize() {
+        if (batchInputFormatCombo != null) {
+            batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
+            batchInputFormatCombo.setValue("CSV");
+        }
+        if (batchOperationCombo != null) {
+            batchOperationCombo.getItems().setAll("SHA-256 (UTF-8 → Hex)", "UTF-8 → Base64URL", "Base64URL → UTF-8");
+            batchOperationCombo.setValue("SHA-256 (UTF-8 → Hex)");
+        }
+        if (batchExportFormatCombo != null) {
+            batchExportFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
+            batchExportFormatCombo.setValue("CSV");
+        }
+        if (manualInputFormatCombo != null) {
+            for (ByteFormat format : ByteFormat.values()) manualInputFormatCombo.getItems().add(format.getDisplayName());
+            manualInputFormatCombo.setValue("Text (UTF-8)");
+        }
+        if (manualOutputFormatCombo != null) {
+            for (ByteFormat format : ByteFormat.values()) manualOutputFormatCombo.getItems().add(format.getDisplayName());
+            manualOutputFormatCombo.setValue("Text (UTF-8)");
+        }
+        if (hashAlgorithmCombo != null) {
+            hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
+            hashAlgorithmCombo.getItems().add("CRC32");
+            hashAlgorithmCombo.setValue("SHA-256");
+        }
+        if (checkDigitAlgorithmCombo != null) {
+            checkDigitAlgorithmCombo.getItems().addAll(CheckDigitCalculator.SUPPORTED_ALGORITHMS);
+            checkDigitAlgorithmCombo.setValue("Luhn (Mod 10)");
+        }
+        if (randomFormatCombo != null) {
+            randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
+            randomFormatCombo.setValue("Hexadecimal");
+        }
+        if (ebcdicCodePageCombo != null) {
+            ebcdicCodePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
+            AppSettings settings = AppSettings.getInstance();
+            String savedCodePage = settings.getEBCDICCodePage();
+            ebcdicCodePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
+                    ? savedCodePage : "IBM037 — US/Canada");
+        }
+        if (ebcdicDirectionCombo != null) {
+            ebcdicDirectionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
+            AppSettings settings = AppSettings.getInstance();
+            String savedDirection = settings.getEBCDICDirection();
+            ebcdicDirectionCombo.setValue(ebcdicDirectionCombo.getItems().contains(savedDirection)
+                    ? savedDirection : "Decode EBCDIC → UTF-8");
+        }
+        if (endianWordSizeCombo != null) {
+            endianWordSizeCombo.getItems().setAll("16 bits (2 bytes)", "32 bits (4 bytes)", "64 bits (8 bytes)", "128 bits (16 bytes)");
+            endianWordSizeCombo.setValue("32 bits (4 bytes)");
+        }
+        if (compressionFormatCombo != null) {
+            compressionFormatCombo.getItems().setAll("gzip", "zlib", "deflate");
+            compressionFormatCombo.setValue("gzip");
+        }
+        if (modOperationCombo != null) {
+            modOperationCombo.getItems().setAll(
+                    "Addition (a + b) mod m",
+                    "Subtraction (a - b) mod m",
+                    "Inverse -a mod m",
+                    "Multiplication (a * b) mod m",
+                    "Exponentiation (a^b) mod m",
+                    "Reciprocal (1/a) mod m",
+                    "GCD(a, b)",
+                    "LCM(a, b)",
+                    "Extended GCD",
+                    "Chinese Remainder Theorem",
+                    "XOR (Hex Input)",
+                    "XOR (Decimal Input)");
+            modOperationCombo.getSelectionModel().select(0);
+        }
+        if (fileInputFormatCombo != null) {
+            fileInputFormatCombo.getItems().setAll("Binary", "Text", "Hex", "Base64");
+            fileInputFormatCombo.getSelectionModel().select("Binary");
+        }
+        if (fileOutputFormatCombo != null) {
+            fileOutputFormatCombo.getItems().setAll("Binary", "Text", "Hex", "Base64");
+            fileOutputFormatCombo.getSelectionModel().select("Binary");
+        }
+        if (fileEncodingCombo != null) {
+            fileEncodingCombo.getItems().setAll("UTF-8", "ASCII", "ISO-8859-1");
+            fileEncodingCombo.getSelectionModel().select("UTF-8");
+        }
+
+        initializeEBCDICConverter();
+    }
+
+
+
+
     public GenericController(StatusReporter statusReporter,
             TextArea inputArea,
             TextArea outputArea,
@@ -109,9 +484,6 @@ public class GenericController {
         this.outputFormatCombo = outputFormatCombo;
     }
 
-    /**
-     * Set hash algorithm ComboBox reference
-     */
     public void setHashAlgorithmCombo(ComboBox<String> combo) {
         this.hashAlgorithmCombo = combo;
         hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
@@ -119,18 +491,12 @@ public class GenericController {
         hashAlgorithmCombo.setValue("SHA-256");
     }
 
-    /**
-     * Set check digit algorithm ComboBox reference
-     */
     public void setCheckDigitAlgorithmCombo(ComboBox<String> combo) {
         this.checkDigitAlgorithmCombo = combo;
         checkDigitAlgorithmCombo.getItems().addAll(CheckDigitCalculator.SUPPORTED_ALGORITHMS);
         checkDigitAlgorithmCombo.setValue("Luhn (Mod 10)");
     }
 
-    /**
-     * Set random generator fields reference
-     */
     public void setRandomGeneratorFields(javafx.scene.control.TextField bytesField, ComboBox<String> formatCombo) {
         this.randomBytesField = bytesField;
         this.randomFormatCombo = formatCombo;
@@ -138,38 +504,25 @@ public class GenericController {
         randomFormatCombo.setValue("Hexadecimal");
     }
 
-    public void setRandomOutputArea(TextArea area) {
-        this.randomOutputArea = area;
-    }
 
-    public void setCheckDigitOutputArea(TextInputControl area) {
-        this.checkDigitOutputArea = area;
-    }
 
-    public void setUUIDOutputField(TextField uuidField) {
-        this.uuidOutputField = uuidField;
-    }
+    public void initializeEBCDICConverter() {
+        if (ebcdicCodePageCombo != null && ebcdicDirectionCombo != null && ebcdicConversionCheck != null) {
+            ebcdicCodePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
+            AppSettings settings = AppSettings.getInstance();
+            String savedCodePage = settings.getEBCDICCodePage();
+            ebcdicCodePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
+                    ? savedCodePage : "IBM037 — US/Canada");
+            ebcdicDirectionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
+            String savedDirection = settings.getEBCDICDirection();
+            ebcdicDirectionCombo.setValue(ebcdicDirectionCombo.getItems().contains(savedDirection)
+                    ? savedDirection : "Decode EBCDIC → UTF-8");
 
-    public void setManualConversionFields(TextArea input, TextArea output) {
-        this.manualInputArea = input;
-        this.manualOutputArea = output;
-    }
-
-    public void initializeEBCDICConverter(CheckBox enabledCheck, ComboBox<String> directionCombo,
-                                         ComboBox<String> codePageCombo) {
-        codePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
-        AppSettings settings = AppSettings.getInstance();
-        String savedCodePage = settings.getEBCDICCodePage();
-        codePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
-                ? savedCodePage : "IBM037 — US/Canada");
-        directionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
-        String savedDirection = settings.getEBCDICDirection();
-        directionCombo.setValue(directionCombo.getItems().contains(savedDirection)
-                ? savedDirection : "Decode EBCDIC → UTF-8");
-        codePageCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICCodePage(selected));
-        directionCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICDirection(selected));
-        directionCombo.disableProperty().bind(enabledCheck.selectedProperty().not());
-        codePageCombo.disableProperty().bind(enabledCheck.selectedProperty().not());
+            ebcdicCodePageCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICCodePage(selected));
+            ebcdicDirectionCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICDirection(selected));
+            ebcdicDirectionCombo.disableProperty().bind(ebcdicConversionCheck.selectedProperty().not());
+            ebcdicCodePageCombo.disableProperty().bind(ebcdicConversionCheck.selectedProperty().not());
+        }
     }
 
     public void convertEBCDIC(String input, String inputFormat, String outputFormat, String direction, String codePage,
@@ -519,6 +872,8 @@ public class GenericController {
     /**
      * Legacy wrapper for MainController compatibility
      */
+    @FXML
+
     public void handleCalculateHash() {
         if (inputArea != null && hashAlgorithmCombo != null && outputArea != null) {
             // Note: Legacy used getInputDataAsBytes() which respected inputFormatCombo.
@@ -529,12 +884,43 @@ public class GenericController {
                     inputFormatCombo != null ? inputFormatCombo.getValue() : "Text",
                     hashAlgorithmCombo.getValue(),
                     outputArea);
+        } else if (hashInputArea != null && hashAlgorithmCombo != null && hashOutputArea != null) {
+            calculateHash(hashInputArea.getText(),
+                    "Text",
+                    hashAlgorithmCombo.getValue(),
+                    hashOutputArea);
         }
     }
 
     /**
      * Universal conversion
      */
+    public void fillManualConversionInput(String value, com.cryptoforge.model.ClipboardEntry.Format format) {
+        String targetFormat = "Text (UTF-8)";
+        switch (format) {
+            case HEX: targetFormat = "Hexadecimal"; break;
+            case BASE64: targetFormat = "Base64"; break;
+            case BASE64URL: targetFormat = "Base64URL"; break;
+            default: break;
+        }
+
+        if (manualInputFormatCombo != null && !manualInputFormatCombo.getItems().contains(targetFormat)) {
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+            alert.setTitle("Format Not Supported");
+            alert.setHeaderText("Incompatible Format");
+            alert.setContentText("The format " + format + " is not supported by Manual Conversion.");
+            alert.showAndWait();
+            return;
+        }
+
+        if (manualInputArea != null) {
+            manualInputArea.setText(value);
+        }
+        if (manualInputFormatCombo != null) {
+            manualInputFormatCombo.setValue(targetFormat);
+        }
+    }
+
     public void convert(String input, String inputFormat, String outputFormat, TextInputControl targetOutputArea) {
         try {
             if (input == null || input.isEmpty()) {
@@ -621,6 +1007,9 @@ public class GenericController {
         }
     }
 
+    @FXML
+
+
     public void handleConvert() {
         if (inputArea != null && inputFormatCombo != null && outputFormatCombo != null && outputArea != null) {
             convert(inputArea.getText(), inputFormatCombo.getValue(), outputFormatCombo.getValue(), outputArea);
@@ -656,6 +1045,9 @@ public class GenericController {
             statusReporter.showError("Check Digit Error", "Error calculating check digit: " + e.getMessage());
         }
     }
+
+    @FXML
+
 
     public void handleCalculateCheckDigit() {
         if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
@@ -701,6 +1093,9 @@ public class GenericController {
             statusReporter.showError("Validation Error", "Error validating: " + e.getMessage());
         }
     }
+
+    @FXML
+
 
     public void handleValidateCheckDigit() {
         if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
@@ -776,6 +1171,8 @@ public class GenericController {
     /**
      * Generate random bytes
      */
+    @FXML
+
     public void handleGenerateRandom() {
         try {
             String bytesStr = randomBytesField.getText().trim();
@@ -882,6 +1279,8 @@ public class GenericController {
     /**
      * Calculate modular arithmetic operation
      */
+    @FXML
+
     public void handleModularCalculate() {
         try {
             String operation = modOperationCombo.getValue();
@@ -1200,6 +1599,8 @@ public class GenericController {
     /**
      * Handle file conversion operation
      */
+    @FXML
+
     public void handleFileConvert() {
         try {
             String inputPath = fileInputPathField.getText().trim();
@@ -1342,11 +1743,14 @@ public class GenericController {
             fileResultArea.setText(result.toString());
             statusReporter.updateStatus("Conversion completed: " + inputFormat + " → " + outputFormat);
 
-            OperationHistory.getInstance().addOperation(
-                    "Generic",
-                    "File Convert: " + inputFormat + " → " + outputFormat,
-                    inputPath,
-                    "Success");
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("File Convert: " + inputFormat + " → " + outputFormat)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", inputPath, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Success", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (java.io.FileNotFoundException e) {
             statusReporter.showError("File Error", "File not found: " + e.getMessage());
@@ -1363,6 +1767,8 @@ public class GenericController {
     /**
      * Generate UUID
      */
+    @FXML
+
     public void handleGenerateUUID() {
         try {
             String uuid = UUIDGenerator.generateUUID();
@@ -1382,6 +1788,9 @@ public class GenericController {
         }
     }
     // --- Global Helper Methods ---
+
+    @FXML
+
 
     public void handleClear() {
         // Clear Standard Conversion

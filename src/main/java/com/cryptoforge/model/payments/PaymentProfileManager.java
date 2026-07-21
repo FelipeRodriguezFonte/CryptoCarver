@@ -20,19 +20,21 @@ public class PaymentProfileManager {
         profiles.add(new PaymentProfile.Builder("dukpt_tdes_pos_1", "DUKPT TDES - Basic PIN", "1.0", PaymentProfile.ProfileType.DUKPT_TDES)
             .description("Standard TDES PIN derivation")
             .addParameter("scheme", "DUKPT TDES")
+            .addParameter("usage", "PIN encryption")
             .addInput("bdk", "0123456789ABCDEFFEDCBA9876543210")
             .addInput("ksn", "FFFF9876543210E00000")
             .addOutput("ipek", "6AC292FAA1315B4D858AB3A3D7D5933A")
-            .addOutput("workingKey", "7A67885F3D18CF6AAEE5A60F5FCE8339") // PIN encryption variant
+            .addOutput("workingKey", "6AC292FAA1315BB2858AB3A3D7D593C5") // PIN encryption variant
             .build()
         );
 
         profiles.add(new PaymentProfile.Builder("dukpt_tdes_pos_2", "DUKPT TDES - MAC", "1.0", PaymentProfile.ProfileType.DUKPT_TDES)
             .description("Standard TDES MAC derivation")
             .addParameter("scheme", "DUKPT TDES")
+            .addParameter("usage", "MAC request")
             .addInput("bdk", "0123456789ABCDEFFEDCBA9876543210")
             .addInput("ksn", "FFFF9876543210E00001") // Count = 1
-            .addOutput("workingKey", "F698AD9E886FA8F5C9E13E4061A0C91C") // MAC variant
+            .addOutput("workingKey", "042666B4918430A368DE9628D03984C9") // MAC request variant
             .build()
         );
 

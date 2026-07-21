@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /** Small persistent settings store for non-secret user preferences. */
 public final class AppSettings {
@@ -15,9 +16,18 @@ public final class AppSettings {
     private Settings data = new Settings();
 
     private AppSettings() {
-        String home = System.getProperty("user.home", System.getProperty("java.io.tmpdir"));
-        file = Paths.get(home, ".cryptocarver", "settings.json");
+        this(defaultSettingsFile());
+    }
+
+    /** Package-visible constructor for isolated settings tests. */
+    AppSettings(Path file) {
+        this.file = Objects.requireNonNull(file, "Settings file is required").toAbsolutePath().normalize();
         load();
+    }
+
+    private static Path defaultSettingsFile() {
+        String home = System.getProperty("user.home", System.getProperty("java.io.tmpdir"));
+        return Paths.get(home, ".cryptocarver", "settings.json");
     }
 
     public static AppSettings getInstance() { return INSTANCE; }
@@ -96,6 +106,28 @@ public final class AppSettings {
 
     public record TrustStoreProfile(String name, String path, String type) { }
 
+    public synchronized List<Pkcs11Profile> getPkcs11Profiles() {
+        if (data.pkcs11Profiles == null) return List.of();
+        return data.pkcs11Profiles.stream().map(profile -> new Pkcs11Profile(profile.name(), profile.library(), profile.slot())).toList();
+    }
+
+    public synchronized void savePkcs11Profile(String name, String library, int slot) {
+        String normalizedName = name == null ? "" : name.trim();
+        String normalizedLibrary = library == null ? "" : library.trim();
+        if (normalizedName.isEmpty() || normalizedLibrary.isEmpty()) throw new IllegalArgumentException("Profile name and library path are required");
+        if (slot < 0) throw new IllegalArgumentException("PKCS#11 slot must be zero or greater");
+        if (data.pkcs11Profiles == null) data.pkcs11Profiles = new ArrayList<>();
+        data.pkcs11Profiles.removeIf(profile -> normalizedName.equalsIgnoreCase(profile.name()));
+        data.pkcs11Profiles.add(new Pkcs11Profile(normalizedName, normalizedLibrary, slot));
+        save();
+    }
+
+    public synchronized void removePkcs11Profile(String name) {
+        if (data.pkcs11Profiles == null || name == null) return;
+        data.pkcs11Profiles.removeIf(profile -> name.trim().equalsIgnoreCase(profile.name()));
+        save();
+    }
+
     private void load() {
         try {
             if (Files.exists(file)) {
@@ -122,6 +154,7 @@ public final class AppSettings {
         private String ebcdicCodePage = "";
         private String ebcdicDirection = "";
         private List<TrustStoreProfile> trustStoreProfiles = new ArrayList<>();
+        private List<Pkcs11Profile> pkcs11Profiles = new ArrayList<>();
         private SecretVisibility secretVisibility = SecretVisibility.FULL_LAB;
     }
 }

@@ -26,6 +26,14 @@ public class XMLSignatureController {
     private StatusReporter statusReporter;
 
     // Sign UI
+
+    @FXML private javafx.scene.control.RadioButton xmlSignSourceLocalRadio;
+    @FXML private javafx.scene.control.RadioButton xmlSignSourcePkcs11Radio;
+    @FXML private javafx.scene.control.ToggleGroup xmlSignSourceToggleGroup;
+    @FXML private javafx.scene.layout.VBox xmlSignLocalKeyBox;
+    @FXML private javafx.scene.control.Label xmlSignKeyPathLabel;
+    @FXML private javafx.scene.control.Label xmlSignKeyPasswordLabel;
+
     @FXML private TextField xmlSignInputPathField;
     @FXML private TextField xmlSignKeyPathField;
     @FXML private PasswordField xmlSignKeyPasswordField;
@@ -75,6 +83,25 @@ public class XMLSignatureController {
     }
 
     @FXML
+    private void handleXMLSignSourceChanged() {
+        boolean isLocal = xmlSignSourceLocalRadio.isSelected();
+        xmlSignLocalKeyBox.setVisible(isLocal);
+        xmlSignLocalKeyBox.setManaged(isLocal);
+        xmlSignKeyPathLabel.setVisible(isLocal);
+        xmlSignKeyPathLabel.setManaged(isLocal);
+        xmlSignKeyPathField.setVisible(isLocal);
+        xmlSignKeyPathField.setManaged(isLocal);
+
+        xmlSignKeyPasswordLabel.setVisible(isLocal);
+        xmlSignKeyPasswordLabel.setManaged(isLocal);
+        xmlSignKeyPasswordField.setVisible(isLocal);
+        xmlSignKeyPasswordField.setManaged(isLocal);
+
+        // Aliases belong to the selected source; never reuse a local entry for a token.
+        xmlSignKeyAliasCombo.getItems().clear();
+        xmlSignKeyAliasCombo.getSelectionModel().clearSelection();
+    }
+
     public void initialize() {
         xmlSignLevelCombo.getItems().addAll("XAdES-BASELINE-B", "XAdES-BASELINE-T", "XAdES-BASELINE-LT", "XAdES-BASELINE-LTA");
         xmlSignLevelCombo.setValue("XAdES-BASELINE-B");
@@ -97,6 +124,7 @@ public class XMLSignatureController {
         xmlTimestampHashCombo.setValue("SHA-256");
         String saved = AppSettings.getInstance().getCustomTsaUrl();
         if (!saved.isBlank()) xmlTimestampUrlField.setText(saved);
+        handleXMLSignSourceChanged();
     }
 
     public void expandAccordionPane(String itemName) {
@@ -138,6 +166,25 @@ public class XMLSignatureController {
 
     @FXML
     public void handleLoadXMLKeys() {
+        if (xmlSignSourcePkcs11Radio != null && xmlSignSourcePkcs11Radio.isSelected()) {
+            try {
+                com.cryptoforge.crypto.hsm.Pkcs11Session session = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession();
+                if (session == null) {
+                    statusReporter.showError("Token Error", "No PKCS#11 token connected. Please connect from the Keys tab first.");
+                    return;
+                }
+                java.util.List<String> aliases = session.listPrivateKeysWithCertificate();
+                xmlSignKeyAliasCombo.getItems().setAll(aliases);
+                if (!aliases.isEmpty()) {
+                    xmlSignKeyAliasCombo.getSelectionModel().selectFirst();
+                }
+                statusReporter.updateStatus("Loaded " + aliases.size() + " private key aliases from PKCS#11 token.");
+            } catch (Exception e) {
+                statusReporter.showError("PKCS#11 Error", "Error listing aliases: " + e.getMessage());
+            }
+            return;
+        }
+
         try {
             String keyPath = xmlSignKeyPathField.getText();
             String password = xmlSignKeyPasswordField.getText();
@@ -260,27 +307,14 @@ public class XMLSignatureController {
     public void handleSignXML() {
         try {
             String inputPath = xmlSignInputPathField.getText();
-            String keyPath = xmlSignKeyPathField.getText();
-            String password = xmlSignKeyPasswordField.getText();
-            int keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
-
-            if (inputPath.isEmpty() || keyPath.isEmpty() || password.isEmpty()) {
-                statusReporter.showError("Input Error", "Please provide Input File, KeyStore and Password");
+            if (inputPath.isEmpty()) {
+                statusReporter.showError("Input Error", "Please provide an Input File");
                 return;
-            }
-
-            if (keyIndex < 0) {
-                // Try to load keys automatically if not selected but credentials provided
-                handleLoadXMLKeys();
-                keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
-                if (keyIndex < 0) {
-                    statusReporter.showError("Key Error", "Please select a key to sign with");
-                    return;
-                }
             }
 
             String xmlContent = Files.readString(new File(inputPath).toPath());
             String level = xmlSignLevelCombo.getValue();
+            String packaging = xmlSignPackagingCombo.getValue();
             String tsaUrl = getTsaUrl();
 
             if (!"XAdES-BASELINE-B".equals(level) && tsaUrl == null) {
@@ -293,23 +327,50 @@ public class XMLSignatureController {
             }
             saveCustomTsa(tsaUrl);
 
-            String packaging = xmlSignPackagingCombo.getValue();
-
-            String signedXml = XMLSignatureOperations.signXAdES(
-                    xmlContent,
-                    keyPath, password, keyIndex, level, tsaUrl, packaging, getTsaCredentials());
-
-            xmlSignOutputArea.setText(signedXml);
-
+            String signedXml;
             Map<String, String> details = new HashMap<>();
             details.put("Action", "XAdES Sign");
-            details.put("Level", xmlSignLevelCombo.getValue());
+            details.put("Level", level);
             details.put("Packaging", packaging);
             details.put("Input", inputPath);
-            details.put("Key Index", String.valueOf(keyIndex));
             if (tsaUrl != null && !tsaUrl.isEmpty()) {
                 details.put("TSA", tsaUrl);
             }
+
+            if (xmlSignSourcePkcs11Radio != null && xmlSignSourcePkcs11Radio.isSelected()) {
+                String alias = xmlSignKeyAliasCombo.getValue();
+                if (alias == null || alias.isEmpty()) {
+                    statusReporter.showError("Key Error", "Please select a key alias to sign with");
+                    return;
+                }
+                signedXml = XMLSignatureOperations.signXAdESWithPkcs11(
+                        xmlContent, alias, level, tsaUrl, packaging, getTsaCredentials());
+                details.put("Source", "PKCS#11");
+                details.put("Alias", alias);
+            } else {
+                String keyPath = xmlSignKeyPathField.getText();
+                String password = xmlSignKeyPasswordField.getText();
+                int keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
+
+                if (keyPath.isEmpty() || password.isEmpty()) {
+                    statusReporter.showError("Input Error", "Please provide KeyStore and Password");
+                    return;
+                }
+                if (keyIndex < 0) {
+                    handleLoadXMLKeys();
+                    keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
+                    if (keyIndex < 0) {
+                        statusReporter.showError("Key Error", "Please select a key to sign with");
+                        return;
+                    }
+                }
+                signedXml = XMLSignatureOperations.signXAdES(
+                        xmlContent, keyPath, password, keyIndex, level, tsaUrl, packaging, getTsaCredentials());
+                details.put("Source", "Local KeyStore");
+                details.put("KeyStore", keyPath);
+            }
+
+            xmlSignOutputArea.setText(signedXml);
             details.put("Output Size", signedXml.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + " bytes");
             statusReporter.publish(OperationResult.forOperation("XAdES Sign")
                     .input(xmlContent.getBytes(java.nio.charset.StandardCharsets.UTF_8))

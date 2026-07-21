@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<TitledPane text="🔍 Inspect / Validate CMS" expanded="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.CmsInspectorController">
+    <content>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <Label text="CMS Source (Base64 / PEM / DER File):" style="-fx-font-weight: bold;"/>
+            <HBox spacing="10">
+                <Button text="Load CMS file..." onAction="#handleLoadCmsFile" />
+                <Label fx:id="cmsFilePathLabel" text="No file selected" />
+            </HBox>
+            <TextArea fx:id="cmsInputArea" promptText="Or paste CMS bytes here..." prefHeight="80" style="-fx-font-family: 'Monospaced';"/>
+            
+            <Label text="Detached Content (Optional, for detached signature verification):" />
+            <CheckBox fx:id="cmsDetachedCheck" text="Provide detached content" onAction="#handleDetachedToggle" />
+            <HBox spacing="10" fx:id="cmsDetachedFileBox" managed="false" visible="false">
+                <Button text="Load Content file..." onAction="#handleLoadContentFile" />
+                <Label fx:id="cmsContentPathLabel" text="No file selected" />
+            </HBox>
+            <TextArea fx:id="cmsContentArea" promptText="Or paste content here..." prefHeight="60" style="-fx-font-family: 'Monospaced';" managed="false" visible="false"/>
+
+            <Label text="Truststore (Optional, for PKIX path validation):" />
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button text="Select Truststore..." onAction="#handleSelectTruststore" />
+                <Label fx:id="truststorePathLabel" text="No truststore selected" />
+                <PasswordField fx:id="truststorePasswordField" promptText="Password (not saved)" />
+            </HBox>
+            
+            <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+                <Button text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
+                <Button text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
+                <Button text="Export Report" onAction="#handleExportReport" />
+            </HBox>
+            
+            <Label text="Inspection Results:" style="-fx-font-weight: bold;"/>
+            <TextArea fx:id="cmsReportArea" editable="false" prefHeight="200" style="-fx-font-family: 'Monospaced';"/>
+        </VBox>
+    </content>
+</TitledPane>

@@ -13,6 +13,13 @@ import javafx.stage.Stage;
 public class CryptoCalculatorModern extends Application {
 
     @Override
+    public void stop() {
+        // A token session owns native PKCS#11 resources. It is intentionally
+        // process-local and must never survive application shutdown.
+        com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().disconnect();
+    }
+
+    @Override
     public void start(Stage primaryStage) {
         try {
             // Load modern FXML

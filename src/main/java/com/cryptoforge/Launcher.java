@@ -2,10 +2,21 @@ package com.cryptoforge;
 
 public class Launcher {
     public static void main(String[] args) {
-        if (args.length > 0 && "--cli".equals(args[0])) {
-            CryptoCarverCli.main(java.util.Arrays.copyOfRange(args, 1, args.length));
+        String[] cliArguments = cliArguments(args);
+        if (cliArguments != null) {
+            CryptoCarverCli.main(cliArguments);
             return;
         }
         CryptoCalculatorModern.main(args);
+    }
+
+    /** Allows a distributed JAR to answer version/help requests without starting JavaFX. */
+    static String[] cliArguments(String[] args) {
+        if (args == null || args.length == 0) return null;
+        if ("--cli".equals(args[0])) return java.util.Arrays.copyOfRange(args, 1, args.length);
+        if (args.length == 1 && ("--version".equals(args[0]) || "--help".equals(args[0]) || "help".equals(args[0]))) {
+            return args.clone();
+        }
+        return null;
     }
 }

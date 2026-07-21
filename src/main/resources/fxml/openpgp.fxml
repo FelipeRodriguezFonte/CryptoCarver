@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.OpenPgpController" spacing="8" style="-fx-padding: 10;">
+    <Label text="OpenPGP / GPG-compatible laboratory" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Button text="Check GnuPG…" onAction="#handleProbeGnuPg" styleClass="secondary-button"/>
+        <Button text="Run GnuPG Interop…" onAction="#handleRunGnuPgInterop" styleClass="secondary-button"/>
+        <Label fx:id="openPgpGnuPgStatusLabel" text="Optional external GnuPG not checked" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
+    </HBox>
+    <HBox spacing="8">
+        <TextField fx:id="openPgpUserIdField" promptText="User ID, e.g. Alice &lt;alice@example.test&gt;" HBox.hgrow="ALWAYS"/>
+        <PasswordField fx:id="openPgpPassphraseField" promptText="Key passphrase" prefWidth="180"/>
+        <Button text="Generate RSA Key Pair" onAction="#handleGenerateKeyPair" styleClass="action-button"/>
+    </HBox>
+    <Label text="Public key (ASCII armor)"/>
+    <HBox spacing="8">
+        <Button text="Load public key…" onAction="#handleLoadPublicKey" styleClass="secondary-button"/>
+        <Button text="Save public key…" onAction="#handleSavePublicKey" styleClass="secondary-button"/>
+        <Button text="Inspect public key" onAction="#handleInspectPublicKey" styleClass="secondary-button"/>
+    </HBox>
+    <TextArea fx:id="openPgpPublicKeyArea" prefHeight="80" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+    <Label text="Secret key (ASCII armor — laboratory only)"/>
+    <HBox spacing="8">
+        <Button text="Load secret key…" onAction="#handleLoadSecretKey" styleClass="secondary-button"/>
+        <Button text="Save secret key…" onAction="#handleSaveSecretKey" styleClass="secondary-button"/>
+        <Button text="Inspect metadata" onAction="#handleInspectSecretKey" styleClass="secondary-button"/>
+        <Button text="Clear visible secrets" onAction="#handleClearSecretMaterial" styleClass="danger-button"/>
+    </HBox>
+    <TextArea fx:id="openPgpSecretKeyArea" prefHeight="80" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+    <Label text="Input (plain text for Encrypt/Sign; armored message for Decrypt/attached/clear-sign Verify)"/>
+    <HBox spacing="8">
+        <Button text="Load input…" onAction="#handleLoadInput" styleClass="secondary-button"/>
+        <Label text="Text/ASCII armor only; 16 MiB laboratory limit" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
+    </HBox>
+    <TextArea fx:id="openPgpInputArea" prefHeight="70" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+    <HBox spacing="8">
+        <Button text="Encrypt" onAction="#handleEncrypt" styleClass="action-button"/>
+        <Button text="Decrypt" onAction="#handleDecrypt" styleClass="action-button"/>
+        <Button text="Sign Detached" onAction="#handleSignDetached" styleClass="action-button"/>
+        <Button text="Sign Attached" onAction="#handleSignAttached" styleClass="action-button"/>
+        <Button text="Clear-sign" onAction="#handleClearSign" styleClass="action-button"/>
+    </HBox>
+    <HBox spacing="8">
+        <Button text="Verify Detached" onAction="#handleVerifyDetached" styleClass="secondary-button"/>
+        <Button text="Verify Attached" onAction="#handleVerifyAttached" styleClass="secondary-button"/>
+        <Button text="Verify Clear-sign" onAction="#handleVerifyClearSigned" styleClass="secondary-button"/>
+        <Button text="Verify with GnuPG" onAction="#handleVerifyWithGnuPg" styleClass="secondary-button"/>
+        <Button text="Clear data" onAction="#handleClear" styleClass="secondary-button"/>
+    </HBox>
+    <HBox spacing="8">
+        <Label text="Binary file lab (max. 16 MiB; destination must not already exist):" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
+        <Button text="Encrypt File…" onAction="#handleEncryptFile" styleClass="secondary-button"/>
+        <Button text="Decrypt File…" onAction="#handleDecryptFile" styleClass="secondary-button"/>
+        <Button text="Sign File…" onAction="#handleSignFileDetached" styleClass="secondary-button"/>
+        <Button text="Verify File…" onAction="#handleVerifyFileDetached" styleClass="secondary-button"/>
+    </HBox>
+    <Label text="Detached signature (ASCII armor)"/>
+    <HBox spacing="8">
+        <Button text="Load signature…" onAction="#handleLoadSignature" styleClass="secondary-button"/>
+        <Button text="Save signature…" onAction="#handleSaveSignature" styleClass="secondary-button"/>
+        <Button text="Inspect signature" onAction="#handleInspectDetachedSignature" styleClass="secondary-button"/>
+    </HBox>
+    <TextArea fx:id="openPgpSignatureArea" prefHeight="65" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+    <Label text="Output"/>
+    <HBox spacing="8">
+        <Button text="Save output…" onAction="#handleSaveOutput" styleClass="secondary-button"/>
+    </HBox>
+    <TextArea fx:id="openPgpOutputArea" editable="false" prefHeight="90" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+</VBox>

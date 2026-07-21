@@ -58,6 +58,19 @@ class OperationRegistryTest {
     }
 
     @Test
+    void testResolveNavigationUsesExactTitleIdAndAlias() {
+        OperationRegistry registry = OperationRegistry.getInstance();
+
+        assertEquals("File Cipher (Streaming)", registry.resolveNavigation("op_sym_file")
+                .orElseThrow().getNavigationPath());
+        assertEquals("PQC Key Generation", registry.resolveNavigation("pqc key generation")
+                .orElseThrow().getNavigationPath());
+        assertEquals("TR-31 Key Blocks", registry.resolveNavigation("TR31")
+                .orElseThrow().getNavigationPath());
+        assertTrue(registry.resolveNavigation("not an operation").isEmpty());
+    }
+
+    @Test
     void testUnmodifiableList() {
         List<OperationDescriptor> all = OperationRegistry.getInstance().getAll();
         assertThrows(UnsupportedOperationException.class, () -> all.remove(0), "Registry should return unmodifiable collections");

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+                <Accordion xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.cryptoforge.ui.GenericController" fx:id="genericContainer" managed="false" visible="false">
+                        <panes>
+                            <!-- KEY & CERTIFICATE FORMAT WORKBENCH -->
+                            <TitledPane text="🛠 Key &amp; Certificate Format Workbench">
+                                <VBox spacing="5" style="-fx-padding: 6;">
+                                    <Label text="Inspect, convert and validate keys and certificates. Fully supports JWK, PEM, DER, OpenSSH and PKCS#12." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                    <fx:include fx:id="keyCertificateWorkbench" source="key_certificate_workbench.fxml" />
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- HASHING -->
+                            <TitledPane text="🔐 Hashing" expanded="true">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <Label text="Algorithm:" style="-fx-font-size: 11px;"/>
+                                    <ComboBox fx:id="hashAlgorithmCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Input:" style="-fx-font-size: 11px;"/>
+                                    <TextArea fx:id="hashInputArea" prefRowCount="3" wrapText="true" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Output:" style="-fx-font-size: 11px;"/>
+                                    <TextArea fx:id="hashOutputArea" prefRowCount="2" editable="false" wrapText="true" style="-fx-font-size: 11px; -fx-font-family: monospace;"/>
+
+                                    <Button text="Calculate Hash" onAction="#handleCalculateHash"
+                                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- BATCH RUNNER -->
+                            <TitledPane text="📦 Batch Runner" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <Label text="Runs safe, deterministic transformations. Input must contain an input column; no secret keys are accepted." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                    <HBox spacing="6" alignment="CENTER_LEFT">
+                                        <Label text="Input:" style="-fx-font-size: 11px;"/>
+                                        <ComboBox fx:id="batchInputFormatCombo" prefWidth="90"/>
+                                        <Label text="Operation:" style="-fx-font-size: 11px;"/>
+                                        <ComboBox fx:id="batchOperationCombo" HBox.hgrow="ALWAYS"/>
+                                        <Label text="Column:" style="-fx-font-size: 11px;"/>
+                                        <TextField fx:id="batchColumnField" text="input" prefWidth="80" style="-fx-font-size: 11px;"/>
+                                    </HBox>
+                                    <TextArea fx:id="batchInputArea" prefRowCount="5" wrapText="false" style="-fx-font-family: monospace; -fx-font-size: 10px;" promptText="CSV: input&#10;hello&#10;or JSON Lines (.jsonl): {&quot;input&quot;:&quot;hello&quot;}&#10;{&quot;input&quot;:&quot;world&quot;}"/>
+                                    <Label text="JSON Lines (.jsonl) uses one JSON object per line; it is not a single JSON array/document." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                    <HBox spacing="6">
+                                        <Button text="Load CSV / JSON Lines…" onAction="#handleBrowseBatchInput" styleClass="secondary-button"/>
+                                        <Button text="Run Batch" onAction="#handleRunBatch" styleClass="action-button"/>
+                                        <Button text="Cancel" onAction="#handleCancelBatch" styleClass="secondary-button"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <ComboBox fx:id="batchExportFormatCombo" prefWidth="80"/>
+                                        <Button text="Export Results…" onAction="#handleExportBatchResults" styleClass="secondary-button"/>
+                                    </HBox>
+                                    <ProgressBar fx:id="batchProgressBar" prefWidth="420" maxWidth="1.7976931348623157E308"/>
+                                    <Label fx:id="batchStatusLabel" text="Ready" wrapText="true" style="-fx-font-size: 10px;"/>
+                                    <TextArea fx:id="batchResultArea" prefRowCount="5" editable="false" wrapText="false" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- ENCODING/CONVERSION -->
+                            <TitledPane text="🔄 File Conversion" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <GridPane hgap="5" vgap="5">
+                                        <Label text="Source:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 10px;"/>
+                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0" HBox.hgrow="ALWAYS">
+                                            <TextField fx:id="fileInputPathField" promptText="Input File Path" HBox.hgrow="ALWAYS" style="-fx-font-size: 10px;"/>
+                                            <Button text="..." onAction="#handleBrowseInputFile" style="-fx-font-size: 10px; -fx-min-width: 25px;"/>
+                                        </HBox>
+
+                                        <Label text="Target:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 10px;"/>
+                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
+                                            <TextField fx:id="fileOutputPathField" promptText="Output File Path" HBox.hgrow="ALWAYS" style="-fx-font-size: 10px;"/>
+                                            <Button text="..." onAction="#handleBrowseOutputFile" style="-fx-font-size: 10px; -fx-min-width: 25px;"/>
+                                        </HBox>
+
+                                        <Label text="Compare:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-size: 10px;"/>
+                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
+                                            <TextField fx:id="fileComparePathField" promptText="Second File Path" HBox.hgrow="ALWAYS" style="-fx-font-size: 10px;"/>
+                                            <Button text="..." onAction="#handleBrowseCompareFile" style="-fx-font-size: 10px; -fx-min-width: 25px;"/>
+                                        </HBox>
+
+                                        <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-size: 10px;"/>
+                                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                            <ComboBox fx:id="fileInputFormatCombo" promptText="In" prefWidth="80" style="-fx-font-size: 10px;"/>
+                                            <Label text="->" style="-fx-font-size: 10px;"/>
+                                            <ComboBox fx:id="fileOutputFormatCombo" promptText="Out" prefWidth="80" style="-fx-font-size: 10px;"/>
+                                        </HBox>
+
+                                        <Label text="Encoding:" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-font-size: 10px;"/>
+                                        <ComboBox fx:id="fileEncodingCombo" prefWidth="120"
+                                                  GridPane.columnIndex="1" GridPane.rowIndex="4" style="-fx-font-size: 10px;"/>
+                                    </GridPane>
+
+                                    <TextArea fx:id="fileResultArea" prefRowCount="2" editable="false"
+                                              wrapText="true" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+
+                                    <Button text="Convert File" onAction="#handleConvertFile"
+                                            maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
+                                    <Button text="Compare Files (streaming)" onAction="#handleCompareFiles"
+                                            maxWidth="180" style="-fx-font-size: 11px;"/>
+                                    <Button text="Hash File SHA-256 (streaming)" onAction="#handleHashFileStreaming"
+                                            maxWidth="200" style="-fx-font-size: 11px;"/>
+                                    <Button text="Preview First 4 KiB" onAction="#handlePreviewFileStreaming"
+                                            maxWidth="180" style="-fx-font-size: 11px;"/>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- MANUAL CONVERSION (NEW) -->
+                            <TitledPane text="🔤 Manual Conversion" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+
+                                     <HBox spacing="6" alignment="CENTER_LEFT">
+                                         <Label text="Input:" style="-fx-font-size: 11px;"/>
+                                         <ComboBox fx:id="manualInputFormatCombo" prefWidth="120" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                     <TextArea fx:id="manualInputArea" prefRowCount="3" wrapText="true" style="-fx-font-size: 11px;"/>
+
+                                     <HBox spacing="8" alignment="CENTER_LEFT">
+                                         <CheckBox fx:id="ebcdicConversionCheck" text="Enable EBCDIC conversion" style="-fx-font-size: 11px;"/>
+                                         <ComboBox fx:id="ebcdicDirectionCombo" prefWidth="190" disable="true" style="-fx-font-size: 11px;"/>
+                                         <Label text="Code page:" style="-fx-font-size: 11px;"/>
+                                         <ComboBox fx:id="ebcdicCodePageCombo" prefWidth="205" disable="true" style="-fx-font-size: 11px;"/>
+                                     </HBox>
+
+                                     <HBox spacing="6" alignment="CENTER_LEFT">
+                                         <Label text="Output:" style="-fx-font-size: 11px;"/>
+                                         <ComboBox fx:id="manualOutputFormatCombo" prefWidth="120" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                     <TextArea fx:id="manualOutputArea" prefRowCount="3" editable="false" wrapText="true" style="-fx-font-size: 11px; -fx-font-family: monospace;"/>
+
+                                     <HBox spacing="6">
+                                         <Button text="Convert Data" onAction="#handleManualConvert"
+                                                 maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
+                                         <Button text="UTF-8 → Base64URL" onAction="#handleEncodeBase64Url" style="-fx-font-size: 10px;"/>
+                                         <Button text="Base64URL → UTF-8" onAction="#handleDecodeBase64Url" style="-fx-font-size: 10px;"/>
+                                         <Button text="UTF-8 → Base32" onAction="#handleEncodeBase32" style="-fx-font-size: 10px;"/>
+                                         <Button text="Base32 → UTF-8" onAction="#handleDecodeBase32" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                     <HBox spacing="6" alignment="CENTER_LEFT">
+                                         <Label text="Endian word:" style="-fx-font-size: 10px;"/>
+                                         <ComboBox fx:id="endianWordSizeCombo" prefWidth="150" style="-fx-font-size: 10px;"/>
+                                         <Button text="Reverse byte order" onAction="#handleConvertEndian" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                     <HBox spacing="6">
+                                         <Button text="UTF-8 → URL" onAction="#handleEncodeUrl" style="-fx-font-size: 10px;"/>
+                                         <Button text="URL → UTF-8" onAction="#handleDecodeUrl" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                     <HBox spacing="6" alignment="CENTER_LEFT">
+                                         <Label text="Compression:" style="-fx-font-size: 10px;"/>
+                                         <ComboBox fx:id="compressionFormatCombo" prefWidth="100" style="-fx-font-size: 10px;"/>
+                                         <Button text="Compress" onAction="#handleCompressData" style="-fx-font-size: 10px;"/>
+                                         <Button text="Decompress" onAction="#handleDecompressData" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                     <HBox spacing="6">
+                                         <Button text="Decimal → BCD" onAction="#handleEncodeBcd" style="-fx-font-size: 10px;"/>
+                                         <Button text="BCD → Decimal" onAction="#handleDecodeBcd" style="-fx-font-size: 10px;"/>
+                                         <Button text="Decimal → COMP-3" onAction="#handleEncodeComp3" style="-fx-font-size: 10px;"/>
+                                         <Button text="COMP-3 → Decimal" onAction="#handleDecodeComp3" style="-fx-font-size: 10px;"/>
+                                     </HBox>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- COMPRESSED HEX / TWO-ROW HOST VIEW -->
+                            <fx:include fx:id="compressedHexPane" source="compressed_hex.fxml"/>
+
+                            <!-- UUID GENERATOR -->
+                            <TitledPane text="🆔 UUID Generator" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <Label text="Generate random UUID (v4):" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="uuidOutputField" editable="false" style="-fx-font-size: 11px;"/>
+                                    <Button text="Generate UUID" onAction="#handleGenerateUUID"
+                                            maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- RANDOM NUMBER GENERATOR -->
+                            <TitledPane text="🎲 Random Generator" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <GridPane hgap="5" vgap="5">
+                                        <Label text="Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 11px;"/>
+                                        <TextField fx:id="randomBytesField" text="16" prefWidth="80"
+                                                   GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-size: 11px;"/>
+
+                                        <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 11px;"/>
+                                        <ComboBox fx:id="randomFormatCombo" prefWidth="150"
+                                                  GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-size: 11px;"/>
+                                    </GridPane>
+
+                                    <Label text="Output:" style="-fx-font-size: 11px;"/>
+                                    <TextArea fx:id="randomOutputArea" prefRowCount="3" editable="false" wrapText="true" style="-fx-font-size: 11px; -fx-font-family: monospace;"/>
+
+                                    <Button text="Generate Random" onAction="#handleGenerateRandom"
+                                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- CHECK DIGITS -->
+                            <TitledPane text="✅ Check Digits" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <Label text="Algorithm:" style="-fx-font-size: 11px;"/>
+                                    <ComboBox fx:id="checkDigitAlgorithmCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Input:" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="checkDigitInput" promptText="Enter number" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Output / Validation:" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="checkDigitOutput" editable="false" style="-fx-font-size: 11px;"/>
+
+                                    <HBox spacing="10">
+                                        <Button text="Calculate" onAction="#handleCalculateCheckDigit"
+                                                styleClass="action-button" style="-fx-font-size: 11px;"/>
+                                        <Button text="Validate" onAction="#handleValidateCheckDigit"
+                                                styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                                    </HBox>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- MODULAR ARITHMETIC -->
+                            <TitledPane text="🔢 Modular Arithmetic" expanded="false">
+                                <VBox spacing="6" style="-fx-padding: 8;">
+                                    <Label text="Operation:" style="-fx-font-size: 11px;"/>
+                                    <ComboBox fx:id="modOperationCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Operand A (Hex):" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="modOperandAField" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Operand B (Hex):" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="modOperandBField" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Modulus (Hex):" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="modModulusField" style="-fx-font-size: 11px;"/>
+
+                                    <Button text="Calculate" onAction="#handleModularCalculate"
+                                            maxWidth="180" styleClass="action-button" style="-fx-font-size: 11px;"/>
+
+                                    <Label text="Result:" style="-fx-font-size: 11px;"/>
+                                    <TextArea fx:id="modResultArea" prefRowCount="2" editable="false"
+                                              wrapText="true" style="-fx-font-family: monospace; -fx-font-size: 11px;"/>
+                                </VBox>
+                            </TitledPane>
+                        </panes>
+                    </Accordion>
+

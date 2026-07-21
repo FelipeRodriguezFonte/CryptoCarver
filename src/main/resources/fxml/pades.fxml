@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptoforge.ui.PadesController" spacing="8" style="-fx-padding: 10;">
+    <Label text="PAdES laboratory — local PKCS#12 signing key" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
+    <Label text="Signs PDF incrementally as Baseline-B, or Baseline-T when timestamping is explicitly enabled. It never overwrites an output file. 64 MiB limit." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
+    <HBox spacing="6">
+        <TextField fx:id="padesInputPathField" promptText="PDF input path" HBox.hgrow="ALWAYS"/>
+        <Button text="Choose PDF…" onAction="#handleChooseInput" styleClass="secondary-button"/>
+    </HBox>
+    <HBox spacing="6">
+        <TextField fx:id="padesOutputPathField" promptText="New signed PDF output path" HBox.hgrow="ALWAYS"/>
+        <Button text="Choose output…" onAction="#handleChooseOutput" styleClass="secondary-button"/>
+    </HBox>
+    <HBox spacing="8">
+        <RadioButton fx:id="padesSourceLocalRadio" text="Local PKCS#12" selected="true" onAction="#handleSourceChanged">
+            <toggleGroup><ToggleGroup fx:id="padesSourceToggleGroup"/></toggleGroup>
+        </RadioButton>
+        <RadioButton fx:id="padesSourcePkcs11Radio" text="PKCS#11 Token" toggleGroup="$padesSourceToggleGroup" onAction="#handleSourceChanged"/>
+    </HBox>
+    <HBox fx:id="padesLocalKeyBox" spacing="6">
+        <TextField fx:id="padesPkcs12PathField" promptText="PKCS#12 (.p12 / .pfx) path" HBox.hgrow="ALWAYS"/>
+        <Button text="Choose key…" onAction="#handleChoosePkcs12" styleClass="secondary-button"/>
+        <PasswordField fx:id="padesPasswordField" promptText="PKCS#12 password" prefWidth="180"/>
+    </HBox>
+    <HBox fx:id="padesPkcs11Box" spacing="6" visible="false" managed="false">
+        <ComboBox fx:id="padesPkcs11AliasCombo" promptText="Token signing alias" HBox.hgrow="ALWAYS"/>
+        <Button text="Load Token Keys" onAction="#handleLoadTokenKeys" styleClass="secondary-button"/>
+    </HBox>
+    <CheckBox fx:id="padesTimestampCheck" text="Add RFC 3161 signature timestamp (PAdES-T)" onAction="#handleTimestampOptionChanged"/>
+    <HBox fx:id="padesTsaBox" spacing="6" visible="false" managed="false">
+        <Label text="TSA URL:"/>
+        <TextField fx:id="padesTsaUrlField" promptText="https://tsa.example.test" HBox.hgrow="ALWAYS"/>
+    </HBox>
+    <CheckBox fx:id="padesVisibleSignatureCheck" text="Add visible signature text" onAction="#handleVisibleSignatureOptionChanged"/>
+    <VBox fx:id="padesVisibleSignatureBox" spacing="5" visible="false" managed="false" style="-fx-padding: 0 0 0 16;">
+        <HBox spacing="6">
+            <Label text="Page"/><TextField fx:id="padesVisiblePageField" text="1" prefWidth="45"/>
+            <Label text="X"/><TextField fx:id="padesVisibleXField" text="40" prefWidth="55"/>
+            <Label text="Y"/><TextField fx:id="padesVisibleYField" text="40" prefWidth="55"/>
+            <Label text="Width"/><TextField fx:id="padesVisibleWidthField" text="220" prefWidth="55"/>
+            <Label text="Height"/><TextField fx:id="padesVisibleHeightField" text="60" prefWidth="55"/>
+            <Label text="(PDF points; lower-left origin)" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+        </HBox>
+        <TextField fx:id="padesVisibleTextField" text="Signed with CryptoCarver laboratory" promptText="Visible signature text" HBox.hgrow="ALWAYS"/>
+    </VBox>
+    <Separator/>
+    <Label text="Validation (local truststore and CRL evidence only; no online revocation lookup)" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+    <HBox spacing="6">
+        <TextField fx:id="padesTrustStorePathField" promptText="Truststore (.p12 / .pfx / .jks), optional" HBox.hgrow="ALWAYS"/>
+        <Button text="Choose truststore…" onAction="#handleChooseTrustStore" styleClass="secondary-button"/>
+        <PasswordField fx:id="padesTrustStorePasswordField" promptText="Truststore password" prefWidth="160"/>
+    </HBox>
+    <HBox spacing="6">
+        <TextField fx:id="padesCrlEvidenceField" editable="false" promptText="No local CRL evidence selected" HBox.hgrow="ALWAYS"/>
+        <Button text="Choose CRL evidence…" onAction="#handleChooseCrlEvidence" styleClass="secondary-button"/>
+    </HBox>
+    <HBox spacing="8">
+        <Button text="Sign PDF" onAction="#handleSign" styleClass="action-button"/>
+        <Button text="Inspect PDF Signatures" onAction="#handleInspect" styleClass="secondary-button"/>
+        <Button text="Validate PDF" onAction="#handleValidate" styleClass="secondary-button"/>
+        <Button text="Save DSS Reports…" onAction="#handleSaveValidationReports" styleClass="secondary-button"/>
+    </HBox>
+    <TextArea fx:id="padesResultArea" editable="false" prefHeight="105" wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;" promptText="PAdES result will appear here..."/>
+</VBox>

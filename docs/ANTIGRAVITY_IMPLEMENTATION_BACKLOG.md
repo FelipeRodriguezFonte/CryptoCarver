@@ -84,6 +84,7 @@ Trabajar en este orden. Cada identificador es un bloque implementable y verifica
 | 11 | CF-11 | JOSE y ASN.1 avanzados | CF-03, CF-07 |
 | 12 | CF-12 | Automatización segura ampliada | CF-02, CF-03, CF-04 |
 | 13 | CF-13 | Release engineering multiplataforma | CF-01 a CF-12 según alcance elegido |
+| 14 | CF-14 | Modularización UI moderna y calidad visual | CF-01 a CF-05, CF-11, CF-13 |
 
 ## 4. Bloques detallados
 

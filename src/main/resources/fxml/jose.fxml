@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.TextFlow?>
+
+
+                        <VBox fx:id="joseContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.JOSEController" managed="false" visible="false" spacing="10" style="-fx-padding: 10;">
+
+
+                            <!-- JWT SECTION -->
+                            <VBox fx:id="jwtSection" spacing="10" managed="false" visible="false">
+                                <Label text="JSON Web Token (JWT)" styleClass="section-header"/>
+
+                                <TabPane tabClosingPolicy="UNAVAILABLE">
+                                    <!-- GENERATE TAB -->
+                                    <Tab text="Generate">
+                                        <VBox spacing="10" style="-fx-padding: 10;">
+                                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                                <Label text="Algorithm:" styleClass="field-label"/>
+                                                <ComboBox fx:id="jwtAlgoCombo" prefWidth="150"/>
+                                                <Label text="Template:" styleClass="field-label"/>
+                                                <ComboBox fx:id="jwtTemplateCombo" prefWidth="150" promptText="Select Template..."/>
+                                            </HBox>
+                                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                                <Label text="Serialization:" styleClass="field-label"/>
+                                                <ComboBox fx:id="jwsSerializationCombo" prefWidth="150" promptText="Compact"/>
+                                                <CheckBox fx:id="jwsUnencodedPayloadCheck" text="Unencoded Payload (b64=false)">
+                                                    <tooltip><javafx.scene.control.Tooltip text="WARNING: May cause interoperability issues with standard parsers"/></tooltip>
+                                                </CheckBox>
+                                            </HBox>
+                                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                                <Label text="Signing Key 1 (Secret / Private PEM):" styleClass="field-label"/>
+                                                <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="link-button"/>
+                                            </HBox>
+                                            <TextArea fx:id="jwtKeyArea" promptText="Enter secret (for HMAC) or paste Private Key PEM (for RSA/EC)..."
+                                                      prefHeight="60" styleClass="code-area"/>
+
+                                            <TitledPane text="Signer 2 (Only for General JSON)" expanded="false">
+                                                <VBox spacing="10">
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Algorithm 2:" styleClass="field-label"/>
+                                                        <ComboBox fx:id="jwtAlgoCombo2" prefWidth="150"/>
+                                                    </HBox>
+                                                    <Label text="Signing Key 2:" styleClass="field-label"/>
+                                                    <TextArea fx:id="jwtKeyArea2" promptText="Optional. Required if using General JSON with two signers..."
+                                                              prefHeight="60" styleClass="code-area"/>
+                                                </VBox>
+                                            </TitledPane>
+
+                                            <TitledPane text="Claims Builder (Optional)" expanded="false">
+                                                <VBox spacing="10">
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Issuer (iss):" prefWidth="80"/>
+                                                        <TextField fx:id="jwtIssField" promptText="e.g. auth.server" HBox.hgrow="ALWAYS"/>
+                                                    </HBox>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Subject (sub):" prefWidth="80"/>
+                                                        <TextField fx:id="jwtSubField" promptText="e.g. user_123" HBox.hgrow="ALWAYS"/>
+                                                    </HBox>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Audience (aud):" prefWidth="80"/>
+                                                        <TextField fx:id="jwtAudField" promptText="e.g. my-api" HBox.hgrow="ALWAYS"/>
+                                                    </HBox>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Valid for:" prefWidth="80"/>
+                                                        <TextField fx:id="jwtExpField" promptText="1" prefWidth="50"/>
+                                                        <Label text="hours"/>
+                                                        <Button text="Apply to Payload" onAction="#handleApplyJWTClaims" styleClass="link-button"/>
+                                                    </HBox>
+                                                </VBox>
+                                            </TitledPane>
+
+                                            <Label text="Payload (JSON):" styleClass="field-label"/>
+                                            <TextArea fx:id="jwtPayloadArea" promptText='{"sub":"1234567890", "name":"John Doe", "iat":1516239022}'
+                                                      prefHeight="80" styleClass="code-area"/>
+
+                                            <Button text="Generate Signed JWT" onAction="#handleGenerateSignedJWT" styleClass="action-button"/>
+
+                                            <Separator/>
+                                            <Label text="Output:" styleClass="field-label"/>
+                                            <TextArea fx:id="jwtOutputArea" promptText="Generated JWT will appear here..."
+                                                      prefHeight="60" styleClass="code-area" editable="false"/>
+                                        </VBox>
+                                    </Tab>
+
+                                    <!-- VALIDATE TAB -->
+                                    <Tab text="Validate &amp; Decode">
+                                        <VBox spacing="10" style="-fx-padding: 10;">
+                                            <Label text="JWT Token:" styleClass="field-label"/>
+                                            <TextArea fx:id="jwtValidateTokenArea" promptText="Paste JWT here..."
+                                                      prefHeight="60" styleClass="code-area"/>
+
+                                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                                <Label text="Verification Key (Secret / Public PEM):" styleClass="field-label"/>
+                                                <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="link-button"/>
+                                            </HBox>
+                                            <TextArea fx:id="jwtValidateKeyArea" promptText="Enter secret (for HMAC) or paste Public Key PEM (for RSA/EC)..."
+                                                      prefHeight="60" styleClass="code-area"/>
+
+                                            <TitledPane text="Advanced Validation Settings" expanded="false">
+                                                <VBox spacing="10">
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Expected Issuer (iss):" prefWidth="120"/>
+                                                        <TextField fx:id="jwtExpectedIssField" promptText="e.g. auth.server" HBox.hgrow="ALWAYS"/>
+                                                    </HBox>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Expected Audience (aud):" prefWidth="120"/>
+                                                        <TextField fx:id="jwtExpectedAudField" promptText="e.g. my-api" HBox.hgrow="ALWAYS"/>
+                                                    </HBox>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Label text="Clock Skew (sec):" prefWidth="120"/>
+                                                        <TextField fx:id="jwtClockSkewField" text="60" prefWidth="60"/>
+                                                        <CheckBox fx:id="jwtCheckExpiryCheck" text="Check Expiration (exp/nbf/iat)" selected="true"/>
+                                                        <CheckBox fx:id="jwtOidcStrictCheck" text="Strict OIDC Profile"/>
+                                                    </HBox>
+                                                </VBox>
+                                            </TitledPane>
+
+                                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                                <Button text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button"/>
+                                                <Label fx:id="jwtStatusLabel" text="" style="-fx-font-weight: bold;"/>
+                                            </HBox>
+
+                                            <Separator/>
+                                            <Label text="Decoded Header:" styleClass="field-label"/>
+                                            <TextArea fx:id="jwtDecodedHeaderArea" promptText="Header JSON..."
+                                                      prefHeight="50" styleClass="code-area" editable="false"/>
+
+                                            <Label text="Decoded Payload:" styleClass="field-label"/>
+                                            <TextArea fx:id="jwtDecodedPayloadArea" promptText="Payload JSON..."
+                                                      prefHeight="80" styleClass="code-area" editable="false"/>
+                                        </VBox>
+                                    </Tab>
+
+
+                                </TabPane>
+                            </VBox>
+
+                            <TitledPane text="🔗 JWS Detached (payload externo)">
+                                <VBox spacing="8" style="-fx-padding: 10;">
+                                    <Label text="Algorithm:"/><ComboBox fx:id="detachedAlgoCombo" prefWidth="180" promptText="HS256 / RS256 / ES256"/>
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Label text="Serialization:"/>
+                                        <ComboBox fx:id="detachedSerializationCombo" prefWidth="150" promptText="Compact"/>
+                                        <CheckBox fx:id="detachedUnencodedCheck" text="b64=false"/>
+                                    </HBox>
+                                    <Label text="External payload:"/><TextArea fx:id="detachedPayloadArea" prefHeight="60"/>
+                                    <Label text="Signing key (secret or private PEM):"/><TextArea fx:id="detachedSigningKeyArea" prefHeight="60"/>
+                                    <Label text="Verification key (same secret or public PEM):"/><TextArea fx:id="detachedVerificationKeyArea" prefHeight="60"/>
+                                    <HBox spacing="8"><Button text="Generate detached JWS" onAction="#handleGenerateDetachedJWS" styleClass="action-button"/><Button text="Verify detached JWS" onAction="#handleVerifyDetachedJWS" styleClass="secondary-button"/></HBox>
+                                    <TextArea fx:id="detachedTokenArea" prefHeight="60" promptText="header..signature"/>
+                                    <Label fx:id="detachedStatusLabel"/>
+                                </VBox>
+                            </TitledPane>
+
+                            <!-- JWK SECTION -->
+                            <VBox fx:id="jwkSection" spacing="10" managed="false" visible="false">
+                                <Label text="JSON Web Keys (JWK)" styleClass="section-header"/>
+                                <TabPane tabClosingPolicy="UNAVAILABLE">
+                                    <Tab text="JWK Tools">
+                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
+                                            <VBox spacing="10" style="-fx-padding: 10;">
+                                                <Label text="Key Conversion &amp; Analysis" styleClass="field-label"/>
+
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Key Type:" styleClass="field-label"/>
+                                                    <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="100"/>
+                                                    <Label text="Key ID (kid):" styleClass="field-label"/>
+                                                    <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" HBox.hgrow="ALWAYS"/>
+                                                </HBox>
+
+                                                <Label fx:id="jwkInputLabel" text="Input (PEM or JWK JSON):" styleClass="field-label"/>
+                                                <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefHeight="100" styleClass="code-area"/>
+
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Button fx:id="pemToJwkBtn" text="PEM -> JWK" onAction="#handlePemToJwk" styleClass="action-button"/>
+                                                    <Button fx:id="jwkToPemBtn" text="JWK -> PEM" onAction="#handleJwkToPem" styleClass="action-button"/>
+                                                    <Button text="Calc Thumbprint" onAction="#handleCalculateThumbprint" styleClass="secondary-button"/>
+                                                </HBox>
+
+                                                <Separator/>
+                                                <Label text="Output:" styleClass="field-label"/>
+                                                <TextArea fx:id="jwkOutputArea" promptText="Result..." prefHeight="150" styleClass="code-area" editable="false"/>
+                                            </VBox>
+                                        </ScrollPane>
+                                    </Tab>
+
+                                    <!-- JWK SET TAB -->
+                                    <Tab text="JWK Set (JWKS)">
+                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
+                                            <VBox spacing="10" style="-fx-padding: 10;">
+                                                <Label text="JWK Set Management" styleClass="field-label"/>
+
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                     <Button text="New JWKS" onAction="#handleNewJWKS" styleClass="secondary-button"/>
+                                                     <Button text="Load JWKS..." onAction="#handleLoadJWKS" styleClass="link-button"/>
+                                                </HBox>
+
+                                                <TextArea fx:id="jwksArea" promptText="{ &quot;keys&quot;: [] }" prefHeight="200" styleClass="code-area"/>
+
+                                                <TitledPane text="Key Rotation &amp; Operations" expanded="true">
+                                                    <VBox spacing="10">
+                                                        <Label text="Simulate Key Rotation:" styleClass="field-label"/>
+                                                        <HBox spacing="10" alignment="CENTER_LEFT">
+                                                            <ComboBox fx:id="jwksRotateAlgoCombo" prefWidth="100"/>
+                                                            <Button text="Add New Key to Set" onAction="#handleRotateKey" styleClass="action-button"/>
+                                                        </HBox>
+                                                        <Label text="Public Export:" styleClass="field-label"/>
+                                                        <Button text="Show Public JWKS Only" onAction="#handleExportPublicJWKS" styleClass="secondary-button"/>
+                                                    </VBox>
+                                                </TitledPane>
+                                            </VBox>
+                                        </ScrollPane>
+                                    </Tab>
+                                </TabPane>
+                            </VBox>
+
+                            <!-- JWE SECTION -->
+                            <VBox fx:id="jweSection" spacing="10" managed="false" visible="false">
+                                <Label text="JSON Web Encryption (JWE)" styleClass="section-header"/>
+
+                                <TabPane tabClosingPolicy="UNAVAILABLE">
+                                    <!-- ENCRYPT TAB -->
+                                    <Tab text="Encrypt">
+                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
+                                            <VBox spacing="10" style="-fx-padding: 10;">
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Key Management Algo:" styleClass="field-label"/>
+                                                    <ComboBox fx:id="jweKeyAlgoCombo" prefWidth="150"/>
+
+                                                    <Label text="Content Encryption Algo:" styleClass="field-label"/>
+                                                    <ComboBox fx:id="jweContentAlgoCombo" prefWidth="150"/>
+                                                    <CheckBox fx:id="jweCompressCheck" text="Compress (DEF)"/>
+                                                </HBox>
+
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Recipient Public Key (PEM):" styleClass="field-label"/>
+                                                    <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="link-button"/>
+                                                </HBox>
+                                                <TextArea fx:id="jwePublicKeyArea" promptText="Paste RSA Public Key PEM..."
+                                                          prefHeight="60" styleClass="code-area"/>
+
+                                                <Label text="Payload (Any String):" styleClass="field-label"/>
+                                                <TextArea fx:id="jwePayloadArea" promptText="Secret Data..."
+                                                          prefHeight="60" styleClass="code-area"/>
+
+                                                <Button text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button"/>
+
+                                                <Separator/>
+                                                <Label text="Output (JWE):" styleClass="field-label"/>
+                                                <TextArea fx:id="jweOutputArea" promptText="Generated JWE..."
+                                                          prefHeight="60" styleClass="code-area" editable="false"/>
+                                            </VBox>
+                                        </ScrollPane>
+                                    </Tab>
+
+                                    <!-- DECRYPT TAB -->
+                                    <Tab text="Decrypt">
+                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
+                                            <VBox spacing="10" style="-fx-padding: 10;">
+                                                <Label text="JWE Token:" styleClass="field-label"/>
+                                                <TextArea fx:id="jweInputArea" promptText="Paste JWE here..."
+                                                          prefHeight="60" styleClass="code-area"/>
+
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Private Key (PEM):" styleClass="field-label"/>
+                                                    <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="link-button"/>
+                                                </HBox>
+                                                <TextArea fx:id="jwePrivateKeyArea" promptText="Paste RSA Private Key PEM..."
+                                                          prefHeight="60" styleClass="code-area"/>
+
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Button text="Decrypt JWE" onAction="#handleDecryptJWE" styleClass="action-button"/>
+                                                    <Label fx:id="jweStatusLabel" text="" style="-fx-font-weight: bold;"/>
+                                                </HBox>
+
+                                                <Separator/>
+                                                <Label text="Decoded Header:" styleClass="field-label"/>
+                                                <TextArea fx:id="jweDecodedHeaderArea" promptText="Header JSON..."
+                                                          prefHeight="50" styleClass="code-area" editable="false"/>
+
+                                                <Label text="Decoded Payload:" styleClass="field-label"/>
+                                                <TextArea fx:id="jweDecodedPayloadArea" promptText="Payload..."
+                                                          prefHeight="80" styleClass="code-area" editable="false"/>
+
+                                                <TitledPane text="Visual Breakdown (Layer 6)" expanded="false">
+                                                    <VBox spacing="5" style="-fx-padding: 5;">
+                                                        <Label text="Protected Header:" styleClass="field-label-small"/>
+                                                        <TextArea fx:id="jweHeaderArea" prefHeight="40" styleClass="code-area" editable="false"/>
+                                                        <Label text="Encrypted Key:" styleClass="field-label-small"/>
+                                                    <TextArea fx:id="jweEncryptedKeyArea" prefHeight="40" styleClass="code-area" editable="false"/>
+                                                    <Label text="Decrypted CEK (Hex):" styleClass="field-label-small"/>
+                                                    <TextArea fx:id="jweDecryptedKeyArea" prefHeight="30" styleClass="code-area" editable="false"/>
+                                                    <Label text="Initialization Vector (IV):" styleClass="field-label-small"/>
+                                                        <TextArea fx:id="jweIVArea" prefHeight="30" styleClass="code-area" editable="false"/>
+                                                        <Label text="Ciphertext (Truncated):" styleClass="field-label-small"/>
+                                                        <TextArea fx:id="jweCiphertextArea" prefHeight="40" styleClass="code-area" editable="false"/>
+                                                        <Label text="Authentication Tag:" styleClass="field-label-small"/>
+                                                        <TextArea fx:id="jweAuthTagArea" prefHeight="30" styleClass="code-area" editable="false"/>
+                                                    </VBox>
+                                                </TitledPane>
+                                            </VBox>
+                                        </ScrollPane>
+                                    </Tab>
+
+                                    <!-- NESTED TAB -->
+                                    <Tab text="Nested (Sign + Encrypt)">
+                                        <ScrollPane fitToWidth="true" styleClass="edge-to-edge">
+                                            <VBox spacing="10" style="-fx-padding: 10;">
+                                                <Label text="1. Inner Token (Signed):" style="-fx-font-weight: bold;"/>
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Sign Algo:" styleClass="field-label"/>
+                                                    <ComboBox fx:id="nestedSignAlgoCombo" prefWidth="120"/>
+                                                    <Label text="Signing Key (PEM/Secret):" styleClass="field-label"/>
+                                                    <Button text="Import..." onAction="#handleLoadNestedSigningKey" styleClass="link-button"/>
+                                                </HBox>
+                                                <TextArea fx:id="nestedSigningKeyArea" promptText="Private Key or Secret..." prefHeight="40" styleClass="code-area"/>
+
+                                                <Label text="Payload:" styleClass="field-label"/>
+                                                <TextArea fx:id="nestedPayloadArea" promptText="{ 'sub': 'user' }..." prefHeight="40" styleClass="code-area"/>
+
+                                                <Separator/>
+
+                                                <Label text="2. Outer Token (Encrypted):" style="-fx-font-weight: bold;"/>
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Key Algo:" styleClass="field-label"/>
+                                                    <ComboBox fx:id="nestedKeyAlgoCombo" prefWidth="120"/>
+                                                    <Label text="Content Algo:" styleClass="field-label"/>
+                                                    <ComboBox fx:id="nestedContentAlgoCombo" prefWidth="120"/>
+                                                    <CheckBox fx:id="nestedCompressCheck" text="Compress (DEF)"/>
+                                                </HBox>
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Recipient Public Key (PEM):" styleClass="field-label"/>
+                                                    <Button text="Import..." onAction="#handleLoadNestedEncryptionKey" styleClass="link-button"/>
+                                                </HBox>
+                                                <TextArea fx:id="nestedEncryptionKeyArea" promptText="RSA Public Key (Encryption) / RSA Private Key (Decryption)..." prefHeight="40" styleClass="code-area"/>
+
+                                                <HBox spacing="10">
+                                                    <Button text="Generate Nested JWT" onAction="#handleGenerateNestedJWT" styleClass="action-button"/>
+                                                    <Button text="Decrypt &amp; Verify Nested JWT" onAction="#handleVerifyNestedJWT" styleClass="action-button" style="-fx-background-color: #2b6cb0;"/>
+                                                </HBox>
+
+                                                <Label text="Token (Input/Output):" styleClass="field-label"/>
+                                                <TextArea fx:id="nestedOutputArea" promptText="Nested Token..." prefHeight="50" styleClass="code-area"/>
+
+                                                <Label text="Inner Payload (Output):" styleClass="field-label"/>
+                                                <TextArea fx:id="nestedPayloadOutputArea" promptText="Decrypted &amp; Verified Payload..." prefHeight="50" styleClass="code-area" editable="false"/>
+
+                                                <Label fx:id="nestedStatusLabel" text="" style="-fx-font-weight: bold;"/>
+                                            </VBox>
+                                        </ScrollPane>
+                                    </Tab>
+                                </TabPane>
+                            </VBox>
+
+
+
+                            <!-- JWA SECTION -->
+                            <!-- JWA SECTION -->
+                            <VBox fx:id="jwaSection" spacing="10" managed="false" visible="false">
+                                <Label text="JSON Web Algorithms (JWA)" styleClass="section-header"/>
+                                <Label text="Supported Algorithms Registry" style="-fx-text-fill: #a0aec0;"/>
+                                <TableView fx:id="jwaTable" styleClass="code-area" VBox.vgrow="ALWAYS" prefHeight="400">
+                                    <columns>
+                                        <TableColumn fx:id="jwaNameCol" text="Algorithm" prefWidth="100"/>
+                                        <TableColumn fx:id="jwaTypeCol" text="Type" prefWidth="100"/>
+                                        <TableColumn fx:id="jwaDescCol" text="Description" prefWidth="300"/>
+                                    </columns>
+                                    <columnResizePolicy>
+                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                                    </columnResizePolicy>
+                                </TableView>
+                            </VBox>
+
+                            <!-- INSPECTOR SECTION -->
+                            <VBox fx:id="inspectorSection" spacing="10" managed="false" visible="false">
+                                <Label text="Unified Token Inspector" styleClass="section-header"/>
+                                <Label text="Paste any JOSE token (JWS or JWE) to see a visual breakdown of its components." style="-fx-text-fill: #a0aec0;"/>
+
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <Button text="Analyze Token" onAction="#handleInspectToken" styleClass="action-button"/>
+                                    <Button text="Expand Report" onAction="#handleOpenExpandedInspectorReport" styleClass="secondary-button"/>
+                                    <Button text="Copy Report" onAction="#handleCopyInspectorOutput" styleClass="secondary-button"/>
+                                    <Button text="Clear" onAction="#handleClearInspector" styleClass="secondary-button"/>
+                                </HBox>
+
+                                <TextArea fx:id="inspectorInputArea" promptText="Paste JWS (eyJ...) or JWE (ey...) here..."
+                                          prefHeight="100" styleClass="code-area" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+
+                                <Separator/>
+                                <Label text="Visual Breakdown:" styleClass="field-label"/>
+                                <ScrollPane fitToWidth="true" styleClass="edge-to-edge" prefHeight="400">
+                                     <TextFlow fx:id="inspectorOutputFlow" styleClass="code-area" style="-fx-padding: 10; -fx-background-color: #2d3748;"/>
+                                </ScrollPane>
+                            </VBox>
+                        </VBox>

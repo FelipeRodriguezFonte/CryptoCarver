@@ -5,6 +5,8 @@ import com.cryptoforge.model.OperationRegistry;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -60,6 +62,7 @@ public class SidePanel extends VBox {
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
         searchField.textProperty().addListener((obs, old, newVal) -> filterTree(newVal));
+        searchField.setOnAction(event -> selectFirstSearchResult());
 
         collapseButton = new Button("«");
         collapseButton.setTooltip(new Tooltip("Collapse panel"));
@@ -73,6 +76,13 @@ public class SidePanel extends VBox {
         navigationTree = new TreeView<>();
         navigationTree.setShowRoot(false);
         navigationTree.getStyleClass().add("navigation-tree");
+        searchField.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE && !searchField.getText().isBlank()) {
+                searchField.clear();
+                navigationTree.requestFocus();
+                event.consume();
+            }
+        });
 
         // Custom Cell Factory for visual states
         navigationTree.setCellFactory(tv -> new TreeCell<>() {
@@ -105,8 +115,12 @@ public class SidePanel extends VBox {
                         setGraphic(content);
                         setText(null);
 
-                        // Tooltip with subtitle
-                        String tooltipText = item.descriptor.getSubtitle();
+                        // Keep category and aliases discoverable without making the narrow navigation tree wider.
+                        String tooltipText = item.descriptor.getSubtitle()
+                                + "\nCategory: " + item.descriptor.getCategory();
+                        if (!item.descriptor.getAliases().isEmpty()) {
+                            tooltipText += "\nAliases: " + String.join(", ", item.descriptor.getAliases());
+                        }
                         if (item.descriptor.getStatus() != OperationDescriptor.Status.STABLE) {
                             tooltipText += " (" + item.descriptor.getStatus() + ")";
                         }
@@ -220,7 +234,8 @@ public class SidePanel extends VBox {
                 op.getId().startsWith("op_keys_dsa") || op.getId().startsWith("op_keys_eddsa") ||
                 op.getId().startsWith("op_keys_compare")) {
                 asymmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));
-            } else if (op.getId().startsWith("op_keys_material") || op.getId().startsWith("op_keys_store")) {
+            } else if (op.getId().startsWith("op_keys_material") || op.getId().startsWith("op_keys_store")
+                    || op.getId().startsWith("op_keys_pkcs11")) {
                 tools.getChildren().add(new TreeItem<>(new OperationNode(op)));
             } else {
                 symmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));
@@ -244,7 +259,8 @@ public class SidePanel extends VBox {
             updateContent(this.currentSection);
         } else {
             List<OperationDescriptor> results = OperationRegistry.getInstance().search(filter);
-            TreeItem<OperationNode> filteredRoot = new TreeItem<>(new OperationNode("Search Results"));
+            TreeItem<OperationNode> filteredRoot = new TreeItem<>(
+                    new OperationNode("Search Results (" + results.size() + ")"));
 
             for (OperationDescriptor res : results) {
                 filteredRoot.getChildren().add(new TreeItem<>(new OperationNode(res)));
@@ -256,6 +272,20 @@ public class SidePanel extends VBox {
 
             navigationTree.setRoot(filteredRoot);
             expandAll(filteredRoot);
+        }
+    }
+
+    private void selectFirstSearchResult() {
+        TreeItem<OperationNode> searchRoot = navigationTree.getRoot();
+        if (searchRoot == null || searchField.getText().isBlank()) {
+            return;
+        }
+        for (TreeItem<OperationNode> item : searchRoot.getChildren()) {
+            if (item.isLeaf() && item.getValue() != null && item.getValue().descriptor != null) {
+                navigationTree.getSelectionModel().select(item);
+                navigationTree.scrollTo(navigationTree.getRow(item));
+                return;
+            }
         }
     }
 

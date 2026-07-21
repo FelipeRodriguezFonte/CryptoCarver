@@ -17,17 +17,20 @@ public class OperationRegistry {
         // Cipher -> Symmetric
         register(new OperationDescriptor("op_sym_ciphers", "Symmetric Ciphers", "Cipher", "Encrypt/Decrypt with symmetric keys", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Symmetric Ciphers", Arrays.asList("AES", "DES", "3DES")));
         register(new OperationDescriptor("op_sym_file", "File Cipher (Streaming)", "Cipher", "Encrypt/Decrypt files", "📄", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "File Cipher (Streaming)", Collections.emptyList()));
+        register(new OperationDescriptor("op_openpgp", "OpenPGP (GPG Compatible)", "Cipher", "Encrypt/decrypt and sign ASCII-armored OpenPGP data", "🔐", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "OpenPGP (GPG Compatible)", Arrays.asList("GPG", "PGP")));
         // Cipher -> Asymmetric
         register(new OperationDescriptor("op_asym_ciphers", "Asymmetric Ciphers", "Cipher", "Encrypt/Decrypt with asymmetric keys", "🔑", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Asymmetric Ciphers", Arrays.asList("RSA")));
 
         // Generic
         register(new OperationDescriptor("op_gen_hash", "Hashing", "Generic", "Calculate hashes", "🧩", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Hashing", Arrays.asList("SHA", "MD5")));
         register(new OperationDescriptor("op_gen_manual", "Manual Conversion", "Generic", "Convert formats", "🔄", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Manual Conversion", Arrays.asList("Hex", "Base64", "EBCDIC")));
+        register(new OperationDescriptor("op_gen_compressed_hex", "Compressed Hex (2-row)", "Generic", "Interleave or split two-row host hexadecimal", "↔️", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Compressed Hex (2-row)", Arrays.asList("Host hex", "Interleaved hex", "Two-row hex")));
         register(new OperationDescriptor("op_gen_batch", "Batch Runner", "Generic", "Run batch operations", "⚙", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Batch Runner", Collections.emptyList()));
         register(new OperationDescriptor("op_gen_file", "File Conversion", "Generic", "Convert file formats", "📁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "File Conversion", Collections.emptyList()));
         register(new OperationDescriptor("op_gen_random", "Random Number Generator", "Generic", "Generate random bytes", "🎲", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Random Number Generator", Collections.emptyList()));
         register(new OperationDescriptor("op_gen_check_digits", "Check Digits", "Generic", "Calculate check digits", "🔢", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Check Digits", Arrays.asList("Luhn")));
         register(new OperationDescriptor("op_gen_mod", "Modular Arithmetic", "Generic", "Math operations", "🧮", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "Modular Arithmetic", Collections.emptyList()));
+        register(new OperationDescriptor("op_gen_clipboard", "Clipboard Shelf", "Generic", "Reuse copied session values across tools", "📋", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Clipboard Shelf", Arrays.asList("Clipboard", "Copy history", "Shelf")));
 
         // Authentication
         register(new OperationDescriptor("op_auth_sig", "Digital Signatures", "Authentication", "Sign and verify", "✒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Digital Signatures", Arrays.asList("RSA", "ECDSA")));
@@ -50,7 +53,9 @@ public class OperationRegistry {
 
         // Keys -> Tools
         register(new OperationDescriptor("op_keys_material", "Key Material Inspector", "Keys", "Inspect key material", "🔎", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Key Material Inspector", Collections.emptyList()));
+        register(new OperationDescriptor("op_keys_format_workbench", "Key & Certificate Format Workbench", "Generic", "Inspect and convert keys and certificates", "🛠", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key & Certificate Format Workbench", Arrays.asList("PEM", "DER", "JWK", "PKCS12")));
         register(new OperationDescriptor("op_keys_store", "KeyStore Inspector", "Keys", "Inspect KeyStore", "🗄", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "KeyStore Inspector", Arrays.asList("JKS", "PKCS12")));
+        register(new OperationDescriptor("op_keys_pkcs11", "PKCS#11 Token", "Keys", "Connect and inspect a laboratory PKCS#11 token", "🔐", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "PKCS#11 Token", Arrays.asList("HSM", "SunPKCS11", "SoftHSM")));
 
         // Post-Quantum
         register(new OperationDescriptor("op_pqc_gen", "PQC Key Generation", "Post-Quantum", "Generate PQC keys", "🔮", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "PQC Key Generation", Arrays.asList("ML-KEM", "Kyber", "ML-DSA", "Dilithium")));
@@ -69,7 +74,10 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_cert_compare", "Compare Certificates", "Certificates", "Compare certs", "⚖", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Compare Certificates", Collections.emptyList()));
         register(new OperationDescriptor("op_cert_val", "Validate Certificate", "Certificates", "Validate certs", "✅", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Validate Certificate", Collections.emptyList()));
         register(new OperationDescriptor("op_cert_chain", "Certificate Chain", "Certificates", "Build chain", "🔗", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Certificate Chain", Collections.emptyList()));
+        register(new OperationDescriptor("op_pades", "PAdES PDF Signatures", "Certificates", "Sign and inspect PDFs with PAdES Baseline-B", "📄", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "PAdES PDF Signatures", Arrays.asList("PDF", "PAdES")));
+        register(new OperationDescriptor("op_asic_s", "ASiC-S Containers", "Certificates", "Package one payload with a detached CAdES-BES signature", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "ASiC-S Containers", Arrays.asList("ASiC", "ASiC-S", "CAdES")));
         register(new OperationDescriptor("op_cert_cms", "CMS/PKCS#7 Operations", "Certificates", "CMS operations", "🗃", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "CMS/PKCS#7 Operations", Arrays.asList("PKCS7", "CMS")));
+        register(new OperationDescriptor("op_cms_inspector", "CMS Inspector", "Certificates", "Inspect CMS/PKCS#7 structures", "🕵️", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "CMS Inspector", Arrays.asList("PKCS7", "CMS", "SignedData", "EnvelopedData")));
 
         // JOSE
         register(new OperationDescriptor("op_jose_jwt", "JWT (Signed)", "JOSE", "Signed JWTs", "🏷", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWT (Signed)", Arrays.asList("JWS")));
@@ -114,6 +122,24 @@ public class OperationRegistry {
 
     public Optional<OperationDescriptor> getByNavigationPath(String path) {
         return operations.values().stream().filter(op -> op.getNavigationPath().equals(path)).findFirst();
+    }
+
+    /**
+     * Resolves a user-facing navigation value without making callers duplicate
+     * title, path and alias matching. Exact matching is intentional: search is
+     * available separately and routing must never guess a cryptographic tool.
+     */
+    public Optional<OperationDescriptor> resolveNavigation(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        String candidate = value.trim();
+        return operations.values().stream()
+                .filter(op -> op.getId().equalsIgnoreCase(candidate)
+                        || op.getTitle().equalsIgnoreCase(candidate)
+                        || op.getNavigationPath().equalsIgnoreCase(candidate)
+                        || op.getAliases().stream().anyMatch(alias -> alias.equalsIgnoreCase(candidate)))
+                .findFirst();
     }
 
     public List<OperationDescriptor> search(String query) {

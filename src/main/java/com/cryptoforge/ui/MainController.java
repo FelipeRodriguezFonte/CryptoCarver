@@ -46,25 +46,15 @@ public class MainController implements StatusReporter {
     @FXML
     private Label statusLabel;
 
-    // Generic tab controller
-    private GenericController genericController;
-
-    // Cipher tab controller
-    private CipherController cipherController;
-
-    // Keys tab controller
+    // Separated Logic Controllers
     private KeysController keysController;
-
-    // Payments tab controller
     private PaymentsController paymentsController;
-
-    // EMV tab controller
     private EMVController emvController;
-
-    // Authentication tab controller
+    private GenericController genericController;
+    private CipherController cipherController;
+    private LegacyASN1Controller asn1Controller;
     private SignatureController signatureController;
     private MACController authMacController;
-    private ASN1Controller asn1Controller;
     private PinController pinController;
 
     // Keys tab FXML components
@@ -775,7 +765,7 @@ public class MainController implements StatusReporter {
         }
 
         // Initialize ASN.1 Parser controller
-        asn1Controller = new ASN1Controller(this);
+        asn1Controller = new LegacyASN1Controller(this);
 
         if (asn1InputFormatCombo != null) {
             asn1Controller.initialize(
@@ -1852,7 +1842,7 @@ public class MainController implements StatusReporter {
     private void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About CryptoCarver");
-        alert.setHeaderText("CryptoCarver v1.0.0");
+        alert.setHeaderText("CryptoCarver v" + com.cryptoforge.model.BuildInfo.version());
         alert.setContentText(
                 "Advanced Cryptographic Tool\n\n" +
                         "A modern evolution of BP-Tools with enhanced features:\n" +

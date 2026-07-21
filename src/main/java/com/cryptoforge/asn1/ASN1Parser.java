@@ -110,7 +110,7 @@ public class ASN1Parser {
         ASN1Primitive primitive = asn1Stream.readObject();
         asn1Stream.close();
 
-        ASN1TreeNode tree = parseObject(primitive, 0, "Root", maxBytesForHex);
+        ASN1TreeNode tree = parseObject(primitive, 0, "Root", maxBytesForHex, 0);
 
         // Apply contextual labels based on detected structure type
         String detectedType = detectType(data);
@@ -130,15 +130,37 @@ public class ASN1Parser {
         } else if (detectedType.contains("X.509 Certificate") && !detectedType.contains("PKCS")) {
             // Only apply X.509 if not part of PKCS#7 (PKCS7Schema handles embedded certs)
             X509CertificateSchema.applyX509Labels(tree);
+        } else if (detectedType.contains("OCSP Request")) {
+            OCSPRequestSchema.applyOCSPRequestLabels(tree);
+        } else if (detectedType.contains("OCSP Response")) {
+            OCSPResponseSchema.applyOCSPResponseLabels(tree);
+        } else if (detectedType.contains("TSTInfo")) {
+            TSTInfoSchema.applyTSTInfoLabels(tree);
         }
 
         return tree;
     }
 
+    private static int getHeaderLength(byte[] encoded) {
+        if (encoded == null || encoded.length < 2) return 0;
+        int index = 0;
+        if ((encoded[index++] & 0x1F) == 0x1F) {
+            while (index < encoded.length && (encoded[index++] & 0x80) != 0);
+        }
+        if (index < encoded.length) {
+            int lengthByte = encoded[index++] & 0xFF;
+            if (lengthByte > 127) {
+                int numLengthBytes = lengthByte & 0x7F;
+                index += numLengthBytes;
+            }
+        }
+        return index;
+    }
+
     /**
      * Parse ASN.1 object recursively
      */
-    private static ASN1TreeNode parseObject(ASN1Encodable encodable, int depth, String context, int maxBytesForHex) {
+    private static ASN1TreeNode parseObject(ASN1Encodable encodable, int depth, String context, int maxBytesForHex, int offset) {
         ASN1Primitive primitive = encodable.toASN1Primitive();
 
         String tag = getTagName(primitive);
@@ -155,41 +177,45 @@ public class ASN1Parser {
         }
 
         ASN1TreeNode node = new ASN1TreeNode(label, tag, tagNumber, constructed,
-                encoded, decodedValue, depth, length);
+                encoded, decodedValue, depth, length, offset);
+        int headerLen = getHeaderLength(encoded);
+        int currentChildOffset = offset + headerLen;
 
         // Parse based on type
         if (primitive instanceof ASN1Sequence) {
             ASN1Sequence sequence = (ASN1Sequence) primitive;
             node = new ASN1TreeNode(label, tag, tagNumber, true, encoded,
-                    "(" + sequence.size() + " elements)", depth, length);
+                    "(" + sequence.size() + " elements)", depth, length, offset);
 
             int index = 0;
             for (Enumeration<?> e = sequence.getObjects(); e.hasMoreElements();) {
                 ASN1Encodable element = (ASN1Encodable) e.nextElement();
-                ASN1TreeNode child = parseObject(element, depth + 1, "", maxBytesForHex);
+                ASN1TreeNode child = parseObject(element, depth + 1, "", maxBytesForHex, currentChildOffset);
                 node.addChild(child);
+                currentChildOffset += child.getLength();
                 index++;
             }
 
         } else if (primitive instanceof ASN1Set) {
             ASN1Set set = (ASN1Set) primitive;
             node = new ASN1TreeNode(label, tag, tagNumber, true, encoded,
-                    "(" + set.size() + " elements)", depth, length);
+                    "(" + set.size() + " elements)", depth, length, offset);
 
             for (Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
                 ASN1Encodable element = (ASN1Encodable) e.nextElement();
-                ASN1TreeNode child = parseObject(element, depth + 1, "", maxBytesForHex);
+                ASN1TreeNode child = parseObject(element, depth + 1, "", maxBytesForHex, currentChildOffset);
                 node.addChild(child);
+                currentChildOffset += child.getLength();
             }
 
         } else if (primitive instanceof ASN1TaggedObject) {
             ASN1TaggedObject tagged = (ASN1TaggedObject) primitive;
             int tagNo = tagged.getTagNo();
             label = "[" + tagNo + "] " + (tagged.isExplicit() ? "EXPLICIT" : "IMPLICIT");
-            node = new ASN1TreeNode(label, tag, tagNo, true, encoded, "", depth, length);
+            node = new ASN1TreeNode(label, tag, tagNo, true, encoded, "", depth, length, offset);
 
             ASN1Encodable baseObject = tagged.getBaseObject();
-            ASN1TreeNode child = parseObject(baseObject, depth + 1, "", maxBytesForHex);
+            ASN1TreeNode child = parseObject(baseObject, depth + 1, "", maxBytesForHex, tagged.isExplicit() ? currentChildOffset : offset);
             node.addChild(child);
 
         } else if (primitive instanceof ASN1Integer) {
@@ -215,7 +241,7 @@ public class ASN1Parser {
 
             // Create label with bit length (like JS decoder)
             String integerLabel = "INTEGER (" + bitLength + " bit)";
-            node = new ASN1TreeNode(integerLabel, tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode(integerLabel, tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1ObjectIdentifier) {
             ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) primitive;
@@ -229,7 +255,7 @@ public class ASN1Parser {
 
             // Create label - OID names already have context
             String enhancedLabel = "OID";
-            node = new ASN1TreeNode(enhancedLabel, tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode(enhancedLabel, tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1OctetString) {
             ASN1OctetString octetString = (ASN1OctetString) primitive;
@@ -246,8 +272,8 @@ public class ASN1Parser {
 
                     if (innerPrimitive != null) {
                         node = new ASN1TreeNode(label + " (contains ASN.1)", tag, tagNumber, true,
-                                encoded, "", depth, length);
-                        ASN1TreeNode child = parseObject(innerPrimitive, depth + 1, "", maxBytesForHex);
+                                encoded, "", depth, length, offset);
+                        ASN1TreeNode child = parseObject(innerPrimitive, depth + 1, "", maxBytesForHex, currentChildOffset);
                         node.addChild(child);
                         isNestedASN1 = true;
                     }
@@ -265,7 +291,7 @@ public class ASN1Parser {
                     decodedValue += " (" + stringValue + ")";
                 }
 
-                node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, decodedValue, depth, length);
+                node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
             }
 
         } else if (primitive instanceof ASN1BitString) {
@@ -281,7 +307,7 @@ public class ASN1Parser {
 
             // Create label with bit length (like JS decoder)
             String bitStringLabel = "BIT STRING (" + bitLength + " bit)";
-            node = new ASN1TreeNode(bitStringLabel, tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode(bitStringLabel, tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1UTCTime) {
             ASN1UTCTime utcTime = (ASN1UTCTime) primitive;
@@ -292,7 +318,7 @@ public class ASN1Parser {
             } catch (Exception e) {
                 decodedValue = utcTime.getTime();
             }
-            node = new ASN1TreeNode("UTCTime", tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode("UTCTime", tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1GeneralizedTime) {
             ASN1GeneralizedTime genTime = (ASN1GeneralizedTime) primitive;
@@ -303,25 +329,25 @@ public class ASN1Parser {
             } catch (Exception e) {
                 decodedValue = genTime.getTime();
             }
-            node = new ASN1TreeNode("GeneralizedTime", tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode("GeneralizedTime", tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1String) {
             ASN1String asn1String = (ASN1String) primitive;
             decodedValue = "\"" + asn1String.getString() + "\"";
-            node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1Boolean) {
             ASN1Boolean bool = (ASN1Boolean) primitive;
             decodedValue = String.valueOf(bool.isTrue());
-            node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
 
         } else if (primitive instanceof ASN1Null) {
-            node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, "NULL", depth, length);
+            node = new ASN1TreeNode(label, tag, tagNumber, false, encoded, "NULL", depth, length, offset);
 
         } else {
             // Unknown type - show hex
             decodedValue = bytesToHex(encoded, maxBytesForHex);
-            node = new ASN1TreeNode(label + " (unknown)", tag, tagNumber, false, encoded, decodedValue, depth, length);
+            node = new ASN1TreeNode(label + " (unknown)", tag, tagNumber, false, encoded, decodedValue, depth, length, offset);
         }
 
         return node;

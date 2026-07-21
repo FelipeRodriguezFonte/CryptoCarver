@@ -210,6 +210,12 @@ public class CMSController {
 
             generateResultArea.setText(result.toString());
             mainController.updateStatus("PKCS#7 generated successfully");
+            if (mainController instanceof StatusReporter) {
+                ((StatusReporter)mainController).publish(com.cryptoforge.model.OperationResult.forOperation("Generate PKCS#7")
+                    .output(pkcs7)
+                    .status("PKCS#7 generated successfully")
+                    .build());
+            }
 
         } catch (Exception e) {
             generateResultArea.setText("Error generating PKCS#7:\n" + e.getMessage());
@@ -295,6 +301,12 @@ public class CMSController {
             result.append("========================================\n");
             verifyResultArea.setText(result.toString());
             mainController.updateStatus("PKCS#7 processed");
+            if (mainController instanceof StatusReporter) {
+                ((StatusReporter)mainController).publish(com.cryptoforge.model.OperationResult.forOperation("Verify PKCS#7")
+                    .input(pkcs7Bytes)
+                    .status("PKCS#7 processed")
+                    .build());
+            }
 
         } catch (Exception e) {
             verifyResultArea.setText("Error verifying PKCS#7:\n" + e.getMessage());

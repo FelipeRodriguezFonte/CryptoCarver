@@ -22,3 +22,17 @@
 hs_err_pid*
 replay_pid*
 target/
+
+# Locally generated distributables and Maven Shade's reduced model.
+dist/
+dependency-reduced-pom.xml
+
+# Native installers
+*.dmg
+*.pkg
+*.msi
+*.exe
+*.deb
+*.rpm
+*.AppImage
+*.app-image

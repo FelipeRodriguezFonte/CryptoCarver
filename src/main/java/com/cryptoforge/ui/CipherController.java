@@ -112,7 +112,7 @@ public class CipherController {
         }
 
         try {
-            // Try PEM format first
+            // Try PEM format firs
             if (keyText.contains("-----BEGIN PUBLIC KEY-----")) {
                 currentPublicKey = AsymmetricKeyOperations.importPublicKeyPEM(keyText);
                 statusReporter.updateStatus("Public Key loaded from PEM");
@@ -161,7 +161,7 @@ public class CipherController {
         }
 
         try {
-            // Try PEM format first
+            // Try PEM format firs
             if (keyText.contains("-----BEGIN PRIVATE KEY-----")) {
                 currentPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEM(keyText);
                 statusReporter.updateStatus("Private Key loaded from PEM");
@@ -266,21 +266,24 @@ public class CipherController {
                 throw new IllegalArgumentException("Detached tag file does not exist");
             }
             if (encrypt && parameters.aead) warnIfNonceReused(parameters.algorithm, parameters.mode, null, parameters.key, parameters.nonce);
-            StreamingCipher.Result result = encrypt
+            StreamingCipher.Result result = encryp
                     ? StreamingCipher.encrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
                             parameters.nonce, parameters.aad, tag, com.cryptoforge.util.ProgressMonitor.NO_OP)
                     : StreamingCipher.decrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
                             parameters.nonce, parameters.aad, tag, com.cryptoforge.util.ProgressMonitor.NO_OP);
             String operation = encrypt ? "encrypted" : "decrypted";
-            fileCipherResultArea.setText("File " + operation + " successfully\nAlgorithm: " + fileCipherAlgorithmCombo.getValue()
+            String enrichedOutputText = "File " + operation + " successfully\nAlgorithm: " + fileCipherAlgorithmCombo.getValue()
                     + "\nInput: " + result.inputBytes() + " bytes\nOutput: " + result.outputBytes() + " bytes"
-                    + (parameters.aead ? "\nAEAD tag: " + tag : ""));
+                    + (parameters.aead ? "\nAEAD tag: " + tag : "");
+            fileCipherResultArea.setText(enrichedOutputText);
+
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", fileCipherAlgorithmCombo.getValue());
             details.put("Input bytes", Long.toString(result.inputBytes()));
             details.put("Output bytes", Long.toString(result.outputBytes()));
             details.put("Authenticated", Boolean.toString(result.authenticated()));
             statusReporter.publish(OperationResult.forOperation("File " + (encrypt ? "Encrypt" : "Decrypt"))
+                    .enrichedOutput(enrichedOutputText)
                     .details(details).status("File " + operation + " using " + fileCipherAlgorithmCombo.getValue()).build());
         } catch (Exception e) {
             statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
@@ -331,7 +334,7 @@ public class CipherController {
         cipherModeCombo.getItems().addAll(SymmetricCipher.SUPPORTED_MODES);
         cipherModeCombo.setValue("CBC");
 
-        // Add listener to update IV field and GCM Tag field requirement
+        // Add listener to update IV field and GCM Tag field requiremen
         // Use valueProperty listener to catch programmatic changes (e.g. Restore UI)
         cipherModeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             updateIVFieldState();
@@ -355,7 +358,7 @@ public class CipherController {
         paddingCombo.getItems().addAll(SymmetricCipher.SUPPORTED_PADDINGS);
         paddingCombo.setValue("PKCS7Padding");
 
-        // Add listener to disable padding for modes that don't support it
+        // Add listener to disable padding for modes that don't support i
         cipherModeCombo.setOnAction(e -> updatePaddingFieldState());
     }
 
@@ -566,7 +569,7 @@ public class CipherController {
             if (aadField != null && !aadField.getText().isEmpty() && !aadField.isDisabled()) {
                 String aadText = aadField.getText().trim();
                 try {
-                    // Try Hex first
+                    // Try Hex firs
                     aadBytes = DataConverter.hexToBytes(aadText);
                 } catch (Exception e) {
                     // Fallback to ASCII bytes (useful for pasting JWE Header string directly)
@@ -588,7 +591,7 @@ public class CipherController {
             if (mode.equalsIgnoreCase("GCM")) {
                 displayGCMResult(ciphertext, true);
             } else {
-                // Display normal result
+                // Display normal resul
                 setOutputData(ciphertext);
             }
 
@@ -682,7 +685,7 @@ public class CipherController {
             if (aadField != null && !aadField.getText().isEmpty() && !aadField.isDisabled()) {
                 String aadText = aadField.getText().trim();
                 try {
-                    // Try Hex first
+                    // Try Hex firs
                     aadBytes = DataConverter.hexToBytes(aadText);
                 } catch (Exception e) {
                     // Fallback to ASCII bytes (useful for pasting JWE Header string directly)
@@ -721,10 +724,11 @@ public class CipherController {
             }
 
             // Special handling for GCM - show TAG verification message
+            String enriched = null;
             if (mode.equalsIgnoreCase("GCM")) {
-                displayGCMResult(plaintext, false);
+                enriched = displayGCMResult(plaintext, false);
             } else {
-                // Display normal result
+                // Display normal resul
                 setOutputData(plaintext);
             }
 
@@ -732,9 +736,11 @@ public class CipherController {
             details.put("Algorithm", algorithm);
             details.put("Mode", mode);
             details.put("Padding", padding);
-            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
+            OperationResult.Builder b = OperationResult.forOperation("Symmetric Decrypt")
                     .input(ciphertext).output(plaintext).details(details)
-                    .status(String.format("Decrypted using %s/%s/%s", algorithm, mode, padding)).build());
+                    .status(String.format("Decrypted using %s/%s/%s", algorithm, mode, padding));
+            if (enriched != null) b.enrichedOutput(enriched);
+            statusReporter.publish(b.build());
 
         } catch (IllegalArgumentException e) {
             statusReporter.showError("Validation Error", e.getMessage());
@@ -768,7 +774,7 @@ public class CipherController {
                 return;
             }
 
-            // Get input data based on format
+            // Get input data based on forma
             String inputText = inputArea.getText().trim();
             if (inputText.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to encrypt");
@@ -816,10 +822,10 @@ public class CipherController {
                 }
             }
 
-            // Encrypt
+            // Encryp
             byte[] ciphertext = AsymmetricCipher.encrypt(plaintext, currentPublicKey, padding);
 
-            // Format output
+            // Format outpu
             String output;
             switch (outputFormat) {
                 case "Text (UTF-8)":
@@ -884,7 +890,7 @@ public class CipherController {
                 return;
             }
 
-            // Get input data based on format
+            // Get input data based on forma
             String inputText = inputArea.getText().trim();
             if (inputText.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to decrypt");
@@ -912,10 +918,10 @@ public class CipherController {
                     return;
             }
 
-            // Decrypt
+            // Decryp
             byte[] plaintext = AsymmetricCipher.decrypt(ciphertext, currentPrivateKey, padding);
 
-            // Format output
+            // Format outpu
             String output;
             switch (outputFormat) {
                 case "Text (UTF-8)":
@@ -1232,7 +1238,7 @@ public class CipherController {
      * Display GCM encryption/decryption result with TAG shown separately
      * In GCM, the last 16 bytes are the authentication TAG (only for encryption)
      */
-    private void displayGCMResult(byte[] data, boolean isEncryption) {
+    private String displayGCMResult(byte[] data, boolean isEncryption) {
         String algorithm = symmetricAlgorithmCombo.getValue();
         String mode = cipherModeCombo.getValue();
         String label = algorithm;
@@ -1246,7 +1252,7 @@ public class CipherController {
             // For encryption: separate ciphertext and TAG
             if (data.length < 16) {
                 setOutputData(data);
-                return;
+                return "";
             }
 
             // GCM TAG is 16 bytes (128 bits) at the end
@@ -1257,7 +1263,7 @@ public class CipherController {
             System.arraycopy(data, 0, ciphertext, 0, ciphertext.length);
             System.arraycopy(data, ciphertext.length, tag, 0, tagLength);
 
-            // Format output based on selected format
+            // Format output based on selected forma
             String format = outputFormatCombo.getValue();
             if (format == null)
                 format = "Hexadecimal";
@@ -1296,6 +1302,7 @@ public class CipherController {
             output.append("ℹ️  The TAG provides authentication - it must match exactly.");
 
             outputArea.setText(output.toString());
+            return output.toString();
 
         } else {
             // For decryption: just show the plaintext with verification message
@@ -1332,6 +1339,7 @@ public class CipherController {
             output.append("✅ TAG VERIFIED - Integrity Confirmed\n");
 
             outputArea.setText(output.toString());
+            return output.toString();
         }
     }
 
@@ -1348,6 +1356,12 @@ public class CipherController {
             }
             setOutputData(ciphertext);
             statusReporter.updateStatus("Encrypted using ChaCha20");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
+                    .input(plaintext)
+                    .output(ciphertext)
+                    .detail("Algorithm", "ChaCha20")
+                    .status("Encrypted using ChaCha20")
+                    .build());
 
         } catch (Exception e) {
             statusReporter.showError("Encryption Error", e.getMessage());
@@ -1366,6 +1380,12 @@ public class CipherController {
             }
             setOutputData(plaintext);
             statusReporter.updateStatus("Decrypted using ChaCha20");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
+                    .input(ciphertext)
+                    .output(plaintext)
+                    .detail("Algorithm", "ChaCha20")
+                    .status("Decrypted using ChaCha20")
+                    .build());
         } catch (Exception e) {
             statusReporter.showError("Decryption Error", e.getMessage());
         }
@@ -1383,6 +1403,12 @@ public class CipherController {
             }
             setOutputData(ciphertext);
             statusReporter.updateStatus("Encrypted using Salsa20");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
+                    .input(plaintext)
+                    .output(ciphertext)
+                    .detail("Algorithm", "Salsa20")
+                    .status("Encrypted using Salsa20")
+                    .build());
 
         } catch (Exception e) {
             statusReporter.showError("Encryption Error", e.getMessage());
@@ -1401,8 +1427,15 @@ public class CipherController {
             }
 
             // Split for display (last 16 bytes are tag)
-            displayGCMResult(combined, true);
+            String enriched = displayGCMResult(combined, true);
             statusReporter.updateStatus("Encrypted using ChaCha20-Poly1305");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
+                    .input(plaintext)
+                    .output(combined)
+                    .enrichedOutput(enriched)
+                    .detail("Algorithm", "ChaCha20-Poly1305")
+                    .status("Encrypted using ChaCha20-Poly1305")
+                    .build());
         } catch (Exception e) {
             statusReporter.showError("Encryption Error", e.getMessage());
         }
@@ -1420,6 +1453,12 @@ public class CipherController {
             }
             setOutputData(plaintext);
             statusReporter.updateStatus("Decrypted using Salsa20");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
+                    .input(ciphertext)
+                    .output(plaintext)
+                    .detail("Algorithm", "Salsa20")
+                    .status("Decrypted using Salsa20")
+                    .build());
         } catch (Exception e) {
             statusReporter.showError("Decryption Error", e.getMessage());
         }
@@ -1448,6 +1487,12 @@ public class CipherController {
 
             displayGCMResult(plaintext, false);
             statusReporter.updateStatus("Decrypted using ChaCha20-Poly1305");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
+                    .input(combined)
+                    .output(plaintext)
+                    .detail("Algorithm", "ChaCha20-Poly1305")
+                    .status("Decrypted using ChaCha20-Poly1305")
+                    .build());
         } catch (Exception e) {
             statusReporter.showError("Decryption Error", e.getMessage());
         }
@@ -1468,8 +1513,15 @@ public class CipherController {
             }
 
             // Split for display (last 16 bytes are tag)
-            displayGCMResult(combined, true);
+            String enriched = displayGCMResult(combined, true);
             statusReporter.updateStatus("Encrypted using XChaCha20-Poly1305");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
+                    .input(plaintext)
+                    .output(combined)
+                    .enrichedOutput(enriched)
+                    .detail("Algorithm", "XChaCha20-Poly1305")
+                    .status("Encrypted using XChaCha20-Poly1305")
+                    .build());
         } catch (Exception e) {
             statusReporter.showError("Encryption Error", e.getMessage());
         }
@@ -1498,6 +1550,12 @@ public class CipherController {
 
             displayGCMResult(plaintext, false);
             statusReporter.updateStatus("Decrypted using XChaCha20-Poly1305");
+            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
+                    .input(combined)
+                    .output(plaintext)
+                    .detail("Algorithm", "XChaCha20-Poly1305")
+                    .status("Decrypted using XChaCha20-Poly1305")
+                    .build());
         } catch (Exception e) {
             statusReporter.showError("Decryption Error", e.getMessage());
         }
@@ -1522,6 +1580,32 @@ public class CipherController {
 
     public String getOutputText() {
         return outputArea != null ? outputArea.getText() : "";
+    }
+
+    public void fillSymmetricCipherInput(String value, com.cryptoforge.model.ClipboardEntry.Format format) {
+        String targetFormat = "Text (UTF-8)";
+        switch (format) {
+            case HEX: targetFormat = "Hexadecimal"; break;
+            case BASE64: targetFormat = "Base64"; break;
+            case BASE64URL: targetFormat = "Base64URL"; break;
+            default: break;
+        }
+
+        if (inputFormatCombo != null && !inputFormatCombo.getItems().contains(targetFormat)) {
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+            alert.setTitle("Format Not Supported");
+            alert.setHeaderText("Incompatible Format");
+            alert.setContentText("The format " + format + " is not supported by Symmetric Cipher Input.");
+            alert.showAndWait();
+            return;
+        }
+
+        if (inputArea != null) {
+            inputArea.setText(value);
+        }
+        if (inputFormatCombo != null) {
+            inputFormatCombo.setValue(targetFormat);
+        }
     }
 
 }

@@ -1,5 +1,7 @@
 package com.cryptoforge.crypto;
 
+import com.cryptoforge.crypto.hsm.Pkcs11SessionManager;
+import eu.europa.esig.dss.token.DSSPrivateKeyEntry;
 import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
 import eu.europa.esig.dss.enumerations.SignaturePackaging;
@@ -11,7 +13,6 @@ import eu.europa.esig.dss.model.x509.CertificateToken;
 import eu.europa.esig.dss.service.crl.OnlineCRLSource;
 import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource;
 import eu.europa.esig.dss.token.AbstractKeyStoreTokenConnection;
-import eu.europa.esig.dss.token.DSSPrivateKeyEntry;
 import eu.europa.esig.dss.token.JKSSignatureToken;
 import eu.europa.esig.dss.token.KSPrivateKeyEntry;
 import eu.europa.esig.dss.token.KeyStoreSignatureTokenConnection;
@@ -134,6 +135,67 @@ public class XMLSignatureOperations {
     /**
      * Sign an XML document using XAdES with specific level and key index
      */
+
+    /**
+     * Signs with the active token session. The session owns the opaque private-key
+     * handle; callers never receive a {@code PrivateKey} or a token keystore.
+     */
+    public static String signXAdESWithPkcs11(String xmlContent, String alias, String level, String tsaUrl,
+                                             String packaging, com.cryptoforge.model.TsaAuthCredentials auth) throws Exception {
+        return Pkcs11SessionManager.getInstance().requireSession()
+                .signXAdES(xmlContent, alias, level, tsaUrl, packaging, auth);
+    }
+
+    /**
+     * Internal DSS bridge used only by {@link com.cryptoforge.crypto.hsm.Pkcs11Session}.
+     * The supplied connection remains backed by SunPKCS11, so DSS signs through
+     * the token provider and cannot export the private material.
+     */
+    public static String signXAdESWithTokenConnection(String xmlContent,
+                                                       AbstractKeyStoreTokenConnection token,
+                                                       String alias, String level, String tsaUrl,
+                                                       String packaging,
+                                                       com.cryptoforge.model.TsaAuthCredentials auth) throws Exception {
+        DSSDocument toSignDocument = new InMemoryDocument(xmlContent.getBytes("UTF-8"));
+        DSSPrivateKeyEntry privateKey = token.getKey(alias);
+        if (privateKey == null) {
+            throw new Exception("Key alias '" + alias + "' not found in PKCS#11 token");
+        }
+
+        CommonCertificateVerifier verifier = new CommonCertificateVerifier();
+        XAdESSignatureParameters parameters = new XAdESSignatureParameters();
+
+        SignatureLevel signatureLevel = SignatureLevel.XAdES_BASELINE_B;
+        if (level != null) {
+            try {
+                signatureLevel = SignatureLevel.valueOf(level.replace("-", "_"));
+            } catch (IllegalArgumentException e) { }
+        }
+        parameters.setSignatureLevel(signatureLevel);
+        parameters.setSignaturePackaging(parsePackaging(packaging));
+        parameters.setDigestAlgorithm(eu.europa.esig.dss.enumerations.DigestAlgorithm.SHA256);
+        parameters.setSigningCertificate(privateKey.getCertificate());
+        parameters.setCertificateChain(privateKey.getCertificateChain());
+
+        XAdESService service = new XAdESService(verifier);
+
+        if (tsaUrl != null && !tsaUrl.isBlank() && !tsaUrl.contains("No TSA")) {
+                eu.europa.esig.dss.service.tsp.OnlineTSPSource tspSource = new eu.europa.esig.dss.service.tsp.OnlineTSPSource(tsaUrl);
+                if (auth != null) {
+                    tspSource.setDataLoader(new TsaAuthDataLoader(auth));
+                }
+                service.setTspSource(tspSource);
+        }
+
+        ToBeSigned dataToSign = service.getDataToSign(toSignDocument, parameters);
+        eu.europa.esig.dss.model.SignatureValue signatureValue = token.sign(dataToSign, parameters.getDigestAlgorithm(), privateKey);
+        DSSDocument signedDocument = service.signDocument(toSignDocument, parameters, signatureValue);
+
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        signedDocument.writeTo(out);
+        return new String(out.toByteArray(), "UTF-8");
+    }
+
     public static String signXAdES(String xmlContent, String p12Path, String password, int keyIndex, String level, String tsaUrl) throws Exception {
         return signXAdES(xmlContent, p12Path, password, keyIndex, level, tsaUrl, "ENVELOPED", null);
     }

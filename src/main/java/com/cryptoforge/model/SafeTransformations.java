@@ -29,4 +29,45 @@ public final class SafeTransformations {
             throw new IllegalArgumentException("Invalid Base64URL string", e);
         }
     }
+
+    public static String hmacSha256(String value, String keyBase64) throws Exception {
+        if (keyBase64 == null || keyBase64.isBlank()) throw new IllegalArgumentException("HMAC key is required");
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
+        byte[] key = java.util.Base64.getDecoder().decode(keyBase64);
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(key, "HmacSHA256"));
+        return CodecRegistry.getInstance().encode(mac.doFinal(input), ByteFormat.HEX).toLowerCase();
+    }
+
+    public static String compressGzip(String value) throws Exception {
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.GZIPOutputStream gzip = new java.util.zip.GZIPOutputStream(bos)) {
+            gzip.write(input);
+        }
+        return CodecRegistry.getInstance().encode(bos.toByteArray(), ByteFormat.BASE64);
+    }
+
+    public static String decompressGzip(String value) throws Exception {
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.BASE64);
+        try (java.util.zip.GZIPInputStream gis = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(input))) {
+            return CodecRegistry.getInstance().encode(gis.readAllBytes(), ByteFormat.TEXT_UTF8);
+        }
+    }
+
+    public static String inspectAsn1(String hexOrBase64) throws Exception {
+        byte[] input;
+        try {
+            input = CodecRegistry.getInstance().decode(hexOrBase64, ByteFormat.HEX);
+        } catch (Exception e) {
+            input = CodecRegistry.getInstance().decode(hexOrBase64, ByteFormat.BASE64);
+        }
+        com.cryptoforge.asn1.ASN1TreeNode root = com.cryptoforge.asn1.ASN1Parser.parse(input);
+        return com.cryptoforge.asn1.ASN1TreeExporter.toJson(root);
+    }
+
+    public static String inspectTlv(String hex) {
+        java.util.List<com.cryptoforge.crypto.EmvTlv.Item> items = com.cryptoforge.crypto.EmvTlv.parse(hex);
+        return new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(items);
+    }
 }

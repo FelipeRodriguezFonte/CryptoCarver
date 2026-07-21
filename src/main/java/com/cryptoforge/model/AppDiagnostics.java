@@ -13,6 +13,10 @@ public final class AppDiagnostics {
         StringBuilder report = new StringBuilder();
         report.append("CryptoCarver diagnostics\n");
         report.append("Generated: ").append(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ZonedDateTime.now())).append('\n');
+        append(report, "Application", BuildInfo.name());
+        append(report, "Application version", BuildInfo.version());
+        append(report, "Release channel", BuildInfo.channel());
+        append(report, "Build Java release", BuildInfo.javaRelease());
         append(report, "Java", System.getProperty("java.version"));
         append(report, "Java vendor", System.getProperty("java.vendor"));
         append(report, "JavaFX", System.getProperty("javafx.runtime.version", "Not reported"));

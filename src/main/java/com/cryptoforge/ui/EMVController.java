@@ -755,8 +755,9 @@ public class EMVController {
 
     public void loadProfile(com.cryptoforge.model.payments.PaymentProfile p) {
         if (p.getType() == com.cryptoforge.model.payments.PaymentProfile.ProfileType.EMV) {
+            String derivedSessionKey = deriveLaboratorySessionKey(p);
             if (p.getName().contains("ARQC")) {
-                if (skARQCField != null && p.getInputs().containsKey("sessionKey")) skARQCField.setText(p.getInputs().get("sessionKey"));
+                if (skARQCField != null) skARQCField.setText(derivedSessionKey);
                 if (imkField != null && p.getInputs().containsKey("imk")) imkField.setText(p.getInputs().get("imk"));
                 if (panFieldSession != null && p.getInputs().containsKey("pan")) panFieldSession.setText(p.getInputs().get("pan"));
                 if (panSeqFieldSession != null && p.getInputs().containsKey("panSeq")) panSeqFieldSession.setText(p.getInputs().get("panSeq"));
@@ -770,12 +771,13 @@ public class EMVController {
                     }
                 }
             } else if (p.getName().contains("ARPC")) {
-                if (skARPCField != null && p.getInputs().containsKey("sessionKey")) skARPCField.setText(p.getInputs().get("sessionKey"));
+                if (skARPCField != null) skARPCField.setText(derivedSessionKey);
                 if (arqcField != null && p.getInputs().containsKey("arqc")) arqcField.setText(p.getInputs().get("arqc"));
                 if (arcField != null && p.getInputs().containsKey("arc")) arcField.setText(p.getInputs().get("arc"));
                 if (csuField != null && p.getInputs().containsKey("csu")) csuField.setText(p.getInputs().get("csu"));
-                if (arpcMethodCombo != null && p.getParameters().containsKey("method")) {
-                    String method = p.getParameters().get("method");
+                if (arpcMethodCombo != null) {
+                    String method = p.getName().contains("Method 1") ? "Method 1"
+                            : p.getParameters().getOrDefault("method", "");
                     for (String item : arpcMethodCombo.getItems()) {
                         if (item.contains(method)) { arpcMethodCombo.setValue(item); break; }
                     }
@@ -786,6 +788,29 @@ public class EMVController {
             // Secure Messaging uses MAC controls or specific SM UI if added.
             // Currently EMVController does not have Secure Messaging UI mapped, it relies on MAC in PaymentsController or a future SM tab.
             System.out.println("Loaded Secure Messaging profile: " + p.getName());
+        }
+    }
+
+    /**
+     * Laboratory EMV profiles carry the ICC master-key inputs, not a copied
+     * session key.  Derive it before filling ARQC/ARPC so the loaded screen is
+     * immediately executable.  Invalid laboratory vectors deliberately keep an
+     * empty field and show their expected validation error when executed.
+     */
+    private String deriveLaboratorySessionKey(com.cryptoforge.model.payments.PaymentProfile profile) {
+        if (profile.getInputs().containsKey("sessionKey")) {
+            return profile.getInputs().get("sessionKey");
+        }
+        try {
+            String imk = profile.getInput("imk");
+            String pan = profile.getInput("pan");
+            String panSeq = profile.getInput("panSeq");
+            String atc = profile.getInput("atc");
+            if (imk == null || pan == null || panSeq == null || atc == null) return "";
+            String iccMasterKey = EMVOperations.deriveICCMasterKey(imk, pan, panSeq);
+            return EMVOperations.deriveSessionKey(iccMasterKey, atc, "");
+        } catch (Exception ignored) {
+            return "";
         }
     }
 }

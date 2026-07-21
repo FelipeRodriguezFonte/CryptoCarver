@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptoforge.ui.KeyCertificateWorkbenchController"
+      style="-fx-padding: 10;">
+
+    <Label text="Input (Paste PEM/JWK/Hex or load file)" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+    
+    <HBox spacing="10">
+        <Button text="Load from File..." onAction="#handleLoadFile" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+        <Button text="Load from Clipboard Shelf" onAction="#handleLoadFromShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+        <ComboBox fx:id="storeTypeCombo" style="-fx-font-size: 11px;"/>
+        <PasswordField fx:id="workbenchPasswordField" promptText="Password (optional)" style="-fx-font-size: 11px;"/>
+        <Region HBox.hgrow="ALWAYS" />
+        <Button text="Detect &amp; Parse" onAction="#handleParse" styleClass="action-button" style="-fx-font-size: 11px;" />
+    </HBox>
+
+    <TextArea fx:id="workbenchInputArea" prefHeight="120" wrapText="true" 
+              promptText="-----BEGIN CERTIFICATE-----... or {...} or Base64/Hex DER"
+              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+
+    <Label text="Detection &amp; Validation Results" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+    
+    <GridPane fx:id="singleItemGrid" hgap="10" vgap="5" style="-fx-background-color: #f4f4f4; -fx-padding: 8; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-background-radius: 4;">
+        <columnConstraints>
+            <ColumnConstraints minWidth="100" />
+            <ColumnConstraints hgrow="ALWAYS" />
+        </columnConstraints>
+        
+        <Label text="Format Detected:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblFormat" text="Unknown" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+        
+        <Label text="Algorithm:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblAlgorithm" text="N/A" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-size: 11px;"/>
+        
+        <Label text="Contains Private Key:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblHasPrivate" text="No" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-size: 11px;"/>
+        
+        <Label text="Subject / Info:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblSubject" text="N/A" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-font-size: 11px;" wrapText="true"/>
+        
+        <Label text="Key Size:" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblKeySize" text="N/A" GridPane.columnIndex="1" GridPane.rowIndex="4" style="-fx-font-size: 11px;"/>
+        
+        <Label text="SHA-256 Fingerprint:" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblFingerprint" text="N/A" GridPane.columnIndex="1" GridPane.rowIndex="5" style="-fx-font-size: 11px;"/>
+        
+        <Label text="Validity (Cert):" GridPane.columnIndex="0" GridPane.rowIndex="6" style="-fx-font-size: 11px; -fx-text-fill: #555;"/>
+        <Label fx:id="lblValidity" text="N/A" GridPane.columnIndex="1" GridPane.rowIndex="6" style="-fx-font-size: 11px;" wrapText="true"/>
+    </GridPane>
+    
+    <TableView fx:id="keystoreTable" prefHeight="150" style="-fx-font-size: 11px;">
+        <columns>
+            <TableColumn fx:id="colAlias" text="Alias" prefWidth="120" />
+            <TableColumn fx:id="colType" text="Type" prefWidth="90" />
+            <TableColumn fx:id="colAlgorithm" text="Algorithm" prefWidth="80" />
+            <TableColumn fx:id="colSubject" text="Subject / Info" prefWidth="250" />
+            <TableColumn fx:id="colExpiration" text="Expiration" prefWidth="150" />
+        </columns>
+    </TableView>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Convert to:" style="-fx-font-size: 11px;" />
+        <ComboBox fx:id="convertToCombo" prefWidth="180" style="-fx-font-size: 11px;"/>
+        <Button text="Convert" onAction="#handleConvert" styleClass="action-button" style="-fx-font-size: 11px;" />
+        <Region HBox.hgrow="ALWAYS" />
+        <TextField fx:id="validationSecondaryInput" promptText="Secondary input for validation..." HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+        <Button text="Validate Pair/Chain" onAction="#handleValidate" styleClass="secondary-button" style="-fx-font-size: 11px;" />
+    </HBox>
+
+    <Label text="Output" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+    
+    <TextArea fx:id="workbenchOutputArea" prefHeight="150" wrapText="true" editable="false"
+              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+              
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Send to Clipboard Shelf" onAction="#handleSendToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;" />
+        <Button text="Copy to Clipboard" onAction="#handleCopyOutput" styleClass="secondary-button" style="-fx-font-size: 11px;" />
+    </HBox>
+
+</VBox>

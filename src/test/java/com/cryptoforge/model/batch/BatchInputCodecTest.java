@@ -14,4 +14,24 @@ class BatchInputCodecTest {
         assertThrows(IllegalArgumentException.class, () -> BatchInputCodec.parseCsv("a,a\n1,2"));
         assertThrows(IllegalArgumentException.class, () -> BatchInputCodec.parseJsonLines("{\"nested\":{\"x\":1}}"));
     }
+
+    @Test void limitsMaxCellSize() {
+        String giant = "a".repeat(100_001);
+        assertThrows(IllegalArgumentException.class, () -> BatchInputCodec.parseCsv("a\n" + giant));
+        assertThrows(IllegalArgumentException.class, () -> BatchInputCodec.parseJsonLines("{\"data\":\"" + giant + "\"}"));
+    }
+
+    @Test void limitsMaxInputSize() {
+        java.io.Reader maliciousReader = new java.io.Reader() {
+            int read = 0;
+            @Override public int read(char[] cbuf, int off, int len) {
+                if (read > 100_000_000) return -1;
+                for (int i = 0; i < len; i++) cbuf[off + i] = 'a';
+                read += len;
+                return len;
+            }
+            @Override public void close() {}
+        };
+        assertThrows(IllegalArgumentException.class, () -> BatchInputCodec.parseCsv(maliciousReader, 10));
+    }
 }

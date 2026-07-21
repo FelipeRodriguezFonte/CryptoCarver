@@ -32,6 +32,61 @@ class ModernMainControllerFxmlStaticTest {
         verifyFxmlAgainstController("/fxml/xml_security.fxml", XMLSignatureController.class);
     }
 
+    @Test
+    void testAsn1Fxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/asn1.fxml", ASN1Controller.class);
+    }
+
+    @Test
+    void testJoseFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/jose.fxml", JOSEController.class);
+    }
+
+    @Test
+    void testCompressedHexFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/compressed_hex.fxml", CompressedHexController.class);
+    }
+
+    @Test
+    void testGenericFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/generic.fxml", GenericController.class);
+    }
+
+    @Test
+    void testHistoryFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/history.fxml", HistoryController.class);
+    }
+
+    @Test
+    void testOpenPgpFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/openpgp.fxml", OpenPgpController.class);
+    }
+
+    @Test
+    void testPadesFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/pades.fxml", PadesController.class);
+    }
+
+    @Test
+    void testAsicFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/asic.fxml", AsicController.class);
+    }
+
+    @Test
+    void testCmsInspectorFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/cms_inspector.fxml", CmsInspectorController.class);
+    }
+
+    @Test
+    void testClipboardShelfFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/clipboard_shelf.fxml", ClipboardShelfController.class);
+    }
+
+    @Test
+    void testKeyCertificateWorkbenchFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/key_certificate_workbench.fxml", KeyCertificateWorkbenchController.class);
+    }
+
     private void verifyFxmlAgainstController(String fxmlPath, Class<?> controllerClass) throws Exception {
         InputStream is = getClass().getResourceAsStream(fxmlPath);
         assertNotNull(is, "FXML file must exist: " + fxmlPath);
@@ -43,10 +98,9 @@ class ModernMainControllerFxmlStaticTest {
 
         Element root = doc.getDocumentElement();
         String expectedControllerName = root.getAttribute("fx:controller");
-        // Only assert fx:controller if it is actually declared on the root element. Some injected FXMLs might not declare it if injected with fx:controller, but here we declare them.
-        if (expectedControllerName != null && !expectedControllerName.isEmpty()) {
-            assertEquals(controllerClass.getName(), expectedControllerName, "Controller must match");
-        }
+        assertFalse(expectedControllerName == null || expectedControllerName.isBlank(),
+                "FXML module must declare its controller: " + fxmlPath);
+        assertEquals(controllerClass.getName(), expectedControllerName, "Controller must match");
 
         String rootFxId = root.getAttribute("fx:id");
         List<String> fxIds = extractAttributes(root, "fx:id");

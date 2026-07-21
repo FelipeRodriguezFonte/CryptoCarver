@@ -69,6 +69,15 @@ public class PaymentProfileVerifier {
                 throw new Exception("IPEK mismatch");
             }
         }
+        if (p.getOutputs().containsKey("workingKey")) {
+            String usage = p.getParameter("usage");
+            DukptKsn.TdesKeyUsage keyUsage = usage != null && usage.toLowerCase().contains("mac")
+                    ? DukptKsn.TdesKeyUsage.MAC_REQUEST : DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
+            String workingKey = DukptKsn.deriveWorkingKey(ipek, ksn, keyUsage).workingKeyHex();
+            if (!p.getOutput("workingKey").equalsIgnoreCase(workingKey)) {
+                throw new Exception("DUKPT working key mismatch");
+            }
+        }
     }
 
     private static void verifyDukptAes(PaymentProfile p) throws Exception {

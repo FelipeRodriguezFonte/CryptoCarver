@@ -1,3 +1,55 @@
+# Pendiente de publicación — evolución posterior a 2.3.0
+
+**Fecha de corte:** 17 de julio de 2026
+**Canal:** laboratorio / experimental hasta completar el checklist de release
+
+### Añadido
+
+- Visor de resultados ampliado con búsqueda, copia, guardado y ajuste de línea.
+  El resultado abierto se vincula a la última operación publicada para impedir que
+  reaparezcan valores de una operación anterior.
+- Conversor de **hexadecimal comprimido de dos filas**, en ambos sentidos, para
+  diagnósticos de datos host.
+- Registro central de operaciones, catálogo generado y recetas encadenadas para
+  automatización reproducible.
+- Catálogo verificable de formatos y charsets, con todos los code pages EBCDIC
+  disponibles en la interfaz.
+- Inspector ASN.1 editable/exportable, JWS JSON (incluido payload detached
+  `b64=false`) y flujos Nested JWT.
+- Perfiles de laboratorio repetibles para DUKPT, TR-31, EMV, PIN y secure
+  messaging.
+- Diagnóstico TSA/RFC 3161 con inspección de token, autenticación efímera,
+  truststore opcional e informes DSS exportables.
+- Modelo `KeyMaterial` y caché HSM simulada de sesión para prácticas de cifrado
+  y MAC sin copiar manualmente la clave.
+- Scripts de release para macOS, Windows y Linux; SBOM CycloneDX, manifiesto y
+  checksums SHA-256. La versión se lee de la configuración Maven en la UI, CLI,
+  OpenAPI y diagnóstico.
+- Guía rápida, guía de límites de laboratorio, checklist de release y exportación
+  del informe de diagnóstico desde **Help → Diagnostics**.
+
+### Cambiado
+
+- PQC usa nomenclatura NIST: ML-KEM, ML-DSA y SLH-DSA; las compatibilidades con
+  aliases de Bouncy Castle quedan encapsuladas y cubiertas por KAT locales.
+- El histórico distingue detalles públicos, sensibles y secretos. La exportación
+  de recetas aplica explícitamente la política de visibilidad elegida.
+- Lotes, recetas, CLI y API local aplican validación de entrada, límites de
+  tamaño, cancelación y códigos de salida/documentación coherentes.
+
+### Seguridad y compatibilidad
+
+- CryptoCarver sigue siendo una herramienta de **laboratorio**: el HSM es
+  simulado, la visibilidad de secretos puede habilitarse y no se ofrece custodia
+  de producción.
+- Las credenciales TSA son efímeras y no se persisten; las exportaciones de
+  recetas aplican una política fail-closed cuando no se proporciona visibilidad.
+- No se ha declarado una nueva versión final: antes de publicar se deben ejecutar
+  el checklist, las pruebas manuales de cada paquete nativo y las notas de
+  migración correspondientes.
+
+---
+
 # CryptoCarver 2.3.0 — laboratorio de pagos, firmas y PQC
 
 **Fecha:** 13 de julio de 2026  

@@ -2,12 +2,11 @@
 
 # Configuration
 APP_NAME="CryptoCarver"
-APP_VERSION="2.3.0"
-MAIN_JAR="target/cryptocarver-2.3.0.jar"
 MAIN_CLASS="com.cryptoforge.Launcher"
 ICON_SOURCE="src/main/resources/icons/app-icon.png"
 ICON_TARGET="src/main/resources/icons/app-icon.icns"
-OUTPUT_DIR="dist"
+OUTPUT_DIR="${PACKAGE_OUTPUT_DIR:-dist}"
+PACKAGE_TYPE="${PACKAGE_TYPE:-app-image}"
 
 # Ensure JAVA_HOME is set
 if [ -z "$JAVA_HOME" ]; then
@@ -27,13 +26,35 @@ JPACKAGE="$JAVA_HOME/bin/jpackage"
 # Check if jpackage exists
 if [ ! -x "$JPACKAGE" ]; then
     echo "Error: jpackage not found at $JPACKAGE"
-    echo "Please ensure you are using JDK 14 or later."
+    echo "Please ensure you are using JDK 17 or later (e.g., from SDKMAN or Homebrew)."
+    exit 1
+fi
+
+JAVA_VERSION=$("$JPACKAGE" --version 2>&1 | awk '{print $1}')
+JAVA_MAJOR=$(echo "$JAVA_VERSION" | cut -d'.' -f1)
+if [ -z "$JAVA_MAJOR" ] || [ "$JAVA_MAJOR" -lt 17 ]; then
+    echo "Error: Detected JDK version $JAVA_VERSION, but JDK 17 or higher is required." >&2
+    echo "Please install JDK 17+ and ensure it is in PATH (or JAVA_HOME)." >&2
     exit 1
 fi
 
 echo "=========================================="
 echo "  Building CryptoCarver (macOS)"
 echo "=========================================="
+
+MAVEN_BIN="${MAVEN_BIN:-$(command -v mvn || true)}"
+if [ -z "$MAVEN_BIN" ] && [ -x /opt/homebrew/bin/mvn ]; then MAVEN_BIN=/opt/homebrew/bin/mvn; fi
+if [ -z "$MAVEN_BIN" ]; then
+    echo "Error: Maven was not found. Set MAVEN_BIN or add mvn to PATH."
+    exit 1
+fi
+
+APP_VERSION=$("$MAVEN_BIN" -q -DforceStdout help:evaluate -Dexpression=project.version)
+if [ -z "$APP_VERSION" ]; then
+    echo "Error: Unable to resolve the Maven project version."
+    exit 1
+fi
+MAIN_JAR="target/cryptocarver-${APP_VERSION}.jar"
 
 # 0. Icon Generation
 echo "[0/3] Checking icons..."
@@ -74,31 +95,29 @@ fi
 
 
 # 1. Build with Maven
+echo "Warning: This script performs a clean build. Do not run it concurrently with an active development instance."
 echo "[1/3] Building project with Maven..."
-mvn clean package -DskipTests
+"$MAVEN_BIN" clean package -DskipTests
 
 if [ ! -f "$MAIN_JAR" ]; then
     echo "Error: Build failed. $MAIN_JAR not found."
     exit 1
 fi
 
-# 2. Cleanup previous build
-if [ -d "$OUTPUT_DIR" ]; then
-    echo "[2/3] Cleaning previous build..."
-    rm -rf "$OUTPUT_DIR"
-fi
+# 2. Cleanup previous build is skipped to be non-destructive
+echo "[2/3] Skipping cleanup to preserve previous releases..."
 
 # 3. Run jpackage
-echo "[3/3] Creating macOS application bundle..."
+echo "[3/3] Creating macOS ${PACKAGE_TYPE} package..."
 
 # Build jpackage arguments
 JPACKAGE_ARGS=(
   --name "$APP_NAME"
   --app-version "$APP_VERSION"
   --input target
-  --main-jar "cryptocarver-2.3.0.jar"
+  --main-jar "$(basename "$MAIN_JAR")"
   --main-class "$MAIN_CLASS"
-  --type app-image
+  --type "$PACKAGE_TYPE"
   --dest "$OUTPUT_DIR"
   --java-options "--enable-preview"
   --java-options "-Xmx512m"
@@ -113,8 +132,8 @@ fi
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo "SUCCESS! Application built at: $OUTPUT_DIR/$APP_NAME.app"
-    echo "You can run it with: open $OUTPUT_DIR/$APP_NAME.app"
+    echo "SUCCESS! macOS artifact built in: $OUTPUT_DIR"
+    echo "Use PACKAGE_TYPE=dmg ./package_macos.sh to create a distributable DMG."
 else
     echo ""
     echo "FAILED. Please check the error messages above."

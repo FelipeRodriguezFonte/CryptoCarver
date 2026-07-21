@@ -100,12 +100,14 @@ public class SignatureController {
             mainController.updateStatus("Signature created with " + algorithm);
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "Authentication",
-                "Sign - " + algorithm,
-                "Data: " + data.length + " bytes",
-                "Signature: " + signature.length + " bytes"
-            );
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Sign - " + algorithm)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Data: " + data.length + " bytes", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Signature: " + signature.length + " bytes", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             mainController.showError("Signature Error",
@@ -188,12 +190,14 @@ public class SignatureController {
             mainController.updateStatus("Signature " + (valid ? "VALID" : "INVALID") + " - " + algorithm);
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "Authentication",
-                "Verify - " + algorithm,
-                "Signature: " + signature.length + " bytes",
-                "Result: " + (valid ? "VALID ✓" : "INVALID ✗")
-            );
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Verify - " + algorithm)
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Signature: " + signature.length + " bytes", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Result: " + (valid ? "VALID ✓" : "INVALID ✗"), com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             mainController.showError("Verification Error",

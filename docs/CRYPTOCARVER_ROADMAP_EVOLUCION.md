@@ -2,8 +2,8 @@
 
 **Documento de trabajo para la evolución funcional, técnica y visual de CryptoCarver**
 
-- Versión del plan: 1.1
-- Fecha: 12 de julio de 2026
+- Versión del plan: 1.2
+- Fecha: 17 de julio de 2026
 - Horizonte recomendado: 12 meses
 - Estado: roadmap maestro en ejecución
 - Producto: aplicación de escritorio para desarrollo, pruebas, formación y diagnóstico criptográfico
@@ -20,7 +20,9 @@
 - [x] Añadir diagnóstico seguro de runtime y proveedor SLF4J; los módulos moderno, PQC y XAdES ya registran errores estructurados.
 - [x] Fase 2 base: Base32/Base58/Base58Check/Base64URL/Quoted-Printable/URL encoding, BCD/COMP-3, endian, XOR, comparación de buffers, análisis de bytes, charsets, EBCDIC explícito, compresión y comparación streaming de archivos.
 - [x] Byte Inspector independiente: vista hexadecimal por rango/selección, ASCII, charsets configurables, controles, estadísticas, XOR y diff.
-- [ ] Fase 2 avanzada: detección estadística de charset y procesamiento criptográfico de archivos de 1 GiB por streaming.
+- [x] Fase 2 avanzada: detección estadística de charset y procesamiento criptográfico de archivos de 1 GiB por streaming.
+- [x] Fases 3 a 9: KeyMaterial/HSM simulado, diagnósticos TSA, PQC estandarizada, perfiles de pagos, ASN.1/JOSE y automatización segura.
+- [x] Fase 10 base: versión centralizada, diagnóstico exportable, catálogo de formatos, guía rápida, guía de límites de laboratorio, SBOM y scripts de empaquetado multiplataforma.
 
 > Nota de migración: `com.cryptoforge` permanece temporalmente como namespace Java interno para mantener compatibilidad. No forma parte de la identidad pública y se migrará en una fase técnica independiente, acompañada de pruebas de regresión.
 
@@ -60,16 +62,16 @@ CryptoCarver debe seguir siendo una herramienta de laboratorio y pruebas, no un 
 
 | Área | Situación actual | Riesgo o límite principal |
 |---|---|---|
-| Conversiones | Hex, Base64, binario, decimal, texto y EBCDIC multicodepage | Dos implementaciones de `DataConverter` y formatos globales compartidos por demasiadas pantallas |
+| Conversiones | Hex, Base64, binario, decimal, texto, Base64URL, BCD/COMP-3, hexadecimal comprimido y EBCDIC multicodepage | Los formatos globales compartidos por varias pantallas requieren atención al contexto de cada operación |
 | Cifrado | DES, 3DES, AES y varios modos | Faltan más pruebas negativas, operaciones con archivos grandes y AEAD moderno adicional |
-| Claves | Generacion, KCV, componentes, KDF y TR-31 | TR-31 conserva parsing simplificado de bloques opcionales y falta un modelo único de clave |
+| Claves | Generación, KCV, componentes, KDF, TR-31, KeyMaterial y HSM simulado | El HSM es deliberadamente de laboratorio y en memoria; no sustituye PKCS#11 real |
 | Firmas y certificados | RSA, ECDSA, EdDSA, certificados, CSR, CMS | Validación e interoperabilidad desigual según operación |
-| JOSE | JWT, JWE, JWK y JWKS | Hay caminos EC simplificados o incompletos y falta cobertura de serializaciones avanzadas |
-| Pagos y EMV | PIN blocks, CVV, PVV, ARQC/ARPC y derivaciones | Necesita más vectores por perfil y mejor separación entre variantes del estándar |
-| XAdES | Firma B/T/LT/LTA, TSA configurable y truststore | Debe probarse con TSA y cadenas reales, y ofrecer informes más detallados |
-| Post-cuántica | ML-KEM, ML-DSA, SLH-DSA, PEM e histórico | Conviven nombres pre-estándar y estándar; faltan KAT e interoperabilidad externa |
-| UI | Rail lateral, panel de operaciones, inspector e histórico | `ModernMainController` concentra demasiada lógica y los formatos globales crean ambiguedad |
-| Pruebas | Tests para hash, dígitos, EBCDIC, PQC y XAdES | Cobertura baja respecto al número de módulos y escasas pruebas UI/interoperabilidad |
+| JOSE | JWT, JWE, JWK/JWKS, JWS JSON, payload detached y Nested JWT | Se recomienda ampliar interoperabilidad con clientes externos en futuras versiones |
+| Pagos y EMV | PIN blocks, CVV, PVV, ARQC/ARPC, DUKPT, TR-31 y perfiles verificables | EMV Option B queda fuera hasta contar con vectores públicos fiables |
+| XAdES | Firma B/T/LT/LTA, TSA configurable/autenticada, truststore e informes DSS | Falta recorrido manual periódico contra TSA y cadenas de cada entorno de usuario |
+| Post-cuántica | ML-KEM, ML-DSA, SLH-DSA, PEM, KAT y benchmark cancelable | Conviene revisar aliases al actualizar Bouncy Castle |
+| UI | Rail lateral, panel de operaciones, inspector, histórico y visor expandido | `ModernMainController` todavía concentra rutas y coordinación transversal |
+| Pruebas | Unitarias, integración, FXML/UI, KAT, TSA local, perfiles de pagos y automatización | Falta automatizar recorridos visuales reales en cada plataforma |
 
 ## 4. Arquitectura objetivo
 
@@ -300,11 +302,24 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 #### PKCS#11 y HSM
 
-- Primera fase: HSM simulado con claves no exportables.
-- Segunda fase: proveedor PKCS#11 configurable para tokens reales de laboratorio.
-- Enumerar slots, mecanismos, objetos y certificados.
-- Firmar, verificar, cifrar y calcular MAC sin extraer la clave.
-- Perfil de configuración por proveedor y diagnóstico de libreria nativa.
+- [x] Primera fase: HSM simulado con claves no exportables.
+- [~] Segunda fase: proveedor PKCS#11 configurable para tokens reales de laboratorio mediante `SunPKCS11`; conexión por biblioteca, slot e inicio de sesión efímero.
+- [x] Inspección de objetos y certificados públicos; firma, verificación, JWS/JWT, CMS, cifrado simétrico y MAC sin extraer la clave.
+- [ ] Enumeración explícita de mecanismos y slots, además de perfiles de proveedor sin PIN y diagnóstico de biblioteca nativa.
+- [ ] Integración XAdES con la sesión PKCS#11 común, con una prueba automática contra SoftHSM.
+
+#### OpenPGP / GnuPG de laboratorio
+
+- [x] Operaciones OpenPGP ASCII-armored para generación RSA, cifrado/descifrado y firma detached/verificación, disponibles desde **Cipher → OpenPGP (GPG compatible)**.
+- [x] Adaptador opcional de GnuPG: diagnóstico del binario y verificación detached aislada con clave pública, sin convertir `gpg` en dependencia de arranque.
+- [x] Verificación de interoperabilidad externa bidireccional con GnuPG: prueba condicional cuando el binario está instalado, usando un hogar temporal para importar una clave generada por CryptoCarver y comprobar cifrado, descifrado y firmas cruzadas.
+- [x] Importación/exportación de ficheros OpenPGP y soporte de adjuntos binarios desde la UI, con límite explícito de 16 MiB y creación exclusiva de destinos para evitar sobrescrituras.
+- [x] Inspector de firmas detached: ID de firmante, versión, tipo, algoritmo público, hash y fecha de creación, distinguiendo el parseo de la verificación criptográfica y de Web-of-Trust.
+- [ ] Soporte de claves OpenPGP desde PKCS#11 cuando el proveedor/token y GnuPG lo permitan, sin extraer la clave privada.
+
+#### Próximo bloque propuesto: CF-15F — CMS Inspector y validación explicable
+
+El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un CMS/PKCS#7 y mostrar de forma segura su tipo, contenido encapsulado o detached, firmantes, destinatarios, algoritmos, certificados, atributos firmados/no firmados y el resultado de cada comprobación. La validación deberá separar con claridad: estructura, integridad/firma, cadena de confianza y vigencia. Tendrá exportación de informe y pruebas positivas, negativas y multi-destinatario.
 
 #### Certificados
 
@@ -348,8 +363,8 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 #### CMS/CAdES/PAdES/ASiC
 
 - Completar CAdES Baseline B/T/LT/LTA reutilizando DSS.
-- PAdES para PDF de laboratorio con firma visible opcional.
-- ASiC-S y ASiC-E con XAdES/CAdES.
+- [~] PAdES Baseline-B/T para PDF de laboratorio con firma PKCS#12 o PKCS#11, TSA RFC 3161 opcional, firma visible de texto, inspector estructural y validación DSS con truststore/CRL local. Pendiente: OCSP, LTV completo y política de confianza avanzada.
+- [~] ASiC-S y ASiC-E/CAdES-BES: creación e inspección de uno o varios payloads, con manifiesto SHA-256, firma local PKCS#12 o PKCS#11 y validación PKIX opcional contra truststore local de la firma CAdES. Pendiente: XAdES, revocación, perfiles avanzados y LTV.
 - Firma detached de grandes archivos por streaming.
 - Timestamp RFC 3161 independiente para cualquier hash o fichero.
 - Verificador generico que detecte formato de firma automaticamente.
@@ -526,20 +541,20 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 
 #### Distribución
 
-- Instaladores nativos con `jpackage` para macOS, Windows y Linux.
-- Runtime Java incluido para evitar diferencias de entorno.
+- [x] Instaladores nativos con `jpackage` para macOS, Windows y Linux.
+- [x] Runtime Java incluido para evitar diferencias de entorno.
 - Firma/notarizacion opcional de binarios cuando exista infraestructura.
-- Checksums SHA-256 y SBOM por release.
-- Versión visible en UI y diagnóstico exportable.
-- Canal estable y canal experimental.
+- [x] Checksums SHA-256 y SBOM por release.
+- [x] Versión visible en UI y diagnóstico exportable.
+- [x] Canal estable y canal experimental.
 
 #### Documentación
 
-- Guia de inicio rapido por caso de uso.
-- Manual por modulo con ejemplos reproducibles.
-- Catalogo de formatos, charsets y aliases.
-- Documento de diferencias entre herramienta de test y uso productivo.
-- Changelog por versión con migraciones y breaking changes.
+- [x] Guía de inicio rápido por caso de uso.
+- [ ] Manual por módulo con ejemplos reproducibles.
+- [x] Catálogo de formatos, charsets y aliases.
+- [x] Documento de diferencias entre herramienta de test y uso productivo.
+- [ ] Changelog por versión con migraciones y breaking changes.
 - Capturas actualizadas automaticamente cuando sea viable.
 
 #### Extensibilidad
@@ -553,18 +568,18 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 
 | Prioridad | Iniciativa | Valor | Esfuerzo | Dependencias |
 |---|---|---|---|---|
-| P0 | Unificar `DataConverter` y codecs | Evita inconsistencias y errores runtime | M | Ninguna |
+| P0 | Unificar `DataConverter` y codecs | Evita inconsistencias y errores runtime | M | **Completado: CodecRegistry y adaptadores** |
 | P0 | Dividir `ModernMainController` | Reduce riesgo de cada cambio UI | L | OperationRegistry básico |
-| P0 | Test de carga FXML y smoke UI | Detecta fallos antes de ejecutar manualmente | M | JavaFX test harness |
-| P0 | Matriz de estado de operaciones | Evita anunciar soporte incompleto | S | Inventario |
+| P0 | Test de carga FXML y smoke UI | Detecta fallos antes de ejecutar manualmente | M | **Completado; falta smoke visual por plataforma** |
+| P0 | Matriz de estado de operaciones | Evita anunciar soporte incompleto | S | **Completado: OperationRegistry/catálogo** |
 | P0 | Vectores conocidos por modulo | Aumenta confianza en resultados | L | Catalogo de tests |
 | P1 | Formatos por operación | Elimina ambiguedad de entrada/salida | M | CodecRegistry |
 | P1 | Histórico reproducible | Convierte sesiones en casos de prueba | L | OperationRequest/Result |
 | P1 | XAdES interoperable B/T/LT/LTA | Alto valor profesional | L | Perfiles TSA/truststore |
 | P1 | TR-31 completo | Alto valor en pagos | L | Vectores y parsing |
-| P1 | PQC KAT y nomenclatura estándar | Alineación técnica y educativa | M | Proveedor BC |
+| P1 | PQC KAT y nomenclatura estándar | Alineación técnica y educativa | M | **Completado; revisar al actualizar proveedor BC** |
 | P1 | Conversor/inspector de bytes avanzado | Uso frecuente y transversal | M | CodecRegistry |
-| P1 | Empaquetado con runtime incluido | Reduce incidencias de instalación | M | Build estable |
+| P1 | Empaquetado con runtime incluido | Reduce incidencias de instalación | M | **Completado; requiere validación manual por SO** |
 | P2 | PKCS#11/HSM software | Amplia escenarios profesionales | L | KeyMaterial |
 | P2 | DUKPT TDES/AES | Completa pagos | L | Modulo pagos estable |
 | P2 | PAdES/CAdES/ASiC | Extiende firmas europeas | XL | DSS estable |

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptoforge.ui.AsicController" spacing="8" style="-fx-padding: 10;">
+    <Label text="ASiC-S laboratory — one payload plus detached CAdES-BES signature" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
+    <Label text="Creates a bounded ASiC-S ZIP container. Inspection checks the mimetype and detached signature; it does not establish certificate trust, revocation or LTV." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
+    <HBox spacing="6"><TextField fx:id="asicInputPathField" promptText="Payload file or ASiC-S container path" HBox.hgrow="ALWAYS"/><Button text="Choose input…" onAction="#handleChooseInput" styleClass="secondary-button"/></HBox>
+    <HBox spacing="6"><TextField fx:id="asicOutputPathField" promptText="New .asics output path (for create)" HBox.hgrow="ALWAYS"/><Button text="Choose output…" onAction="#handleChooseOutput" styleClass="secondary-button"/></HBox>
+    <HBox spacing="8">
+        <RadioButton fx:id="asicSourceLocalRadio" text="Local PKCS#12" selected="true" onAction="#handleSourceChanged"><toggleGroup><ToggleGroup fx:id="asicSourceToggleGroup"/></toggleGroup></RadioButton>
+        <RadioButton fx:id="asicSourcePkcs11Radio" text="PKCS#11 Token" toggleGroup="$asicSourceToggleGroup" onAction="#handleSourceChanged"/>
+    </HBox>
+    <HBox fx:id="asicLocalKeyBox" spacing="6"><TextField fx:id="asicPkcs12PathField" promptText="PKCS#12 signing key (for create)" HBox.hgrow="ALWAYS"/><Button text="Choose key…" onAction="#handleChoosePkcs12" styleClass="secondary-button"/><PasswordField fx:id="asicPasswordField" promptText="PKCS#12 password" prefWidth="180"/></HBox>
+    <HBox fx:id="asicPkcs11Box" spacing="6" visible="false" managed="false"><ComboBox fx:id="asicPkcs11AliasCombo" promptText="Token signing alias" HBox.hgrow="ALWAYS"/><Button text="Load Token Keys" onAction="#handleLoadTokenKeys" styleClass="secondary-button"/></HBox>
+    <HBox spacing="8"><Button text="Create ASiC-S" onAction="#handleCreate" styleClass="action-button"/><Button text="Inspect / Verify" onAction="#handleInspect" styleClass="secondary-button"/></HBox>
+    <Separator/>
+    <Label text="Experimental ASiC-E / CAdES — multiple payloads plus a SHA-256 manifest (local PKCS#12 or PKCS#11)" wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
+    <HBox spacing="6"><TextField fx:id="asicEPayloadsField" editable="false" promptText="No ASiC-E payload files selected" HBox.hgrow="ALWAYS"/><Button text="Choose payloads…" onAction="#handleChooseAsicEPayloads" styleClass="secondary-button"/><Button text="Create ASiC-E" onAction="#handleCreateE" styleClass="action-button"/></HBox>
+    <HBox spacing="6"><TextField fx:id="asicTrustStorePathField" promptText="Optional local truststore (.p12/.pfx or .jks), used when inspecting ASiC" HBox.hgrow="ALWAYS"/><Button text="Choose truststore…" onAction="#handleChooseTrustStore" styleClass="secondary-button"/><PasswordField fx:id="asicTrustStorePasswordField" promptText="Truststore password" prefWidth="160"/></HBox>
+    <TextArea fx:id="asicResultArea" editable="false" prefHeight="105" wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;" promptText="ASiC-S result will appear here..."/>
+</VBox>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="com.cryptoforge.ui.ClipboardShelfController"
+      VBox.vgrow="ALWAYS"
+      stylesheets="@../css/modern.css">
+    
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <Label text="Clipboard Shelf" styleClass="header-label"/>
+    <Label text="Temporarily stores values generated or copied during this session." wrapText="true" styleClass="description-label"/>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <TextField fx:id="searchField" promptText="Search label or source..." HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="formatFilterCombo" promptText="Any Format"/>
+        <ComboBox fx:id="classFilterCombo" promptText="Any Classification"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="itemCountLabel" text="0 / 100 items" style="-fx-text-fill: #7f8c8d;"/>
+        <Button text="Open Copy Window" onAction="#handleOpenClipboardWindow"/>
+        <Button text="Clear Shelf" onAction="#handleClearShelf" styleClass="button, danger-button"/>
+    </HBox>
+
+    <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" dividerPositions="0.6">
+        <TableView fx:id="shelfTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="dateCol" text="Time" prefWidth="120"/>
+                <TableColumn fx:id="labelCol" text="Label" prefWidth="150"/>
+                <TableColumn fx:id="sourceCol" text="Source" prefWidth="150"/>
+                <TableColumn fx:id="formatCol" text="Format" prefWidth="80"/>
+                <TableColumn fx:id="classCol" text="Class" prefWidth="80"/>
+                <TableColumn fx:id="previewCol" text="Preview" prefWidth="300"/>
+            </columns>
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+            </columnResizePolicy>
+        </TableView>
+
+        <VBox spacing="10">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="Entry Details" style="-fx-font-weight: bold;"/>
+                <Label fx:id="warningLabel" text="⚠️ Contains sensitive data" style="-fx-text-fill: #e67e22;" visible="false"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <MenuButton fx:id="useInMenu" text="Use in..." disable="true">
+                    <!-- Items populated dynamically -->
+                </MenuButton>
+                <Button fx:id="copyBtn" text="Copy" onAction="#handleCopy" disable="true"/>
+                <Button fx:id="expandBtn" text="Open Expanded" onAction="#handleOpenExpanded" disable="true"/>
+                <Button fx:id="renameBtn" text="Rename" onAction="#handleRename" disable="true"/>
+                <Button fx:id="deleteBtn" text="Delete" onAction="#handleDelete" disable="true" styleClass="button, danger-button"/>
+            </HBox>
+            <TextArea fx:id="detailsArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" style="-fx-font-family: monospace;"/>
+        </VBox>
+    </SplitPane>
+</VBox>

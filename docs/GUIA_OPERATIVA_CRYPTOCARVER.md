@@ -10,7 +10,15 @@ En macOS y Linux, desde la raíz del proyecto:
 ./run-modern.sh
 ```
 
-También se puede ejecutar con Maven (`mvn javafx:run`) o empaquetar con `mvn package`. El JAR resultante es `target/cryptocarver-2.3.0.jar`.
+También se puede ejecutar con Maven (`mvn javafx:run`) o empaquetar con `mvn package`. El JAR resultante es `target/cryptocarver-<version>.jar`, donde la versión procede del `pom.xml`.
+
+Para una entrega verificable (JAR, SBOM CycloneDX, SHA-256 y manifiesto), ejecutar
+`bash scripts/build-release.sh`. El checklist completo se encuentra en
+`docs/RELEASE_CHECKLIST.md`.
+
+Los paquetes nativos se crean con `./package_macos.sh`, `package_windows.bat` y
+`bash package_linux.sh`; los tres usan `jpackage`, que incluye un runtime Java en
+el paquete resultante.
 
 ## Formatos y conversor
 
@@ -46,6 +54,18 @@ Las opciones predefinidas son DigiCert y FreeTSA. Para validación de confianza 
 El histórico y las sesiones se guardan en `~/.cryptocarver`. En la primera ejecución se migran automáticamente desde `~/.crypto-calculator` si existe.
 
 El modo laboratorio puede conservar material de clave PQC en los detalles del histórico para repetir y estudiar pruebas. No copie esos ficheros a entornos de producción ni los trate como almacenamiento seguro.
+
+## PKCS#11 y SoftHSM
+
+**SoftHSM** es una implementación de token PKCS#11 por software. Sirve para practicar la integración con un HSM sin disponer de un dispositivo físico; sus claves viven en un almacén local protegido por un PIN, no en un módulo hardware certificado.
+
+Para usar un token real o SoftHSM, abra **Keys → Tools → PKCS#11 Token** y complete la ruta de su biblioteca nativa (`.dylib`, `.so` o `.dll`), el índice del slot y el PIN de usuario. El PIN se entrega al proveedor `SunPKCS11` para abrir la sesión, se borra del campo inmediatamente y no se guarda en perfiles, ajustes ni histórico.
+
+Tras conectar, CryptoCarver muestra únicamente metadatos de objetos. Las claves privadas y secretas siguen siendo manejadores opacos dentro del token. Puede seleccionar una clave secreta en **Symmetric Ciphers** o **Message Authentication Codes** como origen `PKCS#11 Token`; para claves privadas puede firmar y verificar datos hexadecimales en el propio panel PKCS#11.
+
+El mismo panel permite crear un JWS/JWT compacto y un CMS/PKCS#7 SignedData con una clave privada del token y su certificado X.509 asociado. CMS se muestra en Base64 y puede ser encapsulado o detached. Ninguna de estas operaciones convierte la clave privada en PEM ni la escribe en el histórico.
+
+La compatibilidad concreta depende del módulo PKCS#11: el laboratorio cubre AES/DES/3DES, MAC y firmas JCA habituales cuando el token anuncia esos mecanismos. Algoritmos o rellenos no disponibles fallan de forma explícita; nunca se sustituye la operación por una clave exportada.
 
 ## Diagnóstico y logs
 

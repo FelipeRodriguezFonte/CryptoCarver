@@ -19,6 +19,7 @@
         <javafx.version>21.0.5</javafx.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <dss.version>6.3</dss.version>
+        <release.channel>laboratory</release.channel>
     </properties>
 
     <dependencies>
@@ -53,6 +54,12 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcutil-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+        <!-- OpenPGP primitives for GnuPG-compatible laboratory workflows -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpg-jdk18on</artifactId>
             <version>${bouncycastle.version}</version>
         </dependency>
 
@@ -98,6 +105,23 @@
             <artifactId>dss-xades</artifactId>
             <version>${dss.version}</version>
         </dependency>
+        <!-- PDF signing implementation for the PAdES laboratory module -->
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-pades</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-pades-pdfbox</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <!-- CMS backend required by DSS when producing PAdES signature containers -->
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-cms-object</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-utils-apache-commons</artifactId>
@@ -136,6 +160,22 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>cryptocarver-build.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>cryptocarver-build.properties</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <!-- Compiler Plugin -->
             <plugin>
@@ -194,4 +234,46 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Opt-in because SBOM generation belongs to a distributable release, not every developer build. -->
+        <profile>
+            <id>release-artifacts</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.cyclonedx</groupId>
+                        <artifactId>cyclonedx-maven-plugin</artifactId>
+                        <version>2.8.1</version>
+                        <executions>
+                            <execution>
+                                <id>generate-cyclonedx-sbom</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>makeAggregateBom</goal>
+                                </goals>
+                                <configuration>
+                                    <outputFormat>json</outputFormat>
+                                    <outputName>cryptocarver-sbom</outputName>
+                                    <includeBomSerialNumber>true</includeBomSerialNumber>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>release-stable</id>
+            <properties>
+                <release.channel>stable</release.channel>
+            </properties>
+        </profile>
+        <profile>
+            <id>release-experimental</id>
+            <properties>
+                <release.channel>experimental</release.channel>
+            </properties>
+        </profile>
+    </profiles>
 </project>

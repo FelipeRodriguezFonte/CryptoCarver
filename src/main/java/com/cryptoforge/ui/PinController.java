@@ -13,6 +13,11 @@ import javafx.scene.control.*;
 public class PinController {
 
     private MainController mainController;
+    private StatusReporter statusReporter;
+
+    public void setStatusReporter(StatusReporter statusReporter) {
+        this.statusReporter = statusReporter;
+    }
 
     // PIN Block ISO 0 controls
     private TextField iso0PinField;
@@ -82,7 +87,8 @@ public class PinController {
     private TextField visaPvvPanField;
     private TextArea visaPvvResultArea;
 
-    public void initialize(MainController mainController,
+    public void initialize(
+            MainController mainController,
                           // ISO 0 Encode
                           TextField iso0PinField,
                           TextField iso0PanFieldEncode,
@@ -144,9 +150,10 @@ public class PinController {
                           TextField visaPvvPvkiField,
                           TextField visaPvvPinField,
                           TextField visaPvvPanField,
-                          TextArea visaPvvResultArea) {
-
+                          TextArea visaPvvResultArea
+    ) {
         this.mainController = mainController;
+        this.statusReporter = (mainController instanceof StatusReporter) ? (StatusReporter) mainController : null;
 
         // ISO 0
         this.iso0PinField = iso0PinField;
@@ -287,12 +294,14 @@ public class PinController {
             iso0ResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 0 - Encode",
-                "PIN: " + pin + ", PAN: " + pan,
-                pinBlockClearHex
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 0 - Encode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN: " + pin + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", pinBlockClearHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso0ResultArea.setText("❌ Error: " + e.getMessage());
@@ -340,12 +349,14 @@ public class PinController {
             iso0DecodeResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 0 - Decode",
-                "PIN Block: " + pinBlockHex + ", PAN: " + pan,
-                "PIN: " + pin
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 0 - Decode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN Block: " + pinBlockHex + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso0DecodeResultArea.setText("❌ Error: " + e.getMessage());
@@ -390,12 +401,14 @@ public class PinController {
             iso2ResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 2 - Encode",
-                "PIN: " + pin,
-                pinBlockClearHex
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 2 - Encode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", pinBlockClearHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso2ResultArea.setText("❌ Error: " + e.getMessage());
@@ -441,12 +454,14 @@ public class PinController {
             iso2DecodeResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 2 - Decode",
-                "PIN Block: " + pinBlockHex,
-                "PIN: " + pin
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 2 - Decode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN Block: " + pinBlockHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso2DecodeResultArea.setText("❌ Error: " + e.getMessage());
@@ -494,12 +509,14 @@ public class PinController {
             iso3ResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 3 - Encode",
-                "PIN: " + pin + ", PAN: " + pan,
-                pinBlockClearHex
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 3 - Encode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN: " + pin + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", pinBlockClearHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso3ResultArea.setText("❌ Error: " + e.getMessage());
@@ -547,12 +564,14 @@ public class PinController {
             iso3DecodeResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 3 - Decode",
-                "PIN Block: " + pinBlockHex + ", PAN: " + pan,
-                "PIN: " + pin
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 3 - Decode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN Block: " + pinBlockHex + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso3DecodeResultArea.setText("❌ Error: " + e.getMessage());
@@ -599,12 +618,14 @@ public class PinController {
             iso4ResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 4 - Encode",
-                "PIN: " + pin + ", PAN: " + pan,
-                encryptedHex
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 4 - Encode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN: " + pin + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", encryptedHex, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso4ResultArea.setText("❌ Error: " + e.getMessage());
@@ -649,12 +670,14 @@ public class PinController {
             iso4DecodeResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "PIN Block ISO 4 - Decode",
-                "PIN Block: " + pinBlockHex + ", PAN: " + pan,
-                "PIN: " + pin
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("PIN Block ISO 4 - Decode")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PIN Block: " + pinBlockHex + ", PAN: " + pan, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             iso4DecodeResultArea.setText("❌ Error: " + e.getMessage());
@@ -701,12 +724,14 @@ public class PinController {
             ibm3624ResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "IBM 3624 - Generate PIN",
-                "PAN: " + pan + ", Offset: " + offset,
-                "PIN: " + pin
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("IBM 3624 - Generate PIN")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PAN: " + pan + ", Offset: " + offset, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             ibm3624ResultArea.setText("❌ Error: " + e.getMessage());
@@ -751,12 +776,14 @@ public class PinController {
             ibm3624OffsetResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "IBM 3624 - Generate Offset",
-                "PAN: " + pan + ", PIN: " + pin,
-                "Offset: " + offset
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("IBM 3624 - Generate Offset")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PAN: " + pan + ", PIN: " + pin, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "Offset: " + offset, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             ibm3624OffsetResultArea.setText("❌ Error: " + e.getMessage());
@@ -795,12 +822,14 @@ public class PinController {
             visaPvvResultArea.setText(result.toString());
 
             // Add to history
-            OperationHistory.getInstance().addOperation(
-                "PIN",
-                "VISA PVV - Generate",
-                "PAN: " + pan + ", PIN: " + pin + ", PVKI: " + pvki,
-                "PVV: " + pvv
-            );
+            if (statusReporter != null) {
+                statusReporter.publish(com.cryptoforge.model.OperationResult.forOperation("VISA PVV - Generate")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "PAN: " + pan + ", PIN: " + pin + ", PVKI: " + pvki, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", "PVV: " + pvv, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                    ))
+                    .build());
+            }
 
         } catch (Exception e) {
             visaPvvResultArea.setText("❌ Error: " + e.getMessage());
