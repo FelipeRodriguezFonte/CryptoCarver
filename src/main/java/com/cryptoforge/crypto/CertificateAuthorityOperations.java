@@ -19,11 +19,19 @@ import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
 import java.util.Calendar;
 import java.util.Date;
 
 /** Laboratory CA operations: validates a CSR and issues an end-entity certificate. */
 public final class CertificateAuthorityOperations {
+    public enum IssuanceProfile {
+        TLS_SERVER,
+        TLS_CLIENT,
+        CODE_SIGNING,
+        INTERMEDIATE_CA
+    }
     static {
         if (Security.getProvider("BC") == null) Security.addProvider(new BouncyCastleProvider());
     }
@@ -43,18 +51,24 @@ public final class CertificateAuthorityOperations {
 
     public static X509Certificate issueFromCsr(PKCS10CertificationRequest csr, X509Certificate issuerCertificate,
             PrivateKey issuerPrivateKey, int validityDays, String signatureAlgorithm) throws Exception {
-        return issueFromCsr(csr, issuerCertificate, issuerPrivateKey, validityDays, signatureAlgorithm, false, 0);
+        return issueFromCsr(csr, issuerCertificate, issuerPrivateKey, validityDays, signatureAlgorithm, IssuanceProfile.TLS_SERVER, 0);
+    }
+
+    /** Issues a certificate from a signed CSR with a specific profile. */
+    public static X509Certificate issueFromCsr(PKCS10CertificationRequest csr, X509Certificate issuerCertificate,
+            PrivateKey issuerPrivateKey, int validityDays, String signatureAlgorithm, IssuanceProfile profile) throws Exception {
+        return issueFromCsr(csr, issuerCertificate, issuerPrivateKey, validityDays, signatureAlgorithm, profile, 0);
     }
 
     /** Issues an intermediate CA from a signed CSR. */
     public static X509Certificate issueIntermediateCaFromCsr(PKCS10CertificationRequest csr, X509Certificate issuerCertificate,
             PrivateKey issuerPrivateKey, int validityDays, String signatureAlgorithm, int pathLength) throws Exception {
         if (pathLength < 0) throw new IllegalArgumentException("Intermediate CA path length cannot be negative");
-        return issueFromCsr(csr, issuerCertificate, issuerPrivateKey, validityDays, signatureAlgorithm, true, pathLength);
+        return issueFromCsr(csr, issuerCertificate, issuerPrivateKey, validityDays, signatureAlgorithm, IssuanceProfile.INTERMEDIATE_CA, pathLength);
     }
 
-    private static X509Certificate issueFromCsr(PKCS10CertificationRequest csr, X509Certificate issuerCertificate,
-            PrivateKey issuerPrivateKey, int validityDays, String signatureAlgorithm, boolean intermediateCa, int pathLength) throws Exception {
+    public static X509Certificate issueFromCsr(PKCS10CertificationRequest csr, X509Certificate issuerCertificate,
+            PrivateKey issuerPrivateKey, int validityDays, String signatureAlgorithm, IssuanceProfile profile, int pathLength) throws Exception {
         if (csr == null || issuerCertificate == null || issuerPrivateKey == null) throw new IllegalArgumentException("CSR, issuer certificate and issuer private key are required");
         if (validityDays <= 0) throw new IllegalArgumentException("Validity must be positive");
         validateIssuer(issuerCertificate, issuerPrivateKey);
@@ -71,13 +85,42 @@ public final class CertificateAuthorityOperations {
         var builder = new JcaX509v3CertificateBuilder(issuerCertificate, new BigInteger(128, new SecureRandom()),
                 notBefore, notAfter, csr.getSubject(), request.getPublicKey());
         JcaX509ExtensionUtils extensionUtils = new JcaX509ExtensionUtils();
-        builder.addExtension(Extension.basicConstraints, true, intermediateCa ? new BasicConstraints(pathLength) : new BasicConstraints(false));
-        builder.addExtension(Extension.keyUsage, true, intermediateCa
-                ? new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign | KeyUsage.digitalSignature)
-                : new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+
+        if (profile == IssuanceProfile.INTERMEDIATE_CA) {
+            builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(pathLength));
+            builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign | KeyUsage.digitalSignature));
+        } else {
+            builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
+            int keyUsage;
+            ExtendedKeyUsage eku;
+            switch (profile) {
+                case TLS_CLIENT -> {
+                    keyUsage = KeyUsage.digitalSignature;
+                    eku = new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth);
+                }
+                case CODE_SIGNING -> {
+                    keyUsage = KeyUsage.digitalSignature;
+                    eku = new ExtendedKeyUsage(KeyPurposeId.id_kp_codeSigning);
+                }
+                case TLS_SERVER -> {
+                    keyUsage = KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.keyAgreement;
+                    eku = new ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth);
+                }
+                default -> {
+                    keyUsage = KeyUsage.digitalSignature | KeyUsage.keyEncipherment;
+                    eku = new ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth);
+                }
+            }
+            builder.addExtension(Extension.keyUsage, true, new KeyUsage(keyUsage));
+            builder.addExtension(Extension.extendedKeyUsage, false, eku);
+        }
+
         builder.addExtension(Extension.subjectKeyIdentifier, false, extensionUtils.createSubjectKeyIdentifier(request.getPublicKey()));
         builder.addExtension(Extension.authorityKeyIdentifier, false, extensionUtils.createAuthorityKeyIdentifier(issuerCertificate));
-        copyRequestedSan(csr, builder);
+
+        if (profile != IssuanceProfile.INTERMEDIATE_CA && profile != IssuanceProfile.CODE_SIGNING) {
+            copyRequestedSan(csr, builder);
+        }
         var signer = new JcaContentSignerBuilder(signatureAlgorithm).setProvider("BC").build(issuerPrivateKey);
         return new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter().setProvider("BC").getCertificate(builder.build(signer));
     }

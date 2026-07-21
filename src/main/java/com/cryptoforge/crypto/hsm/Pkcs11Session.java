@@ -170,6 +170,33 @@ public final class Pkcs11Session implements AutoCloseable {
         }
     }
 
+    /**
+     * Updates the certificate chain associated with a PKCS#11 token alias.
+     * The private key is resolved internally and never escapes the session.
+     */
+    public void updateCertificateChain(String alias, Certificate[] chain) throws GeneralSecurityException {
+        ensureOpen();
+        if (alias == null || chain == null || chain.length == 0) {
+            throw new IllegalArgumentException("Alias and certificate chain are required");
+        }
+
+        try {
+            if (!keyStore.isKeyEntry(alias)) {
+                throw new GeneralSecurityException("Alias does not exist or is not a key entry: " + alias);
+            }
+
+            Key key = keyStore.getKey(alias, null);
+            if (key == null) {
+                throw new GeneralSecurityException("Private key is not accessible for alias: " + alias);
+            }
+
+            // JCA KeyStore allows updating the chain by setting the key entry again
+            keyStore.setKeyEntry(alias, key, null, chain);
+        } catch (Exception e) {
+            throw new GeneralSecurityException("Failed to update certificate chain on token for alias: " + alias, e);
+        }
+    }
+
 
 
     /**

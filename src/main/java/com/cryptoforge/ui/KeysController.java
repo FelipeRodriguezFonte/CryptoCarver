@@ -142,13 +142,24 @@ public class KeysController {
     private TextField certIssueValidityField;
     private TextField certIssueSignatureField;
     private TextArea certIssueResultArea;
-    private CheckBox certIssueIntermediateCaCheck;
+    private ComboBox<String> certIssueProfileCombo;
     private TextField certIssuePathLengthField;
+
+    // CRL Management components
+    private TextArea crlIssuerCertArea;
+    private TextArea crlIssuerKeyArea;
+    private TextArea crlExistingCrlArea;
+    private TextField crlRevokeSerialField;
+    private ComboBox<String> crlRevokeReasonCombo;
+    private TextArea crlResultArea;
 
     // Validate Certificate components
     private TextArea valCertInput;
     private TextArea valIssuerInput;
     private TextArea valResultArea;
+    private TextArea chainInputArea;
+    private TextArea chainCrlInputArea;
+    private TextArea chainResultArea;
 
     // Store last generated key pair for certificate generation
     private KeyPair lastGeneratedKeyPair;
@@ -493,6 +504,43 @@ public class KeysController {
         }
     }
 
+    public void handleUpdatePkcs11CertificateChain() {
+        try {
+            String alias = pkcs11CertificateAliasCombo == null ? null : pkcs11CertificateAliasCombo.getValue();
+            if (alias == null || alias.isBlank()) {
+                throw new IllegalArgumentException("Connect a token and select an alias to update");
+            }
+
+            String pem = pkcs11CertificateArea.getText().trim();
+            if (pem.isEmpty()) {
+                throw new IllegalArgumentException("Paste the PEM certificate chain in the text area");
+            }
+
+            List<X509Certificate> chain = new ArrayList<>();
+            String[] parts = pem.split("-----BEGIN CERTIFICATE-----");
+            for (String part : parts) {
+                if (part.trim().isEmpty()) continue;
+                String certPem = "-----BEGIN CERTIFICATE-----" + part;
+                int endIndex = certPem.indexOf("-----END CERTIFICATE-----");
+                if (endIndex != -1) {
+                    certPem = certPem.substring(0, endIndex + 25);
+                    chain.add(CertificateGenerator.parseCertificate(certPem));
+                }
+            }
+
+            if (chain.isEmpty()) {
+                throw new IllegalArgumentException("No valid PEM certificates found");
+            }
+
+            com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .updateCertificateChain(alias, chain.toArray(new java.security.cert.Certificate[0]));
+
+            updateStatus("Successfully updated certificate chain for token alias: " + alias);
+        } catch (Exception error) {
+            showError("Update PKCS#11 certificate chain", "Failed to update chain: " + safePkcs11Message(error));
+        }
+    }
+
     public void generatePkcs11Jwt() {
         try {
             String alias = requirePkcs11SigningAlias();
@@ -816,7 +864,7 @@ public class KeysController {
     }
 
     public void initializeCertificateIssuer(TextArea csrArea, TextArea caCertArea, TextArea caKeyArea,
-            TextField validityField, TextField signatureField, TextArea resultArea, CheckBox intermediateCaCheck,
+            TextField validityField, TextField signatureField, TextArea resultArea, ComboBox<String> profileCombo,
             TextField pathLengthField) {
         this.certIssueCsrArea = csrArea;
         this.certIssueCaCertArea = caCertArea;
@@ -824,8 +872,38 @@ public class KeysController {
         this.certIssueValidityField = validityField;
         this.certIssueSignatureField = signatureField;
         this.certIssueResultArea = resultArea;
-        this.certIssueIntermediateCaCheck = intermediateCaCheck;
+        this.certIssueProfileCombo = profileCombo;
         this.certIssuePathLengthField = pathLengthField;
+
+        if (certIssueProfileCombo != null) {
+            certIssueProfileCombo.getItems().setAll(Arrays.stream(CertificateAuthorityOperations.IssuanceProfile.values())
+                .map(Enum::name).toList());
+            certIssueProfileCombo.setValue(CertificateAuthorityOperations.IssuanceProfile.TLS_SERVER.name());
+        }
+    }
+
+    public void initializeCrlManagement(TextArea issuerCertArea, TextArea issuerKeyArea, TextArea existingCrlArea,
+            TextField serialField, ComboBox<String> reasonCombo, TextArea resultArea) {
+        this.crlIssuerCertArea = issuerCertArea;
+        this.crlIssuerKeyArea = issuerKeyArea;
+        this.crlExistingCrlArea = existingCrlArea;
+        this.crlRevokeSerialField = serialField;
+        this.crlRevokeReasonCombo = reasonCombo;
+        this.crlResultArea = resultArea;
+
+        if (crlRevokeReasonCombo != null) {
+            crlRevokeReasonCombo.getItems().setAll(
+                "UNSPECIFIED", "KEY_COMPROMISE", "CA_COMPROMISE", "AFFILIATION_CHANGED",
+                "SUPERSEDED", "CESSATION_OF_OPERATION", "CERTIFICATE_HOLD", "PRIVILEGE_WITHDRAWN"
+            );
+            crlRevokeReasonCombo.setValue("UNSPECIFIED");
+        }
+    }
+
+    public void initializeCertificateChainValidation(TextArea chainArea, TextArea trustAnchorArea, TextArea resultArea) {
+        this.valChainInput = chainArea;
+        this.valTrustAnchorInput = trustAnchorArea;
+        this.valChainResultArea = resultArea;
     }
 
     public void handleIssueCertificateFromCsr() {
@@ -837,18 +915,27 @@ public class KeysController {
             var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
                     certIssueCaCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
             var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(certIssueCaKeyArea.getText().trim());
-            int validity = Integer.parseInt(certIssueValidityField.getText().trim());
-            String requestedSignature = certIssueSignatureField.getText().trim();
-            String signatureAlgorithm = requestedSignature.isEmpty() || "automatic".equalsIgnoreCase(requestedSignature)
-                    ? CertificateAuthorityOperations.suggestSignatureAlgorithm(issuerKey) : requestedSignature;
-            certIssueSignatureField.setText(signatureAlgorithm);
-            boolean intermediate = certIssueIntermediateCaCheck.isSelected();
-            var issued = intermediate
-                    ? CertificateAuthorityOperations.issueIntermediateCaFromCsr(csr, issuerCert, issuerKey, validity,
-                            signatureAlgorithm, Integer.parseInt(certIssuePathLengthField.getText().trim()))
-                    : CertificateAuthorityOperations.issueFromCsr(csr, issuerCert, issuerKey, validity,
-                            signatureAlgorithm);
-            String outputText = (intermediate ? "=== ISSUED INTERMEDIATE CA ===\n\n" : "=== ISSUED END-ENTITY CERTIFICATE ===\n\n")
+            int validityDays = Integer.parseInt(certIssueValidityField.getText().trim());
+            String overrideAlgorithm = certIssueSignatureField.getText().trim();
+            if ("Automatic".equalsIgnoreCase(overrideAlgorithm)) overrideAlgorithm = null;
+            if (overrideAlgorithm == null || overrideAlgorithm.isBlank()) {
+                overrideAlgorithm = CertificateAuthorityOperations.suggestSignatureAlgorithm(issuerKey);
+            }
+
+            CertificateAuthorityOperations.IssuanceProfile profile = CertificateAuthorityOperations.IssuanceProfile.TLS_SERVER;
+            if (certIssueProfileCombo != null && certIssueProfileCombo.getValue() != null) {
+                profile = CertificateAuthorityOperations.IssuanceProfile.valueOf(certIssueProfileCombo.getValue());
+            }
+
+            int pathLength = -1;
+            if (profile == CertificateAuthorityOperations.IssuanceProfile.INTERMEDIATE_CA) {
+                try {
+                    pathLength = Integer.parseInt(certIssuePathLengthField.getText().trim());
+                } catch (NumberFormatException ignored) {}
+            }
+
+            var issued = CertificateAuthorityOperations.issueFromCsr(csr, issuerCert, issuerKey, validityDays, overrideAlgorithm, profile, pathLength);
+            String outputText = "=== ISSUED CERTIFICATE ===\n\n"
                     + CertificateGenerator.getCertificateInfo(issued)
                     + "\n\n" + CertificateGenerator.exportCertificatePEM(issued);
             certIssueResultArea.setText(outputText);
@@ -863,6 +950,61 @@ public class KeysController {
             }
         } catch (Exception e) {
             showError("Issue Certificate", "Cannot issue certificate: " + e.getMessage());
+        }
+    }
+
+    public void handleGenerateCrl() {
+        try {
+            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
+            var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
+                    crlIssuerCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+            var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(crlIssuerKeyArea.getText().trim());
+
+            var crl = RevocationOperations.generateEmptyCrl(issuerCert, issuerKey);
+            String outputText = RevocationOperations.exportCrlToPem(crl);
+            crlResultArea.setText(outputText);
+            updateStatus("Empty CRL generated successfully");
+        } catch (Exception e) {
+            showError("Generate CRL", "Failed to generate CRL: " + e.getMessage());
+        }
+    }
+
+    public void handleRevokeCrl() {
+        try {
+            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
+            var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
+                    crlIssuerCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+            var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(crlIssuerKeyArea.getText().trim());
+            String existingCrlStr = crlExistingCrlArea.getText().trim();
+            java.security.cert.X509CRL existingCrl = null;
+            if (!existingCrlStr.isEmpty()) {
+                existingCrl = RevocationOperations.parseCrlPem(existingCrlStr);
+            }
+
+            String serialStr = crlRevokeSerialField.getText().trim();
+            if (serialStr.isEmpty()) throw new IllegalArgumentException("Serial number required for revocation");
+            java.math.BigInteger serial = new java.math.BigInteger(serialStr, 16);
+
+            String reasonStr = crlRevokeReasonCombo.getValue();
+            int reason = org.bouncycastle.asn1.x509.CRLReason.unspecified;
+            if (reasonStr != null) {
+                switch (reasonStr) {
+                    case "KEY_COMPROMISE": reason = org.bouncycastle.asn1.x509.CRLReason.keyCompromise; break;
+                    case "CA_COMPROMISE": reason = org.bouncycastle.asn1.x509.CRLReason.cACompromise; break;
+                    case "AFFILIATION_CHANGED": reason = org.bouncycastle.asn1.x509.CRLReason.affiliationChanged; break;
+                    case "SUPERSEDED": reason = org.bouncycastle.asn1.x509.CRLReason.superseded; break;
+                    case "CESSATION_OF_OPERATION": reason = org.bouncycastle.asn1.x509.CRLReason.cessationOfOperation; break;
+                    case "CERTIFICATE_HOLD": reason = org.bouncycastle.asn1.x509.CRLReason.certificateHold; break;
+                    case "PRIVILEGE_WITHDRAWN": reason = org.bouncycastle.asn1.x509.CRLReason.privilegeWithdrawn; break;
+                }
+            }
+
+            var crl = RevocationOperations.appendRevocation(existingCrl, issuerCert, issuerKey, serial, reason, new java.util.Date());
+            String outputText = RevocationOperations.exportCrlToPem(crl);
+            crlResultArea.setText(outputText);
+            updateStatus("CRL updated successfully");
+        } catch (Exception e) {
+            showError("Update CRL", "Failed to update CRL: " + e.getMessage());
         }
     }
 
@@ -3285,8 +3427,9 @@ public class KeysController {
     private TextArea chainInputArea;
     private TextArea chainResultArea;
 
-    public void initializeCertificateChain(TextArea inputArea, TextArea resultArea) {
+    public void initializeCertificateChain(TextArea inputArea, TextArea crlArea, TextArea resultArea) {
         this.chainInputArea = inputArea;
+        this.chainCrlInputArea = crlArea;
         this.chainResultArea = resultArea;
     }
 
@@ -3326,8 +3469,24 @@ public class KeysController {
                 chain.add(CertificateGenerator.parseCertificate(pem));
             }
 
+            List<java.security.cert.X509CRL> crls = null;
+            if (chainCrlInputArea != null && !chainCrlInputArea.getText().trim().isEmpty()) {
+                crls = new ArrayList<>();
+                String crlsStr = chainCrlInputArea.getText().trim();
+                String[] crlParts = crlsStr.split("-----BEGIN X509 CRL-----");
+                for (String part : crlParts) {
+                    if (part.trim().isEmpty()) continue;
+                    String pem = "-----BEGIN X509 CRL-----" + part;
+                    int endIndex = pem.indexOf("-----END X509 CRL-----");
+                    if (endIndex != -1) {
+                        pem = pem.substring(0, endIndex + 22);
+                        crls.add(RevocationOperations.parseCrlPem(pem));
+                    }
+                }
+            }
+
             // Validate
-            CertificateGenerator.ChainValidationResult result = CertificateGenerator.validateCertificateChain(chain);
+            CertificateGenerator.ChainValidationResult result = CertificateGenerator.validateCertificateChain(chain, crls);
 
             StringBuilder sb = new StringBuilder();
             sb.append("CHAIN VALIDATION: ").append(result.isValid ? "✅ VALID" : "❌ INVALID").append("\n\n");

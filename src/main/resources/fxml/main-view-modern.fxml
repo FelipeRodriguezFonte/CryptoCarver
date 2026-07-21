@@ -248,8 +248,9 @@
                                         <HBox spacing="6">
                                             <ComboBox fx:id="pkcs11CertificateAliasCombo" promptText="Certificate alias" HBox.hgrow="ALWAYS"/>
                                             <Button text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
+                                            <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button"/>
                                         </HBox>
-                                        <TextArea fx:id="pkcs11CertificateArea" prefHeight="90" editable="false" promptText="Only public X.509 certificates can be shown here." wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                        <TextArea fx:id="pkcs11CertificateArea" prefHeight="90" editable="true" promptText="Paste PEM chain here to update, or use Show PEM Chain to view." wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                                         <Separator/>
                                         <Label text="JWT / JWS using token key" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
                                         <Label text="Creates a compact JWS with the same selected token private-key alias. Claims must be a JSON object." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
@@ -719,8 +720,9 @@
                                                 <TextField fx:id="certIssueSignatureField" text="Automatic" promptText="Automatic or issuer signature algorithm" HBox.hgrow="ALWAYS"/>
                                             </HBox>
                                             <HBox spacing="6" alignment="CENTER_LEFT">
-                                                <CheckBox fx:id="certIssueIntermediateCaCheck" text="Issue as Intermediate CA" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
-                                                <Label text="Path length:" style="-fx-font-size: 10px;"/>
+                                                <Label text="Profile:" style="-fx-font-size: 10px;"/>
+                                                <ComboBox fx:id="certIssueProfileCombo" promptText="Select Profile"/>
+                                                <Label text="Path length (CA):" style="-fx-font-size: 10px;"/>
                                                 <TextField fx:id="certIssuePathLengthField" text="0" prefWidth="45"/>
                                             </HBox>
                                             <Button text="Issue Laboratory Certificate" onAction="#handleIssueCertificateFromCsr" styleClass="action-button" maxWidth="220" style="-fx-font-size: 11px;"/>
@@ -782,6 +784,10 @@
                                             <TextArea fx:id="chainInputArea" prefHeight="100" wrapText="true"
                                                       style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
                                                       promptText="-----BEGIN CERTIFICATE-----..."/>
+                                            <Label text="Optional CRLs (PEM sequence):" style="-fx-font-size: 11px;"/>
+                                            <TextArea fx:id="chainCrlInputArea" prefHeight="70" wrapText="true"
+                                                      style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                                                      promptText="-----BEGIN X509 CRL-----..."/>
 
                                             <Button text="Validate Chain" onAction="#handleValidateCertificateChain"
                                                     styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
@@ -790,6 +796,25 @@
                                                       style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
                                                       promptText="Validation results will appear here..."
                                                       managed="false" visible="false"/>
+                                        </VBox>
+                                    </TitledPane>
+
+                                    <!-- CRL MANAGEMENT -->
+                                    <TitledPane text="🚫 CRL Management">
+                                        <VBox spacing="6" style="-fx-padding: 8;">
+                                            <Label text="Generate or update an offline CRL." style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                                            <TextArea fx:id="crlIssuerCertArea" prefHeight="70" wrapText="true" promptText="Issuer Root CA certificate PEM" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                            <TextArea fx:id="crlIssuerKeyArea" prefHeight="70" wrapText="true" promptText="Issuer Root CA private key PEM" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                            <TextArea fx:id="crlExistingCrlArea" prefHeight="70" wrapText="true" promptText="Existing CRL PEM (optional)" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                                            <HBox spacing="6" alignment="CENTER_LEFT">
+                                                <TextField fx:id="crlRevokeSerialField" promptText="Serial Number to Revoke (Hex)"/>
+                                                <ComboBox fx:id="crlRevokeReasonCombo" promptText="Reason"/>
+                                            </HBox>
+                                            <HBox spacing="6">
+                                                <Button text="Generate Empty CRL" onAction="#handleGenerateCrl" styleClass="action-button" style="-fx-font-size: 11px;"/>
+                                                <Button text="Revoke &amp; Update CRL" onAction="#handleRevokeCrl" styleClass="action-button" style="-fx-font-size: 11px;"/>
+                                            </HBox>
+                                            <TextArea fx:id="crlResultArea" prefHeight="150" editable="false" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                                         </VBox>
                                     </TitledPane>
 

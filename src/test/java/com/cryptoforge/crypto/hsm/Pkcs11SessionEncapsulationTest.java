@@ -32,4 +32,13 @@ public class Pkcs11SessionEncapsulationTest {
             }
         }
     }
+
+    @Test
+    public void testUpdateCertificateChainEncapsulation() throws NoSuchMethodException {
+        Method method = Pkcs11Session.class.getMethod("updateCertificateChain", String.class, java.security.cert.Certificate[].class);
+
+        // Ensure the method is public so it can be used, but returns void so it doesn't leak anything
+        org.junit.jupiter.api.Assertions.assertTrue(Modifier.isPublic(method.getModifiers()), "updateCertificateChain must be public");
+        org.junit.jupiter.api.Assertions.assertEquals(void.class, method.getReturnType(), "updateCertificateChain must return void to maintain encapsulation");
+    }
 }

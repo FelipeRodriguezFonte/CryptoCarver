@@ -163,4 +163,46 @@ public class CertificateLifecycleLabTest {
         CertificateGenerator.ChainValidationResult validation = CertificateGenerator.validateCertificateChain(chain);
         assertTrue(validation.isValid, "ECDSA chain should be fully valid offline");
     }
+
+    @Test
+    public void testRevocationAndCrl() throws Exception {
+        // 1. Generate Root CA
+        KeyPair rootCaPair = AsymmetricKeyOperations.generateRSAKeyPair(2048);
+        CertificateGenerator.CertificateConfig rootConfig = new CertificateGenerator.CertificateConfig();
+        rootConfig.commonName = "Test Root CA CRL";
+        X509Certificate rootCert = CertificateGenerator.generateRootCA(rootCaPair, rootConfig, 0);
+
+        // 2. Issue EE Cert
+        KeyPair eePair = AsymmetricKeyOperations.generateRSAKeyPair(2048);
+        CertificateGenerator.CertificateConfig eeConfig = new CertificateGenerator.CertificateConfig();
+        eeConfig.commonName = "crl.example.com";
+        String csrPem = CertificateGenerator.generateCSR(eePair, eeConfig);
+        PKCS10CertificationRequest csr = CertificateGenerator.parseCSR(csrPem);
+        X509Certificate eeCert = CertificateAuthorityOperations.issueFromCsr(
+                csr, rootCert, rootCaPair.getPrivate(), 365, "SHA256withRSA",
+                CertificateAuthorityOperations.IssuanceProfile.TLS_SERVER, 0);
+
+        List<X509Certificate> chain = List.of(eeCert, rootCert);
+
+        // 3. Validation without CRL (NOT EVALUATED)
+        CertificateGenerator.ChainValidationResult valNoCrl = CertificateGenerator.validateCertificateChain(chain);
+        assertTrue(valNoCrl.isValid, "Valid when no CRLs provided");
+
+        // 4. Create empty CRL
+        java.security.cert.X509CRL crl = RevocationOperations.generateEmptyCrl(rootCert, rootCaPair.getPrivate(), "SHA256withRSA", 7);
+        assertNotNull(crl);
+
+        // 5. Validation with empty CRL (Valid)
+        CertificateGenerator.ChainValidationResult valEmptyCrl = CertificateGenerator.validateCertificateChain(chain, List.of(crl));
+        assertTrue(valEmptyCrl.isValid, "Valid against empty CRL");
+
+        // 6. Revoke EE cert
+        java.math.BigInteger serialToRevoke = eeCert.getSerialNumber();
+        java.security.cert.X509CRL revokedCrl = RevocationOperations.revokeCertificate(crl, rootCert, rootCaPair.getPrivate(), "SHA256withRSA", serialToRevoke, org.bouncycastle.asn1.x509.CRLReason.keyCompromise, 7);
+
+        // 7. Validation with revoked CRL (Invalid)
+        CertificateGenerator.ChainValidationResult valRevoked = CertificateGenerator.validateCertificateChain(chain, List.of(revokedCrl));
+        assertFalse(valRevoked.isValid, "Invalid against revoked CRL");
+        assertTrue(valRevoked.message.contains("revoked"), "Should indicate revocation");
+    }
 }

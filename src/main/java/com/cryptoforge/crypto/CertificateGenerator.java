@@ -745,6 +745,10 @@ public class CertificateGenerator {
     }
 
     public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain, java.util.Date validationDate) {
+        return validateCertificateChain(chain, validationDate, null);
+    }
+
+    public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain, java.util.Date validationDate, List<java.security.cert.X509CRL> crls) {
         if (chain == null || chain.isEmpty()) {
             return new ChainValidationResult(false, "Chain is empty");
         }
@@ -802,7 +806,19 @@ public class CertificateGenerator {
             selector.setCertificate(endEntity);
             java.security.cert.PKIXBuilderParameters pkixParams = new java.security.cert.PKIXBuilderParameters(anchors, selector);
             pkixParams.addCertStore(certStore);
-            pkixParams.setRevocationEnabled(false);
+
+            if (crls != null && !crls.isEmpty()) {
+                java.security.cert.CertStore crlStore = java.security.cert.CertStore.getInstance(
+                        "Collection",
+                        new java.security.cert.CollectionCertStoreParameters(crls),
+                        "BC"
+                );
+                pkixParams.addCertStore(crlStore);
+                pkixParams.setRevocationEnabled(true);
+            } else {
+                pkixParams.setRevocationEnabled(false);
+                result.details.add("Revocation Status: NOT EVALUATED");
+            }
 
             if (validationDate != null) {
                 pkixParams.setDate(validationDate);

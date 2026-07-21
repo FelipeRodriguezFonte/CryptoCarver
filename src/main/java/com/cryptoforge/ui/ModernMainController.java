@@ -535,12 +535,22 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private TextField certIssueValidityField;
     @FXML private TextField certIssueSignatureField;
     @FXML private TextArea certIssueResultArea;
-    @FXML private CheckBox certIssueIntermediateCaCheck;
+    @FXML private ComboBox<String> certIssueProfileCombo;
     @FXML private TextField certIssuePathLengthField;
+
+    // CRL Management
+    @FXML private TextArea crlIssuerCertArea;
+    @FXML private TextArea crlIssuerKeyArea;
+    @FXML private TextArea crlExistingCrlArea;
+    @FXML private TextField crlRevokeSerialField;
+    @FXML private ComboBox<String> crlRevokeReasonCombo;
+    @FXML private TextArea crlResultArea;
 
     // Certificate Chain
     @FXML
     private TextArea chainInputArea;
+    @FXML
+    private TextArea chainCrlInputArea;
     @FXML
     private TextArea chainResultArea;
 
@@ -1297,12 +1307,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     certLocalityField, certStateField, certCountryField,
                     certEmailField, certValidityField,
                     certKeyTypeCombo, certSignAlgoCombo, certOutputArea, certSanDnsField, certSanIpField, certRootCaCheck);
-            keysController.initializeCertificateChain(chainInputArea, chainResultArea);
+            keysController.initializeCertificateChain(chainInputArea, chainCrlInputArea, chainResultArea);
             keysController.initializeCertificateParse(certInputArea, certParseResultArea);
             keysController.initializeCertificateComparator(certCompareLeftArea, certCompareRightArea, certCompareResultArea);
             keysController.initializeCertificateIssuer(certIssueCsrArea, certIssueCaCertArea, certIssueCaKeyArea,
-                    certIssueValidityField, certIssueSignatureField, certIssueResultArea, certIssueIntermediateCaCheck,
+                    certIssueValidityField, certIssueSignatureField, certIssueResultArea, certIssueProfileCombo,
                     certIssuePathLengthField);
+            keysController.initializeCrlManagement(crlIssuerCertArea, crlIssuerKeyArea, crlExistingCrlArea,
+                    crlRevokeSerialField, crlRevokeReasonCombo, crlResultArea);
             keysController.initializeValidateCertificate(valCertInput, valIssuerInput, valResultArea);
 
             initializeASN1();
@@ -1632,6 +1644,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleShowPkcs11Certificate() {
         if (keysController != null) keysController.showPkcs11CertificateChain();
+    }
+
+    @FXML
+    private void handleUpdatePkcs11CertificateChain() {
+        if (keysController != null) keysController.handleUpdatePkcs11CertificateChain();
     }
 
     @FXML
@@ -2166,6 +2183,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         java.util.Map<String, String> details = new java.util.HashMap<>();
         details.put("Action", "Laboratory CA issuance from validated CSR");
         addToHistory("Issue Certificate from CSR", details);
+    }
+
+    @FXML
+    private void handleGenerateCrl() {
+        if (keysController != null) keysController.handleGenerateCrl();
+    }
+
+    @FXML
+    private void handleRevokeCrl() {
+        if (keysController != null) keysController.handleRevokeCrl();
     }
 
     @FXML
