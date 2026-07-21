@@ -2,7 +2,9 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Interface for controllers that can report status and show errors.
@@ -12,6 +14,14 @@ public interface StatusReporter {
     void updateStatus(String message);
 
     void updateInspector(String operation, byte[] input, byte[] output, List<OperationDetail> details);
+
+    default void updateInspector(String operation, byte[] input, byte[] output, Map<String, String> details) {
+        List<OperationDetail> normalized = new ArrayList<>();
+        if (details != null) {
+            details.forEach((key, value) -> normalized.add(OperationDetail.publicDetail(key, value)));
+        }
+        updateInspector(operation, input, output, normalized);
+    }
 
     void showError(String title, String message);
 

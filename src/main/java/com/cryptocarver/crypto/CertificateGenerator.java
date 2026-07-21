@@ -741,11 +741,16 @@ public class CertificateGenerator {
     }
 
     public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain) {
-        return validateCertificateChain(chain, null);
+        return validateCertificateChain(chain, (java.util.Date) null);
     }
 
     public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain, java.util.Date validationDate) {
         return validateCertificateChain(chain, validationDate, null);
+    }
+
+    public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain,
+            List<java.security.cert.X509CRL> crls) {
+        return validateCertificateChain(chain, null, crls);
     }
 
     public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain, java.util.Date validationDate, List<java.security.cert.X509CRL> crls) {
@@ -799,8 +804,7 @@ public class CertificateGenerator {
             java.security.cert.CertStore certStore = java.security.cert.CertStore.getInstance(
                     "Collection",
                     new java.security.cert.CollectionCertStoreParameters(intermediates),
-                    "BC"
-            );
+                    "BC");
 
             java.security.cert.X509CertSelector selector = new java.security.cert.X509CertSelector();
             selector.setCertificate(endEntity);
@@ -808,13 +812,9 @@ public class CertificateGenerator {
             pkixParams.addCertStore(certStore);
 
             if (crls != null && !crls.isEmpty()) {
-                java.security.cert.CertStore crlStore = java.security.cert.CertStore.getInstance(
-                        "Collection",
-                        new java.security.cert.CollectionCertStoreParameters(crls),
-                        "BC"
-                );
-                pkixParams.addCertStore(crlStore);
-                pkixParams.setRevocationEnabled(true);
+                // Build the certificate path without OCSP/CRLDP network lookups;
+                // the supplied CRLs are verified explicitly after PKIX succeeds.
+                pkixParams.setRevocationEnabled(false);
             } else {
                 pkixParams.setRevocationEnabled(false);
                 result.details.add("Revocation Status: NOT EVALUATED");
@@ -830,6 +830,13 @@ public class CertificateGenerator {
 
             result.details.add("PKIX Validation Successful");
             if (crls != null && !crls.isEmpty()) {
+                String crlFailure = validateLocalCrls(chain, crls, validationDate);
+                if (crlFailure != null) {
+                    result.isValid = false;
+                    result.message = crlFailure;
+                    result.details.add("Revocation Status: " + crlFailure);
+                    return result;
+                }
                 result.details.add("Revocation Status: VALIDATED AGAINST LOCAL CRL");
             }
             result.details.add("Target: " + endEntity.getSubjectX500Principal());
@@ -846,6 +853,39 @@ public class CertificateGenerator {
         }
 
         return result;
+    }
+
+    private static String validateLocalCrls(List<X509Certificate> chain,
+            List<java.security.cert.X509CRL> crls, java.util.Date validationDate) {
+        java.util.Date effectiveDate = validationDate != null ? validationDate : new java.util.Date();
+        for (X509Certificate certificate : chain) {
+            if (isSelfSigned(certificate)) continue;
+
+            java.security.cert.X509CRL matchingCrl = crls.stream()
+                    .filter(crl -> crl.getIssuerX500Principal().equals(certificate.getIssuerX500Principal()))
+                    .findFirst().orElse(null);
+            if (matchingCrl == null) {
+                return "LOCAL CRL MISSING FOR ISSUER " + certificate.getIssuerX500Principal();
+            }
+            if (matchingCrl.getThisUpdate().after(effectiveDate)
+                    || (matchingCrl.getNextUpdate() != null && matchingCrl.getNextUpdate().before(effectiveDate))) {
+                return "LOCAL CRL IS OUTSIDE ITS VALIDITY PERIOD";
+            }
+
+            X509Certificate issuer = chain.stream()
+                    .filter(candidate -> candidate.getSubjectX500Principal().equals(certificate.getIssuerX500Principal()))
+                    .findFirst().orElse(null);
+            if (issuer == null) return "LOCAL CRL ISSUER IS NOT PRESENT IN THE CHAIN";
+            try {
+                matchingCrl.verify(issuer.getPublicKey());
+            } catch (Exception e) {
+                return "LOCAL CRL SIGNATURE VERIFICATION FAILED";
+            }
+            if (matchingCrl.isRevoked(certificate)) {
+                return "Certificate revoked by local CRL";
+            }
+        }
+        return null;
     }
 
     private static boolean isSelfSigned(X509Certificate cert) {

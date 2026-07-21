@@ -45,7 +45,7 @@ public final class RevocationOperations {
         Date nextUpdate = new Date(now.getTime() + 1000L * 60 * 60 * 24 * nextUpdateDays);
 
         X509v2CRLBuilder crlBuilder = new X509v2CRLBuilder(
-                new org.bouncycastle.asn1.x500.X500Name(issuerCert.getSubjectX500Principal().getName()),
+                org.bouncycastle.asn1.x500.X500Name.getInstance(issuerCert.getSubjectX500Principal().getEncoded()),
                 now);
         crlBuilder.setNextUpdate(nextUpdate);
 
@@ -62,7 +62,7 @@ public final class RevocationOperations {
         Date nextUpdate = new Date(now.getTime() + 1000L * 60 * 60 * 24 * 30);
 
         X509v2CRLBuilder crlBuilder = new X509v2CRLBuilder(
-                new org.bouncycastle.asn1.x500.X500Name(issuerCert.getSubjectX500Principal().getName()),
+                org.bouncycastle.asn1.x500.X500Name.getInstance(issuerCert.getSubjectX500Principal().getEncoded()),
                 now);
         crlBuilder.setNextUpdate(nextUpdate);
 

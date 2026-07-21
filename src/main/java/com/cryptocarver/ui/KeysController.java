@@ -956,9 +956,9 @@ public class KeysController {
     }
 
     public void initializeCertificateChainValidation(TextArea chainArea, TextArea trustAnchorArea, TextArea resultArea) {
-        this.valChainInput = chainArea;
-        this.valTrustAnchorInput = trustAnchorArea;
-        this.valChainResultArea = resultArea;
+        this.chainInputArea = chainArea;
+        this.chainCrlInputArea = trustAnchorArea;
+        this.chainResultArea = resultArea;
     }
 
     public void handleIssueCertificateFromCsr() {
@@ -3478,9 +3478,6 @@ public class KeysController {
     // ============================================================================
     // CERTIFICATE CHAIN VALIDATION
     // ============================================================================
-
-    private TextArea chainInputArea;
-    private TextArea chainResultArea;
 
     public void initializeCertificateChain(TextArea inputArea, TextArea crlArea, TextArea resultArea) {
         this.chainInputArea = inputArea;

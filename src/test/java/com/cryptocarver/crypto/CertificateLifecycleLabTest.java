@@ -194,7 +194,8 @@ public class CertificateLifecycleLabTest {
 
         // 5. Validation with empty CRL (Valid)
         CertificateGenerator.ChainValidationResult valEmptyCrl = CertificateGenerator.validateCertificateChain(chain, List.of(crl));
-        assertTrue(valEmptyCrl.isValid, "Valid against empty CRL");
+        assertTrue(valEmptyCrl.isValid,
+                "Valid against empty CRL: " + valEmptyCrl.message + " / " + String.join(" | ", valEmptyCrl.details));
 
         // 6. Revoke EE cert
         java.math.BigInteger serialToRevoke = eeCert.getSerialNumber();
