@@ -95,17 +95,17 @@ public class KeyCertificateFormatService {
         public FormatType type;
         public String algorithm;
         public int keySize;
-        public String formatString; 
+        public String formatString;
         public String sha256Fingerprint;
         public String subject;
         public String issuer;
         public boolean hasPrivateKey;
         public boolean isEncrypted;
         public String notBefore;
-        public String notAfter; 
-        public Object parsedObject; 
+        public String notAfter;
+        public Object parsedObject;
         public List<KeystoreEntrySummary> keystoreEntries; // Null if not a keystore
-        
+
         // Original raw bytes used to identify this (so we can pass it into convert easily)
         public byte[] rawBytes;
     }
@@ -207,7 +207,7 @@ public class KeyCertificateFormatService {
         } catch (Exception e) {
             // Ignore
         }
-        
+
         // Try DER SPKI (Public Key)
         try {
             SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(input);
@@ -221,7 +221,7 @@ public class KeyCertificateFormatService {
         } catch (Exception e) {
             // Ignore
         }
-        
+
         // Try DER PKCS#8 (Private Key)
         try {
             PrivateKeyInfo pki = PrivateKeyInfo.getInstance(input);
@@ -246,13 +246,13 @@ public class KeyCertificateFormatService {
                         res.type = FormatType.PKCS12;
                         res.formatString = "PKCS#12 Keystore";
                         res.parsedObject = input;
-                        
+
                         char[] pwd = (password != null) ? password : new char[0];
                         KeyStore ks = KeyStore.getInstance("PKCS12");
                         try {
                             ks.load(new ByteArrayInputStream(input), pwd);
                             res.isEncrypted = (pwd.length > 0);
-                            
+
                             boolean hasPriv = false;
                             Enumeration<String> aliases = ks.aliases();
                             while (aliases.hasMoreElements()) {
@@ -280,12 +280,12 @@ public class KeyCertificateFormatService {
 
         return res;
     }
-    
+
     public String convert(DetectionResult source, String targetFormat, SecretVisibility policy) throws Exception {
         if (source.isEncrypted && source.type != FormatType.PKCS12) {
             throw new Exception("Cannot convert encrypted key without decryption logic.");
         }
-        
+
         if (source.hasPrivateKey && policy != SecretVisibility.FULL_LAB) {
             throw new Exception("Policy prevents exporting private keys. Required: FULL_LAB");
         }
@@ -297,7 +297,7 @@ public class KeyCertificateFormatService {
             } else {
                 cert = (X509Certificate) source.parsedObject;
             }
-            
+
             if ("PEM".equalsIgnoreCase(targetFormat)) {
                 return toPEM("CERTIFICATE", cert.getEncoded());
             } else if ("DER (Base64)".equalsIgnoreCase(targetFormat)) {
@@ -307,10 +307,10 @@ public class KeyCertificateFormatService {
             }
             throw new Exception("Unsupported conversion for Certificate to " + targetFormat);
         }
-        
+
         if (source.type == FormatType.PEM_PUBLIC_KEY || source.type == FormatType.DER_PUBLIC_KEY || source.type == FormatType.JWK_PUBLIC || source.type == FormatType.OPENSSH_PUBLIC_KEY) {
             PublicKey pub = getPublicKey(source);
-            
+
             if ("PEM".equalsIgnoreCase(targetFormat)) {
                 return toPEM("PUBLIC KEY", pub.getEncoded());
             } else if ("DER (Base64)".equalsIgnoreCase(targetFormat)) {
@@ -326,10 +326,10 @@ public class KeyCertificateFormatService {
             }
             throw new Exception("Unsupported conversion for Public Key to " + targetFormat);
         }
-        
+
         if (source.type == FormatType.PEM_PRIVATE_KEY || source.type == FormatType.DER_PRIVATE_KEY || source.type == FormatType.JWK_PRIVATE) {
             PrivateKey priv = getPrivateKey(source);
-            
+
             if ("PEM".equalsIgnoreCase(targetFormat)) {
                 return toPEM("PRIVATE KEY", priv.getEncoded()); // Outputs PKCS#8
             } else if ("DER (Base64)".equalsIgnoreCase(targetFormat)) {
@@ -347,7 +347,7 @@ public class KeyCertificateFormatService {
                         pub = KeyFactory.getInstance("RSA").generatePublic(pubSpec);
                     }
                 } catch (Exception e) {}
-                
+
                 return toJWK(pub, priv).toJSONString();
             }
             throw new Exception("Unsupported conversion for Private Key to " + targetFormat);
@@ -355,21 +355,21 @@ public class KeyCertificateFormatService {
 
         throw new Exception("Unsupported source type for conversion.");
     }
-    
+
     public String getChainSummary(byte[] pkcs12Bytes, char[] password) throws Exception {
         KeyStore ks = KeyStore.getInstance("PKCS12");
         ks.load(new ByteArrayInputStream(pkcs12Bytes), password);
-        
+
         StringBuilder sb = new StringBuilder();
         Enumeration<String> aliases = ks.aliases();
         while (aliases.hasMoreElements()) {
             String alias = aliases.nextElement();
             sb.append("Alias: ").append(alias).append("\n");
-            
+
             if (ks.isKeyEntry(alias)) {
                 sb.append("  [Key Entry]\n");
             }
-            
+
             java.security.cert.Certificate[] chain = ks.getCertificateChain(alias);
             if (chain != null) {
                 sb.append("  Certificate Chain:\n");
@@ -387,7 +387,7 @@ public class KeyCertificateFormatService {
         }
         return sb.toString();
     }
-    
+
     public DetectionResult inspectKeystore(byte[] raw, String storeType, char[] password) throws Exception {
         DetectionResult res = new DetectionResult();
         res.rawBytes = raw;
@@ -405,7 +405,7 @@ public class KeyCertificateFormatService {
         } else {
             ks = KeyStore.getInstance(storeType);
         }
-        
+
         try {
             ks.load(new ByteArrayInputStream(raw), password);
             Enumeration<String> aliases = ks.aliases();
@@ -463,10 +463,10 @@ public class KeyCertificateFormatService {
         } else {
             ks = KeyStore.getInstance(storeType);
         }
-        
+
         try {
             ks.load(new ByteArrayInputStream(raw), password);
-            
+
             if (ks.isCertificateEntry(alias)) {
                 if (targetFormat.contains("Public")) {
                     java.security.cert.Certificate cert = ks.getCertificate(alias);
@@ -521,25 +521,25 @@ public class KeyCertificateFormatService {
             }
         }
     }
-    
+
     public boolean validatePair(byte[] primary, byte[] secondary) {
         try {
             DetectionResult r1 = detect(primary, null);
             DetectionResult r2 = detect(secondary, null);
-            
+
             PublicKey pub = null;
             PrivateKey priv = null;
-            
+
             if (r1.hasPrivateKey) priv = getPrivateKey(r1);
             else pub = getPublicKey(r1);
-            
+
             if (r2.hasPrivateKey) priv = getPrivateKey(r2);
             else pub = getPublicKey(r2);
-            
+
             if (pub == null || priv == null) {
                 throw new Exception("Need one public key (or certificate) and one private key.");
             }
-            
+
             // Check if pub and priv match using signature
             String sigAlgo = getSigAlgo(priv.getAlgorithm());
             if (sigAlgo == null) {
@@ -550,7 +550,7 @@ public class KeyCertificateFormatService {
             byte[] data = "CryptoForgeChallenge".getBytes();
             sig.update(data);
             byte[] signature = sig.sign();
-            
+
             sig.initVerify(pub);
             sig.update(data);
             return sig.verify(signature);
@@ -558,7 +558,7 @@ public class KeyCertificateFormatService {
             return false;
         }
     }
-    
+
     private String getSigAlgo(String keyAlg) {
         if ("RSA".equalsIgnoreCase(keyAlg)) return "SHA256withRSA";
         if ("EC".equalsIgnoreCase(keyAlg) || "ECDSA".equalsIgnoreCase(keyAlg)) return "SHA256withECDSA";
@@ -596,7 +596,7 @@ public class KeyCertificateFormatService {
         }
         throw new Exception("Not a supported public key format.");
     }
-    
+
     private PrivateKey getPrivateKey(DetectionResult res) throws Exception {
         JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
         if (res.type == FormatType.PEM_PRIVATE_KEY || res.type == FormatType.DER_PRIVATE_KEY) {
@@ -674,7 +674,7 @@ public class KeyCertificateFormatService {
             res.keySize = getKeySize(pub);
         } catch (Exception e) {}
     }
-    
+
     private void populatePrivateKeyInfo(DetectionResult res, PrivateKeyInfo pki) {
         res.algorithm = resolveOid(pki.getPrivateKeyAlgorithm().getAlgorithm().getId());
         try {

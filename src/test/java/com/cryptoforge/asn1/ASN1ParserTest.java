@@ -23,7 +23,7 @@ public class ASN1ParserTest {
             Files.writeString(tempFile, jsonContent);
 
             int loaded = ASN1Parser.loadCustomOidNames(tempFile);
-            
+
             // "invalid.oid" and "3.2.1" should be rejected.
             // "1.2.3.4.5" and "2.999.1" are valid.
             assertEquals(2, loaded);
@@ -31,7 +31,7 @@ public class ASN1ParserTest {
             Files.deleteIfExists(tempFile);
         }
     }
-    
+
     @Test
     public void testLoadCustomOidNames_Duplicate() throws Exception {
         Path tempFile = Files.createTempFile("custom_oids_duplicate", ".json");

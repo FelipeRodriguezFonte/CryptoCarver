@@ -23,7 +23,7 @@ public class ClipboardShelfController {
     @FXML private ComboBox<ClipboardEntry.Format> formatFilterCombo;
     @FXML private ComboBox<OperationDetail.Classification> classFilterCombo;
     @FXML private Label itemCountLabel;
-    
+
     @FXML private TableView<ClipboardEntry> shelfTable;
     @FXML private TableColumn<ClipboardEntry, String> dateCol;
     @FXML private TableColumn<ClipboardEntry, String> labelCol;
@@ -53,7 +53,7 @@ public class ClipboardShelfController {
 
         formatFilterCombo.getItems().add(null); // Any
         formatFilterCombo.getItems().addAll(ClipboardEntry.Format.values());
-        
+
         classFilterCombo.getItems().add(null);
         classFilterCombo.getItems().addAll(OperationDetail.Classification.values());
 
@@ -88,7 +88,7 @@ public class ClipboardShelfController {
         List<ClipboardEntry> filtered = manager.search(query, fmt, cls);
         tableData.setAll(filtered);
         itemCountLabel.setText(filtered.size() + " / 100 items");
-        
+
         if (shelfTable.getSelectionModel().getSelectedItem() == null) {
             clearDetails();
         } else {
@@ -111,23 +111,23 @@ public class ClipboardShelfController {
             clearDetails();
             return;
         }
-        
-        boolean isSensitive = entry.getClassification() == OperationDetail.Classification.SECRET || 
+
+        boolean isSensitive = entry.getClassification() == OperationDetail.Classification.SECRET ||
                               entry.getClassification() == OperationDetail.Classification.SENSITIVE;
-                              
+
         String displayValue = getMaskedValue(entry, false);
         detailsArea.setText(displayValue);
-        
+
         SecretVisibility visibility = AppSettings.getInstance().getSecretVisibility();
         boolean isRedacted = isSensitive && visibility == SecretVisibility.REDACTED;
         boolean isMasked = isSensitive && visibility == SecretVisibility.MASKED;
-        
+
         boolean canCopy = !isRedacted && !isMasked;
-        
+
         warningLabel.setVisible(isSensitive);
         if (isSensitive) {
-            warningLabel.setText(visibility == SecretVisibility.FULL_LAB 
-                ? "⚠️ Sensitive data displayed (Unsafe Lab mode)" 
+            warningLabel.setText(visibility == SecretVisibility.FULL_LAB
+                ? "⚠️ Sensitive data displayed (Unsafe Lab mode)"
                 : "⚠️ Sensitive data (Masked/Redacted)");
         }
 
@@ -141,10 +141,10 @@ public class ClipboardShelfController {
     private String getMaskedValue(ClipboardEntry entry, boolean truncate) {
         if (entry == null || entry.getValue() == null) return "";
         String val = entry.getValue();
-        
-        boolean isSensitive = entry.getClassification() == OperationDetail.Classification.SECRET || 
+
+        boolean isSensitive = entry.getClassification() == OperationDetail.Classification.SECRET ||
                               entry.getClassification() == OperationDetail.Classification.SENSITIVE;
-                              
+
         if (isSensitive) {
             SecretVisibility visibility = AppSettings.getInstance().getSecretVisibility();
             if (visibility == SecretVisibility.REDACTED) {
@@ -154,7 +154,7 @@ public class ClipboardShelfController {
                 return val.substring(0, 4) + "...[MASKED]..." + val.substring(val.length() - 4);
             }
         }
-        
+
         if (truncate && val.length() > 50) {
             return val.substring(0, 47) + "...";
         }
@@ -225,16 +225,16 @@ public class ClipboardShelfController {
 
     private void populateUseInMenu() {
         useInMenu.getItems().clear();
-        
+
         MenuItem manualConv = new MenuItem("Manual Conversion Input");
         manualConv.setOnAction(e -> useInTarget("op_gen_manual", "MANUAL_CONVERSION"));
-        
+
         MenuItem symCipher = new MenuItem("Symmetric Cipher Input");
         symCipher.setOnAction(e -> useInTarget("op_sym_ciphers", "SYMMETRIC_CIPHER"));
-        
+
         MenuItem hashInput = new MenuItem("Hashing Input");
         hashInput.setOnAction(e -> useInTarget("op_gen_hash", "HASHING"));
-        
+
         MenuItem josePayload = new MenuItem("JOSE Payload (JWT)");
         josePayload.setOnAction(e -> useInTarget("op_jose_jwt", "JOSE_JWT"));
 
@@ -244,11 +244,11 @@ public class ClipboardShelfController {
     private void useInTarget(String operationId, String targetType) {
         ClipboardEntry entry = shelfTable.getSelectionModel().getSelectedItem();
         if (entry == null || navigator == null || mainController == null) return;
-        
+
         ClipboardEntry.Format fmt = entry.getFormat();
         boolean valid = true;
         if (targetType.equals("MANUAL_CONVERSION") || targetType.equals("SYMMETRIC_CIPHER") || targetType.equals("HASHING")) {
-            if (fmt != ClipboardEntry.Format.TEXT && fmt != ClipboardEntry.Format.HEX && 
+            if (fmt != ClipboardEntry.Format.TEXT && fmt != ClipboardEntry.Format.HEX &&
                 fmt != ClipboardEntry.Format.BASE64 && fmt != ClipboardEntry.Format.BASE64URL) {
                 valid = false;
             }
@@ -257,18 +257,18 @@ public class ClipboardShelfController {
                 valid = false;
             }
         }
-        
+
         if (!valid) {
             Alert alert = new Alert(Alert.AlertType.WARNING, "Format " + fmt.name() + " is not supported for " + targetType + ".");
             alert.showAndWait();
             return;
         }
-        
+
         String val = getMaskedValue(entry, false);
         if (val.equals("[REDACTED]") || val.contains("[MASKED]")) return;
 
         navigator.navigateTo(operationId);
-        
+
         // Use the main controller to inject the value
         mainController.fillClipboardTarget(targetType, val, entry.getFormat());
     }

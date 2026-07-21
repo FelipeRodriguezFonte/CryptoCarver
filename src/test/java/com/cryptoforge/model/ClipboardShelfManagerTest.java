@@ -26,7 +26,7 @@ class ClipboardShelfManagerTest {
     void testAddEntry() {
         ClipboardEntry entry = new ClipboardEntry("Test", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
         manager.addEntry(entry);
-        
+
         assertEquals(1, manager.getEntries().size());
         assertEquals("Test", manager.getEntries().get(0).getLabel());
     }
@@ -38,9 +38,9 @@ class ClipboardShelfManagerTest {
             ClipboardEntry entry = new ClipboardEntry("Test " + i, "Value " + i, ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
             manager.addEntry(entry);
         }
-        
+
         assertEquals(100, manager.getEntries().size(), "Manager should not exceed 100 entries");
-        
+
         // The first 5 entries (0 to 4) should have been evicted.
         // The newest entry (104) is at index 0, and the oldest kept (5) is at index 99.
         assertEquals("Test 104", manager.getEntries().get(0).getLabel());
@@ -51,7 +51,7 @@ class ClipboardShelfManagerTest {
     void testRenameEntry() {
         ClipboardEntry entry = new ClipboardEntry("Test", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
         manager.addEntry(entry);
-        
+
         boolean renamed = manager.renameEntry(entry.getId(), "New Label");
         assertTrue(renamed);
         assertEquals("New Label", manager.getEntries().get(0).getLabel());
@@ -62,7 +62,7 @@ class ClipboardShelfManagerTest {
         ClipboardEntry entry = new ClipboardEntry("Test", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
         manager.addEntry(entry);
         assertEquals(1, manager.getEntries().size());
-        
+
         manager.removeEntry(entry.getId());
         assertEquals(0, manager.getEntries().size());
     }
@@ -72,43 +72,43 @@ class ClipboardShelfManagerTest {
         assertEquals(ClipboardEntry.Format.UNKNOWN, ClipboardEntry.Format.inferFormat(""));
         assertEquals(ClipboardEntry.Format.UNKNOWN, ClipboardEntry.Format.inferFormat("   "));
         assertEquals(ClipboardEntry.Format.PEM, ClipboardEntry.Format.inferFormat("-----BEGIN CERTIFICATE-----\nMIIB... \n-----END CERTIFICATE-----"));
-        
+
         // Strict JSON tests (Gson parser should accept these)
         assertEquals(ClipboardEntry.Format.JSON, ClipboardEntry.Format.inferFormat("{\"key\":\"value\"}"));
         assertEquals(ClipboardEntry.Format.JSON, ClipboardEntry.Format.inferFormat("[1, 2, 3]"));
-        
+
         // HEX tests
         assertEquals(ClipboardEntry.Format.HEX, ClipboardEntry.Format.inferFormat("0A1B2C"));
         assertEquals(ClipboardEntry.Format.HEX, ClipboardEntry.Format.inferFormat("0a 1b 2c"));
-        
+
         // BASE64 tests
         assertEquals(ClipboardEntry.Format.BASE64, ClipboardEntry.Format.inferFormat("YWJjZGU=")); // "abcde"
         assertEquals(ClipboardEntry.Format.BASE64, ClipboardEntry.Format.inferFormat("YWJjZGVm")); // "abcdef" (could also be base64url, but base64 matches first)
-        
+
         // BASE64URL tests (no padding, contains - or _)
         assertEquals(ClipboardEntry.Format.BASE64URL, ClipboardEntry.Format.inferFormat("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9_--_"));
         assertEquals(ClipboardEntry.Format.BASE64URL, ClipboardEntry.Format.inferFormat("a-b_cdefghijklmnop"));
-        
+
         assertEquals(ClipboardEntry.Format.TEXT, ClipboardEntry.Format.inferFormat("Just some plain text that is not hex or b64"));
     }
-    
+
     @Test
     void testImmutabilityOnRename() {
         ClipboardEntry original = new ClipboardEntry("Original", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
         ClipboardEntry renamed = original.withLabel("Renamed");
-        
+
         assertNotSame(original, renamed, "Rename should create a new instance");
         assertEquals("Original", original.getLabel(), "Original should not be mutated");
         assertEquals("Renamed", renamed.getLabel(), "New instance should have new label");
         assertEquals(original.getId(), renamed.getId(), "ID should remain the same");
     }
-    
+
     @Test
     void testThreadSafety() throws InterruptedException {
         int threadCount = 10;
         int entriesPerThread = 50;
         Thread[] threads = new Thread[threadCount];
-        
+
         for (int i = 0; i < threadCount; i++) {
             final int threadId = i;
             threads[i] = new Thread(() -> {
@@ -119,11 +119,11 @@ class ClipboardShelfManagerTest {
             });
             threads[i].start();
         }
-        
+
         for (Thread t : threads) {
             t.join();
         }
-        
+
         // Should not exceed max capacity
         assertEquals(100, manager.getEntries().size());
     }
@@ -170,7 +170,7 @@ class ClipboardShelfManagerTest {
         manager.clear();
 
         assertEquals(5, publishedResults.size());
-        
+
         for (OperationResult res : publishedResults) {
             assertNull(res.getInput(), "Input should be null");
             assertNull(res.getOutput(), "Output should be null");

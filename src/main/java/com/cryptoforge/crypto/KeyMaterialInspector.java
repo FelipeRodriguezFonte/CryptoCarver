@@ -73,7 +73,7 @@ public final class KeyMaterialInspector {
         String privAlg = privateKey.getAlgorithm();
         boolean algorithmsMatch = pubAlg.equalsIgnoreCase(privAlg)
             || (isEC(pubAlg) && isEC(privAlg));
-            
+
         if (!algorithmsMatch) {
             return false;
         }
@@ -122,7 +122,7 @@ public final class KeyMaterialInspector {
         if ("DSA".equalsIgnoreCase(key.getAlgorithm())) report.append("⚠️ DSA is legacy; prefer Ed25519 or ECDSA for new signatures.\n");
         if (key instanceof PrivateKey) report.append("⚠️ Private material shown for this laboratory only; do not export it in production.\n");
     }
-    
+
     private static boolean isEC(String alg) {
         return "EC".equalsIgnoreCase(alg) || "ECDSA".equalsIgnoreCase(alg);
     }

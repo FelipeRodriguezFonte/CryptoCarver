@@ -24,7 +24,7 @@ public class ASN1EditorTest {
         // Edit second integer from 10 to 300 (which requires 2 bytes)
         // New integer: 02 02 01 2C
         byte[] newInteger = new byte[]{0x02, 0x02, 0x01, 0x2C};
-        
+
         ASN1TreeNode target = root.getChildren().get(1); // The second integer
 
         byte[] result = ASN1Editor.editNodeAndReencode(root, target, newInteger);

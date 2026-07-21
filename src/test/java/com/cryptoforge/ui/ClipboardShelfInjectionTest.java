@@ -68,16 +68,16 @@ public class ClipboardShelfInjectionTest {
         runAndWait(() -> {
             try {
                 GenericController controller = new GenericController();
-                
+
                 TextArea manualInputArea = new TextArea();
                 ComboBox<String> manualInputFormatCombo = new ComboBox<>();
                 manualInputFormatCombo.getItems().addAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
-                
+
                 setPrivateField(controller, "manualInputArea", manualInputArea);
                 setPrivateField(controller, "manualInputFormatCombo", manualInputFormatCombo);
-                
+
                 controller.fillManualConversionInput("0a1b", ClipboardEntry.Format.HEX);
-                
+
                 assertEquals("0a1b", manualInputArea.getText());
                 assertEquals("Hexadecimal", manualInputFormatCombo.getValue());
             } catch (Exception e) {
@@ -92,16 +92,16 @@ public class ClipboardShelfInjectionTest {
         runAndWait(() -> {
             try {
                 CipherController controller = new CipherController(null, null, null, null, null, null, null);
-                
+
                 TextArea inputArea = new TextArea();
                 ComboBox<String> inputFormatCombo = new ComboBox<>();
                 inputFormatCombo.getItems().addAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
-                
+
                 setPrivateField(controller, "inputArea", inputArea);
                 setPrivateField(controller, "inputFormatCombo", inputFormatCombo);
-                
+
                 controller.fillSymmetricCipherInput("HelloWorld", ClipboardEntry.Format.TEXT);
-                
+
                 assertEquals("HelloWorld", inputArea.getText());
                 assertEquals("Text (UTF-8)", inputFormatCombo.getValue());
             } catch (Exception e) {

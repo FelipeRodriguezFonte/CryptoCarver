@@ -39,7 +39,7 @@ public class ClipboardEntry {
                     // Ignore, not valid JSON
                 }
             }
-            
+
             String hexClean = trimmed.replaceAll("[\\s:]+", "");
             // Must have some HEX-specific letters to not confuse with plain digits, unless it's clearly hex formatted (e.g. 0a:1b).
             // But for safety, if it's even length and matches Hex, we accept it if it's just digits, as many systems do.
@@ -52,14 +52,14 @@ public class ClipboardEntry {
             if (!trimmed.contains(" ") && trimmed.matches("^[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+$")) {
                 return BASE64URL;
             }
-            
+
             // Check Base64URL
             if (!trimmed.contains(" ") && trimmed.length() > 0 && trimmed.matches("^[A-Za-z0-9_\\-]+$")) {
                 if (trimmed.length() >= 16 && (trimmed.contains("-") || trimmed.contains("_"))) {
                     return BASE64URL;
                 }
             }
-            
+
             // Check Base64 (ignore newlines, but NOT spaces)
             String b64Clean = trimmed.replaceAll("[\r\n]+", "");
             if (!b64Clean.contains(" ") && b64Clean.length() > 0 && b64Clean.length() % 4 == 0 && b64Clean.matches("^[A-Za-z0-9+/]+={0,2}$")) {
@@ -72,8 +72,8 @@ public class ClipboardEntry {
         }
     }
 
-    public ClipboardEntry(String label, String value, Format format, 
-                          OperationDetail.Classification classification, 
+    public ClipboardEntry(String label, String value, Format format,
+                          OperationDetail.Classification classification,
                           String sourceOperation) {
         this(UUID.randomUUID(), LocalDateTime.now(), label != null ? label : "Copied Value",
              value != null ? value : "", format != null ? format : Format.UNKNOWN,
@@ -93,7 +93,7 @@ public class ClipboardEntry {
         this.sourceOperation = sourceOperation;
         this.byteLength = calculateByteLength(this.value, this.format);
     }
-    
+
     public ClipboardEntry withLabel(String newLabel) {
         return new ClipboardEntry(this.id, this.createdAt, newLabel, this.value, this.format, this.classification, this.sourceOperation);
     }

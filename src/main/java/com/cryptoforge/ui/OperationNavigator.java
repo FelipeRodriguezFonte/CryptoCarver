@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public interface OperationNavigator {
     void restoreOperationState(Map<String, Object> state, String operation);
-    
+
     void navigateTo(String operation);
 
     void updateStatus(String message);

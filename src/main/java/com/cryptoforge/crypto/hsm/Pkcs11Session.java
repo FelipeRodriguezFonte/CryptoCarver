@@ -190,10 +190,102 @@ public final class Pkcs11Session implements AutoCloseable {
                 throw new GeneralSecurityException("Private key is not accessible for alias: " + alias);
             }
 
+            List<java.security.cert.X509Certificate> x509Chain = new ArrayList<>();
+            java.util.Set<java.security.cert.X509Certificate> uniqueCerts = new java.util.HashSet<>();
+            for (Certificate cert : chain) {
+                if (!(cert instanceof java.security.cert.X509Certificate x509Cert)) {
+                    throw new GeneralSecurityException("Chain contains non-X.509 certificate");
+                }
+                if (!uniqueCerts.add(x509Cert)) {
+                    throw new GeneralSecurityException("Chain contains duplicate certificates");
+                }
+                x509Chain.add(x509Cert);
+            }
+
+            // Determine the unique leaf only from verified issuer relationships.
+            java.security.cert.X509Certificate leaf = null;
+            for (java.security.cert.X509Certificate cert : x509Chain) {
+                boolean isIssuer = false;
+                for (java.security.cert.X509Certificate other : x509Chain) {
+                    if (cert != other && isVerifiedIssuer(cert, other)) {
+                        isIssuer = true;
+                        break;
+                    }
+                }
+                if (!isIssuer) {
+                    if (leaf != null) throw new GeneralSecurityException("Chain contains multiple leaves or is disconnected");
+                    leaf = cert;
+                }
+            }
+            if (leaf == null) {
+                throw new GeneralSecurityException("Could not determine a unique leaf in the chain");
+            }
+
+            // Match keys cryptographically
+            Certificate currentTokenCert = keyStore.getCertificate(alias);
+            if (currentTokenCert == null) {
+                throw new GeneralSecurityException("Token has no existing certificate for alias: " + alias);
+            }
+            java.security.PublicKey tokenPubKey = currentTokenCert.getPublicKey();
+            java.security.PublicKey leafPubKey = leaf.getPublicKey();
+
+            if (!java.util.Arrays.equals(tokenPubKey.getEncoded(), leafPubKey.getEncoded())) {
+                throw new GeneralSecurityException("Public key in the provided leaf certificate does not match the token's public key");
+            }
+
+            // Validate PKIX offline
+            com.cryptoforge.crypto.CertificateGenerator.ChainValidationResult validation = com.cryptoforge.crypto.CertificateGenerator.validateCertificateChain(x509Chain);
+            if (!validation.isValid) {
+                throw new GeneralSecurityException("PKIX validation failed for the new chain: " + validation.message);
+            }
+
+            // Build a complete leaf-to-root chain from verified issuer links. This
+            // both normalizes caller order and rejects disconnected certificates.
+            List<Certificate> finalChain = new ArrayList<>();
+            java.security.cert.X509Certificate current = leaf;
+            while (true) {
+                finalChain.add(current);
+                if (current.getSubjectX500Principal().equals(current.getIssuerX500Principal())) {
+                    break;
+                }
+
+                java.security.cert.X509Certificate issuer = null;
+                for (java.security.cert.X509Certificate candidate : x509Chain) {
+                    if (candidate != current && isVerifiedIssuer(candidate, current)) {
+                        if (issuer != null) {
+                            throw new GeneralSecurityException("Chain contains multiple cryptographic issuers");
+                        }
+                        issuer = candidate;
+                    }
+                }
+                if (issuer == null || finalChain.contains(issuer)) {
+                    throw new GeneralSecurityException("Chain is incomplete or contains an issuer cycle");
+                }
+                current = issuer;
+            }
+            if (finalChain.size() != x509Chain.size()) {
+                throw new GeneralSecurityException("Chain contains disconnected certificates");
+            }
+
             // JCA KeyStore allows updating the chain by setting the key entry again
-            keyStore.setKeyEntry(alias, key, null, chain);
+            keyStore.setKeyEntry(alias, key, null, finalChain.toArray(new Certificate[0]));
+        } catch (GeneralSecurityException e) {
+            throw e;
         } catch (Exception e) {
             throw new GeneralSecurityException("Failed to update certificate chain on token for alias: " + alias, e);
+        }
+    }
+
+    private static boolean isVerifiedIssuer(X509Certificate issuer, X509Certificate certificate)
+            throws GeneralSecurityException {
+        if (!issuer.getSubjectX500Principal().equals(certificate.getIssuerX500Principal())) {
+            return false;
+        }
+        try {
+            certificate.verify(issuer.getPublicKey());
+            return true;
+        } catch (GeneralSecurityException e) {
+            return false;
         }
     }
 

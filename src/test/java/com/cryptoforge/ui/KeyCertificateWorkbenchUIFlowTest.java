@@ -40,7 +40,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
     private static boolean toolkitInitialized = false;
     private KeyCertificateWorkbenchController controller;
     private static byte[] jksBytes;
-    
+
     @BeforeAll
     public static void setup() throws Exception {
         if (!toolkitInitialized) {
@@ -51,12 +51,12 @@ public class KeyCertificateWorkbenchUIFlowTest {
                 // Toolkit already initialized
             }
         }
-        
+
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         KeyPairGenerator rsaGen = KeyPairGenerator.getInstance("RSA");
         rsaGen.initialize(2048);
         KeyPair pair = rsaGen.generateKeyPair();
-        
+
         long now = System.currentTimeMillis();
         X500Name name = new X500Name("CN=Test");
         X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
@@ -64,7 +64,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
         ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSAEncryption").build(pair.getPrivate());
         X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC")
                 .getCertificate(certBuilder.build(signer));
-                
+
         KeyStore jks = KeyStore.getInstance("JKS");
         jks.load(null, null);
         jks.setKeyEntry("mykey", pair.getPrivate(), "password".toCharArray(), new Certificate[]{cert});
@@ -92,7 +92,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
         controller.keystoreTable = new TableView<>();
         controller.singleItemGrid = new javafx.scene.layout.GridPane();
         controller.validationSecondaryInput = new javafx.scene.control.TextField();
-        
+
         controller.setStatusReporter(new com.cryptoforge.ui.StatusReporter() {
             public void showError(String title, String content) { System.out.println("ERROR: " + title + " - " + content); }
             public void showInfo(String title, String content) { System.out.println("INFO: " + title + " - " + content); }
@@ -101,12 +101,12 @@ public class KeyCertificateWorkbenchUIFlowTest {
             public void updateInspector(String title, byte[] source, byte[] target, java.util.List<com.cryptoforge.model.OperationDetail> details) {}
             public void clearInspector() {}
         });
-        
+
         controller.initialize();
-        
+
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
     }
-    
+
     // We cannot easily invoke private action methods without reflection, but since they are private,
     // wait, I can make them package-private or use reflection. I will use reflection.
     private void invokeMethod(String methodName) throws Exception {
@@ -121,7 +121,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
         controller.storeTypeCombo.setValue("JKS");
         controller.workbenchInputArea.setText(java.util.Base64.getEncoder().encodeToString(jksBytes));
         invokeMethod("handleParse");
-        
+
         // Select private key alias
         controller.workbenchPasswordField.setText("password");
         KeyCertificateFormatService.KeystoreEntrySummary entry = new KeyCertificateFormatService.KeystoreEntrySummary(
@@ -129,29 +129,29 @@ public class KeyCertificateWorkbenchUIFlowTest {
         );
         controller.keystoreTable.getItems().add(entry);
         controller.keystoreTable.getSelectionModel().select(entry);
-        
+
         controller.convertToCombo.setValue("PEM Private");
         invokeMethod("handleConvert");
         assertTrue(controller.workbenchOutputArea.getText().contains("BEGIN PRIVATE KEY"));
-        
+
         // Test that Send to Shelf uses SECRET
         invokeMethod("handleSendToShelf");
         // Verify clipboard doesn't blow up, and classification logic executes correctly.
         // If we change to MASKED, it should be blocked.
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
-        
+
         // This will show an error and return without doing anything, preventing exception or copying.
         invokeMethod("handleSendToShelf");
         invokeMethod("handleCopyOutput");
     }
-    
+
     @Test
     public void testPublicExportShelfClassification() throws Exception {
         // Load Keystore
         controller.storeTypeCombo.setValue("JKS");
         controller.workbenchInputArea.setText(java.util.Base64.getEncoder().encodeToString(jksBytes));
         invokeMethod("handleParse");
-        
+
         // Select cert alias
         controller.workbenchPasswordField.setText("password");
         KeyCertificateFormatService.KeystoreEntrySummary entry = new KeyCertificateFormatService.KeystoreEntrySummary(
@@ -159,12 +159,12 @@ public class KeyCertificateWorkbenchUIFlowTest {
         );
         controller.keystoreTable.getItems().add(entry);
         controller.keystoreTable.getSelectionModel().select(entry);
-        
+
         controller.convertToCombo.setValue("PEM Cert");
         invokeMethod("handleConvert");
-        
+
         assertTrue(controller.workbenchOutputArea.getText().contains("BEGIN CERTIFICATE"));
-        
+
         // Test that Send to Shelf works even in MASKED because it's PUBLIC
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
         invokeMethod("handleSendToShelf");

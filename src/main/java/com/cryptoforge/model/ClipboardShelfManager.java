@@ -12,7 +12,7 @@ import com.cryptoforge.ui.StatusReporter;
 
 public class ClipboardShelfManager {
     private static final int MAX_ENTRIES = 100;
-    
+
     // LinkedList to easily add to front and remove from back
     private final LinkedList<ClipboardEntry> entries = new LinkedList<>();
     private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();

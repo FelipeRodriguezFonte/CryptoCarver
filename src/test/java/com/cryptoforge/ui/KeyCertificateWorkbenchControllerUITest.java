@@ -31,7 +31,7 @@ public class KeyCertificateWorkbenchControllerUITest {
                 Parent root = loader.load();
                 KeyCertificateWorkbenchController controller = loader.getController();
                 assertNotNull(controller);
-                
+
                 controller.setStatusReporter(new StatusReporter() {
                     @Override
                     public void updateStatus(String msg) {}
@@ -44,14 +44,14 @@ public class KeyCertificateWorkbenchControllerUITest {
                     @Override
                     public void updateInspector(String title, byte[] rawInput, byte[] rawOutput, java.util.List<com.cryptoforge.model.OperationDetail> details) {}
                 });
-                
+
             } catch (Throwable e) {
                 error[0] = e;
             } finally {
                 latch.countDown();
             }
         });
-        
+
         latch.await();
         if (error[0] != null) {
             fail("Failed to load FXML: " + error[0].getMessage(), error[0]);

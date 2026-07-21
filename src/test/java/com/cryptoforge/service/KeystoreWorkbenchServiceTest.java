@@ -37,25 +37,25 @@ public class KeystoreWorkbenchServiceTest {
     public static void setup() throws Exception {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         service = new KeyCertificateFormatService();
-        
+
         KeyPairGenerator rsaGen = KeyPairGenerator.getInstance("RSA");
         rsaGen.initialize(2048);
         KeyPair pair = rsaGen.generateKeyPair();
-        
+
         long now = System.currentTimeMillis();
         Date startDate = new Date(now);
         Date endDate = new Date(now + 365L * 24 * 60 * 60 * 1000);
         X500Name name = new X500Name("CN=Test");
-        
+
         X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
                 name, BigInteger.valueOf(now), startDate, endDate, name, pair.getPublic());
-                
+
         ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSAEncryption").build(pair.getPrivate());
         X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC")
                 .getCertificate(certBuilder.build(signer));
-                
+
         Certificate[] chain = new Certificate[] { cert };
-        
+
         // Generate PKCS12
         KeyStore p12 = KeyStore.getInstance("PKCS12");
         p12.load(null, null);
@@ -64,7 +64,7 @@ public class KeystoreWorkbenchServiceTest {
         ByteArrayOutputStream p12Out = new ByteArrayOutputStream();
         p12.store(p12Out, "password".toCharArray());
         pkcs12Bytes = p12Out.toByteArray();
-        
+
         // Generate JKS
         KeyStore jks = KeyStore.getInstance("JKS");
         jks.load(null, null);
@@ -73,7 +73,7 @@ public class KeystoreWorkbenchServiceTest {
         ByteArrayOutputStream jksOut = new ByteArrayOutputStream();
         jks.store(jksOut, "password".toCharArray());
         jksBytes = jksOut.toByteArray();
-        
+
         // Generate BKS
         KeyStore bks = KeyStore.getInstance("BKS", "BC");
         bks.load(null, null);
@@ -89,7 +89,7 @@ public class KeystoreWorkbenchServiceTest {
         KeyCertificateFormatService.DetectionResult res = service.inspectKeystore(pkcs12Bytes, "PKCS12", getPassword());
         assertEquals(KeyCertificateFormatService.FormatType.PKCS12, res.type);
         assertEquals(2, res.keystoreEntries.size());
-        
+
         boolean foundKey = false;
         boolean foundCert = false;
         for (KeyCertificateFormatService.KeystoreEntrySummary entry : res.keystoreEntries) {
@@ -106,14 +106,14 @@ public class KeystoreWorkbenchServiceTest {
         assertTrue(foundKey);
         assertTrue(foundCert);
     }
-    
+
     @Test
     public void testInspectJKS() throws Exception {
         KeyCertificateFormatService.DetectionResult res = service.inspectKeystore(jksBytes, "JKS", getPassword());
         assertEquals(KeyCertificateFormatService.FormatType.JKS, res.type);
         assertEquals(2, res.keystoreEntries.size());
     }
-    
+
     @Test
     public void testInspectBKS() throws Exception {
         KeyCertificateFormatService.DetectionResult res = service.inspectKeystore(bksBytes, "BKS", getPassword());
@@ -133,7 +133,7 @@ public class KeystoreWorkbenchServiceTest {
         String exported = service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mycert", "PEM Cert", SecretVisibility.MASKED);
         assertTrue(exported.contains("BEGIN CERTIFICATE"));
     }
-    
+
     @Test
     public void testExtractPrivateKeyDeniedMasked() {
         Exception e = assertThrows(Exception.class, () -> {
@@ -141,7 +141,7 @@ public class KeystoreWorkbenchServiceTest {
         });
         assertTrue(e.getMessage().contains("Private key export is blocked"));
     }
-    
+
     @Test
     public void testExtractPrivateKeyAllowedFullLab() throws Exception {
         String exported = service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mykey", "PEM Private", SecretVisibility.FULL_LAB);

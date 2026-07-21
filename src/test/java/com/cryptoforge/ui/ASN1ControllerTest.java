@@ -126,7 +126,7 @@ class ASN1ControllerTest {
             try {
                 ComboBox<String> inputFormatCombo = getField(controller, "asn1InputFormatCombo");
                 inputFormatCombo.setValue("Hexadecimal");
-                
+
                 ComboBox<String> typeCombo = getField(controller, "asn1TypeCombo");
                 typeCombo.setValue("Auto-detect");
 

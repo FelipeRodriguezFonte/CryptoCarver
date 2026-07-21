@@ -22,11 +22,11 @@ public class KeyCertificateFormatServiceTest {
     public static void setup() throws Exception {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         service = new KeyCertificateFormatService();
-        
+
         KeyPairGenerator rsaGen = KeyPairGenerator.getInstance("RSA");
         rsaGen.initialize(2048);
         rsaPair = rsaGen.generateKeyPair();
-        
+
         KeyPairGenerator ecGen = KeyPairGenerator.getInstance("EC");
         ecGen.initialize(256);
         ecPair = ecGen.generateKeyPair();
@@ -39,7 +39,7 @@ public class KeyCertificateFormatServiceTest {
         assertEquals(KeyCertificateFormatService.FormatType.DER_PUBLIC_KEY, res.type);
         assertEquals("RSA", res.algorithm);
     }
-    
+
     @Test
     public void testDetectDerPrivateKey() throws Exception {
         byte[] privBytes = rsaPair.getPrivate().getEncoded();
@@ -57,7 +57,7 @@ public class KeyCertificateFormatServiceTest {
         assertEquals(KeyCertificateFormatService.FormatType.PEM_PUBLIC_KEY, res.type);
         assertEquals("EC", res.algorithm);
     }
-    
+
     @Test
     public void testDetectPEMPrivateKey() throws Exception {
         String pem = "-----BEGIN PRIVATE KEY-----\n" +
@@ -68,7 +68,7 @@ public class KeyCertificateFormatServiceTest {
         assertEquals("EC", res.algorithm);
         assertTrue(res.hasPrivateKey);
     }
-    
+
     @Test
     public void testConvertPublicToJWK() throws Exception {
         byte[] pubBytes = rsaPair.getPublic().getEncoded();
@@ -76,7 +76,7 @@ public class KeyCertificateFormatServiceTest {
         String jwk = service.convert(res, "JWK", SecretVisibility.FULL_LAB);
         assertTrue(jwk.contains("\"kty\":\"RSA\""));
     }
-    
+
     @Test
     public void testConvertPrivateMaskedThrows() throws Exception {
         byte[] privBytes = rsaPair.getPrivate().getEncoded();
@@ -86,7 +86,7 @@ public class KeyCertificateFormatServiceTest {
         });
         assertTrue(e.getMessage().contains("Policy prevents exporting"));
     }
-    
+
     @Test
     public void testConvertPrivateFullLab() throws Exception {
         byte[] privBytes = rsaPair.getPrivate().getEncoded();

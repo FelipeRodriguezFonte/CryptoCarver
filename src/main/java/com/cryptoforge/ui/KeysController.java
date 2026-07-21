@@ -532,12 +532,67 @@ public class KeysController {
                 throw new IllegalArgumentException("No valid PEM certificates found");
             }
 
+            // Determine the leaf from verified issuer relationships so the
+            // confirmation describes the certificate that will be installed.
+            java.security.cert.X509Certificate leaf = null;
+            for (java.security.cert.X509Certificate cert : chain) {
+                boolean isIssuer = false;
+                for (java.security.cert.X509Certificate other : chain) {
+                    if (cert != other && isVerifiedIssuer(cert, other)) {
+                        isIssuer = true;
+                        break;
+                    }
+                }
+                if (!isIssuer) {
+                    if (leaf != null) throw new IllegalArgumentException("Chain contains multiple leaves");
+                    leaf = cert;
+                }
+            }
+            if (leaf == null) {
+                throw new IllegalArgumentException("Could not determine a unique leaf in the chain");
+            }
+
+            String subject = leaf.getSubjectX500Principal().getName();
+            String issuer = leaf.getIssuerX500Principal().getName();
+
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Confirm Token Update");
+            alert.setHeaderText("Updating certificate chain for alias: " + alias);
+            alert.setContentText("Leaf Subject: " + subject + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size() + "\n\nProceed with token modification?");
+
+            java.util.Optional<javafx.scene.control.ButtonType> result = alert.showAndWait();
+            if (result.isEmpty() || result.get() != javafx.scene.control.ButtonType.OK) {
+                updateStatus("Update cancelled by user");
+                return;
+            }
+
             com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
                     .updateCertificateChain(alias, chain.toArray(new java.security.cert.Certificate[0]));
 
             updateStatus("Successfully updated certificate chain for token alias: " + alias);
+
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("Update PKCS#11 Certificate Chain")
+                        .detail("Alias", alias)
+                        .detail("Subject", subject)
+                        .detail("Issuer", issuer)
+                        .detail("Chain Length", String.valueOf(chain.size()))
+                        .status("Success").build());
+            }
         } catch (Exception error) {
             showError("Update PKCS#11 certificate chain", "Failed to update chain: " + safePkcs11Message(error));
+        }
+    }
+
+    private static boolean isVerifiedIssuer(X509Certificate issuer, X509Certificate certificate) {
+        if (!issuer.getSubjectX500Principal().equals(certificate.getIssuerX500Principal())) {
+            return false;
+        }
+        try {
+            certificate.verify(issuer.getPublicKey());
+            return true;
+        } catch (java.security.GeneralSecurityException e) {
+            return false;
         }
     }
 

@@ -31,7 +31,7 @@ public final class RecipeExecutor {
         for (OperationRecipe.Step step : recipe.steps()) {
             Map<String, String> resolved = new LinkedHashMap<>();
             step.parameters().forEach((k, v) -> resolved.put(k, RecipeVariables.resolve(v, variables)));
-            
+
             currentOutput = executeStep(step.operation(), currentOutput, resolved);
         }
 

@@ -451,14 +451,14 @@ public class HistoryController {
             showError("Recipe Export", "Legacy operations without structured details cannot be exported securely.");
             return;
         }
-        
+
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Export Operation Recipe");
         chooser.setInitialFileName("cryptocarver-recipe.json");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Recipe JSON", "*.json"));
         File file = chooser.showSaveDialog(mainHistoryContainer.getScene().getWindow());
         if (file == null) return;
-        
+
         try {
             Files.writeString(file.toPath(), recipe.toJson(), StandardCharsets.UTF_8);
             if (navigator != null) {
@@ -587,14 +587,14 @@ public class HistoryController {
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Recipe JSON", "*.json"));
         File file = chooser.showOpenDialog(mainHistoryContainer.getScene().getWindow());
         if (file == null) return;
-        
+
         try {
             OperationRecipe recipe = OperationRecipe.fromJson(
                     Files.readString(file.toPath(), StandardCharsets.UTF_8));
             Set<String> variableNames = new TreeSet<>();
             recipe.parameters().values().forEach(value -> variableNames.addAll(
                     RecipeVariables.referencedVariables(value)));
-            
+
             Map<String, String> variables = new LinkedHashMap<>();
             for (String name : variableNames) {
                 TextInputDialog variableDialog = new TextInputDialog();
@@ -605,23 +605,23 @@ public class HistoryController {
                 if (value.isEmpty()) return;
                 variables.put(name, value.get());
             }
-            
+
             Map<String, String> resolvedParameters = new LinkedHashMap<>();
             recipe.parameters().forEach((key, value) -> resolvedParameters.put(key,
                     RecipeVariables.resolve(value, variables)));
-            
+
             StringBuilder preview = new StringBuilder("Operation: ").append(recipe.operation())
                     .append("\nVersion: ").append(recipe.version()).append("\nCreated: ").append(recipe.createdAt()).append("\n\nParameters:\n");
             resolvedParameters.forEach((key, value) -> preview.append(key).append(" = ").append(value).append('\n'));
-            
+
             Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION, preview.toString(), ButtonType.CANCEL, ButtonType.OK);
             confirmation.setTitle("Load Operation Recipe");
             confirmation.setHeaderText("Review recipe before restoring its state");
             if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
-            
+
             Map<String, Object> state = new LinkedHashMap<>();
             resolvedParameters.forEach((key, value) -> { if (!"historyTimestamp".equals(key)) state.put(key, value); });
-            
+
             if (navigator != null) {
                 navigator.restoreOperationState(state, recipe.operation());
                 navigator.updateStatus("Recipe loaded: " + recipe.operation() + " (review inputs before running)");

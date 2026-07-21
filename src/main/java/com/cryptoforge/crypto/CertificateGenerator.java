@@ -829,6 +829,9 @@ public class CertificateGenerator {
                     (java.security.cert.PKIXCertPathBuilderResult) builder.build(pkixParams);
 
             result.details.add("PKIX Validation Successful");
+            if (crls != null && !crls.isEmpty()) {
+                result.details.add("Revocation Status: VALIDATED AGAINST LOCAL CRL");
+            }
             result.details.add("Target: " + endEntity.getSubjectX500Principal());
             result.details.add("Trust Anchor: " + pkixResult.getTrustAnchor().getTrustedCert().getSubjectX500Principal());
             result.details.add("Path Length: " + pkixResult.getCertPath().getCertificates().size());

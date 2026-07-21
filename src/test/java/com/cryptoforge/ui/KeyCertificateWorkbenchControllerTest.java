@@ -68,7 +68,7 @@ class KeyCertificateWorkbenchControllerTest {
         File tempFile = File.createTempFile("test_large", ".txt");
         tempFile.deleteOnExit();
         // We don't want to actually write 1MB+ to disk just to test file.length(),
-        // but java.io.File length() returns actual file size. 
+        // but java.io.File length() returns actual file size.
         // We'll just write 1024 * 1024 + 1 bytes.
         try (FileOutputStream fos = new FileOutputStream(tempFile)) {
             fos.write(new byte[10 * 1024 * 1024 + 1]);

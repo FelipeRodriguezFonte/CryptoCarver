@@ -46,7 +46,7 @@ public class CmsInspectionReport {
         private final Map<String, String> signedAttributes;
         private final Map<String, String> unsignedAttributes;
 
-        public SignerInfoSummary(String sid, String digestAlg, String encryptionAlg, 
+        public SignerInfoSummary(String sid, String digestAlg, String encryptionAlg,
                                ValidationState signatureValid, ValidationState certificateValid,
                                Map<String, String> signedAttributes, Map<String, String> unsignedAttributes) {
             this.sid = sid;
@@ -127,10 +127,10 @@ public class CmsInspectionReport {
     private final List<ValidationStep> validationSteps;
     private final List<String> warnings;
 
-    public CmsInspectionReport(CmsContentType type, String contentOid, String contentName, 
+    public CmsInspectionReport(CmsContentType type, String contentOid, String contentName,
                              ContentState contentState, Long contentSize, String contentEncryptionAlgorithm,
-                             List<SignerInfoSummary> signers, List<RecipientSummary> recipients, 
-                             List<CertificateSummary> certificates, List<ValidationStep> validationSteps, 
+                             List<SignerInfoSummary> signers, List<RecipientSummary> recipients,
+                             List<CertificateSummary> certificates, List<ValidationStep> validationSteps,
                              List<String> warnings) {
         this.type = type;
         this.contentOid = contentOid;

@@ -129,11 +129,11 @@ class CmsInspectorControllerTest {
         byte[] cms = CMSOperations.generateSignedData(content, cert, kp.getPrivate(), null, false);
 
         String secretPass = "SuperSecretTruststore123!";
-        
+
         KeyStore ks = KeyStore.getInstance("PKCS12");
         ks.load(null, null);
         ks.setCertificateEntry("cert", cert);
-        
+
         File tempKs = File.createTempFile("testks", ".p12");
         tempKs.deleteOnExit();
         try (FileOutputStream fos = new FileOutputStream(tempKs)) {
@@ -165,7 +165,7 @@ class CmsInspectorControllerTest {
         assertFalse(reportText.contains(secretPass), "Truststore password leaked in report!");
 
         assertNull(errorMsgRef.get(), "Should not have errors");
-        
+
         // Also check history detail doesn't contain password
         for (OperationDetail detail : result.getDetails()) {
             assertFalse(detail.value().contains(secretPass), "Truststore password leaked in details!");

@@ -125,12 +125,12 @@ public class SoftHsmIntegrationTest {
     @Test
     public void testCmsSignature() throws Exception {
         byte[] data = "Test data for CMS PKCS#11 signature".getBytes(StandardCharsets.UTF_8);
-        
+
         byte[] cmsSignature = session.signCms(testAlias, data, false);
-        
+
         assertNotNull(cmsSignature);
         assertTrue(cmsSignature.length > 0);
-        
+
         // Verify with BouncyCastle
         java.security.cert.Certificate[] certChain = session.getCertificateChain(testAlias);
         com.cryptoforge.crypto.CMSOperations.VerificationResult result = com.cryptoforge.crypto.CMSOperations.verifySignedData(cmsSignature, (java.security.cert.X509Certificate) certChain[0]);

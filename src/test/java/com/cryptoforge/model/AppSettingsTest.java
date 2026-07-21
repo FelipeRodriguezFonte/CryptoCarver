@@ -33,7 +33,7 @@ public class AppSettingsTest {
         settings.savePkcs11Profile("TestProfile1", "/opt/hsm/lib1_updated.so", 2);
         profiles = settings.getPkcs11Profiles();
         assertEquals(2, profiles.size());
-        
+
         p1 = profiles.stream().filter(p -> p.name().equals("TestProfile1")).findFirst().orElse(null);
         assertNotNull(p1);
         assertEquals("/opt/hsm/lib1_updated.so", p1.library());

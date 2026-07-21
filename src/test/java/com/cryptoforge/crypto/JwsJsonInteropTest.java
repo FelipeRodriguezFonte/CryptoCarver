@@ -42,7 +42,7 @@ public class JwsJsonInteropTest {
 
         List<SignerConfig> signers = Arrays.asList(new SignerConfig("HS256", secret));
 
-        // b64=false means payload won't be base64url encoded. For JSON, we expect detached if it's not base64 encoded by nimbus directly, 
+        // b64=false means payload won't be base64url encoded. For JSON, we expect detached if it's not base64 encoded by nimbus directly,
         // but JOSEService puts the raw string or detached. Let's see how JOSEService did it:
         // json.put("payload", jwsObject.getPayload().toBase64URL().toString()) -- wait, in JOSEService we check:
         // if (!unencodedPayload) { json.put("payload", ... ); }
@@ -60,7 +60,7 @@ public class JwsJsonInteropTest {
                 new Payload(rawPayload),
                 new com.nimbusds.jose.util.Base64URL(signature)
         );
-        
+
         assertTrue(parsedObject.verify(new MACVerifier(secret)));
     }
 

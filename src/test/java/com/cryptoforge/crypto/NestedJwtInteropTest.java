@@ -21,7 +21,7 @@ public class NestedJwtInteropTest {
         String nestedToken = JOSEService.generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr, contentAlgoStr, encKey);
 
         String decryptedPayload = JOSEService.verifyNestedJWT(nestedToken, encKey, signKey);
-        
+
         assertTrue(decryptedPayload.contains("nested-subject"));
     }
 
@@ -30,7 +30,7 @@ public class NestedJwtInteropTest {
         String payloadJson = "{\"sub\":\"nested-subject\"}";
         String signKey = "12345678901234567890123456789012";
         String encKey = "abcdefghijklmnopqrstuvwxyz123456";
-        
+
         String nestedToken = JOSEService.generateNestedJWT(payloadJson, "HS256", signKey, "dir", "A256GCM", encKey);
 
         String wrongEncKey = "654321zyxwvutsrqponmlkjihgfedcba";
@@ -69,7 +69,7 @@ public class NestedJwtInteropTest {
         byte[] encSecret = "abcdefghijklmnopqrstuvwxyz123456".getBytes();
         JWEObject jweObject = new JWEObject(new JWEHeader.Builder(JWEAlgorithm.DIR, EncryptionMethod.A256GCM).contentType("JWT").build(), new Payload(tamperedToken));
         jweObject.encrypt(new DirectEncrypter(encSecret));
-        
+
         String nestedToken = jweObject.serialize();
 
         // 3. Verify nested JWT using JOSEService

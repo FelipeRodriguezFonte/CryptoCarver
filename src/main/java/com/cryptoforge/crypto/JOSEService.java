@@ -79,7 +79,7 @@ public class JOSEService {
             }
             JWSHeader header = headerBuilder.build();
             JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey());
-            
+
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
 
@@ -127,7 +127,7 @@ public class JOSEService {
         // JSON Serialization
         Map<String, Object> json = new HashMap<>();
         // In detached mode, we NEVER put the payload in the JSON
-        
+
         List<Map<String, Object>> signaturesList = new ArrayList<>();
         for (SignerConfig config : signers) {
             JWSAlgorithm jwsAlgo = JWSAlgorithm.parse(config.getAlgorithm());
@@ -138,7 +138,7 @@ public class JOSEService {
             }
             JWSHeader header = headerBuilder.build();
             JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey());
-            
+
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
 
@@ -174,7 +174,7 @@ public class JOSEService {
                     // General JSON
                     List<Map<String, Object>> sigs = (List<Map<String, Object>>) map.get("signatures");
                     if (sigs.isEmpty()) throw new IllegalArgumentException("No signatures found in JSON.");
-                    // For the UI verify flow, we'll just check the first signature if multiple are present, 
+                    // For the UI verify flow, we'll just check the first signature if multiple are present,
                     // or ideally loop. The UI passes one algorithm and key. Let's find one that matches the algo.
                     for (Map<String, Object> sigObj : sigs) {
                         String ph = (String) sigObj.get("protected");
@@ -208,7 +208,7 @@ public class JOSEService {
 
         com.nimbusds.jose.JWSVerifier verifier = null;
         String keyStringTrimmed = keyStr.trim();
-        
+
         if (keyStringTrimmed.startsWith("{") && keyStringTrimmed.contains("\"keys\"")) {
             com.nimbusds.jose.jwk.JWKSet jwkSet = com.nimbusds.jose.jwk.JWKSet.parse(keyStringTrimmed);
             String kid = object.getHeader().getKeyID();
@@ -392,7 +392,7 @@ public class JOSEService {
                 .replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
         java.security.PublicKey key = KeyFactory.getInstance("EC").generatePublic(new java.security.spec.X509EncodedKeySpec(DataConverter.decodeBase64Flexible(base64)));
         if (!(key instanceof java.security.interfaces.ECPublicKey ecKey)) throw new IllegalArgumentException("The supplied key is not an EC public key");
-        
+
         Curve requiredCurve = Curve.forJWSAlgorithm(algo).iterator().next();
         Curve keyCurve = Curve.forECParameterSpec(ecKey.getParams());
         if (!requiredCurve.equals(keyCurve)) {
