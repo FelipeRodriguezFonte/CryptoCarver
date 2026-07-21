@@ -265,8 +265,7 @@ public class CipherController {
             if (!encrypt && parameters.aead && !java.nio.file.Files.isRegularFile(tag)) {
                 throw new IllegalArgumentException("Detached tag file does not exist");
             }
-            if (encrypt && parameters.aead) warnIfNonceReused(parameters.algorithm, parameters.mode, null, parameters.key, parameters.nonce);
-            StreamingCipher.Result result = encryp
+            StreamingCipher.Result result = encrypt
                     ? StreamingCipher.encrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
                             parameters.nonce, parameters.aad, tag, com.cryptoforge.util.ProgressMonitor.NO_OP)
                     : StreamingCipher.decrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,

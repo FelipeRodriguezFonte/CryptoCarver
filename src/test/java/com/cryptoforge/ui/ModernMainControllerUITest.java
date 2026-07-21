@@ -31,11 +31,15 @@ class ModernMainControllerUITest {
         if (!jfxIsSetup) {
             CountDownLatch latch = new CountDownLatch(1);
             try {
-                Platform.startup(latch::countDown);
+                Platform.startup(() -> {
+                    Platform.setImplicitExit(false);
+                    latch.countDown();
+                });
                 if (!latch.await(15, TimeUnit.SECONDS)) {
                     throw new IllegalStateException("JavaFX failed to start within timeout");
                 }
             } catch (IllegalStateException e) {
+                Platform.setImplicitExit(false);
                 // Toolkit already initialized
             }
             jfxIsSetup = true;
@@ -529,12 +533,11 @@ class ModernMainControllerUITest {
                         .output("stale result".getBytes(java.nio.charset.StandardCharsets.UTF_8))
                         .status("Published")
                         .build());
-                assertFalse(((String) getField(controller, "lastPublishedResultText")).isBlank());
+                assertTrue(((String) resolveOutput.invoke(controller)).contains("stale result"));
 
                 clear.invoke(controller);
-                assertEquals("", getField(controller, "lastPublishedResultText"));
+                assertEquals("", resolveOutput.invoke(controller));
                 assertEquals("", getField(controller, "lastPublishedOperation"));
-                assertFalse(((String) resolveOutput.invoke(controller)).contains("stale result"));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -697,9 +700,7 @@ class ModernMainControllerUITest {
                             .detail(com.cryptoforge.model.OperationDetail.secretDetail("Private Key", "must-not-appear"))
                             .status("Signature is valid").build());
                     String noOutputResult = (String) resolveOutput.invoke(controller);
-                    assertTrue(noOutputResult.contains("Signature is valid"));
-                    assertFalse(noOutputResult.contains("must-not-appear"));
-                    assertFalse(noOutputResult.contains("EDDSA-RESULT"));
+                    assertEquals("", noOutputResult, "REDACTED mode completely hides SECRET operation results");
                 } finally {
                     com.cryptoforge.model.AppSettings.getInstance().setSecretVisibility(originalVisibility);
                 }
@@ -730,11 +731,11 @@ class ModernMainControllerUITest {
         runAndWait(() -> {
             try {
                 route.invoke(controller, "Symmetric Ciphers");
-                javafx.scene.control.TextArea output = getField(controller, "cipherOutputArea");
-                output.setText("=== AES-256-GCM ENCRYPTION RESULT ===\n\nCIPHERTEXT (4 bytes):\nDEADBEEF"
-                        + "\n\nAUTHENTICATION TAG (16 bytes):\n00112233445566778899AABBCCDDEEFF");
                 controller.publish(com.cryptoforge.model.OperationResult.forOperation("Symmetric Encrypt")
-                        .output(new byte[] {(byte) 0xDE, (byte) 0xAD, (byte) 0xBE, (byte) 0xEF}).build());
+                        .output(new byte[] {(byte) 0xDE, (byte) 0xAD, (byte) 0xBE, (byte) 0xEF})
+                        .enrichedOutput("=== AES-256-GCM ENCRYPTION RESULT ===\n\nCIPHERTEXT (4 bytes):\nDEADBEEF"
+                        + "\n\nAUTHENTICATION TAG (16 bytes):\n00112233445566778899AABBCCDDEEFF", com.cryptoforge.model.OperationDetail.Classification.PUBLIC)
+                        .build());
 
                 String expanded = (String) resolveOutput.invoke(controller);
                 assertTrue(expanded.contains("AUTHENTICATION TAG"));
@@ -766,10 +767,10 @@ class ModernMainControllerUITest {
         runAndWait(() -> {
             try {
                 route.invoke(controller, "Symmetric Ciphers");
-                javafx.scene.control.TextArea output = getField(controller, "cipherOutputArea");
-                output.setText("Formatted result from a specialized operation");
                 controller.publish(com.cryptoforge.model.OperationResult.forOperation("Other Cipher Result")
-                        .output("RAW-OUTPUT".getBytes(java.nio.charset.StandardCharsets.UTF_8)).build());
+                        .output("RAW-OUTPUT".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .enrichedOutput("Formatted result from a specialized operation", com.cryptoforge.model.OperationDetail.Classification.PUBLIC)
+                        .build());
 
                 assertEquals("Formatted result from a specialized operation", resolveOutput.invoke(controller));
             } catch (Exception e) {

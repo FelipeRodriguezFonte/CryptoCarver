@@ -1330,7 +1330,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     cmsEncryptPkcs11Box,
                     cmsEncryptKeyAliasCombo);
 
-            System.ou
+            System.out
                     .println("KeysController (with TR-31 + Asymmetric + Certificates + CMS) initialized successfully!");
         } catch (Exception e) {
             System.err.println("Error initializing KeysController: " + e.getMessage());
@@ -4153,7 +4153,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
             return;
         }
-        handleAddToClipboardShelf(null, content);
+        handleAddToClipboardShelfSecure(null, content);
     }
 
     /** Opens the active operation result in a large, independent viewer. */
@@ -4419,61 +4419,103 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         MenuItem addToShelf = new MenuItem("Add to Clipboard Shelf");
         addToShelf.setOnAction(event -> {
+            lastFocusedResultArea = area;
             String selected = area.getSelectedText();
-            String text = selected != null && !selected.isEmpty() ? selected : area.getText();
-            handleAddToClipboardShelf(area, text);
+            handleAddToClipboardShelfSecure(area, selected != null && !selected.isEmpty() ? selected : null);
         });
 
         MenuItem copyToSys = new MenuItem("Copy to System Clipboard");
-        copyToSys.setOnAction(event -> copyToClipboard(area.getText()));
+        copyToSys.setOnAction(event -> {
+            lastFocusedResultArea = area;
+            handleCopySecure(area, null, false);
+        });
 
         MenuItem copy = new MenuItem("Copy");
-        copy.setOnAction(event -> copyToClipboard(area.getText()));
+        copy.setOnAction(event -> {
+            lastFocusedResultArea = area;
+            String selected = area.getSelectedText();
+            boolean hasSelection = selected != null && !selected.isEmpty();
+            handleCopySecure(area, hasSelection ? selected : null, hasSelection);
+        });
+
         MenuItem selectAll = new MenuItem("Select All");
         selectAll.setOnAction(event -> area.selectAll());
         return new ContextMenu(expand, addToShelf, copyToSys, new SeparatorMenuItem(), copy, selectAll);
     }
 
-    private void handleAddToClipboardShelf(javafx.scene.control.TextArea area, String text) {
-        if (area == cipherOutputArea && gcmTagField != null && !gcmTagField.getText().isEmpty()) {
-            String selected = area.getSelectedText();
-            if (selected == null || selected.isEmpty()) {
-                text = text + gcmTagField.getText();
+    private void handleCopySecure(TextArea area, String textToCopy, boolean isSelection) {
+        if (!isSelection) {
+            String content = resolveCurrentOutputText();
+            if (content == null || content.isEmpty()) {
+                updateStatus("Action blocked: No current output available to copy.");
+                return;
             }
+            if (content.equals("***MASKED***")) {
+                updateStatus("Action blocked: Secret cannot be copied in current visibility mode.");
+                return;
+            }
+            copyToClipboard(content);
+            return;
+        }
+
+        if (textToCopy == null || textToCopy.isEmpty()) return;
+
+        // If it's a selection, ensure it comes from the current snapshot. We do not allow old selections to be treated as PUBLIC by default.
+        if (lastPublishedResultSnapshot == null || area != lastUpdatedResultArea) {
+            updateStatus("Action blocked: Cannot securely copy selection from old or unknown result.");
+            return;
+        }
+
+        com.cryptoforge.model.OperationDetail.Classification cls = classifyPublishedResult(lastPublishedResultSnapshot);
+        boolean requiresFullLab = cls == com.cryptoforge.model.OperationDetail.Classification.SECRET
+                || cls == com.cryptoforge.model.OperationDetail.Classification.SENSITIVE;
+        if (requiresFullLab && com.cryptoforge.model.AppSettings.getInstance().getSecretVisibility() != com.cryptoforge.model.SecretVisibility.FULL_LAB) {
+            updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
+            return;
+        }
+
+        copyToClipboard(textToCopy);
+    }
+
+    private void handleAddToClipboardShelfSecure(javafx.scene.control.TextArea area, String selectedText) {
+        String text;
+        if (selectedText != null) {
+            // Handle partial selection securely
+            if (lastPublishedResultSnapshot == null || area != lastUpdatedResultArea) {
+                updateStatus("Action blocked: Cannot securely add selection from old or unknown result.");
+                return;
+            }
+            com.cryptoforge.model.OperationDetail.Classification cls = classifyPublishedResult(lastPublishedResultSnapshot);
+            boolean requiresFullLab = cls == com.cryptoforge.model.OperationDetail.Classification.SECRET
+                    || cls == com.cryptoforge.model.OperationDetail.Classification.SENSITIVE;
+            if (requiresFullLab && com.cryptoforge.model.AppSettings.getInstance().getSecretVisibility() != com.cryptoforge.model.SecretVisibility.FULL_LAB) {
+                updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
+                return;
+            }
+            text = selectedText;
+        } else {
+            text = resolveCurrentOutputText();
+        }
+
+        if (text == null || text.isEmpty()) {
+             updateStatus("Action blocked: Content hidden by security policy.");
+             return;
+        }
+
+        if (text.equals("***MASKED***")) {
+             updateStatus("Action blocked: Cannot add masked content to shelf.");
+             return;
+        }
+
+        if (area == cipherOutputArea && gcmTagField != null && !gcmTagField.getText().isEmpty() && selectedText == null) {
+             text = text + gcmTagField.getText();
         }
 
         com.cryptoforge.model.ClipboardEntry.Format format = com.cryptoforge.model.ClipboardEntry.Format.inferFormat(text);
-        com.cryptoforge.model.OperationDetail.Classification cls = com.cryptoforge.model.OperationDetail.Classification.SENSITIVE;
-        String sourceOp = currentActiveOperation != null ? currentActiveOperation : "Unknown";
+        com.cryptoforge.model.OperationDetail.Classification cls = classifyPublishedResult(lastPublishedResultSnapshot);
+        String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
 
-        boolean inherited = false;
-        if (lastPublishedResultSnapshot != null) {
-            for (com.cryptoforge.model.OperationDetail detail : lastPublishedResultSnapshot.getDetails()) {
-                if (text.equals(detail.value())) {
-                    cls = detail.classification();
-                    inherited = true;
-                    break;
-                }
-            }
-        }
-
-        if (!inherited) {
-            java.util.Optional<com.cryptoforge.model.OperationDescriptor> desc = com.cryptoforge.model.OperationRegistry.getInstance().resolveNavigation(sourceOp);
-            if (desc.isPresent()) {
-                switch (desc.get().getSecretRisk()) {
-                    case NONE:
-                        cls = com.cryptoforge.model.OperationDetail.Classification.PUBLIC;
-                        break;
-                    case HIGH:
-                        cls = com.cryptoforge.model.OperationDetail.Classification.SECRET;
-                        break;
-                    case LOW:
-                    default:
-                        cls = com.cryptoforge.model.OperationDetail.Classification.SENSITIVE;
-                        break;
-                }
-            }
-        }
+        // Classification already determined by classifyPublishedResult
 
         com.cryptoforge.model.ClipboardEntry entry = new com.cryptoforge.model.ClipboardEntry(
                 "Copied from " + sourceOp,
@@ -4484,6 +4526,34 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         );
         com.cryptoforge.model.ClipboardShelfManager.getInstance().addEntry(entry);
         updateStatus("Added to Clipboard Shelf");
+    }
+
+    public com.cryptoforge.model.OperationDetail.Classification classifyPublishedResult(com.cryptoforge.model.OperationResult result) {
+        if (result == null) return com.cryptoforge.model.OperationDetail.Classification.PUBLIC;
+
+        com.cryptoforge.model.OperationDetail.Classification maxCls = com.cryptoforge.model.OperationDetail.Classification.PUBLIC;
+
+        if (result.getOutputClassification() == com.cryptoforge.model.OperationDetail.Classification.SECRET ||
+            result.getEnrichedOutputClassification() == com.cryptoforge.model.OperationDetail.Classification.SECRET) {
+            return com.cryptoforge.model.OperationDetail.Classification.SECRET;
+        }
+
+        if (result.getOutputClassification() == com.cryptoforge.model.OperationDetail.Classification.SENSITIVE ||
+            result.getEnrichedOutputClassification() == com.cryptoforge.model.OperationDetail.Classification.SENSITIVE) {
+            maxCls = com.cryptoforge.model.OperationDetail.Classification.SENSITIVE;
+        }
+
+        for (com.cryptoforge.model.OperationDetail detail : result.getDetails()) {
+            if (detail == null) continue;
+            if (detail.classification() == com.cryptoforge.model.OperationDetail.Classification.SECRET) {
+                return com.cryptoforge.model.OperationDetail.Classification.SECRET;
+            }
+            if (detail.classification() == com.cryptoforge.model.OperationDetail.Classification.SENSITIVE) {
+                maxCls = com.cryptoforge.model.OperationDetail.Classification.SENSITIVE;
+            }
+        }
+
+        return maxCls;
     }
 
     public void fillClipboardTarget(String targetType, String value, com.cryptoforge.model.ClipboardEntry.Format format) {
