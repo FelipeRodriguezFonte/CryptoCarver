@@ -66,7 +66,15 @@ public final class KeyMaterialInspector {
 
     /** Verifies a public/private pair by signing a random challenge with the private key. */
     public static boolean matches(PublicKey publicKey, PrivateKey privateKey) {
-        if (publicKey == null || privateKey == null || !publicKey.getAlgorithm().equalsIgnoreCase(privateKey.getAlgorithm())) {
+        if (publicKey == null || privateKey == null) {
+            return false;
+        }
+        String pubAlg = publicKey.getAlgorithm();
+        String privAlg = privateKey.getAlgorithm();
+        boolean algorithmsMatch = pubAlg.equalsIgnoreCase(privAlg)
+            || (isEC(pubAlg) && isEC(privAlg));
+            
+        if (!algorithmsMatch) {
             return false;
         }
         try {
@@ -82,6 +90,7 @@ public final class KeyMaterialInspector {
             verifier.update(challenge);
             return verifier.verify(signature);
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
@@ -112,5 +121,9 @@ public final class KeyMaterialInspector {
         }
         if ("DSA".equalsIgnoreCase(key.getAlgorithm())) report.append("⚠️ DSA is legacy; prefer Ed25519 or ECDSA for new signatures.\n");
         if (key instanceof PrivateKey) report.append("⚠️ Private material shown for this laboratory only; do not export it in production.\n");
+    }
+    
+    private static boolean isEC(String alg) {
+        return "EC".equalsIgnoreCase(alg) || "ECDSA".equalsIgnoreCase(alg);
     }
 }

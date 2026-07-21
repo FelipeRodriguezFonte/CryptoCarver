@@ -267,7 +267,7 @@ public final class Pkcs11Session implements AutoCloseable {
 
     public boolean verify(String alias, byte[] data, byte[] signatureBytes, String algorithm)
             throws GeneralSecurityException {
-        PublicKey key = resolvePublicKey(alias);
+        PublicKey key = getPublicKey(alias);
         Signature signature = Signature.getInstance(requireText(algorithm, "Signature algorithm"), provider);
         signature.initVerify(key);
         signature.update(nonNullBytes(data, "Data"));
@@ -407,7 +407,7 @@ public final class Pkcs11Session implements AutoCloseable {
         }
     }
 
-    private PublicKey resolvePublicKey(String alias) throws GeneralSecurityException {
+    public PublicKey getPublicKey(String alias) throws GeneralSecurityException {
         try {
             Certificate certificate = keyStore.getCertificate(alias);
             if (certificate != null) {
@@ -417,6 +417,15 @@ public final class Pkcs11Session implements AutoCloseable {
         } catch (java.security.KeyStoreException error) {
             throw new GeneralSecurityException("Unable to resolve PKCS#11 public key: " + alias, error);
         }
+    }
+
+    /**
+     * Returns an opaque handle to the token-resident private key.
+     * NEVER call .getEncoded() on this key; it should only be passed to JCA engines
+     * initialized with this session's provider (e.g. Signature, Cipher, JcaContentSignerBuilder).
+     */
+    public PrivateKey getOpaquePrivateKey(String alias) throws GeneralSecurityException {
+        return requireKey(alias, PrivateKey.class);
     }
 
     private <T extends Key> T requireKey(String alias, Class<T> expectedType) throws GeneralSecurityException {

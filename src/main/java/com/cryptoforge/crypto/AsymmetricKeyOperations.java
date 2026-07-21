@@ -448,6 +448,29 @@ public class AsymmetricKeyOperations {
         throw new IllegalArgumentException("Unsupported or invalid PKCS#8 private key", last);
     }
 
+    /** Derives a PublicKey from a PrivateKey. */
+    public static PublicKey derivePublicKey(PrivateKey privateKey) throws Exception {
+        if (privateKey instanceof java.security.interfaces.RSAPrivateCrtKey) {
+            java.security.interfaces.RSAPrivateCrtKey rsa = (java.security.interfaces.RSAPrivateCrtKey) privateKey;
+            java.security.spec.RSAPublicKeySpec spec = new java.security.spec.RSAPublicKeySpec(rsa.getModulus(), rsa.getPublicExponent());
+            return KeyFactory.getInstance("RSA", "BC").generatePublic(spec);
+        } else if (privateKey instanceof org.bouncycastle.jce.interfaces.ECPrivateKey) {
+            org.bouncycastle.jce.interfaces.ECPrivateKey ec = (org.bouncycastle.jce.interfaces.ECPrivateKey) privateKey;
+            org.bouncycastle.math.ec.ECPoint q = ec.getParameters().getG().multiply(ec.getD());
+            org.bouncycastle.jce.spec.ECPublicKeySpec spec = new org.bouncycastle.jce.spec.ECPublicKeySpec(q, ec.getParameters());
+            return KeyFactory.getInstance(privateKey.getAlgorithm(), "BC").generatePublic(spec);
+        } else if (privateKey instanceof java.security.interfaces.ECPrivateKey) {
+            java.security.interfaces.ECPrivateKey ec = (java.security.interfaces.ECPrivateKey) privateKey;
+            java.security.spec.ECParameterSpec params = ec.getParams();
+            org.bouncycastle.jce.spec.ECParameterSpec bcParams = org.bouncycastle.jcajce.provider.asymmetric.util.EC5Util.convertSpec(params);
+            org.bouncycastle.math.ec.ECPoint q = bcParams.getG().multiply(ec.getS());
+            java.security.spec.ECPoint w = new java.security.spec.ECPoint(q.getAffineXCoord().toBigInteger(), q.getAffineYCoord().toBigInteger());
+            java.security.spec.ECPublicKeySpec spec = new java.security.spec.ECPublicKeySpec(w, params);
+            return KeyFactory.getInstance(privateKey.getAlgorithm(), "BC").generatePublic(spec);
+        }
+        throw new IllegalArgumentException("Cannot derive public key from this private key type: " + privateKey.getClass().getName());
+    }
+
     /** Imports an X.509 SubjectPublicKeyInfo PEM key by trying supported factories. */
     public static PublicKey importPublicKeyPEMAuto(String pem) throws Exception {
         byte[] encoded = decodePem(pem);

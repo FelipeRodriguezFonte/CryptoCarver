@@ -434,6 +434,73 @@ public class CertificateGenerator {
     }
 
     /**
+     * Generate Certificate Signing Request (CSR) directly in a PKCS#11 token.
+     * The private key is never extracted; signing happens on the token.
+     *
+     * @param session PKCS#11 session
+     * @param alias   Key alias
+     * @param config  Certificate configuration
+     * @return PKCS#10 CSR as PEM string
+     */
+    public static String generateCSRWithPkcs11(com.cryptoforge.crypto.hsm.Pkcs11Session session, String alias, CertificateConfig config) throws Exception {
+        String dn = buildDistinguishedName(config);
+        X500Name subject = new X500Name(dn);
+
+        PublicKey publicKey = session.getPublicKey(alias);
+        PKCS10CertificationRequestBuilder csrBuilder = new JcaPKCS10CertificationRequestBuilder(subject, publicKey);
+
+        if (config.addSubjectAlternativeNames && (!config.sanDnsNames.isEmpty() || !config.sanIpAddresses.isEmpty())) {
+            ExtensionsGenerator extensions = new ExtensionsGenerator();
+            extensions.addExtension(Extension.subjectAlternativeName, false, buildSubjectAlternativeNames(config));
+            csrBuilder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extensions.generate());
+        }
+
+        PrivateKey privateKey = session.getOpaquePrivateKey(alias);
+        ContentSigner signer = new JcaContentSignerBuilder(config.signatureAlgorithm)
+                .setProvider(session.providerName())
+                .build(privateKey);
+
+        PKCS10CertificationRequest csr = csrBuilder.build(signer);
+
+        byte[] encoded = csr.getEncoded();
+        String base64 = Base64.getEncoder().encodeToString(encoded);
+
+        StringBuilder pem = new StringBuilder();
+        pem.append("-----BEGIN CERTIFICATE REQUEST-----\n");
+
+        for (int i = 0; i < base64.length(); i += 64) {
+            pem.append(base64.substring(i, Math.min(i + 64, base64.length()))).append("\n");
+        }
+
+        pem.append("-----END CERTIFICATE REQUEST-----\n");
+
+        return pem.toString();
+    }
+
+    /**
+     * Parse PKCS#10 CSR from PEM string
+     *
+     * @param pemCsr CSR in PEM format
+     * @return PKCS10CertificationRequest
+     */
+    public static PKCS10CertificationRequest parseCSR(String pemCsr) throws Exception {
+        if (pemCsr == null || pemCsr.isEmpty()) {
+            throw new Exception("CSR input is empty");
+        }
+
+        String cleaned = pemCsr.trim();
+        if (!cleaned.contains("-----BEGIN CERTIFICATE REQUEST-----")) {
+            cleaned = "-----BEGIN CERTIFICATE REQUEST-----\n" + cleaned + "\n-----END CERTIFICATE REQUEST-----";
+        }
+
+        String b64 = cleaned.replaceAll("-----BEGIN CERTIFICATE REQUEST-----", "")
+                            .replaceAll("-----END CERTIFICATE REQUEST-----", "")
+                            .replaceAll("\\s", "");
+        byte[] encoded = Base64.getDecoder().decode(b64);
+        return new PKCS10CertificationRequest(encoded);
+    }
+
+    /**
      * Get detailed certificate information
      *
      * @param certificate X509 Certificate
@@ -582,6 +649,29 @@ public class CertificateGenerator {
         java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(
                 cleaned.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         return (X509Certificate) factory.generateCertificate(bais);
+    }
+
+    /**
+     * Parse a chain of X.509 certificates from a PEM string.
+     *
+     * @param pemChain Certificate chain in PEM format
+     * @return List of X509Certificate
+     */
+    public static List<X509Certificate> parseCertificateChain(String pemChain) throws Exception {
+        if (pemChain == null || pemChain.isEmpty()) {
+            throw new Exception("Certificate input is empty");
+        }
+
+        java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
+        java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(
+                pemChain.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        List<X509Certificate> chain = new ArrayList<>();
+        Collection<? extends Certificate> certs = factory.generateCertificates(bais);
+        for (Certificate cert : certs) {
+            chain.add((X509Certificate) cert);
+        }
+        return chain;
     }
 
     /**

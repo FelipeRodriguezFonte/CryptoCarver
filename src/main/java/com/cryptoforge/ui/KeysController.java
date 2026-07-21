@@ -782,7 +782,7 @@ public class KeysController {
         this.certSanIpField = sanIpField;
         this.certRootCaCheck = rootCaCheck;
 
-        certKeyTypeCombo.getItems().addAll("RSA-2048", "RSA-4096", "ECDSA-P256", "ECDSA-P384");
+        certKeyTypeCombo.getItems().addAll("RSA-2048", "RSA-4096", "ECDSA-P256", "ECDSA-P384", "Local PEM (Parse Area)", "PKCS#11 Active Alias");
         certKeyTypeCombo.setValue("RSA-2048");
 
         certSignAlgoCombo.getItems().addAll("SHA256withRSA", "SHA384withRSA", "SHA512withRSA");
@@ -848,10 +848,19 @@ public class KeysController {
                             signatureAlgorithm, Integer.parseInt(certIssuePathLengthField.getText().trim()))
                     : CertificateAuthorityOperations.issueFromCsr(csr, issuerCert, issuerKey, validity,
                             signatureAlgorithm);
-            certIssueResultArea.setText(intermediate ? "=== ISSUED INTERMEDIATE CA ===\n\n" : "=== ISSUED END-ENTITY CERTIFICATE ===\n\n"
+            String outputText = (intermediate ? "=== ISSUED INTERMEDIATE CA ===\n\n" : "=== ISSUED END-ENTITY CERTIFICATE ===\n\n")
                     + CertificateGenerator.getCertificateInfo(issued)
-                    + "\n\n" + CertificateGenerator.exportCertificatePEM(issued));
+                    + "\n\n" + CertificateGenerator.exportCertificatePEM(issued);
+            certIssueResultArea.setText(outputText);
             updateStatus("Certificate issued from validated CSR");
+            if (mainController != null) {
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Issue CA Certificate")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Target", issued.getSubjectX500Principal().getName(), com.cryptoforge.model.OperationDetail.Classification.PUBLIC, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", outputText, com.cryptoforge.model.OperationDetail.Classification.PUBLIC, false, null)
+                    ))
+                    .build());
+            }
         } catch (Exception e) {
             showError("Issue Certificate", "Cannot issue certificate: " + e.getMessage());
         }
@@ -1618,10 +1627,6 @@ public class KeysController {
             String cn = certCNField.getText().trim();
             if (cn.isEmpty()) throw new IllegalArgumentException("Common Name (CN) is required");
             String selected = certKeyTypeCombo.getValue();
-            KeyPair pair;
-            if (selected.startsWith("RSA")) pair = AsymmetricKeyOperations.generateRSAKeyPair(Integer.parseInt(selected.substring(4)));
-            else if (selected.startsWith("ECDSA")) pair = AsymmetricKeyOperations.generateECDSAFpKeyPair(selected.equals("ECDSA-P256") ? "secp256r1" : "secp384r1");
-            else throw new IllegalArgumentException("Unsupported CSR key type");
             CertificateGenerator.CertificateConfig config = new CertificateGenerator.CertificateConfig();
             config.commonName = cn;
             config.organization = certOrgField.getText().trim();
@@ -1632,11 +1637,48 @@ public class KeysController {
             config.email = certEmailField.getText().trim().isEmpty() ? null : certEmailField.getText().trim();
             config.signatureAlgorithm = certSignAlgoCombo.getValue();
             applySanConfiguration(config);
-            certOutputArea.setText("=== PKCS#10 CERTIFICATE SIGNING REQUEST ===\n\n" + CertificateGenerator.generateCSR(pair, config)
-                    + "\n=== PRIVATE KEY (LABORATORY ONLY) ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(pair.getPrivate()));
+
+            String csrPem;
+            String keyDesc = "";
+
+            if ("Local PEM (Parse Area)".equals(selected)) {
+                String pem = certInputArea != null ? certInputArea.getText().trim() : "";
+                if (pem.isEmpty()) throw new IllegalArgumentException("Please paste a private key in the 'Parse Certificate / Key' area");
+                PrivateKey privateKey = parsePrivateMaterial(pem);
+                PublicKey publicKey = AsymmetricKeyOperations.derivePublicKey(privateKey);
+                KeyPair pair = new KeyPair(publicKey, privateKey);
+                csrPem = CertificateGenerator.generateCSR(pair, config);
+                keyDesc = "Local PEM Key";
+            } else if ("PKCS#11 Active Alias".equals(selected)) {
+                String alias = requirePkcs11SigningAlias();
+                csrPem = CertificateGenerator.generateCSRWithPkcs11(com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession(), alias, config);
+                keyDesc = "PKCS#11 Token (Alias: " + alias + ")";
+            } else {
+                KeyPair pair;
+                if (selected.startsWith("RSA")) pair = AsymmetricKeyOperations.generateRSAKeyPair(Integer.parseInt(selected.substring(4)));
+                else if (selected.startsWith("ECDSA")) pair = AsymmetricKeyOperations.generateECDSAFpKeyPair(selected.equals("ECDSA-P256") ? "secp256r1" : "secp384r1");
+                else throw new IllegalArgumentException("Unsupported CSR key type");
+                csrPem = CertificateGenerator.generateCSR(pair, config);
+                keyDesc = "Generated " + selected + "\n\n=== PRIVATE KEY (LABORATORY ONLY) ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(pair.getPrivate());
+            }
+
+            String outputText = "=== PKCS#10 CERTIFICATE SIGNING REQUEST ===\n\n" + csrPem
+                    + "\n" + (keyDesc.startsWith("Generated") ? keyDesc : "Source: " + keyDesc);
+            certOutputArea.setText(outputText);
             certOutputArea.setManaged(true);
             certOutputArea.setVisible(true);
             updateStatus("CSR generated with requested SANs");
+
+            if (mainController != null) {
+                com.cryptoforge.model.OperationDetail.Classification cls = keyDesc.startsWith("Generated") ? com.cryptoforge.model.OperationDetail.Classification.SECRET : com.cryptoforge.model.OperationDetail.Classification.PUBLIC;
+                mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Generate CSR")
+                    .details(java.util.List.of(
+                        new com.cryptoforge.model.OperationDetail("Common Name", cn, com.cryptoforge.model.OperationDetail.Classification.PUBLIC, false, null),
+                        new com.cryptoforge.model.OperationDetail("Source", keyDesc.startsWith("Generated") ? "Generated new pair" : keyDesc, cls, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", outputText, cls, false, null)
+                    ))
+                    .build());
+            }
         } catch (Exception e) {
             showError("CSR Generation", "Cannot generate CSR: " + e.getMessage());
         }
@@ -1725,19 +1767,41 @@ public class KeysController {
 
             updateStatus("Validating certificate...");
 
-            // Parse main certificate
-            X509Certificate cert = null;
+            // Parse certificates
+            List<X509Certificate> chain = null;
             try {
-                cert = CertificateGenerator.parseCertificate(certPem);
+                chain = CertificateGenerator.parseCertificateChain(certPem);
             } catch (Exception e) {
-                valResultArea.setText("Error parsing certificate: " + e.getMessage());
+                valResultArea.setText("Error parsing certificate chain: " + e.getMessage());
                 updateStatus("Validation failed: Parse error");
                 return;
             }
 
-            // Parse issuer if provided
-            X509Certificate issuer = null;
-            if (!issuerPem.isEmpty()) {
+            if (chain == null || chain.isEmpty()) {
+                valResultArea.setText("No certificates found in input.");
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            boolean isValid = false;
+            String statusReason = "";
+
+            if (issuerPem.isEmpty()) {
+                // Chain validation or single self-signed
+                CertificateGenerator.ChainValidationResult result = CertificateGenerator.validateCertificateChain(chain);
+                isValid = result.isValid;
+                statusReason = result.message;
+
+                sb.append("=== CHAIN VALIDATION RESULT ===\n");
+                sb.append("Status: ").append(result.isValid ? "VALID ✅" : "INVALID ❌").append("\n");
+                sb.append("Message: ").append(result.message).append("\n\n");
+                sb.append("=== DETAILS ===\n");
+                for (String detail : result.details) {
+                    sb.append("• ").append(detail).append("\n");
+                }
+            } else {
+                // Legacy validation against explicit issuer
+                X509Certificate issuer;
                 try {
                     issuer = CertificateGenerator.parseCertificate(issuerPem);
                 } catch (Exception e) {
@@ -1745,32 +1809,30 @@ public class KeysController {
                     updateStatus("Validation failed: Issuer parse error");
                     return;
                 }
+
+                CertificateGenerator.CertificateValidationResult result = CertificateGenerator.validateCertificate(chain.get(0), issuer);
+                isValid = result.isValid;
+                statusReason = result.status;
+
+                sb.append("=== SINGLE CERTIFICATE VALIDATION RESULT ===\n");
+                sb.append("Status: ").append(result.isValid ? "VALID ✅" : "INVALID ❌").append("\n");
+                sb.append("Reason: ").append(result.status).append("\n");
+                sb.append("Message: ").append(result.message).append("\n\n");
+                sb.append("=== DETAILS ===\n");
+                for (String detail : result.details) {
+                    sb.append("• ").append(detail).append("\n");
+                }
             }
 
-            // Validate
-            CertificateGenerator.CertificateValidationResult result = CertificateGenerator.validateCertificate(cert,
-                    issuer);
-
-            // Display results
-            StringBuilder sb = new StringBuilder();
-            sb.append("=== VALIDATION RESULT ===\n");
-            sb.append("Status: ").append(result.isValid ? "VALID ✅" : "INVALID ❌").append("\n");
-            sb.append("Reason: ").append(result.status).append("\n");
-            sb.append("Message: ").append(result.message).append("\n\n");
-
-            sb.append("=== DETAILS ===\n");
-            for (String detail : result.details) {
-                sb.append("• ").append(detail).append("\n");
-            }
-
-            valResultArea.setText(sb.toString());
-            updateStatus(result.isValid ? "Certificate is valid" : "Certificate is invalid");
+            String outputText = sb.toString();
+            valResultArea.setText(outputText);
+            updateStatus(isValid ? "Certificate is valid" : "Certificate is invalid");
 
             if (mainController != null) {
                 mainController.publish(com.cryptoforge.model.OperationResult.forOperation("Validate Certificate")
                     .details(java.util.List.of(
-                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Status: " + result.status, com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptoforge.model.OperationDetail("Output", result.isValid ? "Success" : "Failed", com.cryptoforge.model.OperationDetail.Classification.SECRET, false, null)
+                        new com.cryptoforge.model.OperationDetail("Input Parameters", "Status: " + statusReason, com.cryptoforge.model.OperationDetail.Classification.PUBLIC, false, null),
+                        new com.cryptoforge.model.OperationDetail("Output", outputText, com.cryptoforge.model.OperationDetail.Classification.PUBLIC, false, null)
                     ))
                     .build());
             }
