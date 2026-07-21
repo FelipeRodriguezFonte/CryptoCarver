@@ -2,7 +2,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.cryptoforge.ui.AsicController" spacing="8" style="-fx-padding: 10;">
+      fx:controller="com.cryptocarver.ui.AsicController" spacing="8" style="-fx-padding: 10;">
     <Label text="ASiC-S laboratory — one payload plus detached CAdES-BES signature" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
     <Label text="Creates a bounded ASiC-S ZIP container. Inspection checks the mimetype and detached signature; it does not establish certificate trust, revocation or LTV." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
     <HBox spacing="6"><TextField fx:id="asicInputPathField" promptText="Payload file or ASiC-S container path" HBox.hgrow="ALWAYS"/><Button text="Choose input…" onAction="#handleChooseInput" styleClass="secondary-button"/></HBox>

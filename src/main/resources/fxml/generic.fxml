@@ -2,7 +2,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-                <Accordion xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.cryptoforge.ui.GenericController" fx:id="genericContainer" managed="false" visible="false">
+                <Accordion xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.cryptocarver.ui.GenericController" fx:id="genericContainer" managed="false" visible="false">
                         <panes>
                             <!-- KEY & CERTIFICATE FORMAT WORKBENCH -->
                             <TitledPane text="🛠 Key &amp; Certificate Format Workbench">

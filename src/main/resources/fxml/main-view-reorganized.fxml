@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane fx:id="mainPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
-            fx:controller="com.cryptoforge.ui.MainController">
+            fx:controller="com.cryptocarver.ui.MainController">
     
     <!-- Menu Bar -->
     <top>

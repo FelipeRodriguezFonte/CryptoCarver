@@ -4,7 +4,7 @@
 
 <TitledPane fx:id="compressedHexPane" text="↔️ Compressed Hex (2-row)"
              xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-             fx:controller="com.cryptoforge.ui.CompressedHexController" expanded="false">
+             fx:controller="com.cryptocarver.ui.CompressedHexController" expanded="false">
     <content>
         <VBox spacing="6" style="-fx-padding: 8;">
             <Label text="Interleave or split the two hexadecimal rows shown by some host tools. Example: AFD12 + CA123 → ACFAD11223."

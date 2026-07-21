@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane fx:id="mainPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
-            fx:controller="com.cryptoforge.ui.MainController">
+            fx:controller="com.cryptocarver.ui.MainController">
     
     <!-- Menu Bar -->
     <top>
@@ -1542,6 +1542,11 @@
                                 <Button text="Encrypt" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="action-button" onAction="#handleSymmetricEncrypt" />
                                 <Button text="Decrypt" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="action-button" onAction="#handleSymmetricDecrypt" />
                             </HBox>
+                            <HBox spacing="5">
+                                <Button text="Encrypt File..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="secondary-button" onAction="#handleSymmetricEncryptFile" />
+                                <Button text="Decrypt File..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="secondary-button" onAction="#handleSymmetricDecryptFile" />
+                            </HBox>
+                            <Button text="Analyze Encrypted File..." maxWidth="Infinity" styleClass="secondary-button" onAction="#handleAnalyzeEncryptedFile" />
                         </VBox>
                         
                         <Separator />

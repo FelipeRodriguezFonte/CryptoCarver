@@ -4,7 +4,7 @@
 <?import javafx.scene.text.TextFlow?>
 
 
-                        <VBox fx:id="joseContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.JOSEController" managed="false" visible="false" spacing="10" style="-fx-padding: 10;">
+                        <VBox fx:id="joseContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.JOSEController" managed="false" visible="false" spacing="10" style="-fx-padding: 10;">
 
 
                             <!-- JWT SECTION -->

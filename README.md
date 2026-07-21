@@ -219,7 +219,7 @@ Este proyecto no habría sido posible sin:
 CryptoCarver/
 ├── src/
 │   ├── main/
-│   │   ├── java/com/cryptoforge/
+│   │   ├── java/com/cryptocarver/
 │   │   │   ├── ui/          # Controllers (JavaFX)
 │   │   │   ├── crypto/      # Operaciones criptográficas
 │   │   │   ├── utils/       # Utilidades

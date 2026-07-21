@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="xmlSecurityContainer" managed="false" visible="false" spacing="0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.XMLSignatureController">
+<VBox fx:id="xmlSecurityContainer" managed="false" visible="false" spacing="0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.XMLSignatureController">
     <Accordion fx:id="xmlAccordion">
         <panes>
             <TitledPane text="📝 Sign XML (XAdES)" expanded="true">

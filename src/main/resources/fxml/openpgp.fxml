@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.OpenPgpController" spacing="8" style="-fx-padding: 10;">
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.OpenPgpController" spacing="8" style="-fx-padding: 10;">
     <Label text="OpenPGP / GPG-compatible laboratory" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
     <HBox spacing="8" alignment="CENTER_LEFT">
         <Button text="Check GnuPG…" onAction="#handleProbeGnuPg" styleClass="secondary-button"/>

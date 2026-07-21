@@ -2,7 +2,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.cryptoforge.ui.PadesController" spacing="8" style="-fx-padding: 10;">
+      fx:controller="com.cryptocarver.ui.PadesController" spacing="8" style="-fx-padding: 10;">
     <Label text="PAdES laboratory — local PKCS#12 signing key" style="-fx-font-style: italic; -fx-text-fill: #666;"/>
     <Label text="Signs PDF incrementally as Baseline-B, or Baseline-T when timestamping is explicitly enabled. It never overwrites an output file. 64 MiB limit." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
     <HBox spacing="6">

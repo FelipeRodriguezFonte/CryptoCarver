@@ -5,7 +5,7 @@
 <?import javafx.geometry.Insets?>
 
 <VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
-      fx:controller="com.cryptoforge.ui.ClipboardShelfController"
+      fx:controller="com.cryptocarver.ui.ClipboardShelfController"
       VBox.vgrow="ALWAYS"
       stylesheets="@../css/modern.css">
     

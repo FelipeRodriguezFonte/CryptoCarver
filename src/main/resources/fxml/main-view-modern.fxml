@@ -4,11 +4,11 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.TextFlow?>
-<?import com.cryptoforge.ui.NavigationRail?>
-<?import com.cryptoforge.ui.SidePanel?>
+<?import com.cryptocarver.ui.NavigationRail?>
+<?import com.cryptocarver.ui.SidePanel?>
 
 <BorderPane fx:id="mainPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.cryptoforge.ui.ModernMainController">
+            fx:controller="com.cryptocarver.ui.ModernMainController">
 
     <!-- Menu Bar -->
     <top>

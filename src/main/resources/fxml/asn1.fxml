@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<TitledPane fx:id="asn1Pane" text="🔍 ASN.1 Decoder" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.ASN1Controller">
+<TitledPane fx:id="asn1Pane" text="🔍 ASN.1 Decoder" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.ASN1Controller">
     <content>
         <VBox spacing="10.0">
             <padding>

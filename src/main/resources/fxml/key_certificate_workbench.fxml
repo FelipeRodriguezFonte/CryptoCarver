@@ -5,7 +5,7 @@
 <?import javafx.geometry.Insets?>
 
 <VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.cryptoforge.ui.KeyCertificateWorkbenchController"
+      fx:controller="com.cryptocarver.ui.KeyCertificateWorkbenchController"
       style="-fx-padding: 10;">
 
     <Label text="Input (Paste PEM/JWK/Hex or load file)" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>

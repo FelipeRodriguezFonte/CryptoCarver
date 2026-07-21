@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="postQuantumContainer" managed="false" visible="false" spacing="0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptoforge.ui.PostQuantumController">
+<VBox fx:id="postQuantumContainer" managed="false" visible="false" spacing="0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.PostQuantumController">
     <Accordion fx:id="pqcAccordion">
         <panes>
             <TitledPane text="🔑 PQC Key Generation" expanded="true">
