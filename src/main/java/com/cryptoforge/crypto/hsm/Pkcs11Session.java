@@ -8,6 +8,15 @@ import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyStore;
 import eu.europa.esig.dss.token.AbstractKeyStoreTokenConnection;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.ExtensionsGenerator;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
 
 import java.security.MessageDigest;
 import java.security.PrivateKey;
@@ -420,12 +429,38 @@ public final class Pkcs11Session implements AutoCloseable {
     }
 
     /**
-     * Returns an opaque handle to the token-resident private key.
-     * NEVER call .getEncoded() on this key; it should only be passed to JCA engines
-     * initialized with this session's provider (e.g. Signature, Cipher, JcaContentSignerBuilder).
+     * Generate Certificate Signing Request (CSR) directly in the PKCS#11 token.
+     * The private key is never extracted; signing happens on the token.
      */
-    public PrivateKey getOpaquePrivateKey(String alias) throws GeneralSecurityException {
-        return requireKey(alias, PrivateKey.class);
+    public String generateCsr(String alias, com.cryptoforge.crypto.CertificateGenerator.CertificateConfig config) throws Exception {
+        ensureOpen();
+        String dn = com.cryptoforge.crypto.CertificateGenerator.buildDistinguishedName(config);
+        X500Name subject = new X500Name(dn);
+
+        PublicKey publicKey = getPublicKey(alias);
+        PKCS10CertificationRequestBuilder csrBuilder = new JcaPKCS10CertificationRequestBuilder(subject, publicKey);
+
+        if (config.addSubjectAlternativeNames && (!config.sanDnsNames.isEmpty() || !config.sanIpAddresses.isEmpty())) {
+            ExtensionsGenerator extensions = new ExtensionsGenerator();
+            extensions.addExtension(Extension.subjectAlternativeName, false, com.cryptoforge.crypto.CertificateGenerator.buildSubjectAlternativeNames(config));
+            csrBuilder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extensions.generate());
+        }
+
+        PrivateKey privateKey = requireKey(alias, PrivateKey.class);
+        ContentSigner signer = new JcaContentSignerBuilder(config.signatureAlgorithm)
+                .setProvider(provider)
+                .build(privateKey);
+
+        PKCS10CertificationRequest csr = csrBuilder.build(signer);
+        byte[] encoded = csr.getEncoded();
+        String base64 = Base64.getEncoder().encodeToString(encoded);
+        StringBuilder pem = new StringBuilder();
+        pem.append("-----BEGIN CERTIFICATE REQUEST-----\n");
+        for (int i = 0; i < base64.length(); i += 64) {
+            pem.append(base64.substring(i, Math.min(i + 64, base64.length()))).append("\n");
+        }
+        pem.append("-----END CERTIFICATE REQUEST-----\n");
+        return pem.toString();
     }
 
     private <T extends Key> T requireKey(String alias, Class<T> expectedType) throws GeneralSecurityException {

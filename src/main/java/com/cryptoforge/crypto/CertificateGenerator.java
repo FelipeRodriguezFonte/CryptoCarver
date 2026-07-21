@@ -188,7 +188,7 @@ public class CertificateGenerator {
     /**
      * Build Distinguished Name from config
      */
-    private static String buildDistinguishedName(CertificateConfig config) {
+    public static String buildDistinguishedName(CertificateConfig config) {
         StringBuilder dn = new StringBuilder();
 
         if (config.commonName != null) {
@@ -231,7 +231,7 @@ public class CertificateGenerator {
     /**
      * Build Subject Alternative Names extension
      */
-    private static GeneralNames buildSubjectAlternativeNames(CertificateConfig config) {
+    public static GeneralNames buildSubjectAlternativeNames(CertificateConfig config) {
         List<GeneralName> names = new ArrayList<>();
 
         // DNS names
@@ -433,49 +433,7 @@ public class CertificateGenerator {
         return pem.toString();
     }
 
-    /**
-     * Generate Certificate Signing Request (CSR) directly in a PKCS#11 token.
-     * The private key is never extracted; signing happens on the token.
-     *
-     * @param session PKCS#11 session
-     * @param alias   Key alias
-     * @param config  Certificate configuration
-     * @return PKCS#10 CSR as PEM string
-     */
-    public static String generateCSRWithPkcs11(com.cryptoforge.crypto.hsm.Pkcs11Session session, String alias, CertificateConfig config) throws Exception {
-        String dn = buildDistinguishedName(config);
-        X500Name subject = new X500Name(dn);
 
-        PublicKey publicKey = session.getPublicKey(alias);
-        PKCS10CertificationRequestBuilder csrBuilder = new JcaPKCS10CertificationRequestBuilder(subject, publicKey);
-
-        if (config.addSubjectAlternativeNames && (!config.sanDnsNames.isEmpty() || !config.sanIpAddresses.isEmpty())) {
-            ExtensionsGenerator extensions = new ExtensionsGenerator();
-            extensions.addExtension(Extension.subjectAlternativeName, false, buildSubjectAlternativeNames(config));
-            csrBuilder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extensions.generate());
-        }
-
-        PrivateKey privateKey = session.getOpaquePrivateKey(alias);
-        ContentSigner signer = new JcaContentSignerBuilder(config.signatureAlgorithm)
-                .setProvider(session.providerName())
-                .build(privateKey);
-
-        PKCS10CertificationRequest csr = csrBuilder.build(signer);
-
-        byte[] encoded = csr.getEncoded();
-        String base64 = Base64.getEncoder().encodeToString(encoded);
-
-        StringBuilder pem = new StringBuilder();
-        pem.append("-----BEGIN CERTIFICATE REQUEST-----\n");
-
-        for (int i = 0; i < base64.length(); i += 64) {
-            pem.append(base64.substring(i, Math.min(i + 64, base64.length()))).append("\n");
-        }
-
-        pem.append("-----END CERTIFICATE REQUEST-----\n");
-
-        return pem.toString();
-    }
 
     /**
      * Parse PKCS#10 CSR from PEM string
@@ -783,110 +741,92 @@ public class CertificateGenerator {
     }
 
     public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain) {
+        return validateCertificateChain(chain, null);
+    }
+
+    public static ChainValidationResult validateCertificateChain(List<X509Certificate> chain, java.util.Date validationDate) {
         if (chain == null || chain.isEmpty()) {
             return new ChainValidationResult(false, "Chain is empty");
         }
 
         ChainValidationResult result = new ChainValidationResult(true, "Chain is valid");
-        boolean trustedRootPresent = false;
 
-        // 1. Try to order the chain (End Entity -> Intermediate -> Root)
-        // Basic simplistic ordering: find one whose issuer matches another's subject
-        // For this simple implementation, we assume the user provides them in order or
-        // we try to follow links
-        // A better approach is to build a detailed path. Here we will iterate and check
-        // signatures.
+        try {
+            Set<java.security.cert.TrustAnchor> anchors = new java.util.HashSet<>();
+            List<X509Certificate> intermediates = new ArrayList<>();
 
-        // If single cert, just check dates
-        if (chain.size() == 1) {
-            X509Certificate cert = chain.get(0);
-            try {
-                cert.checkValidity();
-                // Self-signed check
+            // Collect all subjects to determine issuers
+            Set<javax.security.auth.x500.X500Principal> allSubjects = new java.util.HashSet<>();
+            Set<javax.security.auth.x500.X500Principal> allIssuers = new java.util.HashSet<>();
+
+            for (X509Certificate cert : chain) {
                 if (isSelfSigned(cert)) {
-                    if (verifyCertificateSignature(cert)) {
-                        result.details.add("Certificate [0] (Root/Self-signed): Valid signature");
-                        return result;
-                    } else {
-                        return new ChainValidationResult(false, "Certificate [0]: Invalid self-signature");
-                    }
+                    anchors.add(new java.security.cert.TrustAnchor(cert, null));
                 } else {
-                    result.details.add(
-                            "Certificate [0]: Valid dates, but no issuer provided to verify signature (Incomplete Chain)");
-                    result.isValid = false; // Cannot fully validate without issuer
-                    result.message = "Incomplete Chain: Single certificate is not self-signed";
-                    return result;
+                    intermediates.add(cert);
+                    allIssuers.add(cert.getIssuerX500Principal());
                 }
-            } catch (Exception e) {
-                return new ChainValidationResult(false, "Certificate [0] Invalid: " + e.getMessage());
+                if (!allSubjects.add(cert.getSubjectX500Principal())) {
+                    return new ChainValidationResult(false, "Duplicate certificates found in chain: " + cert.getSubjectX500Principal());
+                }
             }
-        }
 
-        // Iterate through chain
-        for (int i = 0; i < chain.size(); i++) {
-            X509Certificate current = chain.get(i);
-
-            try {
-                // Check dates
-                current.checkValidity();
-                result.details.add("Certificate [" + i + "] Subject: " + current.getSubjectDN() + " - Dates VALID");
-
-                // Find issuer
-                if (isSelfSigned(current) && verifyCertificateSignature(current)) {
-                    if (current.getBasicConstraints() < 0) {
-                        return new ChainValidationResult(false, "Certificate [" + i + "] is self-signed but is not a CA");
-                    } else {
-                        trustedRootPresent = true;
-                        result.details.add("Certificate [" + i + "] Root CA - self-signature VALID, pathLen=" + current.getBasicConstraints());
-                        continue; // Valid root
-                    }
+            // Identify the target (leaf) certificate: A certificate whose subject is not an issuer for any other cert in the chain,
+            // unless it's a self-signed chain of 1, in which case it is both.
+            List<X509Certificate> leaves = new ArrayList<>();
+            for (X509Certificate cert : chain) {
+                if (!allIssuers.contains(cert.getSubjectX500Principal())) {
+                    leaves.add(cert);
                 }
-
-                // Look for issuer in the rest of the chain
-                X509Certificate issuerCert = null;
-                for (X509Certificate potentialIssuer : chain) {
-                    if (potentialIssuer != current
-                            && potentialIssuer.getSubjectX500Principal().equals(current.getIssuerX500Principal())) {
-                        issuerCert = potentialIssuer;
-                        break;
-                    }
-                }
-
-                if (issuerCert != null) {
-                    if (issuerCert.getBasicConstraints() < 0) {
-                        return new ChainValidationResult(false, "Certificate [" + i + "] issuer is not a CA: " + issuerCert.getSubjectX500Principal());
-                    }
-                    boolean[] issuerUsage = issuerCert.getKeyUsage();
-                    if (issuerUsage != null && (issuerUsage.length <= 5 || !issuerUsage[5])) {
-                        return new ChainValidationResult(false, "Certificate [" + i + "] issuer lacks keyCertSign usage");
-                    }
-                    // Verify signature using issuer's public key
-                    try {
-                        current.verify(issuerCert.getPublicKey(), "BC");
-                        result.details.add("Certificate [" + i + "] verified by " + issuerCert.getSubjectDN());
-                    } catch (Exception e) {
-                        return new ChainValidationResult(false,
-                                "Certificate [" + i + "] signature invalid: " + e.getMessage());
-                    }
-                } else {
-                    result.isValid = false;
-                    result.message = "Broken Chain";
-                    result.details.add("Certificate [" + i + "] Issuer not found in chain: " + current.getIssuerDN());
-                }
-
-            } catch (Exception e) {
-                return new ChainValidationResult(false, "Certificate [" + i + "] check failed: " + e.getMessage());
             }
-        }
 
-        if (!trustedRootPresent) {
+            if (leaves.size() == 0 && chain.size() == 1 && anchors.size() == 1) {
+                leaves.add(chain.get(0));
+            } else if (leaves.size() != 1) {
+                return new ChainValidationResult(false, "Ambiguous target certificate: expected exactly 1 leaf, found " + leaves.size());
+            }
+
+            X509Certificate endEntity = leaves.get(0);
+
+            if (anchors.isEmpty()) {
+                return new ChainValidationResult(false, "Incomplete Chain: no self-signed CA root was provided");
+            }
+
+            java.security.cert.CertStore certStore = java.security.cert.CertStore.getInstance(
+                    "Collection",
+                    new java.security.cert.CollectionCertStoreParameters(intermediates),
+                    "BC"
+            );
+
+            java.security.cert.X509CertSelector selector = new java.security.cert.X509CertSelector();
+            selector.setCertificate(endEntity);
+            java.security.cert.PKIXBuilderParameters pkixParams = new java.security.cert.PKIXBuilderParameters(anchors, selector);
+            pkixParams.addCertStore(certStore);
+            pkixParams.setRevocationEnabled(false);
+
+            if (validationDate != null) {
+                pkixParams.setDate(validationDate);
+            }
+
+            java.security.cert.CertPathBuilder builder = java.security.cert.CertPathBuilder.getInstance("PKIX", "BC");
+            java.security.cert.PKIXCertPathBuilderResult pkixResult =
+                    (java.security.cert.PKIXCertPathBuilderResult) builder.build(pkixParams);
+
+            result.details.add("PKIX Validation Successful");
+            result.details.add("Target: " + endEntity.getSubjectX500Principal());
+            result.details.add("Trust Anchor: " + pkixResult.getTrustAnchor().getTrustedCert().getSubjectX500Principal());
+            result.details.add("Path Length: " + pkixResult.getCertPath().getCertificates().size());
+        } catch (java.security.cert.CertPathBuilderException e) {
             result.isValid = false;
-            result.message = "Incomplete Chain: no self-signed CA root was provided";
-            result.details.add("Root CA: NOT PRESENT");
+            result.message = "Broken Chain";
+            result.details.add("PKIX Validation Failed: " + e.getMessage());
+        } catch (Exception e) {
+            result.isValid = false;
+            result.message = "PKIX Setup Failed";
+            result.details.add("Error: " + e.getMessage());
         }
 
         return result;
-
     }
 
     private static boolean isSelfSigned(X509Certificate cert) {

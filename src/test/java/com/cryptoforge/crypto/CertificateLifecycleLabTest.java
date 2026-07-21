@@ -67,6 +67,51 @@ public class CertificateLifecycleLabTest {
         List<X509Certificate> incompleteChain = List.of(eeCert);
         CertificateGenerator.ChainValidationResult incompleteValidation = CertificateGenerator.validateCertificateChain(incompleteChain);
         assertFalse(incompleteValidation.isValid, "Chain without root CA should fail validation");
+
+        // 8. Test Non-CA Issuer
+        CertificateGenerator.CertificateConfig invalidRootConfig = new CertificateGenerator.CertificateConfig();
+        invalidRootConfig.commonName = "Fake Root";
+        // End-entity basic constraints by default (CA:FALSE)
+        X509Certificate fakeRoot = CertificateGenerator.generateSelfSignedCertificate(rootCaPair, invalidRootConfig);
+        try {
+            CertificateAuthorityOperations.issueFromCsr(csr, fakeRoot, rootCaPair.getPrivate(), 365, "SHA256withRSA");
+            fail("Should have rejected non-CA issuer");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("is not a CA"));
+        }
+
+        // 9. Test Expired Chain
+        java.util.Date futureDate = new java.util.Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 400); // 400 days in future
+        CertificateGenerator.ChainValidationResult expiredValidation = CertificateGenerator.validateCertificateChain(chain, futureDate);
+        assertFalse(expiredValidation.isValid, "Chain should fail validation due to expiration");
+
+        // 9b. Normal Validation Immediately After
+        CertificateGenerator.ChainValidationResult normalValidation = CertificateGenerator.validateCertificateChain(chain);
+        assertTrue(normalValidation.isValid, "Chain should be valid when date is reset/null, ensuring no leaked global state");
+
+        // 10. Test Disordered Chain (should still pass with PKIX CertPathBuilder)
+        List<X509Certificate> disorderedChain = List.of(rootCert, eeCert);
+        CertificateGenerator.ChainValidationResult disorderedValidation = CertificateGenerator.validateCertificateChain(disorderedChain);
+        assertTrue(disorderedValidation.isValid, "CertPathBuilder should handle disordered chains automatically");
+        assertTrue(disorderedValidation.details.stream().anyMatch(detail -> detail.contains("Target: CN=test.example.com")), "CertPath should contain the correct end-entity certificate");
+
+        // 11. Test Invalid CSR Signature
+        // Sign the CSR with a private key that doesn't match the public key inside the CSR
+        KeyPair wrongPair = AsymmetricKeyOperations.generateRSAKeyPair(2048);
+        org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder badCsrBuilder =
+            new org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder(
+                new org.bouncycastle.asn1.x500.X500Name("CN=bad"), eePair.getPublic());
+        org.bouncycastle.operator.ContentSigner badSigner =
+            new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder("SHA256withRSA")
+                .setProvider("BC").build(wrongPair.getPrivate());
+        PKCS10CertificationRequest invalidCsr = badCsrBuilder.build(badSigner);
+
+        try {
+            CertificateAuthorityOperations.issueFromCsr(invalidCsr, rootCert, rootCaPair.getPrivate(), 365, "SHA256withRSA");
+            fail("Should have rejected invalid CSR signature");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("CSR signature is invalid"), "Expected CSR signature invalid message");
+        }
     }
 
     @Test

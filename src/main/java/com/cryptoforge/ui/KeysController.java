@@ -1651,7 +1651,7 @@ public class KeysController {
                 keyDesc = "Local PEM Key";
             } else if ("PKCS#11 Active Alias".equals(selected)) {
                 String alias = requirePkcs11SigningAlias();
-                csrPem = CertificateGenerator.generateCSRWithPkcs11(com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession(), alias, config);
+                csrPem = com.cryptoforge.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().generateCsr(alias, config);
                 keyDesc = "PKCS#11 Token (Alias: " + alias + ")";
             } else {
                 KeyPair pair;
