@@ -374,4 +374,105 @@ public class DataConverter {
 
         return sb.toString();
     }
+
+    /**
+     * Convert hexadecimal string to Base64
+     *
+     * @param hex Hexadecimal string
+     * @return Base64 encoded string
+     */
+    public static String hexToBase64(String hex) {
+        byte[] bytes = hexToBytes(hex);
+        return java.util.Base64.getEncoder().encodeToString(bytes);
+    }
+
+    /**
+     * Convert Base64 to hexadecimal string
+     *
+     * @param base64 Base64 encoded string
+     * @return Uppercase hexadecimal string
+     */
+    public static String base64ToHex(String base64) {
+        byte[] bytes = decodeBase64Flexible(base64);
+        return bytesToHex(bytes);
+    }
+
+    /**
+     * Convert text to hexadecimal string
+     *
+     * @param text Text string
+     * @return Uppercase hexadecimal string
+     */
+    public static String textToHex(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        byte[] bytes = text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return bytesToHex(bytes);
+    }
+
+    /**
+     * Convert hexadecimal string to text
+     *
+     * @param hex Hexadecimal string
+     * @return UTF-8 decoded text
+     */
+    public static String hexToText(String hex) {
+        byte[] bytes = hexToBytes(hex);
+        return utf8BytesToString(bytes);
+    }
+
+    /**
+     * Convert byte array to Java byte array format
+     *
+     * @param bytes Byte array
+     * @return Java byte array string
+     */
+    public static String bytesToJavaArray(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "new byte[] {}";
+        }
+
+        StringBuilder result = new StringBuilder("new byte[] {\n    ");
+        for (int i = 0; i < bytes.length; i++) {
+            if (i > 0) {
+                result.append(", ");
+                if (i % 12 == 0) {
+                    result.append("\n    ");
+                }
+            }
+            result.append(String.format("(byte)0x%02X", bytes[i]));
+        }
+        result.append("\n}");
+        return result.toString();
+    }
+
+    /**
+     * Format hex string with spaces every N bytes
+     *
+     * @param hex            Hexadecimal string
+     * @param byteSeparation Number of bytes before inserting space
+     * @return Formatted hex string
+     */
+    public static String formatHex(String hex, int byteSeparation) {
+        if (byteSeparation <= 0) {
+            throw new IllegalArgumentException("byteSeparation must be greater than 0");
+        }
+        if (hex == null || hex.isEmpty()) {
+            return "";
+        }
+
+        hex = hex.replaceAll("[\\s:-]", "");
+        StringBuilder formatted = new StringBuilder();
+
+        for (int i = 0; i < hex.length(); i += byteSeparation * 2) {
+            if (i > 0) {
+                formatted.append(" ");
+            }
+            int end = Math.min(i + byteSeparation * 2, hex.length());
+            formatted.append(hex.substring(i, end));
+        }
+
+        return formatted.toString();
+    }
 }
