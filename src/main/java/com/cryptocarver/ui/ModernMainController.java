@@ -121,6 +121,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private TextField fileCipherNonceField;
     @FXML private TextField fileCipherAadField;
     @FXML private TextArea fileCipherResultArea;
+    @FXML private CheckBox fileCipherLinesCheck;
+    @FXML private ComboBox<String> fileCipherLineEncodingCombo;
+    @FXML private ComboBox<String> fileCipherLineCharsetCombo;
+    @FXML private CheckBox fileCipherCompactCbcCheck;
     @FXML
     private ComboBox<String> rsaPaddingCombo;
     @FXML
@@ -1071,7 +1075,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             cipherController.setGcmTagField(gcmTagField);
             cipherController.setAADField(aadField);
             cipherController.setFileCipherFields(fileCipherAlgorithmCombo, fileCipherSourceField, fileCipherDestinationField,
-                    fileCipherTagField, fileCipherKeyField, fileCipherNonceField, fileCipherAadField, fileCipherResultArea);
+                    fileCipherTagField, fileCipherKeyField, fileCipherNonceField, fileCipherAadField, fileCipherResultArea,
+                    fileCipherLinesCheck, fileCipherLineEncodingCombo, fileCipherLineCharsetCombo, fileCipherCompactCbcCheck);
 
             // Set asymmetric components
             cipherController.setRSACombos(rsaPaddingCombo, asymmetricInputFormatCombo, asymmetricOutputFormatCombo);
@@ -4186,7 +4191,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Opens the active operation result in a large, independent viewer. */
     @FXML
     private void handleOpenExpandedResultViewer() {
-        String content = resolveCurrentOutputText();
+        TextArea requestedArea = lastFocusedResultArea;
+        if (requestedArea == null || !isEffectivelyVisible(requestedArea)) {
+            requestedArea = findVisibleKeyPairResultArea();
+        }
+        String content = resolveResultText(requestedArea);
         if (content == null || content.isBlank()) {
             showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
             return;
@@ -4199,11 +4208,62 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     String resolveCurrentOutputText() {
+        return resolveResultText(null);
+    }
+
+    /**
+     * Returns the text explicitly selected by the user when it is a registered
+     * result area.  This matters for generated key pairs: their public and
+     * private tabs are two independent outputs, not a single public payload.
+     */
+    private String resolveResultText(TextArea requestedArea) {
+        if (requestedArea != null && resultViewerAreas.contains(requestedArea)) {
+            return renderResultArea(requestedArea);
+        }
         if (lastPublishedResultSnapshot == null) {
             return "";
         }
         return renderPublishedResult(lastPublishedResultSnapshot,
                 com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility());
+    }
+
+    private String renderResultArea(TextArea area) {
+        if (area == null || area.getText() == null || area.getText().isBlank()) {
+            return "";
+        }
+        // Locally generated key pairs are explicit laboratory output.  Their
+        // public/private tabs must remain inspectable and reusable even when a
+        // global history view is configured to mask secrets.
+        if (isKeyPairResultArea(area)) {
+            return area.getText();
+        }
+        com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
+        com.cryptocarver.model.SecretVisibility visibility =
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility();
+        if (classification == com.cryptocarver.model.OperationDetail.Classification.SECRET) {
+            if (visibility == com.cryptocarver.model.SecretVisibility.REDACTED) return "";
+            if (visibility == com.cryptocarver.model.SecretVisibility.MASKED) return "***MASKED***";
+        } else if (classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE
+                && visibility != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+            return "***MASKED***";
+        }
+        return area.getText();
+    }
+
+    private com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
+        if (area != null && isPrivateKeyResultArea(area)) {
+            return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+        }
+        if (lastPublishedResultSnapshot != null) {
+            return classifyPublishedResult(lastPublishedResultSnapshot);
+        }
+        return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
+    }
+
+    private boolean isPrivateKeyResultArea(TextArea area) {
+        String id = area == null ? null : area.getId();
+        return id != null && !area.isEditable()
+                && id.toLowerCase(java.util.Locale.ROOT).contains("privatekeyarea");
     }
 
     String renderPublishedResult(com.cryptocarver.model.OperationResult result, com.cryptocarver.model.SecretVisibility visibility) {
@@ -4387,6 +4447,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 .orElse(null);
     }
 
+    /** Selects the currently visible tab of a generated public/private key pair. */
+    private TextArea findVisibleKeyPairResultArea() {
+        return resultViewerAreas.stream()
+                .filter(this::isKeyPairResultArea)
+                .filter(this::isEffectivelyVisible)
+                .filter(area -> !area.getText().isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isKeyPairResultArea(TextArea area) {
+        String id = area == null ? null : area.getId();
+        if (id == null) return false;
+        String normalized = id.toLowerCase(java.util.Locale.ROOT);
+        return !area.isEditable() && (normalized.contains("publickeyarea")
+                || normalized.contains("privatekeyarea"));
+    }
+
     /**
      * Result areas can be opened directly even when their feature does not use the
      * shared global output panel (for example XAdES, PQC and inspectors).
@@ -4434,7 +4512,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         String normalized = id.toLowerCase(java.util.Locale.ROOT);
         return normalized.contains("output") || normalized.contains("result")
                 || normalized.contains("report") || normalized.contains("details")
-                || normalized.contains("ciphertext");
+                || normalized.contains("ciphertext")
+                || isKeyPairResultArea(area);
     }
 
     private ContextMenu createResultContextMenu(TextArea area) {
@@ -4472,7 +4551,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private void handleCopySecure(TextArea area, String textToCopy, boolean isSelection) {
         if (!isSelection) {
-            String content = resolveCurrentOutputText();
+            String content = resolveResultText(area);
             if (content == null || content.isEmpty()) {
                 updateStatus("Action blocked: No current output available to copy.");
                 return;
@@ -4487,16 +4566,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (textToCopy == null || textToCopy.isEmpty()) return;
 
-        // If it's a selection, ensure it comes from the current snapshot. We do not allow old selections to be treated as PUBLIC by default.
-        if (lastPublishedResultSnapshot == null || area != lastUpdatedResultArea) {
+        if (!isKeyPairResultArea(area)
+                && (lastPublishedResultSnapshot == null || area != lastUpdatedResultArea)) {
             updateStatus("Action blocked: Cannot securely copy selection from old or unknown result.");
             return;
         }
-
-        com.cryptocarver.model.OperationDetail.Classification cls = classifyPublishedResult(lastPublishedResultSnapshot);
+        com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
         boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                 || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-        if (requiresFullLab && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+        if (requiresFullLab && !isKeyPairResultArea(area)
+                && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
             updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
             return;
         }
@@ -4507,21 +4586,22 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleAddToClipboardShelfSecure(javafx.scene.control.TextArea area, String selectedText) {
         String text;
         if (selectedText != null) {
-            // Handle partial selection securely
-            if (lastPublishedResultSnapshot == null || area != lastUpdatedResultArea) {
+            if (!isKeyPairResultArea(area)
+                    && (lastPublishedResultSnapshot == null || area != lastUpdatedResultArea)) {
                 updateStatus("Action blocked: Cannot securely add selection from old or unknown result.");
                 return;
             }
-            com.cryptocarver.model.OperationDetail.Classification cls = classifyPublishedResult(lastPublishedResultSnapshot);
+            com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
             boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                     || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-            if (requiresFullLab && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+            if (requiresFullLab && !isKeyPairResultArea(area)
+                    && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
                 updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
                 return;
             }
             text = selectedText;
         } else {
-            text = resolveCurrentOutputText();
+            text = resolveResultText(area);
         }
 
         if (text == null || text.isEmpty()) {
@@ -4539,7 +4619,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         com.cryptocarver.model.ClipboardEntry.Format format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
-        com.cryptocarver.model.OperationDetail.Classification cls = classifyPublishedResult(lastPublishedResultSnapshot);
+        com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
         String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
 
         // Classification already determined by classifyPublishedResult

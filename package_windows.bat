@@ -2,7 +2,7 @@
 setlocal
 
 set APP_NAME=CryptoCarver
-set MAIN_CLASS=com.cryptoforge.Launcher
+set MAIN_CLASS=com.cryptocarver.Launcher
 set ICON_PATH=src\main\resources\icons\app-icon.png
 set INPUT_DIR=target
 if "%PACKAGE_OUTPUT_DIR%"=="" (set OUTPUT_DIR=dist) else (set OUTPUT_DIR=%PACKAGE_OUTPUT_DIR%)

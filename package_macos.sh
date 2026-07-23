@@ -2,7 +2,7 @@
 
 # Configuration
 APP_NAME="CryptoCarver"
-MAIN_CLASS="com.cryptoforge.Launcher"
+MAIN_CLASS="com.cryptocarver.Launcher"
 ICON_SOURCE="src/main/resources/icons/app-icon.png"
 ICON_TARGET="src/main/resources/icons/app-icon.icns"
 OUTPUT_DIR="${PACKAGE_OUTPUT_DIR:-dist}"

@@ -119,8 +119,9 @@ public class ClipboardShelfController {
         detailsArea.setText(displayValue);
 
         SecretVisibility visibility = AppSettings.getInstance().getSecretVisibility();
-        boolean isRedacted = isSensitive && visibility == SecretVisibility.REDACTED;
-        boolean isMasked = isSensitive && visibility == SecretVisibility.MASKED;
+        boolean laboratoryGeneratedKey = isLaboratoryGeneratedKey(entry);
+        boolean isRedacted = isSensitive && !laboratoryGeneratedKey && visibility == SecretVisibility.REDACTED;
+        boolean isMasked = isSensitive && !laboratoryGeneratedKey && visibility == SecretVisibility.MASKED;
 
         boolean canCopy = !isRedacted && !isMasked;
 
@@ -145,7 +146,7 @@ public class ClipboardShelfController {
         boolean isSensitive = entry.getClassification() == OperationDetail.Classification.SECRET ||
                               entry.getClassification() == OperationDetail.Classification.SENSITIVE;
 
-        if (isSensitive) {
+        if (isSensitive && !isLaboratoryGeneratedKey(entry)) {
             SecretVisibility visibility = AppSettings.getInstance().getSecretVisibility();
             if (visibility == SecretVisibility.REDACTED) {
                 return "[REDACTED]";
@@ -159,6 +160,11 @@ public class ClipboardShelfController {
             return val.substring(0, 47) + "...";
         }
         return val;
+    }
+
+    private boolean isLaboratoryGeneratedKey(ClipboardEntry entry) {
+        String source = entry == null ? null : entry.getSourceOperation();
+        return source != null && source.startsWith("Generate ") && source.contains(" Key");
     }
 
     @FXML

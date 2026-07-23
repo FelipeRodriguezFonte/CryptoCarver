@@ -4,7 +4,7 @@ set -euo pipefail
 # Creates a self-contained Linux app-image by default. Set PACKAGE_TYPE=deb or
 # PACKAGE_TYPE=rpm on a matching distribution to build an installer package.
 APP_NAME="CryptoCarver"
-MAIN_CLASS="com.cryptoforge.Launcher"
+MAIN_CLASS="com.cryptocarver.Launcher"
 OUTPUT_DIR="${PACKAGE_OUTPUT_DIR:-dist}"
 PACKAGE_TYPE="${PACKAGE_TYPE:-app-image}"
 ICON_PATH="src/main/resources/icons/app-icon.png"

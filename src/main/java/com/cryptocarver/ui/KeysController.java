@@ -1507,6 +1507,10 @@ public class KeysController {
                     mainController.publish(OperationResult.forOperation("Generate RSA Key")
                             .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
                                     .getBytes(StandardCharsets.UTF_8))
+                            .enrichedOutput(renderGeneratedKeyPair(
+                                    AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
+                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
+                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
                             .details(details)
                             .status("RSA-" + keySize + " key pair generated successfully")
                             .build());
@@ -1570,6 +1574,10 @@ public class KeysController {
                     mainController.publish(OperationResult.forOperation("Generate DSA Key")
                             .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
                                     .getBytes(StandardCharsets.UTF_8))
+                            .enrichedOutput(renderGeneratedKeyPair(
+                                    AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
+                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
+                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
                             .details(details)
                             .status("DSA-" + keySize + " key pair generated successfully")
                             .build());
@@ -1633,6 +1641,10 @@ public class KeysController {
                     mainController.publish(OperationResult.forOperation("Generate ECDSA Key")
                             .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
                                     .getBytes(StandardCharsets.UTF_8))
+                            .enrichedOutput(renderGeneratedKeyPair(
+                                    AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
+                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
+                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
                             .details(details)
                             .status("ECDSA F(p) key pair generated on curve " + curve)
                             .build());
@@ -1689,6 +1701,9 @@ public class KeysController {
                             AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
                     mainController.publish(OperationResult.forOperation("Generate EdDSA Key")
                             .output(publicPem.getBytes(StandardCharsets.UTF_8))
+                            .enrichedOutput(renderGeneratedKeyPair(publicPem,
+                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
+                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
                             .details(details)
                             .status("Ed25519 key pair generated successfully")
                             .build());
@@ -1709,6 +1724,11 @@ public class KeysController {
         } catch (Exception e) {
             showError("Generation Error", "Error generating Ed25519 key: " + e.getMessage());
         }
+    }
+
+    private String renderGeneratedKeyPair(String publicKeyPem, String privateKeyPem) {
+        return "=== PUBLIC KEY ===\n\n" + publicKeyPem
+                + "\n\n=== PRIVATE KEY ===\n\n" + privateKeyPem;
     }
 
     /**

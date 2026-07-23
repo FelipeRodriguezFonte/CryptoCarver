@@ -59,6 +59,28 @@ public class ExpandResultAuditTest {
         return resultHolder[0];
     }
 
+    private String resolveAreaTextOnFxThread(ModernMainController controller, javafx.scene.control.TextArea area)
+            throws Exception {
+        final String[] resultHolder = new String[1];
+        final Exception[] err = new Exception[1];
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                java.lang.reflect.Method resolve = controller.getClass()
+                        .getDeclaredMethod("resolveResultText", javafx.scene.control.TextArea.class);
+                resolve.setAccessible(true);
+                resultHolder[0] = (String) resolve.invoke(controller, area);
+            } catch (Exception e) {
+                err[0] = e;
+            } finally {
+                latch.countDown();
+            }
+        });
+        assertTrue(latch.await(2, TimeUnit.SECONDS), "Timeout waiting for area result resolution");
+        if (err[0] != null) throw err[0];
+        return resultHolder[0];
+    }
+
     private void publishOnFxThread(ModernMainController controller, OperationResult result) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         final Exception[] err = new Exception[1];
@@ -380,5 +402,42 @@ public class ExpandResultAuditTest {
 
         assertEquals(0, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
         assertTrue(statusLabel.getText().contains("blocked"));
+    }
+
+    @Test
+    public void testK_PrivateKeyResultAreaRemainsAvailableForLaboratoryUse() throws Exception {
+        ModernMainController controller = createController();
+        javafx.scene.control.TextArea privateArea = new javafx.scene.control.TextArea("PRIVATE_KEY_MATERIAL");
+        privateArea.setId("rsaPrivateKeyArea");
+        privateArea.setEditable(false);
+
+        java.lang.reflect.Field areasField = controller.getClass().getDeclaredField("resultViewerAreas");
+        areasField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        java.util.Set<javafx.scene.control.TextArea> areas =
+                (java.util.Set<javafx.scene.control.TextArea>) areasField.get(controller);
+        areas.add(privateArea);
+
+        AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
+        assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
+
+        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
+        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
+                new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
+                new Object[]{privateArea, null});
+        assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
+        assertEquals(OperationDetail.Classification.SECRET,
+                com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getClassification());
+
+        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
+        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
+        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
+                new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
+                new Object[]{privateArea, null});
+        assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
+
+        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
     }
 }

@@ -16,6 +16,6 @@ echo "Compiling test sources..."
 "$MAVEN_BIN" -q test-compile
 
 echo "Generating catalog..."
-"$MAVEN_BIN" -q exec:java -Dexec.mainClass="com.cryptoforge.model.CatalogGenerator" -Dexec.classpathScope="test"
+"$MAVEN_BIN" -q exec:java -Dexec.mainClass="com.cryptocarver.model.CatalogGenerator" -Dexec.classpathScope="test"
 
 echo "Done."

@@ -130,7 +130,13 @@ public final class ClipboardShelfWindow {
             return false;
         }
         return entry.getClassification() == OperationDetail.Classification.PUBLIC
+                || isLaboratoryGeneratedKey(entry)
                 || visibility == SecretVisibility.FULL_LAB;
+    }
+
+    private static boolean isLaboratoryGeneratedKey(ClipboardEntry entry) {
+        String source = entry == null ? null : entry.getSourceOperation();
+        return source != null && source.startsWith("Generate ") && source.contains(" Key");
     }
 
     private static SecretVisibility currentVisibility() {

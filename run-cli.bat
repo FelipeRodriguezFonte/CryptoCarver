@@ -12,5 +12,5 @@ if "%MAVEN_CMD%"=="" (
     exit /b 127
 )
 
-call "%MAVEN_CMD%" -q -DskipTests compile exec:java -Dexec.mainClass=com.cryptoforge.CryptoCarverCli -Dexec.args="%*"
+call "%MAVEN_CMD%" -q -DskipTests compile exec:java -Dexec.mainClass=com.cryptocarver.CryptoCarverCli -Dexec.args="%*"
 exit /b %errorlevel%

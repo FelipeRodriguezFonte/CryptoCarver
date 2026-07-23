@@ -4,12 +4,15 @@ import com.cryptocarver.crypto.AsymmetricCipher;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.SymmetricCipher;
 import com.cryptocarver.crypto.StreamingCipher;
+import com.cryptocarver.crypto.LineFileCipher;
+import com.cryptocarver.crypto.EBCDICConverter;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.CheckBox;
 import javafx.stage.FileChooser;
 
 import java.io.ByteArrayOutputStream;
@@ -64,6 +67,10 @@ public class CipherController {
     private TextField fileCipherNonceField;
     private TextField fileCipherAadField;
     private TextArea fileCipherResultArea;
+    private CheckBox fileCipherLinesCheck;
+    private ComboBox<String> fileCipherLineEncodingCombo;
+    private ComboBox<String> fileCipherLineCharsetCombo;
+    private CheckBox fileCipherCompactCbcCheck;
 
     // Asymmetric cipher UI components
     private ComboBox<String> rsaPaddingCombo;
@@ -469,7 +476,9 @@ public class CipherController {
 
     /** Connects the independent file-cipher panel. */
     public void setFileCipherFields(ComboBox<String> algorithmCombo, TextField sourceField, TextField destinationField,
-            TextField tagField, TextField keyField, TextField nonceField, TextField aadField, TextArea resultArea) {
+            TextField tagField, TextField keyField, TextField nonceField, TextField aadField, TextArea resultArea,
+            CheckBox linesCheck, ComboBox<String> lineEncodingCombo, ComboBox<String> lineCharsetCombo,
+            CheckBox compactCbcCheck) {
         this.fileCipherAlgorithmCombo = algorithmCombo;
         this.fileCipherSourceField = sourceField;
         this.fileCipherDestinationField = destinationField;
@@ -478,8 +487,26 @@ public class CipherController {
         this.fileCipherNonceField = nonceField;
         this.fileCipherAadField = aadField;
         this.fileCipherResultArea = resultArea;
+        this.fileCipherLinesCheck = linesCheck;
+        this.fileCipherLineEncodingCombo = lineEncodingCombo;
+        this.fileCipherLineCharsetCombo = lineCharsetCombo;
+        this.fileCipherCompactCbcCheck = compactCbcCheck;
         algorithmCombo.getItems().setAll("AES-256-GCM", "AES-256-CTR", "AES-256-CBC", "ChaCha20-Poly1305");
         algorithmCombo.setValue("AES-256-GCM");
+        algorithmCombo.valueProperty().addListener((observable, oldValue, selected) -> updateFileCipherLineModeState());
+        if (lineEncodingCombo != null) {
+            lineEncodingCombo.getItems().setAll("Base64URL", "Hexadecimal");
+            lineEncodingCombo.setValue("Base64URL");
+        }
+        if (lineCharsetCombo != null) {
+            lineCharsetCombo.getItems().setAll("UTF-8");
+            lineCharsetCombo.getItems().addAll(EBCDICConverter.supportedCodePages().keySet());
+            lineCharsetCombo.setValue("UTF-8");
+        }
+        if (linesCheck != null) {
+            linesCheck.selectedProperty().addListener((observable, oldValue, selected) -> updateFileCipherLineModeState());
+            updateFileCipherLineModeState();
+        }
     }
 
     public void handleFileCipherEncrypt() {
@@ -488,6 +515,18 @@ public class CipherController {
 
     public void handleFileCipherDecrypt() {
         executeFileCipher(false);
+    }
+
+    private void updateFileCipherLineModeState() {
+        boolean lineMode = fileCipherLinesCheck != null && fileCipherLinesCheck.isSelected();
+        boolean cbcLineMode = lineMode && "AES-256-CBC".equals(fileCipherAlgorithmCombo.getValue());
+        fileCipherNonceField.setDisable(lineMode && !cbcLineMode);
+        fileCipherTagField.setDisable(lineMode);
+        if (fileCipherLineEncodingCombo != null) fileCipherLineEncodingCombo.setDisable(!lineMode);
+        if (fileCipherLineCharsetCombo != null) fileCipherLineCharsetCombo.setDisable(!lineMode);
+        if (fileCipherCompactCbcCheck != null) {
+            fileCipherCompactCbcCheck.setDisable(!lineMode);
+        }
     }
 
     public void chooseFileCipherSource() {
@@ -524,32 +563,65 @@ public class CipherController {
             if (source.toAbsolutePath().normalize().equals(destination.toAbsolutePath().normalize())) {
                 throw new IllegalArgumentException("Source and output file must be different");
             }
-            java.nio.file.Path tag = parameters.aead ? requiredPath(fileCipherTagField.getText(), "Tag file path") : null;
-            if (!encrypt && parameters.aead && !java.nio.file.Files.isRegularFile(tag)) {
+            boolean lineMode = fileCipherLinesCheck != null && fileCipherLinesCheck.isSelected();
+            java.nio.file.Path tag = parameters.aead && !lineMode ? requiredPath(fileCipherTagField.getText(), "Tag file path") : null;
+            if (!encrypt && parameters.aead && !lineMode && !java.nio.file.Files.isRegularFile(tag)) {
                 throw new IllegalArgumentException("Detached tag file does not exist");
+            }
+            if (lineMode) {
+                LineFileCipher.Result result = encrypt
+                        ? LineFileCipher.encrypt(source, destination, parameters.key, fileCipherAlgorithmCombo.getValue(), parameters.aad,
+                                lineEncoding(), parameters.nonce, lineCharset(), compactLineOutput())
+                        : LineFileCipher.decrypt(source, destination, parameters.key, fileCipherAlgorithmCombo.getValue(), parameters.aad,
+                                parameters.nonce, lineEncoding(), lineCharset());
+                publishFileCipherResult(encrypt, parameters, null, result.inputBytes(), result.outputBytes(), result.lines(), true);
+                return;
             }
             StreamingCipher.Result result = encrypt
                     ? StreamingCipher.encrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
                             parameters.nonce, parameters.aad, tag, com.cryptocarver.util.ProgressMonitor.NO_OP)
                     : StreamingCipher.decrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
                             parameters.nonce, parameters.aad, tag, com.cryptocarver.util.ProgressMonitor.NO_OP);
+            publishFileCipherResult(encrypt, parameters, tag, result.inputBytes(), result.outputBytes(), null, false);
+        } catch (Exception e) {
+            statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
+        }
+    }
+
+    private LineFileCipher.Encoding lineEncoding() {
+        return fileCipherLineEncodingCombo != null && "Hexadecimal".equals(fileCipherLineEncodingCombo.getValue())
+                ? LineFileCipher.Encoding.HEXADECIMAL : LineFileCipher.Encoding.BASE64URL;
+    }
+
+    private java.nio.charset.Charset lineCharset() {
+        String selected = fileCipherLineCharsetCombo == null ? "UTF-8" : fileCipherLineCharsetCombo.getValue();
+        if (selected == null || "UTF-8".equals(selected)) return StandardCharsets.UTF_8;
+        String codePage = EBCDICConverter.supportedCodePages().get(selected);
+        if (codePage == null) throw new IllegalArgumentException("Unsupported text encoding: " + selected);
+        return java.nio.charset.Charset.forName(codePage);
+    }
+
+    private boolean compactLineOutput() {
+        return fileCipherCompactCbcCheck != null && fileCipherCompactCbcCheck.isSelected();
+    }
+
+    private void publishFileCipherResult(boolean encrypt, FileCipherParameters parameters, java.nio.file.Path tag,
+                                         long inputBytes, long outputBytes, Long lines, boolean lineMode) {
             String operation = encrypt ? "encrypted" : "decrypted";
             String enrichedOutputText = "File " + operation + " successfully\nAlgorithm: " + fileCipherAlgorithmCombo.getValue()
-                    + "\nInput: " + result.inputBytes() + " bytes\nOutput: " + result.outputBytes() + " bytes"
-                    + (parameters.aead ? "\nAEAD tag: " + tag : "");
+                    + "\nInput: " + inputBytes + " bytes\nOutput: " + outputBytes + " bytes"
+                    + (lineMode ? "\nRecords: " + lines + " (independently authenticated)" : parameters.aead ? "\nAEAD tag: " + tag : "");
             fileCipherResultArea.setText(enrichedOutputText);
 
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", fileCipherAlgorithmCombo.getValue());
-            details.put("Input bytes", Long.toString(result.inputBytes()));
-            details.put("Output bytes", Long.toString(result.outputBytes()));
-            details.put("Authenticated", Boolean.toString(result.authenticated()));
+            details.put("Input bytes", Long.toString(inputBytes));
+            details.put("Output bytes", Long.toString(outputBytes));
+            details.put("Authenticated", Boolean.toString(lineMode || parameters.aead));
+            if (lineMode) details.put("Records", Long.toString(lines));
             statusReporter.publish(OperationResult.forOperation("File " + (encrypt ? "Encrypt" : "Decrypt"))
                     .enrichedOutput(enrichedOutputText)
                     .details(details).status("File " + operation + " using " + fileCipherAlgorithmCombo.getValue()).build());
-        } catch (Exception e) {
-            statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
-        }
     }
 
     private FileCipherParameters readFileCipherParameters() {
@@ -557,7 +629,8 @@ public class CipherController {
         String algorithm = selected.startsWith("ChaCha") ? "ChaCha20-Poly1305" : "AES-256";
         String mode = selected.contains("GCM") ? "GCM" : selected.contains("CTR") ? "CTR" : selected.contains("CBC") ? "CBC" : "";
         byte[] key = requiredHex(fileCipherKeyField.getText(), "Key");
-        byte[] nonce = requiredHex(fileCipherNonceField.getText(), "IV / nonce");
+        boolean lineMode = fileCipherLinesCheck != null && fileCipherLinesCheck.isSelected();
+        byte[] nonce = lineMode && !"AES-256-CBC".equals(selected) ? null : requiredHex(fileCipherNonceField.getText(), "IV / nonce");
         byte[] aad = optionalHex(fileCipherAadField.getText(), "AAD");
         return new FileCipherParameters(algorithm, mode, key, nonce, aad, "GCM".equals(mode) || "ChaCha20-Poly1305".equals(algorithm));
     }

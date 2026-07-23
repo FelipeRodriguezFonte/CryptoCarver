@@ -1025,6 +1025,14 @@
                                                 <Button text="Generate" onAction="#handleGenerateFileCipherNonce" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
                                             </HBox>
                                             <TextField fx:id="fileCipherAadField" promptText="AAD in hexadecimal (optional, AEAD only)" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                                            <CheckBox fx:id="fileCipherLinesCheck" text="Process each UTF-8 line independently (GCM/ChaCha: fresh nonce per line; CBC: supplied IV for all lines)" wrapText="true" style="-fx-font-size: 10px;"/>
+                                            <HBox spacing="6" alignment="CENTER_LEFT">
+                                                <Label text="Line output:" style="-fx-font-size: 10px;"/>
+                                                <ComboBox fx:id="fileCipherLineEncodingCombo" prefWidth="120" style="-fx-font-size: 10px;"/>
+                                                <Label text="Text:" style="-fx-font-size: 10px;"/>
+                                                <ComboBox fx:id="fileCipherLineCharsetCombo" prefWidth="180" style="-fx-font-size: 10px;"/>
+                                            </HBox>
+                                            <CheckBox fx:id="fileCipherCompactCbcCheck" text="Write line records without header (compact format)" style="-fx-font-size: 10px;"/>
                                             <HBox spacing="8">
                                                 <Button text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
                                                 <Button text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
