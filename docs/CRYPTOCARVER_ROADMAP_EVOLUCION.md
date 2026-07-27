@@ -2,8 +2,8 @@
 
 **Documento de trabajo para la evolución funcional, técnica y visual de CryptoCarver**
 
-- Versión del plan: 1.3
-- Fecha: 26 de julio de 2026
+- Versión del plan: 1.5
+- Fecha: 27 de julio de 2026
 - Horizonte recomendado: 12 meses
 - Estado: roadmap maestro en ejecución
 - Producto: aplicación de escritorio para desarrollo, pruebas, formación y diagnóstico criptográfico
@@ -14,7 +14,7 @@
 - [x] Mantener y migrar automáticamente el histórico y las sesiones de la ubicación de configuración anterior.
 - [x] Unificar `DataConverter` en `com.cryptoforge.util.DataConverter` y completar conversión decimal/UTF-8 estricta.
 - [x] Añadir una prueba contractual del FXML moderno: documento, controlador y handlers.
-- [ ] Completar recorridos smoke visuales de las pantallas principales.
+- [~] Recorridos smoke automatizados de navegación completados para todas las operaciones registradas: cada ruta evita el placeholder y deja exactamente un módulo visible. Queda la comprobación visual manual periódica por plataforma.
 - [x] Extraer y desacoplar la lógica PQC y XML/XAdES mediante la frontera `StatusReporter`.
 - [x] Introducir `OperationResult` y usarlo en PQC, XAdES y utilidades principales para publicar inspector, estado e histórico de forma atómica.
 - [x] Añadir diagnóstico seguro de runtime y proveedor SLF4J; los módulos moderno, PQC y XAdES ya registran errores estructurados.
@@ -24,6 +24,18 @@
 - [x] Fases 3 a 9: KeyMaterial/HSM simulado, diagnósticos TSA, PQC estandarizada, perfiles de pagos, ASN.1/JOSE y automatización segura.
 - [x] Fase 10 base: versión centralizada, diagnóstico exportable, catálogo de formatos, guía rápida, guía de límites de laboratorio, SBOM y scripts de empaquetado multiplataforma.
 - [x] WSS-Security base: firma y verificación del SOAP Body con RSA/ECDSA y SHA-256/384/512, SOAP 1.1/1.2, BinarySecurityToken, Timestamp opcional, referencias estrictas, bloqueo XXE y navegación moderna independiente.
+- [x] Completar CF-15F: inspector CMS/PKCS#7 con validación separada de estructura, firma, certificado y confianza PKIX.
+- [x] Retirar los ejecutables de depuración Retail MAC del artefacto de producción y conservar el vector ANSI X9.19 como prueba automatizada.
+- [x] Corregir el visor expandido para resultados de módulos incluidos y publicar informes completos de certificados, validaciones, comparaciones y CRL con su clasificación adecuada.
+- [x] Retirar el constructor dinámico del histórico moderno y unificar la experiencia en `HistoryController`; sesiones e histórico restauran ahora configuración de controladores FXML anidados, con captura completa solo para sesiones explícitas y sin textos/secretos en el estado automático del histórico.
+- [x] Extraer la presentación del inspector a `OperationInspectorPresenter` y eliminar estimaciones de tamaño: entrada y salida muestran únicamente bytes realmente publicados por la operación.
+- [x] Extraer renderizado/clasificación segura de resultados a `OperationResultRenderer`, con política explícita, UTF-8 estricto y fallback hexadecimal; endurecer el histórico con escritura atómica, recuperación de JSON corrupto y migración a `.cryptocarver`.
+- [x] Hacer fiable `mvn clean` en carpetas gestionadas por Finder/iCloud mediante el fast clean atómico de Maven, además de la protección equivalente del lanzador moderno.
+- [x] Extraer a `ResultAreaTracker` el registro, foco, última actualización y selección visible del visor expandido; aislar los smoke tests modernos en un `user.home` temporal para que nunca modifiquen configuración personal.
+- [x] Añadir configuraciones portables completas por pantalla (`.ccconfig`): exportación cifrada con contraseña por defecto, alternativa JSON con advertencia, importación con previsualización, navegación automática y restauración de entradas/opciones —incluidas claves, IV y nonce—; conserva el material generado reutilizable de las pantallas de claves y excluye informes/resultados derivados.
+- [x] Endurecer el formato portable v2 con alcance real por panel: ya no arrastra campos ocultos de otras operaciones del mismo módulo, conserva controles comunes de la pantalla y mantiene importación compatible con los documentos v1. El recorrido contractual cubre todas las rutas exportables y ha alineado los alias PIN/CVV, ML-KEM y CMS Inspector con sus paneles reales.
+- [x] Proteger el almacenamiento de configuraciones con escritura atómica, límite centralizado de 12 MB, limpieza de temporales y permisos de propietario (`0600`) en sistemas POSIX.
+- [~] Modularizar `ModernMainController`: Authentication, Cipher (incluidos streaming, RSA y OpenPGP), Payments, EMV, Keys y Certificates ya disponen de FXML/controladores autocontenidos. La navegación se ha trasladado a un registro declarativo tipado y se retiró el gran switch heredado; queda reducir coordinación transversal de inspector, histórico y ciclo de vida.
 
 > Nota de migración: `com.cryptoforge` permanece temporalmente como namespace Java interno para mantener compatibilidad. No forma parte de la identidad pública y se migrará en una fase técnica independiente, acompañada de pruebas de regresión.
 
@@ -104,8 +116,8 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 ### 4.3 Limpieza técnica prioritaria
 
 - Unificar los dos `DataConverter` existentes y eliminar el paquete duplicado.
-- Dividir `ModernMainController` por módulos FXML independientes.
-- Sacar clases de depuracion de `src/main/java/com/cryptoforge/test`.
+- [~] Dividir `ModernMainController` por módulos FXML independientes. Authentication, Cipher, Payments, EMV, Keys, Certificates/CRL/CMS, PQC, XML/XAdES, WSS, JOSE, ASN.1, OpenPGP, PAdES, ASiC, histórico y herramientas genéricas ya están extraídos. Las rutas internas heredadas se sustituyeron por `UiNavigationRegistry`; histórico, inspector, renderizador y seguimiento del visor tienen componentes propios. Queda reducir coordinación de ciclo de vida y acciones seguras del visor.
+- [x] Sacar clases de depuracion de `src/main/java/com/cryptocarver/test` y trasladar los casos útiles a pruebas automatizadas.
 - Evitar versionar artefactos de `target/` y revisar `.gitignore`.
 - Usar `--release 17` o migrar de forma planificada a Java 21 LTS.
 - Añadir una implementación SLF4J para eliminar el logger NOP y controlar niveles.
@@ -169,6 +181,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 #### Histórico y sesiones
 
+- [x] Configuraciones completas por pantalla exportables e importables: formato versionado, cifrado PBKDF2/AES-GCM, validación estricta del módulo/campos, conservación explícita del material de claves generado y exclusión de informes/salidas derivadas.
 - Histórico con columnas configurables, filtros por modulo, fecha y resultado.
 - Vista detallada estructurada en vez de JSON plano.
 - Repeticion real de operaciones mediante `HistoryCommand`.
@@ -319,9 +332,9 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 - [x] Inspector de firmas detached: ID de firmante, versión, tipo, algoritmo público, hash y fecha de creación, distinguiendo el parseo de la verificación criptográfica y de Web-of-Trust.
 - [ ] Soporte de claves OpenPGP desde PKCS#11 cuando el proveedor/token y GnuPG lo permitan, sin extraer la clave privada.
 
-#### Próximo bloque propuesto: CF-15F — CMS Inspector y validación explicable
+#### Bloque completado: CF-15F — CMS Inspector y validación explicable
 
-El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un CMS/PKCS#7 y mostrar de forma segura su tipo, contenido encapsulado o detached, firmantes, destinatarios, algoritmos, certificados, atributos firmados/no firmados y el resultado de cada comprobación. La validación deberá separar con claridad: estructura, integridad/firma, cadena de confianza y vigencia. Tendrá exportación de informe y pruebas positivas, negativas y multi-destinatario.
+El incremento no añade CAdES como etiqueta comercial. Abre CMS/PKCS#7 y muestra de forma segura su tipo, contenido encapsulado o detached, firmantes, destinatarios, algoritmos, certificados, atributos firmados/no firmados y el resultado de cada comprobación. La validación separa estructura, integridad/firma, cadena de confianza y vigencia. Incluye exportación de informe y pruebas positivas, negativas y multi-destinatario.
 
 #### Certificados
 

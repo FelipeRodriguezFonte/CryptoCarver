@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptocarver.ui.AuthenticationController"
+      managed="false" visible="false" spacing="8" style="-fx-padding: 8;">
+    <VBox spacing="5" style="-fx-padding: 10; -fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4; -fx-background-radius: 4;">
+        <Label text="1. Data to authenticate" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+        <Label text="Enter the message used to generate or verify the signature/MAC."
+               style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+        <TextArea fx:id="authInputArea" prefHeight="120" wrapText="true"
+                  promptText="Enter the message to authenticate..."
+                  style="-fx-font-family: 'Monospaced';" VBox.vgrow="ALWAYS"/>
+    </VBox>
+
+    <Accordion>
+        <panes>
+            <TitledPane text="🔏 Digital Signatures" expanded="true">
+                <VBox spacing="6" style="-fx-padding: 8;">
+                    <Label text="Algorithm:" style="-fx-font-size: 11px;"/>
+                    <ComboBox fx:id="signatureAlgorithmCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
+                    <Separator style="-fx-padding: 3 0;"/>
+                    <Label text="Keys (PEM format):" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="220">
+                        <Tab text="Private Key">
+                            <VBox spacing="5" style="-fx-padding: 8;">
+                                <TextArea fx:id="signaturePrivateKeyArea" promptText="Paste Private Key PEM here..."
+                                          wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;" VBox.vgrow="ALWAYS"/>
+                                <Button text="Load Private Key..." onAction="#handleLoadSignPrivateKey"
+                                        styleClass="secondary-button" maxWidth="Infinity" style="-fx-font-size: 10px;"/>
+                            </VBox>
+                        </Tab>
+                        <Tab text="Public Key">
+                            <VBox spacing="5" style="-fx-padding: 8;">
+                                <TextArea fx:id="signaturePublicKeyArea" promptText="Paste Public Key PEM here..."
+                                          wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;" VBox.vgrow="ALWAYS"/>
+                                <Button text="Load Public Key..." onAction="#handleLoadSignPublicKey"
+                                        styleClass="secondary-button" maxWidth="Infinity" style="-fx-font-size: 10px;"/>
+                            </VBox>
+                        </Tab>
+                    </TabPane>
+                    <Label fx:id="signatureKeyStatusLabel" text="Ready to sign/verify"
+                           style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                    <Separator style="-fx-padding: 3 0;"/>
+                    <Button text="Sign" onAction="#handleSign"
+                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                    <Separator style="-fx-padding: 3 0;"/>
+                    <Label text="Verify Signature:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <TextField fx:id="signatureVerifyField"
+                               promptText="Paste signature to verify (Format must match 'Output Format' selection)"
+                               style="-fx-font-size: 11px;"/>
+                    <Button text="Verify Signature" onAction="#handleVerify"
+                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                    <Label text="ℹ️ Sign: data in Input → signature in Output"
+                           style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d; -fx-font-style: italic;"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔐 Message Authentication Codes (MAC)">
+                <VBox spacing="10" style="-fx-padding: 12;">
+                    <Label text="2. MAC configuration" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                    <HBox spacing="12" alignment="BOTTOM_LEFT">
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="Algorithm" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                            <ComboBox fx:id="authMacAlgorithmCombo" maxWidth="Infinity" style="-fx-font-size: 11px;"/>
+                        </VBox>
+                        <VBox spacing="4" prefWidth="190">
+                            <Label text="Output length" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                            <ComboBox fx:id="authMacTruncationCombo" maxWidth="Infinity" style="-fx-font-size: 11px;"/>
+                        </VBox>
+                    </HBox>
+                    <Label fx:id="authMacAlgorithmInfoLabel" wrapText="true"
+                           style="-fx-font-size: 10px; -fx-text-fill: #52657a;"/>
+                    <Label fx:id="authMacWarningLabel" wrapText="true" managed="false" visible="false"
+                           style="-fx-font-size: 10px; -fx-text-fill: #c0392b; -fx-font-weight: bold;"/>
+                    <VBox spacing="6" style="-fx-padding: 10; -fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4; -fx-background-radius: 4;">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Key material" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <ComboBox fx:id="macKeySourceCombo" prefWidth="155" style="-fx-font-size: 11px;"/>
+                            <Button text="Save key to Lab" onAction="#handleSaveMacKeyToHsm"
+                                    styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                        </HBox>
+                        <StackPane>
+                            <TextField fx:id="authMacKeyField" promptText="Enter MAC key in hexadecimal"
+                                       style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                            <ComboBox fx:id="macHsmKeyCombo" maxWidth="Infinity" visible="false"
+                                      managed="false" style="-fx-font-size: 11px;"/>
+                        </StackPane>
+                        <Label fx:id="authMacKeyInfoLabel" text="Key size depends on algorithm"
+                               style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                        <VBox fx:id="authMacNonceGroup" spacing="3" managed="false" visible="false">
+                            <Label text="GMAC nonce / IV (hexadecimal)" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                            <TextField fx:id="authMacNonceField" promptText="12 unique bytes, e.g. 00112233445566778899AABB"
+                                       style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                        </VBox>
+                    </VBox>
+                    <HBox spacing="12" alignment="TOP_LEFT">
+                        <VBox spacing="5" prefWidth="220">
+                            <Label text="Generate" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                            <Button text="Generate MAC" onAction="#handleGenerateMAC"
+                                    styleClass="action-button" maxWidth="Infinity"/>
+                            <Label text="Writes the MAC to Result below." style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                        </VBox>
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="Verify an existing MAC" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                            <HBox spacing="6">
+                                <TextField fx:id="authMacVerifyField" promptText="Paste the expected MAC"
+                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                           HBox.hgrow="ALWAYS"/>
+                                <Button text="Verify" onAction="#handleVerifyMAC"
+                                        styleClass="action-button" minWidth="110"/>
+                            </HBox>
+                            <Label text="Uses the same message, algorithm, key and output length."
+                                   style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+            </TitledPane>
+        </panes>
+    </Accordion>
+
+    <VBox spacing="5" style="-fx-padding: 10; -fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4; -fx-background-radius: 4;">
+        <Label text="3. Result" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+        <TextArea fx:id="authOutputArea" prefHeight="110" editable="false" wrapText="true"
+                  promptText="The generated value or verification result will appear here."
+                  style="-fx-font-family: 'Monospaced';"/>
+    </VBox>
+</VBox>

@@ -233,6 +233,11 @@ public class JOSEController implements Initializable {
 
     }
 
+    public void fillJwtPayload(String value) {
+        if (jwtPayloadArea != null) jwtPayloadArea.setText(value == null ? "" : value);
+        showSection("JWT (Signed)");
+    }
+
 @FXML
     private ComboBox<String> jwtAlgoCombo2;
 @FXML private Label detachedStatusLabel;

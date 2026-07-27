@@ -192,6 +192,18 @@
             </resource>
         </resources>
         <plugins>
+            <!-- Move the build tree out of Finder/iCloud-managed folders before deletion. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <fast>true</fast>
+                    <fastDir>${java.io.tmpdir}/cryptocarver-maven-clean</fastDir>
+                    <fastMode>background</fastMode>
+                </configuration>
+            </plugin>
+
             <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

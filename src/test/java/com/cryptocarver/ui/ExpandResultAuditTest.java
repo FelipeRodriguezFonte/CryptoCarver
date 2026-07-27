@@ -2,6 +2,7 @@ package com.cryptocarver.ui;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.AppSettings;
@@ -13,6 +14,9 @@ import javafx.application.Platform;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ExpandResultAuditTest {
+
+    @TempDir
+    java.nio.file.Path tempDir;
 
     @BeforeAll
     public static void initToolkit() {
@@ -32,6 +36,9 @@ public class ExpandResultAuditTest {
         injectField(controller, "outputBytesLabel", new javafx.scene.control.Label());
         injectField(controller, "statusLabel", new javafx.scene.control.Label());
         injectField(controller, "securityTipLabel", new javafx.scene.control.Label());
+        injectField(controller, "inspectorDetailsContainer", new javafx.scene.layout.VBox());
+        injectField(controller, "historyManager", new com.cryptocarver.model.HistoryManager(
+                tempDir.resolve(java.util.UUID.randomUUID() + "-history.json")));
         return controller;
     }
 
@@ -201,6 +208,33 @@ public class ExpandResultAuditTest {
         assertEquals(outputText, expandText);
     }
 
+    @Test
+    public void testInspectorUsesOnlyRealByteCountsAndRendersStructuredDetails() throws Exception {
+        ModernMainController controller = createController();
+        java.util.List<OperationDetail> details = java.util.List.of(
+                OperationDetail.publicDetail("Algorithm", "HKDF-SHA256"));
+
+        invokeMethodOnFxThread(controller, "updateInspector",
+                new Class<?>[]{String.class, byte[].class, byte[].class, java.util.List.class},
+                new Object[]{"Key Derivation (KDF)", new byte[]{1, 2, 3}, null, details});
+
+        javafx.scene.control.Label inputBytes = getInjectedField(controller, "inputBytesLabel");
+        javafx.scene.control.Label outputBytes = getInjectedField(controller, "outputBytesLabel");
+        javafx.scene.control.Label tip = getInjectedField(controller, "securityTipLabel");
+        javafx.scene.layout.VBox detailRows = getInjectedField(controller, "inspectorDetailsContainer");
+        assertEquals("3", inputBytes.getText());
+        assertEquals("-", outputBytes.getText(), "Missing output must not reuse or estimate input bytes");
+        assertTrue(tip.getText().contains("KDF parameter"));
+        assertEquals(1, detailRows.getChildren().size());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T getInjectedField(Object target, String fieldName) throws Exception {
+        java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (T) field.get(target);
+    }
+
     private void invokeMethodOnFxThread(Object target, String methodName, Class<?>[] argTypes, Object[] args) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         final Exception[] err = new Exception[1];
@@ -231,7 +265,7 @@ public class ExpandResultAuditTest {
         publishOnFxThread(controller, result);
 
         javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
-        injectField(controller, "lastFocusedResultArea", dummyArea);
+        resultAreaTracker(controller).focus(dummyArea);
 
         // 1. Enriched SECRET + FULL_LAB -> Shelf contains SECRET entry
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
@@ -274,7 +308,7 @@ public class ExpandResultAuditTest {
         publishOnFxThread(controller, result);
 
         javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
-        injectField(controller, "lastFocusedResultArea", dummyArea);
+        resultAreaTracker(controller).focus(dummyArea);
 
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
@@ -306,7 +340,7 @@ public class ExpandResultAuditTest {
         // We simulate the new area being the one updated by publish
         javafx.scene.control.TextArea newArea = new javafx.scene.control.TextArea();
         newArea.setText(newPublicText);
-        injectField(controller, "lastUpdatedResultArea", newArea);
+        resultAreaTracker(controller).markUpdated(newArea);
 
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
@@ -343,7 +377,7 @@ public class ExpandResultAuditTest {
 
         javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
         dummyArea.setText(sensitiveText);
-        injectField(controller, "lastUpdatedResultArea", dummyArea);
+        resultAreaTracker(controller).markUpdated(dummyArea);
 
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
@@ -380,7 +414,7 @@ public class ExpandResultAuditTest {
 
         javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
         dummyArea.setText(sensitiveText);
-        injectField(controller, "lastUpdatedResultArea", dummyArea);
+        resultAreaTracker(controller).markUpdated(dummyArea);
 
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
@@ -411,12 +445,7 @@ public class ExpandResultAuditTest {
         privateArea.setId("rsaPrivateKeyArea");
         privateArea.setEditable(false);
 
-        java.lang.reflect.Field areasField = controller.getClass().getDeclaredField("resultViewerAreas");
-        areasField.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        java.util.Set<javafx.scene.control.TextArea> areas =
-                (java.util.Set<javafx.scene.control.TextArea>) areasField.get(controller);
-        areas.add(privateArea);
+        resultAreaTracker(controller).register(privateArea);
 
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
         assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
@@ -439,5 +468,11 @@ public class ExpandResultAuditTest {
 
         AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
         assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
+    }
+
+    private ResultAreaTracker resultAreaTracker(ModernMainController controller) throws Exception {
+        java.lang.reflect.Field field = controller.getClass().getDeclaredField("resultAreaTracker");
+        field.setAccessible(true);
+        return (ResultAreaTracker) field.get(controller);
     }
 }

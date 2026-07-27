@@ -6,9 +6,11 @@ import javafx.scene.Parent;
 import javafx.scene.layout.VBox;
 import javafx.scene.Node;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -25,9 +27,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class ModernMainControllerUITest {
 
     private static boolean jfxIsSetup;
+    private static String originalUserHome;
+
+    @TempDir
+    static java.nio.file.Path isolatedUserHome;
 
     @BeforeAll
     static void initJFX() throws InterruptedException {
+        originalUserHome = System.getProperty("user.home");
+        System.setProperty("user.home", isolatedUserHome.toString());
         if (!jfxIsSetup) {
             CountDownLatch latch = new CountDownLatch(1);
             try {
@@ -43,6 +51,15 @@ class ModernMainControllerUITest {
                 // Toolkit already initialized
             }
             jfxIsSetup = true;
+        }
+    }
+
+    @AfterAll
+    static void restoreUserHome() {
+        if (originalUserHome == null) {
+            System.clearProperty("user.home");
+        } else {
+            System.setProperty("user.home", originalUserHome);
         }
     }
 
@@ -108,12 +125,13 @@ class ModernMainControllerUITest {
 
         ModernMainController controller = controllerRef.get();
         Object keysController = getField(controller, "keysController");
+        CertificatesController certificatesController = getField(controller, "certificatesContainerController");
 
         // The cmsSignSourcePkcs11Radio should be present in FXML and loaded
-        javafx.scene.control.RadioButton pkcs11Radio = getField(controller, "cmsSignSourcePkcs11Radio");
-        javafx.scene.control.RadioButton localRadio = getField(controller, "cmsSignSourceLocalRadio");
-        javafx.scene.layout.GridPane localGrid = getField(controller, "cmsSignLocalGrid");
-        javafx.scene.layout.HBox pkcs11Box = getField(controller, "cmsSignPkcs11Box");
+        javafx.scene.control.RadioButton pkcs11Radio = getField(certificatesController, "cmsSignSourcePkcs11Radio");
+        javafx.scene.control.RadioButton localRadio = getField(certificatesController, "cmsSignSourceLocalRadio");
+        javafx.scene.layout.GridPane localGrid = getField(certificatesController, "cmsSignLocalGrid");
+        javafx.scene.layout.HBox pkcs11Box = getField(certificatesController, "cmsSignPkcs11Box");
 
         runAndWait(() -> {
             localRadio.setSelected(true);
@@ -191,10 +209,11 @@ class ModernMainControllerUITest {
         ModernMainController controller = controllerRef.get();
 
         Object keysController = getField(controller, "keysController");
-        javafx.scene.control.RadioButton pkcs11Radio = getField(controller, "cmsEncryptSourcePkcs11Radio");
-        javafx.scene.control.RadioButton localRadio = getField(controller, "cmsEncryptSourceLocalRadio");
-        javafx.scene.layout.GridPane localGrid = getField(controller, "cmsEncryptLocalGrid");
-        javafx.scene.layout.HBox pkcs11Box = getField(controller, "cmsEncryptPkcs11Box");
+        CertificatesController certificatesController = getField(controller, "certificatesContainerController");
+        javafx.scene.control.RadioButton pkcs11Radio = getField(certificatesController, "cmsEncryptSourcePkcs11Radio");
+        javafx.scene.control.RadioButton localRadio = getField(certificatesController, "cmsEncryptSourceLocalRadio");
+        javafx.scene.layout.GridPane localGrid = getField(certificatesController, "cmsEncryptLocalGrid");
+        javafx.scene.layout.HBox pkcs11Box = getField(certificatesController, "cmsEncryptPkcs11Box");
 
         assertNotNull(pkcs11Radio, "cmsEncryptSourcePkcs11Radio should be injected");
         assertNotNull(localRadio, "cmsEncryptSourceLocalRadio should be injected");
@@ -255,9 +274,245 @@ class ModernMainControllerUITest {
         assertNotNull(getField(controller, "sidePanel"));
         assertNotNull(getField(controller, "navigationRail"));
         assertNotNull(getField(controller, "jose"));
-        assertNotNull(getField(controller, "joseController"));
-        assertNotNull(getField(controller, "openPgpContainer"));
-        assertNotNull(getField(controller, "openPgpContainerController"));
+        JOSEController joseController = getField(controller, "joseController");
+        assertNotNull(joseController);
+        assertSame(controller, getField(joseController, "statusReporter"));
+        CipherController cipherController = getField(controller, "cipherContainerController");
+        assertNotNull(cipherController);
+        assertNotNull(getField(cipherController, "openPgpContainer"));
+        assertNotNull(getField(cipherController, "openPgpContainerController"));
+        assertNotNull(getField(controller, "authenticationContainer"));
+        assertNotNull(getField(controller, "authenticationContainerController"));
+        assertNotNull(getField(controller, "paymentsContainer"));
+        assertNotNull(getField(controller, "paymentsContainerController"));
+        assertNotNull(getField(controller, "emvContainer"));
+        assertNotNull(getField(controller, "emvContainerController"));
+        assertNotNull(getField(controller, "keysContainer"));
+        assertNotNull(getField(controller, "keysContainerController"));
+        assertNotNull(getField(controller, "certificatesContainer"));
+        assertNotNull(getField(controller, "certificatesContainerController"));
+    }
+
+    @Test
+    void testSessionStateIncludesAndRestoresExtractedModuleControls() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+        javafx.scene.control.TextArea input = getField(cipher, "cipherInputArea");
+        javafx.scene.control.TextField key = getField(cipher, "symmetricKeyField");
+        javafx.scene.control.CheckBox compact = getField(cipher, "fileCipherCompactCbcCheck");
+        Method capture = ModernMainController.class.getDeclaredMethod("captureUIState");
+        capture.setAccessible(true);
+        Method captureHistory = ModernMainController.class.getDeclaredMethod("captureHistoryState");
+        captureHistory.setAccessible(true);
+        Method restore = ModernMainController.class.getDeclaredMethod("restoreUIState", java.util.Map.class);
+        restore.setAccessible(true);
+        AtomicReference<java.util.Map<String, Object>> stateRef = new AtomicReference<>();
+
+        runAndWait(() -> {
+            try {
+                input.setText("module payload");
+                key.setText("00112233445566778899AABBCCDDEEFF");
+                compact.setSelected(true);
+                stateRef.set((java.util.Map<String, Object>) capture.invoke(controller));
+                input.clear();
+                key.clear();
+                compact.setSelected(false);
+                restore.invoke(controller, stateRef.get());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertEquals("module payload", input.getText());
+        assertEquals("00112233445566778899AABBCCDDEEFF", key.getText());
+        assertTrue(compact.isSelected());
+        assertEquals("module payload", stateRef.get().get("CipherController.cipherInputArea"));
+
+        AtomicReference<java.util.Map<String, Object>> historyStateRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                historyStateRef.set((java.util.Map<String, Object>) captureHistory.invoke(controller));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        assertFalse(historyStateRef.get().containsKey("CipherController.cipherInputArea"));
+        assertFalse(historyStateRef.get().containsKey("CipherController.symmetricKeyField"));
+        assertEquals(true, historyStateRef.get().get("CipherController.fileCipherCompactCbcCheck"));
+
+        runAndWait(() -> {
+            try {
+                input.clear();
+                restore.invoke(controller, java.util.Map.of("cipherInputArea", "legacy payload"));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        assertEquals("legacy payload", input.getText(), "Legacy unqualified session keys must remain restorable");
+    }
+
+    @Test
+    void testPortableCipherConfigurationRestoresCompleteActiveScreen() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+        javafx.scene.control.TextArea input = getField(cipher, "cipherInputArea");
+        javafx.scene.control.TextArea output = getField(cipher, "cipherOutputArea");
+        javafx.scene.control.TextField key = getField(cipher, "symmetricKeyField");
+        javafx.scene.control.TextField iv = getField(cipher, "ivField");
+        javafx.scene.control.TextField aad = getField(cipher, "aadField");
+        javafx.scene.control.ComboBox<String> mode = getField(cipher, "cipherModeCombo");
+        javafx.scene.control.ComboBox<String> inputFormat = getField(controller, "inputFormatCombo");
+        AtomicReference<com.cryptocarver.model.ScreenConfiguration> configurationRef = new AtomicReference<>();
+
+        runAndWait(() -> {
+            controller.navigateTo("Symmetric Ciphers");
+            input.setText("portable payload");
+            key.setText("00112233445566778899AABBCCDDEEFF");
+            iv.setText("00112233445566778899AABB");
+            aad.setText("invoice-42");
+            mode.setValue("GCM");
+            inputFormat.setValue("Text (UTF-8)");
+            output.setText("generated output must not travel");
+            configurationRef.set(controller.captureActiveScreenConfiguration());
+
+            input.clear();
+            key.clear();
+            iv.clear();
+            aad.clear();
+            mode.setValue("CBC");
+            inputFormat.setValue("Hexadecimal");
+            output.clear();
+            controller.navigateTo("Hashing");
+            controller.applyScreenConfiguration(configurationRef.get());
+        });
+
+        assertTrue(((javafx.scene.Node) getField(controller, "cipherContainer")).isVisible());
+        assertEquals("portable payload", input.getText());
+        assertEquals("00112233445566778899AABBCCDDEEFF", key.getText());
+        assertEquals("00112233445566778899AABB", iv.getText());
+        assertEquals("invoice-42", aad.getText());
+        assertEquals("GCM", mode.getValue());
+        assertEquals("Text (UTF-8)", inputFormat.getValue());
+        assertEquals("", output.getText(), "Read-only/generated results must not be exported");
+        assertFalse(configurationRef.get().toState().containsKey("CipherController.cipherOutputArea"));
+        assertFalse(configurationRef.get().toState().containsKey("CipherController.fileCipherKeyField"),
+                "A symmetric cipher export must not include hidden File Cipher fields");
+    }
+
+    @Test
+    void testPortableKeyGenerationConfigurationPreservesGeneratedKeyMaterial() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        KeysController keys = getField(controller, "keysContainerController");
+        javafx.scene.control.ComboBox<String> keyType = getField(keys, "keyTypeCombo");
+        javafx.scene.control.TextArea generatedKey = getField(keys, "generatedKeyField");
+        javafx.scene.control.TextField kdfSalt = getField(keys, "kdfSaltField");
+        AtomicReference<com.cryptocarver.model.ScreenConfiguration> configurationRef = new AtomicReference<>();
+
+        runAndWait(() -> {
+            controller.navigateTo("Key Generation");
+            keyType.setValue("AES-256");
+            generatedKey.setText("00112233445566778899AABBCCDDEEFF");
+            configurationRef.set(controller.captureActiveScreenConfiguration());
+            generatedKey.clear();
+            keyType.setValue("DES (64-bit)");
+            controller.navigateTo("Hashing");
+            controller.applyScreenConfiguration(configurationRef.get());
+        });
+
+        assertEquals("00112233445566778899AABBCCDDEEFF", generatedKey.getText());
+        assertEquals("AES-256", keyType.getValue());
+        assertEquals(2, configurationRef.get().version());
+        assertTrue(configurationRef.get().toState().containsKey("KeysController.generatedKeyField"));
+        assertFalse(configurationRef.get().toState().containsKey("KeysController.kdfSaltField"),
+                "A Key Generation export must not include hidden KDF fields");
+        assertFalse(ModernMainController.isLegacyKeyGenerationConfiguration(configurationRef.get()));
+        com.cryptocarver.model.ScreenConfiguration legacy = new com.cryptocarver.model.ScreenConfiguration(
+                "Key Generation", "KEYS_SYMMETRIC",
+                java.util.Map.of("KeysController.keyTypeCombo", "AES-256"));
+        assertTrue(ModernMainController.isLegacyKeyGenerationConfiguration(legacy));
+
+        com.google.gson.JsonObject legacyJson = com.google.gson.JsonParser
+                .parseString(configurationRef.get().toJson()).getAsJsonObject();
+        legacyJson.addProperty("version", 1);
+        com.google.gson.JsonObject legacySalt = new com.google.gson.JsonObject();
+        legacySalt.addProperty("type", "string");
+        legacySalt.addProperty("value", "A1B2C3D4");
+        legacyJson.getAsJsonObject("values").add("KeysController.kdfSaltField", legacySalt);
+        com.cryptocarver.model.ScreenConfiguration legacyModuleWide =
+                com.cryptocarver.model.ScreenConfiguration.fromJson(legacyJson.toString());
+        runAndWait(() -> controller.applyScreenConfiguration(legacyModuleWide));
+        assertEquals("A1B2C3D4", kdfSalt.getText(),
+                "Version 1 module-wide exports must remain importable");
+    }
+
+    @Test
+    void testEveryPortableConfigurationRouteResolvesItsOwnScreenScope() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        java.util.Set<UiNavigationRegistry.Module> portableModules = java.util.EnumSet.of(
+                UiNavigationRegistry.Module.JOSE,
+                UiNavigationRegistry.Module.KEYS_SYMMETRIC,
+                UiNavigationRegistry.Module.KEYS_ASYMMETRIC,
+                UiNavigationRegistry.Module.CERTIFICATES,
+                UiNavigationRegistry.Module.GENERIC,
+                UiNavigationRegistry.Module.POST_QUANTUM,
+                UiNavigationRegistry.Module.XML_SECURITY,
+                UiNavigationRegistry.Module.WSS_SECURITY,
+                UiNavigationRegistry.Module.EMV,
+                UiNavigationRegistry.Module.CIPHER,
+                UiNavigationRegistry.Module.AUTHENTICATION,
+                UiNavigationRegistry.Module.PAYMENTS);
+        java.util.Map<UiNavigationRegistry.Route, String> representativeOperations = new java.util.LinkedHashMap<>();
+        UiNavigationRegistry.routes().forEach((operation, route) -> {
+            if (portableModules.contains(route.module())) representativeOperations.putIfAbsent(route, operation);
+        });
+
+        runAndWait(() -> representativeOperations.forEach((route, operation) -> {
+            controllerRef.get().navigateTo(operation);
+            com.cryptocarver.model.ScreenConfiguration configuration =
+                    controllerRef.get().captureActiveScreenConfiguration();
+            assertEquals(2, configuration.version());
+            assertEquals(route.module().name(), configuration.module(), operation);
+        }));
     }
 
 
@@ -285,8 +540,8 @@ class ModernMainControllerUITest {
             {"Hashing", "genericContainer"},
             {"Compressed Hex (2-row)", "genericContainer"},
             {"Digital Signatures", "authenticationContainer"},
-            {"Key Generation", "symmetricKeysContainer"},
-            {"PKCS#11 Token", "symmetricKeysContainer"},
+            {"Key Generation", "keysContainer"},
+            {"PKCS#11 Token", "keysContainer"},
             {"PQC Key Generation", "postQuantumContainer"},
             {"Sign XML (XAdES)", "xmlSecurityContainer"},
             {"Generate Certificate", "certificatesContainer"},
@@ -380,6 +635,84 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testKeyRoutesSwitchExtractedSections() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        runAndWait(() -> {
+            try {
+                ModernMainController controller = controllerRef.get();
+                Method route = ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class);
+                route.setAccessible(true);
+                KeysController keys = getField(controller, "keysContainerController");
+                javafx.scene.layout.VBox symmetric = getField(keys, "symmetricKeysContainer");
+                javafx.scene.layout.VBox asymmetric = getField(keys, "asymmetricKeysContainer");
+
+                route.invoke(controller, "Key Generation");
+                assertTrue(symmetric.isVisible());
+                assertFalse(asymmetric.isVisible());
+
+                route.invoke(controller, "RSA Key Generation");
+                assertFalse(symmetric.isVisible());
+                assertTrue(asymmetric.isVisible());
+                javafx.scene.control.Accordion accordion = (javafx.scene.control.Accordion) asymmetric.getChildren().get(0);
+                assertNotNull(accordion.getExpandedPane());
+                assertTrue(accordion.getExpandedPane().getText().contains("RSA Key Generation"));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Test
+    void testJoseRoutesDelegateSectionSelection() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        runAndWait(() -> {
+            try {
+                ModernMainController controller = controllerRef.get();
+                JOSEController joseController = getField(controller, "joseController");
+                javafx.scene.layout.VBox jwt = getField(joseController, "jwtSection");
+                javafx.scene.layout.VBox jwe = getField(joseController, "jweSection");
+                javafx.scene.layout.VBox jwk = getField(joseController, "jwkSection");
+                Method route = ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class);
+                route.setAccessible(true);
+
+                route.invoke(controller, "JWT (Signed)");
+                assertTrue(jwt.isVisible());
+                assertFalse(jwe.isVisible());
+
+                route.invoke(controller, "JWE (Encrypted)");
+                assertFalse(jwt.isVisible());
+                assertTrue(jwe.isVisible());
+
+                route.invoke(controller, "JWK (Keys)");
+                assertFalse(jwe.isVisible());
+                assertTrue(jwk.isVisible());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Test
     void testCompressedHexRouteExpandsDedicatedPane() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
@@ -427,10 +760,30 @@ class ModernMainControllerUITest {
         runAndWait(() -> {
             try {
                 javafx.scene.control.Label placeholder = getField(controller, "contentPlaceholderLabel");
+                java.util.List<Node> moduleRoots = java.util.List.of(
+                        getField(controller, "keysContainer"),
+                        getField(controller, "certificatesContainer"),
+                        getField(controller, "cipherContainer"),
+                        getField(controller, "authenticationContainer"),
+                        getField(controller, "paymentsContainer"),
+                        getField(controller, "emvContainer"),
+                        getField(controller, "jose"),
+                        getField(controller, "genericContainer"),
+                        getField(controller, "historyView"),
+                        getField(controller, "clipboardShelf"),
+                        getField(controller, "postQuantumContainer"),
+                        getField(controller, "xmlSecurityContainer"),
+                        getField(controller, "wssSecurityContainer"),
+                        getField(controller, "savedSessionsContainer"));
                 for (com.cryptocarver.model.OperationDescriptor operation
                         : com.cryptocarver.model.OperationRegistry.getInstance().getAll()) {
                     route.invoke(controller, operation.getNavigationPath());
                     assertFalse(placeholder.isVisible(), "Registered route must not show placeholder: "
+                            + operation.getNavigationPath());
+                    long visibleModules = moduleRoots.stream()
+                            .filter(node -> node.isVisible() && node.isManaged())
+                            .count();
+                    assertEquals(1, visibleModules, "Exactly one module must be visible for: "
                             + operation.getNavigationPath());
                 }
             } catch (Exception e) {
@@ -773,6 +1126,49 @@ class ModernMainControllerUITest {
                         .build());
 
                 assertEquals("Formatted result from a specialized operation", resolveOutput.invoke(controller));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Test
+    void testCertificateParseResultExpandsWithoutFocus() throws Exception {
+        var keyPair = com.cryptocarver.crypto.AsymmetricKeyOperations.generateRSAKeyPair(2048);
+        var config = new com.cryptocarver.crypto.CertificateGenerator.CertificateConfig();
+        config.commonName = "expand-result.example";
+        var certificate = com.cryptocarver.crypto.CertificateGenerator.generateSelfSignedCertificate(keyPair, config);
+        String certificatePem = com.cryptocarver.crypto.CertificateGenerator.exportCertificatePEM(certificate);
+
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        Method route = ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class);
+        Method resolveOutput = ModernMainController.class.getDeclaredMethod("resolveCurrentOutputText");
+        route.setAccessible(true);
+        resolveOutput.setAccessible(true);
+        runAndWait(() -> {
+            try {
+                ModernMainController controller = controllerRef.get();
+                route.invoke(controller, "Parse Certificate");
+                CertificatesController certificates = getField(controller, "certificatesContainerController");
+                javafx.scene.control.TextArea input = getField(certificates, "certInputArea");
+                input.setText(certificatePem);
+                KeysController keys = getField(controller, "keysController");
+                keys.handleParseCertificate();
+
+                String expanded = (String) resolveOutput.invoke(controller);
+                assertTrue(expanded.contains("CERTIFICATE INFORMATION"));
+                assertTrue(expanded.contains("expand-result.example"));
+                assertFalse(expanded.contains("***MASKED***"));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

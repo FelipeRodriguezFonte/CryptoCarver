@@ -5,7 +5,9 @@ import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
+import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -23,86 +25,159 @@ import java.util.List;
  */
 public class KeysController {
 
+    @FXML private VBox symmetricKeysContainer;
+    @FXML private VBox asymmetricKeysContainer;
+    @FXML private ComboBox<String> ecdsaCurveCombo;
+    @FXML private TextArea ecdsaPublicKeyArea;
+    @FXML private TextArea ecdsaPrivateKeyArea;
+    @FXML private TextArea eddsaPublicKeyArea;
+    @FXML private TextArea eddsaPrivateKeyArea;
+
     private StatusReporter mainController;
+    private Runnable hsmRefreshCallback = () -> { };
 
     // Symmetric Key Generation components
+    @FXML
     private ComboBox<String> keyTypeCombo;
+    @FXML
     private javafx.scene.control.CheckBox forceOddParityCheck;
+    @FXML
     private TextArea generatedKeyField;
 
     // Key Validation components
+    @FXML
     private TextField keyInputField;
+    @FXML
     private TextArea validationResultArea;
 
     // Key material inspection
+    @FXML
     private TextArea keyMaterialInputArea;
+    @FXML
     private TextArea keyMaterialReportArea;
+    @FXML
     private TextArea keyComparePublicArea;
+    @FXML
     private TextArea keyComparePrivateArea;
+    @FXML
     private TextArea keyCompareResultArea;
+    @FXML
     private ComboBox<String> keyStoreTypeCombo;
+    @FXML
     private PasswordField keyStorePasswordField;
+    @FXML
     private CheckBox keyStoreUnsafeExtractCheck;
+    @FXML
     private TextField keyStorePathField;
+    @FXML
     private TextArea keyStoreReportArea;
+    @FXML
     private ComboBox<String> keyStoreProfileCombo;
+    @FXML
     private TextField keyStoreProfileNameField;
+    @FXML
     private TextField pkcs11NameField;
+    @FXML
     private TextField pkcs11LibraryField;
+    @FXML
     private TextField pkcs11SlotField;
+    @FXML
     private PasswordField pkcs11PinField;
+    @FXML
     private ComboBox<String> pkcs11ProfileCombo;
+    @FXML
     private TextArea pkcs11ReportArea;
+    @FXML
     private ComboBox<String> pkcs11SigningKeyCombo;
+    @FXML
     private ComboBox<String> pkcs11SignatureAlgorithmCombo;
+    @FXML
     private TextArea pkcs11DataArea;
+    @FXML
     private TextArea pkcs11SignatureArea;
+    @FXML
     private ComboBox<String> pkcs11CertificateAliasCombo;
+    @FXML
     private TextArea pkcs11CertificateArea;
+    @FXML
     private ComboBox<String> pkcs11JwtAlgorithmCombo;
+    @FXML
     private TextArea pkcs11JwtPayloadArea;
+    @FXML
     private TextArea pkcs11JwtOutputArea;
+    @FXML
     private TextArea pkcs11CmsDataArea;
+    @FXML
     private CheckBox pkcs11CmsDetachedCheck;
+    @FXML
     private TextArea pkcs11CmsOutputArea;
 
     // Key Sharing components
+    @FXML
     private ComboBox<String> numComponentsCombo;
+    @FXML
     private TextArea keyToSplitField;
+    @FXML
     private TextArea componentResultsArea;
+    @FXML
     private TextField component1Field;
+    @FXML
     private TextField component2Field;
+    @FXML
     private TextField component3Field;
+    @FXML
     private TextField component4Field;
+    @FXML
     private TextField component5Field;
 
     // Key Derivation components
+    @FXML
     private ComboBox<String> kdfAlgorithmCombo;
+    @FXML
     private ComboBox<String> kdfInputFormatCombo;
+    @FXML
     private ComboBox<String> kdfSaltFormatCombo;
+    @FXML
     private ComboBox<String> kdfInfoFormatCombo;
+    @FXML
     private TextField kdfInputField;
+    @FXML
     private TextField kdfSaltField;
+    @FXML
     private TextField kdfInfoField;
+    @FXML
     private TextField kdfIterationsField;
+    @FXML
     private TextField kdfOutputLengthField;
+    @FXML
     private TextArea kdfResultArea;
 
     // AES Key Wrap components
+    @FXML
     private ComboBox<String> keyWrapModeCombo;
+    @FXML
     private CheckBox keyWrapUnwrapCheck;
+    @FXML
     private TextField keyWrapKekField;
+    @FXML
     private TextField keyWrapDataField;
+    @FXML
     private TextArea keyWrapResultArea;
 
     // RSA Generation components
+    @FXML
     private ComboBox<Integer> rsaKeySizeCombo;
+    @FXML
     private TextArea rsaPublicKeyArea;
+    @FXML
     private TextArea rsaPrivateKeyArea;
 
     // DSA Generation components
+    @FXML
     private ComboBox<String> dsaKeySizeCombo;
+    @FXML
     private TextArea dsaPublicKeyArea;
+    @FXML
     private TextArea dsaPrivateKeyArea;
 
     // ECDSA F(p) components
@@ -168,6 +243,96 @@ public class KeysController {
     public KeyPair getLastGeneratedKeyPair() {
         return lastGeneratedKeyPair;
     }
+
+    @FXML
+    private void initialize() {
+        initialize(null, keyTypeCombo, forceOddParityCheck, generatedKeyField, keyInputField, validationResultArea,
+                numComponentsCombo, keyToSplitField, componentResultsArea,
+                component1Field, component2Field, component3Field, component4Field, component5Field);
+        initializeKeyMaterialInspector(keyMaterialInputArea, keyMaterialReportArea);
+        initializeKeyPairComparator(keyComparePublicArea, keyComparePrivateArea, keyCompareResultArea);
+        initializeKeyStoreInspector(keyStoreTypeCombo, keyStorePasswordField, keyStoreUnsafeExtractCheck,
+                keyStorePathField, keyStoreReportArea, keyStoreProfileCombo, keyStoreProfileNameField);
+        initializePkcs11Inspector(pkcs11NameField, pkcs11LibraryField, pkcs11SlotField,
+                pkcs11PinField, pkcs11ProfileCombo, pkcs11ReportArea);
+        initializePkcs11Signing(pkcs11SigningKeyCombo, pkcs11SignatureAlgorithmCombo,
+                pkcs11DataArea, pkcs11SignatureArea);
+        initializePkcs11Certificates(pkcs11CertificateAliasCombo, pkcs11CertificateArea);
+        initializePkcs11Jwt(pkcs11JwtAlgorithmCombo, pkcs11JwtPayloadArea, pkcs11JwtOutputArea);
+        initializePkcs11Cms(pkcs11CmsDataArea, pkcs11CmsDetachedCheck, pkcs11CmsOutputArea);
+        initializeKDF(kdfAlgorithmCombo, kdfInputFormatCombo, kdfSaltFormatCombo, kdfInfoFormatCombo,
+                kdfInputField, kdfSaltField, kdfInfoField, kdfIterationsField, kdfOutputLengthField, kdfResultArea);
+        initializeKeyWrap(keyWrapModeCombo, keyWrapUnwrapCheck, keyWrapKekField, keyWrapDataField, keyWrapResultArea);
+        initializeTR31(tr31KbpkExportField, tr31KeyToWrapField, tr31VersionCombo, tr31UsageCombo,
+                tr31AlgorithmCombo, tr31ModeCombo, tr31ExportabilityCombo, tr31OptionalBlocksField,
+                tr31ExportResultArea, tr31KbpkImportField, tr31KeyBlockField, tr31KeyLengthField,
+                tr31ImportResultArea);
+        initializeRSA(rsaKeySizeCombo, rsaPublicKeyArea, rsaPrivateKeyArea);
+        initializeDSA(dsaKeySizeCombo, dsaPublicKeyArea, dsaPrivateKeyArea);
+        initializeECDSAFp(ecdsaCurveCombo, ecdsaPublicKeyArea, ecdsaPrivateKeyArea);
+        initializeEd25519(eddsaPublicKeyArea, eddsaPrivateKeyArea);
+        showSymmetricSection();
+    }
+
+    public void init(StatusReporter reporter, Runnable hsmRefreshCallback) {
+        this.mainController = reporter;
+        this.hsmRefreshCallback = hsmRefreshCallback == null ? () -> { } : hsmRefreshCallback;
+    }
+
+    public void showSymmetricSection() {
+        setSectionVisible(symmetricKeysContainer, true);
+        setSectionVisible(asymmetricKeysContainer, false);
+    }
+
+    public void showAsymmetricSection() {
+        setSectionVisible(symmetricKeysContainer, false);
+        setSectionVisible(asymmetricKeysContainer, true);
+    }
+
+    public boolean isSymmetricSectionVisible() {
+        return symmetricKeysContainer != null && symmetricKeysContainer.isVisible();
+    }
+
+    public void expandSymmetricPane(String paneName) {
+        expandPane(symmetricKeysContainer, paneName);
+    }
+
+    public void expandAsymmetricPane(String paneName) {
+        expandPane(asymmetricKeysContainer, paneName);
+    }
+
+    private void setSectionVisible(VBox section, boolean visible) {
+        if (section != null) {
+            section.setManaged(visible);
+            section.setVisible(visible);
+        }
+    }
+
+    private void expandPane(VBox section, String paneName) {
+        if (section == null || paneName == null || paneName.isBlank()) return;
+        section.getChildren().stream().filter(Accordion.class::isInstance).map(Accordion.class::cast)
+                .findFirst().ifPresent(accordion -> accordion.getPanes().stream()
+                        .filter(pane -> pane.getText().contains(paneName) || paneName.contains(stripEmoji(pane.getText())))
+                        .findFirst().ifPresent(accordion::setExpandedPane));
+    }
+
+    private String stripEmoji(String text) {
+        return text.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "").trim();
+    }
+
+    @FXML private void handleChooseKeyStore() { chooseKeyStore(); }
+    @FXML private void handleSaveKeyStoreProfile() { saveKeyStoreProfile(); }
+    @FXML private void handleChoosePkcs11Library() { choosePkcs11Library(); }
+    @FXML private void handleConnectPkcs11() { connectPkcs11(); hsmRefreshCallback.run(); }
+    @FXML private void handleDisconnectPkcs11() { disconnectPkcs11(); hsmRefreshCallback.run(); }
+    @FXML private void handlePkcs11Sign() { signWithPkcs11(); }
+    @FXML private void handlePkcs11Verify() { verifyWithPkcs11(); }
+    @FXML private void handleShowPkcs11Certificate() { showPkcs11CertificateChain(); }
+    @FXML private void handleGeneratePkcs11Jwt() { generatePkcs11Jwt(); }
+    @FXML private void handleGeneratePkcs11Cms() { generatePkcs11Cms(); }
+    @FXML private void handleLoadKeyStoreProfile() { loadKeyStoreProfile(); }
+    @FXML private void handleAesKeyWrap() { handleKeyWrap(); }
+    @FXML private void handleGenerateECDSA() { handleGenerateECDSAFp(); }
 
     private void showError(String title, String message) {
         if (mainController != null) mainController.showError(title, message);
@@ -997,6 +1162,7 @@ public class KeysController {
             updateStatus("Certificate issued from validated CSR");
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Issue CA Certificate")
+                    .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
                     .details(java.util.List.of(
                         new com.cryptocarver.model.OperationDetail("Target", issued.getSubjectX500Principal().getName(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
                         new com.cryptocarver.model.OperationDetail("Output", outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
@@ -1019,6 +1185,14 @@ public class KeysController {
             String outputText = RevocationOperations.exportCrlToPem(crl);
             crlResultArea.setText(outputText);
             updateStatus("Empty CRL generated successfully");
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("Generate CRL")
+                        .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .detail(com.cryptocarver.model.OperationDetail.publicDetail(
+                                "Issuer", issuerCert.getSubjectX500Principal().getName()))
+                        .status("Empty CRL generated successfully")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Generate CRL", "Failed to generate CRL: " + e.getMessage());
         }
@@ -1058,6 +1232,13 @@ public class KeysController {
             String outputText = RevocationOperations.exportCrlToPem(crl);
             crlResultArea.setText(outputText);
             updateStatus("CRL updated successfully");
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("Update CRL")
+                        .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .detail(com.cryptocarver.model.OperationDetail.publicDetail("Revoked Serial", serial.toString(16)))
+                        .status("CRL updated successfully")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Update CRL", "Failed to update CRL: " + e.getMessage());
         }
@@ -1070,8 +1251,15 @@ public class KeysController {
                     certCompareLeftArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
             var right = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
                     certCompareRightArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-            certCompareResultArea.setText(CertificateComparator.compare(left, right));
+            String outputText = CertificateComparator.compare(left, right);
+            certCompareResultArea.setText(outputText);
             updateStatus("Certificates compared");
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("Compare Certificates")
+                        .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("Certificates compared")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Compare Certificates", "Cannot compare certificates: " + e.getMessage());
         }
@@ -1948,10 +2136,12 @@ public class KeysController {
 
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Parse Certificate")
+                    .enrichedOutput(output.toString(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
                     .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Subject: " + cert.getSubjectX500Principal().getName(), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Parsed successfully", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
+                        new com.cryptocarver.model.OperationDetail("Subject", cert.getSubjectX500Principal().getName(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
+                        new com.cryptocarver.model.OperationDetail("Result", "Parsed successfully", com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
                     ))
+                    .status("Certificate parsed successfully")
                     .build());
             }
 
@@ -2047,6 +2237,7 @@ public class KeysController {
 
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Validate Certificate")
+                    .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
                     .details(java.util.List.of(
                         new com.cryptocarver.model.OperationDetail("Input Parameters", "Status: " + statusReason, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
                         new com.cryptocarver.model.OperationDetail("Output", outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
@@ -2066,19 +2257,32 @@ public class KeysController {
     // ============================================================================
 
     // TR-31 UI Components (to be added to FXML)
+    @FXML
     private TextField tr31KbpkExportField;
+    @FXML
     private TextField tr31KeyToWrapField;
+    @FXML
     private ComboBox<String> tr31UsageCombo;
+    @FXML
     private ComboBox<String> tr31AlgorithmCombo;
+    @FXML
     private ComboBox<String> tr31ModeCombo;
+    @FXML
     private ComboBox<String> tr31VersionCombo;
+    @FXML
     private ComboBox<String> tr31ExportabilityCombo;
+    @FXML
     private TextField tr31OptionalBlocksField;
+    @FXML
     private TextArea tr31ExportResultArea;
 
+    @FXML
     private TextField tr31KbpkImportField;
+    @FXML
     private TextArea tr31KeyBlockField;
+    @FXML
     private TextField tr31KeyLengthField;
+    @FXML
     private TextArea tr31ImportResultArea;
 
     /**
@@ -3572,17 +3776,20 @@ public class KeysController {
                 sb.append("- ").append(detail).append("\n");
             }
 
-            chainResultArea.setText(sb.toString());
+            String outputText = sb.toString();
+            chainResultArea.setText(outputText);
             chainResultArea.setVisible(true);
             chainResultArea.setManaged(true);
 
             updateStatus("Chain validation complete: " + (result.isValid ? "Valid" : "Invalid"));
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Validate Chain")
+                    .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
                     .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Length: " + chain.size(), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", result.isValid ? "Valid" : "Invalid", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
+                        new com.cryptocarver.model.OperationDetail("Chain Length", String.valueOf(chain.size()), com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
+                        new com.cryptocarver.model.OperationDetail("Result", result.isValid ? "Valid" : "Invalid", com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
                     ))
+                    .status("Certificate chain validation completed")
                     .build());
             }
 

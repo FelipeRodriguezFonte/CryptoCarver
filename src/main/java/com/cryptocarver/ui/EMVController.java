@@ -15,9 +15,9 @@ import javafx.scene.control.*;
  * @author Felipe
  */
 public class EMVController {
-    private TextArea emvTlvInputArea, emvTlvResultArea;
-    private TextField emvDolTemplateField;
-    private TextArea emvDolValuesArea, emvDolResultArea;
+    @FXML private TextArea emvTlvInputArea, emvTlvResultArea;
+    @FXML private TextField emvDolTemplateField;
+    @FXML private TextArea emvDolValuesArea, emvDolResultArea;
 
     public void initializeTlvInspector(TextArea input, TextArea output) { this.emvTlvInputArea = input; this.emvTlvResultArea = output; }
     public void initializeDolBuilder(TextField template, TextArea values, TextArea output) { this.emvDolTemplateField = template; this.emvDolValuesArea = values; this.emvDolResultArea = output; }
@@ -91,50 +91,62 @@ public class EMVController {
     private StatusReporter mainController;
 
     // Session Key Derivation controls
-    private TextField imkField;
-    private TextField panFieldSession;
-    private TextField panSeqFieldSession;
+    @FXML private TextField imkField;
+    @FXML private TextField panFieldSession;
+    @FXML private TextField panSeqFieldSession;
+    @FXML private TextField emvAtcField;
     private TextField atcField;
-    private TextArea sessionKeyResultArea;
+    @FXML private TextArea sessionKeyResultArea;
 
     // ARQC Generation controls
-    private TextField skARQCField;
-    private TextField amountField;
-    private TextField currencyField;
-    private TextField countryField;
-    private TextField atcARQCField;
-    private TextField tvrField;
-    private TextField txDateField;
-    private TextField txTypeField;
-    private TextField unField;
-    private TextArea arqcResultArea;
+    @FXML private TextField skARQCField;
+    @FXML private TextField amountField;
+    @FXML private TextField currencyField;
+    @FXML private TextField countryField;
+    @FXML private TextField atcARQCField;
+    @FXML private TextField tvrField;
+    @FXML private TextField txDateField;
+    @FXML private TextField txTypeField;
+    @FXML private TextField unField;
+    @FXML private TextArea arqcResultArea;
     /** Captures the exact bytes and padding used by the last local ARQC calculation. */
     private String lastArqcTransactionData;
     private int lastArqcPaddingMethod = 1;
     private String lastArqcValue;
 
     // ARPC Generation controls
-    private TextField skARPCField;
-    private TextField arqcField;
-    private TextField arcField;
-    private TextField csuField;
-    private ComboBox<String> arpcMethodCombo;
-    private TextArea arpcResultArea;
+    @FXML private TextField skARPCField;
+    @FXML private TextField arqcField;
+    @FXML private TextField arcField;
+    @FXML private TextField csuField;
+    @FXML private ComboBox<String> arpcMethodCombo;
+    @FXML private TextArea arpcResultArea;
 
     // Track 2 controls
-    private TextField panTrack2Field;
-    private TextField expiryTrack2Field;
-    private TextField serviceCodeFieldTrack2;
-    private TextField discretionaryDataField;
-    private TextField track2InputField;
-    private TextArea track2ResultArea;
+    @FXML private TextField panTrack2Field;
+    @FXML private TextField expiryTrack2Field;
+    @FXML private TextField serviceCodeFieldTrack2;
+    @FXML private TextField discretionaryDataField;
+    @FXML private TextField track2InputField;
+    @FXML private TextArea track2ResultArea;
 
     // New fields
-    private TextArea arqcTerminalDataField;
-    private TextField amountOtherField;
-    private TextField iccDataField;
-    private ComboBox<String> arqcPaddingMethodCombo;
-    private TextField propAuthDataField; // New
+    @FXML private TextArea arqcTerminalDataField;
+    @FXML private TextField amountOtherField;
+    @FXML private TextField iccDataField;
+    @FXML private ComboBox<String> arqcPaddingMethodCombo;
+    @FXML private TextField propAuthDataField;
+
+    @FXML
+    private void initialize() {
+        atcField = emvAtcField;
+        setupARQCPaddingMethods();
+        setupARPCMethods();
+    }
+
+    public void init(StatusReporter reporter) {
+        this.mainController = reporter;
+    }
 
     public void initialize(StatusReporter mainController,
             // Session Key fields

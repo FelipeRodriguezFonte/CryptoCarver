@@ -1,0 +1,86 @@
+package com.cryptocarver.ui;
+
+import com.cryptocarver.model.OperationDetail;
+import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+
+import java.util.List;
+
+/** Renders operation metadata without coupling feature controllers to the application shell. */
+final class OperationInspectorPresenter {
+
+    private final Label operationLabel;
+    private final Label inputBytesLabel;
+    private final Label outputBytesLabel;
+    private final Label securityTipLabel;
+    private final VBox detailsContainer;
+
+    OperationInspectorPresenter(Label operationLabel, Label inputBytesLabel, Label outputBytesLabel,
+                                Label securityTipLabel, VBox detailsContainer) {
+        this.operationLabel = operationLabel;
+        this.inputBytesLabel = inputBytesLabel;
+        this.outputBytesLabel = outputBytesLabel;
+        this.securityTipLabel = securityTipLabel;
+        this.detailsContainer = detailsContainer;
+    }
+
+    void present(String operation, byte[] input, byte[] output, List<OperationDetail> details) {
+        String operationName = operation == null ? "" : operation;
+        if (operationLabel != null) operationLabel.setText(operationName);
+        if (inputBytesLabel != null) inputBytesLabel.setText(byteCount(input));
+        if (outputBytesLabel != null) outputBytesLabel.setText(byteCount(output));
+
+        if (operationName.contains("Key Generation") || operationName.contains("Key Sharing")) {
+            if (inputBytesLabel != null) inputBytesLabel.setText("-");
+            if (outputBytesLabel != null) outputBytesLabel.setText("-");
+        }
+
+        renderDetails(details);
+        if (securityTipLabel != null) securityTipLabel.setText(securityTip(operationName));
+    }
+
+    private void renderDetails(List<OperationDetail> details) {
+        if (detailsContainer == null) return;
+        detailsContainer.getChildren().clear();
+        if (details == null) return;
+
+        for (OperationDetail detail : details) {
+            if (detail == null) continue;
+            HBox row = new HBox(10);
+            Label key = new Label(detail.name() + ":");
+            key.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 10px;");
+            Label value = new Label(detail.value() == null ? "" : detail.value());
+            value.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 10px;");
+            value.setWrapText(true);
+            if (!value.getText().isBlank()) value.setTooltip(new Tooltip(value.getText()));
+            row.getChildren().addAll(key, value);
+            detailsContainer.getChildren().add(row);
+        }
+    }
+
+    static String securityTip(String operation) {
+        String name = operation == null ? "" : operation;
+        if (name.contains("ASN.1")) {
+            return "🔍 ASN.1 represents cryptographic data; BER and DER are encoding rules.";
+        }
+        if (name.contains("KDF") || name.contains("Derivation")) {
+            return "⚠️ Use the required salt or context and verify every KDF parameter before production use.";
+        }
+        if (name.contains("Key Generation")) {
+            return "🔐 Generated keys use SecureRandom. Do not reuse keys across unrelated systems.";
+        }
+        if (name.contains("AES")) {
+            return "✅ Prefer authenticated encryption such as AES-GCM and never reuse a nonce with the same key.";
+        }
+        if (name.contains("RSA")) {
+            return "📏 Use RSA keys of at least 2048 bits and OAEP/PSS for new designs.";
+        }
+        return "💡 Validate inputs, parameters and key sizes before using a result outside the laboratory.";
+    }
+
+    private static String byteCount(byte[] value) {
+        return value == null ? "-" : String.valueOf(value.length);
+    }
+}

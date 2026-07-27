@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptocarver.ui.PaymentsController"
+      managed="false" visible="false" spacing="0">
+    <Accordion>
+        <panes>
+            <TitledPane text="💳 CVV Operations (CVV/CVV2/iCVV)" expanded="true">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Type:"/><ComboBox fx:id="cvvTypeCombo" prefWidth="250"/>
+                    <Separator/>
+                    <GridPane hgap="8" vgap="4">
+                        <columnConstraints><ColumnConstraints minWidth="90" prefWidth="90"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="CVK A (Hex):" GridPane.rowIndex="0"/><TextField fx:id="cvkAField" promptText="16 hex chars (8 bytes)" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="CVK B (Hex):" GridPane.rowIndex="1"/><TextField fx:id="cvkBField" promptText="16 hex chars (8 bytes)" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="PAN:" GridPane.rowIndex="2"/><TextField fx:id="panFieldCvv" promptText="Primary Account Number" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <Label text="Expiry (YYMM):" GridPane.rowIndex="3"/><TextField fx:id="expiryDateField" promptText="e.g. 2512" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                        <Label text="Service Code:" GridPane.rowIndex="4"/><TextField fx:id="serviceCodeField" promptText="e.g. 000" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                        <Label text="ATC/Tracker:" GridPane.rowIndex="5"/><TextField fx:id="atcField" promptText="e.g. 0001 (for dCVV)" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                    </GridPane>
+                    <HBox spacing="10"><Button text="Generate CVV" onAction="#handleGenerateCvv" styleClass="action-button"/><Button text="Verify CVV" onAction="#handleVerifyCvv" styleClass="secondary-button"/></HBox>
+                    <TextArea fx:id="cvvResultArea" prefHeight="100" editable="false" wrapText="true" promptText="Result will appear here..."/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔢 Clear PIN Blocks" expanded="true">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Encode PIN Block" style="-fx-font-weight: bold;"/>
+                    <Label text="PIN (4-12 digits):"/><TextField fx:id="pinField" promptText="Enter PIN"/>
+                    <Label text="PAN (Primary Account Number):"/><TextField fx:id="panFieldEncode" promptText="13-19 digits"/>
+                    <Label text="Format:"/><ComboBox fx:id="pinBlockFormatCombo" prefWidth="300"/>
+                    <Button text="Encode PIN Block" onAction="#handleEncodePinBlock" styleClass="action-button" maxWidth="180"/>
+                    <Separator/>
+                    <Label text="Decode PIN Block" style="-fx-font-weight: bold;"/>
+                    <Label text="PIN Block (Hex):"/><TextField fx:id="pinBlockField" promptText="16 or 32 hex chars"/>
+                    <Label text="PAN:"/><TextField fx:id="panFieldDecode" promptText="13-19 digits"/>
+                    <Label text="Format:"/><ComboBox fx:id="pinBlockFormatDecodeCombo" prefWidth="300"/>
+                    <Button text="Decode PIN Block" onAction="#handleDecodePinBlock" styleClass="action-button" maxWidth="180"/>
+                    <TextArea fx:id="pinBlockResultArea" prefHeight="80" editable="false" wrapText="true" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔐 Encrypted PIN Blocks (ISO)">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Format:" style="-fx-font-weight: bold;"/><ComboBox fx:id="encPinBlockFormatCombo" maxWidth="Infinity"/>
+                    <Separator/><Label text="Encode" style="-fx-font-weight: bold;"/>
+                    <Label text="PIN:"/><TextField fx:id="encPinField" promptText="4-12 digits"/>
+                    <Label text="PAN:"/><TextField fx:id="encPanFieldEncode" promptText="13-19 digits"/>
+                    <Label text="Encryption Key (Hex):"/><TextField fx:id="encPinBlockKeyField" promptText="16/32/48 hex (TDES)"/>
+                    <Button text="Encode" onAction="#handleEncodeEncryptedPinBlock" styleClass="action-button" maxWidth="150"/>
+                    <Separator/><Label text="Decode" style="-fx-font-weight: bold;"/>
+                    <Label text="Encrypted PIN Block (Hex):"/><TextField fx:id="encPinBlockFieldDecode" promptText="16 hex chars"/>
+                    <Label text="PAN:"/><TextField fx:id="encPanFieldDecode" promptText="13-19 digits"/>
+                    <Label text="Decryption Key (Hex):"/><TextField fx:id="encPinBlockKeyFieldDecode" promptText="16/32/48 hex (TDES)"/>
+                    <Button text="Decode" onAction="#handleDecodeEncryptedPinBlock" styleClass="action-button" maxWidth="150"/>
+                    <TextArea fx:id="encResultArea" prefHeight="80" editable="false" wrapText="true" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔑 PIN Generation (IBM 3624)">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Generate PIN from Offset" style="-fx-font-weight: bold;"/>
+                    <Label text="PVK (PIN Verification Key, Hex):"/><TextField fx:id="ibm3624PvkField" promptText="16/32/48 hex (TDES)"/>
+                    <Label text="Conversion Table (16 digits 0-9):"/><TextField fx:id="ibm3624ConvTableField" promptText="e.g. 0123456789012345"/>
+                    <Label text="Offset (4-16 digits):"/><TextField fx:id="ibm3624OffsetField" promptText="e.g. 1234"/>
+                    <Label text="PAN (Primary Account Number):"/><TextField fx:id="ibm3624PanField" promptText="Up to 19 digits"/>
+                    <Separator/><Label text="Validation Data Configuration" style="-fx-font-weight: bold;"/>
+                    <GridPane hgap="8" vgap="4">
+                        <columnConstraints><ColumnConstraints percentWidth="33"/><ColumnConstraints percentWidth="33"/><ColumnConstraints percentWidth="33"/></columnConstraints>
+                        <Label text="Start Pos:"/><TextField fx:id="ibm3624StartField" text="0" GridPane.rowIndex="1"/>
+                        <Label text="Length:" GridPane.columnIndex="1"/><TextField fx:id="ibm3624LengthField" text="16" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="Pad Char:" GridPane.columnIndex="2"/><TextField fx:id="ibm3624PadField" text="F" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+                    </GridPane>
+                    <Button text="Generate PIN" onAction="#handleGenerateIbm3624Pin" styleClass="action-button" maxWidth="150"/>
+                    <Separator/><Label text="Verify PIN" style="-fx-font-weight: bold;"/>
+                    <Label text="PIN to Verify:"/><TextField fx:id="ibm3624PinVerifyField" promptText="4-12 digits"/>
+                    <Button text="Verify PIN" onAction="#handleVerifyIbm3624Pin" styleClass="action-button" maxWidth="150"/>
+                    <TextArea fx:id="ibm3624ResultArea" prefHeight="100" editable="false" wrapText="true" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔑 PIN Utilities (Offset &amp; PVV)">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Generate Offset (IBM 3624)" style="-fx-font-weight: bold;"/>
+                    <Label text="PVK (Hex):"/><TextField fx:id="genOffsetPvkField" promptText="16/32 hex chars"/>
+                    <Label text="Dec Table (16 digits):"/><TextField fx:id="genOffsetDecTableField" text="0123456789012345"/>
+                    <Label text="PAN:"/><TextField fx:id="genOffsetPanField" promptText="13-19 digits"/>
+                    <Label text="Desired PIN:"/><TextField fx:id="genOffsetPinField" promptText="4-12 digits"/>
+                    <Separator/><Label text="Validation Data Configuration" style="-fx-font-weight: bold;"/>
+                    <GridPane hgap="8" vgap="4">
+                        <columnConstraints><ColumnConstraints percentWidth="33"/><ColumnConstraints percentWidth="33"/><ColumnConstraints percentWidth="33"/></columnConstraints>
+                        <Label text="Start Pos:"/><TextField fx:id="genOffsetStartField" text="0" GridPane.rowIndex="1"/>
+                        <Label text="Length:" GridPane.columnIndex="1"/><TextField fx:id="genOffsetLengthField" text="16" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="Pad Char:" GridPane.columnIndex="2"/><TextField fx:id="genOffsetPadField" text="F" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+                    </GridPane>
+                    <Button text="Generate Offset" onAction="#handleGenerateOffsetUtility" styleClass="action-button" maxWidth="150"/>
+                    <TextArea fx:id="genOffsetResultArea" prefHeight="60" editable="false" wrapText="true" managed="false" visible="false"/>
+                    <Separator/><Label text="Generate PVV (VISA)" style="-fx-font-weight: bold;"/>
+                    <Label text="PVK (Hex):"/><TextField fx:id="genPvvPvkField" promptText="16/32 hex chars"/>
+                    <Label text="PAN:"/><TextField fx:id="genPvvPanField" promptText="13-19 digits"/>
+                    <Label text="PIN:"/><TextField fx:id="genPvvPinField" promptText="4 digits"/>
+                    <Label text="PVK Index (Optional):"/><TextField fx:id="genPvvKeyIndexField" promptText="0-9"/>
+                    <Button text="Generate PVV" onAction="#handleGeneratePVVUtility" styleClass="action-button" maxWidth="150"/>
+                    <TextArea fx:id="genPvvResultArea" prefHeight="60" editable="false" wrapText="true" managed="false" visible="false"/>
+                    <Separator/><Label text="Derive PIN from PVV (VISA)" style="-fx-font-weight: bold;"/>
+                    <Label text="PVK (Hex):"/><TextField fx:id="derivePvvPvkField" promptText="16/32 hex chars"/>
+                    <Label text="PAN:"/><TextField fx:id="derivePvvPanField" promptText="13-19 digits"/>
+                    <Label text="Target PVV:"/><TextField fx:id="derivePvvTargetPvvField" promptText="4 digits"/>
+                    <Label text="PVK Index (Optional):"/><TextField fx:id="derivePvvKeyIndexField" promptText="0-9"/>
+                    <Button text="Find PIN" onAction="#handleDerivePinFromPvvUtility" styleClass="action-button" maxWidth="150"/>
+                    <TextArea fx:id="derivePvvResultArea" prefHeight="60" editable="false" wrapText="true" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔐 DUKPT KSN, TDES &amp; AES">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <ComboBox fx:id="dukptSchemeCombo" prefWidth="260"/>
+                    <Label text="BDK (hex; optional for KSN inspection):"/><TextField fx:id="dukptBdkField" promptText="TDES: 16/24 bytes; AES: 16/24/32 bytes"/>
+                    <Label text="KSN (TDES: 10 bytes; AES: 12 bytes):"/><TextField fx:id="dukptKsnField" promptText="TDES FFFF9876543210E00008 · AES 123456789012345600000005"/>
+                    <HBox fx:id="dukptTdesOptionsBox" spacing="6"><Label text="TDES key purpose:"/><ComboBox fx:id="dukptTdesUsageCombo" prefWidth="190"/></HBox>
+                    <HBox fx:id="dukptAesOptionsBox" spacing="6"><Label text="AES key usage:"/><ComboBox fx:id="dukptAesUsageCombo" prefWidth="205"/><ComboBox fx:id="dukptAesKeyTypeCombo" prefWidth="100"/></HBox>
+                    <Button text="Inspect KSN / Derive Key" onAction="#handleInspectDukpt" styleClass="action-button" maxWidth="200"/>
+                    <VBox fx:id="dukptAesPinBox" spacing="6">
+                        <Separator/><Label text="AES DUKPT PIN block (ISO 9564-4, 16 bytes; lab):"/>
+                        <TextField fx:id="dukptAesPinBlockField" promptText="04124389999AAAABAAAAAAAAAAAAAAAA"/>
+                        <HBox spacing="6"><ComboBox fx:id="dukptAesPinOperationCombo" prefWidth="205"/><Button text="Process AES PIN block" onAction="#handleAesDukptPinBlock" styleClass="action-button"/></HBox>
+                    </VBox>
+                    <TextArea fx:id="dukptResultArea" prefHeight="230" editable="false" wrapText="true"/>
+                </VBox>
+            </TitledPane>
+        </panes>
+    </Accordion>
+</VBox>

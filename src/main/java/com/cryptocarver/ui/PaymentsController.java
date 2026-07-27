@@ -6,6 +6,7 @@ import com.cryptocarver.crypto.AesDukpt;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
+import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -31,23 +32,23 @@ public class PaymentsController {
     }
 
     // PIN Block controls
-    private TextField pinField;
-    private TextField panFieldEncode;
-    private TextField pinBlockField;
-    private TextField panFieldDecode;
-    private ComboBox<String> pinBlockFormatCombo;
-    private ComboBox<String> pinBlockFormatDecodeCombo;
-    private TextArea pinBlockResultArea;
+    @FXML private TextField pinField;
+    @FXML private TextField panFieldEncode;
+    @FXML private TextField pinBlockField;
+    @FXML private TextField panFieldDecode;
+    @FXML private ComboBox<String> pinBlockFormatCombo;
+    @FXML private ComboBox<String> pinBlockFormatDecodeCombo;
+    @FXML private TextArea pinBlockResultArea;
 
     // CVV controls
-    private TextField cvkAField;
-    private TextField cvkBField;
-    private TextField panFieldCvv;
-    private TextField expiryDateField;
-    private TextField serviceCodeField;
-    private TextField atcField; // Added for dCVV
-    private ComboBox<String> cvvTypeCombo;
-    private TextArea cvvResultArea;
+    @FXML private TextField cvkAField;
+    @FXML private TextField cvkBField;
+    @FXML private TextField panFieldCvv;
+    @FXML private TextField expiryDateField;
+    @FXML private TextField serviceCodeField;
+    @FXML private TextField atcField;
+    @FXML private ComboBox<String> cvvTypeCombo;
+    @FXML private TextArea cvvResultArea;
 
     // MAC controls
     private ComboBox<String> macAlgorithmCombo;
@@ -59,52 +60,52 @@ public class PaymentsController {
     private PinController pinController;
 
     // Additional PIN fields for Encrypted PIN Blocks (Generic)
-    private ComboBox<String> encPinBlockFormatCombo;
-    private TextField encPinField;
-    private TextField encPanFieldEncode;
-    private TextField encPinBlockKeyField;
-    private TextField encPinBlockFieldDecode;
-    private TextField encPanFieldDecode;
-    private TextField encPinBlockKeyFieldDecode;
-    private TextArea encResultArea;
+    @FXML private ComboBox<String> encPinBlockFormatCombo;
+    @FXML private TextField encPinField;
+    @FXML private TextField encPanFieldEncode;
+    @FXML private TextField encPinBlockKeyField;
+    @FXML private TextField encPinBlockFieldDecode;
+    @FXML private TextField encPanFieldDecode;
+    @FXML private TextField encPinBlockKeyFieldDecode;
+    @FXML private TextArea encResultArea;
 
-    private TextField ibm3624PvkField;
-    private TextField ibm3624ConvTableField;
-    private TextField ibm3624OffsetField;
-    private TextField ibm3624PanField;
-    private TextField ibm3624PinVerifyField;
-    private TextArea ibm3624ResultArea;
-    private TextField ibm3624StartField;
-    private TextField ibm3624LengthField;
-    private TextField ibm3624PadField;
+    @FXML private TextField ibm3624PvkField;
+    @FXML private TextField ibm3624ConvTableField;
+    @FXML private TextField ibm3624OffsetField;
+    @FXML private TextField ibm3624PanField;
+    @FXML private TextField ibm3624PinVerifyField;
+    @FXML private TextArea ibm3624ResultArea;
+    @FXML private TextField ibm3624StartField;
+    @FXML private TextField ibm3624LengthField;
+    @FXML private TextField ibm3624PadField;
 
     // PIN Generators (Offset & PVV)
-    private TextField genOffsetPvkField;
-    private TextField genOffsetDecTableField;
-    private TextField genOffsetPanField;
-    private TextField genOffsetPinField;
-    private TextArea genOffsetResultArea;
-    private TextField genOffsetStartField;
-    private TextField genOffsetLengthField;
-    private TextField genOffsetPadField;
+    @FXML private TextField genOffsetPvkField;
+    @FXML private TextField genOffsetDecTableField;
+    @FXML private TextField genOffsetPanField;
+    @FXML private TextField genOffsetPinField;
+    @FXML private TextArea genOffsetResultArea;
+    @FXML private TextField genOffsetStartField;
+    @FXML private TextField genOffsetLengthField;
+    @FXML private TextField genOffsetPadField;
 
-    private TextField genPvvPvkField;
-    private TextField genPvvPanField;
-    private TextField genPvvPinField;
-    private TextField genPvvKeyIndexField;
-    private TextArea genPvvResultArea;
+    @FXML private TextField genPvvPvkField;
+    @FXML private TextField genPvvPanField;
+    @FXML private TextField genPvvPinField;
+    @FXML private TextField genPvvKeyIndexField;
+    @FXML private TextArea genPvvResultArea;
 
     // Derive PIN from PVV (VISA)
-    private TextField derivePvvPvkField;
-    private TextField derivePvvPanField;
-    private TextField derivePvvTargetPvvField;
-    private TextField derivePvvKeyIndexField;
-    private TextArea derivePvvResultArea;
-    private TextField dukptBdkField, dukptKsnField, dukptAesPinBlockField;
-    private TextArea dukptResultArea;
-    private ComboBox<String> dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
-    private HBox dukptTdesOptionsBox, dukptAesOptionsBox;
-    private VBox dukptAesPinBox;
+    @FXML private TextField derivePvvPvkField;
+    @FXML private TextField derivePvvPanField;
+    @FXML private TextField derivePvvTargetPvvField;
+    @FXML private TextField derivePvvKeyIndexField;
+    @FXML private TextArea derivePvvResultArea;
+    @FXML private TextField dukptBdkField, dukptKsnField, dukptAesPinBlockField;
+    @FXML private TextArea dukptResultArea;
+    @FXML private ComboBox<String> dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
+    @FXML private HBox dukptTdesOptionsBox, dukptAesOptionsBox;
+    @FXML private VBox dukptAesPinBox;
     private DukptKsn.TdesKeyUsage selectedTdesUsage = DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
     private String loadedDukptProfileName;
     private String loadedDukptExpectedWorkingKey;
@@ -265,6 +266,37 @@ public class PaymentsController {
                     + "\n\nNote: this uses AES/ECB/NoPadding over a 16-byte preformatted ISO 9564-4 PIN block.");
             updateStatus("AES DUKPT PIN block " + (decrypt ? "decrypted" : "encrypted"));
         } catch (Exception e) { showError("AES DUKPT PIN block", e.getMessage()); }
+    }
+
+    @FXML
+    public void initialize() {
+        initialize(null,
+                pinField, panFieldEncode, pinBlockField, panFieldDecode,
+                pinBlockFormatCombo, pinBlockFormatDecodeCombo, pinBlockResultArea,
+                cvkAField, cvkBField, panFieldCvv, expiryDateField, serviceCodeField,
+                atcField, cvvTypeCombo, cvvResultArea,
+                null, null, null, null,
+                encPinBlockFormatCombo, encPinField, encPanFieldEncode, encPinBlockKeyField,
+                encPinBlockFieldDecode, encPanFieldDecode, encPinBlockKeyFieldDecode, encResultArea,
+                genOffsetPvkField, genOffsetDecTableField, genOffsetPanField, genOffsetPinField,
+                genOffsetResultArea, genOffsetStartField, genOffsetLengthField, genOffsetPadField,
+                genPvvPvkField, genPvvPanField, genPvvPinField, genPvvKeyIndexField, genPvvResultArea,
+                derivePvvPvkField, derivePvvPanField, derivePvvTargetPvvField,
+                derivePvvKeyIndexField, derivePvvResultArea);
+        initializeIbm3624Controls(ibm3624PvkField, ibm3624ConvTableField, ibm3624OffsetField,
+                ibm3624PanField, ibm3624PinVerifyField, ibm3624ResultArea,
+                ibm3624StartField, ibm3624LengthField, ibm3624PadField);
+        initializeDukptControls(dukptBdkField, dukptKsnField, dukptResultArea,
+                dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo,
+                dukptAesPinBlockField, dukptAesPinOperationCombo,
+                dukptTdesOptionsBox, dukptAesOptionsBox, dukptAesPinBox);
+        if (ibm3624ConvTableField != null && ibm3624ConvTableField.getText().isBlank()) {
+            ibm3624ConvTableField.setText("0123456789012345");
+        }
+    }
+
+    public void init(StatusReporter reporter) {
+        this.mainController = reporter;
     }
 
     public void initialize(StatusReporter mainController,

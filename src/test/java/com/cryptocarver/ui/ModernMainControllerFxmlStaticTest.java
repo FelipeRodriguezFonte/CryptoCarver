@@ -83,6 +83,36 @@ class ModernMainControllerFxmlStaticTest {
     }
 
     @Test
+    void testAuthenticationFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/authentication.fxml", AuthenticationController.class);
+    }
+
+    @Test
+    void testCipherFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/cipher.fxml", CipherController.class);
+    }
+
+    @Test
+    void testPaymentsFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/payments.fxml", PaymentsController.class);
+    }
+
+    @Test
+    void testEmvFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/emv.fxml", EMVController.class);
+    }
+
+    @Test
+    void testKeysFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/keys.fxml", KeysController.class);
+    }
+
+    @Test
+    void testCertificatesFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/certificates.fxml", CertificatesController.class);
+    }
+
+    @Test
     void testKeyCertificateWorkbenchFxml() throws Exception {
         verifyFxmlAgainstController("/fxml/key_certificate_workbench.fxml", KeyCertificateWorkbenchController.class);
     }

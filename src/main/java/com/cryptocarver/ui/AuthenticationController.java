@@ -5,6 +5,7 @@ import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.model.OperationResult;
+import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -30,49 +31,55 @@ public class AuthenticationController {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationController.class);
 
-    private final StatusReporter mainController;
+    private StatusReporter mainController;
 
     // Shared UI components
-    private TextArea inputArea;
-    private TextArea outputArea;
+    @FXML private TextArea authInputArea;
+    @FXML private TextArea authOutputArea;
     private ComboBox<String> inputFormatCombo;
     private ComboBox<String> outputFormatCombo;
 
     // Digital Signatures UI
-    private ComboBox<String> signatureAlgorithmCombo;
-    private Label signatureKeyStatusLabel;
-    private TextField signatureVerifyField;
+    @FXML private ComboBox<String> signatureAlgorithmCombo;
+    @FXML private Label signatureKeyStatusLabel;
+    @FXML private TextField signatureVerifyField;
 
     // Digital Signatures Keys
     private PrivateKey currentPrivateKey;
     private PublicKey currentPublicKey;
-    private TextArea signaturePrivateKeyArea;
-    private TextArea signaturePublicKeyArea;
+    @FXML private TextArea signaturePrivateKeyArea;
+    @FXML private TextArea signaturePublicKeyArea;
 
     // MAC UI
-    private ComboBox<String> authMacAlgorithmCombo;
-    private TextField authMacKeyField;
-    private Label authMacKeyInfoLabel;
-    private ComboBox<String> authMacTruncationCombo;
-    private TextField authMacVerifyField;
-    private TextField authMacNonceField;
-    private VBox authMacNonceGroup;
-    private Label authMacAlgorithmInfoLabel;
-    private Label authMacWarningLabel;
-    private ComboBox<String> macKeySourceCombo;
-    private ComboBox<String> macHsmKeyCombo;
+    @FXML private ComboBox<String> authMacAlgorithmCombo;
+    @FXML private TextField authMacKeyField;
+    @FXML private Label authMacKeyInfoLabel;
+    @FXML private ComboBox<String> authMacTruncationCombo;
+    @FXML private TextField authMacVerifyField;
+    @FXML private TextField authMacNonceField;
+    @FXML private VBox authMacNonceGroup;
+    @FXML private Label authMacAlgorithmInfoLabel;
+    @FXML private Label authMacWarningLabel;
+    @FXML private ComboBox<String> macKeySourceCombo;
+    @FXML private ComboBox<String> macHsmKeyCombo;
 
-    /**
-     * Constructor
-     */
-    public AuthenticationController(StatusReporter mainController,
-            TextArea inputArea,
-            TextArea outputArea,
+    public AuthenticationController() {
+    }
+
+    @FXML
+    public void initialize() {
+        initializeSignatures(signatureAlgorithmCombo, signatureKeyStatusLabel, signatureVerifyField,
+                signaturePrivateKeyArea, signaturePublicKeyArea);
+        initializeMAC(authMacAlgorithmCombo, authMacKeyField, authMacKeyInfoLabel,
+                authMacTruncationCombo, authMacVerifyField, authMacNonceField,
+                authMacNonceGroup, authMacAlgorithmInfoLabel, authMacWarningLabel,
+                macKeySourceCombo, macHsmKeyCombo);
+    }
+
+    public void init(StatusReporter mainController,
             ComboBox<String> inputFormatCombo,
             ComboBox<String> outputFormatCombo) {
         this.mainController = mainController;
-        this.inputArea = inputArea;
-        this.outputArea = outputArea;
         this.inputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
     }
@@ -163,8 +170,8 @@ public class AuthenticationController {
         if (authMacKeyField != null) {
             authMacKeyField.setText(profile.getInput("sessionKey"));
         }
-        if (inputArea != null) {
-            inputArea.setText(profile.getInput("apdu"));
+        if (authInputArea != null) {
+            authInputArea.setText(profile.getInput("apdu"));
         }
 
         String requestedAlgorithm = profile.getParameter("algorithm");
@@ -663,6 +670,19 @@ public class AuthenticationController {
         }
     }
 
+    @FXML
+    private void handleSaveMacKeyToHsm() {
+        saveCurrentKeyToHsm();
+    }
+
+    public void handleClear() {
+        authInputArea.clear();
+        authOutputArea.clear();
+        signatureVerifyField.clear();
+        authMacVerifyField.clear();
+        authMacNonceField.clear();
+    }
+
     private String getHsmMacKeyId() {
         if (macKeySourceCombo != null && "Simulated HSM".equals(macKeySourceCombo.getValue())) {
             String keyId = macHsmKeyCombo.getValue();
@@ -892,14 +912,14 @@ public class AuthenticationController {
      * Get input data as bytes based on input format
      */
     private byte[] getInputDataAsBytes() {
-        if (inputArea == null) {
+        if (authInputArea == null) {
             // No input area available, show error
             mainController.showError("Configuration Error",
                     "Input area not available. Authentication operations require proper UI setup.");
             return null;
         }
 
-        String input = inputArea.getText().trim();
+        String input = authInputArea.getText().trim();
         if (input.isEmpty()) {
             return null;
         }
@@ -912,7 +932,7 @@ public class AuthenticationController {
      * Set output data based on output format
      */
     private void setOutputData(byte[] data) {
-        if (outputArea == null) {
+        if (authOutputArea == null) {
             // No output area available, show data in popup
             String format = outputFormatCombo != null ? outputFormatCombo.getValue() : "Hexadecimal";
             String output = formatDataWithFormat(data, format);
@@ -922,7 +942,7 @@ public class AuthenticationController {
 
         String format = outputFormatCombo.getValue();
         String output = formatDataWithFormat(data, format);
-        outputArea.setText(output);
+        authOutputArea.setText(output);
     }
 
     /**

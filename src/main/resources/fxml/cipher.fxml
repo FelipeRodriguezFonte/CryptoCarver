@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptocarver.ui.CipherController"
+      managed="false" visible="false" spacing="10" styleClass="content-container-vbox">
+    <Label text="Data Encryption &amp; Decryption" styleClass="content-title-label" style="-fx-padding: 0 0 10 5;"/>
+    <Accordion>
+        <panes>
+            <TitledPane text="🔒 Symmetric Cipher (AES, DES, etc.)" expanded="true">
+                <VBox spacing="10" style="-fx-padding: 10;">
+                    <GridPane hgap="10" vgap="10">
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="20"/>
+                            <ColumnConstraints percentWidth="80"/>
+                        </columnConstraints>
+                        <Label text="Algorithm:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="symmetricAlgorithmCombo" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="Mode:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="cipherModeCombo" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="Padding:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <ComboBox fx:id="paddingCombo" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="Key Source:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="3" alignment="CENTER_LEFT">
+                            <ComboBox fx:id="symKeySourceCombo" prefWidth="145"/>
+                            <StackPane HBox.hgrow="ALWAYS">
+                                <TextField fx:id="symmetricKeyField" promptText="Hex Key" style="-fx-font-family: 'Monospaced';"/>
+                                <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false"/>
+                            </StackPane>
+                            <Button text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                        </HBox>
+                        <Label text="IV / Nonce:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="4" alignment="CENTER_LEFT">
+                            <TextField fx:id="ivField" promptText="Hex IV" HBox.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
+                            <Button text="Generate" onAction="#generateIV" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                        </HBox>
+                        <Label text="Auth Tag (GCM):" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                        <TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes) - for GCM/Poly1305 Decryption"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="5" style="-fx-font-family: 'Monospaced';"/>
+                        <Label text="AAD (Optional):" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+                        <TextField fx:id="aadField" promptText="Hex AAD (Additional Authenticated Data)"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="6" style="-fx-font-family: 'Monospaced';"/>
+                    </GridPane>
+                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button"/>
+                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="action-button"/>
+                    </HBox>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="📁 File Cipher (Streaming)" expanded="false">
+                <VBox spacing="6" style="-fx-padding: 8;">
+                    <Label text="Processes the file in chunks. GCM and ChaCha20-Poly1305 use a detached 16-byte tag."
+                           style="-fx-font-size: 10px; -fx-text-fill: #666;" wrapText="true"/>
+                    <ComboBox fx:id="fileCipherAlgorithmCombo" prefWidth="250" style="-fx-font-size: 11px;"/>
+                    <HBox spacing="5">
+                        <TextField fx:id="fileCipherSourceField" promptText="Source file path" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <Button text="…" onAction="#chooseFileCipherSource" styleClass="secondary-button"/>
+                    </HBox>
+                    <HBox spacing="5">
+                        <TextField fx:id="fileCipherDestinationField" promptText="Output file path" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <Button text="…" onAction="#chooseFileCipherDestination" styleClass="secondary-button"/>
+                    </HBox>
+                    <HBox spacing="5">
+                        <TextField fx:id="fileCipherTagField" promptText="Detached AEAD tag path (.tag; required for GCM / ChaCha)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <Button text="…" onAction="#chooseFileCipherTag" styleClass="secondary-button"/>
+                    </HBox>
+                    <TextField fx:id="fileCipherKeyField" promptText="Key in hexadecimal" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                    <HBox spacing="5">
+                        <TextField fx:id="fileCipherNonceField" promptText="IV / nonce in hexadecimal (fresh value for AEAD encryption)"
+                                   HBox.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                        <Button text="Generate" onAction="#generateFileCipherNonce" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                    </HBox>
+                    <TextField fx:id="fileCipherAadField" promptText="AAD in hexadecimal (optional, AEAD only)"
+                               style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                    <CheckBox fx:id="fileCipherLinesCheck"
+                              text="Process each UTF-8 line independently (GCM/ChaCha: fresh nonce per line; CBC: supplied IV for all lines)"
+                              wrapText="true" style="-fx-font-size: 10px;"/>
+                    <HBox spacing="6" alignment="CENTER_LEFT">
+                        <Label text="Line output:" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="fileCipherLineEncodingCombo" prefWidth="120" style="-fx-font-size: 10px;"/>
+                        <Label text="Text:" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="fileCipherLineCharsetCombo" prefWidth="180" style="-fx-font-size: 10px;"/>
+                    </HBox>
+                    <CheckBox fx:id="fileCipherCompactCbcCheck" text="Write line records without header (compact format)" style="-fx-font-size: 10px;"/>
+                    <HBox spacing="8">
+                        <Button text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
+                        <Button text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
+                        <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
+                    </HBox>
+                    <TextArea fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"
+                              style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                </VBox>
+            </TitledPane>
+
+            <TitledPane text="🔐 OpenPGP (GPG compatible)" expanded="false">
+                <content>
+                    <fx:include fx:id="openPgpContainer" source="openpgp.fxml"/>
+                </content>
+            </TitledPane>
+
+            <TitledPane text="🔑 Asymmetric Cipher (RSA)" expanded="false">
+                <VBox spacing="10" style="-fx-padding: 10;">
+                    <Label text="RSA Operation using loaded keys (load keys from Keys tab OR enter manually below)"
+                           style="-fx-font-style: italic; -fx-text-fill: gray;"/>
+                    <GridPane hgap="10" vgap="10">
+                        <Label text="Padding:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="rsaPaddingCombo" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="Input Format:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="asymmetricInputFormatCombo" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="Output Format:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <ComboBox fx:id="asymmetricOutputFormatCombo" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    </GridPane>
+                    <Separator orientation="HORIZONTAL"/>
+                    <VBox spacing="5">
+                        <Label text="Public Key (PEM or Hex):" style="-fx-font-size: 11px;"/>
+                        <TextArea fx:id="publicKeyArea" prefHeight="60" wrapText="true"
+                                  style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                        <HBox spacing="5">
+                            <Button text="Read from Text" onAction="#handleLoadPublicKey" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                            <Button text="Load from File..." onAction="#handleReadPublicKeyFile" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        </HBox>
+                    </VBox>
+                    <VBox spacing="5">
+                        <Label text="Private Key (PEM or Hex):" style="-fx-font-size: 11px;"/>
+                        <TextArea fx:id="privateKeyArea" prefHeight="60" wrapText="true"
+                                  style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                        <HBox spacing="5">
+                            <Button text="Read from Text" onAction="#handleLoadPrivateKey" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                            <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        </HBox>
+                    </VBox>
+                    <Separator orientation="HORIZONTAL"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+                        <Button text="Encrypt (Public Key)" onAction="#handleAsymmetricEncrypt" styleClass="action-button"/>
+                        <Button text="Decrypt (Private Key)" onAction="#handleAsymmetricDecrypt" styleClass="action-button"/>
+                    </HBox>
+                </VBox>
+            </TitledPane>
+        </panes>
+    </Accordion>
+    <Separator orientation="HORIZONTAL"/>
+    <VBox spacing="5" style="-fx-padding: 5;">
+        <Label text="Input Data:"/>
+        <TextArea fx:id="cipherInputArea" prefHeight="120" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+        <HBox spacing="10" alignment="CENTER">
+            <Label text="⬇" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: gray;"/>
+        </HBox>
+        <Label text="Output Result:"/>
+        <TextArea fx:id="cipherOutputArea" prefHeight="120" editable="false" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+    </VBox>
+</VBox>

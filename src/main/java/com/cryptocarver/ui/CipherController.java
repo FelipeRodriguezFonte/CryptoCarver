@@ -11,6 +11,7 @@ import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import com.cryptocarver.model.FileCipherRecipe;
 import com.cryptocarver.model.FileCipherRecipeCodec;
+import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
@@ -44,47 +45,50 @@ import java.util.Map;
  */
 public class CipherController {
 
-    private final TextArea inputArea;
-    private final TextArea outputArea;
-    private final ComboBox<String> inputFormatCombo;
-    private final ComboBox<String> outputFormatCombo;
-    private final StatusReporter statusReporter;
+    @FXML private TextArea cipherInputArea;
+    @FXML private TextArea cipherOutputArea;
+    private ComboBox<String> inputFormatCombo;
+    private ComboBox<String> outputFormatCombo;
+    private StatusReporter statusReporter;
+    private java.util.function.Supplier<java.security.KeyPair> sharedKeyPairSupplier;
 
     // Symmetric cipher UI components
-    private ComboBox<String> symmetricAlgorithmCombo;
-    private ComboBox<String> cipherModeCombo;
-    private ComboBox<String> paddingCombo;
-    private ComboBox<String> symKeySourceCombo;
-    private ComboBox<String> symHsmKeyCombo;
-    private TextField symmetricKeyField;
-    private TextField ivField;
-    private TextField gcmTagField;
-    private TextField aadField; // Added AAD field
+    @FXML private ComboBox<String> symmetricAlgorithmCombo;
+    @FXML private ComboBox<String> cipherModeCombo;
+    @FXML private ComboBox<String> paddingCombo;
+    @FXML private ComboBox<String> symKeySourceCombo;
+    @FXML private ComboBox<String> symHsmKeyCombo;
+    @FXML private TextField symmetricKeyField;
+    @FXML private TextField ivField;
+    @FXML private TextField gcmTagField;
+    @FXML private TextField aadField;
 
     // Streaming file cipher UI components
-    private ComboBox<String> fileCipherAlgorithmCombo;
-    private TextField fileCipherSourceField;
-    private TextField fileCipherDestinationField;
-    private TextField fileCipherTagField;
-    private TextField fileCipherKeyField;
-    private TextField fileCipherNonceField;
-    private TextField fileCipherAadField;
-    private TextArea fileCipherResultArea;
-    private CheckBox fileCipherLinesCheck;
-    private ComboBox<String> fileCipherLineEncodingCombo;
-    private ComboBox<String> fileCipherLineCharsetCombo;
-    private CheckBox fileCipherCompactCbcCheck;
+    @FXML private ComboBox<String> fileCipherAlgorithmCombo;
+    @FXML private TextField fileCipherSourceField;
+    @FXML private TextField fileCipherDestinationField;
+    @FXML private TextField fileCipherTagField;
+    @FXML private TextField fileCipherKeyField;
+    @FXML private TextField fileCipherNonceField;
+    @FXML private TextField fileCipherAadField;
+    @FXML private TextArea fileCipherResultArea;
+    @FXML private CheckBox fileCipherLinesCheck;
+    @FXML private ComboBox<String> fileCipherLineEncodingCombo;
+    @FXML private ComboBox<String> fileCipherLineCharsetCombo;
+    @FXML private CheckBox fileCipherCompactCbcCheck;
 
     // Asymmetric cipher UI components
-    private ComboBox<String> rsaPaddingCombo;
-    private ComboBox<String> asymmetricInputFormatCombo;
-    private ComboBox<String> asymmetricOutputFormatCombo;
+    @FXML private ComboBox<String> rsaPaddingCombo;
+    @FXML private ComboBox<String> asymmetricInputFormatCombo;
+    @FXML private ComboBox<String> asymmetricOutputFormatCombo;
     private PublicKey currentPublicKey;
     private PrivateKey currentPrivateKey;
 
     // Key Input Areas (Manual Loading)
-    private TextArea publicKeyArea;
-    private TextArea privateKeyArea;
+    @FXML private TextArea publicKeyArea;
+    @FXML private TextArea privateKeyArea;
+    @FXML private javafx.scene.layout.VBox openPgpContainer;
+    @FXML private OpenPgpController openPgpContainerController;
     private final java.util.Set<String> usedAeadNonces = new java.util.HashSet<>();
 
     private static final byte[] INDEPENDENT_BLOCK_MAGIC = "CFXBI1".getBytes(StandardCharsets.US_ASCII);
@@ -105,6 +109,42 @@ public class CipherController {
         UTF8,
         EBCDIC_CP037,
         EBCDIC_CP500
+    }
+
+    public CipherController() {
+    }
+
+    @FXML
+    public void initialize() {
+        setSymmetricAlgorithmCombo(symmetricAlgorithmCombo);
+        setCipherModeCombo(cipherModeCombo);
+        setPaddingCombo(paddingCombo);
+        setSymmetricKeyField(symmetricKeyField);
+        setSymKeySourceCombo(symKeySourceCombo);
+        setSymHsmKeyCombo(symHsmKeyCombo);
+        setIVField(ivField);
+        setGcmTagField(gcmTagField);
+        setAADField(aadField);
+        setFileCipherFields(fileCipherAlgorithmCombo, fileCipherSourceField, fileCipherDestinationField,
+                fileCipherTagField, fileCipherKeyField, fileCipherNonceField, fileCipherAadField,
+                fileCipherResultArea, fileCipherLinesCheck, fileCipherLineEncodingCombo,
+                fileCipherLineCharsetCombo, fileCipherCompactCbcCheck);
+        setRSACombos(rsaPaddingCombo, asymmetricInputFormatCombo, asymmetricOutputFormatCombo);
+    }
+
+    public void initModern(StatusReporter reporter,
+            ComboBox<String> globalInputFormatCombo,
+            ComboBox<String> globalOutputFormatCombo,
+            java.util.function.Supplier<java.security.KeyPair> keyPairSupplier) {
+        this.statusReporter = reporter;
+        this.inputFormatCombo = globalInputFormatCombo;
+        this.outputFormatCombo = globalOutputFormatCombo;
+        this.sharedKeyPairSupplier = keyPairSupplier;
+        asymmetricInputFormatCombo.valueProperty().bindBidirectional(globalInputFormatCombo.valueProperty());
+        asymmetricOutputFormatCombo.valueProperty().bindBidirectional(globalOutputFormatCombo.valueProperty());
+        if (openPgpContainerController != null) {
+            openPgpContainerController.setStatusReporter(reporter);
+        }
     }
 
     public static class ExpertFileOptions {
@@ -347,8 +387,8 @@ public class CipherController {
             TextArea publicKeyArea,
             TextArea privateKeyArea) {
         this.statusReporter = statusReporter;
-        this.inputArea = inputArea;
-        this.outputArea = outputArea;
+        this.cipherInputArea = inputArea;
+        this.cipherOutputArea = outputArea;
         this.inputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
         this.publicKeyArea = publicKeyArea;
@@ -369,6 +409,15 @@ public class CipherController {
     public void setPrivateKey(PrivateKey key) {
         this.currentPrivateKey = key;
         statusReporter.updateStatus("Private key loaded from memory");
+    }
+
+    private void syncSharedKeyPair() {
+        if (sharedKeyPairSupplier == null) return;
+        java.security.KeyPair pair = sharedKeyPairSupplier.get();
+        if (pair != null) {
+            currentPublicKey = pair.getPublic();
+            currentPrivateKey = pair.getPrivate();
+        }
     }
 
     /**
@@ -462,6 +511,30 @@ public class CipherController {
         } catch (Exception e) {
             statusReporter.showError("Load Error", "Failed to load Private Key: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleReadPublicKeyFile() {
+        readKeyFile("Read Public Key File", publicKeyArea, true, "*.pem", "*.key", "*.pub", "*.txt");
+    }
+
+    @FXML
+    private void handleReadPrivateKeyFile() {
+        readKeyFile("Read Private Key File", privateKeyArea, false, "*.pem", "*.key", "*.txt");
+    }
+
+    private void readKeyFile(String title, TextArea target, boolean publicKey, String... extensions) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(title);
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM Files", extensions));
+        java.io.File file = chooser.showOpenDialog(target.getScene() == null ? null : target.getScene().getWindow());
+        if (file == null) return;
+        try {
+            target.setText(Files.readString(file.toPath(), StandardCharsets.UTF_8));
+            if (publicKey) handleLoadPublicKey(); else handleLoadPrivateKey();
+        } catch (Exception e) {
+            statusReporter.showError("Read Error", "Failed to read file: " + e.getMessage());
         }
     }
 
@@ -1249,7 +1322,7 @@ public class CipherController {
             byte[] outputData = encodeFileData(processed, effectiveOptions.getOutputEncoding());
             Files.write(outputFile, outputData);
 
-            outputArea.setText(
+            cipherOutputArea.setText(
                     "EXPERT FILE ENCRYPTION SUCCESS\n\n" +
                             "Input File: " + inputFile + "\n" +
                             "Output File: " + outputFile + "\n" +
@@ -1345,7 +1418,7 @@ public class CipherController {
             byte[] outputData = encodeFileData(processed, effectiveOptions.getOutputEncoding());
             Files.write(outputFile, outputData);
 
-            outputArea.setText(
+            cipherOutputArea.setText(
                     "EXPERT FILE DECRYPTION SUCCESS\n\n" +
                             "Input File: " + inputFile + "\n" +
                             "Output File: " + outputFile + "\n" +
@@ -1658,7 +1731,7 @@ public class CipherController {
                 noResult.append("- Verify key and IV/Nonce.\n");
                 noResult.append("- Provide GCM/Auth TAG if needed.\n");
                 noResult.append("- Try enabling more input encodings and chunk sizes.\n");
-                outputArea.setText(noResult.toString());
+                cipherOutputArea.setText(noResult.toString());
                 Files.writeString(analysisDirectory.resolve("report.txt"), noResult.toString(), StandardCharsets.UTF_8);
                 writeHtmlReport(
                         analysisDirectory.resolve("report.html"),
@@ -1691,7 +1764,7 @@ public class CipherController {
                     probableCandidates,
                     analysisDirectory,
                     attemptsLogPath);
-            outputArea.setText(reportText);
+            cipherOutputArea.setText(reportText);
             Files.writeString(analysisDirectory.resolve("report.txt"), reportText, StandardCharsets.UTF_8);
             writeHtmlReport(
                     analysisDirectory.resolve("report.html"),
@@ -1748,6 +1821,7 @@ public class CipherController {
      */
     public void handleAsymmetricEncrypt() {
         try {
+            syncSharedKeyPair();
             if (currentPublicKey == null) {
                 statusReporter.showError("Key Error",
                         "Please load a public key first");
@@ -1765,7 +1839,7 @@ public class CipherController {
             }
 
             // Get input data based on forma
-            String inputText = inputArea.getText().trim();
+            String inputText = cipherInputArea.getText().trim();
             if (inputText.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to encrypt");
                 return;
@@ -1837,7 +1911,7 @@ public class CipherController {
                     return;
             }
 
-            outputArea.setText(output);
+            cipherOutputArea.setText(output);
 
             // Update Inspector
             java.util.Map<String, String> details = new java.util.HashMap<>();
@@ -1864,6 +1938,7 @@ public class CipherController {
      */
     public void handleAsymmetricDecrypt() {
         try {
+            syncSharedKeyPair();
             if (currentPrivateKey == null) {
                 statusReporter.showError("Key Error",
                         "Please load a private key first");
@@ -1881,7 +1956,7 @@ public class CipherController {
             }
 
             // Get input data based on forma
-            String inputText = inputArea.getText().trim();
+            String inputText = cipherInputArea.getText().trim();
             if (inputText.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to decrypt");
                 return;
@@ -1933,7 +2008,7 @@ public class CipherController {
                     return;
             }
 
-            outputArea.setText(output);
+            cipherOutputArea.setText(output);
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", "RSA");
             details.put("Padding", padding);
@@ -1968,7 +2043,7 @@ public class CipherController {
             statusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
 
             statusReporter.updateStatus("Public key loaded from: " + filePath);
-            outputArea.setText("PUBLIC KEY LOADED SUCCESSFULLY\n\n" +
+            cipherOutputArea.setText("PUBLIC KEY LOADED SUCCESSFULLY\n\n" +
                     "File: " + filePath + "\n" +
                     "Algorithm: RSA\n" +
                     "Ready for encryption.\n\n" +
@@ -1999,7 +2074,7 @@ public class CipherController {
             statusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
 
             statusReporter.updateStatus("Private key loaded from: " + filePath);
-            outputArea.setText("PRIVATE KEY LOADED SUCCESSFULLY\n\n" +
+            cipherOutputArea.setText("PRIVATE KEY LOADED SUCCESSFULLY\n\n" +
                     "File: " + filePath + "\n" +
                     "Algorithm: RSA\n" +
                     "Ready for decryption.\n\n" +
@@ -2165,7 +2240,7 @@ public class CipherController {
      * Get input data as bytes
      */
     private byte[] getInputDataAsBytes() {
-        String input = inputArea.getText().trim();
+        String input = cipherInputArea.getText().trim();
         if (input.isEmpty()) {
             return null;
         }
@@ -2221,7 +2296,7 @@ public class CipherController {
                 output = DataConverter.bytesToHex(data);
         }
 
-        outputArea.setText(output);
+        cipherOutputArea.setText(output);
     }
 
     /**
@@ -2291,7 +2366,7 @@ public class CipherController {
             output.append("ℹ️  Note: For decryption, enter the Ciphertext and TAG separately.\n");
             output.append("ℹ️  The TAG provides authentication - it must match exactly.");
 
-            outputArea.setText(output.toString());
+            cipherOutputArea.setText(output.toString());
             return output.toString();
 
         } else {
@@ -2328,7 +2403,7 @@ public class CipherController {
             output.append(plaintextStr).append("\n\n");
             output.append("✅ TAG VERIFIED - Integrity Confirmed\n");
 
-            outputArea.setText(output.toString());
+            cipherOutputArea.setText(output.toString());
             return output.toString();
         }
     }
@@ -2554,10 +2629,10 @@ public class CipherController {
     // --- Helper Methods for Global Toolbar ---
 
     public void handleClear() {
-        if (inputArea != null)
-            inputArea.clear();
-        if (outputArea != null)
-            outputArea.clear();
+        if (cipherInputArea != null)
+            cipherInputArea.clear();
+        if (cipherOutputArea != null)
+            cipherOutputArea.clear();
         if (symmetricKeyField != null)
             symmetricKeyField.clear();
         if (ivField != null)
@@ -2569,7 +2644,23 @@ public class CipherController {
     }
 
     public String getOutputText() {
-        return outputArea != null ? outputArea.getText() : "";
+        return cipherOutputArea != null ? cipherOutputArea.getText() : "";
+    }
+
+    public TextArea getOutputArea() {
+        return cipherOutputArea;
+    }
+
+    public TextArea getFileResultArea() {
+        return fileCipherResultArea;
+    }
+
+    public boolean isPrimaryOutput(TextArea area) {
+        return area != null && area == cipherOutputArea;
+    }
+
+    public String getAuthenticationTagText() {
+        return gcmTagField == null ? "" : gcmTagField.getText();
     }
 
     private ExpertFileOptions normalizeExpertOptions(ExpertFileOptions options) {
@@ -3758,8 +3849,8 @@ public class CipherController {
             return;
         }
 
-        if (inputArea != null) {
-            inputArea.setText(value);
+        if (cipherInputArea != null) {
+            cipherInputArea.setText(value);
         }
         if (inputFormatCombo != null) {
             inputFormatCombo.setValue(targetFormat);
