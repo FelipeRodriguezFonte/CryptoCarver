@@ -4,47 +4,47 @@
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.CipherController"
-      managed="false" visible="false" spacing="10" styleClass="content-container-vbox">
-    <Label text="Data Encryption &amp; Decryption" styleClass="content-title-label" style="-fx-padding: 0 0 10 5;"/>
-    <Accordion>
+      managed="false" visible="false" spacing="14" styleClass="content-container-vbox,cipher-module">
+    <Label text="Data Encryption &amp; Decryption" styleClass="content-title-label"/>
+    <Accordion styleClass="cipher-accordion">
         <panes>
             <TitledPane text="🔒 Symmetric Cipher (AES, DES, etc.)" expanded="true">
-                <VBox spacing="10" style="-fx-padding: 10;">
-                    <GridPane hgap="10" vgap="10">
+                <VBox spacing="14" styleClass="cipher-pane-content">
+                    <GridPane hgap="12" vgap="10" styleClass="cipher-form-grid">
                         <columnConstraints>
-                            <ColumnConstraints percentWidth="20"/>
-                            <ColumnConstraints percentWidth="80"/>
+                            <ColumnConstraints minWidth="130" prefWidth="130" halignment="RIGHT"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Algorithm:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <ComboBox fx:id="symmetricAlgorithmCombo" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                        <Label text="Mode:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <ComboBox fx:id="cipherModeCombo" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                        <Label text="Padding:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <ComboBox fx:id="paddingCombo" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                        <Label text="Key Source:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                        <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="3" alignment="CENTER_LEFT">
-                            <ComboBox fx:id="symKeySourceCombo" prefWidth="145"/>
+                        <Label text="Algorithm:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="symmetricAlgorithmCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="Mode:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="cipherModeCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="Padding:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <ComboBox fx:id="paddingCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="Key Source:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="3" alignment="CENTER_LEFT">
+                            <ComboBox fx:id="symKeySourceCombo" prefWidth="150" minWidth="150" styleClass="cipher-field"/>
                             <StackPane HBox.hgrow="ALWAYS">
-                                <TextField fx:id="symmetricKeyField" promptText="Hex Key" style="-fx-font-family: 'Monospaced';"/>
-                                <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false"/>
+                                <TextField fx:id="symmetricKeyField" promptText="Hex Key" maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
+                                <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false" styleClass="cipher-field"/>
                             </StackPane>
-                            <Button text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                            <Button text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="cipher-inline-action"/>
                         </HBox>
-                        <Label text="IV / Nonce:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="4" alignment="CENTER_LEFT">
-                            <TextField fx:id="ivField" promptText="Hex IV" HBox.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
-                            <Button text="Generate" onAction="#generateIV" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                        <Label text="IV / Nonce:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="4" alignment="CENTER_LEFT">
+                            <TextField fx:id="ivField" promptText="Hex IV" HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace"/>
+                            <Button text="Generate" onAction="#generateIV" styleClass="cipher-inline-action"/>
                         </HBox>
-                        <Label text="Auth Tag (GCM):" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                        <Label text="Auth Tag (GCM):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
                         <TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes) - for GCM/Poly1305 Decryption"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="5" style="-fx-font-family: 'Monospaced';"/>
-                        <Label text="AAD (Optional):" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                        <Label text="AAD (Optional):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
                         <TextField fx:id="aadField" promptText="Hex AAD (Additional Authenticated Data)"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="6" style="-fx-font-family: 'Monospaced';"/>
+                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
                     </GridPane>
-                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
-                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button"/>
-                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="action-button"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="cipher-action-row">
+                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button,cipher-primary-action"/>
+                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="action-button,cipher-primary-action"/>
                     </HBox>
                 </VBox>
             </TitledPane>
@@ -142,14 +142,11 @@
             </TitledPane>
         </panes>
     </Accordion>
-    <Separator orientation="HORIZONTAL"/>
-    <VBox spacing="5" style="-fx-padding: 5;">
-        <Label text="Input Data:"/>
-        <TextArea fx:id="cipherInputArea" prefHeight="120" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
-        <HBox spacing="10" alignment="CENTER">
-            <Label text="⬇" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: gray;"/>
-        </HBox>
-        <Label text="Output Result:"/>
-        <TextArea fx:id="cipherOutputArea" prefHeight="120" editable="false" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+    <VBox spacing="9" styleClass="cipher-io-card">
+        <Label text="Input data" styleClass="cipher-io-label"/>
+        <TextArea fx:id="cipherInputArea" prefHeight="130" wrapText="true" styleClass="cipher-io-area,cipher-monospace"/>
+        <Separator orientation="HORIZONTAL"/>
+        <Label text="Output result" styleClass="cipher-io-label"/>
+        <TextArea fx:id="cipherOutputArea" prefHeight="130" editable="false" wrapText="true" styleClass="cipher-io-area,cipher-monospace"/>
     </VBox>
 </VBox>

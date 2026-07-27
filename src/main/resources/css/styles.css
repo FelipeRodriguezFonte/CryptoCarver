@@ -1313,6 +1313,147 @@
     -fx-background-color: #3498db;
 }
 
+/* Cipher module: shared sizing and visual grouping for the dense crypto form. */
+.cipher-module {
+    -fx-padding: 20;
+}
+
+.cipher-accordion > .titled-pane > .title {
+    -fx-font-weight: 600;
+}
+
+.cipher-pane-content {
+    -fx-padding: 14 12 12 12;
+}
+
+.cipher-form-grid {
+    -fx-hgap: 12;
+    -fx-vgap: 10;
+}
+
+.cipher-field-label {
+    -fx-font-weight: 600;
+    -fx-padding: 0 2 0 0;
+}
+
+.cipher-field {
+    -fx-min-height: 32;
+    -fx-pref-height: 32;
+}
+
+.cipher-monospace {
+    -fx-font-family: "Menlo", "SF Mono", "Monospaced";
+}
+
+.cipher-inline-action {
+    -fx-min-width: 96;
+    -fx-pref-height: 32;
+    -fx-padding: 5 10 5 10;
+    -fx-font-size: 11px;
+}
+
+.cipher-action-row {
+    -fx-padding: 2 0 0 130;
+}
+
+.cipher-primary-action {
+    -fx-min-width: 116;
+    -fx-pref-height: 38;
+}
+
+.cipher-io-card {
+    -fx-padding: 14;
+    -fx-spacing: 9;
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #d6dde5;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.cipher-io-label {
+    -fx-font-weight: 600;
+    -fx-font-size: 13px;
+}
+
+.cipher-io-area {
+    -fx-min-height: 130;
+    -fx-pref-height: 130;
+}
+
+/* Shared module system. New and migrated modules should use these instead of
+   per-control inline dimensions so they behave consistently at any zoom. */
+.module-accordion > .titled-pane > .title {
+    -fx-font-weight: 600;
+}
+
+.module-pane-content {
+    -fx-padding: 14 12 12 12;
+}
+
+.form-grid {
+    -fx-hgap: 10;
+    -fx-vgap: 9;
+}
+
+.form-label {
+    -fx-font-weight: 600;
+}
+
+.form-field {
+    -fx-min-height: 32;
+    -fx-pref-height: 32;
+}
+
+.primary-action {
+    -fx-min-width: 132;
+    -fx-pref-height: 36;
+}
+
+.secondary-button,
+.action-button-secondary {
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #e7edf3);
+    -fx-text-fill: #34495e;
+    -fx-border-color: #aebdca;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-min-height: 32;
+    -fx-padding: 5 11 5 11;
+    -fx-cursor: hand;
+}
+
+.secondary-button:hover,
+.action-button-secondary:hover {
+    -fx-background-color: #dce8f2;
+    -fx-border-color: #7aa7c7;
+}
+
+.action-button-primary {
+    -fx-background-color: linear-gradient(to bottom, #3498db, #2980b9);
+    -fx-text-fill: white;
+    -fx-border-color: #2980b9;
+    -fx-font-weight: bold;
+}
+
+.result-area {
+    -fx-background-color: #fbfcfe;
+    -fx-border-color: #cfd9e3;
+}
+
+.helper-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: #5f7183;
+}
+
+.monospace-field {
+    -fx-font-family: "Menlo", "SF Mono", "Courier New", monospace;
+}
+
+.keys-module .titled-pane > .title {
+    -fx-font-weight: 600;
+}
+
 /* Alerts and Dialogs */
 .dialog-pane {
     -fx-background-color: #ffffff;

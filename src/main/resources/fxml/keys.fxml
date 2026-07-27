@@ -4,47 +4,47 @@
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.cryptocarver.ui.KeysController" spacing="0">
+      fx:controller="com.cryptocarver.ui.KeysController" spacing="14" styleClass="content-container-vbox,keys-module">
     <VBox fx:id="symmetricKeysContainer" managed="true" visible="true">
-        <Accordion>
+        <Accordion styleClass="module-accordion">
             <panes>
                 <!-- KEY GENERATION -->
                 <TitledPane text="🔑 Key Generation" expanded="true">
-                <VBox spacing="4" style="-fx-padding: 6;">
-                    <GridPane hgap="6" vgap="4">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="70" prefWidth="70"/>
                             <ColumnConstraints minWidth="180" prefWidth="220"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <ComboBox fx:id="keyTypeCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200" style="-fx-font-size: 11px;"/>
+                        <Label text="Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <ComboBox fx:id="keyTypeCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="form-field"/>
 
                         <CheckBox fx:id="forceOddParityCheck" text="Force Odd Parity (DES/3DES)"
                                   selected="true" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
                     </GridPane>
 
                     <Button text="Generate Key" onAction="#handleGenerateKey"
-                            styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                            styleClass="action-button,primary-action"/>
 
                     <TextArea fx:id="generatedKeyField" prefHeight="280" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                              styleClass="result-area,monospace-field"
                               promptText="Generated key will appear here..."/>
                 </VBox>
             </TitledPane>
 
             <!-- KEY VALIDATION -->
             <TitledPane text="✓ Validation &amp; KCV">
-                <VBox spacing="4" style="-fx-padding: 6;">
+                <VBox spacing="12" styleClass="module-pane-content">
                     <TextField fx:id="keyInputField" promptText="Enter key in hexadecimal..."
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                              styleClass="form-field,monospace-field"/>
 
                     <Button text="Validate &amp; Calculate KCVs" onAction="#handleValidateKey"
-                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                            styleClass="action-button,primary-action"/>
 
                     <TextArea fx:id="validationResultArea" prefHeight="260" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                              styleClass="result-area,monospace-field"
                               promptText="Validation results will appear here..."
                               managed="false" visible="false"/>
                 </VBox>
@@ -52,13 +52,13 @@
 
             <!-- KEY MATERIAL INSPECTOR -->
             <TitledPane text="🔎 Key Material Inspector">
-                <VBox spacing="5" style="-fx-padding: 6;">
-                    <Label text="Paste a PEM public/private key or an X.509 certificate to inspect its fingerprint, size and security hints." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Paste a PEM public/private key or an X.509 certificate to inspect its fingerprint, size and security hints." wrapText="true" styleClass="helper-text"/>
                     <TextArea fx:id="keyMaterialInputArea" prefHeight="110" wrapText="true" promptText="-----BEGIN PUBLIC KEY----- / -----BEGIN PRIVATE KEY----- / -----BEGIN CERTIFICATE-----"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
-                    <Button text="Inspect Material" onAction="#handleInspectKeyMaterial" styleClass="action-button" maxWidth="160" style="-fx-font-size: 11px;"/>
+                              styleClass="monospace-field"/>
+                    <Button text="Inspect Material" onAction="#handleInspectKeyMaterial" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="keyMaterialReportArea" prefHeight="210" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                              styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
 

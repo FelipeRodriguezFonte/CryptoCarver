@@ -35,6 +35,7 @@
 - [x] Añadir configuraciones portables completas por pantalla (`.ccconfig`): exportación cifrada con contraseña por defecto, alternativa JSON con advertencia, importación con previsualización, navegación automática y restauración de entradas/opciones —incluidas claves, IV y nonce—; conserva el material generado reutilizable de las pantallas de claves y excluye informes/resultados derivados.
 - [x] Endurecer el formato portable v2 con alcance real por panel: ya no arrastra campos ocultos de otras operaciones del mismo módulo, conserva controles comunes de la pantalla y mantiene importación compatible con los documentos v1. El recorrido contractual cubre todas las rutas exportables y ha alineado los alias PIN/CVV, ML-KEM y CMS Inspector con sus paneles reales.
 - [x] Proteger el almacenamiento de configuraciones con escritura atómica, límite centralizado de 12 MB, limpieza de temporales y permisos de propietario (`0600`) en sistemas POSIX.
+- [~] Iniciar formatos por operación sin romper los controladores existentes: los selectores compartidos ya recuerdan pares independientes de entrada/salida por ruta y normalizan alias dinámicos; queda trasladar gradualmente los formatos propios de cada módulo a metadatos declarativos.
 - [~] Modularizar `ModernMainController`: Authentication, Cipher (incluidos streaming, RSA y OpenPGP), Payments, EMV, Keys y Certificates ya disponen de FXML/controladores autocontenidos. La navegación se ha trasladado a un registro declarativo tipado y se retiró el gran switch heredado; queda reducir coordinación transversal de inspector, histórico y ciclo de vida.
 
 > Nota de migración: `com.cryptoforge` permanece temporalmente como namespace Java interno para mantener compatibilidad. No forma parte de la identidad pública y se migrará en una fase técnica independiente, acompañada de pruebas de regresión.
@@ -579,7 +580,7 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 
 - [x] Guía de inicio rápido por caso de uso.
 - [ ] Manual por módulo con ejemplos reproducibles.
-- [ ] Centro de ayuda contextual generado desde metadatos de `OperationRegistry`: propósito, entradas, formatos, parámetros, salida, advertencias, ejemplos y errores frecuentes.
+- [~] Centro de ayuda contextual generado desde metadatos de `OperationRegistry`: el inspector ya muestra propósito, categoría, madurez, sensibilidad, contratos de entrada/salida, parámetros por dominio y alias antes de ejecutar; faltan ejemplos y errores frecuentes específicos por operación.
 - [ ] Ayuda profunda por algoritmo/estándar con enlaces desde cada campo, búsqueda global y recorridos guiados reproducibles.
 - [ ] Contrato de documentación obligatorio para cada operación nueva, validado por test para evitar pantallas sin ayuda.
 - [x] Catálogo de formatos, charsets y aliases.

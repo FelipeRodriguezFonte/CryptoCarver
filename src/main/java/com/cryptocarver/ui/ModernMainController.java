@@ -27,6 +27,8 @@ import com.cryptocarver.util.DataConverter;
  */
 public class ModernMainController implements StatusReporter, OperationNavigator {
 
+    private static final double COMPACT_LAYOUT_WIDTH = 1_100;
+
     static void writeDiagnosticsReport(java.nio.file.Path report, String content) throws Exception {
         java.nio.file.Files.writeString(report, content);
     }
@@ -72,6 +74,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private VBox inspectorPanel;
     @FXML
     private VBox inspectorDetailsContainer;
+    private boolean inspectorHiddenForCompactLayout;
 
     // CIPHER UI
     @FXML private VBox cipherContainer;
@@ -119,6 +122,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // Toolbar
     @FXML
     private ComboBox<String> inputFormatCombo;
+    private final OperationFormatState operationFormatState = new OperationFormatState();
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
@@ -188,19 +192,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         setupLaboratoryMenu();
 
-        // Populate ComboBox items
-        inputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Binary", "Decimal");
-        outputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Binary", "Decimal");
+        operationFormatState.attach(inputFormatCombo, outputFormatCombo);
+        installResponsiveLayoutSupport();
 
         // Connect Rail to SidePanel
         navigationRail.setSidePanel(sidePanel);
 
         // Handle item selection from SidePanel
         sidePanel.setOnItemSelected(this::handleItemSelected);
-
-        // Set default selections
-        inputFormatCombo.setValue("Hexadecimal");
-        outputFormatCombo.setValue("Hexadecimal");
 
         // Initialize History
         initializeHistory();
@@ -231,6 +230,35 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         Platform.runLater(this::installTableViewerSupport);
 
         System.out.println("ModernMainController initialized successfully!");
+    }
+
+    /**
+     * Keeps the working canvas usable on laptop-sized windows. The inspector
+     * remains available through View > Toggle Inspector, but it should not
+     * consume almost half of the workspace once the application gets narrow.
+     */
+    private void installResponsiveLayoutSupport() {
+        if (mainPane == null) {
+            return;
+        }
+        mainPane.widthProperty().addListener((observable, previousWidth, newWidth) ->
+                updateResponsiveLayout(newWidth.doubleValue()));
+        Platform.runLater(() -> updateResponsiveLayout(mainPane.getWidth()));
+    }
+
+    private void updateResponsiveLayout(double width) {
+        if (inspectorPanel == null || width <= 0) {
+            return;
+        }
+        if (width < COMPACT_LAYOUT_WIDTH && inspectorPanel.isVisible()) {
+            inspectorPanel.setVisible(false);
+            inspectorPanel.setManaged(false);
+            inspectorHiddenForCompactLayout = true;
+        } else if (width >= COMPACT_LAYOUT_WIDTH && inspectorHiddenForCompactLayout) {
+            inspectorPanel.setVisible(true);
+            inspectorPanel.setManaged(true);
+            inspectorHiddenForCompactLayout = false;
+        }
     }
 
     private void loadCipherContent() {
@@ -313,6 +341,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 .map(com.cryptocarver.model.OperationDescriptor::getNavigationPath)
                 .orElse(itemName);
         this.currentActiveOperation = itemName;
+        operationFormatState.activate(itemName);
         // Navigation alone is not a result. Clear the previous published
         // snapshot so Expand Result cannot accidentally expose data from the
         // route that the user has just left.
@@ -1461,6 +1490,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean visible = inspectorPanel.isVisible();
         inspectorPanel.setVisible(!visible);
         inspectorPanel.setManaged(!visible);
+        inspectorHiddenForCompactLayout = false;
         updateStatus(visible ? "Inspector hidden" : "Inspector shown");
     }
 
@@ -1470,6 +1500,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         sidePanel.setManaged(true);
         inspectorPanel.setVisible(false);
         inspectorPanel.setManaged(false);
+        inspectorHiddenForCompactLayout = false;
         updateStatus("View reset to defaults");
     }
 
@@ -2190,8 +2221,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleImportKey() {
         if (joseController == null) return;
-        currentActiveOperation = "JWK (Keys)";
-        showJOSE();
+        navigateTo("JWK (Keys)");
         joseController.importKeyFromFile();
     }
 

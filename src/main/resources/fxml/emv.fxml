@@ -4,218 +4,237 @@
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.cryptocarver.ui.EMVController" spacing="0">
-    <Accordion>
+      fx:controller="com.cryptocarver.ui.EMVController" spacing="14" styleClass="content-container-vbox,emv-module">
+    <Accordion styleClass="module-accordion">
         <panes>
             <TitledPane text="🔬 EMV TLV Inspector">
-                <VBox spacing="8" style="-fx-padding: 10;">
-                    <Label text="BER-TLV hexadecimal:" style="-fx-font-size: 11px;"/>
-                    <TextArea fx:id="emvTlvInputArea" prefHeight="100" promptText="9F02060000000001005F2A020978" style="-fx-font-family: 'Courier New'; -fx-font-size: 10px;"/>
-                    <Button text="Inspect EMV TLV" onAction="#handleInspectTlv" styleClass="action-button" maxWidth="160" style="-fx-font-size: 11px;"/>
-                    <TextArea fx:id="emvTlvResultArea" prefHeight="180" editable="false" style="-fx-font-family: 'Courier New'; -fx-font-size: 10px;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="BER-TLV hexadecimal:" styleClass="form-label"/>
+                    <TextArea fx:id="emvTlvInputArea" prefHeight="100" promptText="9F02060000000001005F2A020978" styleClass="monospace-field"/>
+                    <Button text="Inspect EMV TLV" onAction="#handleInspectTlv" styleClass="action-button,primary-action" maxWidth="160"/>
+                    <TextArea fx:id="emvTlvResultArea" prefHeight="180" editable="false" styleClass="result-area,monospace-field"/>
                     <Separator/>
-                    <Label text="CDOL/DDOL Builder" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <TextField fx:id="emvDolTemplateField" promptText="DOL template, e.g. 9F02069F1A02" style="-fx-font-family: 'Courier New'; -fx-font-size: 10px;"/>
-                    <TextArea fx:id="emvDolValuesArea" prefHeight="70" promptText="9F02=000000000100&#10;9F1A=0978" style="-fx-font-family: 'Courier New'; -fx-font-size: 10px;"/>
-                    <Button text="Build DOL Data" onAction="#handleBuildDol" styleClass="secondary-button" maxWidth="150" style="-fx-font-size: 10px;"/>
-                    <TextArea fx:id="emvDolResultArea" prefHeight="145" editable="false" wrapText="true" style="-fx-font-family: 'Courier New'; -fx-font-size: 10px;"/>
+                    <Label text="CDOL/DDOL Builder" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="emvDolTemplateField" promptText="DOL template, e.g. 9F02069F1A02" styleClass="monospace-field,form-field" maxWidth="Infinity"/>
+                    <TextArea fx:id="emvDolValuesArea" prefHeight="70" promptText="9F02=000000000100&#10;9F1A=0978" styleClass="monospace-field"/>
+                    <Button text="Build DOL Data" onAction="#handleBuildDol" styleClass="secondary-button" maxWidth="150"/>
+                    <TextArea fx:id="emvDolResultArea" prefHeight="145" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
+
             <!-- SESSION KEY DERIVATION -->
             <TitledPane text="🔑 Session Key Derivation" expanded="true">
-                <VBox spacing="8" style="-fx-padding: 10;">
-                    <Label text="Derive ICC Master Key (Action A)" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <GridPane hgap="8" vgap="4">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Derive ICC Master Key (Action A)" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
-                            <ColumnConstraints minWidth="90"/>
+                            <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="IMK (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="imkField" promptText="Issuer Master Key (16 bytes)"
-                                  GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="IMK (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="imkField" promptText="Issuer Master Key (16 bytes)" maxWidth="Infinity"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="PAN:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="panFieldSession" promptText="Primary Account Number"
-                                  GridPane.rowIndex="1" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="PAN:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="panFieldSession" promptText="Primary Account Number" maxWidth="Infinity"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="PAN Seq:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="PAN Seq:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                         <TextField fx:id="panSeqFieldSession" promptText="00-99" prefWidth="60"
-                                  GridPane.rowIndex="2" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
-                    <Separator style="-fx-padding: 5 0;"/>
+                    <Separator/>
 
-                    <Label text="Derive Session Key (SK)" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <GridPane hgap="8" vgap="4">
+                    <Label text="Derive Session Key (SK)" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
                          <columnConstraints>
-                            <ColumnConstraints minWidth="90"/>
+                            <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="ATC (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="emvAtcField" promptText="Application Transaction Counter (2 bytes)"
-                                  GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="ATC (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="emvAtcField" promptText="Application Transaction Counter (2 bytes)" maxWidth="Infinity"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
 
                     <Button text="Derive Keys" onAction="#handleDeriveSessionKey"
-                            styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                            styleClass="action-button,primary-action" maxWidth="150"/>
 
                     <TextArea fx:id="sessionKeyResultArea" prefHeight="120" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;" managed="false" visible="false"/>
+                              styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
 
             <!-- ARQC GENERATION -->
             <TitledPane text="💳 ARQC Generation">
-                <VBox spacing="8" style="-fx-padding: 10;">
-                    <Label text="Session Key (Hex):" style="-fx-font-size: 11px;"/>
-                    <TextField fx:id="skARQCField" promptText="16 bytes Session Key"
-                              style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
-
-                    <Label text="Terminal Data (Raw - Overrides fields below):" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <TextArea fx:id="arqcTerminalDataField" prefRowCount="2" wrapText="true"
-                              promptText="Paste full terminal data hex string here to use it directly..." style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
-
-                    <Label text="Transaction Data (Individual Fields):" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <GridPane hgap="8" vgap="4">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
-                            <ColumnConstraints minWidth="90"/>
+                            <ColumnConstraints minWidth="160" prefWidth="160"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="Session Key (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="skARQCField" promptText="16 bytes Session Key" maxWidth="Infinity"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+
+                    <Label text="Terminal Data (Raw - Overrides fields below):" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <TextArea fx:id="arqcTerminalDataField" prefRowCount="2" wrapText="true"
+                              promptText="Paste full terminal data hex string here to use it directly..." styleClass="monospace-field"/>
+
+                    <Label text="Transaction Data (Individual Fields):" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Amount:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="amountField" promptText="000000000100"
-                                  GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Amount:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="amountField" promptText="000000000100" maxWidth="Infinity"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Amount Other:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="amountOtherField" promptText="000000000000"
-                                  GridPane.rowIndex="1" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Amount Other:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="amountOtherField" promptText="000000000000" maxWidth="Infinity"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Currency:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="currencyField" promptText="0978 (EUR)"
-                                  GridPane.rowIndex="2" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Currency:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="currencyField" promptText="0978 (EUR)" maxWidth="Infinity"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Country:" GridPane.rowIndex="3" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="countryField" promptText="0724 (ES)"
-                                  GridPane.rowIndex="3" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="countryField" promptText="0724 (ES)" maxWidth="Infinity"
+                                  GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
                         <!-- ATC Field retained for UI context but excluded from default BP-Tools structure unless user adds it to Raw Data -->
-                        <Label text="ATC (Info):" GridPane.rowIndex="4" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="atcARQCField" promptText="0001"
-                                  GridPane.rowIndex="4" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="ATC (Info):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="atcARQCField" promptText="0001" maxWidth="Infinity"
+                                  GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="TVR:" GridPane.rowIndex="5" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="tvrField" promptText="0000000000"
-                                  GridPane.rowIndex="5" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="TVR:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="tvrField" promptText="0000000000" maxWidth="Infinity"
+                                  GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Date (YYMMDD):" GridPane.rowIndex="6" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="txDateField" promptText="250101"
-                                  GridPane.rowIndex="6" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Date (YYMMDD):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="txDateField" promptText="250101" maxWidth="Infinity"
+                                  GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Type:" GridPane.rowIndex="7" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="txTypeField" promptText="00"
-                                  GridPane.rowIndex="7" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Type:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="txTypeField" promptText="00" maxWidth="Infinity"
+                                  GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="UN:" GridPane.rowIndex="8" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="unField" promptText="Unpredictable Number (4 bytes)"
-                                  GridPane.rowIndex="8" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="UN:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="unField" promptText="Unpredictable Number (4 bytes)" maxWidth="Infinity"
+                                  GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="ICC Data:" GridPane.rowIndex="9" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="iccDataField" promptText="Optional (Tag 9F10?)"
-                                  GridPane.rowIndex="9" GridPane.columnIndex="1" style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="ICC Data:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="iccDataField" promptText="Optional (Tag 9F10?)" maxWidth="Infinity"
+                                  GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Padding:" GridPane.rowIndex="10" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="Padding:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
                         <ComboBox fx:id="arqcPaddingMethodCombo" prefWidth="250"
-                                  GridPane.rowIndex="10" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                                  GridPane.rowIndex="10" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Button text="Generate ARQC" onAction="#handleGenerateARQC"
-                            styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                            styleClass="action-button,primary-action" maxWidth="150"/>
 
                     <TextArea fx:id="arqcResultArea" prefHeight="80" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;" managed="false" visible="false"/>
+                              styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
 
             <!-- ARPC GENERATION -->
             <TitledPane text="🔄 ARQC Validation &amp; ARPC">
-                <VBox spacing="8" style="-fx-padding: 10;">
-                    <Label text="Session Key (Hex):" style="-fx-font-size: 11px;"/>
-                    <TextField fx:id="skARPCField" promptText="16 bytes Session Key"
-                              style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="160" prefWidth="160"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
 
-                    <Label text="ARQC (from card):" style="-fx-font-size: 11px;"/>
-                    <TextField fx:id="arqcField" promptText="8 bytes ARQC"
-                              style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Session Key (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="skARPCField" promptText="16 bytes Session Key" maxWidth="Infinity"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                    <Label text="Response Code (ARC):" style="-fx-font-size: 11px;"/>
-                    <TextField fx:id="arcField" promptText="e.g. 3030 (Approved)"
-                              style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="ARQC (from card):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="arqcField" promptText="8 bytes ARQC" maxWidth="Infinity"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                    <Label text="CSU (Optional, for Method 2):" style="-fx-font-size: 11px;"/>
-                    <TextField fx:id="csuField" promptText="4 bytes Card Status Update"
-                              style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="Response Code (ARC):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="arcField" promptText="e.g. 3030 (Approved)" maxWidth="Infinity"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                    <Label text="Prop. Auth. Data (Optional):" style="-fx-font-size: 11px;"/>
-                    <TextField fx:id="propAuthDataField" promptText="Proprietary Authentication Data (Hex)"
-                              style="-fx-font-family: 'Courier New'; -fx-font-size: 11px;"/>
+                        <Label text="CSU (Optional):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="csuField" promptText="4 bytes Card Status Update" maxWidth="Infinity"
+                                  GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                    <Label text="Method:" style="-fx-font-size: 11px;"/>
-                    <ComboBox fx:id="arpcMethodCombo" prefWidth="250" style="-fx-font-size: 11px;"/>
+                        <Label text="Prop. Auth. Data (Opt):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="propAuthDataField" promptText="Proprietary Authentication Data (Hex)" maxWidth="Infinity"
+                                  GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                    <HBox spacing="10">
+                        <Label text="Method:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <ComboBox fx:id="arpcMethodCombo" prefWidth="250"
+                                  GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field"/>
+                    </GridPane>
+
+                    <HBox spacing="8">
                         <Button text="Generate ARPC" onAction="#handleGenerateARPC"
-                                styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                                styleClass="action-button,primary-action" maxWidth="150"/>
                         <Button text="Verify ARQC (Sim)" onAction="#handleVerifyARQC"
-                                styleClass="secondary-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                                styleClass="secondary-button" maxWidth="150"/>
                     </HBox>
 
                     <TextArea fx:id="arpcResultArea" prefHeight="80" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;" managed="false" visible="false"/>
+                              styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
 
             <!-- TRACK 2 DATA -->
             <TitledPane text="🎞 Track 2 Data">
-                <VBox spacing="8" style="-fx-padding: 10;">
+                <VBox spacing="12" styleClass="module-pane-content">
                     <TabPane tabClosingPolicy="UNAVAILABLE">
                         <Tab text="Encode">
-                            <VBox spacing="8" style="-fx-padding: 8;">
-                                <Label text="PAN:" style="-fx-font-size: 11px;"/>
-                                <TextField fx:id="panTrack2Field" promptText="Primary Account Number" style="-fx-font-size: 11px;"/>
-
-                                <GridPane hgap="8" vgap="4">
+                            <VBox spacing="12" styleClass="module-pane-content">
+                                <GridPane hgap="10" vgap="9" styleClass="form-grid">
                                     <columnConstraints>
-                                        <ColumnConstraints percentWidth="50"/>
-                                        <ColumnConstraints percentWidth="50"/>
+                                        <ColumnConstraints minWidth="140" prefWidth="140"/>
+                                        <ColumnConstraints hgrow="ALWAYS"/>
                                     </columnConstraints>
-                                    <Label text="Expiry (YYMM):" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="expiryTrack2Field" promptText="2512" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                                    <Label text="PAN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="panTrack2Field" promptText="Primary Account Number" maxWidth="Infinity"
+                                              GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                                    <Label text="Service Code:" GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
-                                    <TextField fx:id="serviceCodeFieldTrack2" promptText="201" GridPane.rowIndex="1" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                                    <Label text="Expiry (YYMM):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="expiryTrack2Field" promptText="2512" maxWidth="Infinity"
+                                              GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
+
+                                    <Label text="Service Code:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="serviceCodeFieldTrack2" promptText="201" maxWidth="Infinity"
+                                              GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
+
+                                    <Label text="Discretionary Data:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="discretionaryDataField" promptText="Optional" maxWidth="Infinity"
+                                              GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
                                 </GridPane>
 
-                                <Label text="Discretionary Data:" style="-fx-font-size: 11px;"/>
-                                <TextField fx:id="discretionaryDataField" promptText="Optional" style="-fx-font-size: 11px;"/>
-
                                 <Button text="Encode Track 2" onAction="#handleEncodeTrack2"
-                                        styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                                        styleClass="action-button,primary-action" maxWidth="150"/>
                             </VBox>
                         </Tab>
                         <Tab text="Decode">
-                            <VBox spacing="8" style="-fx-padding: 8;">
-                                <Label text="Track 2 Hex / String:" style="-fx-font-size: 11px;"/>
-                                <TextField fx:id="track2InputField" promptText="Paste Track 2 data" style="-fx-font-size: 11px;"/>
+                            <VBox spacing="12" styleClass="module-pane-content">
+                                <Label text="Track 2 Hex / String:" styleClass="form-label"/>
+                                <TextField fx:id="track2InputField" promptText="Paste Track 2 data" maxWidth="Infinity" styleClass="monospace-field,form-field"/>
 
                                 <Button text="Decode Track 2" onAction="#handleDecodeTrack2"
-                                        styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                                        styleClass="action-button,primary-action" maxWidth="150"/>
                             </VBox>
                         </Tab>
                     </TabPane>
 
                     <TextArea fx:id="track2ResultArea" prefHeight="100" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;" managed="false" visible="false"/>
+                              styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
         </panes>

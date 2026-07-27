@@ -294,6 +294,45 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void compactLayoutTemporarilyHidesAndRestoresInspector() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.layout.VBox inspector = getField(controller, "inspectorPanel");
+        Method updateLayout = ModernMainController.class.getDeclaredMethod("updateResponsiveLayout", double.class);
+        updateLayout.setAccessible(true);
+
+        runAndWait(() -> {
+            try {
+                updateLayout.invoke(controller, 900.0);
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+        assertFalse(inspector.isVisible());
+        assertFalse(inspector.isManaged());
+
+        runAndWait(() -> {
+            try {
+                updateLayout.invoke(controller, 1_200.0);
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+        assertTrue(inspector.isVisible());
+        assertTrue(inspector.isManaged());
+    }
+
+    @Test
     void testSessionStateIncludesAndRestoresExtractedModuleControls() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
@@ -513,6 +552,69 @@ class ModernMainControllerUITest {
             assertEquals(2, configuration.version());
             assertEquals(route.module().name(), configuration.module(), operation);
         }));
+    }
+
+    @Test
+    void testFormatsAreRememberedPerOperation() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.control.ComboBox<String> inputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> outputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.navigateTo("Symmetric Ciphers");
+            inputFormat.setValue("Base64");
+            outputFormat.setValue("Hexadecimal");
+            controller.navigateTo("Hashing");
+            assertEquals("Hexadecimal", inputFormat.getValue());
+            assertEquals("Hexadecimal", outputFormat.getValue());
+            inputFormat.setValue("Text (UTF-8)");
+            outputFormat.setValue("Base64");
+            controller.navigateTo("Symmetric Ciphers");
+            assertEquals("Base64", inputFormat.getValue());
+            assertEquals("Hexadecimal", outputFormat.getValue());
+            controller.navigateTo("Hashing: SHA-256");
+            assertEquals("Text (UTF-8)", inputFormat.getValue());
+            assertEquals("Base64", outputFormat.getValue());
+        });
+    }
+
+    @Test
+    void testInspectorShowsOperationContextBeforeExecution() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.layout.VBox details = getField(controller, "inspectorDetailsContainer");
+
+        runAndWait(() -> controller.navigateTo("Symmetric Ciphers"));
+
+        java.util.List<String> labels = details.getChildren().stream().filter(javafx.scene.layout.HBox.class::isInstance)
+                .map(javafx.scene.layout.HBox.class::cast)
+                .flatMap(row -> row.getChildren().stream())
+                .filter(javafx.scene.control.Label.class::isInstance)
+                .map(javafx.scene.control.Label.class::cast)
+                .map(javafx.scene.control.Label::getText)
+                .toList();
+        assertTrue(labels.contains("Purpose:"));
+        assertTrue(labels.contains("Expected input:"));
+        assertTrue(labels.contains("Produces:"));
     }
 
 

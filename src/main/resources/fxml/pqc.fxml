@@ -3,88 +3,92 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="postQuantumContainer" managed="false" visible="false" spacing="0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.PostQuantumController">
-    <Accordion fx:id="pqcAccordion">
+<VBox fx:id="postQuantumContainer" managed="false" visible="false" spacing="14" styleClass="content-container-vbox,pqc-module" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.PostQuantumController">
+    <Accordion fx:id="pqcAccordion" styleClass="module-accordion">
         <panes>
             <TitledPane text="🔑 PQC Key Generation" expanded="true">
-                <VBox spacing="10" style="-fx-padding: 10;">
-                    <Label text="Algorithm (NIST Standards):"/>
-                    <ComboBox fx:id="pqcAlgorithmCombo" prefWidth="300" style="-fx-font-size: 11px;"/>
-                    <Button text="Generate Key Pair" onAction="#handleGeneratePQCKeyPair" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Algorithm (NIST Standards):" styleClass="form-label"/>
+                    <ComboBox fx:id="pqcAlgorithmCombo" prefWidth="300" styleClass="form-field"/>
+                    <Button text="Generate Key Pair" onAction="#handleGeneratePQCKeyPair" styleClass="action-button,primary-action" maxWidth="180"/>
                     <HBox spacing="8">
-                        <Button text="Import PEM Keys..." onAction="#handleImportPQCKeys" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                        <Button text="Export Public..." onAction="#handleExportPQCPublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                        <Button text="Export Private..." onAction="#handleExportPQCPrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                        <Button text="Import PEM Keys..." onAction="#handleImportPQCKeys" styleClass="secondary-button"/>
+                        <Button text="Export Public..." onAction="#handleExportPQCPublicKey" styleClass="secondary-button"/>
+                        <Button text="Export Private..." onAction="#handleExportPQCPrivateKey" styleClass="secondary-button"/>
                     </HBox>
-                    <Label fx:id="pqcKeyStatusLabel" text="Ready" style="-fx-font-size: 10px;"/>
+                    <Label fx:id="pqcKeyStatusLabel" text="Ready" styleClass="form-label"/>
                     <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="300">
                         <Tab text="Public Key">
-                            <TextArea fx:id="pqcPublicKeyArea" wrapText="true" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                            <TextArea fx:id="pqcPublicKeyArea" wrapText="true" editable="false" styleClass="monospace-field"/>
                         </Tab>
                         <Tab text="Private Key">
-                            <TextArea fx:id="pqcPrivateKeyArea" wrapText="true" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                            <TextArea fx:id="pqcPrivateKeyArea" wrapText="true" editable="false" styleClass="monospace-field"/>
                         </Tab>
                         <Tab text="Key Details">
-                            <TextArea fx:id="pqcKeyDetailsArea" wrapText="true" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                            <TextArea fx:id="pqcKeyDetailsArea" wrapText="true" editable="false" styleClass="monospace-field"/>
                         </Tab>
                     </TabPane>
                 </VBox>
             </TitledPane>
+
             <TitledPane text="🔏 PQC Sign / Verify">
-                <VBox spacing="10" style="-fx-padding: 10;">
-                    <Label text="Algorithm:"/>
-                    <ComboBox fx:id="pqcSignAlgoCombo" prefWidth="300" style="-fx-font-size: 11px;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Algorithm:" styleClass="form-label"/>
+                    <ComboBox fx:id="pqcSignAlgoCombo" prefWidth="300" styleClass="form-field"/>
 
-                    <Label text="Data to Sign (UTF-8):"/>
-                    <TextArea fx:id="pqcSignInputArea" prefHeight="80" style="-fx-font-family: 'Monospaced';"/>
+                    <Label text="Data to Sign (UTF-8):" styleClass="form-label"/>
+                    <TextArea fx:id="pqcSignInputArea" prefHeight="80" styleClass="monospace-field"/>
 
-                    <Button text="Sign Data" onAction="#handlePQCSign" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                    <Button text="Sign Data" onAction="#handlePQCSign" styleClass="action-button,primary-action" maxWidth="180"/>
 
-                    <Label text="Signature (Hex):"/>
-                    <TextArea fx:id="pqcSignOutputArea" prefHeight="80" editable="false" style="-fx-font-family: 'Monospaced';"/>
+                    <Label text="Signature (Hex):" styleClass="form-label"/>
+                    <TextArea fx:id="pqcSignOutputArea" prefHeight="80" editable="false" styleClass="result-area,monospace-field"/>
 
                     <Separator/>
 
-                    <Label text="Verify Signature (Paste Hex):"/>
-                    <TextField fx:id="pqcVerifySignatureField" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
-                    <Button text="Verify Signature" onAction="#handlePQCVerify" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                    <Label text="Verify Signature (Paste Hex):" styleClass="form-label"/>
+                    <TextField fx:id="pqcVerifySignatureField" styleClass="monospace-field,form-field"/>
+                    <Button text="Verify Signature" onAction="#handlePQCVerify" styleClass="action-button,primary-action" maxWidth="180"/>
                 </VBox>
             </TitledPane>
+
             <TitledPane text="🎓 KEM Educational Demo (Alice &amp; Bob)">
-                <VBox spacing="10" style="-fx-padding: 10;">
-                    <Label text="This demo illustrates the Key Encapsulation Mechanism (KEM). It is not a full communication protocol." wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="This demo illustrates the Key Encapsulation Mechanism (KEM). It is not a full communication protocol." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="1. Alice generates a key pair (uses the ML-KEM key generated above)." style="-fx-font-weight: bold;"/>
-                    <Label text="KEM algorithm:"/>
-                    <ComboBox fx:id="pqcKemAlgoCombo" prefWidth="300" style="-fx-font-size: 11px;"/>
+                    <Label text="1. Alice generates a key pair (uses the ML-KEM key generated above)." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="KEM algorithm:" styleClass="form-label"/>
+                        <ComboBox fx:id="pqcKemAlgoCombo" prefWidth="300" styleClass="form-field"/>
+                    </HBox>
 
-                    <Label text="2. Bob uses Alice's public key to encapsulate a shared secret." style="-fx-font-weight: bold;"/>
-                    <Button text="Bob: Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button" maxWidth="240" style="-fx-font-size: 11px;"/>
-                    <Label text="Encapsulation Ciphertext sent to Alice (Hex):"/>
-                    <TextArea fx:id="pqcKemCiphertextArea" prefHeight="50" editable="false" wrapText="true" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
-                    <Label text="Bob's Shared Secret (Hex):"/>
-                    <TextField fx:id="pqcKemSharedSecretField" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                    <Label text="2. Bob uses Alice's public key to encapsulate a shared secret." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Button text="Bob: Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button,primary-action" maxWidth="240"/>
+                    <Label text="Encapsulation Ciphertext sent to Alice (Hex):" styleClass="form-label"/>
+                    <TextArea fx:id="pqcKemCiphertextArea" prefHeight="50" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
+                    <Label text="Bob's Shared Secret (Hex):" styleClass="form-label"/>
+                    <TextField fx:id="pqcKemSharedSecretField" editable="false" styleClass="result-area,monospace-field,form-field"/>
 
                     <Separator/>
 
-                    <Label text="3. Alice decapsulates the ciphertext using her private key." style="-fx-font-weight: bold;"/>
-                    <Button text="Alice: Decapsulate Ciphertext" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="240" style="-fx-font-size: 11px;"/>
-                    <Label text="Alice's Shared Secret (Hex):"/>
-                    <TextField fx:id="pqcAliceSecretField" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                    <Label text="3. Alice decapsulates the ciphertext using her private key." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Button text="Alice: Decapsulate Ciphertext" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="240"/>
+                    <Label text="Alice's Shared Secret (Hex):" styleClass="form-label"/>
+                    <TextField fx:id="pqcAliceSecretField" editable="false" styleClass="result-area,monospace-field,form-field"/>
 
-                    <Label fx:id="pqcKemStatusLabel" text="Generate an ML-KEM key pair to begin." style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                    <Label fx:id="pqcKemStatusLabel" text="Generate an ML-KEM key pair to begin." styleClass="form-label" style="-fx-font-weight: bold;"/>
                 </VBox>
             </TitledPane>
 
             <TitledPane text="⏱️ Benchmark &amp; Performance">
-                <VBox spacing="10" style="-fx-padding: 10;">
-                    <Label text="Algorithm:"/>
-                    <ComboBox fx:id="pqcBenchmarkAlgoCombo" prefWidth="300" style="-fx-font-size: 11px;"/>
-                    <HBox spacing="10">
-                        <Button fx:id="pqcBenchmarkBtn" text="Run Benchmark" onAction="#handlePQCBenchmark" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Algorithm:" styleClass="form-label"/>
+                    <ComboBox fx:id="pqcBenchmarkAlgoCombo" prefWidth="300" styleClass="form-field"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="pqcBenchmarkBtn" text="Run Benchmark" onAction="#handlePQCBenchmark" styleClass="action-button,primary-action" maxWidth="180"/>
                         <ProgressIndicator fx:id="pqcBenchmarkProgress" visible="false" prefWidth="20" prefHeight="20"/>
                     </HBox>
-                    <TextArea fx:id="pqcBenchmarkArea" prefHeight="150" editable="false" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                    <TextArea fx:id="pqcBenchmarkArea" prefHeight="150" editable="false" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
         </panes>

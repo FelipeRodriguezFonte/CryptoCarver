@@ -4,71 +4,73 @@
 <?import javafx.scene.layout.*?>
 
 <VBox fx:id="certificatesContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.cryptocarver.ui.CertificatesController" spacing="0">
-    <Accordion>
+      fx:controller="com.cryptocarver.ui.CertificatesController" spacing="14" styleClass="content-container-vbox,certificates-module">
+    <Accordion styleClass="module-accordion">
         <panes>
             <!-- GENERATE CERTIFICATE -->
             <TitledPane text="📜 Generate Certificate" expanded="true">
-                <VBox spacing="6" style="-fx-padding: 8;">
-                    <GridPane hgap="6" vgap="4">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
-                            <ColumnConstraints minWidth="80" prefWidth="80"/>
+                            <ColumnConstraints minWidth="90" prefWidth="90"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="CN:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certCNField" promptText="localhost"
-                                  GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="CN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certCNField" promptText="localhost" maxWidth="Infinity"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Organization:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certOrgField" promptText="Crypto Org"
-                                  GridPane.rowIndex="1" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="Organization:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certOrgField" promptText="Crypto Org" maxWidth="Infinity"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Org. Unit:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certOUField" promptText="IT Security"
-                                  GridPane.rowIndex="2" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="Org. Unit:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certOUField" promptText="IT Security" maxWidth="Infinity"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Country:" GridPane.rowIndex="3" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="Country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
                         <TextField fx:id="certCountryField" promptText="ES" prefWidth="60"
-                                  GridPane.rowIndex="3" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                                  GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="State:" GridPane.rowIndex="4" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certStateField" promptText="State/Province"
-                                  GridPane.rowIndex="4" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="State:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certStateField" promptText="State/Province" maxWidth="Infinity"
+                                  GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Locality:" GridPane.rowIndex="5" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certLocalityField" promptText="City"
-                                  GridPane.rowIndex="5" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="Locality:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certLocalityField" promptText="City" maxWidth="Infinity"
+                                  GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Email:" GridPane.rowIndex="6" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certEmailField" promptText="Optional"
-                                  GridPane.rowIndex="6" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="Email:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certEmailField" promptText="Optional" maxWidth="Infinity"
+                                  GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Validity (days):" GridPane.rowIndex="7" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="Validity (days):" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
                         <TextField fx:id="certValidityField" text="365" prefWidth="80"
-                                  GridPane.rowIndex="7" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                                  GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Key Type:" GridPane.rowIndex="8" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <ComboBox fx:id="certKeyTypeCombo" prefWidth="120"
-                                 GridPane.rowIndex="8" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="Key Type:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <ComboBox fx:id="certKeyTypeCombo" prefWidth="150"
+                                  GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Sign Algorithm:" GridPane.rowIndex="9" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <ComboBox fx:id="certSignAlgoCombo" prefWidth="150"
-                                 GridPane.rowIndex="9" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
-                        <Label text="SAN DNS:" GridPane.rowIndex="10" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certSanDnsField" promptText="Comma-separated (e.g. api.example.test)" GridPane.rowIndex="10" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
-                        <Label text="SAN IP:" GridPane.rowIndex="11" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
-                        <TextField fx:id="certSanIpField" promptText="Comma-separated (e.g. 127.0.0.1)" GridPane.rowIndex="11" GridPane.columnIndex="1" style="-fx-font-size: 11px;"/>
+                        <Label text="Sign Algorithm:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <ComboBox fx:id="certSignAlgoCombo" prefWidth="200"
+                                  GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="form-field"/>
+
+                        <Label text="SAN DNS:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certSanDnsField" promptText="Comma-separated (e.g. api.example.test)" maxWidth="Infinity" GridPane.rowIndex="10" GridPane.columnIndex="1" styleClass="form-field"/>
+
+                        <Label text="SAN IP:" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="certSanIpField" promptText="Comma-separated (e.g. 127.0.0.1)" maxWidth="Infinity" GridPane.rowIndex="11" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <HBox spacing="8">
-                        <Button text="Generate Certificate" onAction="#handleGenerateCertificate" styleClass="action-button" style="-fx-font-size: 11px;"/>
-                        <Button text="Generate CSR" onAction="#handleGenerateCSR" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                        <Button text="Generate Certificate" onAction="#handleGenerateCertificate" styleClass="action-button,primary-action"/>
+                        <Button text="Generate CSR" onAction="#handleGenerateCSR" styleClass="secondary-button"/>
                     </HBox>
-                    <CheckBox fx:id="certRootCaCheck" text="Generate as laboratory Root CA (CA:TRUE, keyCertSign)" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
+                    <CheckBox fx:id="certRootCaCheck" text="Generate as laboratory Root CA (CA:TRUE, keyCertSign)" styleClass="helper-text"/>
 
                     <TextArea fx:id="certOutputArea" prefHeight="200" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                              styleClass="result-area,monospace-field"
                               promptText="Certificate will appear here..."
                               managed="false" visible="false"/>
                 </VBox>
@@ -76,43 +78,43 @@
 
             <!-- ISSUE FROM CSR -->
             <TitledPane text="🏛 Issue Certificate from CSR (Laboratory CA)">
-                <VBox spacing="6" style="-fx-padding: 8;">
-                    <Label text="Validates the CSR signature before issuing. Use only a laboratory CA key." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #9a3412;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Validates the CSR signature before issuing. Use only a laboratory CA key." wrapText="true" styleClass="helper-text"/>
                     <TextArea fx:id="certIssueCsrArea" prefHeight="80" wrapText="true" promptText="PKCS#10 CSR PEM"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                              styleClass="monospace-field"/>
                     <TextArea fx:id="certIssueCaCertArea" prefHeight="80" wrapText="true" promptText="Issuer Root CA certificate PEM"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                              styleClass="monospace-field"/>
                     <TextArea fx:id="certIssueCaKeyArea" prefHeight="80" wrapText="true" promptText="Issuer Root CA private key PEM"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
-                    <HBox spacing="6">
-                        <TextField fx:id="certIssueValidityField" text="90" prefWidth="80" promptText="Days"/>
-                        <TextField fx:id="certIssueSignatureField" text="Automatic" promptText="Automatic or issuer signature algorithm" HBox.hgrow="ALWAYS"/>
+                              styleClass="monospace-field"/>
+                    <HBox spacing="8">
+                        <TextField fx:id="certIssueValidityField" text="90" prefWidth="80" promptText="Days" styleClass="form-field"/>
+                        <TextField fx:id="certIssueSignatureField" text="Automatic" promptText="Automatic or issuer signature algorithm" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
                     </HBox>
-                    <HBox spacing="6" alignment="CENTER_LEFT">
-                        <Label text="Profile:" style="-fx-font-size: 10px;"/>
-                        <ComboBox fx:id="certIssueProfileCombo" promptText="Select Profile"/>
-                        <Label text="Path length (CA):" style="-fx-font-size: 10px;"/>
-                        <TextField fx:id="certIssuePathLengthField" text="0" prefWidth="45"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Profile:" styleClass="form-label"/>
+                        <ComboBox fx:id="certIssueProfileCombo" promptText="Select Profile" styleClass="form-field"/>
+                        <Label text="Path length (CA):" styleClass="form-label"/>
+                        <TextField fx:id="certIssuePathLengthField" text="0" prefWidth="45" styleClass="form-field"/>
                     </HBox>
-                    <Button text="Issue Laboratory Certificate" onAction="#handleIssueCertificateFromCsr" styleClass="action-button" maxWidth="220" style="-fx-font-size: 11px;"/>
+                    <Button text="Issue Laboratory Certificate" onAction="#handleIssueCertificateFromCsr" styleClass="action-button,primary-action" maxWidth="250"/>
                     <TextArea fx:id="certIssueResultArea" prefHeight="180" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                              styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
 
             <!-- PARSE CERTIFICATE -->
             <TitledPane text="🔍 Parse Certificate">
-                <VBox spacing="6" style="-fx-padding: 8;">
-                    <Label text="Paste PEM Certificate:" style="-fx-font-size: 11px;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Paste PEM Certificate:" styleClass="form-label"/>
                     <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                              styleClass="monospace-field"
                               promptText="Paste certificate in PEM format..."/>
 
                     <Button text="Parse Certificate" onAction="#handleParseCertificate"
-                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                            styleClass="action-button,primary-action" maxWidth="180"/>
 
                     <TextArea fx:id="certParseResultArea" prefHeight="200" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                              styleClass="result-area,monospace-field"
                               promptText="Parse results will appear here..."
                               managed="false" visible="false"/>
                 </VBox>
@@ -120,49 +122,52 @@
 
             <!-- COMPARE CERTIFICATES -->
             <TitledPane text="⚖ Compare Certificates">
-                <VBox spacing="6" style="-fx-padding: 8;">
+                <VBox spacing="12" styleClass="module-pane-content">
                     <TextArea fx:id="certCompareLeftArea" prefHeight="85" wrapText="true" promptText="Left X.509 certificate PEM"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                              styleClass="monospace-field"/>
                     <TextArea fx:id="certCompareRightArea" prefHeight="85" wrapText="true" promptText="Right X.509 certificate PEM"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
-                    <Button text="Compare Certificates" onAction="#handleCompareCertificates" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                              styleClass="monospace-field"/>
+                    <Button text="Compare Certificates" onAction="#handleCompareCertificates" styleClass="action-button,primary-action" maxWidth="200"/>
                     <TextArea fx:id="certCompareResultArea" prefHeight="180" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                              styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
 
+            <!-- VALIDATE CERTIFICATE -->
             <TitledPane text="🛡 Validate Certificate">
-            <content>
-                <VBox spacing="10" styleClass="content-pane">
-                    <Label text="Certificate (PEM)" styleClass="section-header"/>
-                    <TextArea fx:id="valCertInput" promptText="Paste X.509 Certificate..." prefRowCount="5" wrapText="true" styleClass="code-area"/>
+                <content>
+                    <VBox spacing="12" styleClass="module-pane-content">
+                        <Label text="Certificate (PEM)" styleClass="form-label"/>
+                        <TextArea fx:id="valCertInput" promptText="Paste X.509 Certificate..." prefRowCount="5" wrapText="true" styleClass="monospace-field"/>
 
-                    <Label text="Issuer Certificate (Optional)" styleClass="section-header"/>
-                    <TextArea fx:id="valIssuerInput" promptText="Paste Issuer Certificate (for signature verification)..." prefRowCount="5" wrapText="true" styleClass="code-area"/>
+                        <Label text="Issuer Certificate (Optional)" styleClass="form-label"/>
+                        <TextArea fx:id="valIssuerInput" promptText="Paste Issuer Certificate (for signature verification)..." prefRowCount="5" wrapText="true" styleClass="monospace-field"/>
 
-                    <Button text="Validate Certificate" onAction="#handleValidateCertificate" styleClass="action-button"/>
+                        <Button text="Validate Certificate" onAction="#handleValidateCertificate" styleClass="action-button,primary-action" maxWidth="200"/>
 
-                    <Label text="Validation Report" styleClass="section-header"/>
-                    <TextArea fx:id="valResultArea" editable="false" prefRowCount="5" wrapText="true" styleClass="code-area"/>
-                </VBox>
-            </content>
-        </TitledPane>
-        <TitledPane text="🔗 Validate Chain">
-                <VBox spacing="6" style="-fx-padding: 8;">
-                    <Label text="Paste Certificate Chain (PEM sequence - End Entity first):" style="-fx-font-size: 11px;"/>
+                        <Label text="Validation Report" styleClass="form-label"/>
+                        <TextArea fx:id="valResultArea" editable="false" prefRowCount="5" wrapText="true" styleClass="result-area,monospace-field"/>
+                    </VBox>
+                </content>
+            </TitledPane>
+
+            <!-- VALIDATE CHAIN -->
+            <TitledPane text="🔗 Validate Chain">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Paste Certificate Chain (PEM sequence - End Entity first):" styleClass="form-label"/>
                     <TextArea fx:id="chainInputArea" prefHeight="100" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                              styleClass="monospace-field"
                               promptText="-----BEGIN CERTIFICATE-----..."/>
-                    <Label text="Optional CRLs (PEM sequence):" style="-fx-font-size: 11px;"/>
+                    <Label text="Optional CRLs (PEM sequence):" styleClass="form-label"/>
                     <TextArea fx:id="chainCrlInputArea" prefHeight="70" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                              styleClass="monospace-field"
                               promptText="-----BEGIN X509 CRL-----..."/>
 
                     <Button text="Validate Chain" onAction="#handleValidateCertificateChain"
-                            styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                            styleClass="action-button,primary-action" maxWidth="180"/>
 
                     <TextArea fx:id="chainResultArea" prefHeight="150" editable="false" wrapText="true"
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
+                              styleClass="result-area,monospace-field"
                               promptText="Validation results will appear here..."
                               managed="false" visible="false"/>
                 </VBox>
@@ -170,29 +175,31 @@
 
             <!-- CRL MANAGEMENT -->
             <TitledPane text="🚫 CRL Management">
-                <VBox spacing="6" style="-fx-padding: 8;">
-                    <Label text="Generate or update an offline CRL." style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
-                    <TextArea fx:id="crlIssuerCertArea" prefHeight="70" wrapText="true" promptText="Issuer Root CA certificate PEM" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
-                    <TextArea fx:id="crlIssuerKeyArea" prefHeight="70" wrapText="true" promptText="Issuer Root CA private key PEM" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
-                    <TextArea fx:id="crlExistingCrlArea" prefHeight="70" wrapText="true" promptText="Existing CRL PEM (optional)" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
-                    <HBox spacing="6" alignment="CENTER_LEFT">
-                        <TextField fx:id="crlRevokeSerialField" promptText="Serial Number to Revoke (Hex)"/>
-                        <ComboBox fx:id="crlRevokeReasonCombo" promptText="Reason"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Generate or update an offline CRL." styleClass="helper-text"/>
+                    <TextArea fx:id="crlIssuerCertArea" prefHeight="70" wrapText="true" promptText="Issuer Root CA certificate PEM" styleClass="monospace-field"/>
+                    <TextArea fx:id="crlIssuerKeyArea" prefHeight="70" wrapText="true" promptText="Issuer Root CA private key PEM" styleClass="monospace-field"/>
+                    <TextArea fx:id="crlExistingCrlArea" prefHeight="70" wrapText="true" promptText="Existing CRL PEM (optional)" styleClass="monospace-field"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <TextField fx:id="crlRevokeSerialField" promptText="Serial Number to Revoke (Hex)" styleClass="form-field" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <ComboBox fx:id="crlRevokeReasonCombo" promptText="Reason" styleClass="form-field"/>
                     </HBox>
-                    <HBox spacing="6">
-                        <Button text="Generate Empty CRL" onAction="#handleGenerateCrl" styleClass="action-button" style="-fx-font-size: 11px;"/>
-                        <Button text="Revoke &amp; Update CRL" onAction="#handleRevokeCrl" styleClass="action-button" style="-fx-font-size: 11px;"/>
+                    <HBox spacing="8">
+                        <Button text="Generate Empty CRL" onAction="#handleGenerateCrl" styleClass="secondary-button"/>
+                        <Button text="Revoke &amp; Update CRL" onAction="#handleRevokeCrl" styleClass="action-button,primary-action"/>
                     </HBox>
-                    <TextArea fx:id="crlResultArea" prefHeight="150" editable="false" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <TextArea fx:id="crlResultArea" prefHeight="150" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
 
+            <!-- PADES -->
             <TitledPane text="📄 PAdES PDF Signatures">
                 <content>
                     <fx:include fx:id="padesContainer" source="pades.fxml"/>
                 </content>
             </TitledPane>
 
+            <!-- ASICS -->
             <TitledPane text="📦 ASiC-S Containers">
                 <content>
                     <fx:include fx:id="asicContainer" source="asic.fxml"/>
@@ -201,19 +208,19 @@
 
             <!-- CMS OPERATIONS -->
             <TitledPane text="📦 CMS Operations">
-                <VBox spacing="10" style="-fx-padding: 15;">
-                    <Label text="PKCS#7 Cryptographic Message Syntax operations" style="-fx-font-style: italic; -fx-text-fill: gray;"/>
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="PKCS#7 Cryptographic Message Syntax operations" styleClass="helper-text"/>
 
-                    <Label text="Input Data / Content:"/>
-                    <TextArea fx:id="cmsInputArea" promptText="Enter raw data to Sign/Encrypt, or PKCS#7 PEM to Verify/Decrypt..." prefHeight="80" style="-fx-font-family: 'Monospaced';"/>
+                    <Label text="Input Data / Content:" styleClass="form-label"/>
+                    <TextArea fx:id="cmsInputArea" promptText="Enter raw data to Sign/Encrypt, or PKCS#7 PEM to Verify/Decrypt..." prefHeight="80" styleClass="monospace-field"/>
 
                     <TabPane tabClosingPolicy="UNAVAILABLE">
                         <tabs>
                             <Tab text="Signature (Sign/Verify)">
                                 <content>
-                                    <VBox spacing="10" style="-fx-padding: 10;">
+                                    <VBox spacing="12" styleClass="module-pane-content">
                                         <HBox spacing="10" alignment="CENTER_LEFT">
-                                            <Label text="Signing Source: " style="-fx-font-weight: bold;"/>
+                                            <Label text="Signing Source: " styleClass="form-label"/>
                                             <fx:define>
                                                 <ToggleGroup fx:id="cmsSignSourceToggleGroup"/>
                                             </fx:define>
@@ -221,12 +228,12 @@
                                             <RadioButton fx:id="cmsSignSourcePkcs11Radio" text="PKCS#11 Token" toggleGroup="$cmsSignSourceToggleGroup" onAction="#handleCMSourceChanged"/>
                                         </HBox>
 
-                                        <GridPane fx:id="cmsSignLocalGrid" hgap="10" vgap="10">
-                                            <Label text="Signer Certificate (PEM):" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                                            <TextArea fx:id="cmsSignCertArea" promptText="-----BEGIN CERTIFICATE-----..." prefHeight="80" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
+                                        <GridPane fx:id="cmsSignLocalGrid" hgap="10" vgap="10" styleClass="form-grid">
+                                            <Label text="Signer Certificate (PEM):" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="form-label"/>
+                                            <TextArea fx:id="cmsSignCertArea" promptText="-----BEGIN CERTIFICATE-----..." prefHeight="80" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" maxWidth="Infinity" styleClass="monospace-field"/>
 
-                                            <Label text="Signer Private Key (PEM):" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                                            <TextArea fx:id="cmsSignKeyArea" promptText="-----BEGIN PRIVATE KEY-----..." prefHeight="80" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
+                                            <Label text="Signer Private Key (PEM):" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="form-label"/>
+                                            <TextArea fx:id="cmsSignKeyArea" promptText="-----BEGIN PRIVATE KEY-----..." prefHeight="80" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" maxWidth="Infinity" styleClass="monospace-field"/>
                                             <columnConstraints>
                                                 <ColumnConstraints percentWidth="50"/>
                                                 <ColumnConstraints percentWidth="50"/>
@@ -234,41 +241,41 @@
                                         </GridPane>
 
                                         <HBox fx:id="cmsSignPkcs11Box" spacing="10" alignment="CENTER_LEFT" managed="false" visible="false">
-                                            <Label text="Key Alias:" />
-                                            <ComboBox fx:id="cmsSignKeyAliasCombo" prefWidth="250"/>
-                                            <Button text="Load Token Keys" onAction="#handleLoadCMSKeys" />
+                                            <Label text="Key Alias:" styleClass="form-label"/>
+                                            <ComboBox fx:id="cmsSignKeyAliasCombo" prefWidth="250" styleClass="form-field"/>
+                                            <Button text="Load Token Keys" onAction="#handleLoadCMSKeys" styleClass="secondary-button"/>
                                         </HBox>
 
-                                        <Label text="Detached Data (for verification only):"/>
-                                        <TextArea fx:id="cmsVerifyDataArea" promptText="Enter original raw data here if verifying a detached signature..." prefHeight="50" style="-fx-font-family: 'Monospaced';"/>
+                                        <Label text="Detached Data (for verification only):" styleClass="form-label"/>
+                                        <TextArea fx:id="cmsVerifyDataArea" promptText="Enter original raw data here if verifying a detached signature..." prefHeight="50" styleClass="monospace-field"/>
 
                                         <HBox spacing="10" alignment="CENTER_LEFT">
                                              <CheckBox fx:id="cmsDetachedCheck" text="Detached Signature (Sign)"/>
-                                             <CheckBox fx:id="cmsCadesBesCheck" text="CAdES-BES (bind signing certificate)">
+                                             <CheckBox fx:id="cmsCadesBesCheck" text="CAdES-BES">
                                                  <tooltip><Tooltip text="Adds the ETSI CAdES-BES signingCertificateV2 signed attribute. This is not a timestamped or long-term profile."/></tooltip>
                                              </CheckBox>
-                                             <CheckBox fx:id="cmsCadesTCheck" text="CAdES-T (RFC 3161 timestamp)" onAction="#handleCadesTimestampOptionChanged">
+                                             <CheckBox fx:id="cmsCadesTCheck" text="CAdES-T (RFC 3161)" onAction="#handleCadesTimestampOptionChanged">
                                                  <tooltip><Tooltip text="Requests a RFC 3161 timestamp over the CAdES signature. Requires a reachable TSA URL."/></tooltip>
                                              </CheckBox>
                                              <Region HBox.hgrow="ALWAYS"/>
-                                             <Button text="Sign" onAction="#handleCMSSign" styleClass="action-button-primary"/>
-                                             <Button text="Add LT Evidence..." onAction="#handleUpgradeCadesLt" styleClass="action-button-secondary">
+                                             <Button text="Sign" onAction="#handleCMSSign" styleClass="action-button,primary-action"/>
+                                             <Button text="Add LT Evidence..." onAction="#handleUpgradeCadesLt" styleClass="secondary-button">
                                                  <tooltip><Tooltip text="Embed locally selected CRL files into an existing CAdES-T signature. No CRL is downloaded automatically."/></tooltip>
                                              </Button>
-                                             <Button text="Verify" onAction="#handleCMSVerify" styleClass="action-button-secondary"/>
+                                             <Button text="Verify" onAction="#handleCMSVerify" styleClass="secondary-button"/>
                                         </HBox>
                                         <HBox fx:id="cmsCadesTsaBox" spacing="8" alignment="CENTER_LEFT" visible="false" managed="false">
-                                            <Label text="CAdES-T TSA URL:"/>
-                                            <TextField fx:id="cmsCadesTsaUrlField" promptText="https://your-tsa.example/" HBox.hgrow="ALWAYS"/>
+                                            <Label text="CAdES-T TSA URL:" styleClass="form-label"/>
+                                            <TextField fx:id="cmsCadesTsaUrlField" promptText="https://your-tsa.example/" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
                                         </HBox>
                                     </VBox>
                                 </content>
                             </Tab>
                             <Tab text="Encryption (EnvelopedData)">
                                 <content>
-                                    <VBox spacing="10" style="-fx-padding: 10;">
+                                    <VBox spacing="12" styleClass="module-pane-content">
                                         <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-padding: 0 0 5 0;">
-                                            <Label text="Source:" style="-fx-font-weight: bold;"/>
+                                            <Label text="Source:" styleClass="form-label"/>
                                             <fx:define>
                                                 <ToggleGroup fx:id="cmsEncryptSourceToggleGroup"/>
                                             </fx:define>
@@ -276,12 +283,12 @@
                                             <RadioButton fx:id="cmsEncryptSourcePkcs11Radio" text="PKCS#11 Token" toggleGroup="$cmsEncryptSourceToggleGroup" onAction="#handleCMSEncryptSourceChanged"/>
                                         </HBox>
 
-                                        <GridPane fx:id="cmsEncryptLocalGrid" hgap="10" vgap="10">
-                                            <Label text="Recipient Certificate (for Encrypt):" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                                            <TextArea fx:id="cmsEncryptCertArea" promptText="-----BEGIN CERTIFICATE-----..." prefHeight="80" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
+                                        <GridPane fx:id="cmsEncryptLocalGrid" hgap="10" vgap="10" styleClass="form-grid">
+                                            <Label text="Recipient Certificate (for Encrypt):" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="form-label"/>
+                                            <TextArea fx:id="cmsEncryptCertArea" promptText="-----BEGIN CERTIFICATE-----..." prefHeight="80" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" maxWidth="Infinity" styleClass="monospace-field"/>
 
-                                            <Label text="Recipient Private Key (for Decrypt):" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                                            <TextArea fx:id="cmsDecryptKeyArea" promptText="-----BEGIN PRIVATE KEY-----..." prefHeight="80" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced';"/>
+                                            <Label text="Recipient Private Key (for Decrypt):" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="form-label"/>
+                                            <TextArea fx:id="cmsDecryptKeyArea" promptText="-----BEGIN PRIVATE KEY-----..." prefHeight="80" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS" maxWidth="Infinity" styleClass="monospace-field"/>
                                             <columnConstraints>
                                                 <ColumnConstraints percentWidth="50"/>
                                                 <ColumnConstraints percentWidth="50"/>
@@ -289,14 +296,14 @@
                                         </GridPane>
 
                                         <HBox fx:id="cmsEncryptPkcs11Box" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
-                                            <Label text="Token Key Alias:"/>
-                                            <ComboBox fx:id="cmsEncryptKeyAliasCombo" prefWidth="250" />
-                                            <Button text="Load Token Keys" onAction="#handleLoadCMSEncryptKeys" />
+                                            <Label text="Token Key Alias:" styleClass="form-label"/>
+                                            <ComboBox fx:id="cmsEncryptKeyAliasCombo" prefWidth="250" styleClass="form-field"/>
+                                            <Button text="Load Token Keys" onAction="#handleLoadCMSEncryptKeys" styleClass="secondary-button"/>
                                         </HBox>
 
                                         <HBox spacing="10" alignment="CENTER_RIGHT">
-                                             <Button text="Encrypt" onAction="#handleCMSEncrypt" styleClass="action-button-warning"/>
-                                             <Button text="Decrypt" onAction="#handleCMSDecrypt" styleClass="action-button-danger"/>
+                                             <Button text="Encrypt" onAction="#handleCMSEncrypt" styleClass="action-button,primary-action"/>
+                                             <Button text="Decrypt" onAction="#handleCMSDecrypt" styleClass="secondary-button"/>
                                         </HBox>
                                     </VBox>
                                 </content>
@@ -304,8 +311,8 @@
                         </tabs>
                     </TabPane>
 
-                    <Label text="Output / Result:"/>
-                    <TextArea fx:id="cmsOutputArea" editable="false" prefHeight="80" style="-fx-font-family: 'Monospaced';"/>
+                    <Label text="Output / Result:" styleClass="form-label"/>
+                    <TextArea fx:id="cmsOutputArea" editable="false" prefHeight="100" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
 
