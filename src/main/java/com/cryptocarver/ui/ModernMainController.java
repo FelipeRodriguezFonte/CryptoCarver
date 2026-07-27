@@ -657,6 +657,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // XML Security UI
     @FXML private VBox xmlSecurityContainer;
+    @FXML private VBox wssSecurityContainer;
+    @FXML private WssSecurityController wssSecurityContainerController;
     @FXML private TextField xmlSignInputPathField;
     @FXML private TextField xmlSignKeyPathField;
     @FXML private PasswordField xmlSignKeyPasswordField;
@@ -699,6 +701,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private Label authMacKeyInfoLabel;
     @FXML
     private TextField authMacNonceField;
+    @FXML
+    private VBox authMacNonceGroup;
+    @FXML
+    private Label authMacAlgorithmInfoLabel;
+    @FXML
+    private Label authMacWarningLabel;
     @FXML
     private ComboBox<String> authMacTruncationCombo;
     @FXML
@@ -1042,6 +1050,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         loadPostQuantumContent();
         loadXMLSecurityContent();
+        loadWssSecurityContent();
 
         // Show the symmetric keys by defaul
         showSymmetricKeys();
@@ -1108,6 +1117,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     authMacTruncationCombo,
                     authMacVerifyField,
                     authMacNonceField,
+                    authMacNonceGroup,
+                    authMacAlgorithmInfoLabel,
+                    authMacWarningLabel,
                     macKeySourceCombo,
                     macHsmKeyCombo);
         } catch (Exception e) {
@@ -2750,8 +2762,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 expandAccordionPane("Key Material Inspector");
                 break;
             case "Key & Certificate Format Workbench":
-                showSymmetricKeys();
-                expandAccordionPane("Key & Certificate Format Workbench");
+                showGeneric();
+                expandGenericAccordionPane("Key & Certificate Format Workbench");
                 break;
             case "KeyStore Inspector":
                 showSymmetricKeys();
@@ -2910,6 +2922,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 showGeneric();
                 expandGenericAccordionPane("Batch Runner");
                 break;
+            case "Process Designer":
+                showGeneric();
+                expandGenericAccordionPane("Process Designer");
+                break;
             case "Random Number Generator":
             case "Random Generation":
                 showGeneric();
@@ -2962,10 +2978,34 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 showXMLSecurity();
                 expandXMLAccordionPane("Sign XML");
                 break;
+            case "Sign SOAP (WSS)":
+                showWssSecurity();
+                expandWssAccordionPane("Sign SOAP");
+                break;
+            case "Add UsernameToken (WSS)":
+                showWssSecurity();
+                expandWssAccordionPane("Add UsernameToken");
+                break;
+            case "Encrypt SOAP Body (WSS)":
+                showWssSecurity();
+                expandWssAccordionPane("Encrypt SOAP Body");
+                break;
+            case "Decrypt SOAP Body (WSS)":
+                showWssSecurity();
+                expandWssAccordionPane("Decrypt SOAP Body");
+                break;
             case "Verify XML (XAdES)":
             case "XAdES Verify":
                 showXMLSecurity();
                 expandXMLAccordionPane("Verify XML");
+                break;
+            case "Verify SOAP (WSS)":
+                showWssSecurity();
+                expandWssAccordionPane("Verify SOAP");
+                break;
+            case "Verify UsernameToken (WSS)":
+                showWssSecurity();
+                expandWssAccordionPane("Verify UsernameToken");
                 break;
             case "Inspect Signed XML":
                 showXMLSecurity();
@@ -5149,6 +5189,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
+    private void handleExportFileCipherRecipe() {
+        if (cipherController != null) cipherController.handleExportFileCipherRecipe();
+    }
+
+    @FXML
+    private void handleImportFileCipherRecipe() {
+        if (cipherController != null) cipherController.handleImportFileCipherRecipe();
+    }
+
+    @FXML
     private void handleChooseFileCipherSource() {
         if (cipherController != null) cipherController.chooseFileCipherSource();
     }
@@ -5293,6 +5343,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (xmlSecurityContainer != null) {
             xmlSecurityContainer.setVisible(false);
             xmlSecurityContainer.setManaged(false);
+        }
+        if (wssSecurityContainer != null) {
+            wssSecurityContainer.setVisible(false);
+            wssSecurityContainer.setManaged(false);
         }
         if (savedSessionsContainer != null) {
             savedSessionsContainer.setVisible(false);
@@ -6109,6 +6163,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void expandXMLAccordionPane(String itemName) {
         if (xmlSecurityContainerController != null) {
             xmlSecurityContainerController.expandAccordionPane(itemName);
+        }
+    }
+
+    private void loadWssSecurityContent() {
+        if (wssSecurityContainerController != null) {
+            wssSecurityContainerController.initModule(this);
+        }
+    }
+
+    private void showWssSecurity() {
+        hideAllContainers();
+        if (wssSecurityContainer != null) {
+            wssSecurityContainer.setManaged(true);
+            wssSecurityContainer.setVisible(true);
+        }
+        if (mainScrollPane != null) mainScrollPane.setVvalue(0);
+    }
+
+    private void expandWssAccordionPane(String itemName) {
+        if (wssSecurityContainerController != null) {
+            wssSecurityContainerController.expandAccordionPane(itemName);
         }
     }
 

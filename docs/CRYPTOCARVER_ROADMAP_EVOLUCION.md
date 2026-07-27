@@ -2,8 +2,8 @@
 
 **Documento de trabajo para la evolución funcional, técnica y visual de CryptoCarver**
 
-- Versión del plan: 1.2
-- Fecha: 17 de julio de 2026
+- Versión del plan: 1.3
+- Fecha: 26 de julio de 2026
 - Horizonte recomendado: 12 meses
 - Estado: roadmap maestro en ejecución
 - Producto: aplicación de escritorio para desarrollo, pruebas, formación y diagnóstico criptográfico
@@ -23,6 +23,7 @@
 - [x] Fase 2 avanzada: detección estadística de charset y procesamiento criptográfico de archivos de 1 GiB por streaming.
 - [x] Fases 3 a 9: KeyMaterial/HSM simulado, diagnósticos TSA, PQC estandarizada, perfiles de pagos, ASN.1/JOSE y automatización segura.
 - [x] Fase 10 base: versión centralizada, diagnóstico exportable, catálogo de formatos, guía rápida, guía de límites de laboratorio, SBOM y scripts de empaquetado multiplataforma.
+- [x] WSS-Security base: firma y verificación del SOAP Body con RSA/ECDSA y SHA-256/384/512, SOAP 1.1/1.2, BinarySecurityToken, Timestamp opcional, referencias estrictas, bloqueo XXE y navegación moderna independiente.
 
 > Nota de migración: `com.cryptoforge` permanece temporalmente como namespace Java interno para mantener compatibilidad. No forma parte de la identidad pública y se migrará en una fase técnica independiente, acompañada de pruebas de regresión.
 
@@ -69,6 +70,7 @@ CryptoCarver debe seguir siendo una herramienta de laboratorio y pruebas, no un 
 | JOSE | JWT, JWE, JWK/JWKS, JWS JSON, payload detached y Nested JWT | Se recomienda ampliar interoperabilidad con clientes externos en futuras versiones |
 | Pagos y EMV | PIN blocks, CVV, PVV, ARQC/ARPC, DUKPT, TR-31 y perfiles verificables | EMV Option B queda fuera hasta contar con vectores públicos fiables |
 | XAdES | Firma B/T/LT/LTA, TSA configurable/autenticada, truststore e informes DSS | Falta recorrido manual periódico contra TSA y cadenas de cada entorno de usuario |
+| WSS-Security | Firma, verificación, UsernameToken y cifrado/descifrado del SOAP Body con AES y RSA-OAEP, disponibles tanto como herramienta independiente como nodos tipados de Process Designer | Pendiente comprobación manual SoapUI/ReadyAPI |
 | Post-cuántica | ML-KEM, ML-DSA, SLH-DSA, PEM, KAT y benchmark cancelable | Conviene revisar aliases al actualizar Bouncy Castle |
 | UI | Rail lateral, panel de operaciones, inspector, histórico y visor expandido | `ModernMainController` todavía concentra rutas y coordinación transversal |
 | Pruebas | Unitarias, integración, FXML/UI, KAT, TSA local, perfiles de pagos y automatización | Falta automatizar recorridos visuales reales en cada plataforma |
@@ -114,7 +116,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 ### Fase 0 - Estabilización y base de calidad
 
-**Duración orientativa:** 2 a 3 semanas  
+**Duración orientativa:** 2 a 3 semanas
 **Objetivo:** asegurar que el estado actual sea reproducible antes de ampliar alcance.
 
 #### Funcionalidad
@@ -148,7 +150,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 ### Fase 1 - Experiencia de usuario y modelo de operaciones
 
-**Duración orientativa:** 3 a 5 semanas  
+**Duración orientativa:** 3 a 5 semanas
 **Objetivo:** convertir la interfaz en un laboratorio coherente y predecible.
 
 #### Mejoras principales
@@ -183,7 +185,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 ### Fase 2 - Conversiones, inspección de bytes y archivos
 
-**Duración orientativa:** 3 a 4 semanas  
+**Duración orientativa:** 3 a 4 semanas
 **Objetivo:** hacer de CryptoCarver una herramienta fuerte de diagnóstico de datos criptográficos.
 
 > Decisión de interfaz: las transformaciones permanecerán en **Manual Conversion**. El visor hexadecimal, comparador de charsets, entropía/frecuencia, visualización de controles, XOR y diff se consolidarán en una herramienta independiente de **Byte Inspector**, para no mezclar análisis con conversión.
@@ -226,7 +228,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 ### Fase 3 - Criptografía simétrica, MAC y derivación
 
-**Duración orientativa:** 4 a 6 semanas  
+**Duración orientativa:** 4 a 6 semanas
 **Objetivo:** ampliar algoritmos y, sobre todo, hacer visibles las condiciones de uso correcto.
 
 #### Estado de ejecución
@@ -273,7 +275,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 
 ### Fase 4 - Claves, certificados y proveedores
 
-**Duración orientativa:** 4 a 6 semanas  
+**Duración orientativa:** 4 a 6 semanas
 **Objetivo:** unificar el ciclo de vida de claves y mejorar el diagnóstico PKI.
 
 #### Estado de ejecución
@@ -340,7 +342,7 @@ El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un C
 
 ### Fase 5 - Firmas avanzadas y servicios de confianza
 
-**Duración orientativa:** 5 a 8 semanas  
+**Duración orientativa:** 5 a 8 semanas
 **Objetivo:** completar interoperabilidad de firmas y validación a largo plazo.
 
 #### XAdES
@@ -369,6 +371,18 @@ El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un C
 - Timestamp RFC 3161 independiente para cualquier hash o fichero.
 - Verificador generico que detecte formato de firma automaticamente.
 
+#### WSS-Security
+
+- [x] Firma y verificación estricta del SOAP Body con RSA-SHA256/384/512 y ECDSA-SHA256/384/512.
+- [x] `wsse:Security`, `wsu:Id`, canonicalización exclusiva, bloqueo XXE y rechazo de SHA-1/referencias externas.
+- [x] Emitir `wsse:BinarySecurityToken` X.509 y enlazarlo desde `ds:KeyInfo` mediante `SecurityTokenReference`; mantener lectura del `X509Data` anterior.
+- [x] Soportar SOAP 1.1 y SOAP 1.2 mediante detección estricta del namespace y mostrar la versión en el informe.
+- [x] Añadir `wsu:Timestamp`, ventana de validez de 1 minuto a 24 horas, tolerancia de reloj y protección opcional del Timestamp mediante la firma.
+- [x] Añadir UsernameToken PasswordText/PasswordDigest como herramienta separada, con nonce, Created, frescura configurable, advertencias e interoperabilidad WSS4J.
+- [x] Incorporar cifrado XML del SOAP Body con AES-128/256-GCM o CBC, transporte RSA-OAEP SHA-256/legado, descifrado y allowlist estricta.
+- [~] Interoperabilidad bidireccional automatizada con Apache WSS4J 3.0.5 y fixtures reproducibles; pendiente recorrido manual con SoapUI.
+- [ ] Integrar WSS en Process Designer cuando el modelo standalone sea estable.
+
 #### Criterio de salida
 
 - Matriz automatizada de formato, nivel, packaging y TSA.
@@ -377,7 +391,7 @@ El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un C
 
 ### Fase 6 - Post-cuántica e hibridación
 
-**Duración orientativa:** 4 a 6 semanas  
+**Duración orientativa:** 4 a 6 semanas
 **Objetivo:** alinear el modulo con los nombres y flujos estandarizados.
 
 #### Alcance funcional
@@ -407,7 +421,7 @@ El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un C
 
 ### Fase 7 - Pagos, EMV y TR-31
 
-**Duración orientativa:** 6 a 10 semanas  
+**Duración orientativa:** 6 a 10 semanas
 **Objetivo:** convertir el área de pagos en un laboratorio de referencia con perfiles reproducibles.
 
 #### TR-31
@@ -451,7 +465,7 @@ El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un C
 
 ### Fase 8 - JOSE, ASN.1 y protocolos
 
-**Duración orientativa:** 4 a 6 semanas  
+**Duración orientativa:** 4 a 6 semanas
 **Objetivo:** cerrar operaciones incompletas y mejorar inspección estructurada.
 
 #### JOSE
@@ -483,7 +497,7 @@ El siguiente incremento no añade CAdES como etiqueta comercial. Debe abrir un C
 
 ### Fase 9 - Automatización, lotes y API local
 
-**Duración orientativa:** 4 a 6 semanas  
+**Duración orientativa:** 4 a 6 semanas
 **Objetivo:** reutilizar el motor sin depender siempre de la interfaz grafica.
 
 #### Recetas
@@ -536,7 +550,7 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 
 ### Fase 10 - Distribución, documentación y ecosistema
 
-**Duración orientativa:** 3 a 5 semanas iniciales y mantenimiento continuo  
+**Duración orientativa:** 3 a 5 semanas iniciales y mantenimiento continuo
 **Objetivo:** facilitar instalación, soporte y contribución.
 
 #### Distribución
@@ -552,6 +566,9 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 
 - [x] Guía de inicio rápido por caso de uso.
 - [ ] Manual por módulo con ejemplos reproducibles.
+- [ ] Centro de ayuda contextual generado desde metadatos de `OperationRegistry`: propósito, entradas, formatos, parámetros, salida, advertencias, ejemplos y errores frecuentes.
+- [ ] Ayuda profunda por algoritmo/estándar con enlaces desde cada campo, búsqueda global y recorridos guiados reproducibles.
+- [ ] Contrato de documentación obligatorio para cada operación nueva, validado por test para evitar pantallas sin ayuda.
 - [x] Catálogo de formatos, charsets y aliases.
 - [x] Documento de diferencias entre herramienta de test y uso productivo.
 - [ ] Changelog por versión con migraciones y breaking changes.

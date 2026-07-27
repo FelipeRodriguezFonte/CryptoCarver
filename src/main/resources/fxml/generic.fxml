@@ -4,6 +4,7 @@
 
                 <Accordion xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="com.cryptocarver.ui.GenericController" fx:id="genericContainer" managed="false" visible="false">
                         <panes>
+                            <fx:include source="process_designer.fxml" />
                             <!-- KEY & CERTIFICATE FORMAT WORKBENCH -->
                             <TitledPane text="🛠 Key &amp; Certificate Format Workbench">
                                 <VBox spacing="5" style="-fx-padding: 6;">
@@ -38,9 +39,42 @@
                                         <ComboBox fx:id="batchInputFormatCombo" prefWidth="90"/>
                                         <Label text="Operation:" style="-fx-font-size: 11px;"/>
                                         <ComboBox fx:id="batchOperationCombo" HBox.hgrow="ALWAYS"/>
-                                        <Label text="Column:" style="-fx-font-size: 11px;"/>
-                                        <TextField fx:id="batchColumnField" text="input" prefWidth="80" style="-fx-font-size: 11px;"/>
+                                        <Label text="Src Col:" style="-fx-font-size: 11px;"/>
+                                        <TextField fx:id="batchColumnField" text="input" prefWidth="60" style="-fx-font-size: 11px;"/>
+                                        <Label text="Out Col:" style="-fx-font-size: 11px;"/>
+                                        <TextField fx:id="batchOutputColumnField" text="result" prefWidth="60" style="-fx-font-size: 11px;"/>
                                     </HBox>
+                                    <VBox fx:id="batchCryptoConfigBox" managed="false" visible="false" spacing="4" style="-fx-padding: 4; -fx-border-color: #444; -fx-border-radius: 4;">
+                                        <GridPane hgap="6" vgap="4">
+                                            <columnConstraints>
+                                                <ColumnConstraints minWidth="60" prefWidth="60"/>
+                                                <ColumnConstraints minWidth="150" prefWidth="150"/>
+                                                <ColumnConstraints minWidth="40" prefWidth="40"/>
+                                                <ColumnConstraints hgrow="ALWAYS"/>
+                                            </columnConstraints>
+
+                                            <Label text="Algorithm:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 10px;"/>
+                                            <ComboBox fx:id="batchAlgorithmCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="140" style="-fx-font-size: 10px;"/>
+
+                                            <Label text="Encoding:" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
+                                            <ComboBox fx:id="batchRecordEncodingCombo" GridPane.rowIndex="0" GridPane.columnIndex="3" prefWidth="120" style="-fx-font-size: 10px;"/>
+
+                                            <Label text="Key (Hex):" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 10px;"/>
+                                            <PasswordField fx:id="batchKeyField" promptText="32 bytes (only in memory)" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.columnSpan="3" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+
+                                            <Label text="IV/Nonce:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-size: 10px;"/>
+                                            <TextField fx:id="batchIvNonceField" promptText="Hex (Req. for CBC)" GridPane.rowIndex="2" GridPane.columnIndex="1" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+
+                                            <Label text="AAD:" GridPane.rowIndex="2" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
+                                            <TextField fx:id="batchAadField" promptText="Hex (Optional for AEAD)" GridPane.rowIndex="2" GridPane.columnIndex="3" style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+                                        </GridPane>
+                                        <HBox spacing="6" alignment="CENTER_LEFT">
+                                            <Label text="Charset:" style="-fx-font-size: 10px;"/>
+                                            <ComboBox fx:id="batchCharsetCombo" prefWidth="130" style="-fx-font-size: 10px;"/>
+                                            <CheckBox fx:id="batchStopOnErrorCheck" text="Stop on error" selected="true" style="-fx-font-size: 10px;"/>
+                                            <CheckBox fx:id="batchCompactModeCheck" text="Compact records" style="-fx-font-size: 10px;"/>
+                                        </HBox>
+                                    </VBox>
                                     <TextArea fx:id="batchInputArea" prefRowCount="5" wrapText="false" style="-fx-font-family: monospace; -fx-font-size: 10px;" promptText="CSV: input&#10;hello&#10;or JSON Lines (.jsonl): {&quot;input&quot;:&quot;hello&quot;}&#10;{&quot;input&quot;:&quot;world&quot;}"/>
                                     <Label text="JSON Lines (.jsonl) uses one JSON object per line; it is not a single JSON array/document." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
                                     <HBox spacing="6">
@@ -240,4 +274,3 @@
                             </TitledPane>
                         </panes>
                     </Accordion>
-

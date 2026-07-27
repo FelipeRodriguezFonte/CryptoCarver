@@ -166,6 +166,10 @@ La aplicación funciona en:
 - ✅ **macOS** (10.15+)
 - ✅ **Linux** (Ubuntu, Debian, Fedora, etc.)
 
+En Windows puedes ejecutarla desde fuentes con `run.bat`, desde un JAR ya compilado
+con `run_simple.bat`, o generar una aplicación autocontenida mediante
+`package_windows.bat`. Consulta [docs/WINDOWS.md](docs/WINDOWS.md) para los pasos exactos.
+
 ---
 
 ## ⚠️ Notas Importantes

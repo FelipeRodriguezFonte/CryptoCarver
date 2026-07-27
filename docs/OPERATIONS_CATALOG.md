@@ -53,6 +53,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🛠 | Key & Certificate Format Workbench | `op_keys_format_workbench` | STABLE | HIGH | `Key & Certificate Format Workbench` | PEM, DER, JWK, PKCS12 |
 | 🔄 | Manual Conversion | `op_gen_manual` | STABLE | NONE | `Manual Conversion` | Hex, Base64, EBCDIC |
 | 🧮 | Modular Arithmetic | `op_gen_mod` | STABLE | NONE | `Modular Arithmetic` | - |
+| 🧩 | Process Designer | `op_gen_process_designer` | EXPERIMENTAL | LOW | `Process Designer` | workflow, canvas, pipeline, drag and drop |
 | 🎲 | Random Number Generator | `op_gen_random` | STABLE | NONE | `Random Number Generator` | - |
 
 ## History
@@ -115,8 +116,14 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
 |------|-------|----|--------|------|-----------------|---------|
+| 👤 | Add UsernameToken (WSS) | `op_wss_username_add` | EXPERIMENTAL | HIGH | `Add UsernameToken (WSS)` | WSS, SOAP, UsernameToken |
+| 🔓 | Decrypt SOAP Body (WSS) | `op_wss_decrypt` | EXPERIMENTAL | HIGH | `Decrypt SOAP Body (WSS)` | WSS, SOAP, XML Encryption |
+| 🔒 | Encrypt SOAP Body (WSS) | `op_wss_encrypt` | EXPERIMENTAL | LOW | `Encrypt SOAP Body (WSS)` | WSS, SOAP, XML Encryption |
 | 🔍 | Inspect Signed XML | `op_xml_inspect` | STABLE | LOW | `Inspect Signed XML` | - |
 | ⏱ | RFC 3161 Timestamp | `op_xml_tsa` | STABLE | LOW | `RFC 3161 Timestamp` | RFC 3161 |
+| 🔐 | Sign SOAP (WSS) | `op_wss_sign` | EXPERIMENTAL | HIGH | `Sign SOAP (WSS)` | WSS, SOAP |
 | 📝 | Sign XML (XAdES) | `op_xml_sign` | STABLE | HIGH | `Sign XML (XAdES)` | XAdES |
+| ✅ | Verify SOAP (WSS) | `op_wss_verify` | EXPERIMENTAL | LOW | `Verify SOAP (WSS)` | WSS, SOAP |
+| 🔎 | Verify UsernameToken (WSS) | `op_wss_username_verify` | EXPERIMENTAL | HIGH | `Verify UsernameToken (WSS)` | WSS, SOAP, UsernameToken |
 | ✅ | Verify XML (XAdES) | `op_xml_verify` | STABLE | LOW | `Verify XML (XAdES)` | - |
 

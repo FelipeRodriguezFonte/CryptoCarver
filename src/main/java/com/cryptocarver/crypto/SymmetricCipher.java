@@ -82,6 +82,11 @@ public class SymmetricCipher {
         // Initialize cipher
         if (mode.equalsIgnoreCase("ECB")) {
             cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+        } else if (isChaCha20Poly1305(algorithm)) {
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            if (aad != null && aad.length > 0) {
+                cipher.updateAAD(aad);
+            }
         } else if (mode.equalsIgnoreCase("GCM")) {
             GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec);
@@ -114,6 +119,11 @@ public class SymmetricCipher {
 
         if (mode.equalsIgnoreCase("ECB")) {
             cipher.init(Cipher.DECRYPT_MODE, secretKey);
+        } else if (isChaCha20Poly1305(algorithm)) {
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            if (aad != null && aad.length > 0) {
+                cipher.updateAAD(aad);
+            }
         } else if (mode.equalsIgnoreCase("GCM")) {
             GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec);
@@ -138,6 +148,9 @@ public class SymmetricCipher {
      * Build cipher transformation string
      */
     private static String buildTransformation(String algorithm, String mode, String padding) {
+        if (isChaCha20Poly1305(algorithm)) {
+            return "ChaCha20-Poly1305";
+        }
         String algo = normalizeAlgorithm(algorithm);
         String pad = normalizePadding(padding);
 
@@ -154,8 +167,14 @@ public class SymmetricCipher {
             return "DESede"; // Java name for 3DES
         } else if (algorithm.equals("DES")) {
             return "DES";
+        } else if (isChaCha20Poly1305(algorithm)) {
+            return "ChaCha20";
         }
         return algorithm;
+    }
+
+    private static boolean isChaCha20Poly1305(String algorithm) {
+        return "ChaCha20-Poly1305".equals(algorithm);
     }
 
     /**

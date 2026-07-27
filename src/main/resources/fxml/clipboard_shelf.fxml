@@ -4,11 +4,11 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
-<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.ClipboardShelfController"
       VBox.vgrow="ALWAYS"
-      stylesheets="@../css/modern.css">
-    
+      stylesheets="@../css/styles.css">
+
     <padding>
         <Insets top="15" right="15" bottom="15" left="15"/>
     </padding>

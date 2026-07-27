@@ -129,7 +129,7 @@ public final class CryptoCarverCli {
         final String col = column;
         if (rows.stream().anyMatch(row -> !row.containsKey(col))) throw new IllegalArgumentException("Every batch row requires field: " + col);
 
-        BatchRunner.Report report = BatchRunner.run(rows, row -> Map.of("result", switch (operation) {
+        BatchRunner.Report report = BatchRunner.run(rows, (rowNum, row) -> Map.of("result", switch (operation) {
             case "sha256" -> com.cryptocarver.model.SafeTransformations.sha256(row.get(col));
             case "base64url-encode" -> com.cryptocarver.model.SafeTransformations.encodeBase64Url(row.get(col));
             case "base64url-decode" -> com.cryptocarver.model.SafeTransformations.decodeBase64Url(row.get(col));

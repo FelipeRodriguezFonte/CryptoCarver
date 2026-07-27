@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<TitledPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+             text="🧩 Process Designer (MVP)" expanded="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
+    <VBox spacing="7" style="-fx-padding: 8;">
+        <Label text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+        <HBox spacing="6" alignment="CENTER_LEFT">
+            <Label text="Process:" style="-fx-font-size: 11px;"/>
+            <TextField fx:id="processNameField" text="Untitled process" HBox.hgrow="ALWAYS"/>
+            <Button fx:id="runProcessButton" text="Run" onAction="#handleRunProcess" styleClass="action-button"/>
+            <Button text="Expand results" onAction="#handleOpenExpandedExecutionResult" styleClass="secondary-button"/>
+            <Button fx:id="reverseConnectionToolbarButton" text="Reverse connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" disable="true"/>
+            <Button fx:id="inspectorToggleButton" text="Hide inspector" onAction="#handleToggleInspector" styleClass="secondary-button"/>
+            <MenuButton text="Presets" styleClass="secondary-button">
+                <items>
+                    <MenuItem text="SHA-256 text digest" onAction="#handleLoadSha256Preset"/>
+                    <MenuItem text="Base64 text encode" onAction="#handleLoadBase64Preset"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="AES-GCM encrypt and decrypt" onAction="#handleLoadAesGcmRoundTripPreset"/>
+                    <MenuItem text="AES-CMAC" onAction="#handleLoadAesCmacPreset"/>
+                </items>
+            </MenuButton>
+            <Button text="Save…" onAction="#handleSaveProcess" styleClass="secondary-button"/>
+            <Button text="Open…" onAction="#handleLoadProcess" styleClass="secondary-button"/>
+        </HBox>
+        <HBox spacing="5" alignment="CENTER_LEFT" style="-fx-padding: 4 0 4 0;">
+            <MenuButton text="Inputs" styleClass="secondary-button">
+                <items>
+                    <MenuItem text="Console input" onAction="#handleAddConsoleInput"/>
+                    <MenuItem text="File input" onAction="#handleAddFileInput"/>
+                </items>
+            </MenuButton>
+            <MenuButton text="Conversions" styleClass="secondary-button">
+                <items>
+                    <MenuItem text="Base64 encode" onAction="#handleAddBase64Encode"/>
+                    <MenuItem text="Base64 decode" onAction="#handleAddBase64Decode"/>
+                    <MenuItem text="Base64URL encode" onAction="#handleAddBase64UrlEncode"/>
+                    <MenuItem text="Base64URL decode" onAction="#handleAddBase64UrlDecode"/>
+                    <MenuItem text="Hex encode" onAction="#handleAddHexEncode"/>
+                    <MenuItem text="Hex decode" onAction="#handleAddHexDecode"/>
+                    <MenuItem text="UTF-8 encode" onAction="#handleAddUtf8Encode"/>
+                    <MenuItem text="UTF-8 decode" onAction="#handleAddUtf8Decode"/>
+                </items>
+            </MenuButton>
+            <MenuButton text="Crypto" styleClass="secondary-button">
+                <items>
+                    <MenuItem text="Hash" onAction="#handleAddHash"/>
+                    <MenuItem text="Encrypt" onAction="#handleAddEncrypt"/>
+                    <MenuItem text="Decrypt" onAction="#handleAddDecrypt"/>
+                    <MenuItem text="Sign" onAction="#handleAddSign"/>
+                    <MenuItem text="Verify" onAction="#handleAddVerify"/>
+                    <MenuItem text="MAC" onAction="#handleAddMac"/>
+                    <SeparatorMenuItem/>
+                    <Menu text="WS-Security">
+                        <items>
+                            <MenuItem text="Sign SOAP Body" onAction="#handleAddWssSignBody"/>
+                            <MenuItem text="Verify SOAP Signature" onAction="#handleAddWssVerifySignature"/>
+                            <SeparatorMenuItem/>
+                            <MenuItem text="Add UsernameToken" onAction="#handleAddWssUsernameToken"/>
+                            <MenuItem text="Verify UsernameToken" onAction="#handleAddWssVerifyUsernameToken"/>
+                            <SeparatorMenuItem/>
+                            <MenuItem text="Encrypt SOAP Body" onAction="#handleAddWssEncryptBody"/>
+                            <MenuItem text="Decrypt SOAP Body" onAction="#handleAddWssDecryptBody"/>
+                        </items>
+                    </Menu>
+                    <SeparatorMenuItem/>
+                    <Menu text="Generators">
+                        <items>
+                            <MenuItem text="Random bytes" onAction="#handleAddRandomBytes"/>
+                        </items>
+                    </Menu>
+                    <SeparatorMenuItem/>
+                    <Menu text="Key material">
+                        <items>
+                            <MenuItem text="Generate AES key" onAction="#handleAddAesKeyGenerate"/>
+                            <MenuItem text="Derive key (PBKDF2)" onAction="#handleAddPbkdf2"/>
+                            <MenuItem text="Generate RSA key pair" onAction="#handleAddRsaKeypairGenerate"/>
+                        </items>
+                    </Menu>
+                </items>
+            </MenuButton>
+            <MenuButton text="Outputs" styleClass="secondary-button">
+                <items>
+                    <MenuItem text="Console output" onAction="#handleAddConsoleOutput"/>
+                    <MenuItem text="File output" onAction="#handleAddFileOutput"/>
+                </items>
+            </MenuButton>
+        </HBox>
+        <SplitPane fx:id="designerSplitPane" dividerPositions="0.72" prefHeight="330">
+            <items>
+                <ScrollPane fx:id="designerWorkspace" fitToWidth="true" fitToHeight="false" pannable="true" style="-fx-background: #202a33;">
+                    <content><Pane fx:id="workflowCanvas" minWidth="760" prefWidth="760" prefHeight="310" style="-fx-background-color: #202a33; -fx-background-insets: 0;"/></content>
+                </ScrollPane>
+                <VBox fx:id="nodeInspector" spacing="6" minWidth="250" prefWidth="280" style="-fx-padding: 6;">
+                    <Label fx:id="selectedNodeLabel" wrapText="true" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+                    <Label fx:id="inputContractLabel" style="-fx-font-size: 9px; -fx-text-fill: #999;" managed="false" visible="false"/>
+                    <Label fx:id="outputContractLabel" style="-fx-font-size: 9px; -fx-text-fill: #999;" managed="false" visible="false"/>
+                    <VBox fx:id="nodeNameFieldGroup" spacing="2">
+                        <Label text="Node name" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="nodeNameField" promptText="Describe this step" style="-fx-font-size: 10px;"/>
+                    </VBox>
+
+                    <VBox fx:id="consoleValueFieldGroup" spacing="2">
+                        <Label text="Text / console value" style="-fx-font-size: 10px;"/>
+                        <TextArea fx:id="nodeValueArea" prefRowCount="4" wrapText="true" style="-fx-font-size: 10px;"/>
+                    </VBox>
+
+                    <VBox fx:id="filePathFieldGroup" spacing="2">
+                        <Label text="File path" style="-fx-font-size: 10px;"/>
+                        <HBox spacing="5">
+                            <TextField fx:id="nodePathField" style="-fx-font-size: 10px;" HBox.hgrow="ALWAYS"/>
+                            <Button text="Browse" onAction="#handleBrowseFile" styleClass="secondary-button"/>
+                        </HBox>
+                    </VBox>
+
+                                        <VBox fx:id="fileModeFieldGroup" spacing="2">
+                        <Label text="Mode" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="fileModeCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="charsetFieldGroup" spacing="2">
+                        <Label text="Charset" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="nodeCharsetCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+
+                    <VBox fx:id="hashAlgorithmFieldGroup" spacing="2">
+                        <Label text="Hash Algorithm" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="hashAlgorithmCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="cryptoAlgorithmFieldGroup" spacing="2">
+                        <Label text="Algorithm/Mode" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="cryptoAlgorithmCombo" onAction="#handleCryptoAlgorithmChanged" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="wssKeyTransportFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="WSS key transport" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="wssKeyTransportCombo" maxWidth="1.7976931348623157E308"/>
+                        <Label text="RSA-OAEP SHA-256 is recommended. The SHA-1 profile is retained only for interoperability diagnostics."
+                               style="-fx-font-size: 9px; -fx-text-fill: #666;" wrapText="true"/>
+                    </VBox>
+                    <VBox fx:id="wssTimestampFieldGroup" spacing="4" managed="false" visible="false">
+                        <CheckBox fx:id="wssTimestampEnabledCheck" text="Add wsu:Timestamp"/>
+                        <Label text="Timestamp validity (minutes)" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="wssTimestampMinutesField" style="-fx-font-size: 10px;"/>
+                        <CheckBox fx:id="wssTimestampSignedCheck" text="Protect Timestamp with signature" selected="true"/>
+                    </VBox>
+                    <VBox fx:id="wssUsernameFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label fx:id="wssUsernameLabel" text="Username" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="wssUsernameField" style="-fx-font-size: 10px;"/>
+                        <Label fx:id="wssPasswordLabel" text="Password" style="-fx-font-size: 10px;"/>
+                        <PasswordField fx:id="wssPasswordField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="wssPasswordTypeFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="UsernameToken password representation" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="wssPasswordTypeCombo" maxWidth="1.7976931348623157E308"/>
+                        <Label text="PasswordDigest includes a fresh nonce and Created value. PasswordText exposes the password in the SOAP XML."
+                               style="-fx-font-size: 9px; -fx-text-fill: #666;" wrapText="true"/>
+                    </VBox>
+                    <VBox fx:id="wssTokenAgeFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="Maximum token age (seconds)" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="wssTokenAgeField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="keyFormatFieldGroup" spacing="2">
+                        <Label text="Key Format" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="keyFormatCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="manualKeyFieldGroup" spacing="2">
+                        <Label text="Manual Key (Secret)" style="-fx-font-size: 10px;"/>
+                        <PasswordField fx:id="manualKeyField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="nonceFieldGroup" spacing="2">
+                        <Label fx:id="nonceLabel" text="Nonce / IV" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="nonceField" style="-fx-font-size: 10px;"/>
+                        <CheckBox fx:id="generateNonceCheck" text="Auto-generate" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="aadPortHintGroup" spacing="2" managed="false" visible="false">
+                        <Label text="AES-GCM additional authenticated data (AAD)" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                        <Label text="Optional. Add a source block, select it and this Encrypt/Decrypt block, then use Connect to… → aad." style="-fx-font-size: 9px; -fx-text-fill: #666;" wrapText="true"/>
+                    </VBox>
+                    <VBox fx:id="portBindingsFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="Connected inputs" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                        <Label fx:id="portBindingsLabel" style="-fx-font-size: 10px; -fx-text-fill: #444;" wrapText="true"/>
+                    </VBox>
+                    <VBox fx:id="cipherOutputFormatFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="Cipher output" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="cipherOutputFormatCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="keyMaterialFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="Generated / derived key settings" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                        <Label text="Key size (bits)" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="keySizeCombo" maxWidth="1.7976931348623157E308"/>
+                        <Label text="PBKDF2 iterations" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="kdfIterationsField" style="-fx-font-size: 10px;"/>
+                        <Label text="PBKDF2 salt (Base64; empty = generate)" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="kdfSaltField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="symmetricKeyAlgorithmFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="Generated key algorithm" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="symmetricKeyAlgorithmCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="randomBytesFieldGroup" spacing="2" managed="false" visible="false">
+                        <Label text="Length (bytes)" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="randomBytesLengthField" style="-fx-font-size: 10px;"/>
+                        <Label text="Typical use: 12 B for GCM IV, 16 B for CBC IV/CTR, or as test payload." style="-fx-font-size: 9px; -fx-text-fill: #999;" wrapText="true"/>
+                    </VBox>
+                    <VBox fx:id="keystorePathFieldGroup" spacing="2">
+                        <Label text="Keystore path" style="-fx-font-size: 10px;"/>
+                        <HBox spacing="5">
+                            <TextField fx:id="keystorePathField" style="-fx-font-size: 10px;" HBox.hgrow="ALWAYS"/>
+                            <Button text="Browse" onAction="#handleBrowseKeystore" styleClass="secondary-button"/>
+                        </HBox>
+                    </VBox>
+                    <VBox fx:id="keystoreTypeFieldGroup" spacing="2">
+                        <Label text="Keystore Type" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="keystoreTypeCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <VBox fx:id="aliasFieldGroup" spacing="2">
+                        <Label text="Alias" style="-fx-font-size: 10px;"/>
+                        <TextField fx:id="aliasField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="keystorePasswordFieldGroup" spacing="2">
+                        <Label text="Keystore Password" style="-fx-font-size: 10px;"/>
+                        <PasswordField fx:id="keystorePasswordField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="keyPasswordFieldGroup" spacing="2">
+                        <Label text="Key Password" style="-fx-font-size: 10px;"/>
+                        <PasswordField fx:id="keyPasswordField" style="-fx-font-size: 10px;"/>
+                    </VBox>
+                    <VBox fx:id="materialPathFieldGroup" spacing="2">
+                        <Label text="Public Material Path" style="-fx-font-size: 10px;"/>
+                        <HBox spacing="5">
+                            <TextField fx:id="materialPathField" style="-fx-font-size: 10px;" HBox.hgrow="ALWAYS"/>
+                            <Button text="Browse" onAction="#handleBrowseMaterial" styleClass="secondary-button"/>
+                        </HBox>
+                    </VBox>
+                    <VBox fx:id="materialTypeFieldGroup" spacing="2">
+                        <Label text="Material Type" style="-fx-font-size: 10px;"/>
+                        <ComboBox fx:id="materialTypeCombo" maxWidth="1.7976931348623157E308"/>
+                    </VBox>
+                    <Label fx:id="secretsWarningLabel" text="Secrets are not stored in process files." textFill="red" style="-fx-font-size: 10px; -fx-font-weight: bold;" wrapText="true" managed="false" visible="false"/>
+
+                    <Button text="Save block settings" onAction="#handleSaveNodeSettings" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+                    <VBox spacing="4" maxWidth="1.7976931348623157E308">
+                        <Button fx:id="connectSelectedButton" text="Select 2 blocks to connect" onAction="#handleConnectSelected" styleClass="action-button" maxWidth="1.7976931348623157E308"/>
+                        <MenuButton fx:id="connectMenuButton" text="Connect to..." styleClass="action-button" maxWidth="1.7976931348623157E308" managed="false" visible="false"/>
+                    </VBox>
+                    <Button fx:id="reverseConnectionButton" text="Reverse selected connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+                    <Button fx:id="deleteSelectedButton" text="Delete selected" onAction="#handleDeleteSelected" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+                    <Button text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button" maxWidth="1.7976931348623157E308"/>
+
+                </VBox>
+            </items>
+        </SplitPane>
+        <SplitPane orientation="VERTICAL" dividerPositions="0.45" prefHeight="240" VBox.vgrow="ALWAYS">
+            <items>
+                <VBox spacing="4" style="-fx-padding: 2 0 0 0;">
+                    <Label text="Execution status" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+                    <TableView fx:id="executionStatusTable" prefHeight="110" VBox.vgrow="ALWAYS" style="-fx-font-size: 10px;">
+                        <columns>
+                            <TableColumn fx:id="stepCol" text="#" prefWidth="42" sortable="false"/>
+                            <TableColumn fx:id="stepNameCol" text="Step" prefWidth="150" sortable="false"/>
+                            <TableColumn fx:id="operationCol" text="Operation" prefWidth="130" sortable="false"/>
+                            <TableColumn fx:id="inputCol" text="Input" prefWidth="115" sortable="false"/>
+                            <TableColumn fx:id="outputCol" text="Output" prefWidth="115" sortable="false"/>
+                            <TableColumn fx:id="statusCol" text="Status" prefWidth="90" sortable="false"/>
+                            <TableColumn fx:id="durationCol" text="Duration" prefWidth="80" sortable="false"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+                <VBox spacing="4" style="-fx-padding: 4 0 0 0;">
+                    <Label text="Execution results" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+                    <TextArea fx:id="executionOutputArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" promptText="Execution results and validation messages appear here." style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+                </VBox>
+            </items>
+        </SplitPane>
+    </VBox>
+</TitledPane>

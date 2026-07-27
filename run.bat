@@ -10,7 +10,7 @@ REM Check if Java is installed
 java -version >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Java is not installed or not in PATH
-    echo Please install Java 21 or higher from https://adoptium.net/
+    echo Please install JDK 17 or newer from https://adoptium.net/
     pause
     exit /b 1
 )
@@ -19,6 +19,13 @@ echo Starting CryptoCarver...
 echo.
 
 cd /d "%~dp0"
+where mvn.cmd >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: Maven is not installed or not in PATH
+    echo Install Maven 3.8+ or use run_simple.bat with an already-built JAR.
+    pause
+    exit /b 1
+)
 mvn javafx:run
 
 if %errorlevel% neq 0 (

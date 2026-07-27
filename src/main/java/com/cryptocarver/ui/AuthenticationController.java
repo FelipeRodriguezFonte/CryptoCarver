@@ -6,6 +6,7 @@ import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.model.OperationResult;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,9 @@ public class AuthenticationController {
     private ComboBox<String> authMacTruncationCombo;
     private TextField authMacVerifyField;
     private TextField authMacNonceField;
+    private VBox authMacNonceGroup;
+    private Label authMacAlgorithmInfoLabel;
+    private Label authMacWarningLabel;
     private ComboBox<String> macKeySourceCombo;
     private ComboBox<String> macHsmKeyCombo;
 
@@ -101,6 +105,9 @@ public class AuthenticationController {
             ComboBox<String> truncationCombo,
             TextField verifyField,
             TextField nonceField,
+            VBox nonceGroup,
+            Label algorithmInfoLabel,
+            Label warningLabel,
             ComboBox<String> keySourceCombo,
             ComboBox<String> hsmKeyCombo) {
         this.authMacAlgorithmCombo = algorithmCombo;
@@ -109,6 +116,9 @@ public class AuthenticationController {
         this.authMacTruncationCombo = truncationCombo;
         this.authMacVerifyField = verifyField;
         this.authMacNonceField = nonceField;
+        this.authMacNonceGroup = nonceGroup;
+        this.authMacAlgorithmInfoLabel = algorithmInfoLabel;
+        this.authMacWarningLabel = warningLabel;
         this.macKeySourceCombo = keySourceCombo;
         this.macHsmKeyCombo = hsmKeyCombo;
 
@@ -128,21 +138,14 @@ public class AuthenticationController {
         authMacAlgorithmCombo.getItems().addAll("GMAC-AES", "Poly1305");
         authMacAlgorithmCombo.setValue("HMAC-SHA256");
 
-        // Populate truncation options
-        authMacTruncationCombo.getItems().addAll(
-                "0 (full)", "4", "8", "16", "20", "32", "48", "64");
-        authMacTruncationCombo.setValue("0 (full)");
-
         // Update key info and truncation on algorithm change
         authMacAlgorithmCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
-                updateMacKeyInfo(newVal);
-                updateDefaultTruncation(newVal);
+                updateMacPresentation(newVal);
             }
         });
 
-        updateMacKeyInfo("HMAC-SHA256");
-        updateDefaultTruncation("HMAC-SHA256");
+        updateMacPresentation("HMAC-SHA256");
     }
 
     /**
@@ -183,49 +186,47 @@ public class AuthenticationController {
         mainController.updateStatus("Loaded Secure Messaging laboratory profile: " + profile.getName());
     }
 
-    private void updateDefaultTruncation(String algorithm) {
-        String defaultValue;
-        switch (algorithm) {
-            case "HMAC-SHA1":
-            case "HMAC-SHA256":
-            case "HMAC-SHA384":
-            case "HMAC-SHA512":
-            case "CMAC-AES":
-                defaultValue = "0 (full)";
-                break;
-            case "CMAC-3DES":
-            case "CBC-MAC-AES":
-                defaultValue = "8";
-                break;
-            case "CBC-MAC-DES":
-            case "CBC-MAC-3DES":
-            case "ISO-9797-1-ALG1":
-            case "ANSI-X9.9":
-            case "ANSI-X9.19":
-            case "AS2805.4.1":
-            case "Retail-MAC-DES":
-            case "Retail-MAC-3DES":
-                defaultValue = "4";
-                break;
-            default:
-                defaultValue = "0 (full)";
-                break;
-        }
+    static record MacUiProfile(int outputBytes, String info, String warning,
+                               boolean nonceRequired, int defaultTruncation) { }
 
-        // Find matching item in combo
-        for (String item : authMacTruncationCombo.getItems()) {
-            if (item.startsWith(defaultValue)) {
-                authMacTruncationCombo.setValue(item);
-                return;
-            }
-        }
-        // Fallback
-        if (defaultValue.equals("4"))
-            authMacTruncationCombo.setValue("4");
-        else if (defaultValue.equals("8"))
-            authMacTruncationCombo.setValue("8");
-        else
-            authMacTruncationCombo.setValue("0 (full)");
+    static MacUiProfile macUiProfile(String algorithm) {
+        return switch (algorithm) {
+            case "HMAC-SHA1" -> new MacUiProfile(20,
+                    "HMAC with SHA-1 · 20-byte tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "Legacy digest. Prefer HMAC-SHA256 or stronger for new designs.", false, 0);
+            case "HMAC-SHA256" -> new MacUiProfile(32,
+                    "HMAC with SHA-256 · 32-byte tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "", false, 0);
+            case "HMAC-SHA384" -> new MacUiProfile(48,
+                    "HMAC with SHA-384 · 48-byte tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "", false, 0);
+            case "HMAC-SHA512" -> new MacUiProfile(64,
+                    "HMAC with SHA-512 · 64-byte tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "", false, 0);
+            case "CMAC-AES" -> new MacUiProfile(16,
+                    "AES-CMAC · 16-byte tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "", false, 0);
+            case "CMAC-3DES" -> new MacUiProfile(8,
+                    "3DES-CMAC · 8-byte tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "3DES is retained for legacy interoperability. Prefer AES-CMAC.", false, 8);
+            case "GMAC-AES" -> new MacUiProfile(16,
+                    "AES-GMAC · 16-byte authentication tag · AES key: 16, 24 or 32 bytes.",
+                    "The nonce must be unique for every message under the same key; 12 bytes is recommended.", true, 0);
+            case "Poly1305" -> new MacUiProfile(16,
+                    "Poly1305 · 16-byte tag · exactly one unique 32-byte one-time key per message.",
+                    "Never reuse a standalone Poly1305 one-time key.", false, 0);
+            case "CBC-MAC-AES" -> new MacUiProfile(16,
+                    "AES CBC-MAC · 16-byte native tag · key: " + MACOperations.getExpectedKeySize(algorithm),
+                    "CBC-MAC is safe only for fixed-length message domains. Prefer AES-CMAC.", false, 8);
+            case "CBC-MAC-DES", "CBC-MAC-3DES", "ISO-9797-1-ALG1", "ANSI-X9.9",
+                    "ANSI-X9.19", "AS2805.4.1", "Retail-MAC-DES", "Retail-MAC-3DES" ->
+                    new MacUiProfile(8,
+                            "Legacy/payment MAC · 8-byte native tag · key: "
+                                    + MACOperations.getExpectedKeySize(algorithm),
+                            "Legacy or payment-specific construction. Confirm padding and truncation with the target profile.",
+                            false, 4);
+            default -> new MacUiProfile(16, "MAC profile", "Review the algorithm profile before use.", false, 0);
+        };
     }
 
     // ============================================================
@@ -560,28 +561,45 @@ public class AuthenticationController {
     // MAC OPERATIONS
     // ============================================================
 
-    /**
-     * Update MAC key info label
-     */
-    private void updateMacKeyInfo(String algorithm) {
-        if ("GMAC-AES".equals(algorithm)) {
-            authMacKeyInfoLabel.setText("GMAC: AES key 16/24/32 bytes; nonce must be unique (12 bytes recommended)");
-            authMacNonceField.setDisable(false);
-        } else if ("Poly1305".equals(algorithm)) {
-            authMacKeyInfoLabel.setText("Poly1305: a unique one-time 32-byte key is required for every message");
-            authMacNonceField.clear();
-            authMacNonceField.setDisable(true);
-        } else {
-            String info = MACOperations.getExpectedKeySize(algorithm);
-            authMacKeyInfoLabel.setText("Expected key size: " + info);
-            authMacNonceField.clear();
-            authMacNonceField.setDisable(true);
+    private void updateMacPresentation(String algorithm) {
+        MacUiProfile profile = macUiProfile(algorithm);
+        String expectedKey = switch (algorithm) {
+            case "GMAC-AES" -> "16, 24 or 32 bytes (AES)";
+            case "Poly1305" -> "exactly 32 bytes; one-time use";
+            default -> MACOperations.getExpectedKeySize(algorithm);
+        };
+        authMacKeyInfoLabel.setText("Expected key: " + expectedKey);
+        if (authMacAlgorithmInfoLabel != null) authMacAlgorithmInfoLabel.setText(profile.info());
+        if (authMacWarningLabel != null) {
+            boolean warning = profile.warning() != null && !profile.warning().isBlank();
+            authMacWarningLabel.setText(warning ? "⚠ " + profile.warning() : "");
+            authMacWarningLabel.setVisible(warning);
+            authMacWarningLabel.setManaged(warning);
         }
+        if (authMacNonceGroup != null) {
+            authMacNonceGroup.setVisible(profile.nonceRequired());
+            authMacNonceGroup.setManaged(profile.nonceRequired());
+        }
+        if (authMacNonceField != null && !profile.nonceRequired()) authMacNonceField.clear();
 
-        boolean isGmac = "GMAC-AES".equals(algorithm);
-        if (authMacNonceField != null) {
-            authMacNonceField.setVisible(isGmac);
-            authMacNonceField.setManaged(isGmac);
+        authMacTruncationCombo.getItems().clear();
+        authMacTruncationCombo.getItems().add("0 (full — " + profile.outputBytes() + " bytes)");
+        for (int size : new int[] {4, 8, 16, 20, 32, 48, 64}) {
+            if (size <= profile.outputBytes()) authMacTruncationCombo.getItems().add(String.valueOf(size));
+        }
+        String selected = profile.defaultTruncation() == 0
+                ? authMacTruncationCombo.getItems().get(0)
+                : String.valueOf(profile.defaultTruncation());
+        authMacTruncationCombo.setValue(selected);
+
+        if (authMacKeyField != null) {
+            authMacKeyField.setPromptText(switch (algorithm) {
+                case "Poly1305" -> "32-byte one-time key in hexadecimal (64 hex characters)";
+                case "CMAC-AES", "CBC-MAC-AES", "GMAC-AES" -> "AES key in hexadecimal (16, 24 or 32 bytes)";
+                case "CMAC-3DES", "CBC-MAC-3DES", "ANSI-X9.19", "AS2805.4.1", "Retail-MAC-3DES" ->
+                        "3DES key in hexadecimal (16 or 24 bytes)";
+                default -> "MAC key in hexadecimal";
+            });
         }
     }
 

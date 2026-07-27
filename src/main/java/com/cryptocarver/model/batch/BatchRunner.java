@@ -11,7 +11,7 @@ public final class BatchRunner {
     private BatchRunner() { }
 
     @FunctionalInterface public interface RowOperation {
-        Map<String, String> execute(Map<String, String> input) throws Exception;
+        Map<String, String> execute(int rowNumber, Map<String, String> input) throws Exception;
     }
     @FunctionalInterface public interface ProgressListener {
         void completed(int completedRows, int totalRows);
@@ -51,7 +51,7 @@ public final class BatchRunner {
                     Map<String, String> input = Map.copyOf(row == null ? Map.of() : row);
                     RowResult result;
                     try {
-                        Map<String, String> output = operation.execute(input);
+                        Map<String, String> output = operation.execute(i + 1, input);
                         result = new RowResult(i + 1, input, Map.copyOf(output == null ? Map.of() : new LinkedHashMap<>(output)), null);
                     } catch (Exception e) {
                         String message = e.getMessage() == null || e.getMessage().isBlank() ? e.getClass().getSimpleName() : e.getMessage();
@@ -87,12 +87,12 @@ public final class BatchRunner {
                 }
             }
             // A worker may have raised the cancellation flag just before the
-            // executor terminated.  Treat that run as cancelled as well: a
-            // caller must never receive an exportable partial report.
+            // executor terminated. Treat that run as cancelled as well, but
+            // preserve the collected RowResults so callers can inspect the error.
             if (!cancelled && cancellationRequested != null && cancellationRequested.getAsBoolean()) {
                 cancelled = true;
             }
-            if (cancelled) return new Report(List.of(), true);
+            if (cancelled) return new Report(filterNonNull(results), true);
         } finally {
             executor.shutdownNow();
         }

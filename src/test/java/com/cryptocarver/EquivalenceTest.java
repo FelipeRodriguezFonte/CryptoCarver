@@ -30,7 +30,7 @@ class EquivalenceTest {
 
         // 3. Batch
         BatchRunner.Report report = BatchRunner.run(List.of(Map.of("data", input)),
-            row -> Map.of("result", SafeTransformations.encodeBase64Url(row.get("data"))), () -> false);
+            (rowNum, row) -> Map.of("result", SafeTransformations.encodeBase64Url(row.get("data"))), () -> false);
         assertEquals(1, report.results().size());
         assertEquals(modelOutput, report.results().get(0).output().get("result"));
     }

@@ -7,12 +7,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TsaAuthDataLoaderTest {
 
     private static HttpServer server;
+    private static ExecutorService serverExecutor;
     private static int port;
     private static String lastAuthHeader = null;
 
@@ -43,7 +46,8 @@ class TsaAuthDataLoaderTest {
             exchange.getResponseBody().write(resp);
             exchange.getResponseBody().close();
         });
-        server.setExecutor(null);
+        serverExecutor = Executors.newCachedThreadPool();
+        server.setExecutor(serverExecutor);
         server.start();
         port = server.getAddress().getPort();
     }
@@ -52,6 +56,9 @@ class TsaAuthDataLoaderTest {
     static void tearDown() {
         if (server != null) {
             server.stop(0);
+        }
+        if (serverExecutor != null) {
+            serverExecutor.shutdownNow();
         }
     }
 

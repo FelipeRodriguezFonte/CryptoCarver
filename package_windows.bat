@@ -3,7 +3,7 @@ setlocal
 
 set APP_NAME=CryptoCarver
 set MAIN_CLASS=com.cryptocarver.Launcher
-set ICON_PATH=src\main\resources\icons\app-icon.png
+set ICON_PATH=src\main\resources\icons\app-icon.ico
 set INPUT_DIR=target
 if "%PACKAGE_OUTPUT_DIR%"=="" (set OUTPUT_DIR=dist) else (set OUTPUT_DIR=%PACKAGE_OUTPUT_DIR%)
 if "%PACKAGE_TYPE%"=="" set PACKAGE_TYPE=app-image
@@ -31,6 +31,11 @@ if %JAVA_MAJOR% LSS 17 (
 REM 1. Build with Maven
 echo [1/3] Building project with Maven...
 echo Warning: This script performs a clean build. Do not run it concurrently with an active development instance.
+where mvn.cmd >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Error: Maven 3.8 or newer was not found in PATH.
+    goto :error
+)
 call mvn clean package -DskipTests
 if %errorlevel% neq 0 (
     echo Error: Maven build failed.
@@ -51,10 +56,11 @@ if not exist "%INPUT_DIR%\%MAIN_JAR%" (
 
 REM 2. Run jpackage
 echo [2/3] Creating Windows %PACKAGE_TYPE% package...
-echo Note: Using PNG icon. For best results on Windows, revert to an .ico file.
-
 REM --type app-image creates a directory containing the exe.
 REM Set PACKAGE_TYPE=exe or PACKAGE_TYPE=msi for installers (requires WiX Toolset).
+set ICON_ARGS=
+if exist "%ICON_PATH%" set ICON_ARGS=--icon "%ICON_PATH%"
+
 jpackage ^
   --name "%APP_NAME%" ^
   --app-version "%APP_VERSION%" ^
@@ -62,11 +68,9 @@ jpackage ^
   --main-jar "%MAIN_JAR%" ^
   --main-class "%MAIN_CLASS%" ^
   --type "%PACKAGE_TYPE%" ^
-  --icon "%ICON_PATH%" ^
+  %ICON_ARGS% ^
   --dest "%OUTPUT_DIR%" ^
-  --java-options "--enable-preview" ^
   --java-options "-Xmx512m" ^
-  --win-console ^
   --verbose
 
 if %errorlevel% neq 0 (

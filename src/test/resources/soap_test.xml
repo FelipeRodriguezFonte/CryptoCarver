@@ -1,0 +1,8 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sam="http://example.com/sample">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <sam:ProcessData>
+         <sam:Data>SensitivePayload</sam:Data>
+      </sam:ProcessData>
+   </soapenv:Body>
+</soapenv:Envelope>

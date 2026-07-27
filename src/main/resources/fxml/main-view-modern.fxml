@@ -1036,6 +1036,9 @@
                                             <HBox spacing="8">
                                                 <Button text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
                                                 <Button text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
+                                                <Region HBox.hgrow="ALWAYS" />
+                                                <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
+                                                <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
                                             </HBox>
                                             <TextArea fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"
                                                       style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
@@ -1113,7 +1116,17 @@
                         </VBox>
 
                         <!-- Authentication Container -->
-                        <VBox fx:id="authenticationContainer" managed="false" visible="false" spacing="0">
+                        <VBox fx:id="authenticationContainer" managed="false" visible="false" spacing="8"
+                              style="-fx-padding: 8;">
+                            <VBox spacing="5" style="-fx-padding: 10; -fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4; -fx-background-radius: 4;">
+                                <Label text="1. Data to authenticate" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                <Label text="Enter the message used to generate or verify the signature/MAC."
+                                       style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                                <TextArea fx:id="authInputArea" prefHeight="120" wrapText="true"
+                                          promptText="Enter the message to authenticate..."
+                                          style="-fx-font-family: 'Monospaced';" VBox.vgrow="ALWAYS"/>
+                            </VBox>
+
                             <Accordion>
                                 <panes>
                                     <!-- DIGITAL SIGNATURES -->
@@ -1166,67 +1179,80 @@
 
                                     <!-- MESSAGE AUTHENTICATION CODES (MAC) -->
                                     <TitledPane text="🔐 Message Authentication Codes (MAC)">
-                                        <VBox spacing="6" style="-fx-padding: 8;">
-                                            <Label text="Algorithm:" style="-fx-font-size: 11px;"/>
-                                            <ComboBox fx:id="authMacAlgorithmCombo" prefWidth="200" style="-fx-font-size: 11px;"/>
+                                        <VBox spacing="10" style="-fx-padding: 12;">
+                                            <Label text="2. MAC configuration" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
 
-                                            <Separator style="-fx-padding: 3 0;"/>
+                                            <HBox spacing="12" alignment="BOTTOM_LEFT">
+                                                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                                    <Label text="Algorithm" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                                    <ComboBox fx:id="authMacAlgorithmCombo" maxWidth="Infinity"
+                                                              style="-fx-font-size: 11px;"/>
+                                                </VBox>
+                                                <VBox spacing="4" prefWidth="190">
+                                                    <Label text="Output length" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                                    <ComboBox fx:id="authMacTruncationCombo" maxWidth="Infinity"
+                                                              style="-fx-font-size: 11px;"/>
+                                                </VBox>
+                                            </HBox>
+                                            <Label fx:id="authMacAlgorithmInfoLabel" wrapText="true"
+                                                   style="-fx-font-size: 10px; -fx-text-fill: #52657a;"/>
+                                            <Label fx:id="authMacWarningLabel" wrapText="true" managed="false" visible="false"
+                                                   style="-fx-font-size: 10px; -fx-text-fill: #c0392b; -fx-font-weight: bold;"/>
 
-                                            <Label text="Key Source:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                                <ComboBox fx:id="macKeySourceCombo" prefWidth="145" style="-fx-font-size: 11px;" />
-                                                <StackPane HBox.hgrow="ALWAYS">
+                                            <VBox spacing="6" style="-fx-padding: 10; -fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4; -fx-background-radius: 4;">
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Label text="Key material" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                                    <Region HBox.hgrow="ALWAYS"/>
+                                                    <ComboBox fx:id="macKeySourceCombo" prefWidth="155" style="-fx-font-size: 11px;" />
+                                                    <Button text="Save key to Lab" onAction="#handleSaveMacKeyToHsm"
+                                                            styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                                                </HBox>
+                                                <StackPane>
                                                     <TextField fx:id="authMacKeyField" promptText="Enter MAC key in hexadecimal"
-                                                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
-                                                    <ComboBox fx:id="macHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+                                                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                                    <ComboBox fx:id="macHsmKeyCombo" maxWidth="Infinity" visible="false"
+                                                              managed="false" style="-fx-font-size: 11px;"/>
                                                 </StackPane>
-                                                <Button text="Save to Lab" onAction="#handleSaveMacKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                                                <Label fx:id="authMacKeyInfoLabel" text="Key size depends on algorithm"
+                                                       style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                                                <VBox fx:id="authMacNonceGroup" spacing="3" managed="false" visible="false">
+                                                    <Label text="GMAC nonce / IV (hexadecimal)" style="-fx-font-size: 10px; -fx-font-weight: bold;"/>
+                                                    <TextField fx:id="authMacNonceField" promptText="12 unique bytes, e.g. 00112233445566778899AABB"
+                                                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                                </VBox>
+                                            </VBox>
+
+                                            <HBox spacing="12" alignment="TOP_LEFT">
+                                                <VBox spacing="5" prefWidth="220">
+                                                    <Label text="Generate" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                                    <Button text="Generate MAC" onAction="#handleGenerateMAC"
+                                                            styleClass="action-button" maxWidth="Infinity"/>
+                                                    <Label text="Writes the MAC to Result below."
+                                                           style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                                                </VBox>
+                                                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                                    <Label text="Verify an existing MAC" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                                    <HBox spacing="6">
+                                                        <TextField fx:id="authMacVerifyField" promptText="Paste the expected MAC"
+                                                                   style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                                                   HBox.hgrow="ALWAYS"/>
+                                                        <Button text="Verify" onAction="#handleVerifyMAC"
+                                                                styleClass="action-button" minWidth="110"/>
+                                                    </HBox>
+                                                    <Label text="Uses the same message, algorithm, key and output length."
+                                                           style="-fx-font-size: 10px; -fx-text-fill: #667788;"/>
+                                                </VBox>
                                             </HBox>
-                                            <Label fx:id="authMacKeyInfoLabel" text="Key size depends on algorithm"
-                                                   style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
-                                            <TextField fx:id="authMacNonceField" promptText="Nonce / IV in hexadecimal (GMAC only, unique per key)"
-                                                      style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
-
-                                            <Separator style="-fx-padding: 3 0;"/>
-
-                                            <Label text="Truncation (bytes):" style="-fx-font-size: 11px;"/>
-                                            <HBox spacing="6" alignment="CENTER_LEFT">
-                                                <ComboBox fx:id="authMacTruncationCombo" prefWidth="100" style="-fx-font-size: 11px;"/>
-                                                <Label text="(0 = full MAC)" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
-                                            </HBox>
-
-                                            <Separator style="-fx-padding: 3 0;"/>
-
-                                            <Button text="Generate MAC" onAction="#handleGenerateMAC"
-                                                    styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
-
-                                            <Separator style="-fx-padding: 3 0;"/>
-
-                                            <Label text="Verify MAC:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                            <TextField fx:id="authMacVerifyField" promptText="Paste MAC to verify"
-                                                      style="-fx-font-size: 11px;"/>
-                                            <Button text="Verify MAC" onAction="#handleVerifyMAC"
-                                                    styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
-
-                                            <Label text="ℹ️ Generate: data in Input → MAC in Output"
-                                                   style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d; -fx-font-style: italic;"/>
                                         </VBox>
                                     </TitledPane>
                                 </panes>
                             </Accordion>
 
-                            <Separator orientation="HORIZONTAL"/>
-
-                            <VBox spacing="5" style="-fx-padding: 5;">
-                                <Label text="Input Data:"/>
-                                <TextArea fx:id="authInputArea" prefHeight="120" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
-
-                                <HBox spacing="10" alignment="CENTER">
-                                    <Label text="⬇" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: gray;"/>
-                                </HBox>
-
-                                <Label text="Output Result:"/>
-                                <TextArea fx:id="authOutputArea" prefHeight="120" editable="false" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+                            <VBox spacing="5" style="-fx-padding: 10; -fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4; -fx-background-radius: 4;">
+                                <Label text="3. Result" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                <TextArea fx:id="authOutputArea" prefHeight="110" editable="false" wrapText="true"
+                                          promptText="The generated value or verification result will appear here."
+                                          style="-fx-font-family: 'Monospaced';"/>
                             </VBox>
                         </VBox>
 
@@ -1788,6 +1814,9 @@
 
                     <!-- XML Security Container -->
                     <fx:include source="xml_security.fxml" fx:id="xmlSecurityContainer" />
+
+                    <!-- WSS Security Container -->
+                    <fx:include source="wss_security.fxml" fx:id="wssSecurityContainer" />
 
                     </VBox>
                 </ScrollPane>

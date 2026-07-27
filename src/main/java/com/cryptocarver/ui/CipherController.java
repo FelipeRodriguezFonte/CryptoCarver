@@ -9,6 +9,9 @@ import com.cryptocarver.crypto.EBCDICConverter;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
+import com.cryptocarver.model.FileCipherRecipe;
+import com.cryptocarver.model.FileCipherRecipeCodec;
+import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -515,6 +518,117 @@ public class CipherController {
 
     public void handleFileCipherDecrypt() {
         executeFileCipher(false);
+    }
+
+    public void handleExportFileCipherRecipe() {
+        try {
+            String algorithm = fileCipherAlgorithmCombo.getValue();
+            boolean linesMode = fileCipherLinesCheck != null && fileCipherLinesCheck.isSelected();
+            String lineEncoding = fileCipherLineEncodingCombo != null ? fileCipherLineEncodingCombo.getValue() : null;
+            String charset = fileCipherLineCharsetCombo != null ? fileCipherLineCharsetCombo.getValue() : null;
+            boolean compactMode = fileCipherCompactCbcCheck != null && fileCipherCompactCbcCheck.isSelected();
+            String aadHex = (fileCipherAadField != null && !fileCipherAadField.getText().trim().isEmpty()) ? fileCipherAadField.getText().trim() : null;
+            String ivNonceHex = (fileCipherNonceField != null && !fileCipherNonceField.getText().trim().isEmpty()) ? fileCipherNonceField.getText().trim() : null;
+            String tagRef = (fileCipherTagField != null && !fileCipherTagField.getText().trim().isEmpty()) ? fileCipherTagField.getText().trim() : null;
+
+            RecipeUIHelper.RecipeUIState state = new RecipeUIHelper.RecipeUIState(
+                    algorithm, linesMode, lineEncoding, compactMode, charset, aadHex, ivNonceHex, tagRef
+            );
+
+            FileCipherRecipe recipe = RecipeUIHelper.buildRecipeForExport(state);
+
+            // Validar antes de pedir el path para abortar si falta algo
+            String json = FileCipherRecipeCodec.serialize(recipe);
+
+            // Security warning
+            if (RecipeUIHelper.requiresSecurityWarning(recipe)) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Advertencia de Seguridad");
+                alert.setHeaderText("Exportando IV/Nonce o AAD");
+                alert.setContentText("El archivo de receta contendrá el IV/Nonce o AAD.\n" +
+                        "La clave secreta NUNCA se exportará.\n" +
+                        "(Reusar un IV/Nonce con la misma clave en modo fichero o CBC compromete la seguridad).");
+                alert.showAndWait();
+            }
+
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Guardar Receta File Cipher");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Recipe", "*.json"));
+            java.io.File dest = chooser.showSaveDialog(null);
+            if (dest != null) {
+                Files.writeString(dest.toPath(), json);
+                statusReporter.updateStatus("Receta exportada a " + dest.getName());
+            }
+        } catch (Exception e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error de Exportación");
+            alert.setHeaderText("No se pudo exportar la receta");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    public void handleImportFileCipherRecipe() {
+        try {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Abrir Receta File Cipher");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Recipe", "*.json"));
+            java.io.File source = chooser.showOpenDialog(null);
+            if (source != null) {
+                String json = Files.readString(source.toPath());
+                FileCipherRecipe recipe = FileCipherRecipeCodec.deserialize(json);
+
+                // Pre-calculate tag path to ensure atomicity
+                String currentTag = fileCipherTagField != null ? fileCipherTagField.getText() : null;
+                String newTagPath = RecipeUIHelper.calculateLocalTagPath(currentTag, recipe.getTagRef());
+
+                // Update UI atomically after parsing and pre-calculating successfully
+                if (recipe.getAlgorithm() != null && fileCipherAlgorithmCombo != null) {
+                    fileCipherAlgorithmCombo.setValue(recipe.getAlgorithm());
+                }
+                if (fileCipherLinesCheck != null) {
+                    fileCipherLinesCheck.setSelected(recipe.isLinesMode());
+                }
+                if (fileCipherLineEncodingCombo != null && recipe.getLineEncoding() != null) {
+                    fileCipherLineEncodingCombo.setValue(recipe.getLineEncoding());
+                }
+                if (fileCipherLineCharsetCombo != null && recipe.getCharset() != null) {
+                    fileCipherLineCharsetCombo.setValue(recipe.getCharset());
+                }
+                if (fileCipherCompactCbcCheck != null) {
+                    fileCipherCompactCbcCheck.setSelected(recipe.isCompactMode());
+                }
+                if (fileCipherAadField != null) {
+                    fileCipherAadField.setText(recipe.getAadHex() == null ? "" : recipe.getAadHex());
+                }
+                if (fileCipherNonceField != null) {
+                    fileCipherNonceField.setText(recipe.getIvNonceHex() == null ? "" : recipe.getIvNonceHex());
+                }
+                if (fileCipherTagField != null && newTagPath != null) {
+                    fileCipherTagField.setText(newTagPath);
+                }
+                updateFileCipherLineModeState();
+
+                boolean isAeadLines = recipe.isLinesMode() &&
+                        ("AES-256-GCM".equals(recipe.getAlgorithm()) || "ChaCha20-Poly1305".equals(recipe.getAlgorithm()));
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Receta Importada");
+                alert.setHeaderText("Receta v" + recipe.getVersion() + " cargada con éxito");
+                alert.setContentText("Algoritmo: " + recipe.getAlgorithm() +
+                        "\nModo Líneas: " + recipe.isLinesMode() +
+                        (isAeadLines ? " (cada registro generará su propio nonce/tag)" : "") +
+                        "\nFormato: " + (recipe.getLineEncoding() != null ? recipe.getLineEncoding() : "N/A") +
+                        "\nLa Clave Secreta y Rutas de Fichero NO fueron sobrescritas.");
+                alert.showAndWait();
+            }
+        } catch (Exception e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error de Importación");
+            alert.setHeaderText("No se pudo importar la receta");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
     }
 
     private void updateFileCipherLineModeState() {

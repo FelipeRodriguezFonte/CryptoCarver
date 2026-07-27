@@ -51,6 +51,17 @@ public class GenericController {
     @FXML private ComboBox<String> batchInputFormatCombo;
     @FXML private ComboBox<String> batchOperationCombo;
     @FXML private TextField batchColumnField;
+    @FXML private ComboBox<String> batchAlgorithmCombo;
+    @FXML private ComboBox<String> batchRecordEncodingCombo;
+    @FXML private javafx.scene.control.PasswordField batchKeyField;
+    @FXML private TextField batchIvNonceField;
+    @FXML private TextField batchAadField;
+    @FXML private ComboBox<String> batchCharsetCombo;
+    @FXML private CheckBox batchStopOnErrorCheck;
+    @FXML private CheckBox batchCompactModeCheck;
+    @FXML private TextField batchOutputColumnField;
+    @FXML private javafx.scene.layout.VBox batchCryptoConfigBox;
+
     @FXML private TextArea batchInputArea;
     @FXML private ComboBox<String> batchExportFormatCombo;
     @FXML private javafx.scene.control.ProgressBar batchProgressBar;
@@ -234,14 +245,14 @@ public class GenericController {
         }
     }
 
-    private java.util.Map<String, String> runSafeBatchOperation(String operation, java.util.Map<String, String> row) throws Exception {
-        String input = row.get("input");
-        if (input == null) throw new IllegalArgumentException("input field is required");
+    private java.util.Map<String, String> runSafeBatchOperation(String operation, java.util.Map<String, String> row, String srcCol, String outCol) throws Exception {
+        String input = row.get(srcCol);
+        if (input == null) throw new IllegalArgumentException(srcCol + " field is required");
         if ("SHA-256 (UTF-8 → Hex)".equals(operation)) {
-            return java.util.Map.of("result", com.cryptocarver.model.SafeTransformations.sha256(input));
+            return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.sha256(input));
         }
-        if ("UTF-8 → Base64URL".equals(operation)) return java.util.Map.of("result", com.cryptocarver.model.SafeTransformations.encodeBase64Url(input));
-        if ("Base64URL → UTF-8".equals(operation)) return java.util.Map.of("result", com.cryptocarver.model.SafeTransformations.decodeBase64Url(input));
+        if ("UTF-8 → Base64URL".equals(operation)) return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.encodeBase64Url(input));
+        if ("Base64URL → UTF-8".equals(operation)) return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.decodeBase64Url(input));
         throw new IllegalArgumentException("Unsupported batch operation: " + operation);
     }
 
@@ -251,8 +262,12 @@ public class GenericController {
         int displayed = Math.min(50, report.results().size());
         for (int i = 0; i < displayed; i++) {
             com.cryptocarver.model.batch.BatchRunner.RowResult row = report.results().get(i);
+            String outputStr = "";
+            if (row.succeeded() && row.output() != null && !row.output().isEmpty()) {
+                outputStr = row.output().values().iterator().next(); // First mapped value
+            }
             text.append("#").append(row.rowNumber()).append(" ").append(row.succeeded() ? "OK  " : "ERR ")
-                    .append(row.succeeded() ? row.output().getOrDefault("result", "") : row.error()).append('\n');
+                    .append(row.succeeded() ? outputStr : row.error()).append('\n');
         }
         if (report.results().size() > displayed) text.append("… ").append(report.results().size() - displayed).append(" additional rows; export the report for all results.\n");
         return text.toString();
@@ -265,21 +280,107 @@ public class GenericController {
         }
         lastBatchReport = null;
         final java.util.List<java.util.Map<String, String>> rows;
+        final String srcCol = batchColumnField.getText().trim();
+        final String outCol = batchOutputColumnField.getText().trim();
+        if (srcCol.isEmpty() || outCol.isEmpty()) {
+            if (statusReporter != null) statusReporter.showError("Batch config", "Source and output columns are required");
+            return;
+        }
         try {
             rows = isCsvBatchFormat(batchInputFormatCombo.getValue())
                     ? com.cryptocarver.model.batch.BatchInputCodec.parseCsv(batchInputArea.getText())
                     : com.cryptocarver.model.batch.BatchInputCodec.parseJsonLines(batchInputArea.getText());
             if (rows.isEmpty()) throw new IllegalArgumentException("No batch rows found");
-            if (rows.stream().anyMatch(row -> !row.containsKey("input"))) throw new IllegalArgumentException("Every row must contain an input field");
+            if (rows.stream().anyMatch(row -> !row.containsKey(srcCol))) throw new IllegalArgumentException("Every row must contain the field: " + srcCol);
         } catch (Exception e) {
             if (statusReporter != null) statusReporter.showError("Batch input", e.getMessage());
             return;
         }
         final String operation = batchOperationCombo.getValue();
+        final boolean isCrypto = "Encrypt Record".equals(operation) || "Decrypt Record".equals(operation);
+        final boolean isEncrypt = "Encrypt Record".equals(operation);
+        final boolean stopOnError = batchStopOnErrorCheck != null && batchStopOnErrorCheck.isSelected();
+        final byte[] key;
+        final String alg;
+        final byte[] iv;
+        final byte[] aad;
+        final com.cryptocarver.crypto.LineFileCipher.Encoding enc;
+        final java.nio.charset.Charset cs;
+        final boolean compact;
+
+        if (isCrypto) {
+            try {
+                alg = batchAlgorithmCombo.getValue();
+                key = java.util.HexFormat.of().parseHex(batchKeyField.getText().trim());
+                String ivStr = batchIvNonceField.getText().trim();
+                iv = ivStr.isEmpty() ? null : java.util.HexFormat.of().parseHex(ivStr);
+                String aadStr = batchAadField.getText().trim();
+                aad = aadStr.isEmpty() ? null : java.util.HexFormat.of().parseHex(aadStr);
+                enc = "Hexadecimal".equals(batchRecordEncodingCombo.getValue())
+                        ? com.cryptocarver.crypto.LineFileCipher.Encoding.HEXADECIMAL
+                        : com.cryptocarver.crypto.LineFileCipher.Encoding.BASE64URL;
+
+                String csName = batchCharsetCombo.getValue();
+                String mapped = com.cryptocarver.crypto.EBCDICConverter.supportedCodePages().get(csName);
+                cs = java.nio.charset.Charset.forName(mapped != null ? mapped : csName);
+
+                compact = batchCompactModeCheck.isSelected();
+                com.cryptocarver.crypto.LineRecordCipher.validateAlgorithmAndKey(alg, key);
+                com.cryptocarver.crypto.LineRecordCipher.validateIvAndAad(alg, iv, aad);
+
+                if (isEncrypt && "AES-256-CBC".equals(alg) && iv != null) {
+                    javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+                    confirm.setTitle("CBC IV Reuse");
+                    confirm.setHeaderText("Security Warning: Static IV in CBC mode");
+                    confirm.setContentText("Reusing the same IV across multiple encryption records leaks structural information if identical plaintexts share the same IV.\n\nDo you want to proceed?");
+                    java.util.Optional<javafx.scene.control.ButtonType> result = confirm.showAndWait();
+                    if (result.isEmpty() || result.get() != javafx.scene.control.ButtonType.OK) {
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                if (statusReporter != null) statusReporter.showError("Batch crypto config", "Invalid crypto parameters: " + e.getMessage());
+                return;
+            }
+        } else {
+            alg = null; key = null; iv = null; aad = null; enc = null; cs = null; compact = false;
+        }
+
+        final java.util.concurrent.atomic.AtomicBoolean errorOccurred = new java.util.concurrent.atomic.AtomicBoolean(false);
+        final com.cryptocarver.model.batch.BatchRunner.RowOperation rowOperation;
+        if (isCrypto) {
+            rowOperation = (rowNum, row) -> {
+                String val = row.get(srcCol);
+                if (val == null) throw new IllegalArgumentException("Missing column: " + srcCol);
+                try {
+                    String res = isEncrypt ? com.cryptocarver.crypto.LineRecordCipher.encryptRecord(val, key, alg, aad, enc, iv, cs, compact)
+                                           : com.cryptocarver.crypto.LineRecordCipher.decryptRecord(val, key, alg, aad, iv, enc, cs, rowNum);
+                    return java.util.Map.of(outCol, res);
+                } catch (Exception e) {
+                    if (stopOnError) errorOccurred.set(true);
+                    throw e;
+                }
+            };
+        } else {
+            rowOperation = (rowNum, row) -> {
+                try {
+                    return runSafeBatchOperation(operation, row, srcCol, outCol);
+                } catch (Exception e) {
+                    if (stopOnError) errorOccurred.set(true);
+                    throw e;
+                }
+            };
+        }
+
         javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> task = new javafx.concurrent.Task<>() {
             @Override protected com.cryptocarver.model.batch.BatchRunner.Report call() {
-                return com.cryptocarver.model.batch.BatchRunner.run(rows, row -> runSafeBatchOperation(operation, row), this::isCancelled,
-                        (completed, total) -> updateProgress(completed, total));
+                try {
+                    return com.cryptocarver.model.batch.BatchRunner.run(rows, rowOperation, () -> isCancelled() || errorOccurred.get(),
+                            (completed, total) -> updateProgress(completed, total));
+                } finally {
+                    if (key != null) java.util.Arrays.fill(key, (byte) 0);
+                    javafx.application.Platform.runLater(() -> batchKeyField.clear());
+                }
             }
         };
         activeBatchTask = task;
@@ -386,10 +487,28 @@ public class GenericController {
             batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchInputFormatCombo.setValue("CSV");
         }
+
         if (batchOperationCombo != null) {
-            batchOperationCombo.getItems().setAll("SHA-256 (UTF-8 → Hex)", "UTF-8 → Base64URL", "Base64URL → UTF-8");
+            batchOperationCombo.getItems().setAll("SHA-256 (UTF-8 → Hex)", "UTF-8 → Base64URL", "Base64URL → UTF-8", "Encrypt Record", "Decrypt Record");
             batchOperationCombo.setValue("SHA-256 (UTF-8 → Hex)");
+            batchOperationCombo.valueProperty().addListener((obs, oldV, newV) -> {
+                boolean isCrypto = "Encrypt Record".equals(newV) || "Decrypt Record".equals(newV);
+                if (batchCryptoConfigBox != null) {
+                    batchCryptoConfigBox.setVisible(isCrypto);
+                    batchCryptoConfigBox.setManaged(isCrypto);
+                }
+            });
         }
+        if (batchAlgorithmCombo != null) {
+            batchAlgorithmCombo.getItems().setAll("AES-256-GCM", "ChaCha20-Poly1305", "AES-256-CBC");
+            batchAlgorithmCombo.setValue("AES-256-GCM");
+            batchRecordEncodingCombo.getItems().setAll("Base64URL", "Hexadecimal");
+            batchRecordEncodingCombo.setValue("Base64URL");
+            batchCharsetCombo.getItems().setAll("UTF-8");
+            batchCharsetCombo.getItems().addAll(com.cryptocarver.crypto.EBCDICConverter.supportedCodePages().keySet());
+            batchCharsetCombo.setValue("UTF-8");
+        }
+
         if (batchExportFormatCombo != null) {
             batchExportFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchExportFormatCombo.setValue("CSV");
