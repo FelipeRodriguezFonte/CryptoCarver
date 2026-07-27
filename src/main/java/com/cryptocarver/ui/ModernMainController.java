@@ -57,6 +57,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private BorderPane mainPane;
     @FXML
+    private ToggleGroup visibilityProfileGroup;
+
+    @FXML
     private NavigationRail navigationRail;
     @FXML
     private SidePanel sidePanel;
@@ -191,6 +194,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
 
         setupLaboratoryMenu();
+
+        if (visibilityProfileGroup != null) {
+            com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+            for (javafx.scene.control.Toggle toggle : visibilityProfileGroup.getToggles()) {
+                if (toggle instanceof javafx.scene.control.RadioMenuItem item && item.getText().contains(profile.name())) {
+                    item.setSelected(true);
+                    break;
+                }
+            }
+        }
 
         operationFormatState.attach(inputFormatCombo, outputFormatCombo);
         installResponsiveLayoutSupport();
@@ -532,7 +545,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private java.util.Map<String, Object> captureHistoryState() {
-        return UiStateSnapshot.captureConfiguration(this);
+        return UiStateSnapshot.captureHistoryRecipe(this);
     }
 
     com.cryptocarver.model.ScreenConfiguration captureActiveScreenConfiguration() {
@@ -550,7 +563,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             state.put("ModernMainController.outputFormatCombo", outputFormatCombo.getValue());
         }
         return new com.cryptocarver.model.ScreenConfiguration(
-                currentActiveOperation, route.module().name(), state);
+                currentActiveOperation, route.module().name(), state,
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
     }
 
     void applyScreenConfiguration(com.cryptocarver.model.ScreenConfiguration configuration) {
@@ -616,8 +630,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private record ConfigurationTarget(Object controller, javafx.scene.Parent root) { }
 
-    private void restoreUIState(java.util.Map<String, Object> state) {
-        UiStateSnapshot.restore(this, state);
+    private java.util.List<javafx.scene.Node> restoreUIState(java.util.Map<String, Object> state) {
+        return UiStateSnapshot.restore(this, state);
     }
 
     // History Managemen
@@ -637,14 +651,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void refreshHistoryUI() {
-        if (historyViewController != null) {
-            historyViewController.refresh();
-        }
-        if (historyContainer == null) return;
-
+        if (historyContainer == null || historyManager == null) return;
         historyContainer.getChildren().clear();
 
-        java.util.List<com.cryptocarver.model.HistoryItem> items = historyManager.getHistoryItems();
+        java.util.List<com.cryptocarver.model.HistoryCommand> items = historyManager.getHistoryItems();
 
         if (items.isEmpty()) {
             Label placeholder = new Label("No recent operations");
@@ -653,15 +663,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
         }
 
-        for (com.cryptocarver.model.HistoryItem item : items) {
-            HBox historyItem = new HBox(8);
-            historyItem.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-            historyItem.setStyle(
-                    "-fx-padding: 6; -fx-background-color: #37474f; -fx-background-radius: 4; -fx-border-color: #455a64; -fx-border-radius: 4;");
+        for (com.cryptocarver.model.HistoryCommand item : items) {
+            HBox historyCommand = new HBox(8);
+            historyCommand.setStyle(
+                    "-fx-background-color: #2b2b2b; " +
+                            "-fx-padding: 8; " +
+                            "-fx-background-radius: 4;");
+            historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
             VBox infoBox = new VBox(2);
             Label opLabel = new Label(item.getOperation());
-            opLabel.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 11px; -fx-font-weight: bold;");
+            opLabel.setStyle("-fx-text-fill: #e0e0e0; -fx-font-weight: bold; -fx-font-size: 11px;");
 
             Label timeLabel = new Label(item.getTimestamp());
             timeLabel.setStyle("-fx-text-fill: #b0bec5; -fx-font-size: 9px;");
@@ -679,13 +691,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                             "-fx-cursor: hand;");
 
             rerunButton.setOnAction(e -> {
-                restoreUIState(item.getUiState());
-                updateStatus("Restored state for: " + item.getOperation());
-                handleItemSelected(item.getOperation());
+                restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
+                        ? item.getParameters() : item.getUiState(), item.getOperation());
             });
 
-            historyItem.getChildren().addAll(infoBox, rerunButton);
-            historyContainer.getChildren().add(historyItem);
+            historyCommand.getChildren().addAll(infoBox, rerunButton);
+            historyContainer.getChildren().add(historyCommand);
         }
     }
 
@@ -699,7 +710,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @Override
     public void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        // Capture current state when adding to history
         java.util.Map<String, Object> state = captureHistoryState();
 
         String detailsJson = "";
@@ -713,7 +723,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
         }
 
-        com.cryptocarver.model.HistoryItem item = new com.cryptocarver.model.HistoryItem(operation, detailsJson, state);
+        com.cryptocarver.model.HistoryCommand.Reproducibility rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITHOUT_SECRETS;
+        String reason = "All parameters are available.";
+        if (state.values().contains("[REDACTED_SECRET]")) {
+            rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS;
+            reason = "Sensitive secrets were redacted from the history recipe.";
+        }
+
+        String inFmt = inputFormatCombo != null ? inputFormatCombo.getValue() : null;
+        String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
+
+        com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
+                operation, detailsJson, state, rep, reason, inFmt, outFmt);
         item.setStructuredDetails(details);
 
         if (historyManager == null) {
@@ -727,7 +748,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void addToHistoryManual(String operation, String detailsString) {
         java.util.Map<String, Object> state = captureHistoryState();
-        com.cryptocarver.model.HistoryItem item = new com.cryptocarver.model.HistoryItem(operation, detailsString, state);
+        com.cryptocarver.model.HistoryCommand.Reproducibility rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITHOUT_SECRETS;
+        String reason = "All parameters are available.";
+        if (state.values().contains("[REDACTED_SECRET]")) {
+            rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS;
+            reason = "Sensitive secrets were redacted from the history recipe.";
+        }
+
+        String inFmt = inputFormatCombo != null ? inputFormatCombo.getValue() : null;
+        String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
+
+        com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
+                operation, detailsString, state, rep, reason, inFmt, outFmt);
 
         if (historyManager == null) {
             initializeHistory();
@@ -745,9 +777,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Restores an operation selected from the modular history view. */
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
-        restoreUIState(state);
-        updateStatus("Restored state for: " + operation);
         handleItemSelected(operation);
+        java.util.List<javafx.scene.Node> redacted = restoreUIState(state);
+        updateStatus("Restored state for: " + operation);
+        if (redacted != null && !redacted.isEmpty()) {
+            javafx.application.Platform.runLater(() -> redacted.get(0).requestFocus());
+        }
     }
 
     @FXML
@@ -769,8 +804,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         File file = fileChooser.showSaveDialog(mainPane.getScene().getWindow());
         if (file != null) {
             try (PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
-                com.cryptocarver.model.SecretVisibility visibility = com.cryptocarver.model.AppSettings.getInstance()
-                        .getSecretVisibility();
+                com.cryptocarver.model.SecretVisibilityProfile visibility = com.cryptocarver.model.AppSettings.getInstance()
+                        .getSecretVisibilityProfile();
                 String json = com.cryptocarver.utils.HistoryRecordExporter.toJson(
                         historyManager.getHistoryItems(), visibility);
                 writer.write(json);
@@ -1092,7 +1127,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
             return;
         }
-        handleAddToClipboardShelfSecure(null, content);
+        // This is a whole published result, not a selection from a TextArea.
+        // Passing it as selected text makes the stale-selection guard reject it
+        // because no originating area exists.
+        handleAddToClipboardShelfSecure(null, null);
     }
 
     /** Opens the active operation result in a large, independent viewer. */
@@ -1143,7 +1181,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return "";
         }
         return renderPublishedResult(lastPublishedResultSnapshot,
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility());
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
     }
 
     private String renderResultArea(TextArea area) {
@@ -1157,13 +1195,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return area.getText();
         }
         com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
-        com.cryptocarver.model.SecretVisibility visibility =
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility();
+        com.cryptocarver.model.SecretVisibilityProfile visibility =
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
         if (classification == com.cryptocarver.model.OperationDetail.Classification.SECRET) {
-            if (visibility == com.cryptocarver.model.SecretVisibility.REDACTED) return "";
-            if (visibility == com.cryptocarver.model.SecretVisibility.MASKED) return "***MASKED***";
+            if (visibility == com.cryptocarver.model.SecretVisibilityProfile.REDACTED) return "";
+            if (visibility == com.cryptocarver.model.SecretVisibilityProfile.MASKED) return "***MASKED***";
         } else if (classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE
-                && visibility != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+                && visibility != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             return "***MASKED***";
         }
         return area.getText();
@@ -1179,7 +1217,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
     }
 
-    String renderPublishedResult(com.cryptocarver.model.OperationResult result, com.cryptocarver.model.SecretVisibility visibility) {
+    String renderPublishedResult(com.cryptocarver.model.OperationResult result, com.cryptocarver.model.SecretVisibilityProfile visibility) {
         return OperationResultRenderer.render(result, visibility);
     }
 
@@ -1324,7 +1362,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                 || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
         if (requiresFullLab && !ResultAreaTracker.isKeyPairResultArea(area)
-                && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+                && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
             return;
         }
@@ -1343,7 +1381,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                     || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
             if (requiresFullLab && !ResultAreaTracker.isKeyPairResultArea(area)
-                    && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+                    && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
                 return;
             }
@@ -2001,6 +2039,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         updateContentHeader("Saved Sessions");
         updateContentSubtitle("Load or manage your saved workspaces");
+    }
+
+    @FXML
+    private void handleVisibilityFullLab() {
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
+    }
+
+    @FXML
+    private void handleVisibilityMasked() {
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+        updateStatus("Visibility set to MASKED (Classroom/Demo)");
+    }
+
+    @FXML
+    private void handleVisibilityRedacted() {
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+        updateStatus("Visibility set to REDACTED (Strict/Production)");
     }
 
     @FXML

@@ -43,14 +43,15 @@ public final class ScreenConfiguration {
     private final String module;
     private final String createdAt;
     private final boolean mayContainSecrets;
+    private final SecretVisibilityProfile visibilityProfile;
     private final Map<String, Value> values;
 
-    public ScreenConfiguration(String operation, String module, Map<String, Object> state) {
-        this(FORMAT, CURRENT_VERSION, operation, module, Instant.now().toString(), true, encode(state));
+    public ScreenConfiguration(String operation, String module, Map<String, Object> state, SecretVisibilityProfile visibilityProfile) {
+        this(FORMAT, CURRENT_VERSION, operation, module, Instant.now().toString(), true, visibilityProfile, encode(state));
     }
 
     private ScreenConfiguration(String format, int version, String operation, String module, String createdAt,
-                                boolean mayContainSecrets, Map<String, Value> values) {
+                                boolean mayContainSecrets, SecretVisibilityProfile visibilityProfile, Map<String, Value> values) {
         if (!FORMAT.equals(format)) throw new IllegalArgumentException("Unsupported configuration format");
         if (version < 1 || version > CURRENT_VERSION) {
             throw new IllegalArgumentException("Unsupported configuration version: " + version);
@@ -63,6 +64,7 @@ public final class ScreenConfiguration {
         this.module = module.trim();
         this.createdAt = createdAt == null || createdAt.isBlank() ? Instant.now().toString() : createdAt;
         this.mayContainSecrets = mayContainSecrets;
+        this.visibilityProfile = visibilityProfile == null ? SecretVisibilityProfile.FULL_LAB : visibilityProfile;
         this.values = validateValues(values);
     }
 
@@ -80,7 +82,7 @@ public final class ScreenConfiguration {
         }
         if (raw == null) throw new IllegalArgumentException("Configuration JSON is empty");
         return new ScreenConfiguration(raw.format, raw.version, raw.operation, raw.module, raw.createdAt,
-                raw.mayContainSecrets, raw.values);
+                raw.mayContainSecrets, raw.visibilityProfile, raw.values);
     }
 
     public Map<String, Object> toState() {
@@ -95,6 +97,7 @@ public final class ScreenConfiguration {
     public String module() { return module; }
     public String createdAt() { return createdAt; }
     public boolean mayContainSecrets() { return mayContainSecrets; }
+    public SecretVisibilityProfile visibilityProfile() { return visibilityProfile; }
     public Map<String, Value> values() { return values; }
 
     private static Map<String, Value> encode(Map<String, Object> state) {
@@ -129,6 +132,7 @@ public final class ScreenConfiguration {
         String module;
         String createdAt;
         boolean mayContainSecrets;
+        SecretVisibilityProfile visibilityProfile;
         Map<String, Value> values;
     }
 }

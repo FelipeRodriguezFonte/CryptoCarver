@@ -47,7 +47,7 @@ public final class OperationRecipe {
     private final Map<String, String> parameters; // V1 parameters
     private final java.util.List<Step> steps; // V2 steps
 
-    public OperationRecipe(String operation, java.util.List<OperationDetail> details, SecretVisibility visibility) {
+    public OperationRecipe(String operation, java.util.List<OperationDetail> details, SecretVisibilityProfile visibility) {
         this(operation, List.of(new Step(operation, "any", "any", sanitizeDetails(details, visibility))));
     }
 
@@ -95,8 +95,8 @@ public final class OperationRecipe {
     public Map<String, String> parameters() { return parameters; }
     public java.util.List<Step> steps() { return steps; }
 
-    private static Map<String, String> sanitizeDetails(java.util.List<OperationDetail> details, SecretVisibility visibility) {
-        SecretVisibility effectiveVisibility = visibility == null ? SecretVisibility.REDACTED : visibility;
+    private static Map<String, String> sanitizeDetails(java.util.List<OperationDetail> details, SecretVisibilityProfile visibility) {
+        SecretVisibilityProfile effectiveVisibility = visibility == null ? SecretVisibilityProfile.REDACTED : visibility;
         Map<String, String> clean = new LinkedHashMap<>();
         if (details == null) return clean;
         int totalChars = 0;
@@ -111,10 +111,10 @@ public final class OperationRecipe {
             String value = detail.value() == null ? "" : detail.value();
 
             if (clazz == OperationDetail.Classification.SECRET) {
-                if (effectiveVisibility == SecretVisibility.REDACTED) continue;
-                if (effectiveVisibility == SecretVisibility.MASKED) value = "***MASKED***";
+                if (effectiveVisibility == SecretVisibilityProfile.REDACTED) continue;
+                if (effectiveVisibility == SecretVisibilityProfile.MASKED) value = "***MASKED***";
             } else if (clazz == OperationDetail.Classification.SENSITIVE) {
-                if (effectiveVisibility != SecretVisibility.FULL_LAB) value = "***MASKED***";
+                if (effectiveVisibility != SecretVisibilityProfile.FULL_LAB) value = "***MASKED***";
             }
 
             if (value.length() > MAX_VALUE_CHARS) throw new IllegalArgumentException("Recipe parameter " + key + " exceeds " + MAX_VALUE_CHARS + " characters");

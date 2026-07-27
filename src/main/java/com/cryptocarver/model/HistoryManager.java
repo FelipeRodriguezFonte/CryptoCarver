@@ -24,7 +24,7 @@ public class HistoryManager {
     private static final int MAX_HISTORY_SIZE = 50;
     private final Gson gson;
     private final Path historyPath;
-    private final List<HistoryItem> historyItems;
+    private final List<HistoryCommand> historyItems;
 
     public HistoryManager() {
         this(resolveDefaultPath());
@@ -38,11 +38,11 @@ public class HistoryManager {
         this.historyItems = loadHistory();
     }
 
-    public List<HistoryItem> getHistoryItems() {
+    public List<HistoryCommand> getHistoryItems() {
         return new ArrayList<>(historyItems);
     }
 
-    public void addHistoryItem(HistoryItem item) {
+    public void addHistoryItem(HistoryCommand item) {
         historyItems.add(0, item);
         if (historyItems.size() > MAX_HISTORY_SIZE) {
             historyItems.remove(historyItems.size() - 1);
@@ -55,12 +55,12 @@ public class HistoryManager {
         saveHistory();
     }
 
-    private List<HistoryItem> loadHistory() {
+    private List<HistoryCommand> loadHistory() {
         if (!Files.exists(historyPath)) {
             return new ArrayList<>();
         }
         try (Reader reader = Files.newBufferedReader(historyPath)) {
-            List<HistoryItem> loaded = gson.fromJson(reader, new TypeToken<List<HistoryItem>>() {
+            List<HistoryCommand> loaded = gson.fromJson(reader, new TypeToken<List<HistoryCommand>>() {
             }.getType());
             return loaded != null ? loaded : new ArrayList<>();
         } catch (IOException | RuntimeException e) {

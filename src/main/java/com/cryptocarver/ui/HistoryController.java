@@ -1,13 +1,13 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.AppSettings;
-import com.cryptocarver.model.HistoryItem;
+import com.cryptocarver.model.HistoryCommand;
 import com.cryptocarver.model.HistoryManager;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationRegistry;
 import com.cryptocarver.model.OperationRecipe;
 import com.cryptocarver.model.RecipeVariables;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.utils.HistoryComparator;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
@@ -35,7 +35,7 @@ import java.util.TreeSet;
 public class HistoryController {
 
     @FXML private VBox mainHistoryContainer;
-    @FXML private ComboBox<SecretVisibility> visibilityCombo;
+    @FXML private ComboBox<SecretVisibilityProfile> visibilityCombo;
     @FXML private Label unsafeVisibilityWarningLabel;
     @FXML private TextField historyFilterField;
     @FXML private ComboBox<String> historyModuleFilterCombo;
@@ -48,10 +48,10 @@ public class HistoryController {
     @FXML private Button copyHistoryDetailBtn;
     @FXML private Button exportJsonRecordBtn;
     @FXML private Button exportVisibleJsonBtn;
-    @FXML private TableView<HistoryItem> historyTable;
-    @FXML private TableColumn<HistoryItem, String> timeCol;
-    @FXML private TableColumn<HistoryItem, String> opCol;
-    @FXML private TableColumn<HistoryItem, String> actionCol;
+    @FXML private TableView<HistoryCommand> historyTable;
+    @FXML private TableColumn<HistoryCommand, String> timeCol;
+    @FXML private TableColumn<HistoryCommand, String> opCol;
+    @FXML private TableColumn<HistoryCommand, String> actionCol;
     @FXML private TableView<OperationDetail> detailsTable;
     @FXML private TableColumn<OperationDetail, String> nameCol;
     @FXML private TableColumn<OperationDetail, String> valCol;
@@ -72,13 +72,13 @@ public class HistoryController {
         opCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getOperation()));
 
         actionCol.setCellFactory(col -> new TableCell<>() {
-            private final Button btn = new Button("Rerun");
+            private final Button btn = new Button("Reopen");
             {
                 btn.setStyle("-fx-background-color: #0288d1; -fx-text-fill: white; -fx-font-size: 10px; -fx-padding: 3 8; -fx-cursor: hand;");
                 btn.setOnAction(event -> {
-                    HistoryItem item = getTableView().getItems().get(getIndex());
+                    HistoryCommand item = getTableView().getItems().get(getIndex());
                     if (navigator != null) {
-                        navigator.restoreOperationState(item.getUiState(), item.getOperation());
+                        navigator.restoreOperationState(item.getParameters(), item.getOperation());
                     }
                 });
             }
@@ -86,7 +86,18 @@ public class HistoryController {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : btn);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    HistoryCommand historyCmd = getTableView().getItems().get(getIndex());
+                    btn.setTooltip(new Tooltip(historyCmd.getReproducibilityReason()));
+                    if (historyCmd.getReproducibility() == HistoryCommand.Reproducibility.NOT_REPRODUCIBLE) {
+                        btn.setDisable(true);
+                    } else {
+                        btn.setDisable(false);
+                    }
+                    setGraphic(btn);
+                }
             }
         });
 
@@ -141,10 +152,10 @@ public class HistoryController {
         copyHistoryDetailBtn.disableProperty().bind(Bindings.isNull(detailsTable.getSelectionModel().selectedItemProperty()));
 
         // Combo Box
-        visibilityCombo.getItems().setAll(SecretVisibility.values());
+        visibilityCombo.getItems().setAll(SecretVisibilityProfile.values());
         visibilityCombo.setConverter(new StringConverter<>() {
             @Override
-            public String toString(SecretVisibility value) {
+            public String toString(SecretVisibilityProfile value) {
                 if (value == null) return "";
                 return switch (value) {
                     case FULL_LAB -> "Unsafe lab — show all values";
@@ -154,13 +165,13 @@ public class HistoryController {
             }
 
             @Override
-            public SecretVisibility fromString(String ignored) {
+            public SecretVisibilityProfile fromString(String ignored) {
                 return null;
             }
         });
-        visibilityCombo.setValue(AppSettings.getInstance().getSecretVisibility());
+        visibilityCombo.setValue(AppSettings.getInstance().getSecretVisibilityProfile());
         visibilityCombo.setOnAction(e -> {
-            AppSettings.getInstance().setSecretVisibility(visibilityCombo.getValue());
+            AppSettings.getInstance().setSecretVisibilityProfile(selectedVisibility());
             updateVisibilityWarning();
             showDetailsFor(historyTable.getSelectionModel().getSelectedItem());
         });
@@ -192,12 +203,12 @@ public class HistoryController {
     public void refresh() {
         if (historyManager != null && historyTable != null) {
             java.util.Set<String> selectedIds = historyTable.getSelectionModel().getSelectedItems().stream()
-                    .map(HistoryItem::getId)
+                    .map(HistoryCommand::getId)
                     .collect(java.util.stream.Collectors.toSet());
             refreshModuleFilterOptions();
             String query = historyFilterField == null ? "" : historyFilterField.getText();
             String module = historyModuleFilterCombo == null ? null : historyModuleFilterCombo.getValue();
-            List<HistoryItem> filtered = historyManager.getHistoryItems().stream()
+            List<HistoryCommand> filtered = historyManager.getHistoryItems().stream()
                     .filter(item -> matchesFilter(item, query) && matchesModule(item, module))
                     .toList();
             historyTable.getItems().setAll(filtered);
@@ -235,7 +246,7 @@ public class HistoryController {
      * Search metadata only. Detail values are intentionally excluded so that
      * filtering cannot become an accidental side channel for masked secrets.
      */
-    private boolean matchesFilter(HistoryItem item, String query) {
+    private boolean matchesFilter(HistoryCommand item, String query) {
         if (query == null || query.isBlank()) {
             return true;
         }
@@ -250,12 +261,12 @@ public class HistoryController {
     }
 
     /** Filters using catalog metadata only; operation values and secret details are never examined. */
-    private boolean matchesModule(HistoryItem item, String module) {
+    private boolean matchesModule(HistoryCommand item, String module) {
         return module == null || module.isBlank() || "All modules".equals(module)
                 || moduleFor(item).equals(module);
     }
 
-    private String moduleFor(HistoryItem item) {
+    private String moduleFor(HistoryCommand item) {
         if (item == null) {
             return "Other";
         }
@@ -288,7 +299,7 @@ public class HistoryController {
     }
 
     /** Renders operation details according to the explicit visibility policy. */
-    private void showDetailsFor(HistoryItem item) {
+    private void showDetailsFor(HistoryCommand item) {
         if (detailsTable == null) {
             return;
         }
@@ -309,16 +320,15 @@ public class HistoryController {
     }
 
     private OperationDetail forSelectedVisibility(OperationDetail detail) {
-        SecretVisibility visibility = visibilityCombo == null || visibilityCombo.getValue() == null
-                ? SecretVisibility.REDACTED : visibilityCombo.getValue();
+        SecretVisibilityProfile visibility = selectedVisibility();
         String value = detail.value();
-        if (visibility == SecretVisibility.REDACTED
+        if (visibility == SecretVisibilityProfile.REDACTED
                 && detail.classification() == OperationDetail.Classification.SECRET) {
             value = "***REDACTED***";
-        } else if (visibility == SecretVisibility.MASKED
+        } else if (visibility == SecretVisibilityProfile.MASKED
                 && detail.classification() != OperationDetail.Classification.PUBLIC) {
             value = "***MASKED***";
-        } else if (visibility == SecretVisibility.REDACTED
+        } else if (visibility == SecretVisibilityProfile.REDACTED
                 && detail.classification() == OperationDetail.Classification.SENSITIVE) {
             value = "***MASKED***";
         }
@@ -329,9 +339,34 @@ public class HistoryController {
         if (unsafeVisibilityWarningLabel == null) {
             return;
         }
-        boolean unsafe = visibilityCombo != null && visibilityCombo.getValue() == SecretVisibility.FULL_LAB;
+        boolean unsafe = selectedVisibility() == SecretVisibilityProfile.FULL_LAB;
         unsafeVisibilityWarningLabel.setVisible(unsafe);
         unsafeVisibilityWarningLabel.setManaged(unsafe);
+    }
+
+    /**
+     * JavaFX FXML is untyped at runtime. Old persisted UI state can therefore
+     * leave a textual profile in this ComboBox even though its source type is
+     * SecretVisibilityProfile. Treat it as a compatibility input, never as a
+     * reason for Recent Operations to fail to render.
+     */
+    private SecretVisibilityProfile selectedVisibility() {
+        if (visibilityCombo == null) {
+            return SecretVisibilityProfile.REDACTED;
+        }
+        Object selected = ((ComboBox<?>) visibilityCombo).getValue();
+        if (selected instanceof SecretVisibilityProfile profile) {
+            return profile;
+        }
+        if (selected instanceof String name) {
+            try {
+                return SecretVisibilityProfile.valueOf(name.trim().toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to the persisted/default policy.
+            }
+        }
+        SecretVisibilityProfile configured = AppSettings.getInstance().getSecretVisibilityProfile();
+        return configured == null ? SecretVisibilityProfile.REDACTED : configured;
     }
 
     @FXML
@@ -365,7 +400,7 @@ public class HistoryController {
             showError("JSON Record Export", "Select a history entry first.");
             return;
         }
-        SecretVisibility visibility = visibilityCombo == null ? SecretVisibility.REDACTED : visibilityCombo.getValue();
+        SecretVisibilityProfile visibility = selectedVisibility();
         String record = com.cryptocarver.utils.HistoryRecordExporter.toJson(
                 historyTable.getSelectionModel().getSelectedItem(), visibility);
         FileChooser chooser = new FileChooser();
@@ -389,7 +424,7 @@ public class HistoryController {
             showError("Visible History Export", "No visible history entries to export.");
             return;
         }
-        SecretVisibility visibility = visibilityCombo == null ? SecretVisibility.REDACTED : visibilityCombo.getValue();
+        SecretVisibilityProfile visibility = selectedVisibility();
         String record = com.cryptocarver.utils.HistoryRecordExporter.toJson(
                 new java.util.ArrayList<>(historyTable.getItems()), visibility);
         FileChooser chooser = new FileChooser();
@@ -439,13 +474,13 @@ public class HistoryController {
             showError("Recipe Export", "Select a history entry first.");
             return;
         }
-        HistoryItem item = historyTable.getSelectionModel().getSelectedItem();
+        HistoryCommand item = historyTable.getSelectionModel().getSelectedItem();
         OperationRecipe recipe;
         if (item.getStructuredDetails() != null && !item.getStructuredDetails().isEmpty()) {
             recipe = new OperationRecipe(
                 item.getOperation(),
                 item.getStructuredDetails(),
-                AppSettings.getInstance().getSecretVisibility()
+                AppSettings.getInstance().getSecretVisibilityProfile()
             );
         } else {
             showError("Recipe Export", "Legacy operations without structured details cannot be exported securely.");
@@ -479,8 +514,8 @@ public class HistoryController {
             showError("Report Export", "Select a history entry first.");
             return;
         }
-        HistoryItem item = historyTable.getSelectionModel().getSelectedItem();
-        SecretVisibility visibility = visibilityCombo == null ? SecretVisibility.REDACTED : visibilityCombo.getValue();
+        HistoryCommand item = historyTable.getSelectionModel().getSelectedItem();
+        SecretVisibilityProfile visibility = selectedVisibility();
         String report = com.cryptocarver.utils.HistoryReportExporter.toMarkdown(item, visibility);
 
         FileChooser chooser = new FileChooser();
@@ -504,7 +539,7 @@ public class HistoryController {
             showError("Report Copy", "Select a history entry first.");
             return;
         }
-        SecretVisibility visibility = visibilityCombo == null ? SecretVisibility.REDACTED : visibilityCombo.getValue();
+        SecretVisibilityProfile visibility = selectedVisibility();
         String report = com.cryptocarver.utils.HistoryReportExporter.toMarkdown(
                 historyTable.getSelectionModel().getSelectedItem(), visibility);
         ClipboardContent content = new ClipboardContent();
@@ -515,10 +550,10 @@ public class HistoryController {
 
     @FXML
     private void handleCompareHistory(ActionEvent event) {
-        List<HistoryItem> selected = historyTable.getSelectionModel().getSelectedItems();
+        List<HistoryCommand> selected = historyTable.getSelectionModel().getSelectedItems();
         if (selected == null || selected.size() != 2) return;
 
-        SecretVisibility visibility = visibilityCombo == null ? SecretVisibility.REDACTED : visibilityCombo.getValue();
+        SecretVisibilityProfile visibility = selectedVisibility();
         List<HistoryComparator.DiffEntry> diffs = HistoryComparator.compare(selected.get(0), selected.get(1), visibility);
 
         TableView<HistoryComparator.DiffEntry> diffTable = new TableView<>();

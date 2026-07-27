@@ -4,7 +4,7 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.ClipboardEntry;
 import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.OperationDetail;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -118,16 +118,16 @@ public class ClipboardShelfController {
         String displayValue = getMaskedValue(entry, false);
         detailsArea.setText(displayValue);
 
-        SecretVisibility visibility = AppSettings.getInstance().getSecretVisibility();
+        SecretVisibilityProfile visibility = AppSettings.getInstance().getSecretVisibilityProfile();
         boolean laboratoryGeneratedKey = isLaboratoryGeneratedKey(entry);
-        boolean isRedacted = isSensitive && !laboratoryGeneratedKey && visibility == SecretVisibility.REDACTED;
-        boolean isMasked = isSensitive && !laboratoryGeneratedKey && visibility == SecretVisibility.MASKED;
+        boolean isRedacted = isSensitive && !laboratoryGeneratedKey && visibility == SecretVisibilityProfile.REDACTED;
+        boolean isMasked = isSensitive && !laboratoryGeneratedKey && visibility == SecretVisibilityProfile.MASKED;
 
         boolean canCopy = !isRedacted && !isMasked;
 
         warningLabel.setVisible(isSensitive);
         if (isSensitive) {
-            warningLabel.setText(visibility == SecretVisibility.FULL_LAB
+            warningLabel.setText(visibility == SecretVisibilityProfile.FULL_LAB
                 ? "⚠️ Sensitive data displayed (Unsafe Lab mode)"
                 : "⚠️ Sensitive data (Masked/Redacted)");
         }
@@ -147,10 +147,10 @@ public class ClipboardShelfController {
                               entry.getClassification() == OperationDetail.Classification.SENSITIVE;
 
         if (isSensitive && !isLaboratoryGeneratedKey(entry)) {
-            SecretVisibility visibility = AppSettings.getInstance().getSecretVisibility();
-            if (visibility == SecretVisibility.REDACTED) {
+            SecretVisibilityProfile visibility = AppSettings.getInstance().getSecretVisibilityProfile();
+            if (visibility == SecretVisibilityProfile.REDACTED) {
                 return "[REDACTED]";
-            } else if (visibility == SecretVisibility.MASKED) {
+            } else if (visibility == SecretVisibilityProfile.MASKED) {
                 if (val.length() <= 8) return "********";
                 return val.substring(0, 4) + "...[MASKED]..." + val.substring(val.length() - 4);
             }

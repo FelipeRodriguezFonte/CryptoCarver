@@ -2,7 +2,7 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -24,16 +24,16 @@ class OperationResultRendererTest {
         OperationResult secret = OperationResult.forOperation("Secret export")
                 .enrichedOutput("PRIVATE", OperationDetail.Classification.SECRET)
                 .build();
-        assertEquals("PRIVATE", OperationResultRenderer.render(secret, SecretVisibility.FULL_LAB));
-        assertEquals("***MASKED***", OperationResultRenderer.render(secret, SecretVisibility.MASKED));
-        assertEquals("", OperationResultRenderer.render(secret, SecretVisibility.REDACTED));
+        assertEquals("PRIVATE", OperationResultRenderer.render(secret, SecretVisibilityProfile.FULL_LAB));
+        assertEquals("***MASKED***", OperationResultRenderer.render(secret, SecretVisibilityProfile.MASKED));
+        assertEquals("", OperationResultRenderer.render(secret, SecretVisibilityProfile.REDACTED));
         assertEquals("", OperationResultRenderer.render(secret, null), "Null policy must fail closed");
 
         OperationResult sensitive = OperationResult.forOperation("Ciphertext")
                 .output("DATA".getBytes(StandardCharsets.UTF_8), OperationDetail.Classification.SENSITIVE)
                 .build();
-        assertEquals("***MASKED***", OperationResultRenderer.render(sensitive, SecretVisibility.MASKED));
-        assertEquals("DATA", OperationResultRenderer.render(sensitive, SecretVisibility.FULL_LAB));
+        assertEquals("***MASKED***", OperationResultRenderer.render(sensitive, SecretVisibilityProfile.MASKED));
+        assertEquals("DATA", OperationResultRenderer.render(sensitive, SecretVisibilityProfile.FULL_LAB));
     }
 
     @Test
@@ -44,8 +44,8 @@ class OperationResultRendererTest {
                 .build();
 
         assertEquals(OperationDetail.Classification.SECRET, OperationResultRenderer.classification(result));
-        assertEquals("***MASKED***", OperationResultRenderer.render(result, SecretVisibility.MASKED));
-        assertEquals("", OperationResultRenderer.render(result, SecretVisibility.REDACTED));
+        assertEquals("***MASKED***", OperationResultRenderer.render(result, SecretVisibilityProfile.MASKED));
+        assertEquals("", OperationResultRenderer.render(result, SecretVisibilityProfile.REDACTED));
     }
 
     @Test
@@ -56,6 +56,6 @@ class OperationResultRendererTest {
                 .build();
 
         assertEquals("Operation: Validate Certificate\nStatus: Valid\nSubject: CN=Test",
-                OperationResultRenderer.render(result, SecretVisibility.REDACTED));
+                OperationResultRenderer.render(result, SecretVisibilityProfile.REDACTED));
     }
 }

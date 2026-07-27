@@ -16,7 +16,7 @@ class ScreenConfigurationCodecTest {
         state.put("CipherController.symmetricKeyField", "00112233445566778899AABBCCDDEEFF");
         state.put("CipherController.ivField", "00112233445566778899AABB");
         state.put("CipherController.fileCipherCompactCbcCheck", true);
-        return new ScreenConfiguration("Symmetric Ciphers", "CIPHER", state);
+        return new ScreenConfiguration("Symmetric Ciphers", "CIPHER", state, SecretVisibilityProfile.FULL_LAB);
     }
 
     @Test

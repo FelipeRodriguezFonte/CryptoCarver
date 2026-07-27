@@ -2,7 +2,7 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -17,9 +17,9 @@ final class OperationResultRenderer {
     private OperationResultRenderer() {
     }
 
-    static String render(OperationResult result, SecretVisibility visibility) {
+    static String render(OperationResult result, SecretVisibilityProfile visibility) {
         if (result == null) return "";
-        SecretVisibility policy = visibility == null ? SecretVisibility.REDACTED : visibility;
+        SecretVisibilityProfile policy = visibility == null ? SecretVisibilityProfile.REDACTED : visibility;
 
         String protectedResult = protectedValue(classification(result.getDetails()), policy);
         if (protectedResult != null) return protectedResult;
@@ -69,7 +69,7 @@ final class OperationResultRenderer {
         }
     }
 
-    private static String summary(OperationResult result, SecretVisibility policy) {
+    private static String summary(OperationResult result, SecretVisibilityProfile policy) {
         StringBuilder summary = new StringBuilder("Operation: ").append(result.getOperation());
         if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) {
             summary.append("\nStatus: ").append(result.getStatusMessage());
@@ -85,12 +85,12 @@ final class OperationResultRenderer {
     }
 
     /** Null means visible, an empty string means redacted, otherwise the replacement text. */
-    private static String protectedValue(OperationDetail.Classification classification, SecretVisibility policy) {
+    private static String protectedValue(OperationDetail.Classification classification, SecretVisibilityProfile policy) {
         if (classification == OperationDetail.Classification.SECRET) {
-            if (policy == SecretVisibility.REDACTED) return "";
-            if (policy == SecretVisibility.MASKED) return "***MASKED***";
+            if (policy == SecretVisibilityProfile.REDACTED) return "";
+            if (policy == SecretVisibilityProfile.MASKED) return "***MASKED***";
         } else if (classification == OperationDetail.Classification.SENSITIVE
-                && policy != SecretVisibility.FULL_LAB) {
+                && policy != SecretVisibilityProfile.FULL_LAB) {
             return "***MASKED***";
         }
         return null;

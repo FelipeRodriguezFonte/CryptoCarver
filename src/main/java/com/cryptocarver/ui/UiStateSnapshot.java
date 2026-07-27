@@ -53,9 +53,13 @@ final class UiStateSnapshot {
         return capture(rootController, CaptureMode.NON_TEXT);
     }
 
-    /** Captures editable inputs and selectors, excluding generated/read-only results. */
     static Map<String, Object> capturePortableConfiguration(Object rootController) {
         return capture(rootController, CaptureMode.EDITABLE_INPUTS);
+    }
+
+    /** Captures editable inputs and selectors, redacting secret fields for safe history storage. */
+    static Map<String, Object> captureHistoryRecipe(Object rootController) {
+        return capture(rootController, CaptureMode.HISTORY_RECIPE);
     }
 
     /** Captures the controls belonging to one visible operation pane. */
@@ -82,12 +86,28 @@ final class UiStateSnapshot {
             if (mode == CaptureMode.NON_TEXT && value instanceof TextInputControl) return;
             if (mode == CaptureMode.EDITABLE_INPUTS && value instanceof TextInputControl text
                     && !text.isEditable() && !PORTABLE_READ_ONLY_ARTIFACTS.contains(key(owner, field))) return;
+
+            // Do not capture secret fields in history or configuration by default unless specifically allowed
+            // (Wait, actually we should just capture redacted values for secrets)
             Object captured = readControlValue(value);
             if (captured != null) {
-                state.put(key(owner, field), captured);
+                if (mode == CaptureMode.HISTORY_RECIPE && isSecretField(field.getName())) {
+                    state.put(key(owner, field), "[REDACTED_SECRET]");
+                } else {
+                    state.put(key(owner, field), captured);
+                }
             }
         });
         return state;
+    }
+
+    private static boolean isSecretField(String fieldName) {
+        String lower = fieldName.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("password") || lower.contains("key")
+            || lower.contains("pin") || lower.contains("secret")
+            || lower.contains("iv") || lower.contains("nonce")
+            || lower.contains("aad") || lower.contains("payload")
+            || lower.contains("token");
     }
 
     private static boolean isSharedScreenControl(Node node, Parent screenRoot) {
@@ -158,15 +178,24 @@ final class UiStateSnapshot {
         return false;
     }
 
-    static void restore(Object rootController, Map<String, Object> state) {
-        if (rootController == null || state == null || state.isEmpty()) return;
+    static List<Node> restore(Object rootController, Map<String, Object> state) {
+        List<Node> redactedNodes = new ArrayList<>();
+        if (rootController == null || state == null || state.isEmpty()) return redactedNodes;
         visitControllers(rootController, (owner, field, value) -> {
             String qualifiedKey = key(owner, field);
             Object saved = state.containsKey(qualifiedKey) ? state.get(qualifiedKey) : state.get(field.getName());
             if (saved != null || state.containsKey(qualifiedKey) || state.containsKey(field.getName())) {
-                writeControlValue(value, saved);
+                if ("[REDACTED_SECRET]".equals(saved)) {
+                    writeControlValue(value, "");
+                    if (value instanceof Node node) {
+                        redactedNodes.add(node);
+                    }
+                } else {
+                    writeControlValue(value, saved);
+                }
             }
         });
+        return redactedNodes;
     }
 
     private static void visitControllers(Object rootController, FieldVisitor visitor) {
@@ -260,6 +289,7 @@ final class UiStateSnapshot {
     private enum CaptureMode {
         FULL,
         NON_TEXT,
-        EDITABLE_INPUTS
+        EDITABLE_INPUTS,
+        HISTORY_RECIPE
     }
 }

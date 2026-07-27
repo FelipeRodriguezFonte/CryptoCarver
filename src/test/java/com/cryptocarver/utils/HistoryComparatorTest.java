@@ -1,8 +1,8 @@
 package com.cryptocarver.utils;
 
-import com.cryptocarver.model.HistoryItem;
+import com.cryptocarver.model.HistoryCommand;
 import com.cryptocarver.model.OperationDetail;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -15,14 +15,14 @@ class HistoryComparatorTest {
 
     @Test
     void testCombineAndOverride() {
-        HistoryItem item1 = new HistoryItem(
+        HistoryCommand item1 = new HistoryCommand(
                 "Op",
                 "Details",
                 Map.of("uiKey1", "uiVal1", "conflictKey", "uiConflictVal1")
         );
         item1.setStructuredDetails(List.of(OperationDetail.publicDetail("conflictKey", "structConflictVal1")));
 
-        HistoryItem item2 = new HistoryItem(
+        HistoryCommand item2 = new HistoryCommand(
                 "Op",
                 "Details",
                 Map.of("uiKey1", "uiVal2", "conflictKey", "uiConflictVal2")
@@ -47,18 +47,18 @@ class HistoryComparatorTest {
 
     @Test
     void maskedComparisonKeepsDifferenceSignalWithoutRevealingSensitiveValues() {
-        HistoryItem item1 = new HistoryItem("One", "", Map.of("unclassifiedState", "do-not-show"));
+        HistoryCommand item1 = new HistoryCommand("One", "", Map.of("unclassifiedState", "do-not-show"));
         item1.setStructuredDetails(List.of(
                 OperationDetail.publicDetail("Algorithm", "SHA-256"),
                 OperationDetail.sensitiveDetail("Input", "first secret input"),
                 OperationDetail.secretDetail("Private key", "private-one")));
-        HistoryItem item2 = new HistoryItem("Two", "", Map.of("unclassifiedState", "also-do-not-show"));
+        HistoryCommand item2 = new HistoryCommand("Two", "", Map.of("unclassifiedState", "also-do-not-show"));
         item2.setStructuredDetails(List.of(
                 OperationDetail.publicDetail("Algorithm", "SHA-256"),
                 OperationDetail.sensitiveDetail("Input", "second secret input"),
                 OperationDetail.secretDetail("Private key", "private-two")));
 
-        List<HistoryComparator.DiffEntry> masked = HistoryComparator.compare(item1, item2, SecretVisibility.MASKED);
+        List<HistoryComparator.DiffEntry> masked = HistoryComparator.compare(item1, item2, SecretVisibilityProfile.MASKED);
         HistoryComparator.DiffEntry input = masked.stream().filter(d -> d.key.equals("Input")).findFirst().orElseThrow();
         assertEquals("***MASKED***", input.value1);
         assertEquals("***MASKED***", input.value2);
@@ -66,10 +66,10 @@ class HistoryComparatorTest {
         assertFalse(masked.stream().anyMatch(d -> d.value1.contains("secret input") || d.value2.contains("secret input")));
         assertFalse(masked.stream().anyMatch(d -> d.key.equals("unclassifiedState")));
 
-        List<HistoryComparator.DiffEntry> redacted = HistoryComparator.compare(item1, item2, SecretVisibility.REDACTED);
+        List<HistoryComparator.DiffEntry> redacted = HistoryComparator.compare(item1, item2, SecretVisibilityProfile.REDACTED);
         assertFalse(redacted.stream().anyMatch(d -> d.key.equals("Private key")));
 
-        List<HistoryComparator.DiffEntry> unsafe = HistoryComparator.compare(item1, item2, SecretVisibility.FULL_LAB);
+        List<HistoryComparator.DiffEntry> unsafe = HistoryComparator.compare(item1, item2, SecretVisibilityProfile.FULL_LAB);
         HistoryComparator.DiffEntry unsafeInput = unsafe.stream().filter(d -> d.key.equals("Input")).findFirst().orElseThrow();
         assertEquals("first secret input", unsafeInput.value1);
         assertEquals("second secret input", unsafeInput.value2);

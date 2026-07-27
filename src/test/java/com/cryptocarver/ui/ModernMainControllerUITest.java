@@ -386,8 +386,8 @@ class ModernMainControllerUITest {
                 throw new RuntimeException(e);
             }
         });
-        assertFalse(historyStateRef.get().containsKey("CipherController.cipherInputArea"));
-        assertFalse(historyStateRef.get().containsKey("CipherController.symmetricKeyField"));
+        assertEquals("module payload", historyStateRef.get().get("CipherController.cipherInputArea"));
+        assertEquals("[REDACTED_SECRET]", historyStateRef.get().get("CipherController.symmetricKeyField"));
         assertEquals(true, historyStateRef.get().get("CipherController.fileCipherCompactCbcCheck"));
 
         runAndWait(() -> {
@@ -498,7 +498,7 @@ class ModernMainControllerUITest {
         assertFalse(ModernMainController.isLegacyKeyGenerationConfiguration(configurationRef.get()));
         com.cryptocarver.model.ScreenConfiguration legacy = new com.cryptocarver.model.ScreenConfiguration(
                 "Key Generation", "KEYS_SYMMETRIC",
-                java.util.Map.of("KeysController.keyTypeCombo", "AES-256"));
+                java.util.Map.of("KeysController.keyTypeCombo", "AES-256"), com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
         assertTrue(ModernMainController.isLegacyKeyGenerationConfiguration(legacy));
 
         com.google.gson.JsonObject legacyJson = com.google.gson.JsonParser
@@ -1021,7 +1021,7 @@ class ModernMainControllerUITest {
                     .detail("Algorithm", "SHA-256")
                     .build());
 
-            com.cryptocarver.model.HistoryItem item = controller.getHistoryManager().getHistoryItems().get(0);
+            com.cryptocarver.model.HistoryCommand item = controller.getHistoryManager().getHistoryItems().get(0);
             assertTrue(item.getStructuredDetails().stream().anyMatch(detail ->
                     detail.name().startsWith("Input")
                             && "hash input".equals(detail.value())
@@ -1032,11 +1032,11 @@ class ModernMainControllerUITest {
                             && detail.classification() == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE));
 
             String masked = com.cryptocarver.utils.HistoryReportExporter.toMarkdown(
-                    item, com.cryptocarver.model.SecretVisibility.MASKED);
+                    item, com.cryptocarver.model.SecretVisibilityProfile.MASKED);
             assertFalse(masked.contains("hash input"));
             assertTrue(masked.contains("***MASKED***"));
             String unsafe = com.cryptocarver.utils.HistoryReportExporter.toMarkdown(
-                    item, com.cryptocarver.model.SecretVisibility.FULL_LAB);
+                    item, com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
             assertTrue(unsafe.contains("hash input"));
             assertTrue(unsafe.contains("012345"));
         });
@@ -1070,7 +1070,7 @@ class ModernMainControllerUITest {
                 javafx.scene.control.TableView<?> table = getField(historyController, "historyTable");
                 assertEquals(2, table.getItems().size());
                 assertTrue(table.getItems().stream()
-                        .map(com.cryptocarver.model.HistoryItem.class::cast)
+                        .map(com.cryptocarver.model.HistoryCommand.class::cast)
                         .anyMatch(item -> item.getOperation().equals("Hashing")));
 
                 javafx.scene.control.TextField filter = getField(historyController, "historyFilterField");
@@ -1079,7 +1079,7 @@ class ModernMainControllerUITest {
                 assertEquals("2 operations", summary.getText());
                 filter.setText("result");
                 assertEquals(1, table.getItems().size(), "Filtering by a detail name must not search detail values");
-                assertEquals("Hashing", ((com.cryptocarver.model.HistoryItem) table.getItems().get(0)).getOperation());
+                assertEquals("Hashing", ((com.cryptocarver.model.HistoryCommand) table.getItems().get(0)).getOperation());
                 assertEquals("1 of 2 operations", summary.getText());
                 filter.clear();
                 assertEquals(2, table.getItems().size());
@@ -1087,18 +1087,18 @@ class ModernMainControllerUITest {
                 assertTrue(moduleFilter.getItems().contains("Cipher"));
                 moduleFilter.setValue("Cipher");
                 assertEquals(1, table.getItems().size());
-                assertEquals("File Cipher (Streaming)", ((com.cryptocarver.model.HistoryItem) table.getItems().get(0)).getOperation());
+                assertEquals("File Cipher (Streaming)", ((com.cryptocarver.model.HistoryCommand) table.getItems().get(0)).getOperation());
                 moduleFilter.setValue("Generic");
                 table.getSelectionModel().selectFirst();
                 javafx.scene.control.TableView<com.cryptocarver.model.OperationDetail> details = getField(historyController, "detailsTable");
-                javafx.scene.control.ComboBox<com.cryptocarver.model.SecretVisibility> visibility = getField(historyController, "visibilityCombo");
-                visibility.setValue(com.cryptocarver.model.SecretVisibility.FULL_LAB);
+                javafx.scene.control.ComboBox<com.cryptocarver.model.SecretVisibilityProfile> visibility = getField(historyController, "visibilityCombo");
+                visibility.setValue(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
                 visibility.getOnAction().handle(new javafx.event.ActionEvent());
                 assertTrue(details.getItems().stream().anyMatch(detail -> "all-visible-in-lab".equals(detail.value())));
-                visibility.setValue(com.cryptocarver.model.SecretVisibility.MASKED);
+                visibility.setValue(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
                 visibility.getOnAction().handle(new javafx.event.ActionEvent());
                 assertTrue(details.getItems().stream().anyMatch(detail -> "***MASKED***".equals(detail.value())));
-                visibility.setValue(com.cryptocarver.model.SecretVisibility.FULL_LAB);
+                visibility.setValue(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
                 visibility.getOnAction().handle(new javafx.event.ActionEvent());
                 javafx.scene.control.Button exportReport = getField(historyController, "exportReportBtn");
                 javafx.scene.control.Button copyReport = getField(historyController, "copyReportBtn");
@@ -1146,18 +1146,18 @@ class ModernMainControllerUITest {
 
                 assertEquals("EDDSA-RESULT", resolveOutput.invoke(controller));
 
-                com.cryptocarver.model.SecretVisibility originalVisibility = com.cryptocarver.model.AppSettings.getInstance()
-                        .getSecretVisibility();
+                com.cryptocarver.model.SecretVisibilityProfile originalVisibility = com.cryptocarver.model.AppSettings.getInstance()
+                        .getSecretVisibilityProfile();
                 try {
                     com.cryptocarver.model.AppSettings.getInstance()
-                            .setSecretVisibility(com.cryptocarver.model.SecretVisibility.REDACTED);
+                            .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
                     controller.publish(com.cryptocarver.model.OperationResult.forOperation("Signature Verification")
                             .detail(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", "must-not-appear"))
                             .status("Signature is valid").build());
                     String noOutputResult = (String) resolveOutput.invoke(controller);
                     assertEquals("", noOutputResult, "REDACTED mode completely hides SECRET operation results");
                 } finally {
-                    com.cryptocarver.model.AppSettings.getInstance().setSecretVisibility(originalVisibility);
+                    com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(originalVisibility);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -1547,7 +1547,7 @@ class ModernMainControllerUITest {
                 com.cryptocarver.model.HistoryManager hm = getField(mainControllerRef.get(), "historyManager");
                 assertNotNull(hm, "HistoryManager should be initialized");
                 assertFalse(hm.getHistoryItems().isEmpty(), "History should not be empty");
-                com.cryptocarver.model.HistoryItem item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
+                com.cryptocarver.model.HistoryCommand item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
                 assertEquals("Batch Runner", item.getOperation());
                 assertTrue(item.getDetails().contains("Rows"), "History should contain Rows");
                 assertTrue(item.getDetails().contains("2"), "History should contain 2");
@@ -1584,7 +1584,7 @@ class ModernMainControllerUITest {
 
                 com.cryptocarver.model.HistoryManager hm = getField(mainControllerRef.get(), "historyManager");
                 if (hm != null && !hm.getHistoryItems().isEmpty()) {
-                    com.cryptocarver.model.HistoryItem item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
+                    com.cryptocarver.model.HistoryCommand item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
                     // It shouldn't be the cancelled batch. The last one should be the previous successful batch.
                     assertFalse(item.getDetails().contains("50000"), "Cancelled batch should not be published");
                 }
@@ -1629,7 +1629,7 @@ class ModernMainControllerUITest {
                 assertNotNull(hm, "HistoryManager should be initialized");
                 assertFalse(hm.getHistoryItems().isEmpty(), "History should not be empty");
 
-                com.cryptocarver.model.HistoryItem item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
+                com.cryptocarver.model.HistoryCommand item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
                 assertTrue(item.getOperation().startsWith("Hashing:"), "Operation should start with Hashing:, but was " + item.getOperation());
                 assertTrue(item.getOperation().contains("SHA-256"), "Operation should contain SHA-256");
                 assertTrue(item.getDetails().contains("Algorithm"), "Details should include Algorithm");
@@ -1637,6 +1637,142 @@ class ModernMainControllerUITest {
                 throw new RuntimeException(e);
             }
         });
+    }
+    @Test
+    void testHistoryReopenCipherPopulatesFields() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+        javafx.scene.control.TextArea input = getField(cipher, "cipherInputArea");
+        javafx.scene.control.TextField key = getField(cipher, "symmetricKeyField");
+
+        runAndWait(() -> {
+            key.setText("pre-existing-secret-that-must-be-cleared");
+            controller.restoreOperationState(java.util.Map.of(
+                    "CipherController.cipherInputArea", "restored payload",
+                    "CipherController.symmetricKeyField", "[REDACTED_SECRET]"
+            ), "Symmetric Ciphers");
+        });
+
+        assertEquals("restored payload", input.getText());
+        assertEquals("", key.getText(), "Reopen should clear redacted secrets and never leave [REDACTED_SECRET] in the field");
+        assertTrue(((javafx.scene.Node) getField(controller, "cipherContainer")).isVisible());
+    }
+
+    @Test
+    void testHistoryReopenHashingPopulatesFields() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.TextArea input = getField(generic, "hashInputArea");
+        javafx.scene.control.ComboBox<String> algo = getField(generic, "hashAlgorithmCombo");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(
+                    "GenericController.hashInputArea", "hash this",
+                    "GenericController.hashAlgorithmCombo", "SHA-512"
+            ), "Hashing: SHA-512");
+        });
+
+        assertEquals("hash this", input.getText());
+        assertEquals("SHA-512", algo.getValue());
+        assertTrue(((javafx.scene.Node) getField(controller, "genericContainer")).isVisible());
+    }
+
+    @Test
+    void testHistoryReopenKeyGenerationPopulatesFields() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        KeysController keys = getField(controller, "keysContainerController");
+        javafx.scene.control.ComboBox<String> keyType = getField(keys, "keyTypeCombo");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(
+                    "KeysController.keyTypeCombo", "ChaCha20"
+            ), "Key Generation");
+        });
+
+        assertEquals("ChaCha20", keyType.getValue());
+        assertTrue(((javafx.scene.Node) getField(controller, "keysContainer")).isVisible());
+    }
+
+    @Test
+    void testHistoryReopenCertificatesPopulatesFields() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CertificatesController certs = getField(controller, "certificatesContainerController");
+        javafx.scene.control.TextField subject = getField(certs, "certCNField");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(
+                    "CertificatesController.certCNField", "CN=Test"
+            ), "Generate Certificate");
+        });
+
+        assertEquals("CN=Test", subject.getText());
+        assertTrue(((javafx.scene.Node) getField(controller, "certificatesContainer")).isVisible());
+    }
+
+    @Test
+    void testHistoryReopenPaymentsPopulatesFields() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        PaymentsController payments = getField(controller, "paymentsContainerController");
+        javafx.scene.control.TextField pan = getField(payments, "panFieldEncode");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(
+                    "PaymentsController.panFieldEncode", "123456789012345"
+            ), "PIN Generation");
+        });
+
+        assertEquals("123456789012345", pan.getText());
+        assertTrue(((javafx.scene.Node) getField(controller, "paymentsContainer")).isVisible());
     }
 
 }

@@ -3,7 +3,7 @@ package com.cryptocarver.ui;
 import com.cryptocarver.model.ClipboardEntry;
 import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.OperationDetail;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import javafx.collections.FXCollections;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -114,7 +114,7 @@ public final class ClipboardShelfWindow {
         stage.show();
     }
 
-    static String buildClipboardText(Collection<ClipboardEntry> entries, SecretVisibility visibility) {
+    static String buildClipboardText(Collection<ClipboardEntry> entries, SecretVisibilityProfile visibility) {
         if (entries == null || entries.isEmpty()) {
             return "";
         }
@@ -125,13 +125,13 @@ public final class ClipboardShelfWindow {
                 .collect(Collectors.joining("\n\n"));
     }
 
-    private static boolean isCopyAllowed(ClipboardEntry entry, SecretVisibility visibility) {
+    private static boolean isCopyAllowed(ClipboardEntry entry, SecretVisibilityProfile visibility) {
         if (entry == null) {
             return false;
         }
         return entry.getClassification() == OperationDetail.Classification.PUBLIC
                 || isLaboratoryGeneratedKey(entry)
-                || visibility == SecretVisibility.FULL_LAB;
+                || visibility == SecretVisibilityProfile.FULL_LAB;
     }
 
     private static boolean isLaboratoryGeneratedKey(ClipboardEntry entry) {
@@ -139,12 +139,12 @@ public final class ClipboardShelfWindow {
         return source != null && source.startsWith("Generate ") && source.contains(" Key");
     }
 
-    private static SecretVisibility currentVisibility() {
-        return com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility();
+    private static SecretVisibilityProfile currentVisibility() {
+        return com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
     }
 
-    private static String policyText(SecretVisibility visibility) {
-        return visibility == SecretVisibility.FULL_LAB
+    private static String policyText(SecretVisibilityProfile visibility) {
+        return visibility == SecretVisibilityProfile.FULL_LAB
                 ? "⚠ Unsafe lab: sensitive values may be copied."
                 : "Sensitive and secret values are locked. Switch to Unsafe lab to copy them.";
     }

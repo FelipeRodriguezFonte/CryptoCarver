@@ -1,6 +1,6 @@
 package com.cryptocarver.service;
 
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.OctetKeyPair;
@@ -281,12 +281,12 @@ public class KeyCertificateFormatService {
         return res;
     }
 
-    public String convert(DetectionResult source, String targetFormat, SecretVisibility policy) throws Exception {
+    public String convert(DetectionResult source, String targetFormat, SecretVisibilityProfile policy) throws Exception {
         if (source.isEncrypted && source.type != FormatType.PKCS12) {
             throw new Exception("Cannot convert encrypted key without decryption logic.");
         }
 
-        if (source.hasPrivateKey && policy != SecretVisibility.FULL_LAB) {
+        if (source.hasPrivateKey && policy != SecretVisibilityProfile.FULL_LAB) {
             throw new Exception("Policy prevents exporting private keys. Required: FULL_LAB");
         }
 
@@ -456,7 +456,7 @@ public class KeyCertificateFormatService {
         return res;
     }
 
-    public String extractFromKeystore(byte[] raw, String storeType, char[] password, String alias, String targetFormat, SecretVisibility visibility) throws Exception {
+    public String extractFromKeystore(byte[] raw, String storeType, char[] password, String alias, String targetFormat, SecretVisibilityProfile visibility) throws Exception {
         KeyStore ks;
         if ("BKS".equalsIgnoreCase(storeType)) {
             ks = KeyStore.getInstance("BKS", "BC");
@@ -498,8 +498,8 @@ public class KeyCertificateFormatService {
                     tempRes.parsedObject = SubjectPublicKeyInfo.getInstance(cert.getPublicKey().getEncoded());
                     return convert(tempRes, targetFormat.replace(" Public", ""), visibility);
                 } else if (targetFormat.contains("Private")) {
-                    if (visibility != SecretVisibility.FULL_LAB) {
-                        throw new Exception("Private key export is blocked by current SecretVisibility policy.");
+                    if (visibility != SecretVisibilityProfile.FULL_LAB) {
+                        throw new Exception("Private key export is blocked by current SecretVisibilityProfile policy.");
                     }
                     java.security.Key key = ks.getKey(alias, password);
                     if (!(key instanceof PrivateKey)) throw new Exception("Not a private key entry");

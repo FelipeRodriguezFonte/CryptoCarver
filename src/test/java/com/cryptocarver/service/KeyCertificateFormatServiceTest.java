@@ -1,6 +1,6 @@
 package com.cryptocarver.service;
 
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -73,7 +73,7 @@ public class KeyCertificateFormatServiceTest {
     public void testConvertPublicToJWK() throws Exception {
         byte[] pubBytes = rsaPair.getPublic().getEncoded();
         KeyCertificateFormatService.DetectionResult res = service.detect(pubBytes, null);
-        String jwk = service.convert(res, "JWK", SecretVisibility.FULL_LAB);
+        String jwk = service.convert(res, "JWK", SecretVisibilityProfile.FULL_LAB);
         assertTrue(jwk.contains("\"kty\":\"RSA\""));
     }
 
@@ -82,7 +82,7 @@ public class KeyCertificateFormatServiceTest {
         byte[] privBytes = rsaPair.getPrivate().getEncoded();
         KeyCertificateFormatService.DetectionResult res = service.detect(privBytes, null);
         Exception e = assertThrows(Exception.class, () -> {
-            service.convert(res, "PEM", SecretVisibility.MASKED);
+            service.convert(res, "PEM", SecretVisibilityProfile.MASKED);
         });
         assertTrue(e.getMessage().contains("Policy prevents exporting"));
     }
@@ -91,7 +91,7 @@ public class KeyCertificateFormatServiceTest {
     public void testConvertPrivateFullLab() throws Exception {
         byte[] privBytes = rsaPair.getPrivate().getEncoded();
         KeyCertificateFormatService.DetectionResult res = service.detect(privBytes, null);
-        String pem = service.convert(res, "PEM", SecretVisibility.FULL_LAB);
+        String pem = service.convert(res, "PEM", SecretVisibilityProfile.FULL_LAB);
         assertTrue(pem.contains("BEGIN PRIVATE KEY"));
     }
 

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.AppSettings;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
@@ -152,15 +152,15 @@ public class ExpandResultAuditTest {
         publishOnFxThread(controller, result);
 
         // FULL_LAB -> Should be completely visible
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
         assertEquals(secretText, resolveTextOnFxThread(controller));
 
         // MASKED -> Should be masked explicitly
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         assertEquals("***MASKED***", resolveTextOnFxThread(controller));
 
         // REDACTED -> Should not be available at all
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
         assertEquals("", resolveTextOnFxThread(controller));
     }
 
@@ -179,15 +179,15 @@ public class ExpandResultAuditTest {
         publishOnFxThread(controller, result);
 
         // FULL_LAB -> Visible
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
         assertEquals(reportText, resolveTextOnFxThread(controller));
 
         // MASKED -> Because there's a SECRET detail, the entire payload is masked
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         assertEquals("***MASKED***", resolveTextOnFxThread(controller));
 
         // REDACTED -> Blocked entirely
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
         assertEquals("", resolveTextOnFxThread(controller));
     }
 
@@ -268,7 +268,7 @@ public class ExpandResultAuditTest {
         resultAreaTracker(controller).focus(dummyArea);
 
         // 1. Enriched SECRET + FULL_LAB -> Shelf contains SECRET entry
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
         invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
             new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
@@ -278,7 +278,7 @@ public class ExpandResultAuditTest {
         assertEquals(OperationDetail.Classification.SECRET, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getClassification());
 
         // 2. Enriched SECRET + MASKED -> Shelf does not add entry (blocked)
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
         invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
             new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
@@ -310,7 +310,7 @@ public class ExpandResultAuditTest {
         javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
         resultAreaTracker(controller).focus(dummyArea);
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
         invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
             new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
@@ -342,7 +342,7 @@ public class ExpandResultAuditTest {
         newArea.setText(newPublicText);
         resultAreaTracker(controller).markUpdated(newArea);
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
 
         // 3. User tries to select and copy from the OLD area
@@ -379,7 +379,7 @@ public class ExpandResultAuditTest {
         dummyArea.setText(sensitiveText);
         resultAreaTracker(controller).markUpdated(dummyArea);
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
 
         // Context menu Copy on partial selection -> blocked in MASKED for SENSITIVE
@@ -416,7 +416,7 @@ public class ExpandResultAuditTest {
         dummyArea.setText(sensitiveText);
         resultAreaTracker(controller).markUpdated(dummyArea);
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
 
         // Context menu Copy on partial selection -> blocked in REDACTED for SENSITIVE
@@ -447,7 +447,7 @@ public class ExpandResultAuditTest {
 
         resultAreaTracker(controller).register(privateArea);
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
         assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
 
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
@@ -458,7 +458,7 @@ public class ExpandResultAuditTest {
         assertEquals(OperationDetail.Classification.SECRET,
                 com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getClassification());
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
         com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
         invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
@@ -466,7 +466,7 @@ public class ExpandResultAuditTest {
                 new Object[]{privateArea, null});
         assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.REDACTED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
         assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
     }
 

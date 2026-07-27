@@ -1,7 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDetail;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.service.KeyCertificateFormatService;
 import javafx.application.Platform;
@@ -104,7 +104,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
 
         controller.initialize();
 
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.FULL_LAB);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
     }
 
     // We cannot easily invoke private action methods without reflection, but since they are private,
@@ -138,7 +138,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
         invokeMethod("handleSendToShelf");
         // Verify clipboard doesn't blow up, and classification logic executes correctly.
         // If we change to MASKED, it should be blocked.
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
 
         // This will show an error and return without doing anything, preventing exception or copying.
         invokeMethod("handleSendToShelf");
@@ -166,7 +166,7 @@ public class KeyCertificateWorkbenchUIFlowTest {
         assertTrue(controller.workbenchOutputArea.getText().contains("BEGIN CERTIFICATE"));
 
         // Test that Send to Shelf works even in MASKED because it's PUBLIC
-        AppSettings.getInstance().setSecretVisibility(SecretVisibility.MASKED);
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         invokeMethod("handleSendToShelf");
     }
 }

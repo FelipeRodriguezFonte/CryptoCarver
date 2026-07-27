@@ -45,6 +45,15 @@
                     <MenuItem text="Reset to Defaults" onAction="#handleResetView"/>
                 </Menu>
 
+                <Menu text="Security">
+                    <fx:define>
+                        <ToggleGroup fx:id="visibilityProfileGroup"/>
+                    </fx:define>
+                    <RadioMenuItem text="Visibility: FULL_LAB (Debug/Learning)" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
+                    <RadioMenuItem text="Visibility: MASKED (Classroom/Demo)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
+                    <RadioMenuItem text="Visibility: REDACTED (Strict/Production)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
+                </Menu>
+
                 <Menu text="Tools">
                     <MenuItem text="Epoch Converter" onAction="#handleEpochConverter" accelerator="Ctrl+T"/>
                     <MenuItem text="JSON Formatter" onAction="#handleJsonFormatter" accelerator="Ctrl+J"/>
@@ -240,7 +249,7 @@
                                     <Label text="HKDF SHA256 32B" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
                                 </VBox>
                                 <Region HBox.hgrow="ALWAYS"/>
-                                <Button text="Rerun" style="-fx-font-size: 10px; -fx-padding: 2 6;"/>
+                                <Button text="Reopen" style="-fx-font-size: 10px; -fx-padding: 2 6;"/>
                             </HBox>
 
                             <HBox styleClass="history-item" spacing="8" alignment="CENTER_LEFT">

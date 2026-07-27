@@ -32,12 +32,12 @@ public final class AppSettings {
 
     public static AppSettings getInstance() { return INSTANCE; }
 
-    public synchronized SecretVisibility getSecretVisibility() {
-        return data.secretVisibility == null ? SecretVisibility.FULL_LAB : data.secretVisibility;
+    public synchronized SecretVisibilityProfile getSecretVisibilityProfile() {
+        return data.secretVisibility == null ? SecretVisibilityProfile.FULL_LAB : data.secretVisibility;
     }
 
-    public synchronized void setSecretVisibility(SecretVisibility visibility) {
-        data.secretVisibility = visibility == null ? SecretVisibility.FULL_LAB : visibility;
+    public synchronized void setSecretVisibilityProfile(SecretVisibilityProfile visibility) {
+        data.secretVisibility = visibility == null ? SecretVisibilityProfile.FULL_LAB : visibility;
         save();
     }
 
@@ -155,6 +155,6 @@ public final class AppSettings {
         private String ebcdicDirection = "";
         private List<TrustStoreProfile> trustStoreProfiles = new ArrayList<>();
         private List<Pkcs11Profile> pkcs11Profiles = new ArrayList<>();
-        private SecretVisibility secretVisibility = SecretVisibility.FULL_LAB;
+        private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
     }
 }

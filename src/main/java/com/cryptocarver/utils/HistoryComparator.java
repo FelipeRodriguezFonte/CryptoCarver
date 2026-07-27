@@ -1,8 +1,8 @@
 package com.cryptocarver.utils;
 
-import com.cryptocarver.model.HistoryItem;
+import com.cryptocarver.model.HistoryCommand;
 import com.cryptocarver.model.OperationDetail;
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -28,7 +28,7 @@ public class HistoryComparator {
         }
     }
 
-    public static List<DiffEntry> compare(HistoryItem item1, HistoryItem item2) {
+    public static List<DiffEntry> compare(HistoryCommand item1, HistoryCommand item2) {
         Map<String, String> map1 = extractMap(item1);
         Map<String, String> map2 = extractMap(item2);
 
@@ -55,8 +55,8 @@ public class HistoryComparator {
      * classification. Diff highlighting still reflects the underlying values,
      * without showing them.
      */
-    public static List<DiffEntry> compare(HistoryItem item1, HistoryItem item2, SecretVisibility visibility) {
-        SecretVisibility policy = visibility == null ? SecretVisibility.REDACTED : visibility;
+    public static List<DiffEntry> compare(HistoryCommand item1, HistoryCommand item2, SecretVisibilityProfile visibility) {
+        SecretVisibilityProfile policy = visibility == null ? SecretVisibilityProfile.REDACTED : visibility;
         Map<String, VisibleValue> map1 = extractVisibleDetails(item1, policy);
         Map<String, VisibleValue> map2 = extractVisibleDetails(item2, policy);
         List<String> allKeys = new ArrayList<>();
@@ -79,21 +79,21 @@ public class HistoryComparator {
 
     private record VisibleValue(String raw, String display) { }
 
-    private static Map<String, VisibleValue> extractVisibleDetails(HistoryItem item, SecretVisibility policy) {
+    private static Map<String, VisibleValue> extractVisibleDetails(HistoryCommand item, SecretVisibilityProfile policy) {
         Map<String, VisibleValue> values = new LinkedHashMap<>();
         if (item == null || item.getStructuredDetails() == null) {
             return values;
         }
         for (OperationDetail detail : item.getStructuredDetails()) {
-            if (detail == null || (policy == SecretVisibility.REDACTED
+            if (detail == null || (policy == SecretVisibilityProfile.REDACTED
                     && detail.classification() == OperationDetail.Classification.SECRET)) {
                 continue;
             }
             String raw = detail.value() == null ? "" : detail.value();
             String display = raw;
-            if (policy == SecretVisibility.MASKED && detail.classification() != OperationDetail.Classification.PUBLIC) {
+            if (policy == SecretVisibilityProfile.MASKED && detail.classification() != OperationDetail.Classification.PUBLIC) {
                 display = "***MASKED***";
-            } else if (policy == SecretVisibility.REDACTED
+            } else if (policy == SecretVisibilityProfile.REDACTED
                     && detail.classification() == OperationDetail.Classification.SENSITIVE) {
                 display = "***MASKED***";
             }
@@ -102,12 +102,12 @@ public class HistoryComparator {
         return values;
     }
 
-    private static Map<String, String> extractMap(HistoryItem item) {
+    private static Map<String, String> extractMap(HistoryCommand item) {
         Map<String, String> map = new LinkedHashMap<>();
 
         // Add uiState first
-        if (item.getUiState() != null) {
-            for (Map.Entry<String, Object> entry : item.getUiState().entrySet()) {
+        if (item.getParameters() != null) {
+            for (Map.Entry<String, Object> entry : item.getParameters().entrySet()) {
                 map.put(entry.getKey(), entry.getValue() == null ? "" : String.valueOf(entry.getValue()));
             }
         }

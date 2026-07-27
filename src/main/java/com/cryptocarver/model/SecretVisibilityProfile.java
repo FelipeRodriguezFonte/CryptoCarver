@@ -3,7 +3,7 @@ package com.cryptocarver.model;
 /**
  * Defines the visibility policy for secrets in the application (like keys, passwords).
  */
-public enum SecretVisibility {
+public enum SecretVisibilityProfile {
     /** Show all secret values clearly (standard laboratory behavior). */
     FULL_LAB,
     /** Mask secret values (e.g. show only parts, or ***MASKED***). */

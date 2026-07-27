@@ -202,7 +202,7 @@ public class KeyCertificateWorkbenchController {
     // Visible for testing
     boolean canLoadFromShelf(ClipboardEntry selected) {
         if (selected.getClassification() == com.cryptocarver.model.OperationDetail.Classification.SECRET
-            && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibility() != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+            && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             return false;
         }
         return true;
@@ -342,7 +342,7 @@ public class KeyCertificateWorkbenchController {
                         password,
                         selected.getAlias(),
                         targetFormat,
-                        AppSettings.getInstance().getSecretVisibility());
+                        AppSettings.getInstance().getSecretVisibilityProfile());
 
                 workbenchOutputArea.setText(converted);
 
@@ -390,7 +390,7 @@ public class KeyCertificateWorkbenchController {
                 throw new Exception("Target format " + targetFormat + " is only for Keystore extractions.");
             }
 
-            String converted = formatService.convert(lastParsedResult, targetFormat, AppSettings.getInstance().getSecretVisibility());
+            String converted = formatService.convert(lastParsedResult, targetFormat, AppSettings.getInstance().getSecretVisibilityProfile());
             workbenchOutputArea.setText(converted);
             currentOutputClassification = (lastParsedResult != null && lastParsedResult.hasPrivateKey) ? OperationDetail.Classification.SECRET : OperationDetail.Classification.PUBLIC;
             publishResult("Convert to " + targetFormat, converted);
@@ -442,8 +442,8 @@ public class KeyCertificateWorkbenchController {
 
         boolean isSecret = (currentOutputClassification == OperationDetail.Classification.SECRET);
         if (isSecret) {
-            com.cryptocarver.model.SecretVisibility vis = AppSettings.getInstance().getSecretVisibility();
-            if (vis != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+            com.cryptocarver.model.SecretVisibilityProfile vis = AppSettings.getInstance().getSecretVisibilityProfile();
+            if (vis != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 if (statusReporter != null) {
                     statusReporter.showError("Security Policy", "Cannot copy SECRET material while environment is " + vis);
                 }
@@ -469,8 +469,8 @@ public class KeyCertificateWorkbenchController {
         OperationDetail.Classification classification = currentOutputClassification;
 
         if (isSecret) {
-            com.cryptocarver.model.SecretVisibility vis = AppSettings.getInstance().getSecretVisibility();
-            if (vis != com.cryptocarver.model.SecretVisibility.FULL_LAB) {
+            com.cryptocarver.model.SecretVisibilityProfile vis = AppSettings.getInstance().getSecretVisibilityProfile();
+            if (vis != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 if (statusReporter != null) {
                     statusReporter.showError("Security Policy", "Cannot copy SECRET material to Shelf while environment is " + vis);
                 }
@@ -502,12 +502,12 @@ public class KeyCertificateWorkbenchController {
             String inputStr = workbenchInputArea.getText().trim();
             // Don't leak private inputs if REDACTED or MASKED
             if (lastParsedResult != null && lastParsedResult.hasPrivateKey) {
-                if (AppSettings.getInstance().getSecretVisibility() == com.cryptocarver.model.SecretVisibility.REDACTED) {
+                if (AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.REDACTED) {
                     inputStr = "*** REDACTED ***";
                     if (!operationSuffix.contains("Summary") && !operationSuffix.contains("Validate")) {
                         output = "*** REDACTED ***";
                     }
-                } else if (AppSettings.getInstance().getSecretVisibility() == com.cryptocarver.model.SecretVisibility.MASKED) {
+                } else if (AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.MASKED) {
                     inputStr = "*** MASKED ***";
                     if (!operationSuffix.contains("Summary") && !operationSuffix.contains("Validate")) {
                         output = "*** MASKED ***";

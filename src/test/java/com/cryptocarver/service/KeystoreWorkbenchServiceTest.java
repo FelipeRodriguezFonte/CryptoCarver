@@ -1,6 +1,6 @@
 package com.cryptocarver.service;
 
-import com.cryptocarver.model.SecretVisibility;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -130,21 +130,21 @@ public class KeystoreWorkbenchServiceTest {
 
     @Test
     public void testExtractPublicCert() throws Exception {
-        String exported = service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mycert", "PEM Cert", SecretVisibility.MASKED);
+        String exported = service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mycert", "PEM Cert", SecretVisibilityProfile.MASKED);
         assertTrue(exported.contains("BEGIN CERTIFICATE"));
     }
 
     @Test
     public void testExtractPrivateKeyDeniedMasked() {
         Exception e = assertThrows(Exception.class, () -> {
-            service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mykey", "PEM Private", SecretVisibility.MASKED);
+            service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mykey", "PEM Private", SecretVisibilityProfile.MASKED);
         });
         assertTrue(e.getMessage().contains("Private key export is blocked"));
     }
 
     @Test
     public void testExtractPrivateKeyAllowedFullLab() throws Exception {
-        String exported = service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mykey", "PEM Private", SecretVisibility.FULL_LAB);
+        String exported = service.extractFromKeystore(jksBytes, "JKS", getPassword(), "mykey", "PEM Private", SecretVisibilityProfile.FULL_LAB);
         assertTrue(exported.contains("BEGIN PRIVATE KEY") || exported.contains("BEGIN RSA PRIVATE KEY"));
     }
 }

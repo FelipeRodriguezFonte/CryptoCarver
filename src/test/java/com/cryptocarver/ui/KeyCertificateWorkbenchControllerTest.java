@@ -25,33 +25,33 @@ class KeyCertificateWorkbenchControllerTest {
     @AfterEach
     void tearDown() {
         // Reset singleton to FULL_LAB for other tests
-        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibility(com.cryptocarver.model.SecretVisibility.FULL_LAB);
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
     }
 
     @Test
     void testCanLoadFromShelf_SecretWithFullLab() {
-        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibility(com.cryptocarver.model.SecretVisibility.FULL_LAB);
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
         ClipboardEntry entry = new ClipboardEntry("Label", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.SECRET, "Source");
         assertTrue(controller.canLoadFromShelf(entry));
     }
 
     @Test
     void testCanLoadFromShelf_SecretWithMasked() {
-        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibility(com.cryptocarver.model.SecretVisibility.MASKED);
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
         ClipboardEntry entry = new ClipboardEntry("Label", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.SECRET, "Source");
         assertFalse(controller.canLoadFromShelf(entry));
     }
 
     @Test
     void testCanLoadFromShelf_SecretWithRedacted() {
-        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibility(com.cryptocarver.model.SecretVisibility.REDACTED);
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         ClipboardEntry entry = new ClipboardEntry("Label", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.SECRET, "Source");
         assertFalse(controller.canLoadFromShelf(entry));
     }
 
     @Test
     void testCanLoadFromShelf_PublicWithRedacted() {
-        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibility(com.cryptocarver.model.SecretVisibility.REDACTED);
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         ClipboardEntry entry = new ClipboardEntry("Label", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
         assertTrue(controller.canLoadFromShelf(entry));
     }

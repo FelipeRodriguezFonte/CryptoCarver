@@ -35,7 +35,7 @@ class HistoryManagerRecoveryTest {
         assertEquals(1, recoveryFiles.size());
         assertEquals(malformed, Files.readString(recoveryFiles.get(0)));
 
-        manager.addHistoryItem(new HistoryItem("Hashing", "{}", Map.of("algorithm", "SHA-256")));
+        manager.addHistoryItem(new HistoryCommand("Hashing", "{}", Map.of("algorithm", "SHA-256")));
         assertTrue(Files.exists(history));
         HistoryManager reloaded = new HistoryManager(history);
         assertEquals(1, reloaded.getHistoryItems().size());
@@ -47,11 +47,11 @@ class HistoryManagerRecoveryTest {
         Path history = tempDir.resolve("nested/history.json");
         HistoryManager manager = new HistoryManager(history);
         for (int index = 0; index < 55; index++) {
-            manager.addHistoryItem(new HistoryItem("Operation " + index, "{}", Map.of()));
+            manager.addHistoryItem(new HistoryCommand("Operation " + index, "{}", Map.of()));
         }
 
-        List<HistoryItem> parsed = new Gson().fromJson(Files.readString(history),
-                new TypeToken<List<HistoryItem>>() { }.getType());
+        List<HistoryCommand> parsed = new Gson().fromJson(Files.readString(history),
+                new TypeToken<List<HistoryCommand>>() { }.getType());
         assertEquals(50, parsed.size());
         assertEquals("Operation 54", parsed.get(0).getOperation());
         try (java.util.stream.Stream<Path> files = Files.list(history.getParent())) {
