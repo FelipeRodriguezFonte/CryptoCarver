@@ -104,8 +104,68 @@
 
 .main-toolbar {
     -fx-background-color: #e8e8e8;
-    -fx-padding: 8;
-    -fx-spacing: 10;
+    -fx-padding: 8px;
+    -fx-hgap: 12px;
+    -fx-vgap: 8px;
+    -fx-alignment: center-left;
+}
+
+.format-flow-bar {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8px;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-padding: 4px 10px;
+    -fx-alignment: center;
+    -fx-spacing: 8px;
+}
+
+.format-flow-label {
+    -fx-text-fill: #4a5568;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.format-flow-operation {
+    -fx-text-fill: #1a365d;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-min-width: 70px;
+    -fx-max-width: 200px;
+    -fx-text-overrun: ellipsis;
+}
+
+.format-flow-arrow {
+    -fx-text-fill: #718096;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.format-combo {
+    -fx-background-color: #f7fafc;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: #cbd5e0;
+    -fx-border-width: 1px;
+    -fx-padding: 2px 8px;
+    -fx-font-size: 12px;
+    -fx-pref-width: 120px;
+    -fx-max-width: 120px;
+}
+
+.format-combo:hover {
+    -fx-background-color: #edf2f7;
+    -fx-border-color: #a0aec0;
+}
+
+.format-combo:focused {
+    -fx-border-color: #3182ce;
+}
+
+.format-combo:disabled {
+    -fx-opacity: 0.6;
+    -fx-background-color: #edf2f7;
 }
 
 /* Navigation Rail */
@@ -694,8 +754,10 @@
 
 .main-toolbar {
     -fx-background-color: #e8e8e8;
-    -fx-padding: 8;
-    -fx-spacing: 10;
+    -fx-padding: 8px;
+    -fx-hgap: 12px;
+    -fx-vgap: 8px;
+    -fx-alignment: center-left;
 }
 
 /* Tab Pane */

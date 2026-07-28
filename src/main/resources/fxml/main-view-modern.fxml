@@ -69,22 +69,33 @@
             </MenuBar>
 
             <!-- Toolbar -->
-            <HBox styleClass="main-toolbar">
-                <Button text="Save Session" onAction="#handleSaveSession" styleClass="link-button"/>
-                <Button text="Clear" onAction="#handleClearInput" styleClass="link-button"/>
+            <FlowPane styleClass="main-toolbar">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Button text="Save Session" onAction="#handleSaveSession" styleClass="link-button"/>
+                    <Button text="Clear" onAction="#handleClearInput" styleClass="link-button"/>
+                </HBox>
 
-                <Label text="Input Format:"/>
-                <ComboBox fx:id="inputFormatCombo" prefWidth="150"/>
+                <!-- Format Flow Bar -->
+                <HBox fx:id="formatFlowBar" alignment="CENTER" spacing="8" styleClass="format-flow-bar">
+                    <Label text="Input:" styleClass="format-flow-label"/>
+                    <ComboBox fx:id="inputFormatCombo" prefWidth="120" styleClass="format-combo"/>
 
-                <Label text="Output Format:"/>
-                <ComboBox fx:id="outputFormatCombo" prefWidth="150"/>
+                    <Label text="→" styleClass="format-flow-arrow"/>
 
-                <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="contractOperationLabel" text="Operation" styleClass="format-flow-operation"/>
 
-                <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="link-button"/>
-                <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="link-button"/>
-                <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="link-button"/>
-            </HBox>
+                    <Label text="→" styleClass="format-flow-arrow"/>
+
+                    <Label text="Output:" styleClass="format-flow-label"/>
+                    <ComboBox fx:id="outputFormatCombo" prefWidth="120" styleClass="format-combo"/>
+                </HBox>
+
+                <HBox alignment="CENTER_RIGHT" spacing="10">
+                    <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="link-button"/>
+                    <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="link-button"/>
+                    <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="link-button"/>
+                </HBox>
+            </FlowPane>
         </VBox>
     </top>
 

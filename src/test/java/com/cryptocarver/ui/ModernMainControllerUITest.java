@@ -575,7 +575,7 @@ class ModernMainControllerUITest {
             inputFormat.setValue("Base64");
             outputFormat.setValue("Hexadecimal");
             controller.navigateTo("Hashing");
-            assertEquals("Hexadecimal", inputFormat.getValue());
+            assertEquals("Text (UTF-8)", inputFormat.getValue());
             assertEquals("Hexadecimal", outputFormat.getValue());
             inputFormat.setValue("Text (UTF-8)");
             outputFormat.setValue("Base64");
@@ -1385,11 +1385,16 @@ class ModernMainControllerUITest {
                 javafx.scene.control.TextArea hashInput = getField(genericController, "hashInputArea");
                 javafx.scene.control.TextArea hashOutput = getField(genericController, "hashOutputArea");
                 javafx.scene.control.ComboBox<String> hashAlgo = getField(genericController, "hashAlgorithmCombo");
+                javafx.scene.control.ComboBox<String> toolbarInputFormat = getField(controller, "inputFormatCombo");
+                javafx.scene.control.ComboBox<String> toolbarOutputFormat = getField(controller, "outputFormatCombo");
+                controller.navigateTo("Hashing");
                 hashInput.setText("Hello");
                 hashAlgo.setValue("SHA-256");
-                hashAlgo.setValue("SHA-256");
+                toolbarInputFormat.setValue("Text (UTF-8)");
+                toolbarOutputFormat.setValue("Base64");
                 genericController.handleCalculateHash();
-                assertNotNull(hashOutput.getText());
+                assertEquals("GF+NsyJx/iX1Yab8k4suJkMG7DBO2lGAB9F2SCY4GWk=", hashOutput.getText(),
+                        "Hash output must use the format shown in the shared toolbar");
 
                 // Base64URL
                 javafx.scene.control.TextArea manualInput = getField(genericController, "manualInputArea");
@@ -1398,8 +1403,15 @@ class ModernMainControllerUITest {
                 javafx.scene.control.TextArea manualOutput = getField(genericController, "manualOutputArea");
 
                 manualInput.setText("Test data");
+                controller.navigateTo("Manual Conversion");
+                toolbarInputFormat.setValue("Base64");
+                toolbarOutputFormat.setValue("Text (UTF-8)");
+                assertEquals("Base64", manualInputFormat.getValue());
+                assertEquals("Text (UTF-8)", manualOutputFormat.getValue());
                 manualInputFormat.setValue("Text");
                 manualOutputFormat.setValue("Text");
+                assertEquals("Text (UTF-8)", toolbarInputFormat.getValue());
+                assertEquals("Text (UTF-8)", toolbarOutputFormat.getValue());
 
                 genericController.handleEncodeBase64Url();
                 assertNotNull(manualOutput.getText());
@@ -1773,6 +1785,149 @@ class ModernMainControllerUITest {
 
         assertEquals("123456789012345", pan.getText());
         assertTrue(((javafx.scene.Node) getField(controller, "paymentsContainer")).isVisible());
+    }
+
+    @Test
+    void testHashingObeysVisibleGlobalFormat() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.TextArea inputArea = getField(generic, "hashInputArea");
+        javafx.scene.control.TextArea outputArea = getField(generic, "hashOutputArea");
+        javafx.scene.control.ComboBox<String> globalInputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> globalOutputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(), "Hashing: SHA-256");
+            inputArea.setText("hello");
+            globalInputFormat.setValue("Text (UTF-8)");
+            globalOutputFormat.setValue("Hexadecimal");
+            generic.handleCalculateHash();
+        });
+
+        // SHA-256 of "hello" in Hexadecimal
+        String hexHash = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+        assertEquals(hexHash, outputArea.getText().trim().toLowerCase());
+
+        runAndWait(() -> {
+            globalOutputFormat.setValue("Base64");
+            generic.handleCalculateHash();
+        });
+
+        // SHA-256 of "hello" in Base64
+        String base64Hash = "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=";
+        assertEquals(base64Hash, outputArea.getText().trim());
+    }
+
+    @Test
+    void testRandomGeneratorSynchronizesWithGlobalFormat() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.ComboBox<String> localRandomFormat = getField(generic, "randomFormatCombo");
+        javafx.scene.control.ComboBox<String> globalOutputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(), "Random Number Generator");
+        });
+
+        // Verify initial synchronization (should default to Hexadecimal)
+        assertEquals("Hexadecimal", localRandomFormat.getValue());
+        assertEquals("Hexadecimal", globalOutputFormat.getValue());
+
+        // Change global -> local
+        runAndWait(() -> {
+            globalOutputFormat.setValue("Base64");
+        });
+        assertEquals("Base64", localRandomFormat.getValue());
+
+        // Change local -> global
+        runAndWait(() -> {
+            localRandomFormat.setValue("Binary");
+        });
+        assertEquals("Binary", globalOutputFormat.getValue());
+    }
+
+    @Test
+    void testNonByteOperationDisablesFormatBar() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.control.ComboBox<String> globalInputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> globalOutputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(), "JWT (Signed)");
+        });
+
+        assertTrue(globalInputFormat.isDisable());
+        assertTrue(globalOutputFormat.isDisable());
+    }
+
+    @Test
+    void testFormatNotLeakedBetweenOperations() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.control.ComboBox<String> globalInputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> globalOutputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(), "Hashing: SHA-256");
+            globalOutputFormat.setValue("Base64");
+        });
+
+        assertEquals("Base64", globalOutputFormat.getValue());
+
+        // Navigate to JWT (Signed) - format bar should get disabled
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(), "JWT (Signed)");
+        });
+        assertTrue(globalInputFormat.isDisable());
+        assertTrue(globalOutputFormat.isDisable());
+
+        // Navigate back to Hashing - format bar should re-enable and restore defaults/allowed items without leak
+        runAndWait(() -> {
+            controller.restoreOperationState(java.util.Map.of(), "Hashing: SHA-256");
+        });
+        assertFalse(globalInputFormat.isDisable());
+        assertFalse(globalOutputFormat.isDisable());
+        assertTrue(globalOutputFormat.getItems().contains("Hexadecimal"));
+        assertTrue(globalOutputFormat.getItems().contains("Base64"));
     }
 
 }

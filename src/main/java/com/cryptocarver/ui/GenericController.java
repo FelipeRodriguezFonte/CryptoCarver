@@ -43,6 +43,9 @@ public class GenericController {
     private TextArea outputArea;
     private ComboBox<String> inputFormatCombo;
     private ComboBox<String> outputFormatCombo;
+    /** The operation whose format contract is currently presented in the shell toolbar. */
+    private String activeFormatContractOperation;
+    private boolean synchronizingFormatControls;
     private StatusReporter statusReporter;
     @FXML private Accordion genericContainer;
     @FXML private TextArea hashInputArea;
@@ -516,10 +519,14 @@ public class GenericController {
         if (manualInputFormatCombo != null) {
             for (ByteFormat format : ByteFormat.values()) manualInputFormatCombo.getItems().add(format.getDisplayName());
             manualInputFormatCombo.setValue("Text (UTF-8)");
+            manualInputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
+                    synchronizeToolbarFromManualFormats());
         }
         if (manualOutputFormatCombo != null) {
             for (ByteFormat format : ByteFormat.values()) manualOutputFormatCombo.getItems().add(format.getDisplayName());
             manualOutputFormatCombo.setValue("Text (UTF-8)");
+            manualOutputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
+                    synchronizeToolbarFromManualFormats());
         }
         if (hashAlgorithmCombo != null) {
             hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
@@ -533,6 +540,7 @@ public class GenericController {
         if (randomFormatCombo != null) {
             randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
             randomFormatCombo.setValue("Hexadecimal");
+            setupRandomFormatComboListener();
         }
         if (ebcdicCodePageCombo != null) {
             ebcdicCodePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
@@ -603,6 +611,100 @@ public class GenericController {
         this.outputFormatCombo = outputFormatCombo;
     }
 
+    /**
+     * Connects the shared format toolbar to Generic's operation-specific controls.
+     *
+     * <p>The Generic module is FXML-included, so its local hash and conversion
+     * controls are not injected through the legacy constructor. Keeping this
+     * connection explicit prevents the toolbar from advertising a format which
+     * the operation then ignores.</p>
+     */
+    public void setFormatControls(ComboBox<String> inputFormatCombo,
+            ComboBox<String> outputFormatCombo) {
+        this.inputFormatCombo = inputFormatCombo;
+        this.outputFormatCombo = outputFormatCombo;
+
+        inputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
+                synchronizeManualFormatsFromToolbar());
+        outputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
+                synchronizeManualFormatsFromToolbar());
+    }
+
+    /** Selects which Generic sub-operation owns the shared format toolbar. */
+    public void setActiveFormatContractOperation(String operation) {
+        activeFormatContractOperation = operation;
+        synchronizeManualFormatsFromToolbar();
+    }
+
+    private boolean isManualConversionContractActive() {
+        return "Manual Conversion".equals(activeFormatContractOperation);
+    }
+
+    private boolean isRandomGeneratorContractActive() {
+        return "Random Number Generator".equals(activeFormatContractOperation);
+    }
+
+    private void synchronizeManualFormatsFromToolbar() {
+        if (synchronizingFormatControls) return;
+
+        if (isManualConversionContractActive()) {
+            synchronizingFormatControls = true;
+            try {
+                selectIfSupported(manualInputFormatCombo, inputFormatCombo == null ? null : inputFormatCombo.getValue());
+                selectIfSupported(manualOutputFormatCombo, outputFormatCombo == null ? null : outputFormatCombo.getValue());
+            } finally {
+                synchronizingFormatControls = false;
+            }
+        } else if (isRandomGeneratorContractActive()) {
+            synchronizingFormatControls = true;
+            try {
+                selectIfSupported(randomFormatCombo, outputFormatCombo == null ? null : outputFormatCombo.getValue());
+            } finally {
+                synchronizingFormatControls = false;
+            }
+        }
+    }
+
+    private void synchronizeToolbarFromManualFormats() {
+        if (!isManualConversionContractActive() || synchronizingFormatControls) return;
+
+        synchronizingFormatControls = true;
+        try {
+            selectIfSupported(inputFormatCombo, normalizeFormatName(manualInputFormatCombo == null ? null : manualInputFormatCombo.getValue()));
+            selectIfSupported(outputFormatCombo, normalizeFormatName(manualOutputFormatCombo == null ? null : manualOutputFormatCombo.getValue()));
+        } finally {
+            synchronizingFormatControls = false;
+        }
+    }
+
+    private void synchronizeToolbarFromRandomFormats() {
+        if (!isRandomGeneratorContractActive() || synchronizingFormatControls) return;
+
+        synchronizingFormatControls = true;
+        try {
+            selectIfSupported(outputFormatCombo, randomFormatCombo == null ? null : randomFormatCombo.getValue());
+        } finally {
+            synchronizingFormatControls = false;
+        }
+    }
+
+    private void setupRandomFormatComboListener() {
+        if (randomFormatCombo != null) {
+            randomFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
+                    synchronizeToolbarFromRandomFormats());
+        }
+    }
+
+    private static String normalizeFormatName(String format) {
+        return "Text".equals(format) ? "Text (UTF-8)" : format;
+    }
+
+    private static void selectIfSupported(ComboBox<String> combo, String value) {
+        if (combo != null && value != null && combo.getItems().contains(value)) {
+            combo.setValue(value);
+        }
+    }
+
     public void setHashAlgorithmCombo(ComboBox<String> combo) {
         this.hashAlgorithmCombo = combo;
         hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
@@ -621,6 +723,7 @@ public class GenericController {
         this.randomFormatCombo = formatCombo;
         randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
         randomFormatCombo.setValue("Hexadecimal");
+        setupRandomFormatComboListener();
     }
 
 
@@ -950,6 +1053,12 @@ public class GenericController {
      * @param targetOutputArea The TextArea to display the result
      */
     public void calculateHash(String input, String inputFormat, String algorithm, TextInputControl targetOutputArea) {
+        calculateHash(input, inputFormat, "Hexadecimal", algorithm, targetOutputArea);
+    }
+
+    /** Calculates a hash and serializes its bytes using the selected output format. */
+    public void calculateHash(String input, String inputFormat, String outputFormat,
+            String algorithm, TextInputControl targetOutputArea) {
         try {
             if (input == null || input.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to hash");
@@ -972,13 +1081,14 @@ public class GenericController {
 
             // Calculate hash
             byte[] hash = HashOperations.calculateHash(inputData, algorithm);
-            String hashHex = bytesToHex(hash);
+            String formattedHash = formatBytes(hash, outputFormat);
 
             // Display result
-            targetOutputArea.setText(hashHex);
+            targetOutputArea.setText(formattedHash);
             statusReporter.publish(OperationResult.forOperation("Hashing: " + algorithm)
                     .input(inputData).output(hash)
                     .detail("Algorithm", algorithm).detail("Input Format", inputFormat)
+                    .detail("Output Format", outputFormat)
                     .status("Hash calculated using " + algorithm).build());
 
         } catch (NoSuchAlgorithmException e) {
@@ -994,21 +1104,23 @@ public class GenericController {
     @FXML
 
     public void handleCalculateHash() {
-        if (inputArea != null && hashAlgorithmCombo != null && outputArea != null) {
-            // Note: Legacy used getInputDataAsBytes() which respected inputFormatCombo.
-            // Ideally we replicate that if we want full legacy support, but for now
-            // I'll try to keep behavioral consistency.
-            // If this breaks legacy complex inputs (like Hex input for hash), we fix later.
-            calculateHash(inputArea.getText(),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text",
-                    hashAlgorithmCombo.getValue(),
-                    outputArea);
-        } else if (hashInputArea != null && hashAlgorithmCombo != null && hashOutputArea != null) {
+        if (hashInputArea != null && hashAlgorithmCombo != null && hashOutputArea != null) {
             calculateHash(hashInputArea.getText(),
-                    "Text",
+                    selectedFormatOrDefault(inputFormatCombo, "Text (UTF-8)"),
+                    selectedFormatOrDefault(outputFormatCombo, "Hexadecimal"),
                     hashAlgorithmCombo.getValue(),
                     hashOutputArea);
+        } else if (inputArea != null && hashAlgorithmCombo != null && outputArea != null) {
+            calculateHash(inputArea.getText(),
+                    selectedFormatOrDefault(inputFormatCombo, "Text (UTF-8)"),
+                    selectedFormatOrDefault(outputFormatCombo, "Hexadecimal"),
+                    hashAlgorithmCombo.getValue(),
+                    outputArea);
         }
+    }
+
+    private static String selectedFormatOrDefault(ComboBox<String> combo, String defaultFormat) {
+        return combo != null && combo.getValue() != null ? combo.getValue() : defaultFormat;
     }
 
     /**
@@ -1048,6 +1160,13 @@ public class GenericController {
             }
             if (inputFormat == null || outputFormat == null) {
                 statusReporter.showError("Format Error", "Please select both input and output formats");
+                return;
+            }
+
+            try {
+                com.cryptocarver.util.InputValidator.validateInput(input, inputFormat);
+            } catch (IllegalArgumentException e) {
+                statusReporter.showError("Format Error", e.getMessage());
                 return;
             }
 

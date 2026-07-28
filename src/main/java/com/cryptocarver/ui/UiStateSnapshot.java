@@ -181,21 +181,51 @@ final class UiStateSnapshot {
     static List<Node> restore(Object rootController, Map<String, Object> state) {
         List<Node> redactedNodes = new ArrayList<>();
         if (rootController == null || state == null || state.isEmpty()) return redactedNodes;
+
+        List<RestorationTask> tasks = new ArrayList<>();
         visitControllers(rootController, (owner, field, value) -> {
             String qualifiedKey = key(owner, field);
             Object saved = state.containsKey(qualifiedKey) ? state.get(qualifiedKey) : state.get(field.getName());
             if (saved != null || state.containsKey(qualifiedKey) || state.containsKey(field.getName())) {
-                if ("[REDACTED_SECRET]".equals(saved)) {
-                    writeControlValue(value, "");
-                    if (value instanceof Node node) {
-                        redactedNodes.add(node);
-                    }
-                } else {
-                    writeControlValue(value, saved);
-                }
+                tasks.add(new RestorationTask(owner, field, value, saved));
             }
         });
+
+        // Sort tasks: ComboBox/ChoiceBox first
+        tasks.sort((t1, t2) -> {
+            boolean isCombo1 = t1.value instanceof ComboBox<?> || t1.value instanceof ChoiceBox<?>;
+            boolean isCombo2 = t2.value instanceof ComboBox<?> || t2.value instanceof ChoiceBox<?>;
+            if (isCombo1 && !isCombo2) return -1;
+            if (!isCombo1 && isCombo2) return 1;
+            return 0;
+        });
+
+        for (RestorationTask task : tasks) {
+            Object value = task.value;
+            Object saved = task.saved;
+            if ("[REDACTED_SECRET]".equals(saved)) {
+                writeControlValue(value, "");
+                if (value instanceof Node node) {
+                    redactedNodes.add(node);
+                }
+            } else {
+                writeControlValue(value, saved);
+            }
+        }
         return redactedNodes;
+    }
+
+    private static class RestorationTask {
+        final Object owner;
+        final Field field;
+        final Object value;
+        final Object saved;
+        RestorationTask(Object owner, Field field, Object value, Object saved) {
+            this.owner = owner;
+            this.field = field;
+            this.value = value;
+            this.saved = saved;
+        }
     }
 
     private static void visitControllers(Object rootController, FieldVisitor visitor) {

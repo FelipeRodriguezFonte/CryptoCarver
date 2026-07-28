@@ -122,10 +122,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private VBox savedSessionsList;
 
-    // Toolbar
     @FXML
     private ComboBox<String> inputFormatCombo;
-    private final OperationFormatState operationFormatState = new OperationFormatState();
+
+    @FXML
+    private Label contractOperationLabel;
+
+    @FXML
+    private HBox formatFlowBar;
+
+    private final java.util.Map<String, String> rememberedInputFormats = new java.util.HashMap<>();
+    private final java.util.Map<String, String> rememberedOutputFormats = new java.util.HashMap<>();
+    private String currentFormatProfileOperation = "Dashboard";
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
@@ -205,7 +213,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
         }
 
-        operationFormatState.attach(inputFormatCombo, outputFormatCombo);
         installResponsiveLayoutSupport();
 
         // Connect Rail to SidePanel
@@ -223,7 +230,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         loadAuthenticationContent();
         loadPaymentsContent();
         loadEMVContent();
-        if (genericContainerController != null) genericContainerController.setStatusReporter(this);
+        if (genericContainerController != null) {
+            genericContainerController.setStatusReporter(this);
+            genericContainerController.setFormatControls(inputFormatCombo, outputFormatCombo);
+        }
         if (genericContainerController != null && genericContainerController.getKeyCertificateWorkbenchController() != null) {
             genericContainerController.getKeyCertificateWorkbenchController().setStatusReporter(this);
         }
@@ -353,8 +363,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 .resolveNavigation(itemName)
                 .map(com.cryptocarver.model.OperationDescriptor::getNavigationPath)
                 .orElse(itemName);
+
+        // Save current formats before switching
+        if (this.currentFormatProfileOperation != null) {
+            rememberedInputFormats.put(this.currentFormatProfileOperation, inputFormatCombo.getValue());
+            rememberedOutputFormats.put(this.currentFormatProfileOperation, outputFormatCombo.getValue());
+        }
+
         this.currentActiveOperation = itemName;
-        operationFormatState.activate(itemName);
+
         // Navigation alone is not a result. Clear the previous published
         // snapshot so Expand Result cannot accidentally expose data from the
         // route that the user has just left.
@@ -483,6 +500,85 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         contentTitleLabel.setText(section);
         contentSubtitleLabel.setText(subsection);
+
+        // Update format profile in the toolbar
+        if (contractOperationLabel != null) {
+            contractOperationLabel.setText(subsection);
+        }
+        applyOperationFormatProfile(itemName);
+    }
+
+    private void applyOperationFormatProfile(String itemName) {
+        String profileOperation = formatProfileOperation(itemName);
+        com.cryptocarver.model.OperationFormatProfile profile = com.cryptocarver.model.OperationFormatRegistry.getInstance().getProfile(profileOperation);
+
+        String rememberedInput = rememberedInputFormats.get(profileOperation);
+        applyFormatToCombo(inputFormatCombo, profile.allowedInputFormats(), profile.defaultInputFormat(), rememberedInput);
+
+        String rememberedOutput = rememberedOutputFormats.get(profileOperation);
+        applyFormatToCombo(outputFormatCombo, profile.allowedOutputFormats(), profile.defaultOutputFormat(), rememberedOutput);
+        currentFormatProfileOperation = profileOperation;
+
+        if (genericContainerController != null) {
+            genericContainerController.setActiveFormatContractOperation(profileOperation);
+        }
+
+        if (contractOperationLabel != null) {
+            String opText = "Operation";
+            java.util.Optional<com.cryptocarver.model.OperationDescriptor> op = com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(itemName);
+            if (op.isPresent()) {
+                opText = op.get().getTitle();
+            } else {
+                opText = itemName;
+            }
+            contractOperationLabel.setText(opText);
+
+            // Add a tooltip for the contract description
+            if (profile.contractDescription() != null && !profile.contractDescription().isEmpty()) {
+                Tooltip tooltipObj = new Tooltip(profile.contractDescription());
+                contractOperationLabel.setTooltip(tooltipObj);
+                if (inputFormatCombo != null) {
+                    inputFormatCombo.setTooltip(tooltipObj);
+                }
+                if (outputFormatCombo != null) {
+                    outputFormatCombo.setTooltip(tooltipObj);
+                }
+            } else {
+                contractOperationLabel.setTooltip(null);
+                if (inputFormatCombo != null) {
+                    inputFormatCombo.setTooltip(null);
+                }
+                if (outputFormatCombo != null) {
+                    outputFormatCombo.setTooltip(null);
+                }
+            }
+        }
+    }
+
+    private String formatProfileOperation(String operation) {
+        return operation != null && operation.startsWith("Hashing:") ? "Hashing" : operation;
+    }
+
+    private void applyFormatToCombo(ComboBox<String> combo, java.util.List<String> allowedFormats, String defaultFormat, String remembered) {
+        if (combo == null) return;
+
+        if (allowedFormats == null || allowedFormats.isEmpty()) {
+            combo.getItems().setAll("Not applicable");
+            combo.setValue("Not applicable");
+            combo.setDisable(true);
+            return;
+        }
+
+        combo.setDisable(false);
+        combo.getItems().setAll(allowedFormats);
+
+        if (remembered != null && allowedFormats.contains(remembered)) {
+            combo.setValue(remembered);
+        } else if (defaultFormat != null && allowedFormats.contains(defaultFormat)) {
+            combo.setValue(defaultFormat);
+        } else if (!allowedFormats.isEmpty()) {
+            combo.setValue(allowedFormats.get(0));
+        }
     }
 
     private String operationStatusSummary(com.cryptocarver.model.OperationDescriptor operation) {

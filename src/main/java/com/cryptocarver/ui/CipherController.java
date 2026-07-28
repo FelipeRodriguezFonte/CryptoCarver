@@ -1845,6 +1845,13 @@ public class CipherController {
                 return;
             }
 
+            try {
+                com.cryptocarver.util.InputValidator.validateInput(inputText, inputFormat);
+            } catch (IllegalArgumentException e) {
+                statusReporter.showError("Format Error", e.getMessage());
+                return;
+            }
+
             byte[] plaintext;
             switch (inputFormat) {
                 case "Text (UTF-8)":
@@ -1955,10 +1962,17 @@ public class CipherController {
                 return;
             }
 
-            // Get input data based on forma
+            // Get input data based on format
             String inputText = cipherInputArea.getText().trim();
             if (inputText.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to decrypt");
+                return;
+            }
+
+            try {
+                com.cryptocarver.util.InputValidator.validateInput(inputText, inputFormat);
+            } catch (IllegalArgumentException e) {
+                statusReporter.showError("Format Error", e.getMessage());
                 return;
             }
 
@@ -2248,6 +2262,8 @@ public class CipherController {
         String format = inputFormatCombo.getValue();
         if (format == null)
             format = "Hexadecimal";
+
+        com.cryptocarver.util.InputValidator.validateInput(input, format);
 
         try {
             switch (format) {

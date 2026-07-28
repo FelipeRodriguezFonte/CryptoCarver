@@ -925,6 +925,7 @@ public class AuthenticationController {
         }
 
         String format = inputFormatCombo.getValue();
+        com.cryptocarver.util.InputValidator.validateInput(input, format);
         return parseDataWithFormat(input, format);
     }
 
