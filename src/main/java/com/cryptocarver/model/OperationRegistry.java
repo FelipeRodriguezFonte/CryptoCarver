@@ -38,6 +38,7 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_auth_mac", "Message Authentication Codes", "Authentication", "Calculate MACs", "🛡", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Message Authentication Codes", Arrays.asList("HMAC", "CMAC")));
 
         // Keys -> Symmetric
+        register(new OperationDescriptor("op_keys_lab", "Key Lab", "Keys", "Secure inventory of keys with CRUD and KCV", "🎛", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key Lab", Collections.emptyList()));
         register(new OperationDescriptor("op_keys_gen", "Key Generation", "Keys", "Generate symmetric keys", "🔑", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key Generation", Collections.emptyList()));
         register(new OperationDescriptor("op_keys_val", "Validation & KCV", "Keys", "Validate keys", "✅", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Validation & KCV", Collections.emptyList()));
         register(new OperationDescriptor("op_keys_share", "Key Sharing (XOR Split/Combine)", "Keys", "Split or combine keys", "✂", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key Sharing (XOR Split/Combine)", Collections.emptyList()));

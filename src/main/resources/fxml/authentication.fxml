@@ -18,6 +18,21 @@
         <panes>
             <TitledPane text="🔏 Digital Signatures" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
+                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box" style="-fx-margin: 0 0 10 0;">
+                        <Label text="Apply Template:" styleClass="form-label"/>
+                        <ComboBox fx:id="signatureTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                        <Button text="Apply" onAction="#handleApplySignatureTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                            <items>
+                                <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveSignatureTemplate"/>
+                                <MenuItem text="Export Selected Template..." onAction="#handleExportSignatureTemplate"/>
+                                <MenuItem text="Import Template File..." onAction="#handleImportSignatureTemplate"/>
+                                <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteSignatureTemplate"/>
+                            </items>
+                        </MenuButton>
+                        <Button text="Reset Defaults" onAction="#handleResetSignatureDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                    </HBox>
+
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Label text="Algorithm:" styleClass="form-label"/>
                         <ComboBox fx:id="signatureAlgorithmCombo" prefWidth="250" styleClass="form-field"/>

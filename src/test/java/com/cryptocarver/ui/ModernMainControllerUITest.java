@@ -1930,4 +1930,332 @@ class ModernMainControllerUITest {
         assertTrue(globalOutputFormat.getItems().contains("Base64"));
     }
 
+    @Test
+    void testNewUxUnifiedPolishFeatures() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+
+        // 1. Verify resultSummaryBar is injected and starts as hidden/unmanaged
+        javafx.scene.layout.HBox resultBar = getField(controller, "resultSummaryBar");
+        assertNotNull(resultBar, "resultSummaryBar should be injected");
+        assertFalse(resultBar.isVisible());
+        assertFalse(resultBar.isManaged());
+
+        // 2. Verify Key Lab Table columns do not contain "Modified"
+        KeysController keys = getField(controller, "keysContainerController");
+        javafx.scene.control.TableView<?> table = getField(keys, "keyLabTable");
+        assertNotNull(table, "keyLabTable should be injected");
+        boolean hasModifiedCol = table.getColumns().stream()
+                .anyMatch(col -> "Modified".equalsIgnoreCase(col.getText()));
+        assertFalse(hasModifiedCol, "Key Lab Table should not contain a Modified column anymore");
+
+        // 3. Verify Symmetric Cipher pane has form-group-box container elements
+        CipherController cipher = getField(controller, "cipherContainerController");
+        javafx.scene.layout.VBox cipherRoot = getField(controller, "cipherContainer");
+        assertNotNull(cipherRoot);
+        // Find form-group-box elements in Symmetric Cipher titled pane
+        javafx.scene.control.Accordion accordion = (javafx.scene.control.Accordion) cipherRoot.getChildren().stream()
+                .filter(javafx.scene.control.Accordion.class::isInstance)
+                .findFirst().orElseThrow();
+        javafx.scene.control.TitledPane symmetricPane = accordion.getPanes().get(0);
+        javafx.scene.layout.VBox contentVBox = (javafx.scene.layout.VBox) symmetricPane.getContent();
+        boolean hasFormGroup = contentVBox.getChildren().stream()
+                .anyMatch(node -> node.getStyleClass().contains("form-group-box"));
+        assertTrue(hasFormGroup, "Symmetric Cipher should contain form-group-box containers");
+
+        // 4. Verify publish() updates resultSummaryBar
+        runAndWait(() -> {
+            com.cryptocarver.model.OperationResult dummyResult = com.cryptocarver.model.OperationResult.forOperation("Symmetric Ciphers")
+                .input("hello".getBytes())
+                .output("world".getBytes())
+                .detail(com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", "AES-256"))
+                .status("Operation succeeded")
+                .build();
+            controller.publish(dummyResult);
+        });
+
+        assertTrue(resultBar.isVisible());
+        assertTrue(resultBar.isManaged());
+        javafx.scene.control.Label opLabel = getField(controller, "resultOpLabel");
+        assertEquals("Symmetric Ciphers", opLabel.getText());
+    }
+
+    @Test
+    void testMetadataOnlySelectionAndImportDisable() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        KeysController keys = getField(controller, "keysContainerController");
+
+        javafx.scene.control.PasswordField importField = getField(keys, "keyLabImportBytesField");
+        javafx.scene.control.Button importBtn = getField(keys, "keyLabImportBtn");
+        assertNotNull(importField);
+        assertNotNull(importBtn);
+
+        // Switch to MASKED
+        runAndWait(() -> {
+            com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+            keys.updateVisibilityControls();
+        });
+
+        assertTrue(importField.isDisable());
+        assertTrue(importBtn.isDisable());
+
+        // Verify state capture ignores this field completely
+        java.util.Map<String, Object> state = UiStateSnapshot.capture(controller);
+        assertFalse(state.containsKey("KeysController.keyLabImportBytesField"), "State capture must not track the key lab import field");
+
+        // Verify history capture ignores this field completely
+        java.util.Map<String, Object> historyState = UiStateSnapshot.captureHistoryRecipe(controller);
+        assertFalse(historyState.containsKey("KeysController.keyLabImportBytesField"), "History recipe must not track the key lab import field");
+
+        // Restore profile to FULL_LAB
+        runAndWait(() -> {
+            com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+            keys.updateVisibilityControls();
+        });
+        assertFalse(importField.isDisable());
+        assertFalse(importBtn.isDisable());
+    }
+
+    @Test
+    void testResultBarNavigationClearance() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.layout.HBox resultBar = getField(controller, "resultSummaryBar");
+
+        runAndWait(() -> {
+            com.cryptocarver.model.OperationResult dummyResult = com.cryptocarver.model.OperationResult.forOperation("Symmetric Encrypt")
+                .input("hello".getBytes())
+                .output("world".getBytes())
+                .detail(com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", "AES-256"))
+                .status("Operation succeeded")
+                .build();
+            controller.publish(dummyResult);
+        });
+
+        assertTrue(resultBar.isVisible());
+        assertTrue(resultBar.isManaged());
+
+        // Navigate to Hashing -> should hide resultBar and clear snapshot
+        runAndWait(() -> {
+            controller.navigateTo("Hashing");
+        });
+
+        assertFalse(resultBar.isVisible());
+        assertFalse(resultBar.isManaged());
+        assertNull(getField(controller, "lastPublishedResultSnapshot"));
+
+        // Copy/shelf actions should do nothing when snapshot is null
+        runAndWait(() -> {
+            try {
+                java.lang.reflect.Method mCopy = controller.getClass().getDeclaredMethod("handleCopyOutput");
+                mCopy.setAccessible(true);
+                mCopy.invoke(controller);
+
+                java.lang.reflect.Method mShelf = controller.getClass().getDeclaredMethod("handleAddCurrentOutputToShelf");
+                mShelf.setAccessible(true);
+                mShelf.invoke(controller);
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    @Test
+    void testGuidedWorkflowsAndQuickStartCards() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.layout.HBox guidedPanel = getField(controller, "guidedFlowPanel");
+        javafx.scene.control.Label titleLabel = getField(controller, "guideStepTitleLabel");
+        javafx.scene.control.Label descLabel = getField(controller, "guideStepDescLabel");
+        javafx.scene.control.Button backBtn = getField(controller, "guideBackBtn");
+        javafx.scene.control.Button nextBtn = getField(controller, "guideNextBtn");
+
+        // Quick Start -> Guided Encrypt
+        runAndWait(() -> {
+            controller.showQuickStart();
+            Method m = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleStartGuidedEncrypt"));
+            m.setAccessible(true);
+            assertDoesNotThrow(() -> m.invoke(controller));
+        });
+
+        assertTrue(guidedPanel.isVisible());
+        assertTrue(guidedPanel.isManaged());
+        assertTrue(titleLabel.getText().contains("Step 1 of 5"));
+        assertTrue(backBtn.isDisable());
+        assertFalse(nextBtn.isDisable());
+
+        // Step progression: 1 -> 2 -> 3
+        runAndWait(() -> {
+            Method mNext = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleGuideNext"));
+            mNext.setAccessible(true);
+            assertDoesNotThrow(() -> mNext.invoke(controller));
+            assertDoesNotThrow(() -> mNext.invoke(controller));
+        });
+
+        assertTrue(titleLabel.getText().contains("Step 3 of 5"));
+        assertFalse(backBtn.isDisable());
+
+        // Back: 3 -> 2
+        runAndWait(() -> {
+            Method mBack = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleGuideBack"));
+            mBack.setAccessible(true);
+            assertDoesNotThrow(() -> mBack.invoke(controller));
+        });
+        assertTrue(titleLabel.getText().contains("Step 2 of 5"));
+
+        // Skip to Step 4
+        runAndWait(() -> {
+            Method mSkip = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleGuideSkip"));
+            mSkip.setAccessible(true);
+            assertDoesNotThrow(() -> mSkip.invoke(controller));
+        });
+        assertTrue(titleLabel.getText().contains("Step 4 of 5"));
+
+        // Exit guided flow (should hide panel without clearing configuration)
+        runAndWait(() -> {
+            Method mExit = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleGuideExit"));
+            mExit.setAccessible(true);
+            assertDoesNotThrow(() -> mExit.invoke(controller));
+        });
+        assertFalse(guidedPanel.isVisible());
+    }
+
+    @Test
+    void testSafeOperationTemplatesApplication() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+
+        // Apply AES-256-GCM template
+        runAndWait(() -> {
+            javafx.scene.control.ComboBox<String> combo = cipher.getCipherTemplateCombo();
+            assertNotNull(combo);
+            combo.setValue("AES-256-GCM — Text UTF-8 → Base64");
+            Method m = assertDoesNotThrow(() -> CipherController.class.getDeclaredMethod("handleApplyCipherTemplate"));
+            m.setAccessible(true);
+            assertDoesNotThrow(() -> m.invoke(cipher));
+        });
+
+        javafx.scene.control.ComboBox<String> symAlgo = getField(cipher, "symmetricAlgorithmCombo");
+        javafx.scene.control.ComboBox<String> cipherMode = getField(cipher, "cipherModeCombo");
+        javafx.scene.control.TextField keyField = getField(cipher, "symmetricKeyField");
+        javafx.scene.control.TextField ivField = getField(cipher, "ivField");
+
+        assertEquals("AES-256", symAlgo.getValue());
+        assertEquals("GCM", cipherMode.getValue());
+        assertEquals("", keyField.getText()); // Key is NOT fixed or populated
+        assertEquals("", ivField.getText());  // IV/nonce is NOT fixed or hardcoded
+
+        // Verify status message includes security tip
+        javafx.scene.control.Label statusLabel = getField(controller, "statusLabel");
+        assertTrue(statusLabel.getText().contains("GCM authenticates ciphertext"));
+    }
+
+    @Test
+    void testTemplateSecretsExclusion() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+
+        // Set key and IV values
+        runAndWait(() -> {
+            javafx.scene.control.TextField keyField = assertDoesNotThrow(() -> getField(cipher, "symmetricKeyField"));
+            javafx.scene.control.TextField ivField = assertDoesNotThrow(() -> getField(cipher, "ivField"));
+            keyField.setText("00112233445566778899AABBCCDDEEFF");
+            ivField.setText("0102030405060708090A0B0C");
+        });
+
+        // Capture recipe using UiStateSnapshot
+        java.util.Map<String, Object> recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+        for (java.util.Map.Entry<String, Object> entry : recipe.entrySet()) {
+            if (entry.getKey().contains("symmetricKeyField") || entry.getKey().contains("ivField")) {
+                assertEquals("[REDACTED_SECRET]", entry.getValue(), "Secret field " + entry.getKey() + " must be redacted");
+            }
+        }
+    }
+
+    @Test
+    void testApplyingTemplatePreservesUserInputText() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+
+        runAndWait(() -> {
+            javafx.scene.control.TextArea inputArea = assertDoesNotThrow(() -> getField(cipher, "cipherInputArea"));
+            inputArea.setText("PRESERVED_USER_INPUT_TEXT");
+
+            javafx.scene.control.ComboBox<String> combo = cipher.getCipherTemplateCombo();
+            combo.setValue("AES-256-CBC — Hex → Hex");
+
+            Method m = assertDoesNotThrow(() -> CipherController.class.getDeclaredMethod("handleApplyCipherTemplate"));
+            m.setAccessible(true);
+            assertDoesNotThrow(() -> m.invoke(cipher));
+
+            assertEquals("PRESERVED_USER_INPUT_TEXT", inputArea.getText(), "Applying a template must NEVER clear user-entered text!");
+        });
+    }
 }

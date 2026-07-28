@@ -85,6 +85,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🗝 | EdDSA Key Generation | `op_keys_eddsa` | STABLE | HIGH | `EdDSA Key Generation` | - |
 | 🧬 | Key Derivation (KDF) | `op_keys_kdf` | STABLE | HIGH | `Key Derivation (KDF)` | HKDF, PBKDF2 |
 | 🔑 | Key Generation | `op_keys_gen` | STABLE | HIGH | `Key Generation` | - |
+| 🎛 | Key Lab | `op_keys_lab` | STABLE | HIGH | `Key Lab` | - |
 | 🔎 | Key Material Inspector | `op_keys_material` | STABLE | LOW | `Key Material Inspector` | - |
 | ✂ | Key Sharing (XOR Split/Combine) | `op_keys_share` | STABLE | HIGH | `Key Sharing (XOR Split/Combine)` | - |
 | 🗄 | KeyStore Inspector | `op_keys_store` | STABLE | LOW | `KeyStore Inspector` | JKS, PKCS12 |

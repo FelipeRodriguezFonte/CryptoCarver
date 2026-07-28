@@ -118,9 +118,121 @@
                     <Label fx:id="contentSubtitleLabel" text="Key Derivation (KDF)" styleClass="content-subtitle-label"/>
                 </HBox>
 
+                <!-- Result Summary Bar (Compact header) -->
+                <HBox fx:id="resultSummaryBar" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="result-summary-bar">
+                    <Label text="Last Result:" style="-fx-font-weight: bold; -fx-text-fill: -color-text-muted; -fx-font-size: 12px;"/>
+                    <Label fx:id="resultOpLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;"/>
+                    <Separator orientation="VERTICAL"/>
+                    <Label text="Algo:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
+                    <Label fx:id="resultAlgoLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
+                    <Separator orientation="VERTICAL"/>
+                    <Label text="Sizes:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
+                    <Label fx:id="resultSizeLabel" text="In: 0B / Out: 0B" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
+                    <Separator orientation="VERTICAL"/>
+                    <Label text="Format:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
+                    <Label fx:id="resultFormatLabel" text="HEX" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="resultStatusBadge" text="SUCCESS"
+                           style="-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;"/>
+                    <HBox spacing="6" alignment="CENTER_RIGHT">
+                        <Button text="Expand" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
+                        <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
+                        <Button text="Copy" onAction="#handleCopyOutput" styleClass="action-button-primary" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
+                    </HBox>
+                </HBox>
+
+                <!-- Guided Flow Panel (reusable) -->
+                <HBox fx:id="guidedFlowPanel" spacing="15" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="guided-flow-panel" style="-fx-background-color: #1e293b; -fx-padding: 10 15; -fx-background-radius: 8; -fx-margin: 5 0;">
+                    <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <Label fx:id="guideStepTitleLabel" text="Step 1: Choose data/input format" style="-fx-font-weight: bold; -fx-text-fill: #60a5fa; -fx-font-size: 13px;"/>
+                        <Label fx:id="guideStepDescLabel" text="Configure the input source type and encoding on the format flow bar." style="-fx-text-fill: #94a3b8; -fx-font-size: 11px;" wrapText="true"/>
+                    </VBox>
+                    <HBox spacing="8" alignment="CENTER_RIGHT">
+                        <Button fx:id="guideBackBtn" text="Back" onAction="#handleGuideBack" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button fx:id="guideNextBtn" text="Next" onAction="#handleGuideNext" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button text="Skip Guidance" onAction="#handleGuideSkip" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button text="Exit" onAction="#handleGuideExit" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                    </HBox>
+                </HBox>
+
                 <!-- Scrollable Content -->
                 <ScrollPane fx:id="mainScrollPane" fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="content-scroll-pane">
                     <VBox fx:id="contentContainer" spacing="0" styleClass="content-container-vbox">
+
+                        <!-- Quick Start Container -->
+                        <VBox fx:id="quickStartContainer" managed="false" visible="false" spacing="20" style="-fx-padding: 20;">
+                            <VBox spacing="5">
+                                <Label text="Laboratory Quick Start" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -color-primary-dark;"/>
+                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." style="-fx-text-fill: -color-text-muted; -fx-font-size: 13px;"/>
+                            </VBox>
+
+                            <GridPane hgap="15" vgap="15">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="50"/>
+                                    <ColumnConstraints percentWidth="50"/>
+                                </columnConstraints>
+
+                                <!-- Card 1: Encrypt a message -->
+                                <VBox styleClass="form-group-box" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                    <Label text="🔒 Encrypt a message" styleClass="form-group-title"/>
+                                    <Label text="Secure data using symmetric keys (e.g. AES-256)." styleClass="helper-text" wrapText="true"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
+                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Medium (Key Material / Secrets)" style="-fx-text-fill: #b54708; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    </HBox>
+                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedEncrypt" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                </VBox>
+
+                                <!-- Card 2: Calculate a hash -->
+                                <VBox styleClass="form-group-box" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                    <Label text="🔐 Calculate a hash" styleClass="form-group-title"/>
+                                    <Label text="Generate a secure one-way hash (e.g. SHA-256)." styleClass="helper-text" wrapText="true"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
+                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Low (No secrets involved)" style="-fx-text-fill: #027a48; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    </HBox>
+                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedHash" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                </VBox>
+
+                                <!-- Card 3: Sign or verify data -->
+                                <VBox styleClass="form-group-box" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                    <Label text="🖋 Sign or verify data" styleClass="form-group-title"/>
+                                    <Label text="Generate asymmetric signatures or verify authenticity." styleClass="helper-text" wrapText="true"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
+                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="High (Private signing keys)" style="-fx-text-fill: #b42318; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    </HBox>
+                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedSign" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                </VBox>
+
+                                <!-- Card 4: Inspect a certificate -->
+                                <VBox styleClass="form-group-box" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <Label text="🔍 Inspect a certificate" styleClass="form-group-title"/>
+                                    <Label text="Parse and validate public X.509 certificates." styleClass="helper-text" wrapText="true"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
+                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Low (Public data only)" style="-fx-text-fill: #027a48; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    </HBox>
+                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedCert" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                </VBox>
+
+                                <!-- Card 5: Convert encodings -->
+                                <VBox styleClass="form-group-box" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                    <Label text="🔄 Convert encodings" styleClass="form-group-title"/>
+                                    <Label text="Transform data formats (Base64, Hex, EBCDIC, etc.)." styleClass="helper-text" wrapText="true"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
+                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                        <Label text="Low (No secrets)" style="-fx-text-fill: #027a48; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    </HBox>
+                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedConvert" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                </VBox>
+                            </GridPane>
+                        </VBox>
 
                         <!-- PLACEHOLDER - Real content will be loaded dynamically -->
                         <Label fx:id="contentPlaceholderLabel" text="Select an operation from the side panel"

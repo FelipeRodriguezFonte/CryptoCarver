@@ -105,6 +105,21 @@
             <!-- PARSE CERTIFICATE -->
             <TitledPane text="🔍 Parse Certificate">
                 <VBox spacing="12" styleClass="module-pane-content">
+                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box" style="-fx-margin: 0 0 10 0;">
+                        <Label text="Apply Template:" styleClass="form-label"/>
+                        <ComboBox fx:id="certTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                        <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                            <items>
+                                <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCertTemplate"/>
+                                <MenuItem text="Export Selected Template..." onAction="#handleExportCertTemplate"/>
+                                <MenuItem text="Import Template File..." onAction="#handleImportCertTemplate"/>
+                                <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCertTemplate"/>
+                            </items>
+                        </MenuButton>
+                        <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                    </HBox>
+
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
                     <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
                               styleClass="monospace-field"

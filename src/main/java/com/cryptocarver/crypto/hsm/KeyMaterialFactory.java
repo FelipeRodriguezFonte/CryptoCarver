@@ -13,6 +13,7 @@ public class KeyMaterialFactory {
     public static KeyMaterial fromSecretKey(String id, SecretKey key, KeyExportability exportability, Set<KeyUsage> usages) {
         if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
         int size = key.getEncoded() != null ? key.getEncoded().length * 8 : 0;
+        String kcvVal = calculateKcv(key);
         return new KeyMaterial(
                 id,
                 generateFingerprint(key.getEncoded()),
@@ -23,7 +24,13 @@ public class KeyMaterialFactory {
                 usages,
                 exportability,
                 key,
-                null
+                null,
+                id,
+                "simulated",
+                System.currentTimeMillis(),
+                System.currentTimeMillis(),
+                kcvVal,
+                "ACTIVE"
         );
     }
 
@@ -39,7 +46,13 @@ public class KeyMaterialFactory {
                 usages,
                 exportability,
                 key,
-                null
+                null,
+                id,
+                "simulated",
+                System.currentTimeMillis(),
+                System.currentTimeMillis(),
+                "N/A",
+                "ACTIVE"
         );
     }
 
@@ -55,7 +68,13 @@ public class KeyMaterialFactory {
                 usages,
                 exportability,
                 key,
-                null
+                null,
+                id,
+                "simulated",
+                System.currentTimeMillis(),
+                System.currentTimeMillis(),
+                "N/A",
+                "ACTIVE"
         );
     }
 
@@ -76,8 +95,32 @@ public class KeyMaterialFactory {
                 usages,
                 exportability,
                 cert.getPublicKey(),
-                cert
+                cert,
+                id,
+                "simulated",
+                System.currentTimeMillis(),
+                System.currentTimeMillis(),
+                "N/A",
+                "ACTIVE"
         );
+    }
+
+    private static String calculateKcv(SecretKey key) {
+        byte[] encoded = key.getEncoded();
+        if (encoded == null) return "N/A";
+        try {
+            byte[] kcvBytes;
+            if (key.getAlgorithm().toUpperCase().contains("AES")) {
+                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_AES(encoded);
+            } else if (key.getAlgorithm().toUpperCase().contains("DES") || key.getAlgorithm().toUpperCase().contains("3DES")) {
+                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_VISA(encoded);
+            } else {
+                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_SHA256(encoded);
+            }
+            return com.cryptocarver.util.DataConverter.bytesToHex(kcvBytes).toUpperCase();
+        } catch (Exception e) {
+            return "N/A";
+        }
     }
 
     private static String generateFingerprint(byte[] data) {

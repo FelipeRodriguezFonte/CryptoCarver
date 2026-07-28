@@ -42,4 +42,10 @@ public interface StatusReporter {
             updateStatus(result.getStatusMessage());
         }
     }
+
+    default void setInputFormat(String format) {
+    }
+
+    default void setOutputFormat(String format) {
+    }
 }

@@ -19,6 +19,7 @@ import java.security.interfaces.RSAKey;
 import java.security.interfaces.ECKey;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +41,7 @@ public class AuthenticationController {
     private ComboBox<String> outputFormatCombo;
 
     // Digital Signatures UI
+    @FXML private ComboBox<String> signatureTemplateCombo;
     @FXML private ComboBox<String> signatureAlgorithmCombo;
     @FXML private Label signatureKeyStatusLabel;
     @FXML private TextField signatureVerifyField;
@@ -101,6 +103,84 @@ public class AuthenticationController {
         // Populate signature algorithms
         signatureAlgorithmCombo.getItems().addAll(SignatureOperations.SUPPORTED_ALGORITHMS);
         signatureAlgorithmCombo.setValue("RSA-SHA256-PKCS1");
+
+        refreshSignatureTemplateCombo();
+    }
+
+    private void refreshSignatureTemplateCombo() {
+        SafeTemplateUIHelper.populateTemplateCombo(
+                signatureTemplateCombo,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES,
+                List.of("Sign/Verify RSA-SHA256-PKCS1")
+        );
+    }
+
+    @FXML
+    private void handleApplySignatureTemplate() {
+        String template = signatureTemplateCombo != null ? signatureTemplateCombo.getValue() : null;
+        if (template == null) return;
+
+        Map<String, java.util.function.Consumer<String>> setters = Map.of(
+                "signatureAlgorithmCombo", v -> { if (signatureAlgorithmCombo != null) signatureAlgorithmCombo.setValue(v); }
+        );
+
+        SafeTemplateUIHelper.applySelectedTemplate(
+                template,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES,
+                () -> {
+                    if (template.contains("RSA-SHA256-PKCS1")) {
+                        signatureAlgorithmCombo.setValue("RSA-SHA256-PKCS1");
+                        if (mainController != null) {
+                            mainController.setInputFormat("Plain Text");
+                            mainController.setOutputFormat("Hexadecimal");
+                            mainController.updateStatus("Template Applied: Sign/Verify RSA-SHA256-PKCS1");
+                        }
+                    }
+                },
+                setters,
+                mainController
+        );
+    }
+
+    @FXML
+    private void handleSaveSignatureTemplate() {
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        if (signatureAlgorithmCombo != null && signatureAlgorithmCombo.getValue() != null) params.put("signatureAlgorithmCombo", signatureAlgorithmCombo.getValue());
+        javafx.stage.Window owner = signatureTemplateCombo != null && signatureTemplateCombo.getScene() != null ? signatureTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES, params, this::refreshSignatureTemplateCombo, mainController);
+    }
+
+    @FXML
+    private void handleExportSignatureTemplate() {
+        javafx.stage.Window owner = signatureTemplateCombo != null && signatureTemplateCombo.getScene() != null ? signatureTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES, signatureTemplateCombo, mainController);
+    }
+
+    @FXML
+    private void handleImportSignatureTemplate() {
+        javafx.stage.Window owner = signatureTemplateCombo != null && signatureTemplateCombo.getScene() != null ? signatureTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES, this::refreshSignatureTemplateCombo, mainController);
+    }
+
+    @FXML
+    private void handleDeleteSignatureTemplate() {
+        javafx.stage.Window owner = signatureTemplateCombo != null && signatureTemplateCombo.getScene() != null ? signatureTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES, signatureTemplateCombo, this::refreshSignatureTemplateCombo, mainController);
+    }
+
+    @FXML
+    private void handleResetSignatureDefaults() {
+        signatureAlgorithmCombo.setValue("RSA-SHA256-PKCS1");
+        signaturePrivateKeyArea.setText("");
+        signaturePublicKeyArea.setText("");
+        authInputArea.setText("");
+        authOutputArea.setText("");
+        signatureVerifyField.setText("");
+        if (mainController != null) {
+            mainController.setInputFormat("Plain Text");
+            mainController.setOutputFormat("Hexadecimal");
+            mainController.updateStatus("Signature form reset to default");
+        }
     }
 
     /**
@@ -128,6 +208,41 @@ public class AuthenticationController {
         this.authMacWarningLabel = warningLabel;
         this.macKeySourceCombo = keySourceCombo;
         this.macHsmKeyCombo = hsmKeyCombo;
+        if (hsmKeyCombo != null) {
+            hsmKeyCombo.setCellFactory(lv -> new javafx.scene.control.ListCell<String>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(item);
+                        if (km != null) {
+                            String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
+                            setText(km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort);
+                        } else {
+                            setText(item);
+                        }
+                    }
+                }
+            });
+            hsmKeyCombo.setConverter(new javafx.util.StringConverter<String>() {
+                @Override
+                public String toString(String item) {
+                    if (item == null) return "";
+                    var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(item);
+                    if (km != null) {
+                        String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
+                        return km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort;
+                    }
+                    return item;
+                }
+                @Override
+                public String fromString(String string) {
+                    return string;
+                }
+            });
+        }
 
         if (macKeySourceCombo != null) {
             macKeySourceCombo.getItems().addAll("Manual Input", "Simulated HSM", "PKCS#11 Token");

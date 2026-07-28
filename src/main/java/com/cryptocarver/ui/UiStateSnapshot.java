@@ -91,7 +91,7 @@ final class UiStateSnapshot {
             // (Wait, actually we should just capture redacted values for secrets)
             Object captured = readControlValue(value);
             if (captured != null) {
-                if (mode == CaptureMode.HISTORY_RECIPE && isSecretField(field.getName())) {
+                if (mode == CaptureMode.HISTORY_RECIPE && isSecretField(field.getName(), value)) {
                     state.put(key(owner, field), "[REDACTED_SECRET]");
                 } else {
                     state.put(key(owner, field), captured);
@@ -101,7 +101,10 @@ final class UiStateSnapshot {
         return state;
     }
 
-    private static boolean isSecretField(String fieldName) {
+    private static boolean isSecretField(String fieldName, Object control) {
+        if (control instanceof javafx.scene.control.ComboBox || control instanceof javafx.scene.control.ChoiceBox || control instanceof javafx.scene.control.CheckBox) {
+            return false;
+        }
         String lower = fieldName.toLowerCase(java.util.Locale.ROOT);
         return lower.contains("password") || lower.contains("key")
             || lower.contains("pin") || lower.contains("secret")
@@ -238,6 +241,7 @@ final class UiStateSnapshot {
         if (controller == null || !visited.add(controller)) return;
         for (Field field : allFields(controller.getClass())) {
             if (!field.isAnnotationPresent(FXML.class)) continue;
+            if ("keyLabImportBytesField".equals(field.getName())) continue;
             try {
                 field.setAccessible(true);
                 Object value = field.get(controller);

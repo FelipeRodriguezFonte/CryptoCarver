@@ -1559,3 +1559,104 @@
     -fx-font-family: 'Courier New', monospace;
     -fx-font-size: 18px;
 }
+
+/* ============================================================
+   CRYPTOCARVER MODERN UX / UNIFIED LAYOUT SYSTEM
+   ============================================================ */
+
+/* Group styling */
+.form-group-box {
+    -fx-padding: 14px;
+    -fx-spacing: 10px;
+    -fx-background-color: -color-bg-surface;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.03), 4, 0, 0, 1);
+}
+
+.form-group-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-primary-dark;
+    -fx-padding: 0 0 6px 0;
+}
+
+/* Red Validation Border */
+.text-field.field-error,
+.password-field.field-error,
+.text-area.field-error {
+    -fx-border-color: #d32f2f !important;
+    -fx-border-width: 1.5px !important;
+    -fx-border-radius: 4px !important;
+    -fx-background-color: #fdf2f2 !important;
+}
+
+/* Call-to-action placeholder for empty tables */
+.table-placeholder-cta {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-muted;
+}
+
+/* Table Row States in Key Lab */
+.table-row-cell.key-row-archived {
+    -fx-opacity: 0.55;
+    -fx-font-style: italic;
+}
+
+.table-row-cell.key-row-metadata-only {
+    -fx-text-fill: #b54708;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell.key-row-non-exportable {
+    -fx-border-color: -color-primary-light;
+    -fx-border-width: 0 0 0 3;
+}
+
+/* Primary/Secondary/Danger Unified Button Heights */
+.action-button-primary,
+.secondary-button,
+.btn-danger {
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+}
+
+.btn-danger {
+    -fx-background-color: linear-gradient(to bottom, #f05252, #c81e1e);
+    -fx-text-fill: white;
+    -fx-border-color: #c81e1e;
+    -fx-font-weight: bold;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #e02424;
+    -fx-border-color: #9b1c1c;
+}
+
+/* High Contrast Inspector Styles */
+.inspector-detail-key {
+    -fx-text-fill: -color-text-muted;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.inspector-detail-value {
+    -fx-text-fill: -color-text-primary;
+    -fx-font-size: 12px;
+}
+
+/* Result summary bar in main toolbar */
+.result-summary-bar {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cbd5e0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 6px 12px;
+    -fx-spacing: 10px;
+}

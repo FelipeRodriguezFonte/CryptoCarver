@@ -8,6 +8,114 @@
     <VBox fx:id="symmetricKeysContainer" managed="true" visible="true">
         <Accordion styleClass="module-accordion">
             <panes>
+                <!-- KEY LAB -->
+                <TitledPane text="🎛 Key Lab" fx:id="keyLabPane" expanded="true">
+                    <VBox spacing="10" styleClass="module-pane-content">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Search:" styleClass="form-label"/>
+                            <TextField fx:id="keyLabSearchField" promptText="Search keys by name or algorithm..." HBox.hgrow="ALWAYS"/>
+                            <ComboBox fx:id="keyLabStatusFilter" prefWidth="120"/>
+                            <Button text="Import Metadata" onAction="#handleImportKeyLabMetadata" styleClass="secondary-button"/>
+                            <Button text="Export Metadata" onAction="#handleExportKeyLabMetadata" styleClass="secondary-button"/>
+                        </HBox>
+                        <SplitPane dividerPositions="0.6" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+                            <!-- Left Side: Table & Creation Toolbar -->
+                            <VBox spacing="10">
+                                <TableView fx:id="keyLabTable" VBox.vgrow="ALWAYS" prefHeight="250">
+                                    <placeholder>
+                                        <Label text="No keys in Lab. Generate or import one below!"/>
+                                    </placeholder>
+                                </TableView>
+                                <TitledPane text="Add New Key" expanded="false" styleClass="sub-accordion">
+                                    <VBox spacing="8">
+                                        <GridPane hgap="8" vgap="8">
+                                            <columnConstraints>
+                                                <ColumnConstraints minWidth="80" prefWidth="80"/>
+                                                <ColumnConstraints minWidth="150" prefWidth="180" hgrow="ALWAYS"/>
+                                            </columnConstraints>
+                                            <rowConstraints>
+                                                <RowConstraints minHeight="25"/>
+                                                <RowConstraints minHeight="25"/>
+                                                <RowConstraints minHeight="25"/>
+                                            </rowConstraints>
+                                            <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                            <TextField fx:id="keyLabNewNameField" promptText="Enter key alias/name..." GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                                            <Label text="Algorithm:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                            <ComboBox fx:id="keyLabNewAlgoCombo" GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity"/>
+
+                                            <Label text="Key Size:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                            <ComboBox fx:id="keyLabNewSizeCombo" GridPane.rowIndex="2" GridPane.columnIndex="1" maxWidth="Infinity"/>
+                                        </GridPane>
+                                        <HBox spacing="8" alignment="CENTER_LEFT">
+                                            <Button text="Generate Key" onAction="#handleKeyLabGenerate" styleClass="action-button-primary"/>
+                                            <Separator orientation="VERTICAL"/>
+                                            <PasswordField fx:id="keyLabImportBytesField" promptText="Or paste raw key bytes in hex..." HBox.hgrow="ALWAYS" styleClass="monospace-field"/>
+                                            <Button fx:id="keyLabImportBtn" text="Import Key" onAction="#handleKeyLabImport" styleClass="secondary-button"/>
+                                        </HBox>
+                                    </VBox>
+                                </TitledPane>
+                            </VBox>
+                            <!-- Right Side: Detail Panel -->
+                            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+                                <VBox spacing="8" style="-fx-padding: 0 0 0 10;">
+                                    <Label text="Key Details" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                                    <GridPane hgap="8" vgap="6">
+                                        <columnConstraints>
+                                            <ColumnConstraints minWidth="90" prefWidth="90"/>
+                                            <ColumnConstraints hgrow="ALWAYS"/>
+                                        </columnConstraints>
+                                        <Label text="ID/Alias:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <TextField fx:id="keyLabDetailIdField" editable="false" styleClass="monospace-field" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                                        <Label text="Name:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <TextField fx:id="keyLabDetailNameField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                        <Label text="Algorithm:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailAlgoLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                        <Label text="Bits:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailBitsLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                                        <Label text="KCV:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailKcvLabel" styleClass="monospace-field" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                                        <Label text="Fingerprint:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+                                        <Label text="Origin:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailOriginLabel" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+                                        <Label text="Created:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailCreatedLabel" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+
+                                        <Label text="Modified:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailModifiedLabel" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+
+                                        <Label text="Status:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailStatusLabel" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+
+                                        <Label text="Key Value:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <VBox spacing="4" GridPane.rowIndex="10" GridPane.columnIndex="1">
+                                            <TextField fx:id="keyLabDetailValueField" editable="false" styleClass="monospace-field"/>
+                                            <HBox spacing="6">
+                                                <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                                                <Button text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                                            </HBox>
+                                        </VBox>
+                                    </GridPane>
+                                    <Separator style="-fx-padding: 8 0;"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT">
+                                        <Button text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
+                                        <Button fx:id="keyLabArchiveBtn" text="Archive" onAction="#handleKeyLabArchive" styleClass="secondary-button"/>
+                                        <Button text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>
+                                    </HBox>
+                                </VBox>
+                            </ScrollPane>
+                        </SplitPane>
+                    </VBox>
+                </TitledPane>
+
                 <!-- KEY GENERATION -->
                 <TitledPane text="🔑 Key Generation" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">

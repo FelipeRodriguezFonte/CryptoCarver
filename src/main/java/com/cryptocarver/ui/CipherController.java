@@ -17,6 +17,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Button;
 import javafx.stage.FileChooser;
 
 import java.io.ByteArrayOutputStream;
@@ -53,6 +54,7 @@ public class CipherController {
     private java.util.function.Supplier<java.security.KeyPair> sharedKeyPairSupplier;
 
     // Symmetric cipher UI components
+    @FXML private ComboBox<String> cipherTemplateCombo;
     @FXML private ComboBox<String> symmetricAlgorithmCombo;
     @FXML private ComboBox<String> cipherModeCombo;
     @FXML private ComboBox<String> paddingCombo;
@@ -62,6 +64,8 @@ public class CipherController {
     @FXML private TextField ivField;
     @FXML private TextField gcmTagField;
     @FXML private TextField aadField;
+    @FXML private Button inspectKeyBtn;
+    @FXML private Button saveToLabBtn;
 
     // Streaming file cipher UI components
     @FXML private ComboBox<String> fileCipherAlgorithmCombo;
@@ -130,6 +134,129 @@ public class CipherController {
                 fileCipherResultArea, fileCipherLinesCheck, fileCipherLineEncodingCombo,
                 fileCipherLineCharsetCombo, fileCipherCompactCbcCheck);
         setRSACombos(rsaPaddingCombo, asymmetricInputFormatCombo, asymmetricOutputFormatCombo);
+
+        setupHexValidation(symmetricKeyField);
+        setupHexValidation(ivField);
+        setupHexValidation(gcmTagField);
+        setupHexValidation(aadField);
+
+        refreshCipherTemplateCombo();
+    }
+
+    private void refreshCipherTemplateCombo() {
+        SafeTemplateUIHelper.populateTemplateCombo(
+                cipherTemplateCombo,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER,
+                List.of("AES-256-GCM — Text UTF-8 → Base64", "AES-256-CBC — Hex → Hex")
+        );
+    }
+
+    @FXML
+    private void handleApplyCipherTemplate() {
+        String template = cipherTemplateCombo != null ? cipherTemplateCombo.getValue() : null;
+        if (template == null) return;
+
+        Map<String, java.util.function.Consumer<String>> setters = Map.of(
+                "symmetricAlgorithmCombo", v -> { if (symmetricAlgorithmCombo != null) symmetricAlgorithmCombo.setValue(v); },
+                "cipherModeCombo", v -> { if (cipherModeCombo != null) cipherModeCombo.setValue(v); },
+                "paddingCombo", v -> { if (paddingCombo != null) paddingCombo.setValue(v); },
+                "asymmetricInputFormatCombo", v -> { if (asymmetricInputFormatCombo != null) asymmetricInputFormatCombo.setValue(v); },
+                "asymmetricOutputFormatCombo", v -> { if (asymmetricOutputFormatCombo != null) asymmetricOutputFormatCombo.setValue(v); },
+                "rsaPaddingCombo", v -> { if (rsaPaddingCombo != null) rsaPaddingCombo.setValue(v); }
+        );
+
+        SafeTemplateUIHelper.applySelectedTemplate(
+                template,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER,
+                () -> {
+                    if (template.contains("AES-256-GCM")) {
+                        symmetricAlgorithmCombo.setValue("AES-256");
+                        cipherModeCombo.setValue("GCM");
+                        paddingCombo.setValue("NoPadding");
+                        symKeySourceCombo.setValue("Manual Input");
+                        symmetricKeyField.setText("");
+                        symmetricKeyField.setPromptText("Enter key in hex (Select a Key)");
+                        ivField.setText("");
+                        ivField.setPromptText("Click Generate for fresh GCM nonce...");
+                        gcmTagField.setText("");
+                        aadField.setText("");
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setOutputFormat("Base64");
+                            statusReporter.updateStatus("Template Applied: AES-256-GCM — Text UTF-8 → Base64. GCM authenticates ciphertext; use a fresh nonce for every encryption.");
+                        }
+                    } else if (template.contains("AES-256-CBC")) {
+                        symmetricAlgorithmCombo.setValue("AES-256");
+                        cipherModeCombo.setValue("CBC");
+                        paddingCombo.setValue("PKCS5Padding");
+                        symKeySourceCombo.setValue("Manual Input");
+                        symmetricKeyField.setText("");
+                        ivField.setText("");
+                        gcmTagField.setText("");
+                        aadField.setText("");
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Hexadecimal");
+                            statusReporter.setOutputFormat("Hexadecimal");
+                            statusReporter.updateStatus("Template Applied: AES-256-CBC — Hex → Hex");
+                        }
+                    }
+                },
+                setters,
+                statusReporter
+        );
+    }
+
+    @FXML
+    private void handleSaveCipherTemplate() {
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        if (symmetricAlgorithmCombo != null && symmetricAlgorithmCombo.getValue() != null) params.put("symmetricAlgorithmCombo", symmetricAlgorithmCombo.getValue());
+        if (cipherModeCombo != null && cipherModeCombo.getValue() != null) params.put("cipherModeCombo", cipherModeCombo.getValue());
+        if (paddingCombo != null && paddingCombo.getValue() != null) params.put("paddingCombo", paddingCombo.getValue());
+        if (rsaPaddingCombo != null && rsaPaddingCombo.getValue() != null) params.put("rsaPaddingCombo", rsaPaddingCombo.getValue());
+
+        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.saveCurrentAsTemplate(
+                owner,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER,
+                params,
+                this::refreshCipherTemplateCombo,
+                statusReporter
+        );
+    }
+
+    @FXML
+    private void handleExportCipherTemplate() {
+        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER, cipherTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleImportCipherTemplate() {
+        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER, this::refreshCipherTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleDeleteCipherTemplate() {
+        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER, cipherTemplateCombo, this::refreshCipherTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleResetCipherDefaults() {
+        symmetricAlgorithmCombo.setValue("AES-256");
+        cipherModeCombo.setValue("CBC");
+        paddingCombo.setValue("PKCS5Padding");
+        symKeySourceCombo.setValue("Manual Input");
+        symmetricKeyField.setText("");
+        ivField.setText("");
+        gcmTagField.setText("");
+        aadField.setText("");
+        if (statusReporter != null) {
+            statusReporter.setInputFormat("Plain Text");
+            statusReporter.setOutputFormat("Hexadecimal");
+            statusReporter.updateStatus("Cipher form reset to default");
+        }
     }
 
     public void initModern(StatusReporter reporter,
@@ -901,7 +1028,63 @@ public class CipherController {
 
     public void setSymHsmKeyCombo(ComboBox<String> combo) {
         this.symHsmKeyCombo = combo;
+        configureHsmKeyCombo(combo);
+        if (combo != null) {
+            combo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(newVal);
+                    if (km != null && !km.hasKeyMaterial()) {
+                        if (!combo.getStyleClass().contains("field-error")) {
+                            combo.getStyleClass().add("field-error");
+                        }
+                    } else {
+                        combo.getStyleClass().remove("field-error");
+                    }
+                } else {
+                    combo.getStyleClass().remove("field-error");
+                }
+            });
+        }
         refreshHsmKeys();
+    }
+
+    private void configureHsmKeyCombo(ComboBox<String> combo) {
+        if (combo == null) return;
+        combo.setCellFactory(lv -> new javafx.scene.control.ListCell<String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(item);
+                    if (km != null) {
+                        String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
+                        String prefix = km.hasKeyMaterial() ? "" : "[Metadata-only] ";
+                        setText(prefix + km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort);
+                    } else {
+                        setText(item);
+                    }
+                }
+            }
+        });
+        combo.setConverter(new javafx.util.StringConverter<String>() {
+            @Override
+            public String toString(String item) {
+                if (item == null) return "";
+                var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(item);
+                if (km != null) {
+                    String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
+                    String prefix = km.hasKeyMaterial() ? "" : "[Metadata-only] ";
+                    return prefix + km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort;
+                }
+                return item;
+            }
+            @Override
+            public String fromString(String string) {
+                return string;
+            }
+        });
     }
 
     private void updateKeySourceVisibility() {
@@ -913,6 +1096,31 @@ public class CipherController {
         if (symHsmKeyCombo != null) {
             symHsmKeyCombo.setVisible(isHsm);
             symHsmKeyCombo.setManaged(isHsm);
+        }
+        if (inspectKeyBtn != null) {
+            inspectKeyBtn.setVisible(isHsm);
+            inspectKeyBtn.setManaged(isHsm);
+        }
+        if (saveToLabBtn != null) {
+            saveToLabBtn.setVisible(!isHsm);
+            saveToLabBtn.setManaged(!isHsm);
+        }
+    }
+
+    @FXML
+    private void handleInspectKey() {
+        if (symHsmKeyCombo == null) return;
+        String keyId = symHsmKeyCombo.getValue();
+        if (keyId == null || keyId.isEmpty()) {
+            statusReporter.showError("Inspect Error", "No HSM key is currently selected to inspect.");
+            return;
+        }
+        if (statusReporter instanceof ModernMainController) {
+            ModernMainController mmc = (ModernMainController) statusReporter;
+            mmc.navigateTo("Key Lab");
+            if (mmc.getKeysController() != null) {
+                mmc.getKeysController().selectKeyInKeyLab(keyId);
+            }
         }
     }
 
@@ -939,16 +1147,45 @@ public class CipherController {
             byte[] keyBytes = DataConverter.hexToBytes(symmetricKeyField.getText().trim());
             String algo = symmetricAlgorithmCombo.getValue();
             if (algo == null) algo = "AES";
+
+            // Prompt user for key name
+            javafx.scene.control.TextInputDialog dialog = new javafx.scene.control.TextInputDialog("Key-" + algo + "-" + (keyBytes.length * 8));
+            dialog.setTitle("Save Key to Lab");
+            dialog.setHeaderText("Specify a name for this key in Key Lab:");
+            dialog.setContentText("Name:");
+            java.util.Optional<String> nameResult = dialog.showAndWait();
+            if (!nameResult.isPresent()) {
+                return; // User cancelled
+            }
+            String name = nameResult.get().trim();
+            if (name.isEmpty()) name = "Unnamed Key";
+
             javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, algo);
+            String id = java.util.UUID.randomUUID().toString();
             com.cryptocarver.crypto.hsm.KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
-                null, secretKey,
-                com.cryptocarver.crypto.hsm.KeyExportability.NON_EXPORTABLE,
-                java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT)
+                id, secretKey,
+                com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
+                java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
             );
+            km.setName(name);
+
+            // Check duplicate by fingerprint
+            var existing = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().findKeyByFingerprint(km.getFingerprint());
+            if (existing != null) {
+                statusReporter.showError("Save Error", "A key with this fingerprint already exists in the Lab: " + existing.getName() + " (" + existing.getId() + ")");
+                return;
+            }
+
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
-            statusReporter.showInfo("Success", "Key saved to Lab Cache as " + km.getId());
             refreshHsmKeys();
+
+            if (symHsmKeyCombo != null) {
+                symHsmKeyCombo.setValue(km.getId());
+            }
             symKeySourceCombo.setValue("Simulated HSM");
+
+            String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
+            statusReporter.showInfo("Success", "Key \"" + name + "\" saved to Lab. KCV: " + kcvShort);
         } catch (Exception e) {
             statusReporter.showError("Save Error", "Failed to save key: " + e.getMessage());
         }
@@ -1025,6 +1262,10 @@ public class CipherController {
             String keyId = symHsmKeyCombo.getValue();
             if (keyId == null || keyId.isEmpty()) {
                 throw new IllegalArgumentException("Please select a key from the Lab Cache");
+            }
+            var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
+            if (km != null && !km.hasKeyMaterial()) {
+                throw new IllegalStateException("Selected key material is not available (metadata-only reference). Please re-import or regenerate the key bytes.");
             }
             return keyId;
         }
@@ -3873,4 +4114,26 @@ public class CipherController {
         }
     }
 
+    private void setupHexValidation(TextField field) {
+        if (field == null) return;
+        field.textProperty().addListener((obs, old, val) -> {
+            if (val != null && !val.trim().isEmpty() && !isValidHex(val.trim())) {
+                if (!field.getStyleClass().contains("field-error")) {
+                    field.getStyleClass().add("field-error");
+                }
+            } else {
+                field.getStyleClass().remove("field-error");
+            }
+        });
+    }
+
+    private boolean isValidHex(String value) {
+        if (value == null) return false;
+        return value.matches("^[0-9a-fA-F]*$");
+    }
+
+    public ComboBox<String> getSymmetricAlgorithmCombo() { return symmetricAlgorithmCombo; }
+    public ComboBox<String> getSymKeySourceCombo() { return symKeySourceCombo; }
+    public TextField getIvField() { return ivField; }
+    public ComboBox<String> getCipherTemplateCombo() { return cipherTemplateCombo; }
 }

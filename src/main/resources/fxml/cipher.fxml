@@ -9,42 +9,90 @@
     <Accordion styleClass="cipher-accordion">
         <panes>
             <TitledPane text="🔒 Symmetric Cipher (AES, DES, etc.)" expanded="true">
-                <VBox spacing="14" styleClass="cipher-pane-content">
-                    <GridPane hgap="12" vgap="10" styleClass="cipher-form-grid">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="130" prefWidth="130" halignment="RIGHT"/>
-                            <ColumnConstraints hgrow="ALWAYS"/>
-                        </columnConstraints>
-                        <Label text="Algorithm:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <ComboBox fx:id="symmetricAlgorithmCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                        <Label text="Mode:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <ComboBox fx:id="cipherModeCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                        <Label text="Padding:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <ComboBox fx:id="paddingCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                        <Label text="Key Source:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="3" alignment="CENTER_LEFT">
-                            <ComboBox fx:id="symKeySourceCombo" prefWidth="150" minWidth="150" styleClass="cipher-field"/>
-                            <StackPane HBox.hgrow="ALWAYS">
-                                <TextField fx:id="symmetricKeyField" promptText="Hex Key" maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
-                                <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false" styleClass="cipher-field"/>
-                            </StackPane>
-                            <Button text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="cipher-inline-action"/>
-                        </HBox>
-                        <Label text="IV / Nonce:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="4" alignment="CENTER_LEFT">
-                            <TextField fx:id="ivField" promptText="Hex IV" HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace"/>
-                            <Button text="Generate" onAction="#generateIV" styleClass="cipher-inline-action"/>
-                        </HBox>
-                        <Label text="Auth Tag (GCM):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
-                        <TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes) - for GCM/Poly1305 Decryption"
-                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
-                        <Label text="AAD (Optional):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
-                        <TextField fx:id="aadField" promptText="Hex AAD (Additional Authenticated Data)"
-                                   maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
-                    </GridPane>
-                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="cipher-action-row">
-                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button,cipher-primary-action"/>
-                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="action-button,cipher-primary-action"/>
+                <VBox spacing="14" styleClass="cipher-pane-content" maxWidth="720">
+
+                    <!-- Template Selection Bar -->
+                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box">
+                        <Label text="Apply Template:" styleClass="form-label"/>
+                        <ComboBox fx:id="cipherTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                        <Button text="Apply" onAction="#handleApplyCipherTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                            <items>
+                                <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCipherTemplate"/>
+                                <MenuItem text="Export Selected Template..." onAction="#handleExportCipherTemplate"/>
+                                <MenuItem text="Import Template File..." onAction="#handleImportCipherTemplate"/>
+                                <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCipherTemplate"/>
+                            </items>
+                        </MenuButton>
+                        <Button text="Reset Defaults" onAction="#handleResetCipherDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                    </HBox>
+
+                    <!-- Group 1: Algorithm & Mode -->
+                    <VBox styleClass="form-group-box">
+                        <Label text="Algorithm &amp; Mode" styleClass="form-group-title"/>
+                        <GridPane hgap="12" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="130" prefWidth="130" halignment="RIGHT"/>
+                                <ColumnConstraints hgrow="ALWAYS"/>
+                            </columnConstraints>
+                            <Label text="Algorithm:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="symmetricAlgorithmCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Mode:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cipherModeCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="Padding:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="paddingCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        </GridPane>
+                    </VBox>
+
+                    <!-- Group 2: Key Source -->
+                    <VBox styleClass="form-group-box">
+                        <Label text="Key Source" styleClass="form-group-title"/>
+                        <GridPane hgap="12" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="130" prefWidth="130" halignment="RIGHT"/>
+                                <ColumnConstraints hgrow="ALWAYS"/>
+                            </columnConstraints>
+                            <Label text="Key Source *:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0" alignment="CENTER_LEFT">
+                                <ComboBox fx:id="symKeySourceCombo" prefWidth="150" minWidth="150" styleClass="cipher-field"/>
+                                <StackPane HBox.hgrow="ALWAYS">
+                                    <TextField fx:id="symmetricKeyField" promptText="Enter key in hex (required)..." maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
+                                    <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false" styleClass="cipher-field"/>
+                                </StackPane>
+                                <Button fx:id="inspectKeyBtn" text="Inspect" onAction="#handleInspectKey" styleClass="secondary-button" style="-fx-font-size: 11px;" visible="false" managed="false"/>
+                                <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            </HBox>
+                        </GridPane>
+                        <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text" style="-fx-padding: 0 0 0 142;"/>
+                    </VBox>
+
+                    <!-- Group 3: IV / Nonce & AEAD Parameters -->
+                    <VBox styleClass="form-group-box">
+                        <Label text="IV / Nonce &amp; AEAD parameters" styleClass="form-group-title"/>
+                        <GridPane hgap="12" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="130" prefWidth="130" halignment="RIGHT"/>
+                                <ColumnConstraints hgrow="ALWAYS"/>
+                            </columnConstraints>
+                            <Label text="IV / Nonce:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0" alignment="CENTER_LEFT">
+                                <TextField fx:id="ivField" promptText="Hex IV (required for CBC/CTR/GCM modes)..." HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace"/>
+                                <Button text="Generate" onAction="#generateIV" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            </HBox>
+                            <Label text="Auth Tag (GCM):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes; required for GCM/Poly1305 Decryption)"
+                                       maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="AAD (Optional):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <TextField fx:id="aadField" promptText="Hex Additional Authenticated Data (optional)"
+                                       maxWidth="Infinity" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        </GridPane>
+                        <Label text="Note: AEAD modes (GCM, ChaCha20-Poly1305) require a nonce and produce/verify a detached auth tag." styleClass="helper-text" style="-fx-padding: 4 0 0 142;"/>
+                    </VBox>
+
+                    <!-- Primary actions -->
+                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 4 0 0 142;">
+                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button-primary" style="-fx-min-width: 120;"/>
+                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="secondary-button" style="-fx-min-width: 120;"/>
                     </HBox>
                 </VBox>
             </TitledPane>

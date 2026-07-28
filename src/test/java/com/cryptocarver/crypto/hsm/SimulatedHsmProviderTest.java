@@ -1,5 +1,6 @@
 package com.cryptocarver.crypto.hsm;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import javax.crypto.spec.SecretKeySpec;
@@ -8,12 +9,23 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SimulatedHsmProviderTest {
 
+    private java.io.File tempFile;
     private SimulatedHsmProvider hsm;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        tempFile = java.io.File.createTempFile("hsm_provider_test_store", ".json");
+        tempFile.deleteOnExit();
         hsm = SimulatedHsmProvider.getInstance();
+        hsm.resetForTest(tempFile.toPath());
+    }
+
+    @AfterEach
+    void tearDown() {
         hsm.clear();
+        if (tempFile != null && tempFile.exists()) {
+            tempFile.delete();
+        }
     }
 
     @Test

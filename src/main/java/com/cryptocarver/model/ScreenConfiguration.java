@@ -50,6 +50,10 @@ public final class ScreenConfiguration {
         this(FORMAT, CURRENT_VERSION, operation, module, Instant.now().toString(), true, visibilityProfile, encode(state));
     }
 
+    public ScreenConfiguration(String operation, String module, Map<String, Object> state, SecretVisibilityProfile visibilityProfile, boolean mayContainSecrets) {
+        this(FORMAT, CURRENT_VERSION, operation, module, Instant.now().toString(), mayContainSecrets, visibilityProfile, encode(state));
+    }
+
     private ScreenConfiguration(String format, int version, String operation, String module, String createdAt,
                                 boolean mayContainSecrets, SecretVisibilityProfile visibilityProfile, Map<String, Value> values) {
         if (!FORMAT.equals(format)) throw new IllegalArgumentException("Unsupported configuration format");

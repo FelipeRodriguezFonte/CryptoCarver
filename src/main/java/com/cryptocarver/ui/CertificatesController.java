@@ -5,6 +5,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import java.util.List;
+import java.util.Map;
 
 /**
  * FXML boundary for the certificate, CRL and CMS laboratory.
@@ -24,6 +26,8 @@ public class CertificatesController {
     @FXML private CheckBox certRootCaCheck;
 
     @FXML private TextArea certInputArea, certParseResultArea;
+    @FXML private ComboBox<String> certTemplateCombo;
+    private StatusReporter statusReporter;
     @FXML private TextArea certCompareLeftArea, certCompareRightArea, certCompareResultArea;
     @FXML private TextArea certIssueCsrArea, certIssueCaCertArea, certIssueCaKeyArea, certIssueResultArea;
     @FXML private TextField certIssueValidityField, certIssueSignatureField, certIssuePathLengthField;
@@ -59,7 +63,9 @@ public class CertificatesController {
     private KeysController keysController;
 
     public void init(StatusReporter reporter, KeysController sharedKeysController) {
+        this.statusReporter = reporter;
         this.keysController = sharedKeysController;
+        refreshCertTemplateCombo();
         if (keysController == null) return;
 
         keysController.initializeCertificateGen(
@@ -139,4 +145,76 @@ public class CertificatesController {
     @FXML private void handleCMSVerify() { keysController.handleCMSVerify(); }
     @FXML private void handleCMSEncrypt() { keysController.handleCMSEncrypt(); }
     @FXML private void handleCMSDecrypt() { keysController.handleCMSDecrypt(); }
+
+    private void refreshCertTemplateCombo() {
+        SafeTemplateUIHelper.populateTemplateCombo(
+                certTemplateCombo,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION,
+                List.of("Certificate inspection — PEM")
+        );
+    }
+
+    @FXML
+    private void handleApplyCertTemplate() {
+        String template = certTemplateCombo != null ? certTemplateCombo.getValue() : null;
+        if (template == null) return;
+
+        Map<String, java.util.function.Consumer<String>> setters = Map.of(
+                "certFormatCombo", v -> { if (certTemplateCombo != null) certTemplateCombo.setValue(v); }
+        );
+
+        SafeTemplateUIHelper.applySelectedTemplate(
+                template,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION,
+                () -> {
+                    if (template.contains("PEM")) {
+                        if (certInputArea != null) {
+                            certInputArea.setPromptText("Paste certificate in PEM format... (PEM Certificate template)");
+                        }
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.updateStatus("Template Applied: Certificate inspection — PEM");
+                        }
+                    }
+                },
+                setters,
+                statusReporter
+        );
+    }
+
+    @FXML
+    private void handleSaveCertTemplate() {
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        if (certTemplateCombo != null && certTemplateCombo.getValue() != null) params.put("certFormatCombo", certTemplateCombo.getValue());
+        javafx.stage.Window owner = certTemplateCombo != null && certTemplateCombo.getScene() != null ? certTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION, params, this::refreshCertTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleExportCertTemplate() {
+        javafx.stage.Window owner = certTemplateCombo != null && certTemplateCombo.getScene() != null ? certTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION, certTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleImportCertTemplate() {
+        javafx.stage.Window owner = certTemplateCombo != null && certTemplateCombo.getScene() != null ? certTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION, this::refreshCertTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleDeleteCertTemplate() {
+        javafx.stage.Window owner = certTemplateCombo != null && certTemplateCombo.getScene() != null ? certTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION, certTemplateCombo, this::refreshCertTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleResetCertDefaults() {
+        certInputArea.setText("");
+        certParseResultArea.setText("");
+        if (statusReporter != null) {
+            statusReporter.setInputFormat("Plain Text");
+            statusReporter.updateStatus("Certificate parsing form reset to default");
+        }
+    }
 }

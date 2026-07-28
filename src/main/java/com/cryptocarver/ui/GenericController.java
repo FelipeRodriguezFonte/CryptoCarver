@@ -31,6 +31,8 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.CheckBox;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Controller for Generic cryptography operations - Enhanced
@@ -92,6 +94,7 @@ public class GenericController {
 
 
     // UI Components for Generic tab
+    @FXML private ComboBox<String> hashTemplateCombo;
     @FXML private ComboBox<String> hashAlgorithmCombo;
     @FXML private ComboBox<String> checkDigitAlgorithmCombo;
     @FXML private javafx.scene.control.TextField randomBytesField;
@@ -126,6 +129,7 @@ public class GenericController {
     }
 
     // Manual Conversion Components
+    @FXML private ComboBox<String> manualTemplateCombo;
     @FXML private TextArea manualInputArea;
     @FXML private TextArea manualOutputArea;
     @FXML private ComboBox<String> manualInputFormatCombo;
@@ -593,7 +597,175 @@ public class GenericController {
             fileEncodingCombo.getSelectionModel().select("UTF-8");
         }
 
+        refreshHashTemplateCombo();
+        refreshManualTemplateCombo();
+
         initializeEBCDICConverter();
+    }
+
+    private void refreshHashTemplateCombo() {
+        SafeTemplateUIHelper.populateTemplateCombo(
+                hashTemplateCombo,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING,
+                List.of("SHA-256 — Text UTF-8 → Hex", "SHA-512 — Text UTF-8 → Base64")
+        );
+    }
+
+    private void refreshManualTemplateCombo() {
+        SafeTemplateUIHelper.populateTemplateCombo(
+                manualTemplateCombo,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION,
+                List.of("Convert Text UTF-8 → Base64", "Convert Hex → Text UTF-8")
+        );
+    }
+
+    @FXML
+    private void handleApplyHashTemplate() {
+        String template = hashTemplateCombo != null ? hashTemplateCombo.getValue() : null;
+        if (template == null) return;
+
+        Map<String, java.util.function.Consumer<String>> setters = Map.of(
+                "hashAlgorithmCombo", v -> { if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue(v); }
+        );
+
+        SafeTemplateUIHelper.applySelectedTemplate(
+                template,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING,
+                () -> {
+                    if (template.contains("SHA-256")) {
+                        hashAlgorithmCombo.setValue("SHA-256");
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setOutputFormat("Hexadecimal");
+                            statusReporter.updateStatus("Template Applied: SHA-256 — Text UTF-8 → Hex. A hash is one-way; it cannot be decrypted.");
+                        }
+                    } else if (template.contains("SHA-512")) {
+                        hashAlgorithmCombo.setValue("SHA-512");
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setOutputFormat("Base64");
+                            statusReporter.updateStatus("Template Applied: SHA-512 — Text UTF-8 → Base64. A hash is one-way; it cannot be decrypted.");
+                        }
+                    }
+                },
+                setters,
+                statusReporter
+        );
+    }
+
+    @FXML
+    private void handleSaveHashTemplate() {
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        if (hashAlgorithmCombo != null && hashAlgorithmCombo.getValue() != null) params.put("hashAlgorithmCombo", hashAlgorithmCombo.getValue());
+        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, params, this::refreshHashTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleExportHashTemplate() {
+        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, hashTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleImportHashTemplate() {
+        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, this::refreshHashTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleDeleteHashTemplate() {
+        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, hashTemplateCombo, this::refreshHashTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleResetHashDefaults() {
+        hashAlgorithmCombo.setValue("SHA-256");
+        if (statusReporter != null) {
+            statusReporter.setInputFormat("Plain Text");
+            statusReporter.setOutputFormat("Hexadecimal");
+            statusReporter.updateStatus("Hash form reset to default");
+        }
+    }
+
+    @FXML
+    private void handleApplyManualTemplate() {
+        String template = manualTemplateCombo != null ? manualTemplateCombo.getValue() : null;
+        if (template == null) return;
+
+        Map<String, java.util.function.Consumer<String>> setters = Map.of(
+                "manualInputFormatCombo", v -> { if (manualInputFormatCombo != null) manualInputFormatCombo.setValue(v); },
+                "manualOutputFormatCombo", v -> { if (manualOutputFormatCombo != null) manualOutputFormatCombo.setValue(v); },
+                "ebcdicDirectionCombo", v -> { if (ebcdicDirectionCombo != null) ebcdicDirectionCombo.setValue(v); }
+        );
+
+        SafeTemplateUIHelper.applySelectedTemplate(
+                template,
+                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION,
+                () -> {
+                    if (template.contains("Base64")) {
+                        manualInputFormatCombo.setValue("Text (UTF-8)");
+                        manualOutputFormatCombo.setValue("Base64");
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setOutputFormat("Base64");
+                            statusReporter.updateStatus("Template Applied: Convert Text UTF-8 → Base64");
+                        }
+                    } else if (template.contains("Hex")) {
+                        manualInputFormatCombo.setValue("Hexadecimal");
+                        manualOutputFormatCombo.setValue("Text (UTF-8)");
+                        if (statusReporter != null) {
+                            statusReporter.setInputFormat("Hexadecimal");
+                            statusReporter.setOutputFormat("Plain Text");
+                            statusReporter.updateStatus("Template Applied: Convert Hex → Text UTF-8");
+                        }
+                    }
+                },
+                setters,
+                statusReporter
+        );
+    }
+
+    @FXML
+    private void handleSaveManualTemplate() {
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        if (manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null) params.put("manualInputFormatCombo", manualInputFormatCombo.getValue());
+        if (manualOutputFormatCombo != null && manualOutputFormatCombo.getValue() != null) params.put("manualOutputFormatCombo", manualOutputFormatCombo.getValue());
+        if (ebcdicDirectionCombo != null && ebcdicDirectionCombo.getValue() != null) params.put("ebcdicDirectionCombo", ebcdicDirectionCombo.getValue());
+        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, params, this::refreshManualTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleExportManualTemplate() {
+        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, manualTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleImportManualTemplate() {
+        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, this::refreshManualTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleDeleteManualTemplate() {
+        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
+        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, manualTemplateCombo, this::refreshManualTemplateCombo, statusReporter);
+    }
+
+    @FXML
+    private void handleResetManualDefaults() {
+        manualInputFormatCombo.setValue("Text (UTF-8)");
+        manualOutputFormatCombo.setValue("Text (UTF-8)");
+        manualInputArea.setText("");
+        manualOutputArea.setText("");
+        if (statusReporter != null) {
+            statusReporter.setInputFormat("Plain Text");
+            statusReporter.setOutputFormat("Plain Text");
+            statusReporter.updateStatus("Manual conversion form reset to default");
+        }
     }
 
 

@@ -112,6 +112,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private ClipboardShelfController clipboardShelfController;
 
+    // Compact Result Summary Bar
+    @FXML private HBox resultSummaryBar;
+    @FXML private Label resultOpLabel;
+    @FXML private Label resultAlgoLabel;
+    @FXML private Label resultSizeLabel;
+    @FXML private Label resultFormatLabel;
+    @FXML private Label resultStatusBadge;
+
+    // Quick Start & Guided Workflows
+    @FXML private VBox quickStartContainer;
+    @FXML private HBox guidedFlowPanel;
+    @FXML private Label guideStepTitleLabel;
+    @FXML private Label guideStepDescLabel;
+    @FXML private Button guideBackBtn;
+    @FXML private Button guideNextBtn;
+
+    public enum GuidedOperation {
+        ENCRYPT, HASH, SIGN, CERT, CONVERT
+    }
+
+    private GuidedOperation currentGuidedOp;
+    private int currentGuidedStep = 1;
+
 
 
 
@@ -333,6 +356,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
+    public KeysController getKeysController() {
+        return keysController;
+    }
+
     // ============================================================
     // EVENT HANDLERS - Symmetric Keys Operations
     // ============================================================
@@ -355,6 +382,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @Override
     public void navigateTo(String operation) {
         handleItemSelected(operation);
+    }
+
+    @Override
+    public void setInputFormat(String format) {
+        if (inputFormatCombo != null) {
+            inputFormatCombo.setValue(format);
+        }
+    }
+
+    @Override
+    public void setOutputFormat(String format) {
+        if (outputFormatCombo != null) {
+            outputFormatCombo.setValue(format);
+        }
     }
 
     private void handleItemSelected(String itemName) {
@@ -754,7 +795,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (items.isEmpty()) {
             Label placeholder = new Label("No recent operations");
-            placeholder.setStyle("-fx-text-fill: #718096; -fx-font-size: 11px; -fx-padding: 10;");
+            placeholder.setStyle("-fx-text-fill: -color-text-muted; -fx-font-size: 11px; -fx-padding: 10;");
             historyContainer.getChildren().add(placeholder);
             return;
         }
@@ -762,37 +803,66 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         for (com.cryptocarver.model.HistoryCommand item : items) {
             HBox historyCommand = new HBox(8);
             historyCommand.setStyle(
-                    "-fx-background-color: #2b2b2b; " +
+                    "-fx-background-color: -color-bg-sidebar-hover; " +
                             "-fx-padding: 8; " +
-                            "-fx-background-radius: 4;");
+                            "-fx-background-radius: 6;");
             historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
             VBox infoBox = new VBox(2);
             Label opLabel = new Label(item.getOperation());
-            opLabel.setStyle("-fx-text-fill: #e0e0e0; -fx-font-weight: bold; -fx-font-size: 11px;");
+            opLabel.setStyle("-fx-text-fill: -color-text-light; -fx-font-weight: bold; -fx-font-size: 12px;");
 
-            Label timeLabel = new Label(item.getTimestamp());
-            timeLabel.setStyle("-fx-text-fill: #b0bec5; -fx-font-size: 9px;");
+            String relTime = formatRelativeTime(item.getTimestamp());
+            Label timeLabel = new Label(relTime);
+            timeLabel.setStyle("-fx-text-fill: -color-text-subtle; -fx-font-size: 10px;");
+            Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
 
             infoBox.getChildren().addAll(opLabel, timeLabel);
             HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
 
-            Button rerunButton = new Button("Rerun");
-            rerunButton.setStyle(
-                    "-fx-background-color: #0288d1; " +
-                            "-fx-text-fill: #ffffff; " +
+            Button reopenButton = new Button("Reopen");
+            reopenButton.setStyle(
+                    "-fx-background-color: transparent; " +
+                            "-fx-border-color: -color-border; " +
+                            "-fx-border-width: 1; " +
+                            "-fx-border-radius: 3; " +
+                            "-fx-text-fill: -color-text-light; " +
                             "-fx-font-size: 10px; " +
                             "-fx-padding: 3 8; " +
-                            "-fx-background-radius: 3; " +
                             "-fx-cursor: hand;");
 
-            rerunButton.setOnAction(e -> {
+            reopenButton.setOnAction(e -> {
                 restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
                         ? item.getParameters() : item.getUiState(), item.getOperation());
             });
 
-            historyCommand.getChildren().addAll(infoBox, rerunButton);
+            historyCommand.getChildren().addAll(infoBox, reopenButton);
             historyContainer.getChildren().add(historyCommand);
+        }
+    }
+
+    private String formatRelativeTime(String timestampStr) {
+        if (timestampStr == null) return "";
+        try {
+            java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(
+                timestampStr,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            );
+            java.time.ZonedDateTime zdt = ldt.atZone(java.time.ZoneId.systemDefault());
+            long timeMillis = zdt.toInstant().toEpochMilli();
+            long delta = System.currentTimeMillis() - timeMillis;
+            if (delta < 0) return "just now";
+            if (delta < 60000) {
+                return (delta / 1000) + "s ago";
+            } else if (delta < 3600000) {
+                return (delta / 60000) + "m ago";
+            } else if (delta < 86400000) {
+                return (delta / 3600000) + "h ago";
+            } else {
+                return (delta / 86400000) + "d ago";
+            }
+        } catch (Exception e) {
+            return timestampStr; // Fallback
         }
     }
 
@@ -1205,6 +1275,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleCopyOutput() {
+        if (lastPublishedResultSnapshot == null) {
+            updateStatus("No output available to copy");
+            return;
+        }
         String content = resolveCurrentOutputText();
 
         if (content != null && !content.isEmpty()) {
@@ -1218,6 +1292,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
     @FXML
     private void handleAddCurrentOutputToShelf() {
+        if (lastPublishedResultSnapshot == null) {
+            showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
+            return;
+        }
         String content = resolveCurrentOutputText();
         if (content == null || content.isBlank()) {
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
@@ -1232,6 +1310,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Opens the active operation result in a large, independent viewer. */
     @FXML
     private void handleOpenExpandedResultViewer() {
+        if (lastPublishedResultSnapshot == null) {
+            showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
+            return;
+        }
         TextArea requestedArea = preferredResultArea();
         String content = resolveResultText(requestedArea);
         if (content == null || content.isBlank()) {
@@ -1340,6 +1422,44 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) {
             updateStatus(result.getStatusMessage());
         }
+
+        if (resultSummaryBar != null) {
+            resultSummaryBar.setManaged(true);
+            resultSummaryBar.setVisible(true);
+            if (resultOpLabel != null) resultOpLabel.setText(result.getOperation());
+
+            // Resolve algorithm
+            String algo = "N/A";
+            if (result.getDetails() != null) {
+                for (com.cryptocarver.model.OperationDetail d : result.getDetails()) {
+                    if ("Algorithm".equalsIgnoreCase(d.name()) || "Type".equalsIgnoreCase(d.name())) {
+                        algo = d.value();
+                        break;
+                    }
+                }
+            }
+            if (resultAlgoLabel != null) resultAlgoLabel.setText(algo);
+
+            // Resolve sizes
+            int inLen = result.getInput() != null ? result.getInput().length : 0;
+            int outLen = result.getOutput() != null ? result.getOutput().length : 0;
+            if (resultSizeLabel != null) resultSizeLabel.setText("In: " + inLen + "B / Out: " + outLen + "B");
+
+            // Resolve output format
+            String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
+            if (resultFormatLabel != null) resultFormatLabel.setText(outFormat);
+
+            // Success / Error status
+            if (resultStatusBadge != null) {
+                if (result.getStatusMessage() != null && result.getStatusMessage().toLowerCase().contains("failed")) {
+                    resultStatusBadge.setText("FAILED");
+                    resultStatusBadge.setStyle("-fx-background-color: #fde8e8; -fx-text-fill: #9b1c1c; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
+                } else {
+                    resultStatusBadge.setText("SUCCESS");
+                    resultStatusBadge.setStyle("-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
+                }
+            }
+        }
     }
 
     /** Clears the cached result whenever it no longer represents the visible UI state. */
@@ -1347,6 +1467,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         lastPublishedOperation = "";
         lastPublishedResultSnapshot = null;
         resultAreaTracker.clearSelection();
+        if (resultSummaryBar != null) {
+            resultSummaryBar.setManaged(false);
+            resultSummaryBar.setVisible(false);
+        }
     }
 
 
@@ -1929,6 +2053,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             wssSecurityContainer.setVisible(false);
             wssSecurityContainer.setManaged(false);
         }
+        if (quickStartContainer != null) {
+            quickStartContainer.setVisible(false);
+            quickStartContainer.setManaged(false);
+        }
         if (savedSessionsContainer != null) {
             savedSessionsContainer.setVisible(false);
             savedSessionsContainer.setManaged(false);
@@ -2141,18 +2269,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
         updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
+        if (keysController != null) {
+            keysController.updateVisibilityControls();
+            keysController.refreshKeyLabTable();
+        }
     }
 
     @FXML
     private void handleVisibilityMasked() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
         updateStatus("Visibility set to MASKED (Classroom/Demo)");
+        if (keysController != null) {
+            keysController.updateVisibilityControls();
+            keysController.refreshKeyLabTable();
+        }
     }
 
     @FXML
     private void handleVisibilityRedacted() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         updateStatus("Visibility set to REDACTED (Strict/Production)");
+        if (keysController != null) {
+            keysController.updateVisibilityControls();
+            keysController.refreshKeyLabTable();
+        }
     }
 
     @FXML
@@ -2536,6 +2676,151 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
+    public void showQuickStart() {
+        hideAllContainers();
+        if (quickStartContainer != null) {
+            quickStartContainer.setVisible(true);
+            quickStartContainer.setManaged(true);
+        }
+        updateContentHeader("Quick Start");
+        updateStatus("Quick Start dashboard active.");
+    }
+
+    @FXML
+    private void handleStartGuidedEncrypt() {
+        startGuidedWorkflow(GuidedOperation.ENCRYPT);
+    }
+
+    @FXML
+    private void handleStartGuidedHash() {
+        startGuidedWorkflow(GuidedOperation.HASH);
+    }
+
+    @FXML
+    private void handleStartGuidedSign() {
+        startGuidedWorkflow(GuidedOperation.SIGN);
+    }
+
+    @FXML
+    private void handleStartGuidedCert() {
+        startGuidedWorkflow(GuidedOperation.CERT);
+    }
+
+    @FXML
+    private void handleStartGuidedConvert() {
+        startGuidedWorkflow(GuidedOperation.CONVERT);
+    }
+
+    public void startGuidedWorkflow(GuidedOperation op) {
+        this.currentGuidedOp = op;
+        this.currentGuidedStep = 1;
+        switch (op) {
+            case ENCRYPT -> handleItemSelected("Symmetric Encryption");
+            case HASH -> handleItemSelected("Hashing");
+            case SIGN -> handleItemSelected("Digital Signatures");
+            case CERT -> handleItemSelected("Parse Certificate");
+            case CONVERT -> handleItemSelected("Manual Conversion");
+        }
+        if (guidedFlowPanel != null) {
+            guidedFlowPanel.setVisible(true);
+            guidedFlowPanel.setManaged(true);
+            setupGuidedFlowKeyboardAndTooltips();
+        }
+        updateGuidedStepUI();
+    }
+
+    @FXML
+    private void handleGuideNext() {
+        if (currentGuidedStep < 5) {
+            currentGuidedStep++;
+            updateGuidedStepUI();
+        }
+    }
+
+    @FXML
+    private void handleGuideBack() {
+        if (currentGuidedStep > 1) {
+            currentGuidedStep--;
+            updateGuidedStepUI();
+        }
+    }
+
+    @FXML
+    private void handleGuideSkip() {
+        currentGuidedStep = 4;
+        updateGuidedStepUI();
+    }
+
+    @FXML
+    private void handleGuideExit() {
+        if (guidedFlowPanel != null) {
+            guidedFlowPanel.setVisible(false);
+            guidedFlowPanel.setManaged(false);
+        }
+    }
+
+    private void updateGuidedStepUI() {
+        if (guideStepTitleLabel == null || guideStepDescLabel == null || currentGuidedOp == null) return;
+
+        if (guideBackBtn != null) guideBackBtn.setDisable(currentGuidedStep <= 1);
+        if (guideNextBtn != null) guideNextBtn.setDisable(currentGuidedStep >= 5);
+
+        switch (currentGuidedStep) {
+            case 1 -> {
+                guideStepTitleLabel.setText("Step 1 of 5: Choose data/input format");
+                guideStepDescLabel.setText("Configure the input encoding on the format flow bar (UTF-8, Hex, Base64).");
+                if (inputFormatCombo != null) inputFormatCombo.requestFocus();
+            }
+            case 2 -> {
+                guideStepTitleLabel.setText("Step 2 of 5: Choose algorithm & settings (or Start from a Template)");
+                switch (currentGuidedOp) {
+                    case ENCRYPT -> guideStepDescLabel.setText("Select cipher algorithm (e.g. AES-256), mode (GCM/CBC), or Apply a safe template.");
+                    case HASH -> guideStepDescLabel.setText("Select digest algorithm (e.g. SHA-256, SHA-512) or Apply a safe template.");
+                    case SIGN -> guideStepDescLabel.setText("Select signature scheme (e.g. RSA-SHA256, ECDSA) or Apply a safe template.");
+                    case CERT -> guideStepDescLabel.setText("Configure certificate format options or Apply a safe template.");
+                    case CONVERT -> guideStepDescLabel.setText("Select target output encoding (Base64, Hex, EBCDIC) or Apply a template.");
+                }
+            }
+            case 3 -> {
+                guideStepTitleLabel.setText("Step 3 of 5: Provide key / material");
+                switch (currentGuidedOp) {
+                    case ENCRYPT -> guideStepDescLabel.setText("Select key source (Manual, Key Lab, HSM). For GCM/CBC, click Generate for a fresh IV/nonce. (Applying a template does not auto-advance or supply keys).");
+                    case HASH -> guideStepDescLabel.setText("Enter or paste the input payload to hash.");
+                    case SIGN -> guideStepDescLabel.setText("Select Private key (to sign) or Public key/cert (to verify).");
+                    case CERT -> guideStepDescLabel.setText("Paste PEM certificate text into input area.");
+                    case CONVERT -> guideStepDescLabel.setText("Enter input data to convert.");
+                }
+            }
+            case 4 -> {
+                guideStepTitleLabel.setText("Step 4 of 5: Review & execute");
+                guideStepDescLabel.setText("Review your configuration and click the Execute/Run button to process data safely.");
+            }
+            case 5 -> {
+                guideStepTitleLabel.setText("Step 5 of 5: Inspect, copy & save");
+                guideStepDescLabel.setText("Inspect output bytes in summary bar or inspector. Copy or send to Clipboard Shelf.");
+            }
+        }
+    }
+
+    private void setupGuidedFlowKeyboardAndTooltips() {
+        if (guidedFlowPanel == null) return;
+
+        if (guideBackBtn != null) guideBackBtn.setTooltip(new Tooltip("Return to previous guided step"));
+        if (guideNextBtn != null) guideNextBtn.setTooltip(new Tooltip("Advance to next guided step"));
+
+        guidedFlowPanel.setOnKeyPressed(event -> {
+            if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                handleGuideExit();
+                event.consume();
+            } else if (event.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                if (currentGuidedStep < 4) {
+                    handleGuideNext();
+                    event.consume();
+                }
+            }
+        });
+    }
+
 
 
 
@@ -2545,6 +2830,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (!hasLabMenu) {
             javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
             labMenu.setStyle("-fx-text-fill: white;");
+
+            javafx.scene.control.MenuItem quickStartItem = new javafx.scene.control.MenuItem("Quick Start");
+            quickStartItem.setOnAction(e -> showQuickStart());
+            labMenu.getItems().add(quickStartItem);
+            labMenu.getItems().add(new javafx.scene.control.SeparatorMenuItem());
             for (com.cryptocarver.model.payments.PaymentProfile p : com.cryptocarver.model.payments.PaymentProfileManager.getAllProfiles()) {
                 // Si el perfil no tiene aún pantalla funcional, no incluirlo en Laboratory hasta que la tenga.
                 // Currently only TR31, EMV, DUKPT_TDES, DUKPT_AES, PIN and SECURE_MESSAGING have UI or are going to have UI via EMV/Payments/Keys controllers.

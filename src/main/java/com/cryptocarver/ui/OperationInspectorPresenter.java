@@ -126,9 +126,9 @@ final class OperationInspectorPresenter {
             if (detail == null) continue;
             HBox row = new HBox(10);
             Label key = new Label(detail.name() + ":");
-            key.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 10px;");
+            key.getStyleClass().add("inspector-detail-key");
             Label value = new Label(detail.value() == null ? "" : detail.value());
-            value.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 10px;");
+            value.getStyleClass().add("inspector-detail-value");
             value.setWrapText(true);
             if (!value.getText().isBlank()) value.setTooltip(new Tooltip(value.getText()));
             row.getChildren().addAll(key, value);

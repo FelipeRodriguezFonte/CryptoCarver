@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.*;
+import com.cryptocarver.crypto.hsm.KeyMaterial;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.util.DataConverter;
@@ -13,10 +14,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Key;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Controller for Keys tab - Enhanced with asymmetric cryptography
@@ -32,6 +35,30 @@ public class KeysController {
     @FXML private TextArea ecdsaPrivateKeyArea;
     @FXML private TextArea eddsaPublicKeyArea;
     @FXML private TextArea eddsaPrivateKeyArea;
+
+    // Key Lab FXML fields
+    @FXML private TitledPane keyLabPane;
+    @FXML private TextField keyLabSearchField;
+    @FXML private ComboBox<String> keyLabStatusFilter;
+    @FXML private TableView<KeyMaterial> keyLabTable;
+    @FXML private TextField keyLabNewNameField;
+    @FXML private ComboBox<String> keyLabNewAlgoCombo;
+    @FXML private ComboBox<String> keyLabNewSizeCombo;
+    @FXML private PasswordField keyLabImportBytesField;
+    @FXML private Button keyLabImportBtn;
+    @FXML private TextField keyLabDetailIdField;
+    @FXML private TextField keyLabDetailNameField;
+    @FXML private Label keyLabDetailAlgoLabel;
+    @FXML private Label keyLabDetailBitsLabel;
+    @FXML private Label keyLabDetailKcvLabel;
+    @FXML private Label keyLabDetailFingerprintLabel;
+    @FXML private Label keyLabDetailOriginLabel;
+    @FXML private Label keyLabDetailCreatedLabel;
+    @FXML private Label keyLabDetailModifiedLabel;
+    @FXML private Label keyLabDetailStatusLabel;
+    @FXML private TextField keyLabDetailValueField;
+    @FXML private Button keyLabRevealBtn;
+    @FXML private Button keyLabArchiveBtn;
 
     private StatusReporter mainController;
     private Runnable hsmRefreshCallback = () -> { };
@@ -271,6 +298,24 @@ public class KeysController {
         initializeDSA(dsaKeySizeCombo, dsaPublicKeyArea, dsaPrivateKeyArea);
         initializeECDSAFp(ecdsaCurveCombo, ecdsaPublicKeyArea, ecdsaPrivateKeyArea);
         initializeEd25519(eddsaPublicKeyArea, eddsaPrivateKeyArea);
+        initializeKeyLab();
+
+        setupHexValidation(keyInputField);
+        setupHexValidation(keyToSplitField);
+        setupHexValidation(component1Field);
+        setupHexValidation(component2Field);
+        setupHexValidation(component3Field);
+        setupHexValidation(component4Field);
+        setupHexValidation(component5Field);
+        setupHexValidation(kdfInputField);
+        setupHexValidation(kdfSaltField);
+        setupHexValidation(keyWrapKekField);
+        setupHexValidation(keyWrapDataField);
+        setupHexValidation(tr31KbpkExportField);
+        setupHexValidation(tr31KeyToWrapField);
+        setupHexValidation(tr31KbpkImportField);
+        setupHexValidation(keyLabImportBytesField);
+
         showSymmetricSection();
     }
 
@@ -3907,5 +3952,509 @@ public class KeysController {
             }
             updateStatus("Loaded TR-31 profile: " + p.getName());
         }
+    }
+
+    private void initializeKeyLab() {
+        if (keyLabStatusFilter != null) {
+            keyLabStatusFilter.getItems().setAll("Active Only", "Archived Only", "All Keys");
+            keyLabStatusFilter.setValue("Active Only");
+            keyLabStatusFilter.setOnAction(e -> refreshKeyLabTable());
+        }
+
+        if (keyLabNewAlgoCombo != null) {
+            keyLabNewAlgoCombo.getItems().setAll("AES", "3DES", "DES", "ChaCha20");
+            keyLabNewAlgoCombo.setValue("AES");
+            keyLabNewAlgoCombo.setOnAction(e -> updateNewKeySizes());
+        }
+
+        if (keyLabNewSizeCombo != null) {
+            updateNewKeySizes();
+        }
+
+        if (keyLabSearchField != null) {
+            keyLabSearchField.textProperty().addListener((obs, old, val) -> refreshKeyLabTable());
+        }
+
+        if (keyLabTable != null) {
+            TableColumn<KeyMaterial, String> nameCol = new TableColumn<>("Name");
+            nameCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getName()));
+            nameCol.setPrefWidth(120);
+
+            TableColumn<KeyMaterial, String> algoCol = new TableColumn<>("Algorithm");
+            algoCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getAlgorithm()));
+            algoCol.setPrefWidth(80);
+
+            TableColumn<KeyMaterial, String> bitsCol = new TableColumn<>("Bits");
+            bitsCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(String.valueOf(d.getValue().getSize())));
+            bitsCol.setPrefWidth(50);
+
+            TableColumn<KeyMaterial, String> kcvCol = new TableColumn<>("KCV");
+            kcvCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getKcv()));
+            kcvCol.setPrefWidth(60);
+
+            TableColumn<KeyMaterial, String> originCol = new TableColumn<>("Origin");
+            originCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getOrigin()));
+            originCol.setPrefWidth(80);
+
+            TableColumn<KeyMaterial, String> statusCol = new TableColumn<>("Status");
+            statusCol.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getStatus()));
+            statusCol.setPrefWidth(70);
+
+            keyLabTable.getColumns().setAll(nameCol, algoCol, bitsCol, kcvCol, originCol, statusCol);
+
+            keyLabTable.setRowFactory(tv -> new TableRow<KeyMaterial>() {
+                @Override
+                protected void updateItem(KeyMaterial item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (item == null || empty) {
+                        setStyle("");
+                        getStyleClass().removeAll("key-row-archived", "key-row-metadata-only", "key-row-non-exportable");
+                    } else {
+                        getStyleClass().removeAll("key-row-archived", "key-row-metadata-only", "key-row-non-exportable");
+                        if ("ARCHIVED".equalsIgnoreCase(item.getStatus())) {
+                            getStyleClass().add("key-row-archived");
+                        } else if (!item.hasKeyMaterial()) {
+                            getStyleClass().add("key-row-metadata-only");
+                        }
+                        if (item.getExportability() == com.cryptocarver.crypto.hsm.KeyExportability.NON_EXPORTABLE) {
+                            getStyleClass().add("key-row-non-exportable");
+                        }
+                    }
+                }
+            });
+
+            keyLabTable.getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> showKeyLabDetails(val));
+        }
+
+        updateVisibilityControls();
+        refreshKeyLabTable();
+    }
+
+    public void updateVisibilityControls() {
+        boolean isFullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        if (keyLabImportBytesField != null) {
+            keyLabImportBytesField.setDisable(!isFullLab);
+            if (!isFullLab) {
+                keyLabImportBytesField.setText("");
+                keyLabImportBytesField.setPromptText("Importing secret key material requires FULL_LAB");
+            } else {
+                keyLabImportBytesField.setPromptText("Or paste raw key bytes in hex...");
+            }
+        }
+        if (keyLabImportBtn != null) {
+            keyLabImportBtn.setDisable(!isFullLab);
+        }
+    }
+
+    private void updateNewKeySizes() {
+        if (keyLabNewSizeCombo == null || keyLabNewAlgoCombo == null) return;
+        String algo = keyLabNewAlgoCombo.getValue();
+        if ("AES".equals(algo)) {
+            keyLabNewSizeCombo.getItems().setAll("128", "192", "256");
+            keyLabNewSizeCombo.setValue("256");
+        } else if ("3DES".equals(algo)) {
+            keyLabNewSizeCombo.getItems().setAll("128 (2key)", "192 (3key)");
+            keyLabNewSizeCombo.setValue("192 (3key)");
+        } else if ("DES".equals(algo)) {
+            keyLabNewSizeCombo.getItems().setAll("64");
+            keyLabNewSizeCombo.setValue("64");
+        } else if ("ChaCha20".equals(algo)) {
+            keyLabNewSizeCombo.getItems().setAll("256");
+            keyLabNewSizeCombo.setValue("256");
+        }
+    }
+
+    public void refreshKeyLabTable() {
+        if (keyLabTable == null) return;
+
+        boolean includeArchived = !"Active Only".equals(keyLabStatusFilter.getValue());
+        boolean onlyArchived = "Archived Only".equals(keyLabStatusFilter.getValue());
+        String query = keyLabSearchField != null ? keyLabSearchField.getText().toLowerCase(java.util.Locale.ROOT) : "";
+
+        java.util.List<KeyMaterial> filtered = new java.util.ArrayList<>();
+        for (String id : com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().listKeyIds(true)) {
+            KeyMaterial km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(id);
+            if (km == null) continue;
+
+            if (onlyArchived && !"ARCHIVED".equalsIgnoreCase(km.getStatus())) continue;
+            if (!includeArchived && "ARCHIVED".equalsIgnoreCase(km.getStatus())) continue;
+
+            if (!query.isEmpty()) {
+                boolean matches = km.getName().toLowerCase().contains(query) ||
+                                  km.getAlgorithm().toLowerCase().contains(query) ||
+                                  km.getId().toLowerCase().contains(query);
+                if (!matches) continue;
+            }
+
+            filtered.add(km);
+        }
+
+        keyLabTable.getItems().setAll(filtered);
+    }
+
+    private void showKeyLabDetails(KeyMaterial km) {
+        if (km == null) {
+            clearKeyLabDetails();
+            return;
+        }
+
+        keyLabDetailIdField.setText(km.getId());
+        keyLabDetailNameField.setText(km.getName());
+        keyLabDetailAlgoLabel.setText(km.getAlgorithm());
+        keyLabDetailBitsLabel.setText(km.getSize() + " bits");
+        keyLabDetailKcvLabel.setText(km.getKcv());
+        keyLabDetailFingerprintLabel.setText(km.getFingerprint());
+        keyLabDetailOriginLabel.setText(km.getOrigin());
+
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        keyLabDetailCreatedLabel.setText(sdf.format(new java.util.Date(km.getCreated())));
+        keyLabDetailModifiedLabel.setText(sdf.format(new java.util.Date(km.getModified())));
+        keyLabDetailStatusLabel.setText(km.getStatus() + (km.hasKeyMaterial() ? "" : " (Metadata-only)"));
+
+        boolean isFullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        boolean isExportable = km.getExportability() == com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE;
+        keyLabRevealBtn.setDisable(!isFullLab || !isExportable);
+
+        keyLabDetailValueField.setText("************************");
+
+        if ("ARCHIVED".equalsIgnoreCase(km.getStatus())) {
+            keyLabArchiveBtn.setText("Restore");
+        } else {
+            keyLabArchiveBtn.setText("Archive");
+        }
+    }
+
+    private void clearKeyLabDetails() {
+        keyLabDetailIdField.clear();
+        keyLabDetailNameField.clear();
+        keyLabDetailAlgoLabel.setText("N/A");
+        keyLabDetailBitsLabel.setText("N/A");
+        keyLabDetailKcvLabel.setText("N/A");
+        keyLabDetailFingerprintLabel.setText("N/A");
+        keyLabDetailOriginLabel.setText("N/A");
+        keyLabDetailCreatedLabel.setText("N/A");
+        keyLabDetailModifiedLabel.setText("N/A");
+        keyLabDetailStatusLabel.setText("N/A");
+        keyLabDetailValueField.clear();
+        keyLabRevealBtn.setDisable(true);
+        keyLabArchiveBtn.setText("Archive");
+    }
+
+    @FXML
+    private void handleKeyLabGenerate() {
+        try {
+            String name = keyLabNewNameField.getText().trim();
+            if (name.isEmpty()) {
+                showError("Validation Error", "Please specify a name for the new key");
+                return;
+            }
+            String algo = keyLabNewAlgoCombo.getValue();
+            String sizeStr = keyLabNewSizeCombo.getValue();
+            int size = 256;
+            if (sizeStr != null) {
+                if (sizeStr.contains("128")) size = 128;
+                else if (sizeStr.contains("192")) size = 192;
+                else if (sizeStr.contains("64")) size = 64;
+            }
+
+            String keyTypeMap = "AES";
+            if ("3DES".equals(algo)) keyTypeMap = "3DES";
+            else if ("DES".equals(algo)) keyTypeMap = "DES";
+            else if ("ChaCha20".equals(algo)) keyTypeMap = "AES-256";
+
+            byte[] keyBytes = com.cryptocarver.crypto.KeyOperations.generateKey(keyTypeMap, true);
+            if ("AES".equals(algo) && keyBytes.length != (size / 8)) {
+                byte[] temp = new byte[size / 8];
+                System.arraycopy(keyBytes, 0, temp, 0, temp.length);
+                keyBytes = temp;
+            }
+
+            String realAlgo = algo;
+            if ("ChaCha20".equals(algo)) realAlgo = "ChaCha20";
+
+            javax.crypto.SecretKey spec = new javax.crypto.spec.SecretKeySpec(keyBytes, realAlgo);
+            String id = UUID.randomUUID().toString();
+            KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
+                    id, spec, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
+                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+            );
+            km.setName(name);
+            km.setModified(System.currentTimeMillis());
+
+            var existing = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().findKeyByFingerprint(km.getFingerprint());
+            if (existing != null) {
+                showError("Duplicate Key", "A key with this fingerprint already exists in the Lab: " + existing.getName() + " (" + existing.getId() + ")");
+                return;
+            }
+
+            com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
+            refreshKeyLabTable();
+            keyLabTable.getSelectionModel().select(km);
+            keyLabTable.scrollTo(km);
+            keyLabTable.requestFocus();
+            keyLabNewNameField.clear();
+            hsmRefreshCallback.run();
+            if (mainController != null) {
+                mainController.updateStatus("Generated and registered key: " + name);
+            }
+        } catch (Exception e) {
+            showError("Generation Error", "Failed to generate key: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleKeyLabImport() {
+        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            showError("Security Error", "Importing secret key material requires FULL_LAB visibility profile.");
+            return;
+        }
+        try {
+            String name = keyLabNewNameField.getText().trim();
+            if (name.isEmpty()) {
+                showError("Validation Error", "Please specify a name for the imported key");
+                return;
+            }
+            String hex = keyLabImportBytesField.getText().trim();
+            if (hex.isEmpty()) {
+                showError("Validation Error", "Please enter key bytes in hexadecimal format");
+                return;
+            }
+            byte[] bytes = com.cryptocarver.util.DataConverter.hexToBytes(hex);
+            String algo = keyLabNewAlgoCombo.getValue();
+
+            javax.crypto.SecretKey spec = new javax.crypto.spec.SecretKeySpec(bytes, algo);
+            String id = UUID.randomUUID().toString();
+            KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
+                    id, spec, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
+                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+            );
+            km.setName(name);
+            km.setModified(System.currentTimeMillis());
+
+            var existing = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().findKeyByFingerprint(km.getFingerprint());
+            if (existing != null) {
+                showError("Duplicate Key", "A key with this fingerprint already exists in the Lab: " + existing.getName() + " (" + existing.getId() + ")");
+                return;
+            }
+
+            com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
+            refreshKeyLabTable();
+            keyLabTable.getSelectionModel().select(km);
+            keyLabTable.scrollTo(km);
+            keyLabTable.requestFocus();
+            keyLabNewNameField.clear();
+            keyLabImportBytesField.clear();
+            hsmRefreshCallback.run();
+            if (mainController != null) {
+                mainController.updateStatus("Imported key: " + name);
+            }
+        } catch (Exception e) {
+            showError("Import Error", "Failed to import key: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleKeyLabReveal() {
+        KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) return;
+
+        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            showError("Security Restriction", "Revealing key material is only allowed in FULL_LAB security profile.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Warning: Reveal Secret Key");
+        alert.setHeaderText("Are you sure you want to reveal raw secret key bytes?");
+        alert.setContentText("Warning: Exporting or displaying cleartext key material violates production security standards. Only proceed in isolated lab environments.");
+
+        java.util.Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                byte[] keyBytes = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().revealExportableKeyForFullLab(km.getId());
+                if (keyBytes != null) {
+                    keyLabDetailValueField.setText(com.cryptocarver.util.DataConverter.bytesToHex(keyBytes).toUpperCase());
+                } else {
+                    keyLabDetailValueField.setText("[No raw key material available / Opaque key]");
+                }
+            } catch (Exception e) {
+                showError("Security Restriction", e.getMessage());
+            }
+        }
+    }
+
+    @FXML
+    private void handleKeyLabCopyId() {
+        KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) return;
+        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(km.getId());
+        clipboard.setContent(content);
+        if (mainController != null) {
+            mainController.updateStatus("Copied key ID to clipboard: " + km.getId());
+        }
+    }
+
+    @FXML
+    private void handleKeyLabSaveMetadata() {
+        KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) return;
+
+        String newName = keyLabDetailNameField.getText().trim();
+        if (newName.isEmpty()) {
+            showError("Validation Error", "Name cannot be empty");
+            return;
+        }
+
+        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().updateKeyMetadata(km.getId(), newName, km.getStatus());
+        refreshKeyLabTable();
+        for (KeyMaterial item : keyLabTable.getItems()) {
+            if (item.getId().equals(km.getId())) {
+                keyLabTable.getSelectionModel().select(item);
+                break;
+            }
+        }
+        hsmRefreshCallback.run();
+        if (mainController != null) {
+            mainController.showInfo("Success", "Key metadata updated");
+        }
+    }
+
+    @FXML
+    private void handleKeyLabArchive() {
+        KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) return;
+
+        boolean willArchive = !"ARCHIVED".equalsIgnoreCase(km.getStatus());
+        String actionText = willArchive ? "archive" : "restore";
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm " + (willArchive ? "Archive" : "Restore"));
+        alert.setHeaderText((willArchive ? "Archive" : "Restore") + " Key: " + km.getName());
+        alert.setContentText("Are you sure you want to " + actionText + " this key? "
+            + (willArchive ? "Archived keys are hidden from standard operations but kept in history." : "This key will be active again."));
+
+        java.util.Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().archiveKey(km.getId());
+            refreshKeyLabTable();
+            var reloaded = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(km.getId());
+            if (reloaded != null) {
+                keyLabTable.getSelectionModel().select(reloaded);
+            }
+            hsmRefreshCallback.run();
+        }
+    }
+
+    @FXML
+    private void handleKeyLabDelete() {
+        KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) return;
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Deletion");
+        alert.setHeaderText("Delete Key: " + km.getName());
+        alert.setContentText("Are you sure you want to permanently delete this key from the Lab? This action cannot be undone.");
+
+        java.util.Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().deleteKey(km.getId());
+            refreshKeyLabTable();
+            keyLabTable.getSelectionModel().clearSelection();
+            hsmRefreshCallback.run();
+            if (mainController != null) {
+                mainController.updateStatus("Deleted key: " + km.getName());
+            }
+        }
+    }
+
+    @FXML
+    private void handleImportKeyLabMetadata() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Import Key Lab Metadata Manifest");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+        java.io.File file = chooser.showOpenDialog(keyLabTable.getScene().getWindow());
+        if (file != null) {
+            try {
+                com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().importMetadata(file);
+                refreshKeyLabTable();
+                hsmRefreshCallback.run();
+                if (mainController != null) {
+                    mainController.showInfo("Success", "Imported key metadata manifest successfully.");
+                }
+            } catch (Exception e) {
+                showError("Import Error", "Failed to import metadata: " + e.getMessage());
+            }
+        }
+    }
+
+    @FXML
+    private void handleExportKeyLabMetadata() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export Key Lab Metadata Manifest (No Secrets)");
+        chooser.setInitialFileName("key-lab-metadata.json");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+        java.io.File file = chooser.showSaveDialog(keyLabTable.getScene().getWindow());
+        if (file != null) {
+            try {
+                com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().exportMetadata(file);
+                if (mainController != null) {
+                    mainController.showInfo("Success", "Exported metadata successfully to " + file.getName());
+                }
+            } catch (Exception e) {
+                showError("Export Error", "Failed to export metadata: " + e.getMessage());
+            }
+        }
+    }
+
+    public void selectKeyInKeyLab(String keyId) {
+        if (keyLabPane != null) {
+            keyLabPane.setExpanded(true);
+        }
+        if (keyLabStatusFilter != null) {
+            keyLabStatusFilter.setValue("All Keys");
+        }
+        refreshKeyLabTable();
+        if (keyLabTable != null) {
+            for (KeyMaterial km : keyLabTable.getItems()) {
+                if (km.getId().equals(keyId)) {
+                    keyLabTable.getSelectionModel().select(km);
+                    keyLabTable.scrollTo(km);
+                    keyLabTable.requestFocus();
+                    break;
+                }
+            }
+        }
+    }
+
+    private void setupHexValidation(TextField field) {
+        if (field == null) return;
+        field.textProperty().addListener((obs, old, val) -> {
+            if (val != null && !val.trim().isEmpty() && !isValidHex(val.trim())) {
+                if (!field.getStyleClass().contains("field-error")) {
+                    field.getStyleClass().add("field-error");
+                }
+            } else {
+                field.getStyleClass().remove("field-error");
+            }
+        });
+    }
+
+    private void setupHexValidation(TextArea field) {
+        if (field == null) return;
+        field.textProperty().addListener((obs, old, val) -> {
+            if (val != null && !val.trim().isEmpty() && !isValidHex(val.trim())) {
+                if (!field.getStyleClass().contains("field-error")) {
+                    field.getStyleClass().add("field-error");
+                }
+            } else {
+                field.getStyleClass().remove("field-error");
+            }
+        });
+    }
+
+    private boolean isValidHex(String value) {
+        if (value == null) return false;
+        return value.matches("^[0-9a-fA-F]*$");
     }
 }

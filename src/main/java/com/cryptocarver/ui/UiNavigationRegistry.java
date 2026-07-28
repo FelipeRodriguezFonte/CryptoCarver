@@ -72,6 +72,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.EPOCH_CONVERTER, null), "Epoch Converter");
         add(routes, new Route(Module.JSON_FORMATTER, null), "JSON Formatter");
 
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Lab"), "Key Lab", "Secure Key Inventory");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Generation"),
                 "Key Generation", "Generate Symmetric Key", "Symmetric Keys");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Validation & KCV"),
