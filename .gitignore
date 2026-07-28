@@ -22,6 +22,7 @@
 hs_err_pid*
 replay_pid*
 target/
+/.cryptocarver-build.*/
 
 # Locally generated distributables and Maven Shade's reduced model.
 dist/

@@ -33,6 +33,7 @@ public class AuthenticationController {
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationController.class);
 
     private StatusReporter mainController;
+    private boolean preflightListenersInstalled;
 
     // Shared UI components
     @FXML private TextArea authInputArea;
@@ -84,6 +85,32 @@ public class AuthenticationController {
         this.mainController = mainController;
         this.inputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
+        installPreflightListeners();
+    }
+
+    private void installPreflightListeners() {
+        if (preflightListenersInstalled) return;
+        preflightListenersInstalled = true;
+        observePreflight(authInputArea);
+        observePreflight(signaturePrivateKeyArea);
+        observePreflight(signaturePublicKeyArea);
+        observePreflight(authMacKeyField);
+        observePreflight(signatureAlgorithmCombo);
+        observePreflight(authMacAlgorithmCombo);
+        observePreflight(macKeySourceCombo);
+        observePreflight(macHsmKeyCombo);
+    }
+
+    private void observePreflight(TextInputControl control) {
+        if (control != null) control.textProperty().addListener((obs, previous, value) -> refreshPreflight());
+    }
+
+    private void observePreflight(ComboBox<?> control) {
+        if (control != null) control.valueProperty().addListener((obs, previous, value) -> refreshPreflight());
+    }
+
+    private void refreshPreflight() {
+        if (mainController instanceof ModernMainController modern) modern.updateReadinessPanel();
     }
 
     /**
@@ -522,6 +549,9 @@ public class AuthenticationController {
      * Handle sign operation
      */
     public void handleSign() {
+        if (mainController != null && !mainController.checkPreflightReadiness("Digital Signatures", true)) {
+            return;
+        }
         try {
             if (currentPrivateKey == null) {
                 mainController.showError("Key Error", "Please load a private key first");
@@ -600,6 +630,9 @@ public class AuthenticationController {
      * Handle verify signature operation
      */
     public void handleVerify() {
+        if (mainController != null && !mainController.checkPreflightReadiness("Digital Signatures", false)) {
+            return;
+        }
         try {
             if (currentPublicKey == null) {
                 mainController.showError("Key Error", "Please load a public key first");
@@ -834,6 +867,9 @@ public class AuthenticationController {
      * Handle generate MAC
      */
     public void handleGenerateMAC() {
+        if (mainController != null && !mainController.checkPreflightReadiness("Message Authentication Codes", true)) {
+            return;
+        }
         try {
             String algorithm = authMacAlgorithmCombo.getValue();
             if (algorithm == null) {
@@ -897,6 +933,9 @@ public class AuthenticationController {
      * Handle verify MAC
      */
     public void handleVerifyMAC() {
+        if (mainController != null && !mainController.checkPreflightReadiness("Message Authentication Codes", false)) {
+            return;
+        }
         try {
             String algorithm = authMacAlgorithmCombo.getValue();
             if (algorithm == null) {

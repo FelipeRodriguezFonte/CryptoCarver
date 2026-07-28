@@ -49,6 +49,7 @@ public class GenericController {
     private String activeFormatContractOperation;
     private boolean synchronizingFormatControls;
     private StatusReporter statusReporter;
+    private boolean preflightListenersInstalled;
     @FXML private Accordion genericContainer;
     @FXML private TextArea hashInputArea;
     @FXML private TextArea hashOutputArea;
@@ -172,6 +173,18 @@ public class GenericController {
         if (compressedHexPaneController != null) {
             compressedHexPaneController.setReporter(reporter);
         }
+        installPreflightListeners();
+    }
+
+    private void installPreflightListeners() {
+        if (preflightListenersInstalled) return;
+        preflightListenersInstalled = true;
+        if (hashInputArea != null) hashInputArea.textProperty().addListener((obs, previous, value) -> refreshPreflight());
+        if (hashAlgorithmCombo != null) hashAlgorithmCombo.valueProperty().addListener((obs, previous, value) -> refreshPreflight());
+    }
+
+    private void refreshPreflight() {
+        if (statusReporter instanceof ModernMainController modern) modern.updateReadinessPanel();
     }
 
     public GenericController() {}
@@ -1276,6 +1289,9 @@ public class GenericController {
     @FXML
 
     public void handleCalculateHash() {
+        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Hashing", true)) {
+            return;
+        }
         if (hashInputArea != null && hashAlgorithmCombo != null && hashOutputArea != null) {
             calculateHash(hashInputArea.getText(),
                     selectedFormatOrDefault(inputFormatCombo, "Text (UTF-8)"),

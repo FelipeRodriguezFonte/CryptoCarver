@@ -7,8 +7,10 @@
 <?import com.cryptocarver.ui.NavigationRail?>
 <?import com.cryptocarver.ui.SidePanel?>
 
-<BorderPane fx:id="mainPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.cryptocarver.ui.ModernMainController">
+<StackPane fx:id="rootStackPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.cryptocarver.ui.ModernMainController">
+
+<BorderPane fx:id="mainPane">
 
     <!-- Menu Bar -->
     <top>
@@ -34,6 +36,8 @@
                 </Menu>
 
                 <Menu text="View">
+                    <MenuItem text="Command Palette..." onAction="#handleOpenCommandPalette" accelerator="Shortcut+K" />
+                    <SeparatorMenuItem/>
                     <MenuItem text="Toggle Side Panel" onAction="#handleToggleSidePanel" accelerator="Ctrl+B" />
                     <MenuItem text="Toggle Inspector" onAction="#handleToggleInspector" accelerator="Ctrl+I" />
                     <MenuItem text="Expand Result" onAction="#handleOpenExpandedResultViewer" accelerator="Ctrl+Shift+E" />
@@ -153,6 +157,16 @@
                         <Button text="Skip Guidance" onAction="#handleGuideSkip" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                         <Button text="Exit" onAction="#handleGuideExit" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                     </HBox>
+                </HBox>
+
+                <!-- Execution Readiness Panel (reusable compact card) -->
+                <HBox fx:id="readinessPanel" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="readiness-panel" style="-fx-padding: 8 14; -fx-background-radius: 6; -fx-margin: 4 0; -fx-background-color: #1e293b;">
+                    <Label fx:id="readinessStatusBadge" text="✔ READY" style="-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #059669;"/>
+                    <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <Label fx:id="readinessSummaryLabel" text="Execution Readiness Checklist" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #f8fafc;"/>
+                        <FlowPane fx:id="readinessChecksContainer" hgap="10" vgap="4"/>
+                    </VBox>
+                    <Button fx:id="readinessToggleDetailsBtn" text="Show Details" onAction="#handleToggleReadinessDetails" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
                 </HBox>
 
                 <!-- Scrollable Content -->
@@ -402,3 +416,25 @@
     </bottom>
 
 </BorderPane>
+
+    <!-- Command Palette Overlay -->
+    <VBox fx:id="commandPaletteOverlay" managed="false" visible="false" alignment="TOP_CENTER" style="-fx-background-color: rgba(15, 23, 42, 0.65); -fx-padding: 60 20 20 20;">
+        <VBox spacing="10" maxWidth="660" styleClass="command-palette-card" style="-fx-background-color: #1e293b; -fx-padding: 16; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 20, 0, 0, 10);">
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: #0f172a; -fx-padding: 8 12; -fx-background-radius: 6; -fx-border-color: #334155; -fx-border-radius: 6;">
+                <Label text="🔍" style="-fx-font-size: 14px;"/>
+                <TextField fx:id="commandSearchField" promptText="Type a command or search (e.g. aes, hash, jwt, shelf, cert)..." HBox.hgrow="ALWAYS" style="-fx-background-color: transparent; -fx-text-fill: #f8fafc; -fx-font-size: 13px; -fx-border-width: 0;"/>
+                <Label text="ESC to close" style="-fx-font-size: 10px; -fx-text-fill: #94a3b8; -fx-padding: 2 6; -fx-background-color: #334155; -fx-background-radius: 4;"/>
+            </HBox>
+            <ListView fx:id="commandResultsListView" prefHeight="320" styleClass="command-palette-list"/>
+            <Label fx:id="commandEmptyLabel" text="No commands found" managed="false" visible="false" style="-fx-text-fill: #94a3b8; -fx-font-size: 13px; -fx-padding: 20; -fx-alignment: center;"/>
+            <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-padding: 4 6;">
+                <Label text="↑↓ Navigate" style="-fx-font-size: 10px; -fx-text-fill: #64748b;"/>
+                <Label text="↵ Select" style="-fx-font-size: 10px; -fx-text-fill: #64748b;"/>
+                <Label text="ESC Cancel" style="-fx-font-size: 10px; -fx-text-fill: #64748b;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="CryptoCarver Command Palette" style="-fx-font-size: 10px; -fx-text-fill: #475569; -fx-font-style: italic;"/>
+            </HBox>
+        </VBox>
+    </VBox>
+
+</StackPane>

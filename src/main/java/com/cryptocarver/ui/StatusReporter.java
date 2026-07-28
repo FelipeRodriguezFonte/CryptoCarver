@@ -33,6 +33,10 @@ public interface StatusReporter {
         // Default implementation does nothing, for legacy compatibility
     }
 
+    default boolean checkPreflightReadiness(String operation, boolean isEncrypt) {
+        return true;
+    }
+
     /** Publishes one coherent result to inspector, history and status. */
     default void publish(OperationResult result) {
         if (result == null) return;

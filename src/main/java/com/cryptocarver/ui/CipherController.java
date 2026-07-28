@@ -52,6 +52,7 @@ public class CipherController {
     private ComboBox<String> outputFormatCombo;
     private StatusReporter statusReporter;
     private java.util.function.Supplier<java.security.KeyPair> sharedKeyPairSupplier;
+    private boolean preflightListenersInstalled;
 
     // Symmetric cipher UI components
     @FXML private ComboBox<String> cipherTemplateCombo;
@@ -272,6 +273,37 @@ public class CipherController {
         if (openPgpContainerController != null) {
             openPgpContainerController.setStatusReporter(reporter);
         }
+        installPreflightListeners();
+    }
+
+    private void installPreflightListeners() {
+        if (preflightListenersInstalled) return;
+        preflightListenersInstalled = true;
+        observePreflight(cipherInputArea);
+        observePreflight(symmetricKeyField);
+        observePreflight(ivField);
+        observePreflight(gcmTagField);
+        observePreflight(aadField);
+        observePreflight(publicKeyArea);
+        observePreflight(privateKeyArea);
+        observePreflight(symmetricAlgorithmCombo);
+        observePreflight(cipherModeCombo);
+        observePreflight(paddingCombo);
+        observePreflight(symKeySourceCombo);
+        observePreflight(symHsmKeyCombo);
+        observePreflight(rsaPaddingCombo);
+    }
+
+    private void observePreflight(javafx.scene.control.TextInputControl control) {
+        if (control != null) control.textProperty().addListener((obs, previous, value) -> refreshPreflight());
+    }
+
+    private void observePreflight(ComboBox<?> control) {
+        if (control != null) control.valueProperty().addListener((obs, previous, value) -> refreshPreflight());
+    }
+
+    private void refreshPreflight() {
+        if (statusReporter instanceof ModernMainController modern) modern.updateReadinessPanel();
     }
 
     public static class ExpertFileOptions {
@@ -545,6 +577,15 @@ public class CipherController {
             currentPublicKey = pair.getPublic();
             currentPrivateKey = pair.getPrivate();
         }
+    }
+
+    /** Returns whether the selected asymmetric operation has key material available without mutating state. */
+    public boolean hasAsymmetricKeyAvailable(boolean forEncryption) {
+        if (forEncryption && currentPublicKey != null) return true;
+        if (!forEncryption && currentPrivateKey != null) return true;
+        if (sharedKeyPairSupplier == null) return false;
+        java.security.KeyPair pair = sharedKeyPairSupplier.get();
+        return pair != null && (forEncryption ? pair.getPublic() != null : pair.getPrivate() != null);
     }
 
     /**
@@ -1284,6 +1325,9 @@ public class CipherController {
      * Handle symmetric encryption
      */
     public void handleSymmetricEncrypt() {
+        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Symmetric Cipher", true)) {
+            return;
+        }
         try {
             // Get inputs
             byte[] plaintext = getInputDataAsBytes();
@@ -1400,6 +1444,9 @@ public class CipherController {
      * Handle symmetric decryption
      */
     public void handleSymmetricDecrypt() {
+        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Symmetric Cipher", false)) {
+            return;
+        }
         try {
             // Get inputs
             byte[] ciphertext = getInputDataAsBytes();
@@ -2061,6 +2108,9 @@ public class CipherController {
      * Handle RSA encryption
      */
     public void handleAsymmetricEncrypt() {
+        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Asymmetric Ciphers", true)) {
+            return;
+        }
         try {
             syncSharedKeyPair();
             if (currentPublicKey == null) {
@@ -2185,6 +2235,9 @@ public class CipherController {
      * Handle RSA decryption
      */
     public void handleAsymmetricDecrypt() {
+        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Asymmetric Ciphers", false)) {
+            return;
+        }
         try {
             syncSharedKeyPair();
             if (currentPrivateKey == null) {

@@ -225,6 +225,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
 
         setupLaboratoryMenu();
+        initializeCommandPalette();
 
         if (visibilityProfileGroup != null) {
             com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
@@ -398,7 +399,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void handleItemSelected(String itemName) {
+    public void navigateToModule(String moduleName) {
+        handleItemSelected(moduleName);
+    }
+
+    public void handleItemSelected(String itemName) {
         String requestedItem = itemName;
         itemName = com.cryptocarver.model.OperationRegistry.getInstance()
                 .resolveNavigation(itemName)
@@ -436,6 +441,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         updateStatus("Loaded: " + itemName);
+        updateReadinessPanel();
     }
 
     private boolean activateNavigationRoute(String operation) {
@@ -1273,8 +1279,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         updateStatus("Output cleared");
     }
 
+    public boolean hasCurrentResult() {
+        return lastPublishedResultSnapshot != null;
+    }
+
     @FXML
-    private void handleCopyOutput() {
+    public void handleCopyOutput() {
         if (lastPublishedResultSnapshot == null) {
             updateStatus("No output available to copy");
             return;
@@ -1291,7 +1301,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
     @FXML
-    private void handleAddCurrentOutputToShelf() {
+    public void handleAddCurrentOutputToShelf() {
         if (lastPublishedResultSnapshot == null) {
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
             return;
@@ -1309,7 +1319,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Opens the active operation result in a large, independent viewer. */
     @FXML
-    private void handleOpenExpandedResultViewer() {
+    public void handleOpenExpandedResultViewer() {
         if (lastPublishedResultSnapshot == null) {
             showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
             return;
@@ -1736,7 +1746,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
-    private void handleToggleSidePanel() {
+    public void handleToggleSidePanel() {
         boolean visible = sidePanel.isVisible();
         sidePanel.setVisible(!visible);
         sidePanel.setManaged(!visible);
@@ -1744,7 +1754,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
-    private void handleToggleInspector() {
+    public void handleToggleInspector() {
         boolean visible = inspectorPanel.isVisible();
         inspectorPanel.setVisible(!visible);
         inspectorPanel.setManaged(!visible);
@@ -1765,7 +1775,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private int currentFontSize = 14;
 
     @FXML
-    private void handleIncreaseFontSize() {
+    public void handleIncreaseFontSize() {
         if (currentFontSize < 24) {
             currentFontSize += 2;
             applyFontSize();
@@ -1774,7 +1784,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
-    private void handleDecreaseFontSize() {
+    public void handleDecreaseFontSize() {
         if (currentFontSize > 8) {
             currentFontSize -= 2;
             applyFontSize();
@@ -2892,6 +2902,388 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 labMenu.getItems().add(profileMenu);
             }
             mainMenuBar.getMenus().add(labMenu);
+        }
+    }
+
+    @FXML private HBox readinessPanel;
+    @FXML private Label readinessStatusBadge;
+    @FXML private Label readinessSummaryLabel;
+    @FXML private FlowPane readinessChecksContainer;
+    @FXML private Button readinessToggleDetailsBtn;
+    private boolean readinessShowDetails = false;
+    private com.cryptocarver.model.PreflightReport currentPreflightReport;
+    private boolean currentPreflightEncrypt = true;
+
+    @FXML
+    private void handleToggleReadinessDetails() {
+        readinessShowDetails = !readinessShowDetails;
+        if (readinessToggleDetailsBtn != null) {
+            readinessToggleDetailsBtn.setText(readinessShowDetails ? "Hide Details" : "Show Details");
+        }
+        updateReadinessPanelUI();
+    }
+
+    @Override
+    public boolean checkPreflightReadiness(String operation, boolean isEncrypt) {
+        updateReadinessPanelForOperation(operation, isEncrypt);
+        if (currentPreflightReport != null && !currentPreflightReport.isExecutable()) {
+            com.cryptocarver.model.PreflightCheck firstIssue = currentPreflightReport.getFirstNonReadyCheck();
+            if (firstIssue != null && firstIssue.getTargetControlKey() != null) {
+                focusControl(firstIssue.getTargetControlKey());
+            }
+            if (readinessPanel != null) {
+                readinessPanel.setManaged(true);
+                readinessPanel.setVisible(true);
+            }
+            updateStatus("Execution blocked by preflight checklist: " + (firstIssue != null ? firstIssue.getMessage() : "Incomplete setup"));
+            return false;
+        }
+        return true;
+    }
+
+    public void updateReadinessPanel() {
+        updateReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
+    }
+
+    public void updateReadinessPanelForOperation(String operation, boolean isEncrypt) {
+        if (readinessPanel == null) return;
+        currentPreflightEncrypt = isEncrypt;
+
+        com.cryptocarver.model.PreflightReport report = evaluatePreflightForOperation(operation, isEncrypt);
+        currentPreflightReport = report;
+        if (report == null) {
+            readinessPanel.setManaged(false);
+            readinessPanel.setVisible(false);
+            return;
+        }
+
+        readinessPanel.setManaged(true);
+        readinessPanel.setVisible(true);
+        updateReadinessPanelUI();
+    }
+
+    private void updateReadinessPanelUI() {
+        if (currentPreflightReport == null || readinessStatusBadge == null || readinessSummaryLabel == null || readinessChecksContainer == null) return;
+
+        com.cryptocarver.model.PreflightStatus status = currentPreflightReport.getOverallStatus();
+        switch (status) {
+            case READY -> {
+                readinessStatusBadge.setText("✔ READY");
+                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #059669;");
+            }
+            case WARNING -> {
+                readinessStatusBadge.setText("⚠️ WARNING");
+                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #d97706;");
+            }
+            case INCOMPLETE -> {
+                readinessStatusBadge.setText("❓ INCOMPLETE");
+                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #eab308;");
+            }
+            case BLOCKED -> {
+                readinessStatusBadge.setText("⛔ BLOCKED");
+                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #b91c1c;");
+            }
+        }
+
+        readinessSummaryLabel.setText(currentPreflightReport.getSummaryMessage());
+
+        readinessChecksContainer.getChildren().clear();
+        java.util.List<com.cryptocarver.model.PreflightCheck> checks = currentPreflightReport.getChecks();
+        int maxVisible = readinessShowDetails ? checks.size() : Math.min(3, checks.size());
+
+        for (int i = 0; i < maxVisible; i++) {
+            com.cryptocarver.model.PreflightCheck check = checks.get(i);
+            Button checkBtn = new Button();
+            String icon = switch (check.getStatus()) {
+                case READY -> "✔ ";
+                case WARNING -> "⚠️ ";
+                case INCOMPLETE -> "❓ ";
+                case BLOCKED -> "⛔ ";
+            };
+            checkBtn.setText(icon + check.getName() + ": " + check.getMessage());
+            checkBtn.setStyle("-fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            checkBtn.setOnAction(e -> {
+                if (check.getTargetControlKey() != null) {
+                    focusControl(check.getTargetControlKey());
+                }
+            });
+            readinessChecksContainer.getChildren().add(checkBtn);
+        }
+    }
+
+    private com.cryptocarver.model.PreflightReport evaluatePreflightForOperation(String operation, boolean isEncrypt) {
+        if (operation == null) return null;
+        String opName = formatProfileOperation(operation);
+
+        if ("Symmetric Ciphers".equals(opName)) {
+            if (cipherContainerController == null) return null;
+            return com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                    getFieldText(cipherContainerController, "cipherInputArea"),
+                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Plain Text",
+                    getComboValue(cipherContainerController, "symmetricAlgorithmCombo"),
+                    getComboValue(cipherContainerController, "cipherModeCombo"),
+                    getComboValue(cipherContainerController, "paddingCombo"),
+                    getComboValue(cipherContainerController, "symKeySourceCombo"),
+                    getFieldText(cipherContainerController, "symmetricKeyField"),
+                    getComboValue(cipherContainerController, "symHsmKeyCombo"),
+                    isHsmKeyMetadataOnly(getComboValue(cipherContainerController, "symHsmKeyCombo")),
+                    getFieldText(cipherContainerController, "ivField"),
+                    getFieldText(cipherContainerController, "gcmTagField"),
+                    getFieldText(cipherContainerController, "aadField"),
+                    isEncrypt
+            );
+        } else if ("Hashing".equals(opName)) {
+            return com.cryptocarver.model.OperationPreflightEngine.checkHashing(
+                    getFieldText(genericContainerController, "hashInputArea"),
+                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Plain Text",
+                    getComboValue(genericContainerController, "hashAlgorithmCombo")
+            );
+        } else if ("Digital Signatures".equals(opName)) {
+            String keyText = isEncrypt ? getFieldText(authenticationContainerController, "signaturePrivateKeyArea") : getFieldText(authenticationContainerController, "signaturePublicKeyArea");
+            return com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
+                    getFieldText(authenticationContainerController, "authInputArea"),
+                    getComboValue(authenticationContainerController, "signatureAlgorithmCombo"),
+                    keyText,
+                    false,
+                    isEncrypt
+            );
+        } else if ("Message Authentication Codes".equals(opName)) {
+            String keySource = getComboValue(authenticationContainerController, "macKeySourceCombo");
+            String keyReference = getComboValue(authenticationContainerController, "macHsmKeyCombo");
+            return com.cryptocarver.model.OperationPreflightEngine.checkMac(
+                    getFieldText(authenticationContainerController, "authInputArea"),
+                    getComboValue(authenticationContainerController, "authMacAlgorithmCombo"),
+                    keySource,
+                    getFieldText(authenticationContainerController, "authMacKeyField"),
+                    keyReference,
+                    "Simulated HSM".equalsIgnoreCase(keySource) && isHsmKeyMetadataOnly(keyReference)
+            );
+        } else if ("Asymmetric Ciphers".equals(opName)) {
+            String keyText = isEncrypt ? getFieldText(cipherContainerController, "publicKeyArea") : getFieldText(cipherContainerController, "privateKeyArea");
+            if ((keyText == null || keyText.isBlank())
+                    && cipherContainerController != null
+                    && cipherContainerController.hasAsymmetricKeyAvailable(isEncrypt)) {
+                keyText = "[loaded key pair]";
+            }
+            return com.cryptocarver.model.OperationPreflightEngine.checkAsymmetricCipher(
+                    getFieldText(cipherContainerController, "cipherInputArea"),
+                    keyText,
+                    false,
+                    getComboValue(cipherContainerController, "rsaPaddingCombo"),
+                    isEncrypt
+            );
+        }
+
+        return null;
+    }
+
+    private boolean isHsmKeyMetadataOnly(String keyId) {
+        if (keyId == null || keyId.isEmpty()) return false;
+        try {
+            var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
+            return km != null && !km.hasKeyMaterial();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String getFieldText(Object controllerObj, String fieldName) {
+        if (controllerObj == null || fieldName == null) return "";
+        try {
+            java.lang.reflect.Field field = controllerObj.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            Object val = field.get(controllerObj);
+            if (val instanceof TextInputControl tic) {
+                return tic.getText();
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    private String getComboValue(Object controllerObj, String fieldName) {
+        if (controllerObj == null || fieldName == null) return null;
+        try {
+            java.lang.reflect.Field field = controllerObj.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            Object val = field.get(controllerObj);
+            if (val instanceof ComboBox<?> cb) {
+                Object selected = cb.getValue();
+                return selected != null ? selected.toString() : null;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public void focusControl(String controlKey) {
+        if (controlKey == null || controlKey.isEmpty()) return;
+        Object[] controllers = new Object[]{ this, cipherContainerController, genericContainerController, authenticationContainerController, certificatesContainerController };
+        for (Object ctrl : controllers) {
+            if (ctrl == null) continue;
+            try {
+                java.lang.reflect.Field field = ctrl.getClass().getDeclaredField(controlKey);
+                field.setAccessible(true);
+                Object val = field.get(ctrl);
+                if (val instanceof javafx.scene.Node node) {
+                    node.requestFocus();
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @FXML private StackPane rootStackPane;
+    @FXML private VBox commandPaletteOverlay;
+    @FXML private TextField commandSearchField;
+    @FXML private ListView<com.cryptocarver.model.CommandItem> commandResultsListView;
+    @FXML private Label commandEmptyLabel;
+
+    private java.util.List<com.cryptocarver.model.CommandItem> allPaletteCommands = new java.util.ArrayList<>();
+    private final javafx.collections.ObservableList<com.cryptocarver.model.CommandItem> filteredPaletteCommands = javafx.collections.FXCollections.observableArrayList();
+
+    private void initializeCommandPalette() {
+        if (rootStackPane != null) {
+            rootStackPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene != null) {
+                    newScene.getAccelerators().put(
+                            new javafx.scene.input.KeyCodeCombination(javafx.scene.input.KeyCode.K, javafx.scene.input.KeyCombination.SHORTCUT_DOWN),
+                            this::handleOpenCommandPalette
+                    );
+                }
+            });
+        }
+
+        if (commandResultsListView == null || commandSearchField == null) return;
+
+        allPaletteCommands = com.cryptocarver.model.CommandRegistry.buildCommands(this);
+        commandResultsListView.setItems(filteredPaletteCommands);
+
+        commandResultsListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(com.cryptocarver.model.CommandItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("");
+                } else {
+                    HBox row = new HBox(10);
+                    row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    row.setStyle("-fx-padding: 6 10;");
+
+                    Label categoryBadge = new Label("[" + item.getCategory() + "]");
+                    categoryBadge.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 6; -fx-background-radius: 4; -fx-text-fill: #60a5fa; -fx-background-color: #1e3a8a;");
+
+                    VBox textContainer = new VBox(2);
+                    Label titleLabel = new Label(item.getTitle());
+                    titleLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #f8fafc;");
+
+                    Label descLabel = new Label(item.getDescription());
+                    descLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #94a3b8;");
+
+                    textContainer.getChildren().addAll(titleLabel, descLabel);
+                    HBox.setHgrow(textContainer, Priority.ALWAYS);
+
+                    row.getChildren().addAll(categoryBadge, textContainer);
+
+                    if (item.getShortcut() != null && !item.getShortcut().isEmpty()) {
+                        Label shortcutLabel = new Label(item.getShortcut());
+                        shortcutLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #94a3b8; -fx-padding: 2 6; -fx-background-color: #334155; -fx-background-radius: 4;");
+                        row.getChildren().add(shortcutLabel);
+                    }
+
+                    if (!item.isEnabled()) {
+                        row.setOpacity(0.45);
+                    } else {
+                        row.setOpacity(1.0);
+                    }
+
+                    setGraphic(row);
+                }
+            }
+        });
+
+        commandSearchField.textProperty().addListener((obs, oldVal, newVal) -> filterCommandPalette(newVal));
+
+        commandSearchField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.DOWN) {
+                if (!filteredPaletteCommands.isEmpty()) {
+                    commandResultsListView.getSelectionModel().select(0);
+                    commandResultsListView.requestFocus();
+                }
+                e.consume();
+            } else if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                handleCloseCommandPalette();
+                e.consume();
+            } else if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                handleExecuteSelectedCommand();
+                e.consume();
+            }
+        });
+
+        commandResultsListView.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                handleCloseCommandPalette();
+                e.consume();
+            } else if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                handleExecuteSelectedCommand();
+                e.consume();
+            }
+        });
+
+        commandResultsListView.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 2) {
+                handleExecuteSelectedCommand();
+            }
+        });
+    }
+
+    @FXML
+    public void handleOpenCommandPalette() {
+        if (commandPaletteOverlay == null) return;
+
+        allPaletteCommands = com.cryptocarver.model.CommandRegistry.buildCommands(this);
+        commandPaletteOverlay.setManaged(true);
+        commandPaletteOverlay.setVisible(true);
+
+        if (commandSearchField != null) {
+            commandSearchField.setText("");
+            filterCommandPalette("");
+            commandSearchField.requestFocus();
+        }
+    }
+
+    @FXML
+    public void handleCloseCommandPalette() {
+        if (commandPaletteOverlay == null) return;
+        commandPaletteOverlay.setManaged(false);
+        commandPaletteOverlay.setVisible(false);
+        if (commandSearchField != null) {
+            commandSearchField.setText("");
+        }
+    }
+
+    @FXML
+    public void handleExecuteSelectedCommand() {
+        if (commandResultsListView == null) return;
+        com.cryptocarver.model.CommandItem selected = commandResultsListView.getSelectionModel().getSelectedItem();
+        if (selected != null && selected.isEnabled()) {
+            handleCloseCommandPalette();
+            selected.execute();
+        }
+    }
+
+    private void filterCommandPalette(String query) {
+        java.util.List<com.cryptocarver.model.CommandItem> matched = com.cryptocarver.model.CommandSearchEngine.search(allPaletteCommands, query);
+        filteredPaletteCommands.setAll(matched);
+
+        if (commandEmptyLabel != null) {
+            boolean empty = matched.isEmpty();
+            commandEmptyLabel.setManaged(empty);
+            commandEmptyLabel.setVisible(empty);
+        }
+
+        if (commandResultsListView != null && !matched.isEmpty()) {
+            commandResultsListView.getSelectionModel().select(0);
         }
     }
 }

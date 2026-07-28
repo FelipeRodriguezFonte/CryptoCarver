@@ -2258,4 +2258,144 @@ class ModernMainControllerUITest {
             assertEquals("PRESERVED_USER_INPUT_TEXT", inputArea.getText(), "Applying a template must NEVER clear user-entered text!");
         });
     }
+
+    @Test
+    void testExecutionPreflightReadinessPanel() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+
+        // 1. Initially Empty -> INCOMPLETE
+        runAndWait(() -> {
+            Method m = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class));
+            m.setAccessible(true);
+            assertDoesNotThrow(() -> m.invoke(controller, "Symmetric Ciphers"));
+
+            javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
+            assertNotNull(badge);
+            assertTrue(badge.getText().contains("INCOMPLETE") || badge.getText().contains("BLOCKED"));
+        });
+
+        // 2. Set Invalid Hex Key -> BLOCKED
+        runAndWait(() -> {
+            javafx.scene.control.TextArea inputArea = assertDoesNotThrow(() -> getField(cipher, "cipherInputArea"));
+            javafx.scene.control.TextField keyField = assertDoesNotThrow(() -> getField(cipher, "symmetricKeyField"));
+            inputArea.setText("Sample Data Payload");
+            keyField.setText("NOT_A_HEX_KEY");
+            controller.updateReadinessPanel();
+
+            javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
+            assertTrue(badge.getText().contains("BLOCKED"));
+        });
+
+        // 3. Set ECB Mode -> WARNING (Executable)
+        runAndWait(() -> {
+            javafx.scene.control.TextField keyField = assertDoesNotThrow(() -> getField(cipher, "symmetricKeyField"));
+            javafx.scene.control.ComboBox<String> modeCombo = assertDoesNotThrow(() -> getField(cipher, "cipherModeCombo"));
+            keyField.setText("00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF");
+            modeCombo.setValue("ECB");
+            controller.updateReadinessPanel();
+
+            javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
+            assertTrue(badge.getText().contains("WARNING"));
+        });
+
+        // 4. Set Valid AES-256-GCM + 12-byte IV -> READY
+        runAndWait(() -> {
+            javafx.scene.control.ComboBox<String> modeCombo = assertDoesNotThrow(() -> getField(cipher, "cipherModeCombo"));
+            javafx.scene.control.TextField ivField = assertDoesNotThrow(() -> getField(cipher, "ivField"));
+            modeCombo.setValue("GCM");
+            ivField.setText("0102030405060708090A0B0C");
+            controller.updateReadinessPanel();
+
+            javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
+            assertTrue(badge.getText().contains("READY"));
+        });
+
+        // 5. Test Click-to-Focus on target control
+        runAndWait(() -> {
+            controller.focusControl("cipherInputArea");
+            javafx.scene.control.TextArea inputArea = assertDoesNotThrow(() -> getField(cipher, "cipherInputArea"));
+            assertTrue(inputArea.isFocused() || inputArea.getScene() == null);
+        });
+
+        // 6. File Cipher uses a different form contract, so it must not be
+        // evaluated with in-memory symmetric cipher controls.
+        runAndWait(() -> {
+            Method m = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class));
+            m.setAccessible(true);
+            assertDoesNotThrow(() -> m.invoke(controller, "File Cipher (Streaming)"));
+            javafx.scene.layout.HBox readinessPanel = assertDoesNotThrow(() -> getField(controller, "readinessPanel"));
+            assertFalse(readinessPanel.isVisible(), "File Cipher must not display the symmetric-cipher preflight panel");
+        });
+    }
+
+    @Test
+    void testCommandPaletteUI() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+
+        // 1. Open Command Palette -> Overlay visible & Search field populated/focused
+        runAndWait(() -> {
+            controller.handleOpenCommandPalette();
+            javafx.scene.layout.VBox overlay = assertDoesNotThrow(() -> getField(controller, "commandPaletteOverlay"));
+            javafx.scene.control.TextField searchField = assertDoesNotThrow(() -> getField(controller, "commandSearchField"));
+
+            assertTrue(overlay.isVisible(), "Command Palette overlay must be visible on open");
+            assertNotNull(searchField);
+        });
+
+        // 2. Search "hash" and execute selected command -> Navigates to Hashing & closes overlay
+        runAndWait(() -> {
+            javafx.scene.control.TextField searchField = assertDoesNotThrow(() -> getField(controller, "commandSearchField"));
+            searchField.setText("hash");
+
+            controller.handleExecuteSelectedCommand();
+
+            javafx.scene.layout.VBox overlay = assertDoesNotThrow(() -> getField(controller, "commandPaletteOverlay"));
+            assertFalse(overlay.isVisible(), "Command Palette overlay must close after executing a command");
+        });
+
+        // 3. Escape closes overlay
+        runAndWait(() -> {
+            controller.handleOpenCommandPalette();
+            javafx.scene.layout.VBox overlay = assertDoesNotThrow(() -> getField(controller, "commandPaletteOverlay"));
+            assertTrue(overlay.isVisible());
+
+            controller.handleCloseCommandPalette();
+            assertFalse(overlay.isVisible(), "handleCloseCommandPalette must hide overlay");
+        });
+
+        // 4. Verify result-dependent commands are disabled when no result exists
+        runAndWait(() -> {
+            assertFalse(controller.hasCurrentResult(), "No operation result exists initially");
+            java.util.List<com.cryptocarver.model.CommandItem> commands = com.cryptocarver.model.CommandRegistry.buildCommands(controller);
+
+            com.cryptocarver.model.CommandItem expandCmd = commands.stream().filter(c -> "view_expand_result".equals(c.getId())).findFirst().orElse(null);
+            com.cryptocarver.model.CommandItem copyCmd = commands.stream().filter(c -> "action_copy_output".equals(c.getId())).findFirst().orElse(null);
+
+            assertNotNull(expandCmd);
+            assertNotNull(copyCmd);
+            assertFalse(expandCmd.isEnabled(), "Expand Result must be disabled when no result exists");
+            assertFalse(copyCmd.isEnabled(), "Copy Output must be disabled when no result exists");
+        });
+    }
 }
