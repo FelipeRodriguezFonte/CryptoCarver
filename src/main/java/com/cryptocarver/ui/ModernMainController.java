@@ -99,6 +99,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private Label securityTipLabel;
     @FXML
+    private VBox securityTipBox;
+    @FXML
+    private Label runtimeInfoLabel;
+    @FXML
     private Label statusLabel;
     @FXML
     private VBox historyContainer;
@@ -226,6 +230,23 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         setupLaboratoryMenu();
         initializeCommandPalette();
+        syncMenuBarAccelerators();
+
+        if (securityTipLabel != null && securityTipBox != null) {
+            securityTipLabel.textProperty().addListener((obs, oldVal, newVal) -> {
+                boolean hasTip = newVal != null && !newVal.trim().isEmpty();
+                securityTipBox.setVisible(hasTip);
+                securityTipBox.setManaged(hasTip);
+            });
+        }
+
+        if (runtimeInfoLabel != null) {
+            String javaVer = System.getProperty("java.version");
+            String javafxVer = System.getProperty("javafx.version");
+            String javaText = (javaVer != null && !javaVer.isBlank()) ? "Java " + javaVer : "Java";
+            String javafxText = (javafxVer != null && !javafxVer.isBlank()) ? "JavaFX " + javafxVer : "JavaFX";
+            runtimeInfoLabel.setText(javaText + " | " + javafxText + " | BouncyCastle");
+        }
 
         if (visibilityProfileGroup != null) {
             com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
@@ -1856,6 +1877,53 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
+    public void handleShowKeyboardShortcuts() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Keyboard Shortcuts");
+        alert.setHeaderText("CryptoCarver Keyboard Shortcuts");
+
+        VBox contentBox = new VBox(10);
+        contentBox.setPrefWidth(540);
+        contentBox.setStyle("-fx-padding: 10;");
+
+        Label intro = new Label("System Keyboard Shortcuts:");
+        intro.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        contentBox.getChildren().add(intro);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(15);
+        grid.setVgap(8);
+        grid.setStyle("-fx-background-color: -color-bg-subtle; -fx-padding: 12; -fx-background-radius: 6;");
+
+        int row = 0;
+        for (com.cryptocarver.model.KeyboardShortcutEntry shortcut : com.cryptocarver.model.KeyboardShortcutRegistry.getShortcuts()) {
+            Label comboLabel = new Label(shortcut.getDisplayCombination());
+            comboLabel.setStyle("-fx-font-family: monospace; -fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;");
+
+            Label actionLabel = new Label(shortcut.getActionName());
+            actionLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+
+            Label descLabel = new Label(shortcut.getDescription());
+            descLabel.setStyle("-fx-text-fill: -color-text-muted; -fx-font-size: 11px;");
+
+            grid.add(comboLabel, 0, row);
+            grid.add(actionLabel, 1, row);
+            grid.add(descLabel, 2, row);
+            row++;
+        }
+
+        ScrollPane scrollPane = new ScrollPane(grid);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefHeight(340);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+
+        contentBox.getChildren().add(scrollPane);
+        alert.getDialogPane().setContent(contentBox);
+        alert.getDialogPane().setPrefWidth(580);
+        alert.showAndWait();
+    }
+
+    @FXML
     private void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About CryptoCarver");
@@ -3171,6 +3239,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private java.util.List<com.cryptocarver.model.CommandItem> allPaletteCommands = new java.util.ArrayList<>();
     private final javafx.collections.ObservableList<com.cryptocarver.model.CommandItem> filteredPaletteCommands = javafx.collections.FXCollections.observableArrayList();
+
+    private void syncMenuBarAccelerators() {
+        if (mainMenuBar == null) return;
+        for (javafx.scene.control.Menu menu : mainMenuBar.getMenus()) {
+            for (javafx.scene.control.MenuItem item : menu.getItems()) {
+                if (item == null || item.getText() == null) continue;
+                com.cryptocarver.model.KeyboardShortcutRegistry.findShortcutByAction(item.getText()).ifPresent(s -> {
+                    try {
+                        item.setAccelerator(javafx.scene.input.KeyCombination.valueOf(s.getKeyCombination()));
+                    } catch (Exception ignored) {}
+                });
+            }
+        }
+    }
 
     private void initializeCommandPalette() {
         if (rootStackPane != null) {

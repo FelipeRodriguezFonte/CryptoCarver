@@ -60,7 +60,7 @@ class CommandSearchEngineTest {
                 "Actions",
                 "Copy current output to clipboard",
                 Arrays.asList("copy", "output"),
-                "Ctrl+C",
+                "Shortcut+Shift+C",
                 () -> false, // Disabled state
                 () -> {}
         );

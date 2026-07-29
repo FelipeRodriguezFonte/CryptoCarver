@@ -116,7 +116,9 @@ public final class CommandRegistry {
                 "Actions",
                 "Copy current output result to system clipboard (subject to security policy)",
                 Arrays.asList("copy", "output", "clipboard"),
-                "Ctrl+C",
+                KeyboardShortcutRegistry.findShortcutByAction("Copy Output")
+                        .map(KeyboardShortcutEntry::getKeyCombination)
+                        .orElse(null),
                 controller::hasCurrentResult,
                 controller::handleCopyOutput
         ));

@@ -17,34 +17,34 @@
         <VBox>
             <MenuBar fx:id="mainMenuBar" styleClass="main-menu-bar">
                 <Menu text="File">
-                    <MenuItem text="Import Key..." onAction="#handleImportKey" accelerator="Ctrl+O" />
+                    <MenuItem text="Import Key..." onAction="#handleImportKey" accelerator="Shortcut+O" />
                     <SeparatorMenuItem />
                     <MenuItem text="Export Screen Configuration..." onAction="#handleExportScreenConfiguration" />
                     <MenuItem text="Import Screen Configuration..." onAction="#handleImportScreenConfiguration" />
                     <SeparatorMenuItem />
-                    <MenuItem text="Save Session" onAction="#handleSaveSession" accelerator="Ctrl+S" />
+                    <MenuItem text="Save Session" onAction="#handleSaveSession" accelerator="Shortcut+S" />
                     <MenuItem text="Export History..." onAction="#handleExportHistory" />
                     <SeparatorMenuItem />
-                    <MenuItem text="Exit" onAction="#handleExit" accelerator="Ctrl+Q" />
+                    <MenuItem text="Exit" onAction="#handleExit" accelerator="Shortcut+Q" />
                 </Menu>
 
                 <Menu text="Edit">
-                    <MenuItem text="Clear Input" onAction="#handleClearInput" accelerator="Ctrl+Shift+I" />
-                    <MenuItem text="Clear Output" onAction="#handleClearOutput" accelerator="Ctrl+Shift+O" />
-                    <MenuItem text="Copy Output" onAction="#handleCopyOutput" accelerator="Ctrl+C" />
+                    <MenuItem text="Clear Input" onAction="#handleClearInput" accelerator="Shortcut+Shift+I" />
+                    <MenuItem text="Clear Output" onAction="#handleClearOutput" accelerator="Shortcut+Shift+O" />
+                    <MenuItem text="Copy Output" onAction="#handleCopyOutput" accelerator="Shortcut+Shift+C" />
                     <MenuItem text="Add Output to Clipboard Shelf" onAction="#handleAddCurrentOutputToShelf" />
                 </Menu>
 
                 <Menu text="View">
                     <MenuItem text="Command Palette..." onAction="#handleOpenCommandPalette" accelerator="Shortcut+K" />
                     <SeparatorMenuItem/>
-                    <MenuItem text="Toggle Side Panel" onAction="#handleToggleSidePanel" accelerator="Ctrl+B" />
-                    <MenuItem text="Toggle Inspector" onAction="#handleToggleInspector" accelerator="Ctrl+I" />
-                    <MenuItem text="Expand Result" onAction="#handleOpenExpandedResultViewer" accelerator="Ctrl+Shift+E" />
-                    <MenuItem text="Expand Table" onAction="#handleOpenExpandedTableViewer" accelerator="Ctrl+Shift+T" />
+                    <MenuItem text="Toggle Side Panel" onAction="#handleToggleSidePanel" accelerator="Shortcut+B" />
+                    <MenuItem text="Toggle Inspector" onAction="#handleToggleInspector" accelerator="Shortcut+I" />
+                    <MenuItem text="Expand Result" onAction="#handleOpenExpandedResultViewer" accelerator="Shortcut+Shift+E" />
+                    <MenuItem text="Expand Table" onAction="#handleOpenExpandedTableViewer" accelerator="Shortcut+Shift+T" />
                     <SeparatorMenuItem/>
-                    <MenuItem text="Zoom In (Font)" onAction="#handleIncreaseFontSize" accelerator="Ctrl+PLUS" />
-                    <MenuItem text="Zoom Out (Font)" onAction="#handleDecreaseFontSize" accelerator="Ctrl+MINUS" />
+                    <MenuItem text="Zoom In (Font)" onAction="#handleIncreaseFontSize" accelerator="Shortcut+PLUS" />
+                    <MenuItem text="Zoom Out (Font)" onAction="#handleDecreaseFontSize" accelerator="Shortcut+MINUS" />
                     <SeparatorMenuItem/>
                     <MenuItem text="Reset to Defaults" onAction="#handleResetView"/>
                 </Menu>
@@ -59,14 +59,16 @@
                 </Menu>
 
                 <Menu text="Tools">
-                    <MenuItem text="Epoch Converter" onAction="#handleEpochConverter" accelerator="Ctrl+T"/>
-                    <MenuItem text="JSON Formatter" onAction="#handleJsonFormatter" accelerator="Ctrl+J"/>
+                    <MenuItem text="Epoch Converter" onAction="#handleEpochConverter" accelerator="Shortcut+T"/>
+                    <MenuItem text="JSON Formatter" onAction="#handleJsonFormatter" accelerator="Shortcut+J"/>
                     <MenuItem text="Byte Inspector" onAction="#handleByteInspector"/>
                     <SeparatorMenuItem/>
                     <MenuItem text="Clear Lab Key Cache" onAction="#handleClearLabKeyCache"/>
                 </Menu>
 
                 <Menu text="Help">
+                    <MenuItem text="Keyboard Shortcuts..." onAction="#handleShowKeyboardShortcuts" accelerator="F1" />
+                    <SeparatorMenuItem />
                     <MenuItem text="Diagnostics" onAction="#handleDiagnostics"/>
                     <MenuItem text="About" onAction="#handleAbout"/>
                 </Menu>
@@ -75,6 +77,7 @@
             <!-- Toolbar -->
             <FlowPane styleClass="main-toolbar">
                 <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Button text="Search operations (⌘K)" onAction="#handleOpenCommandPalette" styleClass="secondary-button"/>
                     <Button text="Save Session" onAction="#handleSaveSession" styleClass="link-button"/>
                     <Button text="Clear" onAction="#handleClearInput" styleClass="link-button"/>
                 </HBox>
@@ -327,7 +330,7 @@
                                 <Label fx:id="inputBytesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="inspector-value"/>
 
                                 <Label text="Output Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="inspector-label-small"/>
-                                <Label fx:id="outputBytesLabel" text="32" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="inspector-value"/>
+                                <Label fx:id="outputBytesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="inspector-value"/>
 
                                 <columnConstraints>
                                     <ColumnConstraints minWidth="100"/>
@@ -339,7 +342,7 @@
 
                             <VBox spacing="4">
                                 <Label text="Algorithm:" styleClass="inspector-label-small"/>
-                                <Label fx:id="operationLabel" text="HKDF-SHA256" style="-fx-font-weight: bold;"/>
+                                <Label fx:id="operationLabel" text="No result yet" style="-fx-font-weight: bold;"/>
                             </VBox>
 
                              <Separator styleClass="separator-horizontal"/>
@@ -357,14 +360,13 @@
                             <Label text="&lt;" style="-fx-text-fill: white; -fx-font-size: 10px;"/>
                         </HBox>
 
-                        <VBox style="-fx-padding: 12;">
+                        <VBox fx:id="securityTipBox" managed="false" visible="false" style="-fx-padding: 12;">
                             <VBox styleClass="warning-box" spacing="5">
                                 <HBox spacing="8" alignment="CENTER_LEFT">
                                     <Label text="⚠️" style="-fx-font-size: 16px;"/>
                                     <Label text="Warning" styleClass="warning-title"/>
                                 </HBox>
-                                <Label fx:id="securityTipLabel" text="No salt provided, HKDF is less secure! Consider using a random salt."
-                                       wrapText="true" styleClass="warning-text"/>
+                                <Label fx:id="securityTipLabel" text="" wrapText="true" styleClass="warning-text"/>
                             </VBox>
                         </VBox>
 
@@ -378,26 +380,7 @@
                             <Button text="Clear" onAction="#handleClearHistory" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #90caf9; -fx-cursor: hand;"/>
                         </HBox>
 
-                        <VBox fx:id="historyContainer" spacing="4" style="-fx-padding: 8;">
-                            <!-- Example Items -->
-                            <HBox styleClass="history-item" spacing="8" alignment="CENTER_LEFT">
-                                <Label text="🕒"/>
-                                <VBox>
-                                    <Label text="HKDF SHA256 32B" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                                </VBox>
-                                <Region HBox.hgrow="ALWAYS"/>
-                                <Button text="Reopen" style="-fx-font-size: 10px; -fx-padding: 2 6;"/>
-                            </HBox>
-
-                            <HBox styleClass="history-item" spacing="8" alignment="CENTER_LEFT">
-                                <Label text="🕒"/>
-                                <VBox>
-                                    <Label text="AES-GCM Encrypt" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                                </VBox>
-                                <Region HBox.hgrow="ALWAYS"/>
-                                <Button text="Rerun" style="-fx-font-size: 10px; -fx-padding: 2 6;"/>
-                            </HBox>
-                        </VBox>
+                        <VBox fx:id="historyContainer" spacing="4" style="-fx-padding: 8;"/>
 
                     </VBox>
                 </ScrollPane>
@@ -411,7 +394,7 @@
         <HBox styleClass="status-bar" spacing="10">
             <Label fx:id="statusLabel" text="Ready" styleClass="status-label-main"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label text="Java 21 | JavaFX 21 | BouncyCastle" styleClass="status-label-info"/>
+            <Label fx:id="runtimeInfoLabel" text="Java -- | JavaFX -- | BouncyCastle" styleClass="status-label-info"/>
         </HBox>
     </bottom>
 

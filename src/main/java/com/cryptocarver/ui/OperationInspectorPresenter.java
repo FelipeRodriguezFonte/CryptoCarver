@@ -40,7 +40,13 @@ final class OperationInspectorPresenter {
         }
 
         renderDetails(details == null ? contextDetails(operationName) : details);
-        if (securityTipLabel != null) securityTipLabel.setText(securityTip(operationName));
+        if (securityTipLabel != null) {
+            if (details == null) {
+                securityTipLabel.setText("");
+            } else {
+                securityTipLabel.setText(securityTip(operationName));
+            }
+        }
     }
 
     /** Metadata-first help shown before an operation has produced a result. */
