@@ -29,6 +29,10 @@ public interface StatusReporter {
         // Optional for non-JavaFX hosts and controller tests.
     }
 
+    default void refreshHsmKeyCombos() {
+        // Optional for non-JavaFX hosts and controller tests.
+    }
+
     default void addToHistory(String operation, List<OperationDetail> details) {
         // Default implementation does nothing, for legacy compatibility
     }
@@ -51,5 +55,8 @@ public interface StatusReporter {
     }
 
     default void setOutputFormat(String format) {
+    }
+
+    default void navigateTo(String operation) {
     }
 }

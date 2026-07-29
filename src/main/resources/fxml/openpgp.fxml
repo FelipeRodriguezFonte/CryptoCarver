@@ -30,22 +30,26 @@
 
                         <VBox spacing="8" GridPane.columnIndex="0">
                             <Label text="Public key (ASCII armor)" styleClass="form-label"/>
-                            <HBox spacing="8">
+                            <FlowPane styleClass="responsive-action-bar">
+                                <Button text="Paste" onAction="#handlePastePublicKey" styleClass="secondary-button"/>
                                 <Button text="Load…" onAction="#handleLoadPublicKey" styleClass="secondary-button"/>
                                 <Button text="Save…" onAction="#handleSavePublicKey" styleClass="secondary-button"/>
                                 <Button text="Inspect" onAction="#handleInspectPublicKey" styleClass="secondary-button"/>
-                            </HBox>
+                                <MenuButton fx:id="openPgpPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulatePgpPubKeyShelf"/>
+                            </FlowPane>
                             <TextArea fx:id="openPgpPublicKeyArea" prefRowCount="4" wrapText="true" styleClass="monospace-field"/>
                         </VBox>
 
                         <VBox spacing="8" GridPane.columnIndex="1">
                             <Label text="Secret key (laboratory only)" styleClass="form-label"/>
-                            <HBox spacing="8">
+                            <FlowPane styleClass="responsive-action-bar">
+                                <Button text="Paste" onAction="#handlePasteSecretKey" styleClass="secondary-button"/>
                                 <Button text="Load…" onAction="#handleLoadSecretKey" styleClass="secondary-button"/>
                                 <Button text="Save…" onAction="#handleSaveSecretKey" styleClass="secondary-button"/>
                                 <Button text="Inspect" onAction="#handleInspectSecretKey" styleClass="secondary-button"/>
+                                <MenuButton fx:id="openPgpSecretKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulatePgpSecretKeyShelf"/>
                                 <Button text="Clear" onAction="#handleClearSecretMaterial" styleClass="danger-button"/>
-                            </HBox>
+                            </FlowPane>
                             <TextArea fx:id="openPgpSecretKeyArea" prefRowCount="4" wrapText="true" styleClass="monospace-field"/>
                         </VBox>
                     </GridPane>
@@ -59,31 +63,31 @@
                     </HBox>
                     <TextArea fx:id="openPgpInputArea" prefRowCount="4" wrapText="true" styleClass="monospace-field"/>
 
-                    <HBox spacing="10">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Encrypt" onAction="#handleEncrypt" styleClass="action-button,primary-action"/>
                         <Button text="Decrypt" onAction="#handleDecrypt" styleClass="action-button,primary-action"/>
                         <Button text="Sign Detached" onAction="#handleSignDetached" styleClass="action-button"/>
                         <Button text="Sign Attached" onAction="#handleSignAttached" styleClass="action-button"/>
                         <Button text="Clear-sign" onAction="#handleClearSign" styleClass="action-button"/>
-                    </HBox>
+                    </FlowPane>
 
-                    <HBox spacing="10">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Verify Detached" onAction="#handleVerifyDetached" styleClass="secondary-button"/>
                         <Button text="Verify Attached" onAction="#handleVerifyAttached" styleClass="secondary-button"/>
                         <Button text="Verify Clear-sign" onAction="#handleVerifyClearSigned" styleClass="secondary-button"/>
                         <Button text="Verify with GnuPG" onAction="#handleVerifyWithGnuPg" styleClass="secondary-button"/>
                         <Button text="Clear data" onAction="#handleClear" styleClass="secondary-button"/>
-                    </HBox>
+                    </FlowPane>
 
                     <Separator/>
 
                     <Label text="Binary File Operations (max. 16 MiB)" styleClass="form-label" style="-fx-font-weight: bold;"/>
-                    <HBox spacing="10">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Encrypt File…" onAction="#handleEncryptFile" styleClass="secondary-button"/>
                         <Button text="Decrypt File…" onAction="#handleDecryptFile" styleClass="secondary-button"/>
                         <Button text="Sign File…" onAction="#handleSignFileDetached" styleClass="secondary-button"/>
                         <Button text="Verify File…" onAction="#handleVerifyFileDetached" styleClass="secondary-button"/>
-                    </HBox>
+                    </FlowPane>
 
                     <Separator/>
 

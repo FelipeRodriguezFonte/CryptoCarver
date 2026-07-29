@@ -4,6 +4,8 @@ import com.cryptocarver.crypto.*;
 import com.cryptocarver.crypto.hsm.KeyMaterial;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.GeneratedKeySummary;
+import com.cryptocarver.model.GeneratedAsymmetricKeySummary;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.fxml.FXML;
@@ -70,6 +72,106 @@ public class KeysController {
     private javafx.scene.control.CheckBox forceOddParityCheck;
     @FXML
     private TextArea generatedKeyField;
+    @FXML
+    private Button saveGeneratedKeyButton;
+    private byte[] lastGeneratedSymmetricKeyBytes;
+    private String lastGeneratedSymmetricKeyType;
+
+    // Generated Key Summary components
+    @FXML private VBox generatedKeySummaryCard;
+    @FXML private Label summaryAlgoLabel;
+    @FXML private Label summaryLengthLabel;
+    @FXML private Label summaryKcvLabel;
+    @FXML private Label summaryFingerprintLabel;
+    @FXML private Label summaryParityLabel;
+    @FXML private Label summaryOriginLabel;
+    @FXML private Label summarySavedStatusLabel;
+    @FXML private TitledPane validationPane;
+    @FXML private Button copyGeneratedKeyButton;
+    @FXML private Button copyGeneratedKcvButton;
+    @FXML private Button copyGeneratedSummaryButton;
+    @FXML private Button saveGeneratedSummaryButton;
+    @FXML private Button openValidationButton;
+
+    private GeneratedKeySummary currentGeneratedKeySummary;
+
+    // Asymmetric Key Generation summary components
+    @FXML private VBox rsaSummaryCard;
+    @FXML private Label rsaSummaryAlgoLabel;
+    @FXML private Label rsaSummaryFingerprintLabel;
+    @FXML private Label rsaSummaryPubLenLabel;
+    @FXML private Label rsaSummaryPrivLenLabel;
+    @FXML private Label rsaSummaryCreatedLabel;
+    @FXML private Label rsaSummarySavedStatusLabel;
+    @FXML private Button rsaCopyPublicBtn;
+    @FXML private Button rsaCopyPrivateBtn;
+    @FXML private Button rsaCopySummaryBtn;
+    @FXML private Button rsaExportPublicBtn;
+    @FXML private Button rsaExportPrivateBtn;
+    @FXML private Button rsaSendShelfBtn;
+    @FXML private Button rsaUseCipherBtn;
+    @FXML private Button rsaUseSignaturesBtn;
+    @FXML private Button rsaUseCertificatesBtn;
+    @FXML private Button rsaClearBtn;
+
+    @FXML private VBox ecdsaSummaryCard;
+    @FXML private Label ecdsaSummaryAlgoLabel;
+    @FXML private Label ecdsaSummaryFingerprintLabel;
+    @FXML private Label ecdsaSummaryPubLenLabel;
+    @FXML private Label ecdsaSummaryPrivLenLabel;
+    @FXML private Label ecdsaSummaryCreatedLabel;
+    @FXML private Label ecdsaSummarySavedStatusLabel;
+    @FXML private Button ecdsaCopyPublicBtn;
+    @FXML private Button ecdsaCopyPrivateBtn;
+    @FXML private Button ecdsaCopySummaryBtn;
+    @FXML private Button ecdsaExportPublicBtn;
+    @FXML private Button ecdsaExportPrivateBtn;
+    @FXML private Button ecdsaSendShelfBtn;
+    @FXML private Button ecdsaUseCipherBtn;
+    @FXML private Button ecdsaUseSignaturesBtn;
+    @FXML private Button ecdsaUseCertificatesBtn;
+    @FXML private Button ecdsaClearBtn;
+
+    @FXML private VBox dsaSummaryCard;
+    @FXML private Label dsaSummaryAlgoLabel;
+    @FXML private Label dsaSummaryFingerprintLabel;
+    @FXML private Label dsaSummaryPubLenLabel;
+    @FXML private Label dsaSummaryPrivLenLabel;
+    @FXML private Label dsaSummaryCreatedLabel;
+    @FXML private Label dsaSummarySavedStatusLabel;
+    @FXML private Button dsaCopyPublicBtn;
+    @FXML private Button dsaCopyPrivateBtn;
+    @FXML private Button dsaCopySummaryBtn;
+    @FXML private Button dsaExportPublicBtn;
+    @FXML private Button dsaExportPrivateBtn;
+    @FXML private Button dsaSendShelfBtn;
+    @FXML private Button dsaUseCipherBtn;
+    @FXML private Button dsaUseSignaturesBtn;
+    @FXML private Button dsaUseCertificatesBtn;
+    @FXML private Button dsaClearBtn;
+
+    @FXML private VBox eddsaSummaryCard;
+    @FXML private Label eddsaSummaryAlgoLabel;
+    @FXML private Label eddsaSummaryFingerprintLabel;
+    @FXML private Label eddsaSummaryPubLenLabel;
+    @FXML private Label eddsaSummaryPrivLenLabel;
+    @FXML private Label eddsaSummaryCreatedLabel;
+    @FXML private Label eddsaSummarySavedStatusLabel;
+    @FXML private Button eddsaCopyPublicBtn;
+    @FXML private Button eddsaCopyPrivateBtn;
+    @FXML private Button eddsaCopySummaryBtn;
+    @FXML private Button eddsaExportPublicBtn;
+    @FXML private Button eddsaExportPrivateBtn;
+    @FXML private Button eddsaSendShelfBtn;
+    @FXML private Button eddsaUseCipherBtn;
+    @FXML private Button eddsaUseSignaturesBtn;
+    @FXML private Button eddsaUseCertificatesBtn;
+    @FXML private Button eddsaClearBtn;
+
+    private GeneratedAsymmetricKeySummary currentRsaSummary;
+    private GeneratedAsymmetricKeySummary currentEcdsaSummary;
+    private GeneratedAsymmetricKeySummary currentDsaSummary;
+    private GeneratedAsymmetricKeySummary currentEddsaSummary;
 
     // Key Validation components
     @FXML
@@ -309,6 +411,40 @@ public class KeysController {
         setupHexValidation(component5Field);
         setupHexValidation(kdfInputField);
         setupHexValidation(kdfSaltField);
+
+        if (keyTypeCombo != null) {
+            keyTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                if (currentGeneratedKeySummary != null && (newVal == null || !newVal.equalsIgnoreCase(currentGeneratedKeySummary.getAlgorithm()))) {
+                    hideGeneratedKeySummary();
+                    if (lastGeneratedSymmetricKeyBytes != null) {
+                        Arrays.fill(lastGeneratedSymmetricKeyBytes, (byte) 0);
+                    }
+                    lastGeneratedSymmetricKeyBytes = null;
+                    lastGeneratedSymmetricKeyType = null;
+                    if (generatedKeyField != null) generatedKeyField.clear();
+                    if (saveGeneratedKeyButton != null) saveGeneratedKeyButton.setDisable(true);
+                }
+            });
+        }
+
+        if (rsaKeySizeCombo != null) {
+            rsaKeySizeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                currentRsaSummary = null;
+                if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
+            });
+        }
+        if (ecdsaCurveCombo != null) {
+            ecdsaCurveCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                currentEcdsaSummary = null;
+                if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
+            });
+        }
+        if (dsaKeySizeCombo != null) {
+            dsaKeySizeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                currentDsaSummary = null;
+                if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
+            });
+        }
         setupHexValidation(keyWrapKekField);
         setupHexValidation(keyWrapDataField);
         setupHexValidation(tr31KbpkExportField);
@@ -377,10 +513,14 @@ public class KeysController {
     @FXML private void handleGeneratePkcs11Cms() { generatePkcs11Cms(); }
     @FXML private void handleLoadKeyStoreProfile() { loadKeyStoreProfile(); }
     @FXML private void handleAesKeyWrap() { handleKeyWrap(); }
-    @FXML private void handleGenerateECDSA() { handleGenerateECDSAFp(); }
+    @FXML public void handleGenerateECDSA() { handleGenerateECDSAFp(); }
 
     private void showError(String title, String message) {
         if (mainController != null) mainController.showError(title, message);
+    }
+
+    private void showInfo(String title, String message) {
+        if (mainController != null) mainController.showInfo(title, message);
     }
 
     private void updateStatus(String message) {
@@ -1342,6 +1482,17 @@ public class KeysController {
             String keyHex = DataConverter.bytesToHex(key);
             generatedKeyField.setText(keyHex);
 
+            this.lastGeneratedSymmetricKeyBytes = key;
+            this.lastGeneratedSymmetricKeyType = keyType;
+            if (saveGeneratedKeyButton != null) {
+                saveGeneratedKeyButton.setDisable(false);
+            }
+
+            // Create and update GeneratedKeySummary card
+            GeneratedKeySummary summary = new GeneratedKeySummary(key, keyType, forceParity);
+            this.currentGeneratedKeySummary = summary;
+            updateGeneratedKeySummaryCard(summary);
+
             String parityStatus = forceParity ? " with odd parity" : " without parity adjustment";
             updateStatus("Generated " + keyType + " key" + parityStatus);
 
@@ -1385,6 +1536,291 @@ public class KeysController {
         } catch (Exception e) {
             showError("Generation Error", "Error generating key: " + e.getMessage());
         }
+    }
+
+    @FXML
+    public void handleSaveGeneratedKeyToLab() {
+        byte[] keyBytes = this.lastGeneratedSymmetricKeyBytes;
+        String algoName = this.lastGeneratedSymmetricKeyType;
+
+        if (keyBytes == null || keyBytes.length == 0) {
+            showError("No Key Available", "Generate a key first before saving to Key Lab.");
+            return;
+        }
+
+        if (algoName == null || algoName.isEmpty()) {
+            algoName = "AES-256";
+        }
+
+        String fingerprint = com.cryptocarver.crypto.hsm.KeyMaterialFactory.generateFingerprint(keyBytes);
+        String kcvHex = "N/A";
+        try {
+            byte[] kcvBytes = (algoName.contains("DES") || algoName.contains("3DES"))
+                    ? KeyOperations.calculateKCV_VISA(keyBytes)
+                    : KeyOperations.calculateKCV_AES(keyBytes);
+            kcvHex = DataConverter.bytesToHex(kcvBytes);
+        } catch (Exception ignored) {}
+
+        // Fingerprint Duplicate Check
+        com.cryptocarver.crypto.hsm.KeyMaterial existing = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().findKeyByFingerprint(fingerprint);
+        if (existing != null) {
+            showInfo("Duplicate Key Detected",
+                    "A key with an identical fingerprint already exists in Key Lab:\n\n"
+                    + "Name: " + existing.getName() + "\n"
+                    + "ID: " + existing.getId() + "\n"
+                    + "Algorithm: " + existing.getAlgorithm() + "\n"
+                    + "KCV: " + existing.getKcv() + "\n\n"
+                    + "No duplicate entry was created.");
+            refreshKeyLabTable();
+            if (keyLabTable != null) {
+                keyLabTable.getItems().stream()
+                        .filter(km -> km.getId().equals(existing.getId()))
+                        .findFirst()
+                        .ifPresent(km -> {
+                            keyLabTable.getSelectionModel().select(km);
+                            showKeyLabDetails(km);
+                        });
+            }
+            if (mainController != null) {
+                mainController.refreshHsmKeyCombos();
+            }
+            updateStatus("Key already exists in Key Lab: " + existing.getName() + " (ID: " + existing.getId() + ")");
+            return;
+        }
+
+        // Show metadata dialog
+        javafx.scene.control.Dialog<javafx.scene.control.ButtonType> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle("Save Generated Key to Key Lab");
+        dialog.setHeaderText("Specify key metadata for Simulated HSM / Key Lab");
+
+        javafx.scene.control.ButtonType saveButtonType = new javafx.scene.control.ButtonType("Save to Key Lab", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, javafx.scene.control.ButtonType.CANCEL);
+
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new javafx.geometry.Insets(15));
+
+        // Metadata summary
+        javafx.scene.control.Label summaryLabel = new javafx.scene.control.Label(
+                "Algorithm: " + algoName + "  |  Length: " + (keyBytes.length * 8) + " bits  |  KCV: " + kcvHex + "  |  Origin: Generated"
+        );
+        summaryLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3b82f6;");
+        grid.add(summaryLabel, 0, 0, 2, 1);
+
+        javafx.scene.control.Label nameLabel = new javafx.scene.control.Label("Name (1-100 chars):");
+        javafx.scene.control.TextField nameField = new javafx.scene.control.TextField("Generated " + algoName + " Key");
+        nameField.setPromptText("Enter key name...");
+        grid.add(nameLabel, 0, 1);
+        grid.add(nameField, 1, 1);
+
+        javafx.scene.control.Label usageLabel = new javafx.scene.control.Label("Key Usages:");
+        javafx.scene.layout.VBox usageBox = new javafx.scene.layout.VBox(5);
+        javafx.scene.control.CheckBox chkEncrypt = new javafx.scene.control.CheckBox("ENCRYPT"); chkEncrypt.setSelected(true);
+        javafx.scene.control.CheckBox chkDecrypt = new CheckBox("DECRYPT"); chkDecrypt.setSelected(true);
+        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC"); chkMac.setSelected(algoName.contains("HMAC") || algoName.contains("GMAC"));
+        javafx.scene.control.CheckBox chkWrap = new javafx.scene.control.CheckBox("WRAP / UNWRAP (KEY_WRAP)"); chkWrap.setSelected(true);
+        usageBox.getChildren().addAll(chkEncrypt, chkDecrypt, chkMac, chkWrap);
+        grid.add(usageLabel, 0, 2);
+        grid.add(usageBox, 1, 2);
+
+        javafx.scene.control.Label exportLabel = new javafx.scene.control.Label("Exportability:");
+        javafx.scene.control.ComboBox<com.cryptocarver.crypto.hsm.KeyExportability> exportCombo = new javafx.scene.control.ComboBox<>();
+        exportCombo.getItems().addAll(com.cryptocarver.crypto.hsm.KeyExportability.NON_EXPORTABLE, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE);
+        exportCombo.setValue(com.cryptocarver.crypto.hsm.KeyExportability.NON_EXPORTABLE);
+        grid.add(exportLabel, 0, 3);
+        grid.add(exportCombo, 1, 3);
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Validation
+        javafx.scene.Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+        nameField.textProperty().addListener((obs, oldVal, newVal) -> {
+            boolean valid = newVal != null && !newVal.trim().isEmpty() && newVal.trim().length() <= 100;
+            if (saveButton != null) {
+                saveButton.setDisable(!valid);
+            }
+        });
+
+        if (!Boolean.getBoolean("test.mode") && !Boolean.getBoolean("runUiTests") && !System.getProperty("java.awt.headless", "false").equals("true")) {
+            java.util.Optional<javafx.scene.control.ButtonType> result = dialog.showAndWait();
+            if (result.isEmpty() || result.get() != saveButtonType) {
+                return;
+            }
+        }
+
+        String keyName = nameField.getText().trim();
+        if (keyName.isEmpty() || keyName.length() > 100) {
+            keyName = "Generated " + algoName + " Key";
+        }
+
+        java.util.Set<com.cryptocarver.crypto.hsm.KeyUsage> usages = new java.util.HashSet<>();
+        if (chkEncrypt.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT);
+        if (chkDecrypt.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+        if (chkMac.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+        if (chkWrap.isSelected()) {
+            usages.add(com.cryptocarver.crypto.hsm.KeyUsage.WRAP);
+            usages.add(com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP);
+        }
+        if (usages.isEmpty()) {
+            usages.add(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT);
+            usages.add(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+        }
+
+        com.cryptocarver.crypto.hsm.KeyExportability exportability = exportCombo.getValue();
+        if (exportability == null) exportability = com.cryptocarver.crypto.hsm.KeyExportability.NON_EXPORTABLE;
+
+        javax.crypto.SecretKey secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, algoName);
+        String keyId = java.util.UUID.randomUUID().toString();
+
+        com.cryptocarver.crypto.hsm.KeyMaterial km = new com.cryptocarver.crypto.hsm.KeyMaterial(
+                keyId,
+                fingerprint,
+                com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC,
+                algoName,
+                keyBytes.length * 8,
+                com.cryptocarver.crypto.hsm.KeyFormat.RAW,
+                usages,
+                exportability,
+                secretKey,
+                null,
+                keyName,
+                "Generated",
+                System.currentTimeMillis(),
+                System.currentTimeMillis(),
+                kcvHex,
+                "ACTIVE",
+                true
+        );
+
+        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(km);
+
+        refreshKeyLabTable();
+        if (keyLabTable != null) {
+            keyLabTable.getItems().stream()
+                    .filter(item -> item.getId().equals(keyId))
+                    .findFirst()
+                    .ifPresent(item -> {
+                        keyLabTable.getSelectionModel().select(item);
+                        showKeyLabDetails(item);
+                    });
+        }
+
+        if (mainController != null) {
+            mainController.refreshHsmKeyCombos();
+        }
+
+        if (currentGeneratedKeySummary != null) {
+            String status = "Saved to Key Lab (" + keyName + ")";
+            currentGeneratedKeySummary.setSavedStatus(status);
+            if (summarySavedStatusLabel != null) {
+                summarySavedStatusLabel.setText("✓ " + status);
+            }
+        }
+
+        updateStatus("Saved generated key to Key Lab: " + keyName + " — " + algoName + " — KCV " + kcvHex);
+    }
+
+    private void hideGeneratedKeySummary() {
+        this.currentGeneratedKeySummary = null;
+        if (generatedKeySummaryCard != null) {
+            generatedKeySummaryCard.setVisible(false);
+            generatedKeySummaryCard.setManaged(false);
+        }
+    }
+
+    private void updateGeneratedKeySummaryCard(com.cryptocarver.model.GeneratedKeySummary summary) {
+        if (generatedKeySummaryCard == null || summary == null) return;
+        if (summaryAlgoLabel != null) summaryAlgoLabel.setText(summary.getAlgorithm());
+        if (summaryLengthLabel != null) summaryLengthLabel.setText(summary.getFormattedLength());
+        if (summaryKcvLabel != null) summaryKcvLabel.setText(summary.getFormattedKcv());
+        if (summaryFingerprintLabel != null) summaryFingerprintLabel.setText(summary.getFingerprintTruncated());
+        if (summaryParityLabel != null) summaryParityLabel.setText(summary.getParityStatus());
+        if (summaryOriginLabel != null) summaryOriginLabel.setText(summary.getOrigin());
+        if (summarySavedStatusLabel != null) {
+            summarySavedStatusLabel.setText(summary.getSavedStatus() != null ? "✓ " + summary.getSavedStatus() : "");
+        }
+        generatedKeySummaryCard.setVisible(true);
+        generatedKeySummaryCard.setManaged(true);
+    }
+
+    @FXML
+    public void handleCopyGeneratedKey() {
+        if (currentGeneratedKeySummary == null || currentGeneratedKeySummary.getRawKeyBytes().length == 0) {
+            updateStatus("No generated key summary available to copy.");
+            return;
+        }
+        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        if (profile != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            updateStatus("Action blocked: Secret key cannot be copied in current visibility mode.");
+            showInfo("Security Policy", "Copying key material is blocked under " + profile + " mode. Switch to FULL_LAB to copy secret keys.");
+            return;
+        }
+        copyToClipboard(currentGeneratedKeySummary.getRawKeyHex());
+        updateStatus("Copied generated key to clipboard");
+    }
+
+    @FXML
+    public void handleCopyGeneratedKcv() {
+        if (currentGeneratedKeySummary == null) {
+            updateStatus("No generated key summary available to copy.");
+            return;
+        }
+        String kcv = currentGeneratedKeySummary.getFormattedKcv();
+        copyToClipboard(kcv);
+        updateStatus("Copied KCV to clipboard: " + kcv);
+    }
+
+    @FXML
+    public void handleCopyGeneratedSummary() {
+        if (currentGeneratedKeySummary == null) {
+            updateStatus("No generated key summary available to copy.");
+            return;
+        }
+        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        String keyDisplay = (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB)
+                ? currentGeneratedKeySummary.getRawKeyHex()
+                : "***MASKED***";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Generated Key Summary ---\n");
+        sb.append("Algorithm: ").append(currentGeneratedKeySummary.getAlgorithm()).append("\n");
+        sb.append("Length: ").append(currentGeneratedKeySummary.getFormattedLength()).append("\n");
+        sb.append("KCV: ").append(currentGeneratedKeySummary.getFormattedKcv()).append("\n");
+        sb.append("Fingerprint: ").append(currentGeneratedKeySummary.getFingerprintTruncated()).append("\n");
+        sb.append("Odd Parity: ").append(currentGeneratedKeySummary.getParityStatus()).append("\n");
+        sb.append("Origin: ").append(currentGeneratedKeySummary.getOrigin()).append("\n");
+        sb.append("Key: ").append(keyDisplay);
+        if (currentGeneratedKeySummary.getSavedStatus() != null) {
+            sb.append("\nStatus: ").append(currentGeneratedKeySummary.getSavedStatus());
+        }
+
+        copyToClipboard(sb.toString());
+        updateStatus("Copied Key Summary to clipboard");
+    }
+
+    @FXML
+    public void handleOpenValidationAndKcv() {
+        if (currentGeneratedKeySummary == null) {
+            updateStatus("No generated key available for validation.");
+            return;
+        }
+        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        if (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB && keyInputField != null) {
+            keyInputField.setText(currentGeneratedKeySummary.getRawKeyHex());
+        }
+        if (validationPane != null) {
+            validationPane.setExpanded(true);
+        }
+        handleValidateKey();
+    }
+
+    private void copyToClipboard(String text) {
+        if (text == null) return;
+        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(text);
+        clipboard.setContent(content);
     }
 
     /**
@@ -1717,6 +2153,11 @@ public class KeysController {
             lastGeneratedKeyPair = keyPair;
             lastKeyType = "RSA";
 
+            // Create and present GeneratedAsymmetricKeySummary
+            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "RSA", keySize + " bits");
+            this.currentRsaSummary = summary;
+            updateAsymmetricSummaryCard(rsaSummaryCard, rsaSummaryAlgoLabel, rsaSummaryFingerprintLabel, rsaSummaryPubLenLabel, rsaSummaryPrivLenLabel, rsaSummaryCreatedLabel, rsaSummarySavedStatusLabel, summary);
+
             // Get key info
             String publicKeyInfo = AsymmetricKeyOperations.getRSAPublicKeyInfo(keyPair.getPublic());
             String privateKeyInfo = AsymmetricKeyOperations.getRSAPrivateKeyInfo(keyPair.getPrivate());
@@ -1786,6 +2227,10 @@ public class KeysController {
             lastGeneratedKeyPair = keyPair;
             lastKeyType = "DSA";
 
+            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "DSA", keySize + " bits");
+            this.currentDsaSummary = summary;
+            updateAsymmetricSummaryCard(dsaSummaryCard, dsaSummaryAlgoLabel, dsaSummaryFingerprintLabel, dsaSummaryPubLenLabel, dsaSummaryPrivLenLabel, dsaSummaryCreatedLabel, dsaSummarySavedStatusLabel, summary);
+
             String publicKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPublic());
             String privateKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPrivate());
 
@@ -1851,6 +2296,10 @@ public class KeysController {
             lastGeneratedKeyPair = keyPair;
             lastKeyType = "ECDSA";
 
+            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "ECDSA", curve);
+            this.currentEcdsaSummary = summary;
+            updateAsymmetricSummaryCard(ecdsaSummaryCard, ecdsaSummaryAlgoLabel, ecdsaSummaryFingerprintLabel, ecdsaSummaryPubLenLabel, ecdsaSummaryPrivLenLabel, ecdsaSummaryCreatedLabel, ecdsaSummarySavedStatusLabel, summary);
+
             String publicKeyInfo = AsymmetricKeyOperations.getECKeyInfo(keyPair.getPublic());
             String privateKeyInfo = AsymmetricKeyOperations.getECKeyInfo(keyPair.getPrivate());
 
@@ -1911,6 +2360,10 @@ public class KeysController {
 
             lastGeneratedKeyPair = keyPair;
             lastKeyType = "Ed25519";
+
+            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "Ed25519", "Ed25519 (255-bit curve)");
+            this.currentEddsaSummary = summary;
+            updateAsymmetricSummaryCard(eddsaSummaryCard, eddsaSummaryAlgoLabel, eddsaSummaryFingerprintLabel, eddsaSummaryPubLenLabel, eddsaSummaryPrivLenLabel, eddsaSummaryCreatedLabel, eddsaSummarySavedStatusLabel, summary);
 
             ed25519PublicKeyArea.setText("=== Ed25519 PUBLIC KEY ===\n" +
                     "Algorithm: Ed25519 (255-bit curve)\n" +
@@ -3866,22 +4319,261 @@ public class KeysController {
 
     public void handleClearAsymmetric() {
         // Asymmetric
-        if (rsaPublicKeyArea != null)
-            rsaPublicKeyArea.clear();
-        if (rsaPrivateKeyArea != null)
-            rsaPrivateKeyArea.clear();
-        if (dsaPublicKeyArea != null)
-            dsaPublicKeyArea.clear();
-        if (dsaPrivateKeyArea != null)
-            dsaPrivateKeyArea.clear();
-        if (ecdsaFpPublicKeyArea != null)
-            ecdsaFpPublicKeyArea.clear();
-        if (ecdsaFpPrivateKeyArea != null)
-            ecdsaFpPrivateKeyArea.clear();
-        if (ed25519PublicKeyArea != null)
-            ed25519PublicKeyArea.clear();
-        if (ed25519PrivateKeyArea != null)
-            ed25519PrivateKeyArea.clear();
+        currentRsaSummary = null;
+        currentEcdsaSummary = null;
+        currentDsaSummary = null;
+        currentEddsaSummary = null;
+
+        if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
+        if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
+        if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
+        if (eddsaSummaryCard != null) { eddsaSummaryCard.setVisible(false); eddsaSummaryCard.setManaged(false); }
+
+        if (rsaPublicKeyArea != null) rsaPublicKeyArea.clear();
+        if (rsaPrivateKeyArea != null) rsaPrivateKeyArea.clear();
+        if (dsaPublicKeyArea != null) dsaPublicKeyArea.clear();
+        if (dsaPrivateKeyArea != null) dsaPrivateKeyArea.clear();
+        if (ecdsaPublicKeyArea != null) ecdsaPublicKeyArea.clear();
+        if (ecdsaPrivateKeyArea != null) ecdsaPrivateKeyArea.clear();
+        if (ecdsaFpPublicKeyArea != null) ecdsaFpPublicKeyArea.clear();
+        if (ecdsaFpPrivateKeyArea != null) ecdsaFpPrivateKeyArea.clear();
+        if (eddsaPublicKeyArea != null) eddsaPublicKeyArea.clear();
+        if (eddsaPrivateKeyArea != null) eddsaPrivateKeyArea.clear();
+        if (ed25519PublicKeyArea != null) ed25519PublicKeyArea.clear();
+        if (ed25519PrivateKeyArea != null) ed25519PrivateKeyArea.clear();
+    }
+
+    private void updateAsymmetricSummaryCard(VBox card, Label algoLbl, Label fpLbl, Label pubLenLbl, Label privLenLbl, Label createdLbl, Label savedLbl, GeneratedAsymmetricKeySummary summary) {
+        if (card == null || summary == null) return;
+        if (algoLbl != null) algoLbl.setText(summary.getAlgorithm() + " (" + summary.getCurveOrKeySize() + ")");
+        if (fpLbl != null) fpLbl.setText(summary.getPublicFingerprintTruncated());
+        if (pubLenLbl != null) pubLenLbl.setText(summary.getPublicKeyLength());
+        if (privLenLbl != null) privLenLbl.setText(summary.getPrivateKeyLength());
+        if (createdLbl != null) createdLbl.setText(summary.getCreatedAt());
+        if (savedLbl != null) savedLbl.setText(summary.getSavedStatus() != null ? "✓ " + summary.getSavedStatus() : "");
+        card.setVisible(true);
+        card.setManaged(true);
+    }
+
+    private void copyPublicKey(GeneratedAsymmetricKeySummary summary) {
+        if (summary == null || summary.getPublicKeyPem() == null) {
+            updateStatus("No public key available to copy.");
+            return;
+        }
+        copyToClipboard(summary.getPublicKeyPem());
+        updateStatus("Copied " + summary.getAlgorithm() + " public key to clipboard");
+    }
+
+    private void copyPrivateKey(GeneratedAsymmetricKeySummary summary) {
+        if (summary == null || summary.getPrivateKeyPem() == null) {
+            updateStatus("No private key available to copy.");
+            return;
+        }
+        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        if (profile != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            updateStatus("Action blocked: Private key cannot be copied under " + profile + " profile.");
+            showInfo("Security Policy", "Copying private key material is blocked under " + profile + " profile. Switch to FULL_LAB to copy private keys.");
+            return;
+        }
+        copyToClipboard(summary.getPrivateKeyPem());
+        updateStatus("Copied " + summary.getAlgorithm() + " private key to clipboard");
+    }
+
+    private void copyAsymmetricSummary(GeneratedAsymmetricKeySummary summary) {
+        if (summary == null) {
+            updateStatus("No asymmetric summary available to copy.");
+            return;
+        }
+        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        String privDisplay = (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB)
+                ? summary.getPrivateKeyPem()
+                : "***MASKED***";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- ").append(summary.getAlgorithm()).append(" Key Pair Summary ---\n");
+        sb.append("Algorithm/Size: ").append(summary.getAlgorithm()).append(" (").append(summary.getCurveOrKeySize()).append(")\n");
+        sb.append("Public Fingerprint (SHA-256): ").append(summary.getPublicFingerprintTruncated()).append("\n");
+        sb.append("Public Key Length: ").append(summary.getPublicKeyLength()).append("\n");
+        sb.append("Private Key Length: ").append(summary.getPrivateKeyLength()).append("\n");
+        sb.append("Creation Time: ").append(summary.getCreatedAt()).append("\n");
+        sb.append("Compatible Uses: ").append(summary.getCompatibleUses()).append("\n");
+        sb.append("Origin: ").append(summary.getOrigin()).append("\n\n");
+        sb.append("=== PUBLIC KEY (PEM) ===\n").append(summary.getPublicKeyPem()).append("\n\n");
+        sb.append("=== PRIVATE KEY (PEM) ===\n").append(privDisplay);
+
+        copyToClipboard(sb.toString());
+        updateStatus("Copied " + summary.getAlgorithm() + " PEM Pair Summary to clipboard");
+    }
+
+    private void exportPublicPem(GeneratedAsymmetricKeySummary summary, String defaultFilename) {
+        if (summary == null || summary.getPublicKeyPem() == null) {
+            updateStatus("No public key available to export.");
+            return;
+        }
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Export Public Key PEM");
+        fc.setInitialFileName(defaultFilename);
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM Files (*.pem, *.pub)", "*.pem", "*.pub"));
+        java.io.File file = fc.showSaveDialog(null);
+        if (file != null) {
+            try {
+                java.nio.file.Files.writeString(file.toPath(), summary.getPublicKeyPem(), StandardCharsets.UTF_8);
+                updateStatus("Exported public key to " + file.getName());
+                summary.setSavedStatus("Exported to " + file.getName());
+            } catch (Exception e) {
+                showError("Export Error", "Error exporting public key: " + e.getMessage());
+            }
+        }
+    }
+
+    private void exportPrivatePem(GeneratedAsymmetricKeySummary summary, String defaultFilename) {
+        if (summary == null || summary.getPrivateKeyPem() == null) {
+            updateStatus("No private key available to export.");
+            return;
+        }
+        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        if (profile != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            updateStatus("Action blocked: Exporting private key is blocked under " + profile + " profile.");
+            showInfo("Security Policy", "Exporting private key files is blocked under " + profile + " profile. Switch to FULL_LAB to export private keys.");
+            return;
+        }
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Export Private Key PEM");
+        fc.setInitialFileName(defaultFilename);
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM Files (*.pem, *.key)", "*.pem", "*.key"));
+        java.io.File file = fc.showSaveDialog(null);
+        if (file != null) {
+            try {
+                java.nio.file.Files.writeString(file.toPath(), summary.getPrivateKeyPem(), StandardCharsets.UTF_8);
+                updateStatus("Exported private key to " + file.getName());
+                summary.setSavedStatus("Exported to " + file.getName());
+            } catch (Exception e) {
+                showError("Export Error", "Error exporting private key: " + e.getMessage());
+            }
+        }
+    }
+
+    private void sendPublicKeyToShelf(GeneratedAsymmetricKeySummary summary) {
+        if (summary == null || summary.getPublicKeyPem() == null) {
+            updateStatus("No public key available for shelf.");
+            return;
+        }
+        com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
+                summary.getAlgorithm() + " Public Key",
+                summary.getPublicKeyPem(),
+                com.cryptocarver.model.ClipboardEntry.Format.PEM,
+                com.cryptocarver.model.OperationDetail.Classification.PUBLIC,
+                "Key Generation"
+        );
+        com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
+        updateStatus("Added " + summary.getAlgorithm() + " public key to Clipboard Shelf");
+    }
+
+    private void useInSignatures(GeneratedAsymmetricKeySummary summary) {
+        if (summary == null || summary.getKeyPair() == null) {
+            updateStatus("No key pair available for signatures.");
+            return;
+        }
+        updateStatus("Selected " + summary.getAlgorithm() + " key pair for Digital Signatures");
+        if (mainController instanceof ModernMainController modern) {
+            modern.useGeneratedKeyPairInSignatures(
+                    summary.getKeyPair(), summary.getPublicKeyPem(), summary.getPrivateKeyPem());
+        } else if (mainController != null) {
+            mainController.navigateTo("Digital Signatures");
+        }
+    }
+
+    private void useInCertificates(GeneratedAsymmetricKeySummary summary) {
+        if (summary == null) {
+            updateStatus("No key pair available for certificates.");
+            return;
+        }
+        updateStatus("Selected " + summary.getAlgorithm() + " key pair for Certificates");
+        if (mainController != null) {
+            mainController.navigateTo("Generate Certificate");
+        }
+    }
+
+    // RSA Action Handlers
+    @FXML public void handleCopyRsaPublicKey() { copyPublicKey(currentRsaSummary); }
+    @FXML public void handleCopyRsaPrivateKey() { copyPrivateKey(currentRsaSummary); }
+    @FXML public void handleCopyRsaSummary() { copyAsymmetricSummary(currentRsaSummary); }
+    @FXML public void handleExportRsaPublicPem() { exportPublicPem(currentRsaSummary, "rsa_public.pem"); }
+    @FXML public void handleExportRsaPrivatePem() { exportPrivatePem(currentRsaSummary, "rsa_private.pem"); }
+    @FXML public void handleSendRsaPublicToShelf() { sendPublicKeyToShelf(currentRsaSummary); }
+    @FXML public void handleUseRsaInCipher() {
+        if (currentRsaSummary == null) {
+            updateStatus("No RSA key pair available for encryption.");
+            return;
+        }
+        updateStatus("Selected RSA key pair for RSA Cipher");
+        if (mainController != null) {
+            mainController.navigateTo("Asymmetric Ciphers");
+        }
+    }
+    @FXML public void handleUseRsaInSignatures() { useInSignatures(currentRsaSummary); }
+    @FXML public void handleUseRsaInCertificates() { useInCertificates(currentRsaSummary); }
+    @FXML public void handleClearRsa() {
+        currentRsaSummary = null;
+        if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
+        if (rsaPublicKeyArea != null) rsaPublicKeyArea.clear();
+        if (rsaPrivateKeyArea != null) rsaPrivateKeyArea.clear();
+        updateStatus("Cleared RSA key pair");
+    }
+
+    // ECDSA Action Handlers
+    @FXML public void handleCopyEcdsaPublicKey() { copyPublicKey(currentEcdsaSummary); }
+    @FXML public void handleCopyEcdsaPrivateKey() { copyPrivateKey(currentEcdsaSummary); }
+    @FXML public void handleCopyEcdsaSummary() { copyAsymmetricSummary(currentEcdsaSummary); }
+    @FXML public void handleExportEcdsaPublicPem() { exportPublicPem(currentEcdsaSummary, "ecdsa_public.pem"); }
+    @FXML public void handleExportEcdsaPrivatePem() { exportPrivatePem(currentEcdsaSummary, "ecdsa_private.pem"); }
+    @FXML public void handleSendEcdsaPublicToShelf() { sendPublicKeyToShelf(currentEcdsaSummary); }
+    @FXML public void handleUseEcdsaInSignatures() { useInSignatures(currentEcdsaSummary); }
+    @FXML public void handleUseEcdsaInCertificates() { useInCertificates(currentEcdsaSummary); }
+    @FXML public void handleClearEcdsa() {
+        currentEcdsaSummary = null;
+        if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
+        if (ecdsaPublicKeyArea != null) ecdsaPublicKeyArea.clear();
+        if (ecdsaPrivateKeyArea != null) ecdsaPrivateKeyArea.clear();
+        if (ecdsaFpPublicKeyArea != null) ecdsaFpPublicKeyArea.clear();
+        if (ecdsaFpPrivateKeyArea != null) ecdsaFpPrivateKeyArea.clear();
+        updateStatus("Cleared ECDSA key pair");
+    }
+
+    // DSA Action Handlers
+    @FXML public void handleCopyDsaPublicKey() { copyPublicKey(currentDsaSummary); }
+    @FXML public void handleCopyDsaPrivateKey() { copyPrivateKey(currentDsaSummary); }
+    @FXML public void handleCopyDsaSummary() { copyAsymmetricSummary(currentDsaSummary); }
+    @FXML public void handleExportDsaPublicPem() { exportPublicPem(currentDsaSummary, "dsa_public.pem"); }
+    @FXML public void handleExportDsaPrivatePem() { exportPrivatePem(currentDsaSummary, "dsa_private.pem"); }
+    @FXML public void handleSendDsaPublicToShelf() { sendPublicKeyToShelf(currentDsaSummary); }
+    @FXML public void handleUseDsaInSignatures() { useInSignatures(currentDsaSummary); }
+    @FXML public void handleUseDsaInCertificates() { useInCertificates(currentDsaSummary); }
+    @FXML public void handleClearDsa() {
+        currentDsaSummary = null;
+        if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
+        if (dsaPublicKeyArea != null) dsaPublicKeyArea.clear();
+        if (dsaPrivateKeyArea != null) dsaPrivateKeyArea.clear();
+        updateStatus("Cleared DSA key pair");
+    }
+
+    // Ed25519 Action Handlers
+    @FXML public void handleCopyEddsaPublicKey() { copyPublicKey(currentEddsaSummary); }
+    @FXML public void handleCopyEddsaPrivateKey() { copyPrivateKey(currentEddsaSummary); }
+    @FXML public void handleCopyEddsaSummary() { copyAsymmetricSummary(currentEddsaSummary); }
+    @FXML public void handleExportEddsaPublicPem() { exportPublicPem(currentEddsaSummary, "ed25519_public.pem"); }
+    @FXML public void handleExportEddsaPrivatePem() { exportPrivatePem(currentEddsaSummary, "ed25519_private.pem"); }
+    @FXML public void handleSendEddsaPublicToShelf() { sendPublicKeyToShelf(currentEddsaSummary); }
+    @FXML public void handleUseEddsaInSignatures() { useInSignatures(currentEddsaSummary); }
+    @FXML public void handleUseEddsaInCertificates() { useInCertificates(currentEddsaSummary); }
+    @FXML public void handleClearEd25519() {
+        currentEddsaSummary = null;
+        if (eddsaSummaryCard != null) { eddsaSummaryCard.setVisible(false); eddsaSummaryCard.setManaged(false); }
+        if (eddsaPublicKeyArea != null) eddsaPublicKeyArea.clear();
+        if (eddsaPrivateKeyArea != null) eddsaPrivateKeyArea.clear();
+        if (ed25519PublicKeyArea != null) ed25519PublicKeyArea.clear();
+        if (ed25519PrivateKeyArea != null) ed25519PrivateKeyArea.clear();
+        updateStatus("Cleared Ed25519 key pair");
     }
 
     public String getOutputText() {

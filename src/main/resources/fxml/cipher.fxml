@@ -12,9 +12,9 @@
                 <VBox spacing="14" styleClass="cipher-pane-content" maxWidth="720">
 
                     <!-- Template Selection Bar -->
-                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box">
+                    <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
-                        <ComboBox fx:id="cipherTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                        <ComboBox fx:id="cipherTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
                         <Button text="Apply" onAction="#handleApplyCipherTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                         <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
                             <items>
@@ -25,7 +25,7 @@
                             </items>
                         </MenuButton>
                         <Button text="Reset Defaults" onAction="#handleResetCipherDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                    </HBox>
+                    </FlowPane>
 
                     <!-- Group 1: Algorithm & Mode -->
                     <VBox styleClass="form-group-box">
@@ -63,7 +63,12 @@
                                 <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             </HBox>
                         </GridPane>
-                        <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text" style="-fx-padding: 0 0 0 142;"/>
+                        <FlowPane styleClass="responsive-action-bar" style="-fx-padding: 4 0 0 142;">
+                            <Button text="Paste Key" onAction="#handlePasteSymKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button text="Load Key…" onAction="#handleLoadSymKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <MenuButton fx:id="symKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" style="-fx-font-size: 11px;" onShowing="#handlePopulateSymKeyShelf"/>
+                        </FlowPane>
+                        <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text" style="-fx-padding: 4 0 0 142;"/>
                     </VBox>
 
                     <!-- Group 3: IV / Nonce & AEAD Parameters -->
@@ -132,13 +137,12 @@
                         <ComboBox fx:id="fileCipherLineCharsetCombo" prefWidth="180" style="-fx-font-size: 10px;"/>
                     </HBox>
                     <CheckBox fx:id="fileCipherCompactCbcCheck" text="Write line records without header (compact format)" style="-fx-font-size: 10px;"/>
-                    <HBox spacing="8">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
                         <Button text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
-                        <Region HBox.hgrow="ALWAYS"/>
                         <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
                         <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
-                    </HBox>
+                    </FlowPane>
                     <TextArea fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"
                               style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
                 </VBox>
@@ -167,19 +171,21 @@
                         <Label text="Public Key (PEM or Hex):" style="-fx-font-size: 11px;"/>
                         <TextArea fx:id="publicKeyArea" prefHeight="60" wrapText="true"
                                   style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
-                        <HBox spacing="5">
-                            <Button text="Read from Text" onAction="#handleLoadPublicKey" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                            <Button text="Load from File..." onAction="#handleReadPublicKeyFile" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        </HBox>
+                        <FlowPane styleClass="responsive-action-bar">
+                            <Button text="Paste Public Key" onAction="#handlePastePublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button text="Load from File..." onAction="#handleReadPublicKeyFile" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <MenuButton fx:id="cipherPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" style="-fx-font-size: 11px;" onShowing="#handlePopulateCipherPubKeyShelf"/>
+                        </FlowPane>
                     </VBox>
                     <VBox spacing="5">
                         <Label text="Private Key (PEM or Hex):" style="-fx-font-size: 11px;"/>
                         <TextArea fx:id="privateKeyArea" prefHeight="60" wrapText="true"
                                   style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
-                        <HBox spacing="5">
-                            <Button text="Read from Text" onAction="#handleLoadPrivateKey" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                            <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" style="-fx-font-size: 11px;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        </HBox>
+                        <FlowPane styleClass="responsive-action-bar">
+                            <Button text="Paste Private Key" onAction="#handlePastePrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <MenuButton fx:id="cipherPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" style="-fx-font-size: 11px;" onShowing="#handlePopulateCipherPrivKeyShelf"/>
+                        </FlowPane>
                     </VBox>
                     <Separator orientation="HORIZONTAL"/>
                     <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">

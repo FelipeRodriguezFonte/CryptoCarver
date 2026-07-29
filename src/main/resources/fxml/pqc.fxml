@@ -11,11 +11,12 @@
                     <Label text="Algorithm (NIST Standards):" styleClass="form-label"/>
                     <ComboBox fx:id="pqcAlgorithmCombo" prefWidth="300" styleClass="form-field"/>
                     <Button text="Generate Key Pair" onAction="#handleGeneratePQCKeyPair" styleClass="action-button,primary-action" maxWidth="180"/>
-                    <HBox spacing="8">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Import PEM Keys..." onAction="#handleImportPQCKeys" styleClass="secondary-button"/>
                         <Button text="Export Public..." onAction="#handleExportPQCPublicKey" styleClass="secondary-button"/>
                         <Button text="Export Private..." onAction="#handleExportPQCPrivateKey" styleClass="secondary-button"/>
-                    </HBox>
+                        <MenuButton fx:id="pqcKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulatePqcKeyShelf"/>
+                    </FlowPane>
                     <Label fx:id="pqcKeyStatusLabel" text="Ready" styleClass="form-label"/>
                     <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="300">
                         <Tab text="Public Key">
@@ -48,6 +49,10 @@
 
                     <Label text="Verify Signature (Paste Hex):" styleClass="form-label"/>
                     <TextField fx:id="pqcVerifySignatureField" styleClass="monospace-field,form-field"/>
+                    <FlowPane styleClass="responsive-action-bar">
+                        <Button text="Paste Signature" onAction="#handlePastePqcVerifySignature" styleClass="secondary-button"/>
+                        <MenuButton fx:id="pqcVerifyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulatePqcVerifyShelf"/>
+                    </FlowPane>
                     <Button text="Verify Signature" onAction="#handlePQCVerify" styleClass="action-button,primary-action" maxWidth="180"/>
                 </VBox>
             </TitledPane>

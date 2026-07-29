@@ -123,7 +123,7 @@ public class KeyMaterialFactory {
         }
     }
 
-    private static String generateFingerprint(byte[] data) {
+    public static String generateFingerprint(byte[] data) {
         if (data == null || data.length == 0) return "unknown";
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");

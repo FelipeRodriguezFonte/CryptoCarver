@@ -47,7 +47,7 @@
             <Button onAction="#handleClearHistory" style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Clear History" />
         </HBox>
 
-        <FlowPane hgap="8.0" vgap="7.0" prefWrapLength="900.0">
+        <FlowPane prefWrapLength="900.0" styleClass="responsive-action-bar">
             <Label style="-fx-text-fill: #607d8b; -fx-font-size: 11px;" text="The latest operation is selected automatically. Select a different row to export it." />
             <Button fx:id="openHistoryDetailBtn" onAction="#openSelectedHistoryDetail" style="-fx-background-color: #6c5ce7; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Open Selected Value">
                 <tooltip>

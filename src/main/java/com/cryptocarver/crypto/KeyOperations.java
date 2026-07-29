@@ -320,6 +320,27 @@ public class KeyOperations {
     }
 
     /**
+     * Calculate full zero-block KCV encryption bytes for a given key and algorithm
+     */
+    public static byte[] calculateFullZeroBlockKCV(byte[] key, String algorithm) throws Exception {
+        if (key == null || key.length == 0) {
+            throw new IllegalArgumentException("Key cannot be null or empty");
+        }
+        String algo = algorithm != null ? algorithm.toUpperCase() : "";
+        if (algo.contains("DES") || algo.contains("3DES")) {
+            byte[] workingKey = key;
+            if (key.length == 8 || key.length == 16 || key.length == 24) {
+                workingKey = new byte[key.length];
+                System.arraycopy(key, 0, workingKey, 0, key.length);
+                applyOddParity(workingKey);
+            }
+            return encryptZeroBlock(workingKey, key.length == 32 ? "AES" : "DES");
+        } else {
+            return encryptZeroBlock(key, "AES");
+        }
+    }
+
+    /**
      * Generic KCV calculation
      */
     private static byte[] calculateKCV_Generic(byte[] key, int kcvLength, String algorithm) throws Exception {

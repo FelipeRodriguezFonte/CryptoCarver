@@ -117,6 +117,60 @@ class ModernMainControllerFxmlStaticTest {
         verifyFxmlAgainstController("/fxml/key_certificate_workbench.fxml", KeyCertificateWorkbenchController.class);
     }
 
+    @Test
+    void testResponsiveActionBarsInFxml() throws Exception {
+        String[] fxmlFiles = {
+            "/fxml/keys.fxml",
+            "/fxml/certificates.fxml",
+            "/fxml/cipher.fxml",
+            "/fxml/openpgp.fxml",
+            "/fxml/pqc.fxml",
+            "/fxml/pades.fxml",
+            "/fxml/clipboard_shelf.fxml",
+            "/fxml/cms_inspector.fxml",
+            "/fxml/process_designer.fxml",
+            "/fxml/compressed_hex.fxml",
+            "/fxml/history.fxml"
+        };
+
+        for (String fxmlPath : fxmlFiles) {
+            InputStream is = getClass().getResourceAsStream(fxmlPath);
+            assertNotNull(is, "FXML file must exist: " + fxmlPath);
+
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(is);
+            Element root = doc.getDocumentElement();
+
+            List<Element> flowPanes = findElementsByTagName(root, "FlowPane");
+            assertFalse(flowPanes.isEmpty(), fxmlPath + " should contain at least one FlowPane for responsive action bars");
+
+            boolean foundResponsiveActionBar = false;
+            for (Element fp : flowPanes) {
+                String styleClass = fp.getAttribute("styleClass");
+                if (styleClass != null && styleClass.contains("responsive-action-bar")) {
+                    foundResponsiveActionBar = true;
+                    break;
+                }
+            }
+            assertTrue(foundResponsiveActionBar, fxmlPath + " should use responsive-action-bar styleClass on FlowPane");
+        }
+    }
+
+    private List<Element> findElementsByTagName(Element element, String tagName) {
+        List<Element> elements = new ArrayList<>();
+        if (element.getTagName().equals(tagName)) {
+            elements.add(element);
+        }
+        NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            if (children.item(i) instanceof Element) {
+                elements.addAll(findElementsByTagName((Element) children.item(i), tagName));
+            }
+        }
+        return elements;
+    }
+
     private void verifyFxmlAgainstController(String fxmlPath, Class<?> controllerClass) throws Exception {
         InputStream is = getClass().getResourceAsStream(fxmlPath);
         assertNotNull(is, "FXML file must exist: " + fxmlPath);

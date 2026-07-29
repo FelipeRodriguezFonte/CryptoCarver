@@ -138,6 +138,13 @@ public class JOSEController implements Initializable {
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
 
+        IngestionUIHelper.bindField(jwtKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+        IngestionUIHelper.bindField(jwtValidateTokenArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
+        IngestionUIHelper.bindField(jwtValidateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+        IngestionUIHelper.bindField(jwePublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+        IngestionUIHelper.bindField(jweInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
+        IngestionUIHelper.bindField(jwePrivateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+
             // Init JWA Table
             if (jwaTable != null && jwaTable.getItems().isEmpty()) {
                 initJwaTable();
@@ -172,6 +179,64 @@ public class JOSEController implements Initializable {
                     }
                 });
             }
+    }
+
+    @FXML
+    public void handlePopulateJwtKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(jwtKeyShelfMenu, jwtKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePopulateJwtValidateKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(jwtValidateKeyShelfMenu, jwtValidateKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePasteJwtKey() {
+        IngestionUIHelper.pasteFromClipboard(jwtKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePasteJwtValidateKey() {
+        IngestionUIHelper.pasteFromClipboard(jwtValidateKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePasteJwePublicKey() {
+        IngestionUIHelper.pasteFromClipboard(jwePublicKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+    }
+
+    @FXML
+    public void handlePopulateJwePubKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(jwePubKeyShelfMenu, jwePublicKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+    }
+
+    @FXML
+    public void handlePasteJwePrivateKey() {
+        IngestionUIHelper.pasteFromClipboard(jwePrivateKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+    }
+
+    @FXML
+    public void handlePopulateJwePrivKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(jwePrivKeyShelfMenu, jwePrivateKeyArea, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
     }
 
     public void showSection(String sectionName) {
@@ -263,6 +328,10 @@ public class JOSEController implements Initializable {
     private TextArea jweIVArea;
 @FXML
     private TextArea jwtKeyArea;
+@FXML private MenuButton jwtKeyShelfMenu;
+@FXML private MenuButton jwtValidateKeyShelfMenu;
+@FXML private MenuButton jwePubKeyShelfMenu;
+@FXML private MenuButton jwePrivKeyShelfMenu;
 @FXML
     private Label jwkInputLabel;
 @FXML

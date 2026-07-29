@@ -39,7 +39,10 @@
                                 <Label text="Signing Key 1:" styleClass="form-label"/>
                             </HBox>
                             <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1">
-                                <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="link-button"/>
+                                <FlowPane styleClass="responsive-action-bar">
+                                    <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="secondary-button"/>
+                                    <MenuButton fx:id="jwtKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtKeyShelf"/>
+                                </FlowPane>
                                 <TextArea fx:id="jwtKeyArea" promptText="Enter secret (for HMAC) or paste Private Key PEM (for RSA/EC)..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
                         </GridPane>
@@ -111,7 +114,10 @@
                                 <Label text="Verification Key:" styleClass="form-label"/>
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                                <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="link-button"/>
+                                <FlowPane styleClass="responsive-action-bar">
+                                    <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="secondary-button"/>
+                                    <MenuButton fx:id="jwtValidateKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtValidateKeyShelf"/>
+                                </FlowPane>
                                 <TextArea fx:id="jwtValidateKeyArea" promptText="Enter secret (for HMAC) or paste Public Key PEM (for RSA/EC)..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
                         </GridPane>
@@ -289,7 +295,10 @@
                                 <Label text="Recipient Public Key:" styleClass="form-label"/>
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1">
-                                <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="link-button"/>
+                                <FlowPane styleClass="responsive-action-bar">
+                                    <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
+                                    <MenuButton fx:id="jwePubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePubKeyShelf"/>
+                                </FlowPane>
                                 <TextArea fx:id="jwePublicKeyArea" promptText="Paste RSA Public Key PEM..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
 
@@ -318,7 +327,10 @@
                                 <Label text="Private Key (PEM):" styleClass="form-label"/>
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                                <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="link-button"/>
+                                <FlowPane styleClass="responsive-action-bar">
+                                    <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="secondary-button"/>
+                                    <MenuButton fx:id="jwePrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePrivKeyShelf"/>
+                                </FlowPane>
                                 <TextArea fx:id="jwePrivateKeyArea" promptText="Paste RSA Private Key PEM..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
                         </GridPane>
@@ -463,12 +475,12 @@
         <Label text="Unified Token Inspector" styleClass="section-header"/>
         <Label text="Paste any JOSE token (JWS or JWE) to see a visual breakdown of its components." styleClass="helper-text"/>
 
-        <HBox spacing="10" alignment="CENTER_LEFT">
+        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
             <Button text="Analyze Token" onAction="#handleInspectToken" styleClass="action-button,primary-action"/>
             <Button text="Expand Report" onAction="#handleOpenExpandedInspectorReport" styleClass="secondary-button"/>
             <Button text="Copy Report" onAction="#handleCopyInspectorOutput" styleClass="secondary-button"/>
             <Button text="Clear" onAction="#handleClearInspector" styleClass="secondary-button"/>
-        </HBox>
+        </FlowPane>
 
         <TextArea fx:id="inspectorInputArea" promptText="Paste JWS (eyJ...) or JWE (ey...) here..." prefRowCount="4" styleClass="monospace-field" wrapText="true"/>
 

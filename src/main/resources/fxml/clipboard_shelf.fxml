@@ -45,10 +45,9 @@
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
-            <HBox alignment="CENTER_LEFT" spacing="10">
+            <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                 <Label text="Entry Details" style="-fx-font-weight: bold;"/>
                 <Label fx:id="warningLabel" text="⚠️ Contains sensitive data" style="-fx-text-fill: #e67e22;" visible="false"/>
-                <Region HBox.hgrow="ALWAYS"/>
                 <MenuButton fx:id="useInMenu" text="Use in..." disable="true">
                     <!-- Items populated dynamically -->
                 </MenuButton>
@@ -56,7 +55,7 @@
                 <Button fx:id="expandBtn" text="Open Expanded" onAction="#handleOpenExpanded" disable="true"/>
                 <Button fx:id="renameBtn" text="Rename" onAction="#handleRename" disable="true"/>
                 <Button fx:id="deleteBtn" text="Delete" onAction="#handleDelete" disable="true" styleClass="button, danger-button"/>
-            </HBox>
+            </FlowPane>
             <TextArea fx:id="detailsArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" style="-fx-font-family: monospace;"/>
         </VBox>
     </SplitPane>

@@ -133,8 +133,54 @@
                                   selected="true" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
                     </GridPane>
 
-                    <Button text="Generate Key" onAction="#handleGenerateKey"
-                            styleClass="action-button,primary-action"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button text="Generate Key" onAction="#handleGenerateKey"
+                                styleClass="action-button,primary-action"/>
+                        <Button fx:id="saveGeneratedKeyButton" text="Save to Simulated HSM / Key Lab…" onAction="#handleSaveGeneratedKeyToLab"
+                                disable="true" styleClass="action-button,secondary-action"/>
+                    </HBox>
+
+                    <VBox fx:id="generatedKeySummaryCard" visible="false" managed="false" spacing="8" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Generated Key Summary" style="-fx-font-weight: bold; -fx-font-size: 13px;"/>
+                            <Label fx:id="summarySavedStatusLabel" text="" style="-fx-font-size: 11px; -fx-text-fill: #10b981; -fx-font-weight: bold;"/>
+                        </HBox>
+                        <GridPane hgap="12" vgap="6">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="130" prefWidth="140"/>
+                                <ColumnConstraints hgrow="ALWAYS"/>
+                            </columnConstraints>
+
+                            <Label text="Algorithm / Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="summaryAlgoLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <Label text="Length:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="summaryLengthLabel" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                            <Label text="Key Check Value (KCV):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="summaryKcvLabel" styleClass="monospace-field" style="-fx-font-weight: bold;" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                            <Label text="Fingerprint (SHA-256):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="summaryFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                            <Label text="Odd Parity:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="summaryParityLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                            <Label text="Origin:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="summaryOriginLabel" text="Generated locally" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                        </GridPane>
+
+                        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                            <Button fx:id="copyGeneratedKeyButton" text="Copy Key" onAction="#handleCopyGeneratedKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="copyGeneratedKcvButton" text="Copy KCV" onAction="#handleCopyGeneratedKcv" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="copyGeneratedSummaryButton" text="Copy Summary" onAction="#handleCopyGeneratedSummary" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="saveGeneratedSummaryButton" text="Save to Key Lab…" onAction="#handleSaveGeneratedKeyToLab" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="openValidationButton" text="Validate / Open Validation &amp; KCV" onAction="#handleOpenValidationAndKcv" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                        </FlowPane>
+                    </VBox>
+
+                    <Label text="After generating, register the key in the Simulated HSM with a name, allowed usages and exportability."
+                           styleClass="helper-text" wrapText="true"/>
 
                     <TextArea fx:id="generatedKeyField" prefHeight="280" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field"
@@ -143,7 +189,7 @@
             </TitledPane>
 
             <!-- KEY VALIDATION -->
-            <TitledPane text="✓ Validation &amp; KCV">
+            <TitledPane fx:id="validationPane" text="✓ Validation &amp; KCV">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <TextField fx:id="keyInputField" promptText="Enter key in hexadecimal..."
                               styleClass="form-field,monospace-field"/>
@@ -517,110 +563,291 @@
             <panes>
                 <!-- RSA KEY GENERATION -->
                 <TitledPane text="🔐 RSA Key Generation" expanded="true">
-                    <VBox spacing="6" style="-fx-padding: 8;">
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <Label text="Key Size:" style="-fx-font-size: 11px;"/>
-                            <ComboBox fx:id="rsaKeySizeCombo" prefWidth="100" style="-fx-font-size: 11px;"/>
-                            <Button text="Generate RSA Key Pair" onAction="#handleGenerateRSA"
-                                    styleClass="action-button" style="-fx-font-size: 11px;"/>
+                    <VBox spacing="10" styleClass="module-pane-content">
+                        <!-- Compact Header -->
+                        <VBox spacing="4" style="-fx-padding: 6 10; -fx-background-color: rgba(59, 130, 246, 0.05); -fx-background-radius: 4;">
+                            <Label text="RSA (Rivest-Shamir-Adleman) Workbench" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                            <Label text="Suitable for asymmetric encryption, digital signatures, and X.509 certificates. Minimum recommended size: 2048 bits." wrapText="true" styleClass="helper-text"/>
+                        </VBox>
+
+                        <!-- Block 1: Configure & Block 2: Generate -->
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <Label text="Key Size:" styleClass="form-label"/>
+                            <ComboBox fx:id="rsaKeySizeCombo" prefWidth="120" styleClass="form-field"/>
+                            <Button text="Generate RSA Key Pair" onAction="#handleGenerateRSA" styleClass="action-button,primary-action"/>
+                            <Label text="⚠️ Keys &gt; 4096 bits may take several seconds" style="-fx-text-fill: #e67e22; -fx-font-style: italic; -fx-font-size: 10px;"/>
                         </HBox>
 
-                        <Label text="⚠️ RSA keys > 4096 bits may take several seconds"
-                               style="-fx-text-fill: #e67e22; -fx-font-style: italic; -fx-font-size: 10px;"/>
+                        <!-- Block 3: Generated Key Pair Summary -->
+                        <VBox fx:id="rsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <Label text="Generated RSA Key Pair Summary" style="-fx-font-weight: bold; -fx-font-size: 13px;"/>
+                                <Label fx:id="rsaSummarySavedStatusLabel" text="" style="-fx-font-size: 11px; -fx-text-fill: #10b981; -fx-font-weight: bold;"/>
+                            </HBox>
+                            <GridPane hgap="12" vgap="4">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="130" prefWidth="140"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="Algorithm / Size:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="rsaSummaryAlgoLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="280">
-                            <Tab text="Public Key">
-                                <TextArea fx:id="rsaPublicKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Public key will appear here..."/>
+                                <Label text="Public Fingerprint (SHA-256):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="rsaSummaryFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                <Label text="Public Key Size:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="rsaSummaryPubLenLabel" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                <Label text="Private Key Size:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="rsaSummaryPrivLenLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                                <Label text="Creation Time:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="rsaSummaryCreatedLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                                <Label text="Origin:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label text="Generated locally" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+
+                        <!-- Key Material PEM Displays -->
+                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)">
+                                <TextArea fx:id="rsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key">
-                                <TextArea fx:id="rsaPrivateKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Private key will appear here..."/>
+                            <Tab text="Private Key (PEM)">
+                                <TextArea fx:id="rsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
+
+                        <!-- Block 4: Use or Export Actions -->
+                        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                            <Button fx:id="rsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyRsaPublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyRsaPrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyRsaSummary" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportRsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportRsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendRsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaUseCipherBtn" text="Use in RSA Cipher" onAction="#handleUseRsaInCipher" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseRsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseRsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaClearBtn" text="Clear Pair" onAction="#handleClearRsa" styleClass="btn-danger" style="-fx-font-size: 11px;"/>
+                        </FlowPane>
                     </VBox>
                 </TitledPane>
 
                 <!-- ECDSA KEY GENERATION -->
                 <TitledPane text="📈 ECDSA Key Generation">
-                    <VBox spacing="6" style="-fx-padding: 8;">
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <Label text="Curve:" style="-fx-font-size: 11px;"/>
-                            <ComboBox fx:id="ecdsaCurveCombo" prefWidth="150" style="-fx-font-size: 11px;"/>
-                            <Button text="Generate ECDSA Key Pair" onAction="#handleGenerateECDSA"
-                                    styleClass="action-button" style="-fx-font-size: 11px;"/>
+                    <VBox spacing="10" styleClass="module-pane-content">
+                        <!-- Compact Header -->
+                        <VBox spacing="4" style="-fx-padding: 6 10; -fx-background-color: rgba(59, 130, 246, 0.05); -fx-background-radius: 4;">
+                            <Label text="ECDSA (Elliptic Curve Digital Signature Algorithm) Workbench" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                            <Label text="Suitable for high-efficiency digital signatures and X.509 certificates. (Not RSA encryption)." wrapText="true" styleClass="helper-text"/>
+                        </VBox>
+
+                        <!-- Block 1 & 2 -->
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <Label text="Curve:" styleClass="form-label"/>
+                            <ComboBox fx:id="ecdsaCurveCombo" prefWidth="160" styleClass="form-field"/>
+                            <Button text="Generate ECDSA Key Pair" onAction="#handleGenerateECDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="280">
-                            <Tab text="Public Key">
-                                <TextArea fx:id="ecdsaPublicKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Public key will appear here..."/>
+                        <!-- Block 3: Summary -->
+                        <VBox fx:id="ecdsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <Label text="Generated ECDSA Key Pair Summary" style="-fx-font-weight: bold; -fx-font-size: 13px;"/>
+                                <Label fx:id="ecdsaSummarySavedStatusLabel" text="" style="-fx-font-size: 11px; -fx-text-fill: #10b981; -fx-font-weight: bold;"/>
+                            </HBox>
+                            <GridPane hgap="12" vgap="4">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="130" prefWidth="140"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="Algorithm / Curve:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="ecdsaSummaryAlgoLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                                <Label text="Public Fingerprint (SHA-256):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="ecdsaSummaryFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                <Label text="Public Key Size:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="ecdsaSummaryPubLenLabel" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                <Label text="Private Key Size:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="ecdsaSummaryPrivLenLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                                <Label text="Creation Time:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="ecdsaSummaryCreatedLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                                <Label text="Origin:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label text="Generated locally" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+
+                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)">
+                                <TextArea fx:id="ecdsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key">
-                                <TextArea fx:id="ecdsaPrivateKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Private key will appear here..."/>
+                            <Tab text="Private Key (PEM)">
+                                <TextArea fx:id="ecdsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
+
+                        <!-- Block 4: Actions -->
+                        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                            <Button fx:id="ecdsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyEcdsaPublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyEcdsaPrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyEcdsaSummary" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEcdsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEcdsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEcdsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEcdsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEcdsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaClearBtn" text="Clear Pair" onAction="#handleClearEcdsa" styleClass="btn-danger" style="-fx-font-size: 11px;"/>
+                        </FlowPane>
                     </VBox>
                 </TitledPane>
 
                 <!-- DSA KEY GENERATION -->
                 <TitledPane text="🔑 DSA Key Generation">
-                    <VBox spacing="6" style="-fx-padding: 8;">
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <Label text="Key Size:" style="-fx-font-size: 11px;"/>
-                            <ComboBox fx:id="dsaKeySizeCombo" prefWidth="100" style="-fx-font-size: 11px;"/>
-                            <Button text="Generate DSA Key Pair" onAction="#handleGenerateDSA"
-                                    styleClass="action-button" style="-fx-font-size: 11px;"/>
+                    <VBox spacing="10" styleClass="module-pane-content">
+                        <!-- Compact Header -->
+                        <VBox spacing="4" style="-fx-padding: 6 10; -fx-background-color: rgba(230, 126, 34, 0.08); -fx-background-radius: 4;">
+                            <Label text="DSA (Digital Signature Algorithm) Workbench" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                            <Label text="⚠️ Legacy digital signature algorithm. 1024-bit keys are deprecated by NIST. Prefer ECDSA or Ed25519 for new applications." wrapText="true" styleClass="helper-text"/>
+                        </VBox>
+
+                        <!-- Block 1 & 2 -->
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <Label text="Key Size:" styleClass="form-label"/>
+                            <ComboBox fx:id="dsaKeySizeCombo" prefWidth="120" styleClass="form-field"/>
+                            <Button text="Generate DSA Key Pair" onAction="#handleGenerateDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
-                        <Label text="⚠️ DSA key generation may take a few seconds"
-                               style="-fx-text-fill: #e67e22; -fx-font-style: italic; -fx-font-size: 10px;"/>
+                        <!-- Block 3: Summary -->
+                        <VBox fx:id="dsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <Label text="Generated DSA Key Pair Summary" style="-fx-font-weight: bold; -fx-font-size: 13px;"/>
+                                <Label fx:id="dsaSummarySavedStatusLabel" text="" style="-fx-font-size: 11px; -fx-text-fill: #10b981; -fx-font-weight: bold;"/>
+                            </HBox>
+                            <GridPane hgap="12" vgap="4">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="130" prefWidth="140"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="Algorithm / Size:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="dsaSummaryAlgoLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="280">
-                            <Tab text="Public Key">
-                                <TextArea fx:id="dsaPublicKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Public key will appear here..."/>
+                                <Label text="Public Fingerprint (SHA-256):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="dsaSummaryFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                <Label text="Public Key Size:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="dsaSummaryPubLenLabel" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                <Label text="Private Key Size:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="dsaSummaryPrivLenLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                                <Label text="Creation Time:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="dsaSummaryCreatedLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                                <Label text="Origin:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label text="Generated locally" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+
+                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)">
+                                <TextArea fx:id="dsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key">
-                                <TextArea fx:id="dsaPrivateKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Private key will appear here..."/>
+                            <Tab text="Private Key (PEM)">
+                                <TextArea fx:id="dsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
+
+                        <!-- Block 4: Actions -->
+                        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                            <Button fx:id="dsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyDsaPublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyDsaPrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyDsaSummary" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportDsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportDsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendDsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseDsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseDsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaClearBtn" text="Clear Pair" onAction="#handleClearDsa" styleClass="btn-danger" style="-fx-font-size: 11px;"/>
+                        </FlowPane>
                     </VBox>
                 </TitledPane>
 
                 <!-- EdDSA KEY GENERATION -->
                 <TitledPane text="⚡ EdDSA Key Generation">
-                    <VBox spacing="6" style="-fx-padding: 8;">
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <Label text="Curve: Ed25519" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <VBox spacing="10" styleClass="module-pane-content">
+                        <!-- Compact Header -->
+                        <VBox spacing="4" style="-fx-padding: 6 10; -fx-background-color: rgba(39, 174, 96, 0.08); -fx-background-radius: 4;">
+                            <Label text="Ed25519 (EdDSA) Workbench" style="-fx-font-weight: bold; -fx-font-size: 12px;"/>
+                            <Label text="✨ High-performance, modern signature algorithm operating on Curve25519 (fixed 255-bit key size). (Not RSA encryption)." wrapText="true" styleClass="helper-text"/>
+                        </VBox>
+
+                        <!-- Block 1 & 2 -->
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <Label text="Curve: Ed25519 (fixed 255-bit)" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Button text="Generate EdDSA Key Pair" onAction="#handleGenerateEdDSA"
-                                    styleClass="action-button" style="-fx-font-size: 11px;"/>
+                            <Button text="Generate EdDSA Key Pair" onAction="#handleGenerateEdDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
-                        <Label text="✨ Ed25519 provides fast signing and verification"
-                               style="-fx-text-fill: #27ae60; -fx-font-style: italic; -fx-font-size: 10px;"/>
+                        <!-- Block 3: Summary -->
+                        <VBox fx:id="eddsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <Label text="Generated Ed25519 Key Pair Summary" style="-fx-font-weight: bold; -fx-font-size: 13px;"/>
+                                <Label fx:id="eddsaSummarySavedStatusLabel" text="" style="-fx-font-size: 11px; -fx-text-fill: #10b981; -fx-font-weight: bold;"/>
+                            </HBox>
+                            <GridPane hgap="12" vgap="4">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="130" prefWidth="140"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="Algorithm / Curve:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="eddsaSummaryAlgoLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="280">
-                            <Tab text="Public Key">
-                                <TextArea fx:id="eddsaPublicKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Public key will appear here..."/>
+                                <Label text="Public Fingerprint (SHA-256):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="eddsaSummaryFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                <Label text="Public Key Size:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="eddsaSummaryPubLenLabel" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                <Label text="Private Key Size:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="eddsaSummaryPrivLenLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                                <Label text="Creation Time:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label fx:id="eddsaSummaryCreatedLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                                <Label text="Origin:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                <Label text="Generated locally" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+
+                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)">
+                                <TextArea fx:id="eddsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key">
-                                <TextArea fx:id="eddsaPrivateKeyArea" wrapText="true" editable="false"
-                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"
-                                          promptText="Private key will appear here..."/>
+                            <Tab text="Private Key (PEM)">
+                                <TextArea fx:id="eddsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
+
+                        <!-- Block 4: Actions -->
+                        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                            <Button fx:id="eddsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyEddsaPublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyEddsaPrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyEddsaSummary" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEddsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEddsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEddsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEddsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEddsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaClearBtn" text="Clear Pair" onAction="#handleClearEd25519" styleClass="btn-danger" style="-fx-font-size: 11px;"/>
+                        </FlowPane>
                     </VBox>
                 </TitledPane>
             </panes>

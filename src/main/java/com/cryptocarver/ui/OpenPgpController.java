@@ -17,6 +17,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.MenuButton;
 import javafx.stage.FileChooser;
 
 /** OpenPGP laboratory UI, interoperable with ASCII-armored GnuPG material. */
@@ -31,8 +32,38 @@ public final class OpenPgpController {
     @FXML private TextArea openPgpSignatureArea;
     @FXML private TextArea openPgpOutputArea;
     @FXML private Label openPgpGnuPgStatusLabel;
+    @FXML private MenuButton openPgpPubKeyShelfMenu;
+    @FXML private MenuButton openPgpSecretKeyShelfMenu;
 
     private StatusReporter statusReporter;
+
+    @FXML
+    public void initialize() {
+        IngestionUIHelper.bindField(openPgpPublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PUBLIC_KEY);
+        IngestionUIHelper.bindField(openPgpSecretKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PRIVATE_KEY);
+        IngestionUIHelper.bindField(openPgpInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_MESSAGE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+        IngestionUIHelper.bindField(openPgpSignatureArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_SIGNATURE);
+    }
+
+    @FXML
+    public void handlePastePublicKey() {
+        IngestionUIHelper.pasteFromClipboard(openPgpPublicKeyArea, null, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PUBLIC_KEY);
+    }
+
+    @FXML
+    public void handlePopulatePgpPubKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(openPgpPubKeyShelfMenu, openPgpPublicKeyArea, null, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PUBLIC_KEY);
+    }
+
+    @FXML
+    public void handlePasteSecretKey() {
+        IngestionUIHelper.pasteFromClipboard(openPgpSecretKeyArea, null, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PRIVATE_KEY);
+    }
+
+    @FXML
+    public void handlePopulatePgpSecretKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(openPgpSecretKeyShelfMenu, openPgpSecretKeyArea, null, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PRIVATE_KEY);
+    }
 
     public void setStatusReporter(StatusReporter statusReporter) {
         this.statusReporter = statusReporter;

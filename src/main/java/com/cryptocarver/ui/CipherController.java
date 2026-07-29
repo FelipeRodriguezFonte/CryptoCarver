@@ -18,6 +18,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Button;
+import javafx.scene.control.MenuButton;
 import javafx.stage.FileChooser;
 
 import java.io.ByteArrayOutputStream;
@@ -67,6 +68,9 @@ public class CipherController {
     @FXML private TextField aadField;
     @FXML private Button inspectKeyBtn;
     @FXML private Button saveToLabBtn;
+    @FXML private MenuButton symKeyShelfMenu;
+    @FXML private MenuButton cipherPubKeyShelfMenu;
+    @FXML private MenuButton cipherPrivKeyShelfMenu;
 
     // Streaming file cipher UI components
     @FXML private ComboBox<String> fileCipherAlgorithmCombo;
@@ -141,7 +145,68 @@ public class CipherController {
         setupHexValidation(gcmTagField);
         setupHexValidation(aadField);
 
+        IngestionUIHelper.bindField(symmetricKeyField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+        IngestionUIHelper.bindField(ivField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+        IngestionUIHelper.bindField(publicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+        IngestionUIHelper.bindField(privateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+        IngestionUIHelper.bindField(cipherInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64);
+
         refreshCipherTemplateCombo();
+    }
+
+    @FXML
+    public void handlePasteSymKey() {
+        IngestionUIHelper.pasteFromClipboard(symmetricKeyField, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handleLoadSymKey() {
+        IngestionUIHelper.loadFile(symmetricKeyField != null && symmetricKeyField.getScene() != null ? symmetricKeyField.getScene().getWindow() : null,
+                symmetricKeyField, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePopulateSymKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(symKeyShelfMenu, symmetricKeyField, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePastePublicKey() {
+        IngestionUIHelper.pasteFromClipboard(publicKeyArea, null, () -> handleLoadPublicKey(),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+    }
+
+    @FXML
+    public void handlePopulateCipherPubKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(cipherPubKeyShelfMenu, publicKeyArea, null, () -> handleLoadPublicKey(),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+    }
+
+    @FXML
+    public void handlePastePrivateKey() {
+        IngestionUIHelper.pasteFromClipboard(privateKeyArea, null, () -> handleLoadPrivateKey(),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+    }
+
+    @FXML
+    public void handlePopulateCipherPrivKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(cipherPrivKeyShelfMenu, privateKeyArea, null, () -> handleLoadPrivateKey(),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
     }
 
     private void refreshCipherTemplateCombo() {

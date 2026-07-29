@@ -403,6 +403,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         handleItemSelected(moduleName);
     }
 
+    /** Opens the signatures workspace with a generated laboratory key pair prepared, without executing it. */
+    public void useGeneratedKeyPairInSignatures(java.security.KeyPair keyPair, String publicPem, String privatePem) {
+        handleItemSelected("Digital Signatures");
+        if (authenticationContainerController != null) {
+            authenticationContainerController.loadGeneratedKeyPair(keyPair, publicPem, privatePem);
+        }
+    }
+
     public void handleItemSelected(String itemName) {
         String requestedItem = itemName;
         itemName = com.cryptocarver.model.OperationRegistry.getInstance()
@@ -441,7 +449,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         updateStatus("Loaded: " + itemName);
-        updateReadinessPanel();
+        // An untouched form is naturally incomplete. Do not make that the
+        // first thing users see; reveal the checklist after an edit, a real
+        // warning, or an attempted execution.
+        readinessPanelActivated = false;
+        readinessShowDetails = false;
+        refreshReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
     }
 
     private boolean activateNavigationRoute(String operation) {
@@ -2305,13 +2318,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
+    public void refreshHsmKeyCombos() {
+        if (cipherController != null) cipherController.refreshHsmKeys();
+        if (cipherContainerController != null) cipherContainerController.refreshHsmKeys();
+        if (authenticationContainerController != null) authenticationContainerController.refreshHsmKeys();
+    }
+
     @FXML
     private void handleClearLabKeyCache() {
         com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().clear();
         showInfo("Success", "Lab Key Cache cleared");
-        // refresh combos
-        if (cipherController != null) cipherController.refreshHsmKeys();
-        if (authenticationContainerController != null) authenticationContainerController.refreshHsmKeys();
+        refreshHsmKeyCombos();
     }
 
     @FXML
@@ -2911,6 +2928,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private FlowPane readinessChecksContainer;
     @FXML private Button readinessToggleDetailsBtn;
     private boolean readinessShowDetails = false;
+    private boolean readinessPanelActivated = false;
     private com.cryptocarver.model.PreflightReport currentPreflightReport;
     private boolean currentPreflightEncrypt = true;
 
@@ -2942,10 +2960,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void updateReadinessPanel() {
-        updateReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
+        refreshReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
     }
 
     public void updateReadinessPanelForOperation(String operation, boolean isEncrypt) {
+        readinessPanelActivated = true;
+        refreshReadinessPanelForOperation(operation, isEncrypt);
+    }
+
+    private void refreshReadinessPanelForOperation(String operation, boolean isEncrypt) {
         if (readinessPanel == null) return;
         currentPreflightEncrypt = isEncrypt;
 
@@ -2957,8 +2980,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
         }
 
-        readinessPanel.setManaged(true);
-        readinessPanel.setVisible(true);
+        if (report.isExecutable()) {
+            readinessPanelActivated = false;
+        }
+
+        // Keep validation out of the user's way while they type. The panel is
+        // a recovery aid after an attempted execution was blocked, not a
+        // permanent header banner for every partially completed form.
+        boolean showPanel = readinessPanelActivated && !report.isExecutable();
+        readinessPanel.setManaged(showPanel);
+        readinessPanel.setVisible(showPanel);
+        if (!showPanel) return;
         updateReadinessPanelUI();
     }
 

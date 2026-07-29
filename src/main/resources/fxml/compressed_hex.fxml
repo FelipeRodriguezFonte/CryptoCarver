@@ -13,11 +13,11 @@
             <TextArea fx:id="compressedHexInputArea" prefRowCount="3" wrapText="false"
                       promptText="Two rows:&#10;AFD12&#10;CA123&#10;&#10;or a normal hexadecimal value: ACFAD11223"
                       style="-fx-font-family: monospace; -fx-font-size: 11px;"/>
-            <HBox spacing="6">
+            <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                 <Button text="Two rows → Hex" onAction="#handleExpandCompressedHex" styleClass="action-button"/>
                 <Button text="Hex → Two rows" onAction="#handleCompressHex" styleClass="secondary-button"/>
                 <Button text="Clear" onAction="#handleClearCompressedHex" styleClass="secondary-button"/>
-            </HBox>
+            </FlowPane>
             <Label text="Output:" style="-fx-font-size: 11px;"/>
             <TextArea fx:id="compressedHexOutputArea" prefRowCount="3" editable="false" wrapText="false"
                       style="-fx-font-family: monospace; -fx-font-size: 11px;"/>

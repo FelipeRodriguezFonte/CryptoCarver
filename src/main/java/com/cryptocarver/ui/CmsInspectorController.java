@@ -41,6 +41,7 @@ public class CmsInspectorController {
 
     @FXML
     public void initialize() {
+        IngestionUIHelper.bindField(cmsInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64);
     }
 
     public void init(StatusReporter reporter) {

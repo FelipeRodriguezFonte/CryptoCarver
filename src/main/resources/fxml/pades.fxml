@@ -93,12 +93,12 @@
                         </HBox>
                     </GridPane>
 
-                    <HBox spacing="12">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Sign PDF" onAction="#handleSign" styleClass="action-button,primary-action"/>
                         <Button text="Inspect Signatures" onAction="#handleInspect" styleClass="secondary-button"/>
                         <Button text="Validate PDF" onAction="#handleValidate" styleClass="secondary-button"/>
                         <Button text="Save DSS Reports…" onAction="#handleSaveValidationReports" styleClass="secondary-button"/>
-                    </HBox>
+                    </FlowPane>
 
                     <TextArea fx:id="padesResultArea" editable="false" prefRowCount="6" wrapText="true" styleClass="result-area,monospace-field" promptText="PAdES result will appear here..."/>
                 </VBox>

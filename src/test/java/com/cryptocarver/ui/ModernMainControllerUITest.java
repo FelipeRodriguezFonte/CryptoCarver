@@ -2274,12 +2274,17 @@ class ModernMainControllerUITest {
         ModernMainController controller = controllerRef.get();
         CipherController cipher = getField(controller, "cipherContainerController");
 
-        // 1. Initially Empty -> INCOMPLETE
+        // 1. An untouched empty form is naturally incomplete, but the
+        // checklist should stay out of the way until the user interacts.
         runAndWait(() -> {
             Method m = assertDoesNotThrow(() -> ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class));
             m.setAccessible(true);
             assertDoesNotThrow(() -> m.invoke(controller, "Symmetric Ciphers"));
 
+            javafx.scene.layout.HBox readinessPanel = assertDoesNotThrow(() -> getField(controller, "readinessPanel"));
+            assertFalse(readinessPanel.isVisible());
+
+            assertFalse(controller.checkPreflightReadiness("Symmetric Ciphers", true));
             javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
             assertNotNull(badge);
             assertTrue(badge.getText().contains("INCOMPLETE") || badge.getText().contains("BLOCKED"));
@@ -2291,7 +2296,7 @@ class ModernMainControllerUITest {
             javafx.scene.control.TextField keyField = assertDoesNotThrow(() -> getField(cipher, "symmetricKeyField"));
             inputArea.setText("Sample Data Payload");
             keyField.setText("NOT_A_HEX_KEY");
-            controller.updateReadinessPanel();
+            assertFalse(controller.checkPreflightReadiness("Symmetric Ciphers", true));
 
             javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
             assertTrue(badge.getText().contains("BLOCKED"));
@@ -2303,10 +2308,9 @@ class ModernMainControllerUITest {
             javafx.scene.control.ComboBox<String> modeCombo = assertDoesNotThrow(() -> getField(cipher, "cipherModeCombo"));
             keyField.setText("00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF");
             modeCombo.setValue("ECB");
-            controller.updateReadinessPanel();
-
-            javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
-            assertTrue(badge.getText().contains("WARNING"));
+            assertTrue(controller.checkPreflightReadiness("Symmetric Ciphers", true));
+            javafx.scene.layout.HBox readinessPanel = assertDoesNotThrow(() -> getField(controller, "readinessPanel"));
+            assertFalse(readinessPanel.isVisible(), "A valid setup must not leave a banner behind");
         });
 
         // 4. Set Valid AES-256-GCM + 12-byte IV -> READY
@@ -2315,10 +2319,9 @@ class ModernMainControllerUITest {
             javafx.scene.control.TextField ivField = assertDoesNotThrow(() -> getField(cipher, "ivField"));
             modeCombo.setValue("GCM");
             ivField.setText("0102030405060708090A0B0C");
-            controller.updateReadinessPanel();
-
-            javafx.scene.control.Label badge = assertDoesNotThrow(() -> getField(controller, "readinessStatusBadge"));
-            assertTrue(badge.getText().contains("READY"));
+            assertTrue(controller.checkPreflightReadiness("Symmetric Ciphers", true));
+            javafx.scene.layout.HBox readinessPanel = assertDoesNotThrow(() -> getField(controller, "readinessPanel"));
+            assertFalse(readinessPanel.isVisible(), "A ready operation should execute without a header banner");
         });
 
         // 5. Test Click-to-Focus on target control
@@ -2396,6 +2399,230 @@ class ModernMainControllerUITest {
             assertNotNull(copyCmd);
             assertFalse(expandCmd.isEnabled(), "Expand Result must be disabled when no result exists");
             assertFalse(copyCmd.isEnabled(), "Copy Output must be disabled when no result exists");
+        });
+    }
+
+    @Test
+    void testSaveGeneratedKeyToKeyLabUI() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+
+        runAndWait(() -> {
+            KeysController keys = assertDoesNotThrow(() -> getField(controller, "keysController"));
+            assertNotNull(keys);
+
+            javafx.scene.control.Button saveBtn = assertDoesNotThrow(() -> getField(keys, "saveGeneratedKeyButton"));
+            assertNotNull(saveBtn);
+            assertTrue(saveBtn.isDisable(), "Save to Key Lab button must be disabled before generating a key");
+
+            // Generate key
+            keys.handleGenerateKey();
+
+            assertFalse(saveBtn.isDisable(), "Save to Key Lab button must be enabled after generating a key");
+
+            // Save key to lab
+            keys.handleSaveGeneratedKeyToLab();
+
+            // Verify Key Lab table has entries
+            javafx.scene.control.TableView<com.cryptocarver.crypto.hsm.KeyMaterial> table = assertDoesNotThrow(() -> getField(keys, "keyLabTable"));
+            assertFalse(table.getItems().isEmpty(), "Key Lab table must contain newly saved generated key");
+
+            // Verify MASKED profile security
+            com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+            assertThrows(SecurityException.class, () ->
+                    com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().revealExportableKeyForFullLab(table.getItems().get(0).getId())
+            );
+        });
+    }
+
+    @Test
+    void testGeneratedKeySummaryCardUI() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+
+        runAndWait(() -> {
+            try {
+                KeysController keys = getField(controller, "keysController");
+                assertNotNull(keys);
+
+                javafx.scene.layout.VBox card = getField(keys, "generatedKeySummaryCard");
+                assertNotNull(card);
+                assertFalse(card.isVisible(), "Generated Key Summary card must be initially hidden");
+                assertFalse(card.isManaged(), "Generated Key Summary card must be initially unmanaged");
+
+                javafx.scene.control.ComboBox<String> combo = getField(keys, "keyTypeCombo");
+                combo.setValue("AES-256");
+
+                // Generate Key
+                keys.handleGenerateKey();
+
+                assertTrue(card.isVisible(), "Generated Key Summary card must be visible after generation");
+                assertTrue(card.isManaged(), "Generated Key Summary card must be managed after generation");
+
+                javafx.scene.control.Label algoLbl = getField(keys, "summaryAlgoLabel");
+                javafx.scene.control.Label lengthLbl = getField(keys, "summaryLengthLabel");
+                javafx.scene.control.Label kcvLbl = getField(keys, "summaryKcvLabel");
+                javafx.scene.control.Label fpLbl = getField(keys, "summaryFingerprintLabel");
+                javafx.scene.control.Label parityLbl = getField(keys, "summaryParityLabel");
+
+                assertEquals("AES-256", algoLbl.getText());
+                assertEquals("256 bits (32 bytes)", lengthLbl.getText());
+                assertFalse(kcvLbl.getText().isEmpty());
+                assertEquals(16, fpLbl.getText().length());
+                assertEquals("Not applicable", parityLbl.getText());
+
+                // Copy KCV
+                keys.handleCopyGeneratedKcv();
+                String clipKcv = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                assertNotNull(clipKcv);
+                assertEquals(kcvLbl.getText(), clipKcv);
+
+                // Save to Key Lab updates card status label
+                keys.handleSaveGeneratedKeyToLab();
+                javafx.scene.control.Label savedLbl = getField(keys, "summarySavedStatusLabel");
+                assertTrue(savedLbl.getText().contains("Saved to Key Lab"));
+
+                // Security profiles test: MASKED vs FULL_LAB
+                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+                keys.handleCopyGeneratedKey(); // should block copying raw key under MASKED
+                assertNotEquals(getField(keys, "generatedKeyField"), javafx.scene.input.Clipboard.getSystemClipboard().getString());
+
+                keys.handleCopyGeneratedSummary();
+                String summaryMasked = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                assertTrue(summaryMasked.contains("Key: ***MASKED***"));
+
+                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+                keys.handleCopyGeneratedSummary();
+                String summaryFull = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                assertFalse(summaryFull.contains("Key: ***MASKED***"));
+
+                // Changing key type combo hides/resets card
+                combo.setValue("DES");
+                assertFalse(card.isVisible(), "Changing key type combo must hide previous summary card");
+                assertFalse(card.isManaged(), "Changing key type combo must unmanage previous summary card");
+                javafx.scene.control.Button saveBtn = getField(keys, "saveGeneratedKeyButton");
+                javafx.scene.control.TextArea generatedKey = getField(keys, "generatedKeyField");
+                assertTrue(saveBtn.isDisable(), "Changing key type must invalidate the previous save action");
+                assertTrue(generatedKey.getText().isEmpty(), "Changing key type must clear the previous generated key display");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    @Test
+    void testAsymmetricKeyGenerationWorkbenchUI() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+
+        runAndWait(() -> {
+            try {
+                KeysController keys = getField(controller, "keysController");
+                assertNotNull(keys);
+
+                javafx.scene.layout.VBox rsaCard = getField(keys, "rsaSummaryCard");
+                javafx.scene.layout.VBox ecdsaCard = getField(keys, "ecdsaSummaryCard");
+                javafx.scene.layout.VBox dsaCard = getField(keys, "dsaSummaryCard");
+                javafx.scene.layout.VBox eddsaCard = getField(keys, "eddsaSummaryCard");
+
+                assertFalse(rsaCard.isVisible());
+                assertFalse(ecdsaCard.isVisible());
+                assertFalse(dsaCard.isVisible());
+                assertFalse(eddsaCard.isVisible());
+
+                // RSA Generation
+                javafx.scene.control.ComboBox<Integer> rsaCombo = getField(keys, "rsaKeySizeCombo");
+                rsaCombo.setValue(2048);
+                keys.handleGenerateRSA();
+
+                assertTrue(rsaCard.isVisible());
+                assertTrue(rsaCard.isManaged());
+
+                javafx.scene.control.Label rsaAlgoLbl = getField(keys, "rsaSummaryAlgoLabel");
+                javafx.scene.control.Label rsaFpLbl = getField(keys, "rsaSummaryFingerprintLabel");
+                assertEquals("RSA (2048 bits)", rsaAlgoLbl.getText());
+                assertEquals(16, rsaFpLbl.getText().length());
+
+                javafx.scene.control.Button rsaUseCipherBtn = getField(keys, "rsaUseCipherBtn");
+                assertFalse(rsaUseCipherBtn.isDisable(), "RSA must enable Use in RSA Cipher button");
+
+                keys.handleUseRsaInCipher();
+                assertEquals("Asymmetric Ciphers", getField(controller, "currentActiveOperation"),
+                        "Use in RSA Cipher must open the asymmetric cipher workspace");
+
+                keys.handleUseRsaInSignatures();
+                AuthenticationController authentication = getField(controller, "authenticationContainerController");
+                javafx.scene.control.TextArea signaturePrivate = getField(authentication, "signaturePrivateKeyArea");
+                javafx.scene.control.TextArea signaturePublic = getField(authentication, "signaturePublicKeyArea");
+                assertFalse(signaturePrivate.getText().isBlank(), "Use in Digital Signatures must prepare the private key");
+                assertFalse(signaturePublic.getText().isBlank(), "Use in Digital Signatures must prepare the public key");
+
+                // ECDSA Generation
+                javafx.scene.control.ComboBox<String> ecdsaCombo = getField(keys, "ecdsaCurveCombo");
+                ecdsaCombo.setValue("secp256r1");
+                keys.handleGenerateECDSA();
+
+                assertTrue(ecdsaCard.isVisible());
+                javafx.scene.control.Button ecdsaUseCipherBtn = getField(keys, "ecdsaUseCipherBtn");
+                assertTrue(ecdsaUseCipherBtn.isDisable(), "ECDSA must disable Use in RSA Cipher button");
+
+                // DSA Generation
+                javafx.scene.control.ComboBox<String> dsaCombo = getField(keys, "dsaKeySizeCombo");
+                dsaCombo.setValue("2048");
+                keys.handleGenerateDSA();
+                assertTrue(dsaCard.isVisible());
+
+                // Ed25519 Generation
+                keys.handleGenerateEdDSA();
+                assertTrue(eddsaCard.isVisible());
+
+                // Security Visibility Profile Test
+                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+                keys.handleCopyRsaPrivateKey(); // Should block copying raw private key under MASKED
+                keys.handleCopyRsaSummary();
+                String summaryMasked = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                assertTrue(summaryMasked.contains("***MASKED***"));
+
+                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+                keys.handleCopyRsaSummary();
+                String summaryFull = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                assertFalse(summaryFull.contains("***MASKED***"));
+
+                // Clear RSA pair
+                keys.handleClearRsa();
+                assertFalse(rsaCard.isVisible());
+
+            } catch (Exception e) {
+                fail(e);
+            }
         });
     }
 }

@@ -150,8 +150,9 @@
     -fx-border-width: 1px;
     -fx-padding: 2px 8px;
     -fx-font-size: 12px;
-    -fx-pref-width: 120px;
-    -fx-max-width: 120px;
+    /* Leave room for the format value as well as the ComboBox arrow. */
+    -fx-pref-width: 160px;
+    -fx-max-width: 160px;
 }
 
 .format-combo:hover {
@@ -1489,6 +1490,27 @@
 .action-button-secondary:hover {
     -fx-background-color: #dce8f2;
     -fx-border-color: #7aa7c7;
+}
+
+/*
+ * Action bars with many independent actions must wrap instead of forcing
+ * buttons into unreadable ellipses when their container narrows.
+ */
+.responsive-action-bar {
+    -fx-hgap: 8px;
+    -fx-vgap: 8px;
+    -fx-padding: 4px 0 0 0;
+}
+
+.responsive-action-bar .button {
+    -fx-min-height: 34px;
+}
+
+/* Template selectors are controls, not a single unbreakable toolbar. */
+.template-toolbar {
+    -fx-hgap: 8px;
+    -fx-vgap: 8px;
+    -fx-padding: 0 0 10px 0;
 }
 
 .action-button-primary {

@@ -87,6 +87,22 @@ public class CertificatesController {
                 cmsSignPkcs11Box, cmsSignKeyAliasCombo, cmsVerifyDataArea, cmsEncryptSourcePkcs11Radio,
                 cmsEncryptLocalGrid, cmsEncryptPkcs11Box, cmsEncryptKeyAliasCombo);
 
+        IngestionUIHelper.bindField(certInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(certIssueCsrArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CSR);
+        IngestionUIHelper.bindField(certIssueCaCertArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(certIssueCaKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+        IngestionUIHelper.bindField(certCompareLeftArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(certCompareRightArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(valCertInput, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(valIssuerInput, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(chainInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(chainCrlInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CRL);
+        IngestionUIHelper.bindField(cmsInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(cmsSignCertArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(cmsSignKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+        IngestionUIHelper.bindField(cmsEncryptCertArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(cmsDecryptKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+
         if (padesContainerController != null) padesContainerController.setStatusReporter(reporter);
         if (asicContainerController != null) asicContainerController.setStatusReporter(reporter);
         if (cmsInspectorController != null) cmsInspectorController.init(reporter);

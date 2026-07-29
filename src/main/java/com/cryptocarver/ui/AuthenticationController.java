@@ -52,6 +52,9 @@ public class AuthenticationController {
     private PublicKey currentPublicKey;
     @FXML private TextArea signaturePrivateKeyArea;
     @FXML private TextArea signaturePublicKeyArea;
+    @FXML private MenuButton sigPrivKeyShelfMenu;
+    @FXML private MenuButton sigPubKeyShelfMenu;
+    @FXML private MenuButton macKeyShelfMenu;
 
     // MAC UI
     @FXML private ComboBox<String> authMacAlgorithmCombo;
@@ -77,6 +80,10 @@ public class AuthenticationController {
                 authMacTruncationCombo, authMacVerifyField, authMacNonceField,
                 authMacNonceGroup, authMacAlgorithmInfoLabel, authMacWarningLabel,
                 macKeySourceCombo, macHsmKeyCombo);
+
+        IngestionUIHelper.bindField(signaturePrivateKeyArea, signatureKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+        IngestionUIHelper.bindField(signaturePublicKeyArea, signatureKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+        IngestionUIHelper.bindField(authMacKeyField, authMacKeyInfoLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     public void init(StatusReporter mainController,
@@ -86,6 +93,24 @@ public class AuthenticationController {
         this.inputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
         installPreflightListeners();
+    }
+
+    /**
+     * Receives an in-memory laboratory key pair from the asymmetric key workbench.
+     * This prepares the signature form only; it never signs or verifies data.
+     */
+    public void loadGeneratedKeyPair(java.security.KeyPair keyPair, String publicPem, String privatePem) {
+        if (keyPair == null || keyPair.getPublic() == null || keyPair.getPrivate() == null) {
+            throw new IllegalArgumentException("A complete generated key pair is required");
+        }
+        currentPublicKey = keyPair.getPublic();
+        currentPrivateKey = keyPair.getPrivate();
+        if (signaturePublicKeyArea != null) signaturePublicKeyArea.setText(publicPem == null ? "" : publicPem);
+        if (signaturePrivateKeyArea != null) signaturePrivateKeyArea.setText(privatePem == null ? "" : privatePem);
+        if (signatureKeyStatusLabel != null) {
+            signatureKeyStatusLabel.setText("Generated " + keyPair.getPublic().getAlgorithm() + " key pair loaded");
+            signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
+        }
     }
 
     private void installPreflightListeners() {
@@ -386,46 +411,80 @@ public class AuthenticationController {
      * Handle load private key
      */
     public void handleLoadSignPrivateKey() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Load Private Key for Signing (PEM)");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("PEM Files", "*.pem", "*.key"));
-
-        File file = fileChooser.showOpenDialog(null);
-        if (file != null) {
-            try {
-                String content = new String(java.nio.file.Files.readAllBytes(file.toPath()));
-                if (signaturePrivateKeyArea != null) {
-                    signaturePrivateKeyArea.setText(content);
-                }
-                loadPrivateKey(content);
-            } catch (Exception e) {
-                mainController.showError("Load Error", "Failed to read file: " + e.getMessage());
-            }
-        }
+        IngestionUIHelper.loadFile(resolveWindow(signaturePrivateKeyArea), signaturePrivateKeyArea,
+                signatureKeyStatusLabel, () -> loadPrivateKey(signaturePrivateKeyArea.getText()),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
     }
 
     /**
      * Handle load public key
      */
     public void handleLoadSignPublicKey() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Load Public Key for Verification (PEM)");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("PEM Files", "*.pem", "*.pub", "*.key"));
+        IngestionUIHelper.loadFile(resolveWindow(signaturePublicKeyArea), signaturePublicKeyArea,
+                signatureKeyStatusLabel, () -> loadPublicKey(signaturePublicKeyArea.getText()),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+    }
 
-        File file = fileChooser.showOpenDialog(null);
-        if (file != null) {
-            try {
-                String content = new String(java.nio.file.Files.readAllBytes(file.toPath()));
-                if (signaturePublicKeyArea != null) {
-                    signaturePublicKeyArea.setText(content);
-                }
-                loadPublicKey(content);
-            } catch (Exception e) {
-                mainController.showError("Load Error", "Failed to read file: " + e.getMessage());
-            }
-        }
+    private javafx.stage.Window resolveWindow(javafx.scene.control.Control control) {
+        return control != null && control.getScene() != null ? control.getScene().getWindow() : null;
+    }
+
+    /** Paste, validate and load a private PEM key without requiring a temporary file. */
+    @FXML
+    public void handlePasteSignPrivateKey() {
+        IngestionUIHelper.pasteFromClipboard(signaturePrivateKeyArea, signatureKeyStatusLabel,
+                () -> loadPrivateKey(signaturePrivateKeyArea.getText()),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+    }
+
+    /** Paste, validate and load a public PEM key without requiring a temporary file. */
+    @FXML
+    public void handlePasteSignPublicKey() {
+        IngestionUIHelper.pasteFromClipboard(signaturePublicKeyArea, signatureKeyStatusLabel,
+                () -> loadPublicKey(signaturePublicKeyArea.getText()),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+    }
+
+    @FXML
+    public void handlePopulateSigPrivKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(sigPrivKeyShelfMenu, signaturePrivateKeyArea, signatureKeyStatusLabel,
+                () -> loadPrivateKey(signaturePrivateKeyArea.getText()),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+    }
+
+    @FXML
+    public void handlePopulateSigPubKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(sigPubKeyShelfMenu, signaturePublicKeyArea, signatureKeyStatusLabel,
+                () -> loadPublicKey(signaturePublicKeyArea.getText()),
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+    }
+
+    @FXML
+    public void handlePopulateMacKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(macKeyShelfMenu, authMacKeyField, authMacKeyInfoLabel, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handlePasteMacKey() {
+        IngestionUIHelper.pasteFromClipboard(authMacKeyField, authMacKeyInfoLabel, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+    }
+
+    @FXML
+    public void handleLoadMacKey() {
+        IngestionUIHelper.loadFile(authMacKeyField != null && authMacKeyField.getScene() != null ? authMacKeyField.getScene().getWindow() : null,
+                authMacKeyField, authMacKeyInfoLabel, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     /**
@@ -553,35 +612,13 @@ public class AuthenticationController {
             return;
         }
         try {
-            if (currentPrivateKey == null) {
-                mainController.showError("Key Error", "Please load a private key first");
-                return;
-            }
-
             String algorithm = signatureAlgorithmCombo.getValue();
             if (algorithm == null) {
                 mainController.showError("Algorithm Error", "Please select a signature algorithm");
                 return;
             }
 
-            // Get data to sign
-            byte[] data = getInputDataAsBytes();
-            if (data == null || data.length == 0) {
-                mainController.showError("Input Error", "Please enter data to sign");
-                return;
-            }
-
-            // Verify key type matches algorithm
-            String expectedKeyType = SignatureOperations.getExpectedKeyType(algorithm);
-            String actualKeyType = currentPrivateKey.getAlgorithm();
-            if (!actualKeyType.equals(expectedKeyType)) {
-                mainController.showError("Key Mismatch",
-                        String.format("Algorithm %s requires %s key, but loaded key is %s",
-                                algorithm, expectedKeyType, actualKeyType));
-                return;
-            }
-
-            // Ensure key is current from TextArea if possible
+            // A PEM pasted into the text area is a first-class key source.
             if (signaturePrivateKeyArea != null && !signaturePrivateKeyArea.getText().trim().isEmpty()) {
                 try {
                     String pem = signaturePrivateKeyArea.getText().trim();
@@ -598,6 +635,28 @@ public class AuthenticationController {
                             "Could not parse private key from text area: " + e.getMessage());
                     return;
                 }
+            }
+
+            if (currentPrivateKey == null) {
+                mainController.showError("Key Error", "Paste or load a private key first");
+                return;
+            }
+
+            // Get data to sign
+            byte[] data = getInputDataAsBytes();
+            if (data == null || data.length == 0) {
+                mainController.showError("Input Error", "Please enter data to sign");
+                return;
+            }
+
+            // Verify key type matches algorithm after parsing pasted PEM.
+            String expectedKeyType = SignatureOperations.getExpectedKeyType(algorithm);
+            String actualKeyType = currentPrivateKey.getAlgorithm();
+            if (!actualKeyType.equals(expectedKeyType)) {
+                mainController.showError("Key Mismatch",
+                        String.format("Algorithm %s requires %s key, but pasted/loaded key is %s",
+                                algorithm, expectedKeyType, actualKeyType));
+                return;
             }
 
             // Sign
@@ -634,11 +693,6 @@ public class AuthenticationController {
             return;
         }
         try {
-            if (currentPublicKey == null) {
-                mainController.showError("Key Error", "Please load a public key first");
-                return;
-            }
-
             String algorithm = signatureAlgorithmCombo.getValue();
             if (algorithm == null) {
                 mainController.showError("Algorithm Error", "Please select a signature algorithm");
@@ -661,6 +715,11 @@ public class AuthenticationController {
                             "Could not parse public key from text area: " + e.getMessage());
                     return;
                 }
+            }
+
+            if (currentPublicKey == null) {
+                mainController.showError("Key Error", "Paste or load a public key first");
+                return;
             }
 
             // Get signature from verify field

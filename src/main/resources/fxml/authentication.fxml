@@ -18,9 +18,9 @@
         <panes>
             <TitledPane text="🔏 Digital Signatures" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box" style="-fx-margin: 0 0 10 0;">
+                    <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
-                        <ComboBox fx:id="signatureTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                        <ComboBox fx:id="signatureTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
                         <Button text="Apply" onAction="#handleApplySignatureTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                         <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
                             <items>
@@ -31,7 +31,7 @@
                             </items>
                         </MenuButton>
                         <Button text="Reset Defaults" onAction="#handleResetSignatureDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                    </HBox>
+                    </FlowPane>
 
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Label text="Algorithm:" styleClass="form-label"/>
@@ -44,16 +44,26 @@
                             <VBox spacing="8" styleClass="module-pane-content">
                                 <TextArea fx:id="signaturePrivateKeyArea" promptText="Paste Private Key PEM here..."
                                           wrapText="true" styleClass="monospace-field" VBox.vgrow="ALWAYS"/>
-                                <Button text="Load Private Key..." onAction="#handleLoadSignPrivateKey"
-                                        styleClass="secondary-button" maxWidth="Infinity"/>
+                                <FlowPane styleClass="responsive-action-bar">
+                                    <Button text="Paste Private Key from Clipboard" onAction="#handlePasteSignPrivateKey"
+                                            styleClass="secondary-button"/>
+                                    <Button text="Load Private Key…" onAction="#handleLoadSignPrivateKey"
+                                            styleClass="secondary-button"/>
+                                    <MenuButton fx:id="sigPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateSigPrivKeyShelf"/>
+                                </FlowPane>
                             </VBox>
                         </Tab>
                         <Tab text="Public Key">
                             <VBox spacing="8" styleClass="module-pane-content">
                                 <TextArea fx:id="signaturePublicKeyArea" promptText="Paste Public Key PEM here..."
                                           wrapText="true" styleClass="monospace-field" VBox.vgrow="ALWAYS"/>
-                                <Button text="Load Public Key..." onAction="#handleLoadSignPublicKey"
-                                        styleClass="secondary-button" maxWidth="Infinity"/>
+                                <FlowPane styleClass="responsive-action-bar">
+                                    <Button text="Paste Public Key from Clipboard" onAction="#handlePasteSignPublicKey"
+                                            styleClass="secondary-button"/>
+                                    <Button text="Load Public Key…" onAction="#handleLoadSignPublicKey"
+                                            styleClass="secondary-button"/>
+                                    <MenuButton fx:id="sigPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateSigPubKeyShelf"/>
+                                </FlowPane>
                             </VBox>
                         </Tab>
                     </TabPane>
@@ -104,6 +114,11 @@
                             <ComboBox fx:id="macHsmKeyCombo" maxWidth="Infinity" visible="false"
                                       managed="false" styleClass="form-field"/>
                         </StackPane>
+                        <FlowPane styleClass="responsive-action-bar">
+                            <Button text="Paste MAC Key" onAction="#handlePasteMacKey" styleClass="secondary-button"/>
+                            <Button text="Load MAC Key…" onAction="#handleLoadMacKey" styleClass="secondary-button"/>
+                            <MenuButton fx:id="macKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateMacKeyShelf"/>
+                        </FlowPane>
                         <Label fx:id="authMacKeyInfoLabel" text="Key size depends on algorithm"
                                styleClass="helper-text"/>
                         <VBox fx:id="authMacNonceGroup" spacing="6" managed="false" visible="false">

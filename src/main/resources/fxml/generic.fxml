@@ -16,9 +16,9 @@
         <!-- HASHING -->
         <TitledPane text="🔐 Hashing" expanded="true">
             <VBox spacing="12" styleClass="module-pane-content">
-                <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box" style="-fx-margin: 0 0 10 0;">
+                <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                     <Label text="Apply Template:" styleClass="form-label"/>
-                    <ComboBox fx:id="hashTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                    <ComboBox fx:id="hashTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
                     <Button text="Apply" onAction="#handleApplyHashTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                     <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
                         <items>
@@ -29,7 +29,7 @@
                         </items>
                     </MenuButton>
                     <Button text="Reset Defaults" onAction="#handleResetHashDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                </HBox>
+                </FlowPane>
 
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <Label text="Algorithm:" styleClass="form-label"/>
@@ -165,9 +165,9 @@
         <!-- MANUAL CONVERSION (NEW) -->
         <TitledPane text="🔤 Manual Conversion" expanded="false">
             <VBox spacing="12" styleClass="module-pane-content">
-                 <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box" style="-fx-margin: 0 0 10 0;">
+                 <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                      <Label text="Apply Template:" styleClass="form-label"/>
-                     <ComboBox fx:id="manualTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                     <ComboBox fx:id="manualTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
                      <Button text="Apply" onAction="#handleApplyManualTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                      <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
                          <items>
@@ -178,7 +178,7 @@
                          </items>
                      </MenuButton>
                      <Button text="Reset Defaults" onAction="#handleResetManualDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                 </HBox>
+                 </FlowPane>
 
                  <HBox spacing="8" alignment="CENTER_LEFT">
                      <Label text="Input:" styleClass="form-label"/>

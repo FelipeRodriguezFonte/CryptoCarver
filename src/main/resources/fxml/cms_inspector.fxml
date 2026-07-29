@@ -29,11 +29,11 @@
                 <PasswordField fx:id="truststorePasswordField" promptText="Password (not saved)" />
             </HBox>
             
-            <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+            <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                 <Button text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
                 <Button text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
                 <Button text="Export Report" onAction="#handleExportReport" />
-            </HBox>
+            </FlowPane>
             
             <Label text="Inspection Results:" style="-fx-font-weight: bold;"/>
             <TextArea fx:id="cmsReportArea" editable="false" prefHeight="200" style="-fx-font-family: 'Monospaced';"/>

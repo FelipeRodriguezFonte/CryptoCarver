@@ -105,9 +105,9 @@
             <!-- PARSE CERTIFICATE -->
             <TitledPane text="🔍 Parse Certificate">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="form-group-box" style="-fx-margin: 0 0 10 0;">
+                    <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
-                        <ComboBox fx:id="certTemplateCombo" promptText="Select a template..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                        <ComboBox fx:id="certTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
                         <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
                         <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
                             <items>
@@ -118,7 +118,7 @@
                             </items>
                         </MenuButton>
                         <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                    </HBox>
+                    </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
                     <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
@@ -264,7 +264,7 @@
                                         <Label text="Detached Data (for verification only):" styleClass="form-label"/>
                                         <TextArea fx:id="cmsVerifyDataArea" promptText="Enter original raw data here if verifying a detached signature..." prefHeight="50" styleClass="monospace-field"/>
 
-                                        <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                                              <CheckBox fx:id="cmsDetachedCheck" text="Detached Signature (Sign)"/>
                                              <CheckBox fx:id="cmsCadesBesCheck" text="CAdES-BES">
                                                  <tooltip><Tooltip text="Adds the ETSI CAdES-BES signingCertificateV2 signed attribute. This is not a timestamped or long-term profile."/></tooltip>
@@ -272,13 +272,12 @@
                                              <CheckBox fx:id="cmsCadesTCheck" text="CAdES-T (RFC 3161)" onAction="#handleCadesTimestampOptionChanged">
                                                  <tooltip><Tooltip text="Requests a RFC 3161 timestamp over the CAdES signature. Requires a reachable TSA URL."/></tooltip>
                                              </CheckBox>
-                                             <Region HBox.hgrow="ALWAYS"/>
                                              <Button text="Sign" onAction="#handleCMSSign" styleClass="action-button,primary-action"/>
                                              <Button text="Add LT Evidence..." onAction="#handleUpgradeCadesLt" styleClass="secondary-button">
                                                  <tooltip><Tooltip text="Embed locally selected CRL files into an existing CAdES-T signature. No CRL is downloaded automatically."/></tooltip>
                                              </Button>
                                              <Button text="Verify" onAction="#handleCMSVerify" styleClass="secondary-button"/>
-                                        </HBox>
+                                         </FlowPane>
                                         <HBox fx:id="cmsCadesTsaBox" spacing="8" alignment="CENTER_LEFT" visible="false" managed="false">
                                             <Label text="CAdES-T TSA URL:" styleClass="form-label"/>
                                             <TextField fx:id="cmsCadesTsaUrlField" promptText="https://your-tsa.example/" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>

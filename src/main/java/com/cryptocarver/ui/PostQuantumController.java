@@ -59,6 +59,8 @@ public class PostQuantumController {
     @FXML private TextField pqcKemSharedSecretField;
     @FXML private TextField pqcAliceSecretField;
     @FXML private Label pqcKemStatusLabel;
+    @FXML private MenuButton pqcKeyShelfMenu;
+    @FXML private MenuButton pqcVerifyShelfMenu;
 
     // Benchmark
     @FXML private ComboBox<String> pqcBenchmarkAlgoCombo;
@@ -85,6 +87,11 @@ public class PostQuantumController {
 
     @FXML
     public void initialize() {
+        IngestionUIHelper.bindField(pqcSignInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+        IngestionUIHelper.bindField(pqcVerifySignatureField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+        IngestionUIHelper.bindField(pqcPublicKeyArea, pqcKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+        IngestionUIHelper.bindField(pqcPrivateKeyArea, pqcKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+
         // Populate Key Gen combo
         pqcAlgorithmCombo.getItems().addAll("--- Key Encapsulation (KEM) ---");
         pqcAlgorithmCombo.getItems().addAll(PostQuantumOperations.ML_KEM_ALGORITHMS);
@@ -597,5 +604,24 @@ public class PostQuantumController {
         Thread th = new Thread(activeBenchmarkTask);
         th.setDaemon(true);
         th.start();
+    }
+
+    @FXML
+    public void handlePopulatePqcKeyShelf() {
+        IngestionUIHelper.populateShelfMenu(pqcKeyShelfMenu, pqcPublicKeyArea, pqcKeyStatusLabel, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+    }
+
+    @FXML
+    public void handlePastePqcVerifySignature() {
+        IngestionUIHelper.pasteFromClipboard(pqcVerifySignatureField, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
+    }
+
+    @FXML
+    public void handlePopulatePqcVerifyShelf() {
+        IngestionUIHelper.populateShelfMenu(pqcVerifyShelfMenu, pqcVerifySignatureField, null, null,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
     }
 }
