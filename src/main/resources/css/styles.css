@@ -1782,3 +1782,40 @@
     -fx-background-color: #fecaca;
     -fx-background-radius: 4;
 }
+
+/* Async Progress Bar UI */
+.async-progress-box {
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+    -fx-padding: 2 8;
+    -fx-background-color: rgba(30, 41, 59, 0.85);
+    -fx-background-radius: 4;
+    -fx-border-color: #334155;
+    -fx-border-radius: 4;
+}
+
+.async-progress-spinner {
+    -fx-progress-color: #38bdf8;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+}
+
+.async-progress-label {
+    -fx-text-fill: #38bdf8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.async-cancel-button {
+    -fx-background-color: #ef4444;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 6;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+}
+
+.async-cancel-button:hover {
+    -fx-background-color: #dc2626;
+}

@@ -21,6 +21,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.MenuButton;
 import javafx.stage.FileChooser;
 
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -85,6 +88,8 @@ public class CipherController {
     @FXML private ComboBox<String> fileCipherLineEncodingCombo;
     @FXML private ComboBox<String> fileCipherLineCharsetCombo;
     @FXML private CheckBox fileCipherCompactCbcCheck;
+    @FXML private Button fileCipherEncryptBtn;
+    @FXML private Button fileCipherDecryptBtn;
 
     // Asymmetric cipher UI components
     @FXML private ComboBox<String> rsaPaddingCombo;
@@ -974,6 +979,8 @@ public class CipherController {
         statusReporter.updateStatus("Generated fresh " + length + "-byte IV/nonce for file cipher");
     }
 
+    private record FileCipherExecutionResult(long inputBytes, long outputBytes, Long lines, boolean lineMode) {}
+
     private void executeFileCipher(boolean encrypt) {
         try {
             FileCipherParameters parameters = readFileCipherParameters();
@@ -988,23 +995,92 @@ public class CipherController {
             if (!encrypt && parameters.aead && !lineMode && !java.nio.file.Files.isRegularFile(tag)) {
                 throw new IllegalArgumentException("Detached tag file does not exist");
             }
-            if (lineMode) {
-                LineFileCipher.Result result = encrypt
-                        ? LineFileCipher.encrypt(source, destination, parameters.key, fileCipherAlgorithmCombo.getValue(), parameters.aad,
-                                lineEncoding(), parameters.nonce, lineCharset(), compactLineOutput())
-                        : LineFileCipher.decrypt(source, destination, parameters.key, fileCipherAlgorithmCombo.getValue(), parameters.aad,
-                                parameters.nonce, lineEncoding(), lineCharset());
-                publishFileCipherResult(encrypt, parameters, null, result.inputBytes(), result.outputBytes(), result.lines(), true);
-                return;
+
+            String algo = fileCipherAlgorithmCombo != null ? fileCipherAlgorithmCombo.getValue() : parameters.algorithm;
+            LineFileCipher.Encoding encoding = lineEncoding();
+            java.nio.charset.Charset charset = lineCharset();
+            boolean compact = compactLineOutput();
+            Button triggerBtn = encrypt ? fileCipherEncryptBtn : fileCipherDecryptBtn;
+
+            java.util.UUID sessionUuid = java.util.UUID.randomUUID();
+            java.nio.file.Path stagingDest = destination.resolveSibling("." + destination.getFileName() + ".stage." + sessionUuid);
+            java.nio.file.Path stagingTag = (encrypt && tag != null) ? tag.resolveSibling("." + tag.getFileName() + ".stage." + sessionUuid) : null;
+
+            com.cryptocarver.util.ProgressMonitor progressMonitor = new com.cryptocarver.util.ProgressMonitor() {
+                @Override
+                public void updateProgress(long bytesProcessed, long totalBytes) {}
+
+                @Override
+                public boolean isCancelled() {
+                    return Thread.currentThread().isInterrupted()
+                            || (statusReporter instanceof ModernMainController mc && mc.getOperationExecutor() != null && mc.getOperationExecutor().isCancelled());
+                }
+            };
+
+            Callable<FileCipherExecutionResult> task = () -> {
+                FileCipherExecutionResult res;
+                if (lineMode) {
+                    LineFileCipher.Result r = encrypt
+                            ? LineFileCipher.encrypt(source, stagingDest, parameters.key, algo, parameters.aad, encoding, parameters.nonce, charset, compact, progressMonitor)
+                            : LineFileCipher.decrypt(source, stagingDest, parameters.key, algo, parameters.aad, parameters.nonce, encoding, charset, progressMonitor);
+                    res = new FileCipherExecutionResult(r.inputBytes(), r.outputBytes(), r.lines(), true);
+                } else {
+                    StreamingCipher.Result r = encrypt
+                            ? StreamingCipher.encrypt(source, stagingDest, parameters.key, parameters.algorithm, parameters.mode,
+                                    parameters.nonce, parameters.aad, stagingTag, progressMonitor)
+                            : StreamingCipher.decrypt(source, stagingDest, parameters.key, parameters.algorithm, parameters.mode,
+                                    parameters.nonce, parameters.aad, tag, progressMonitor);
+                    res = new FileCipherExecutionResult(r.inputBytes(), r.outputBytes(), null, false);
+                }
+
+                if (progressMonitor.isCancelled() || Thread.currentThread().isInterrupted()) {
+                    FileCipherPromotion.cleanupStaging(stagingDest, stagingTag);
+                    throw new java.util.concurrent.CancellationException("File cipher operation cancelled");
+                }
+
+                // Transactional promotion with atomic enterCommitPhase check
+                java.util.function.BooleanSupplier enterCommitCheck = () -> {
+                    if (statusReporter instanceof ModernMainController mc && mc.getOperationExecutor() != null) {
+                        return mc.getOperationExecutor().enterCommitPhase();
+                    }
+                    return !progressMonitor.isCancelled() && !Thread.currentThread().isInterrupted();
+                };
+
+                FileCipherPromotion.promote(stagingDest, stagingTag, destination, tag, encrypt, sessionUuid.toString(), enterCommitCheck);
+
+                return res;
+            };
+
+            Consumer<FileCipherExecutionResult> onSuccess = res -> {
+                try {
+                    publishFileCipherResult(encrypt, parameters, tag, res.inputBytes(), res.outputBytes(), res.lines(), res.lineMode());
+                } catch (Exception e) {
+                    if (statusReporter != null) statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
+                }
+            };
+
+            Consumer<Throwable> onFailure = err -> {
+                if (statusReporter != null) {
+                    statusReporter.showError("File Cipher", "Cannot process file: " + (err != null ? err.getMessage() : "Unknown error"));
+                }
+            };
+
+            Runnable onCancelled = () -> {
+                if (statusReporter != null) {
+                    statusReporter.updateStatus("File cipher operation cancelled.");
+                }
+            };
+
+            if (statusReporter instanceof ModernMainController mc && mc.getOperationExecutor() != null) {
+                mc.getOperationExecutor().execute((encrypt ? "File Encrypt (" : "File Decrypt (") + source.getFileName() + ")", triggerBtn, task, onSuccess, onFailure, onCancelled);
+            } else {
+                FileCipherExecutionResult res = task.call();
+                onSuccess.accept(res);
             }
-            StreamingCipher.Result result = encrypt
-                    ? StreamingCipher.encrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
-                            parameters.nonce, parameters.aad, tag, com.cryptocarver.util.ProgressMonitor.NO_OP)
-                    : StreamingCipher.decrypt(source, destination, parameters.key, parameters.algorithm, parameters.mode,
-                            parameters.nonce, parameters.aad, tag, com.cryptocarver.util.ProgressMonitor.NO_OP);
-            publishFileCipherResult(encrypt, parameters, tag, result.inputBytes(), result.outputBytes(), null, false);
         } catch (Exception e) {
-            statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
+            if (statusReporter != null) {
+                statusReporter.showError("File Cipher", "Cannot process file: " + e.getMessage());
+            }
         }
     }
 

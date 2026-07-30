@@ -10,7 +10,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Algorithm (NIST Standards):" styleClass="form-label"/>
                     <ComboBox fx:id="pqcAlgorithmCombo" prefWidth="300" styleClass="form-field"/>
-                    <Button text="Generate Key Pair" onAction="#handleGeneratePQCKeyPair" styleClass="action-button,primary-action" maxWidth="180"/>
+                    <Button fx:id="pqcGenerateKeyBtn" text="Generate Key Pair" onAction="#handleGeneratePQCKeyPair" styleClass="action-button,primary-action" maxWidth="180"/>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Import PEM Keys..." onAction="#handleImportPQCKeys" styleClass="secondary-button"/>
                         <Button text="Export Public..." onAction="#handleExportPQCPublicKey" styleClass="secondary-button"/>

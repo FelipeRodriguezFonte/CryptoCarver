@@ -415,8 +415,13 @@
 
     <!-- Status Bar -->
     <bottom>
-        <HBox styleClass="status-bar" spacing="10">
+        <HBox styleClass="status-bar" spacing="10" alignment="CENTER_LEFT">
             <Label fx:id="statusLabel" text="Ready" styleClass="status-label-main"/>
+            <HBox fx:id="asyncProgressBox" visible="false" managed="false" alignment="CENTER_LEFT" spacing="8" styleClass="async-progress-box">
+                <ProgressIndicator fx:id="asyncProgressSpinner" prefWidth="16" prefHeight="16" styleClass="async-progress-spinner"/>
+                <Label fx:id="asyncProgressLabel" text="Working..." styleClass="async-progress-label"/>
+                <Button fx:id="asyncCancelBtn" text="Cancel" onAction="#handleCancelAsyncOperation" styleClass="async-cancel-button"/>
+            </HBox>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="runtimeInfoLabel" text="Java -- | JavaFX -- | BouncyCastle" styleClass="status-label-info"/>
         </HBox>

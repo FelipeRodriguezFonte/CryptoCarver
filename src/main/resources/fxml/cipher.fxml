@@ -138,8 +138,8 @@
                     </HBox>
                     <CheckBox fx:id="fileCipherCompactCbcCheck" text="Write line records without header (compact format)" style="-fx-font-size: 10px;"/>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                        <Button text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
-                        <Button text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
+                        <Button fx:id="fileCipherEncryptBtn" text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
+                        <Button fx:id="fileCipherDecryptBtn" text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
                         <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
                         <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
                     </FlowPane>

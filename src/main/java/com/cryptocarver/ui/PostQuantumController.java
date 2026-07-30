@@ -18,6 +18,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 /**
  * Controller for Post-Quantum Cryptography operations
@@ -34,6 +36,8 @@ public class PostQuantumController {
     // UI Components - Key Gen
     @FXML
     private ComboBox<String> pqcAlgorithmCombo;
+    @FXML
+    private Button pqcGenerateKeyBtn;
     @FXML
     private TextArea pqcPublicKeyArea;
     @FXML
@@ -137,37 +141,60 @@ public class PostQuantumController {
                 return;
             }
 
-            KeyPair kp = PostQuantumOperations.generateKeyPair(algo);
-            currentPublicKey = kp.getPublic();
-            currentPrivateKey = kp.getPrivate();
+            Callable<KeyPair> task = () -> PostQuantumOperations.generateKeyPair(algo);
 
-            String pubHex = DataConverter.bytesToHex(currentPublicKey.getEncoded());
-            String privHex = DataConverter.bytesToHex(currentPrivateKey.getEncoded());
+            Consumer<KeyPair> onSuccess = kp -> {
+                try {
+                    currentPublicKey = kp.getPublic();
+                    currentPrivateKey = kp.getPrivate();
 
-            try {
-                pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" +
-                    java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) +
-                    "\n-----END PUBLIC KEY-----");
+                    String pubHex = DataConverter.bytesToHex(currentPublicKey.getEncoded());
+                    String privHex = DataConverter.bytesToHex(currentPrivateKey.getEncoded());
 
-                pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" +
-                    java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) +
-                    "\n-----END PRIVATE KEY-----");
-            } catch (Exception e) {
-                pqcPublicKeyArea.setText(pubHex);
-                pqcPrivateKeyArea.setText(privHex);
-            }
+                    try {
+                        pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" +
+                            java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) +
+                            "\n-----END PUBLIC KEY-----");
 
-            if (pqcKeyStatusLabel != null) {
-                pqcKeyStatusLabel.setText("Generated " + algo + " Key Pair");
-            }
-            java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(algo, "Generated");
-            if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Key Generation")
-                        .output(currentPublicKey.getEncoded())
-                        .details(detailsWithKeyMaterial(details))
-                        .status("Generated " + algo + " Key Pair")
-                        .build());
+                        pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" +
+                            java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) +
+                            "\n-----END PRIVATE KEY-----");
+                    } catch (Exception e) {
+                        pqcPublicKeyArea.setText(pubHex);
+                        pqcPrivateKeyArea.setText(privHex);
+                    }
+
+                    if (pqcKeyStatusLabel != null) {
+                        pqcKeyStatusLabel.setText("Generated " + algo + " Key Pair");
+                    }
+                    java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(algo, "Generated");
+                    if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
+                    if (statusReporter != null) {
+                        statusReporter.publish(OperationResult.forOperation("PQC Key Generation")
+                                .output(currentPublicKey.getEncoded())
+                                .details(detailsWithKeyMaterial(details))
+                                .status("Generated " + algo + " Key Pair")
+                                .build());
+                    }
+                } catch (Exception e) {
+                    if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + e.getMessage());
+                }
+            };
+
+            Consumer<Throwable> onFailure = err -> {
+                if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + (err != null ? err.getMessage() : "Unknown error"));
+            };
+
+            Runnable onCancelled = () -> {
+                if (pqcKeyStatusLabel != null) pqcKeyStatusLabel.setText("PQC key generation cancelled");
+                if (statusReporter != null) statusReporter.updateStatus("PQC key generation cancelled");
+            };
+
+            if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
+                statusReporter.getOperationExecutor().execute("PQC-" + algo + " Key Generation", pqcGenerateKeyBtn, task, onSuccess, onFailure, onCancelled);
+            } else {
+                KeyPair kp = task.call();
+                onSuccess.accept(kp);
             }
 
         } catch (Exception e) {
@@ -557,53 +584,47 @@ public class PostQuantumController {
 
     @FXML
     public void handlePQCBenchmark() {
-        if (activeBenchmarkTask != null && activeBenchmarkTask.isRunning()) {
-            activeBenchmarkTask.cancel();
-            return;
-        }
-
         String algo = pqcBenchmarkAlgoCombo.getValue();
         if (algo == null) {
             if (statusReporter != null) statusReporter.showError("Benchmark Error", "Select an algorithm to benchmark");
             return;
         }
 
-        pqcBenchmarkBtn.setText("Cancel Benchmark");
-        pqcBenchmarkProgress.setVisible(true);
-        pqcBenchmarkArea.setText("Benchmarking " + algo + " (1000 iterations). Please wait...\n");
+        if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(true);
+        if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText("Benchmarking " + algo + " (1000 iterations). Please wait...\n");
 
-        activeBenchmarkTask = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
+        Callable<String> task = () -> {
+            com.cryptocarver.crypto.pqc.PQCBenchmark bench = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
+            bench.run();
+            return bench.getValue();
+        };
 
-        activeBenchmarkTask.setOnSucceeded(e -> {
-            pqcBenchmarkArea.setText(activeBenchmarkTask.getValue());
-            pqcBenchmarkBtn.setText("Run Benchmark");
-            pqcBenchmarkProgress.setVisible(false);
-            activeBenchmarkTask = null;
-        });
+        Consumer<String> onSuccess = resultText -> {
+            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(resultText);
+            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
+        };
 
-        activeBenchmarkTask.setOnCancelled(e -> {
-            String partial = activeBenchmarkTask.getPartialResult();
-            if (partial != null) {
-                pqcBenchmarkArea.setText(partial);
-            } else {
-                pqcBenchmarkArea.setText("Benchmark canceled.");
+        Consumer<Throwable> onFailure = err -> {
+            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText("Benchmark failed: " + (err != null ? err.getMessage() : "Unknown error"));
+            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
+            if (statusReporter != null) statusReporter.showError("Benchmark Error", err != null ? err.getMessage() : "Unknown error");
+        };
+
+        Runnable onCancelled = () -> {
+            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText("Benchmark canceled.");
+            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
+        };
+
+        if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
+            statusReporter.getOperationExecutor().execute("PQC Benchmark (" + algo + ")", pqcBenchmarkBtn, task, onSuccess, onFailure, onCancelled);
+        } else {
+            try {
+                String res = task.call();
+                onSuccess.accept(res);
+            } catch (Exception e) {
+                onFailure.accept(e);
             }
-            pqcBenchmarkBtn.setText("Run Benchmark");
-            pqcBenchmarkProgress.setVisible(false);
-            activeBenchmarkTask = null;
-        });
-
-        activeBenchmarkTask.setOnFailed(e -> {
-            pqcBenchmarkArea.setText("Benchmark failed: " + activeBenchmarkTask.getException().getMessage());
-            pqcBenchmarkBtn.setText("Run Benchmark");
-            pqcBenchmarkProgress.setVisible(false);
-            if (statusReporter != null) statusReporter.showError("Benchmark Error", activeBenchmarkTask.getException().getMessage());
-            activeBenchmarkTask = null;
-        });
-
-        Thread th = new Thread(activeBenchmarkTask);
-        th.setDaemon(true);
-        th.start();
+        }
     }
 
     @FXML

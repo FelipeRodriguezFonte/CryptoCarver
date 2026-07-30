@@ -39,6 +39,10 @@ public interface StatusReporter {
         // Optional for non-JavaFX hosts and controller tests.
     }
 
+    default OperationExecutor getOperationExecutor() {
+        return null;
+    }
+
     default void refreshHsmKeyCombos() {
         // Optional for non-JavaFX hosts and controller tests.
     }

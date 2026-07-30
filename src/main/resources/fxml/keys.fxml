@@ -574,7 +574,7 @@
                         <HBox spacing="12" alignment="CENTER_LEFT">
                             <Label text="Key Size:" styleClass="form-label"/>
                             <ComboBox fx:id="rsaKeySizeCombo" prefWidth="120" styleClass="form-field"/>
-                            <Button text="Generate RSA Key Pair" onAction="#handleGenerateRSA" styleClass="action-button,primary-action"/>
+                            <Button fx:id="rsaGenerateBtn" text="Generate RSA Key Pair" onAction="#handleGenerateRSA" styleClass="action-button,primary-action"/>
                             <Label text="⚠️ Keys &gt; 4096 bits may take several seconds" style="-fx-text-fill: #e67e22; -fx-font-style: italic; -fx-font-size: 10px;"/>
                         </HBox>
 
@@ -720,7 +720,7 @@
                         <HBox spacing="12" alignment="CENTER_LEFT">
                             <Label text="Key Size:" styleClass="form-label"/>
                             <ComboBox fx:id="dsaKeySizeCombo" prefWidth="120" styleClass="form-field"/>
-                            <Button text="Generate DSA Key Pair" onAction="#handleGenerateDSA" styleClass="action-button,primary-action"/>
+                            <Button fx:id="dsaGenerateBtn" text="Generate DSA Key Pair" onAction="#handleGenerateDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
                         <!-- Block 3: Summary -->

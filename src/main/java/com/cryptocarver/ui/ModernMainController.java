@@ -237,11 +237,101 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private MenuBar mainMenuBar;
 
+    // Async Progress UI
+    @FXML private HBox asyncProgressBox;
+    @FXML private ProgressIndicator asyncProgressSpinner;
+    @FXML private Label asyncProgressLabel;
+    @FXML private Button asyncCancelBtn;
+
+    private final OperationExecutor operationExecutor = new OperationExecutor();
+
+    public OperationExecutor getOperationExecutor() {
+        return operationExecutor;
+    }
+
+    public void showAsyncProgress(String operationName) {
+        if (asyncProgressBox != null) {
+            if (asyncProgressLabel != null) {
+                asyncProgressLabel.setText("Working on " + (operationName != null ? operationName : "Operation") + "...");
+            }
+            asyncProgressBox.setManaged(true);
+            asyncProgressBox.setVisible(true);
+        }
+    }
+
+    public void hideAsyncProgress() {
+        if (asyncProgressBox != null) {
+            asyncProgressBox.setVisible(false);
+            asyncProgressBox.setManaged(false);
+        }
+    }
+
+    @FXML
+    private final java.util.concurrent.atomic.AtomicBoolean isShutdown = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    public void handleCancelAsyncOperation() {
+        boolean cancelled = operationExecutor.cancelCurrentOperation();
+        if (cancelled) {
+            if (asyncProgressLabel != null) {
+                asyncProgressLabel.setText("Cancelling operation...");
+            }
+        } else if (operationExecutor.isInCommitPhase()) {
+            if (asyncProgressLabel != null) {
+                asyncProgressLabel.setText("Finishing file commit...");
+            }
+            if (asyncCancelBtn != null) {
+                asyncCancelBtn.setDisable(true);
+            }
+        } else {
+            hideAsyncProgress();
+        }
+    }
+
+    public void shutdown() {
+        if (isShutdown.compareAndSet(false, true)) {
+            if (operationExecutor != null) {
+                operationExecutor.shutdown();
+            }
+        }
+    }
+
+    private void setupWindowLifecycleListeners() {
+        javafx.scene.Node node = rootStackPane != null ? rootStackPane : asyncProgressBox;
+        if (node == null) return;
+
+        javafx.beans.value.ChangeListener<javafx.stage.Window> windowListener = (obsWindow, oldWindow, newWindow) -> {
+            if (newWindow != null) {
+                newWindow.addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, e -> shutdown());
+            }
+        };
+
+        javafx.beans.value.ChangeListener<javafx.scene.Scene> sceneListener = (obsScene, oldScene, newScene) -> {
+            if (newScene != null) {
+                if (newScene.getWindow() != null) {
+                    newScene.getWindow().addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, e -> shutdown());
+                }
+                newScene.windowProperty().addListener(windowListener);
+            }
+        };
+
+        if (node.getScene() != null) {
+            sceneListener.changed(null, null, node.getScene());
+        }
+        node.sceneProperty().addListener(sceneListener);
+    }
+
     @FXML
     public void initialize() {
         if (joseController != null) joseController.setReporter(this);
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
+
+        operationExecutor.setProgressHandlers(
+                this::showAsyncProgress,
+                this::hideAsyncProgress
+        );
+
+        setupWindowLifecycleListeners();
 
         setupLaboratoryMenu();
         initializeCommandPalette();
