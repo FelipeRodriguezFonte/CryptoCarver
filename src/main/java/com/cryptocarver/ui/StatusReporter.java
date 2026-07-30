@@ -25,6 +25,16 @@ public interface StatusReporter {
 
     void showError(String title, String message);
 
+    default void showError(UserFacingError error) {
+        if (error != null) {
+            showError(error.title(), error.remedy() != null && !error.remedy().isBlank() ? error.remedy() : error.detail());
+        }
+    }
+
+    default void showError(Throwable cause, String contextTitle, String fieldKey) {
+        showError(UserFacingErrorMapper.map(cause, contextTitle, fieldKey));
+    }
+
     default void showInfo(String title, String message) {
         // Optional for non-JavaFX hosts and controller tests.
     }

@@ -89,6 +89,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private Label contentSubtitleLabel;
 
+    // Breadcrumbs & Favorites UI (UX-07)
+    @FXML private HBox breadcrumbContainer;
+    @FXML private Button breadcrumbSectionBtn;
+    @FXML private Label breadcrumbSep1;
+    @FXML private Button breadcrumbModuleBtn;
+    @FXML private Label breadcrumbSep2;
+    @FXML private Label breadcrumbOperationLabel;
+    @FXML private Button favoriteToggleBtn;
+
     // Inspector labels
     @FXML
     private Label inputBytesLabel;
@@ -102,8 +111,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private VBox securityTipBox;
     @FXML
     private Label runtimeInfoLabel;
-    @FXML
-    private Label statusLabel;
+    @FXML private Label statusLabel;
+    @FXML private HBox errorBanner;
+    @FXML private Label errorBannerTitle;
+    @FXML private Label errorBannerRemedy;
+    @FXML private Button errorBannerGoToFieldBtn;
+    @FXML private Button errorBannerCopyDetailsBtn;
+    @FXML private Button errorBannerCloseBtn;
+    private InlineErrorPresenter inlineErrorPresenter;
     @FXML
     private VBox historyContainer;
     @FXML
@@ -232,6 +247,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         initializeCommandPalette();
         syncMenuBarAccelerators();
 
+        inlineErrorPresenter = new InlineErrorPresenter(
+                errorBanner, errorBannerTitle, errorBannerRemedy,
+                errorBannerGoToFieldBtn, errorBannerCopyDetailsBtn, errorBannerCloseBtn
+        );
+
         if (securityTipLabel != null && securityTipBox != null) {
             securityTipLabel.textProperty().addListener((obs, oldVal, newVal) -> {
                 boolean hasTip = newVal != null && !newVal.trim().isEmpty();
@@ -286,8 +306,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         loadXMLSecurityContent();
         loadWssSecurityContent();
 
-        // Show the symmetric keys by defaul
+        // Show the symmetric keys by default
         showSymmetricKeys();
+        restoreStartupLastRoute();
 
         // Apply default font size
         applyFontSize();
@@ -579,14 +600,170 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             section = "Payments";
         }
 
-        contentTitleLabel.setText(section);
-        contentSubtitleLabel.setText(subsection);
+        if (contentTitleLabel != null) contentTitleLabel.setText(section);
+        if (contentSubtitleLabel != null) contentSubtitleLabel.setText(subsection);
+
+        // UX-07: Update Breadcrumbs, Favorites & Last Route
+        updateBreadcrumbs(itemName);
+        updateFavoriteToggleState(itemName);
+        com.cryptocarver.model.AppSettings.getInstance().setLastRoute(itemName);
 
         // Update format profile in the toolbar
         if (contractOperationLabel != null) {
             contractOperationLabel.setText(subsection);
         }
         applyOperationFormatProfile(itemName);
+    }
+
+    private void restoreStartupLastRoute() {
+        try {
+            String lastRoute = com.cryptocarver.model.AppSettings.getInstance().getLastRoute();
+            if (lastRoute != null && !lastRoute.isBlank()) {
+                if (UiNavigationRegistry.resolve(lastRoute).isPresent()) {
+                    navigateToModule(lastRoute);
+                }
+            }
+        } catch (Exception ignored) {
+            // Preferences must never fail application startup
+        }
+    }
+
+    private void updateBreadcrumbs(String operationName) {
+        if (breadcrumbContainer == null || operationName == null) return;
+
+        String sectionLabel = "Laboratory";
+        String moduleLabel = "General";
+        String operationLabel = operationName;
+        String canonicalModulePath = operationName;
+
+        java.util.Optional<UiNavigationRegistry.Route> resolved = UiNavigationRegistry.resolve(operationName);
+        if (resolved.isPresent()) {
+            UiNavigationRegistry.Route route = resolved.get();
+            sectionLabel = switch (route.module()) {
+                case KEYS_SYMMETRIC -> "Symmetric Keys";
+                case KEYS_ASYMMETRIC -> "Asymmetric Keys";
+                case CIPHER -> "Ciphers";
+                case AUTHENTICATION -> "Signatures & MAC";
+                case CERTIFICATES -> "Certificates & CMS";
+                case JOSE -> "JOSE / JWT";
+                case POST_QUANTUM -> "Post-Quantum PQC";
+                case XML_SECURITY -> "XML Security";
+                case WSS_SECURITY -> "WSS Security";
+                case EMV -> "EMV & Smartcards";
+                case PAYMENTS -> "Payment Cryptography";
+                case GENERIC -> "Utilities";
+                case HISTORY -> "History";
+                case CLIPBOARD_SHELF -> "Clipboard Shelf";
+                case SAVED_SESSIONS -> "Saved Sessions";
+                default -> "Laboratory";
+            };
+
+            if (route.section() != null && !route.section().isBlank()) {
+                moduleLabel = route.section();
+                canonicalModulePath = route.section();
+            } else {
+                moduleLabel = route.module().name();
+                canonicalModulePath = operationName;
+            }
+        } else {
+            java.util.Optional<com.cryptocarver.model.OperationDescriptor> descriptor =
+                    com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(operationName);
+            if (descriptor.isPresent()) {
+                com.cryptocarver.model.OperationDescriptor op = descriptor.get();
+                sectionLabel = op.getCategory() != null ? op.getCategory() : "Laboratory";
+                moduleLabel = sectionLabel;
+                operationLabel = op.getTitle();
+                canonicalModulePath = op.getNavigationPath() != null ? op.getNavigationPath() : op.getTitle();
+            }
+        }
+
+        if (breadcrumbSectionBtn != null) {
+            breadcrumbSectionBtn.setText(sectionLabel);
+            breadcrumbSectionBtn.setAccessibleText("Navigate to Section: " + sectionLabel);
+            breadcrumbSectionBtn.setTooltip(new Tooltip("Navigate to " + sectionLabel));
+        }
+
+        if (breadcrumbModuleBtn != null) {
+            breadcrumbModuleBtn.setText(moduleLabel);
+            breadcrumbModuleBtn.setUserData(canonicalModulePath);
+            breadcrumbModuleBtn.setAccessibleText("Navigate to Module: " + moduleLabel);
+            breadcrumbModuleBtn.setTooltip(new Tooltip("Navigate to " + moduleLabel));
+        }
+
+        if (breadcrumbOperationLabel != null) {
+            breadcrumbOperationLabel.setText(operationLabel);
+        }
+    }
+
+    @FXML
+    public void handleBreadcrumbSectionClick() {
+        if (breadcrumbSectionBtn == null) return;
+        String sectionText = breadcrumbSectionBtn.getText();
+        if (navigationRail == null) {
+            showQuickStart();
+            return;
+        }
+        switch (sectionText) {
+            case "Symmetric Keys", "Asymmetric Keys" -> navigationRail.selectSection(NavigationRail.Section.KEYS);
+            case "Ciphers" -> navigationRail.selectSection(NavigationRail.Section.CIPHER);
+            case "Signatures & MAC" -> navigationRail.selectSection(NavigationRail.Section.AUTHENTICATION);
+            case "Certificates & CMS" -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
+            case "JOSE / JWT" -> navigationRail.selectSection(NavigationRail.Section.JOSE);
+            case "Post-Quantum PQC" -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
+            case "XML Security", "WSS Security" -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
+            case "EMV & Smartcards", "Payment Cryptography" -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
+            case "History" -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
+            default -> showQuickStart();
+        }
+    }
+
+    @FXML
+    public void handleBreadcrumbModuleClick() {
+        if (breadcrumbModuleBtn == null) return;
+        Object data = breadcrumbModuleBtn.getUserData();
+        String targetRoute = data instanceof String s && !s.isBlank() ? s : breadcrumbModuleBtn.getText();
+        navigateToModule(targetRoute);
+    }
+
+    public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
+        if (item == null || item.getOperation() == null) return;
+        navigateToModule(item.getOperation());
+        if (item.getParameters() != null && !item.getParameters().isEmpty()) {
+            restoreOperationState(item.getParameters(), item.getOperation());
+        }
+    }
+
+    @FXML
+    public void handleToggleFavorite() {
+        if (currentActiveOperation == null || currentActiveOperation.isBlank()) return;
+        com.cryptocarver.model.AppSettings.getInstance().toggleFavorite(currentActiveOperation);
+        updateFavoriteToggleState(currentActiveOperation);
+        if (sidePanel != null && sidePanel.isVisible()) {
+            sidePanel.updateContent(sidePanel.getCurrentSection());
+        }
+    }
+
+    private void updateFavoriteToggleState(String operationName) {
+        if (favoriteToggleBtn == null || operationName == null) return;
+        boolean isFav = com.cryptocarver.model.AppSettings.getInstance().isFavorite(operationName);
+        if (isFav) {
+            favoriteToggleBtn.setText("★");
+            if (!favoriteToggleBtn.getStyleClass().contains("active")) {
+                favoriteToggleBtn.getStyleClass().add("active");
+            }
+            favoriteToggleBtn.setAccessibleText("Remove " + operationName + " from Favorites");
+            favoriteToggleBtn.setTooltip(new Tooltip("Favorite active (Shortcut+Shift+F to toggle)"));
+        } else {
+            favoriteToggleBtn.setText("☆");
+            favoriteToggleBtn.getStyleClass().remove("active");
+            favoriteToggleBtn.setAccessibleText("Add " + operationName + " to Favorites");
+            favoriteToggleBtn.setTooltip(new Tooltip("Add to Favorites (Shortcut+Shift+F)"));
+        }
+    }
+
+    @FXML
+    public void handleQuickStart() {
+        showQuickStart();
     }
 
     private void applyOperationFormatProfile(String itemName) {
@@ -699,6 +876,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @Override
     public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptocarver.model.OperationDetail> details) {
         inspectorPresenter().present(operation, input, output, details);
+
+        if (details != null && inlineErrorPresenter != null) {
+            boolean isInvalidResult = details.stream().anyMatch(d ->
+                    "Result".equalsIgnoreCase(d.name()) && d.value() != null && d.value().toUpperCase().contains("INVALID"));
+            if (!isInvalidResult) {
+                inlineErrorPresenter.hideBanner();
+            }
+        }
 
         // Ensure history container is visible (it might be hidden by Saved Sessions
         // view)
@@ -817,6 +1002,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (historyManager == null) {
             historyManager = new com.cryptocarver.model.HistoryManager();
         }
+        if (sidePanel != null) {
+            sidePanel.setHistoryManager(historyManager);
+            sidePanel.setOnHistoryItemSelected(this::reopenRecentHistoryCommand);
+        }
         if (historyViewController != null) {
             historyViewController.setHistoryManager(historyManager);
             historyViewController.setOperationNavigator(this);
@@ -878,6 +1067,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
             historyCommand.getChildren().addAll(infoBox, reopenButton);
             historyContainer.getChildren().add(historyCommand);
+        }
+
+        if (sidePanel != null && sidePanel.isVisible()) {
+            sidePanel.updateContent(sidePanel.getCurrentSection());
         }
     }
 
@@ -1975,13 +2168,47 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     public void showError(String title, String message) {
         if ("true".equals(System.getProperty("test.mode"))) {
             System.err.println("SHOW_ERROR: " + title + " - " + message);
-            return;
         }
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        UserFacingError error = UserFacingErrorMapper.map(title, message, null);
+        showError(error);
+    }
+
+    @Override
+    public void showError(UserFacingError error) {
+        if (error == null) return;
+        if ("true".equals(System.getProperty("test.mode"))) {
+            System.err.println("SHOW_ERROR: " + error.title() + " - " + error.remedy());
+        }
+        if (inlineErrorPresenter != null) {
+            inlineErrorPresenter.showError(error, rootStackPane != null ? rootStackPane : mainPane);
+        }
+    }
+
+    @Override
+    public void showError(Throwable cause, String contextTitle, String fieldKey) {
+        UserFacingError error = UserFacingErrorMapper.map(cause, contextTitle, fieldKey);
+        showError(error);
+    }
+
+    @FXML
+    private void handleErrorBannerGoToField() {
+        if (inlineErrorPresenter != null) {
+            inlineErrorPresenter.goToField(rootStackPane != null ? rootStackPane : mainPane);
+        }
+    }
+
+    @FXML
+    private void handleErrorBannerCopyDetails() {
+        if (inlineErrorPresenter != null) {
+            inlineErrorPresenter.copyTechnicalDetails(this);
+        }
+    }
+
+    @FXML
+    private void handleErrorBannerClose() {
+        if (inlineErrorPresenter != null) {
+            inlineErrorPresenter.hideBanner();
+        }
     }
 
     public void showWarning(String title, String message) {
@@ -3021,7 +3248,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 readinessPanel.setManaged(true);
                 readinessPanel.setVisible(true);
             }
-            updateStatus("Execution blocked by preflight checklist: " + (firstIssue != null ? firstIssue.getMessage() : "Incomplete setup"));
+            String msg = firstIssue != null ? firstIssue.getMessage() : "Incomplete operation setup";
+            String fieldKey = firstIssue != null ? firstIssue.getTargetControlKey() : null;
+            showError(new UserFacingError("Preflight Setup Required", msg, "Complete the highlighted setup steps before running the operation.", fieldKey));
             return false;
         }
         return true;

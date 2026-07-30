@@ -36,6 +36,7 @@
                 </Menu>
 
                 <Menu text="View">
+                    <MenuItem text="Quick Start" onAction="#handleQuickStart" accelerator="Shortcut+Shift+H" />
                     <MenuItem text="Command Palette..." onAction="#handleOpenCommandPalette" accelerator="Shortcut+K" />
                     <SeparatorMenuItem/>
                     <MenuItem text="Toggle Side Panel" onAction="#handleToggleSidePanel" accelerator="Shortcut+B" />
@@ -118,11 +119,18 @@
             <!-- Main Content Area -->
             <VBox fx:id="mainContentArea" HBox.hgrow="ALWAYS" styleClass="main-content-vbox">
 
-                <!-- Content Header -->
-                <HBox styleClass="content-header">
-                    <Label fx:id="contentTitleLabel" text="Symmetric Keys" styleClass="content-title-label"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label fx:id="contentSubtitleLabel" text="Key Derivation (KDF)" styleClass="content-subtitle-label"/>
+                <!-- Content Header with Breadcrumbs & Favorite Star Toggle -->
+                <HBox styleClass="content-header" alignment="CENTER_LEFT" spacing="10">
+                    <HBox fx:id="breadcrumbContainer" alignment="CENTER_LEFT" spacing="4" styleClass="breadcrumb-container" HBox.hgrow="ALWAYS">
+                        <Button fx:id="breadcrumbSectionBtn" text="Keys" styleClass="breadcrumb-button" onAction="#handleBreadcrumbSectionClick" accessibleText="Navigate to Section"/>
+                        <Label text="›" styleClass="breadcrumb-separator" fx:id="breadcrumbSep1"/>
+                        <Button fx:id="breadcrumbModuleBtn" text="Symmetric" styleClass="breadcrumb-button" onAction="#handleBreadcrumbModuleClick" accessibleText="Navigate to Module"/>
+                        <Label text="›" styleClass="breadcrumb-separator" fx:id="breadcrumbSep2"/>
+                        <Label fx:id="breadcrumbOperationLabel" text="Symmetric Ciphers" styleClass="breadcrumb-current"/>
+                    </HBox>
+                    <Label fx:id="contentTitleLabel" text="Symmetric Keys" styleClass="content-title-label" managed="false" visible="false"/>
+                    <Label fx:id="contentSubtitleLabel" text="Key Derivation (KDF)" styleClass="content-subtitle-label" managed="false" visible="false"/>
+                    <Button fx:id="favoriteToggleBtn" text="☆" onAction="#handleToggleFavorite" styleClass="favorite-toggle-button" accessibleText="Toggle Favorite for current operation"/>
                 </HBox>
 
                 <!-- Result Summary Bar (Compact header) -->
@@ -145,7 +153,23 @@
                         <Button text="Expand" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
                         <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
                         <Button text="Copy" onAction="#handleCopyOutput" styleClass="action-button-primary" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
+                </HBox>
+
+                <!-- Inline Actionable Error Banner -->
+                <HBox fx:id="errorBanner" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="inline-error-banner">
+                    <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <HBox spacing="6" alignment="CENTER_LEFT">
+                            <Label text="⚠️" style="-fx-font-size: 13px;"/>
+                            <Label fx:id="errorBannerTitle" text="Operation Failed" styleClass="error-banner-title"/>
+                        </HBox>
+                        <Label fx:id="errorBannerRemedy" text="Check parameters and try again." styleClass="error-banner-remedy" wrapText="true"/>
+                    </VBox>
+                    <HBox spacing="6" alignment="CENTER_RIGHT">
+                        <Button fx:id="errorBannerGoToFieldBtn" text="Go to field" onAction="#handleErrorBannerGoToField" styleClass="error-banner-btn-secondary" managed="false" visible="false"/>
+                        <Button fx:id="errorBannerCopyDetailsBtn" text="Copy technical details" onAction="#handleErrorBannerCopyDetails" styleClass="error-banner-btn-secondary"/>
+                        <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" styleClass="error-banner-btn-close"/>
                     </HBox>
+                </HBox>
                 </HBox>
 
                 <!-- Guided Flow Panel (reusable) -->

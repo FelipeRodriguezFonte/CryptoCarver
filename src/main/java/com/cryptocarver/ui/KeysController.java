@@ -519,6 +519,14 @@ public class KeysController {
         if (mainController != null) mainController.showError(title, message);
     }
 
+    private void showError(UserFacingError error) {
+        if (mainController != null) mainController.showError(error);
+    }
+
+    private void showError(Throwable cause, String contextTitle, String fieldKey) {
+        if (mainController != null) mainController.showError(cause, contextTitle, fieldKey);
+    }
+
     private void showInfo(String title, String message) {
         if (mainController != null) mainController.showInfo(title, message);
     }
@@ -2610,7 +2618,7 @@ public class KeysController {
 
             String pemCert = certInputArea.getText().trim();
             if (pemCert.isEmpty()) {
-                showError("Input Error", "Please paste a certificate in PEM format");
+                showError(new UserFacingError("Missing Certificate Input", "Please paste a certificate in PEM format.", "Provide X.509 PEM certificate data in the input area.", "certInputArea"));
                 return;
             }
 
@@ -2648,7 +2656,7 @@ public class KeysController {
             certParseResultArea.setVisible(true);
             certParseResultArea.setManaged(true);
             updateStatus("Certificate parse failed");
-            e.printStackTrace();
+            showError(e, "Certificate Parse Error", "certInputArea");
         }
     }
 
@@ -2664,7 +2672,7 @@ public class KeysController {
 
             String certPem = valCertInput.getText().trim();
             if (certPem.isEmpty()) {
-                showError("Input Error", "Please paste a certificate to validate");
+                showError(new UserFacingError("Missing Validation Certificate", "Please paste a certificate to validate.", "Provide X.509 PEM certificate data in the validation input field.", "valCertInput"));
                 return;
             }
 
@@ -2679,6 +2687,7 @@ public class KeysController {
             } catch (Exception e) {
                 valResultArea.setText("Error parsing certificate chain: " + e.getMessage());
                 updateStatus("Validation failed: Parse error");
+                showError(e, "Certificate Chain Parse Error", "valCertInput");
                 return;
             }
 

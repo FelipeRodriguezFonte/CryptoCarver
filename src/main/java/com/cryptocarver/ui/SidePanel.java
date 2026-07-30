@@ -28,13 +28,21 @@ public class SidePanel extends VBox {
     private TreeItem<OperationNode> rootItem;
     private NavigationRail.Section currentSection = NavigationRail.Section.KEYS;
 
+    private Consumer<com.cryptocarver.model.HistoryCommand> onHistoryItemSelected;
+
     // Helper wrapper for TreeView
     private static class OperationNode {
         String label;
         OperationDescriptor descriptor;
+        com.cryptocarver.model.HistoryCommand historyCommand;
 
         OperationNode(String label) { this.label = label; }
         OperationNode(OperationDescriptor desc) { this.descriptor = desc; this.label = desc.getTitle(); }
+        OperationNode(com.cryptocarver.model.HistoryCommand cmd) {
+            this.historyCommand = cmd;
+            this.label = cmd.getOperation() + " (" + cmd.getTimestamp() + ")";
+            this.descriptor = OperationRegistry.getInstance().resolveNavigation(cmd.getOperation()).orElse(null);
+        }
 
         @Override
         public String toString() { return label; }
@@ -98,7 +106,7 @@ public class SidePanel extends VBox {
                         HBox content = new HBox(5);
                         content.setAlignment(Pos.CENTER_LEFT);
                         Label iconLabel = new Label(item.descriptor.getIcon());
-                        Label textLabel = new Label(item.descriptor.getTitle());
+                        Label textLabel = new Label(item.historyCommand != null ? item.label : item.descriptor.getTitle());
                         content.getChildren().addAll(iconLabel, textLabel);
 
                         if (item.descriptor.getStatus() == OperationDescriptor.Status.EXPERIMENTAL) {
@@ -142,6 +150,15 @@ public class SidePanel extends VBox {
             if (newVal != null && newVal.isLeaf()) {
                 OperationNode selected = newVal.getValue();
 
+                if (selected.historyCommand != null) {
+                    if (onHistoryItemSelected != null) {
+                        onHistoryItemSelected.accept(selected.historyCommand);
+                    } else if (onItemSelected != null) {
+                        onItemSelected.accept(selected.historyCommand.getOperation());
+                    }
+                    return;
+                }
+
                 // Do not navigate to PLANNED operations
                 if (selected.descriptor != null && selected.descriptor.getStatus() == OperationDescriptor.Status.PLANNED) {
                     return;
@@ -159,6 +176,16 @@ public class SidePanel extends VBox {
 
         // Initialize with default content (Keys)
         updateContent(NavigationRail.Section.KEYS);
+    }
+
+    private com.cryptocarver.model.HistoryManager historyManager;
+
+    public void setHistoryManager(com.cryptocarver.model.HistoryManager historyManager) {
+        this.historyManager = historyManager;
+    }
+
+    public void setOnHistoryItemSelected(Consumer<com.cryptocarver.model.HistoryCommand> handler) {
+        this.onHistoryItemSelected = handler;
     }
 
     public void updateContent(NavigationRail.Section section) {
@@ -200,15 +227,63 @@ public class SidePanel extends VBox {
                 buildCategoryTree("ASN1");
                 break;
             case HISTORY:
-                buildCategoryTree("History");
+                buildHistoryTree();
                 break;
             case SEARCH:
                 rootItem.getChildren().add(new TreeItem<>(new OperationNode("Quick search across all operations")));
                 break;
         }
 
+        if (section != NavigationRail.Section.SEARCH) {
+            attachFavoritesIfAny();
+            if (section != NavigationRail.Section.HISTORY) {
+                attachRecentsIfAny();
+            }
+        }
+
         navigationTree.setRoot(rootItem);
         expandAll(rootItem);
+    }
+
+    public NavigationRail.Section getCurrentSection() {
+        return currentSection != null ? currentSection : NavigationRail.Section.KEYS;
+    }
+
+    private void attachFavoritesIfAny() {
+        List<String> favs = com.cryptocarver.model.AppSettings.getInstance().getFavorites();
+        if (favs.isEmpty()) return;
+
+        TreeItem<OperationNode> favsGroup = new TreeItem<>(new OperationNode("★ Favorites"));
+        for (String fav : favs) {
+            OperationDescriptor desc = OperationRegistry.getInstance().resolveNavigation(fav).orElse(null);
+            if (desc != null) {
+                favsGroup.getChildren().add(new TreeItem<>(new OperationNode(desc)));
+            } else {
+                favsGroup.getChildren().add(new TreeItem<>(new OperationNode(fav)));
+            }
+        }
+        rootItem.getChildren().add(0, favsGroup);
+    }
+
+    private void attachRecentsIfAny() {
+        if (historyManager == null) return;
+        List<com.cryptocarver.model.HistoryCommand> items = historyManager.getHistoryItems();
+        if (items.isEmpty()) return;
+
+        TreeItem<OperationNode> recentsGroup = new TreeItem<>(new OperationNode("Recent Executions"));
+        for (com.cryptocarver.model.HistoryCommand item : items.stream().limit(8).toList()) {
+            recentsGroup.getChildren().add(new TreeItem<>(new OperationNode(item)));
+        }
+        rootItem.getChildren().add(recentsGroup);
+    }
+
+    private void buildHistoryTree() {
+        buildCategoryTree("History");
+        if (historyManager == null || historyManager.getHistoryItems().isEmpty()) {
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode("No executed operations yet")));
+        } else {
+            attachRecentsIfAny();
+        }
     }
 
     private void buildCategoryTree(String category) {

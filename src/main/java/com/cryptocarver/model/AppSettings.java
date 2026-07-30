@@ -1,5 +1,6 @@
 package com.cryptocarver.model;
 
+import com.cryptocarver.ui.UiNavigationRegistry;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.nio.file.Files;
@@ -19,8 +20,8 @@ public final class AppSettings {
         this(defaultSettingsFile());
     }
 
-    /** Package-visible constructor for isolated settings tests. */
-    AppSettings(Path file) {
+    /** Constructor for isolated settings instances (e.g. tests or custom paths). */
+    public AppSettings(Path file) {
         this.file = Objects.requireNonNull(file, "Settings file is required").toAbsolutePath().normalize();
         load();
     }
@@ -30,7 +31,23 @@ public final class AppSettings {
         return Paths.get(home, ".cryptocarver", "settings.json");
     }
 
-    public static AppSettings getInstance() { return INSTANCE; }
+    private static volatile AppSettings instanceOverride;
+
+    public static AppSettings getInstance() {
+        return instanceOverride != null ? instanceOverride : INSTANCE;
+    }
+
+    public static void setInstanceForTesting(AppSettings override) {
+        instanceOverride = override;
+    }
+
+    public static void resetInstanceForTesting() {
+        instanceOverride = null;
+    }
+
+    public synchronized void resetForTesting() {
+        data = new Settings();
+    }
 
     public synchronized SecretVisibilityProfile getSecretVisibilityProfile() {
         return data.secretVisibility == null ? SecretVisibilityProfile.FULL_LAB : data.secretVisibility;
@@ -128,6 +145,63 @@ public final class AppSettings {
         save();
     }
 
+    // --- FAVORITES & LAST ROUTE PERSISTENCE (UX-07) ---
+
+    public synchronized List<String> getFavorites() {
+        if (data.favorites == null) return List.of();
+        // Purge any favorites that no longer resolve in UiNavigationRegistry
+        List<String> valid = data.favorites.stream()
+                .filter(fav -> fav != null && !fav.isBlank() && UiNavigationRegistry.resolve(fav).isPresent())
+                .distinct()
+                .limit(12)
+                .toList();
+        if (valid.size() != data.favorites.size()) {
+            data.favorites = new ArrayList<>(valid);
+            save();
+        }
+        return valid;
+    }
+
+    public synchronized boolean isFavorite(String routeId) {
+        if (routeId == null || routeId.isBlank()) return false;
+        return getFavorites().contains(routeId.trim());
+    }
+
+    public synchronized void toggleFavorite(String routeId) {
+        if (routeId == null || routeId.isBlank()) return;
+        String clean = routeId.trim();
+        if (UiNavigationRegistry.resolve(clean).isEmpty()) return; // Must resolve safely
+
+        List<String> list = new ArrayList<>(getFavorites());
+        if (list.contains(clean)) {
+            list.remove(clean);
+        } else {
+            if (list.size() < 12) {
+                list.add(clean);
+            }
+        }
+        data.favorites = list;
+        save();
+    }
+
+    public synchronized String getLastRoute() {
+        if (data.lastRoute == null || data.lastRoute.isBlank()) return "";
+        String clean = data.lastRoute.trim();
+        if (UiNavigationRegistry.resolve(clean).isPresent()) {
+            return clean;
+        }
+        return "";
+    }
+
+    public synchronized void setLastRoute(String routeId) {
+        if (routeId == null || routeId.isBlank()) return;
+        String clean = routeId.trim();
+        if (UiNavigationRegistry.resolve(clean).isPresent()) {
+            data.lastRoute = clean;
+            save();
+        }
+    }
+
     private void load() {
         try {
             if (Files.exists(file)) {
@@ -156,5 +230,7 @@ public final class AppSettings {
         private List<TrustStoreProfile> trustStoreProfiles = new ArrayList<>();
         private List<Pkcs11Profile> pkcs11Profiles = new ArrayList<>();
         private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
+        private List<String> favorites = new ArrayList<>();
+        private String lastRoute = "";
     }
 }

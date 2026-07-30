@@ -638,14 +638,14 @@ public class AuthenticationController {
             }
 
             if (currentPrivateKey == null) {
-                mainController.showError("Key Error", "Paste or load a private key first");
+                mainController.showError(new UserFacingError("Missing Signing Key", "Paste or load a private key first.", "Provide a private key PEM in the key area.", "signaturePrivateKeyArea"));
                 return;
             }
 
             // Get data to sign
             byte[] data = getInputDataAsBytes();
             if (data == null || data.length == 0) {
-                mainController.showError("Input Error", "Please enter data to sign");
+                mainController.showError(new UserFacingError("Missing Input Data", "Please enter data to sign.", "Provide text or binary input in the message field.", "authInputArea"));
                 return;
             }
 
@@ -653,9 +653,11 @@ public class AuthenticationController {
             String expectedKeyType = SignatureOperations.getExpectedKeyType(algorithm);
             String actualKeyType = currentPrivateKey.getAlgorithm();
             if (!actualKeyType.equals(expectedKeyType)) {
-                mainController.showError("Key Mismatch",
+                mainController.showError(new UserFacingError("Key Mismatch",
                         String.format("Algorithm %s requires %s key, but pasted/loaded key is %s",
-                                algorithm, expectedKeyType, actualKeyType));
+                                algorithm, expectedKeyType, actualKeyType),
+                        "Provide a matching private key for the selected algorithm.",
+                        "signaturePrivateKeyArea"));
                 return;
             }
 
@@ -679,8 +681,7 @@ public class AuthenticationController {
                     .status("Signature created with " + algorithm).build());
 
         } catch (Exception e) {
-            mainController.showError("Signature Error",
-                    "Error creating signature: " + e.getMessage());
+            mainController.showError(e, "Signature Error", "signaturePrivateKeyArea");
             LOG.error("Digital signature creation failed", e);
         }
     }
@@ -718,29 +719,27 @@ public class AuthenticationController {
             }
 
             if (currentPublicKey == null) {
-                mainController.showError("Key Error", "Paste or load a public key first");
+                mainController.showError(new UserFacingError("Missing Public Key", "Paste or load a public key first.", "Provide a public key PEM in the key area.", "signaturePublicKeyArea"));
                 return;
             }
 
             // Get signature from verify field
             String signatureText = signatureVerifyField.getText().trim();
             if (signatureText.isEmpty()) {
-                mainController.showError("Signature Error",
-                        "Please paste the signature in the verification field");
+                mainController.showError(new UserFacingError("Missing Signature", "Please paste the signature in the verification field.", "Enter signature bytes/text to verify.", "signatureVerifyField"));
                 return;
             }
 
             byte[] signature = parseDataWithFormat(signatureText, outputFormatCombo.getValue());
             if (signature == null || signature.length == 0) {
-                mainController.showError("Signature Error", "Invalid signature format");
+                mainController.showError(new UserFacingError("Signature Error", "Invalid signature format.", "Check that the signature matches the selected output format.", "signatureVerifyField"));
                 return;
             }
 
             // Get original data from input area
             byte[] data = getInputDataAsBytes();
             if (data == null || data.length == 0) {
-                mainController.showError("Data Error",
-                        "Please enter the original data that was signed");
+                mainController.showError(new UserFacingError("Missing Data to Verify", "Please enter the original data that was signed.", "Provide original message text in the input area.", "authInputArea"));
                 return;
             }
 
@@ -751,8 +750,10 @@ public class AuthenticationController {
                 mainController.showInfo("Verification Success",
                         "✅ Signature is VALID!\n\nThe data has not been tampered with.");
             } else {
-                mainController.showError("Verification Failed",
-                        "❌ Signature is INVALID!\n\nThe data may have been tampered with or the wrong key was used.");
+                mainController.showError(new UserFacingError("Verification Failed",
+                        "Signature is INVALID! The data may have been tampered with or the wrong key was used.",
+                        "Check that the public key matches the private key used for signing, and verify the message text.",
+                        "signatureVerifyField"));
             }
 
             Map<String, String> details = new HashMap<>();
@@ -765,8 +766,7 @@ public class AuthenticationController {
                     .status("Signature verification: " + (valid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {
-            mainController.showError("Verification Error",
-                    "Error verifying signature: " + e.getMessage());
+            mainController.showError(e, "Verification Error", "signatureVerifyField");
             LOG.error("Digital signature verification failed", e);
         }
     }
@@ -932,7 +932,7 @@ public class AuthenticationController {
         try {
             String algorithm = authMacAlgorithmCombo.getValue();
             if (algorithm == null) {
-                mainController.showError("Algorithm Error", "Please select a MAC algorithm");
+                mainController.showError(new UserFacingError("Algorithm Error", "Please select a MAC algorithm.", "Select an algorithm from the dropdown list.", "authMacAlgorithmCombo"));
                 return;
             }
 
@@ -944,7 +944,7 @@ public class AuthenticationController {
             // Get data
             byte[] data = getInputDataAsBytes();
             if (data == null || data.length == 0) {
-                mainController.showError("Input Error", "Please enter data to MAC");
+                mainController.showError(new UserFacingError("Missing Input Data", "Please enter data to MAC.", "Provide text or binary data in the message field.", "authInputArea"));
                 return;
             }
 
@@ -982,8 +982,7 @@ public class AuthenticationController {
                     .status("MAC generated with " + algorithm).build());
 
         } catch (Exception e) {
-            mainController.showError("MAC Error",
-                    "Error generating MAC: " + e.getMessage());
+            mainController.showError(e, "MAC Error", "authMacKeyField");
             LOG.error("MAC generation failed", e);
         }
     }
@@ -998,7 +997,7 @@ public class AuthenticationController {
         try {
             String algorithm = authMacAlgorithmCombo.getValue();
             if (algorithm == null) {
-                mainController.showError("Algorithm Error", "Please select a MAC algorithm");
+                mainController.showError(new UserFacingError("Algorithm Error", "Please select a MAC algorithm.", "Select an algorithm from the dropdown list.", "authMacAlgorithmCombo"));
                 return;
             }
 
@@ -1010,22 +1009,20 @@ public class AuthenticationController {
             // Get MAC from verify field
             String macText = authMacVerifyField.getText().trim();
             if (macText.isEmpty()) {
-                mainController.showError("MAC Error",
-                        "Please paste the MAC in the verification field");
+                mainController.showError(new UserFacingError("Missing MAC Verification Value", "Please paste the MAC in the verification field.", "Enter MAC value to verify.", "authMacVerifyField"));
                 return;
             }
 
             byte[] providedMac = parseDataWithFormat(macText, outputFormatCombo.getValue());
             if (providedMac == null || providedMac.length == 0) {
-                mainController.showError("MAC Error", "Invalid MAC format");
+                mainController.showError(new UserFacingError("MAC Error", "Invalid MAC format.", "Check MAC format and output encoding.", "authMacVerifyField"));
                 return;
             }
 
             // Get original data
             byte[] data = getInputDataAsBytes();
             if (data == null || data.length == 0) {
-                mainController.showError("Data Error",
-                        "Please enter the original data that was MACed");
+                mainController.showError(new UserFacingError("Data Error", "Please enter the original data that was MACed.", "Provide original message text in the input area.", "authInputArea"));
                 return;
             }
 
@@ -1046,8 +1043,10 @@ public class AuthenticationController {
                 mainController.showInfo("Verification Success",
                         "✅ MAC is VALID!\n\nThe data has not been tampered with.");
             } else {
-                mainController.showError("Verification Failed",
-                        "❌ MAC is INVALID!\n\nThe data may have been tampered with or the wrong key was used.");
+                mainController.showError(new UserFacingError("Verification Failed",
+                        "MAC is INVALID! The data may have been tampered with or the wrong key was used.",
+                        "Check MAC key and message content.",
+                        "authMacVerifyField"));
             }
 
             Map<String, String> details = new HashMap<>();
@@ -1061,8 +1060,7 @@ public class AuthenticationController {
                     .status("MAC verification: " + (valid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {
-            mainController.showError("Verification Error",
-                    "Error verifying MAC: " + e.getMessage());
+            mainController.showError(e, "Verification Error", "authMacVerifyField");
             LOG.error("MAC verification failed", e);
         }
     }

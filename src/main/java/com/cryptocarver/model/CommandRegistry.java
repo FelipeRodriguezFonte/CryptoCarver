@@ -134,6 +134,19 @@ public final class CommandRegistry {
                 controller::handleAddCurrentOutputToShelf
         ));
 
+        commands.add(new CommandItem(
+                "action_toggle_favorite",
+                "Toggle Favorite for Current Operation",
+                "Actions",
+                "Add or remove the currently active operation from your favorites list",
+                Arrays.asList("favorite", "star", "bookmark", "toggle", "pin"),
+                KeyboardShortcutRegistry.findShortcutByAction("Toggle Favorite")
+                        .map(KeyboardShortcutEntry::getKeyCombination)
+                        .orElse(null),
+                () -> true,
+                controller::handleToggleFavorite
+        ));
+
         return commands;
     }
 }

@@ -1618,13 +1618,11 @@ public class CipherController {
             statusReporter.publish(b.build());
 
         } catch (IllegalArgumentException e) {
-            statusReporter.showError("Validation Error", e.getMessage());
+            statusReporter.showError(e, "Validation Error", "cipherInputArea");
         } catch (javax.crypto.AEADBadTagException e) {
-            statusReporter.showError("Authentication Error",
-                    "GCM TAG verification failed! The data has been modified or the key/IV is incorrect.");
+            statusReporter.showError(e, "Authentication Error", "gcmTagField");
         } catch (Exception e) {
-            statusReporter.showError("Decryption Error",
-                    "Error decrypting data: " + e.getMessage());
+            statusReporter.showError(e, "Decryption Error", "cipherInputArea");
         }
     }
 

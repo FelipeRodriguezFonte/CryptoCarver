@@ -570,6 +570,56 @@
     -fx-font-weight: normal;
 }
 
+.breadcrumb-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 6;
+}
+
+.breadcrumb-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 6;
+    -fx-cursor: hand;
+    -fx-border-radius: 4;
+}
+
+.breadcrumb-button:hover {
+    -fx-text-fill: #ffffff;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.breadcrumb-separator {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.breadcrumb-current {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.favorite-toggle-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 16px;
+    -fx-padding: 2 6;
+    -fx-cursor: hand;
+    -fx-border-radius: 4;
+}
+
+.favorite-toggle-button:hover {
+    -fx-text-fill: #fbbf24;
+    -fx-background-color: rgba(251, 191, 36, 0.15);
+}
+
+.favorite-toggle-button.active {
+    -fx-text-fill: #f59e0b;
+}
+
 .content-scroll-pane {
     -fx-background: -color-bg-base;
     -fx-background-color: -color-bg-base;
@@ -1681,4 +1731,54 @@
     -fx-background-radius: 8px;
     -fx-padding: 6px 12px;
     -fx-spacing: 10px;
+}
+
+/* Inline Actionable Error Banner */
+.inline-error-banner {
+    -fx-background-color: #fef2f2;
+    -fx-border-color: #fca5a5;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px 12px;
+}
+
+.error-banner-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: #991b1b;
+}
+
+.error-banner-remedy {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7f1d1d;
+}
+
+.error-banner-btn-secondary {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #f87171;
+    -fx-text-fill: #991b1b;
+    -fx-font-size: 11px;
+    -fx-padding: 4 10;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.error-banner-btn-secondary:hover {
+    -fx-background-color: #fee2e2;
+}
+
+.error-banner-btn-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #991b1b;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 2 6;
+    -fx-cursor: hand;
+}
+
+.error-banner-btn-close:hover {
+    -fx-background-color: #fecaca;
+    -fx-background-radius: 4;
 }

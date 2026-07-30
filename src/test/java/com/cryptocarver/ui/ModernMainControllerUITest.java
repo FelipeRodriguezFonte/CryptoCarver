@@ -54,6 +54,24 @@ class ModernMainControllerUITest {
         }
     }
 
+    @org.junit.jupiter.api.BeforeEach
+    void resetSettings() {
+        if (isolatedUserHome != null) {
+            java.nio.file.Path isolatedFile = isolatedUserHome.resolve(".cryptocarver").resolve("settings.json");
+            try {
+                java.nio.file.Files.deleteIfExists(isolatedFile);
+            } catch (Exception ignored) {}
+            com.cryptocarver.model.AppSettings.setInstanceForTesting(new com.cryptocarver.model.AppSettings(isolatedFile));
+        } else {
+            com.cryptocarver.model.AppSettings.getInstance().resetForTesting();
+        }
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDownSettings() {
+        com.cryptocarver.model.AppSettings.resetInstanceForTesting();
+    }
+
     @AfterAll
     static void restoreUserHome() {
         if (originalUserHome == null) {

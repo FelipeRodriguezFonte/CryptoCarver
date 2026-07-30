@@ -25,7 +25,9 @@ public class KeyboardShortcutRegistry {
             new KeyboardShortcutEntry("Zoom In (Font)", "Shortcut+PLUS", "Increase application interface font size", "View"),
             new KeyboardShortcutEntry("Zoom Out (Font)", "Shortcut+MINUS", "Decrease application interface font size", "View"),
             new KeyboardShortcutEntry("Epoch Converter", "Shortcut+T", "Open Unix timestamp epoch conversion tool", "Tools"),
-            new KeyboardShortcutEntry("JSON Formatter", "Shortcut+J", "Open JSON formatter and validator tool", "Tools")
+            new KeyboardShortcutEntry("JSON Formatter", "Shortcut+J", "Open JSON formatter and validator tool", "Tools"),
+            new KeyboardShortcutEntry("Quick Start", "Shortcut+Shift+H", "Navigate to Laboratory Quick Start dashboard", "View"),
+            new KeyboardShortcutEntry("Toggle Favorite", "Shortcut+Shift+F", "Toggle favorite star for current operation", "Navigation")
     );
 
     public static List<KeyboardShortcutEntry> getShortcuts() {
