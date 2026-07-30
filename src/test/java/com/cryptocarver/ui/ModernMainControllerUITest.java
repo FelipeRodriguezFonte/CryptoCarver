@@ -2643,4 +2643,68 @@ class ModernMainControllerUITest {
             }
         });
     }
+
+    @Test
+    void testAsyncProgressUIElementsFormattingAndAccessibility() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
+
+                javafx.scene.layout.HBox box = getField(controller, "asyncProgressBox");
+                javafx.scene.control.ProgressIndicator spinner = getField(controller, "asyncProgressSpinner");
+                javafx.scene.control.ProgressBar bar = getField(controller, "asyncProgressBar");
+                javafx.scene.control.Label label = getField(controller, "asyncProgressLabel");
+                javafx.scene.control.Button cancelBtn = getField(controller, "asyncCancelBtn");
+
+                // Test 1: Determined progress (File Cipher 42% 12.4MB / 29.5MB 00:08)
+                long bytesProcessed = (long) (42.0 / 100.0 * 29.5 * 1024 * 1024);
+                long totalBytes = (long) (29.5 * 1024 * 1024);
+                OperationExecutor.ProgressDetails determinedDetails = new OperationExecutor.ProgressDetails(
+                        "Encrypting file", bytesProcessed, totalBytes, 8000,
+                        OperationExecutor.formatProgressText("Encrypting file", bytesProcessed, totalBytes, 8000)
+                );
+
+                controller.updateAsyncProgressDetails(determinedDetails);
+
+                assertTrue(box.isVisible());
+                assertTrue(bar.isVisible());
+                assertFalse(spinner.isVisible());
+                assertEquals(0.42, bar.getProgress(), 0.01);
+                assertTrue(label.getText().contains("42%"));
+                assertTrue(label.getText().contains("00:08"));
+                assertTrue(label.getAccessibleText().contains("42%"));
+                assertTrue(bar.getAccessibleText().contains("42%"));
+
+                // Test 2: Indeterminate progress (RSA Key Gen)
+                OperationExecutor.ProgressDetails indeterminateDetails = new OperationExecutor.ProgressDetails(
+                        "Generating RSA-4096", 0, 0, 8000,
+                        OperationExecutor.formatProgressText("Generating RSA-4096", 0, 0, 8000)
+                );
+
+                controller.updateAsyncProgressDetails(indeterminateDetails);
+
+                assertTrue(box.isVisible());
+                assertTrue(spinner.isVisible());
+                assertFalse(bar.isVisible());
+                assertEquals(-1.0, spinner.getProgress());
+                assertEquals("Generating RSA-4096… · 00:08", label.getText());
+
+                // Test 3: Commit Phase UI
+                controller.getOperationExecutor().execute("Commit Test", null, () -> {
+                    controller.getOperationExecutor().enterCommitPhase();
+                    controller.handleCancelAsyncOperation();
+                    return "Done";
+                }, res -> {}, err -> {}, () -> {});
+
+                assertEquals("Finishing file commit...", label.getText());
+                assertTrue(cancelBtn.isDisable(), "Cancel button must be disabled during commit phase");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
 }

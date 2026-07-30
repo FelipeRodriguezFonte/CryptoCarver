@@ -240,6 +240,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // Async Progress UI
     @FXML private HBox asyncProgressBox;
     @FXML private ProgressIndicator asyncProgressSpinner;
+    @FXML private ProgressBar asyncProgressBar;
     @FXML private Label asyncProgressLabel;
     @FXML private Button asyncCancelBtn;
 
@@ -252,10 +253,52 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     public void showAsyncProgress(String operationName) {
         if (asyncProgressBox != null) {
             if (asyncProgressLabel != null) {
-                asyncProgressLabel.setText("Working on " + (operationName != null ? operationName : "Operation") + "...");
+                String title = (operationName != null && !operationName.isBlank()) ? operationName : "Operation";
+                asyncProgressLabel.setText(title + "…");
+                asyncProgressLabel.setAccessibleText(title);
+            }
+            if (asyncCancelBtn != null) {
+                asyncCancelBtn.setDisable(false);
             }
             asyncProgressBox.setManaged(true);
             asyncProgressBox.setVisible(true);
+        }
+    }
+
+    public void updateAsyncProgressDetails(OperationExecutor.ProgressDetails details) {
+        if (asyncProgressBox == null || details == null) return;
+        if (!asyncProgressBox.isVisible()) {
+            asyncProgressBox.setManaged(true);
+            asyncProgressBox.setVisible(true);
+        }
+        if (asyncProgressLabel != null) {
+            asyncProgressLabel.setText(details.getFormattedText());
+            asyncProgressLabel.setAccessibleText(details.getFormattedText());
+        }
+
+        if (details.getTotalBytes() > 0) {
+            double ratio = Math.min(1.0, (double) details.getBytesProcessed() / details.getTotalBytes());
+            if (asyncProgressBar != null) {
+                asyncProgressBar.setProgress(ratio);
+                asyncProgressBar.setAccessibleText(String.format(java.util.Locale.US, "Progress: %d%%", Math.round(ratio * 100)));
+                asyncProgressBar.setVisible(true);
+                asyncProgressBar.setManaged(true);
+            }
+            if (asyncProgressSpinner != null) {
+                asyncProgressSpinner.setVisible(false);
+                asyncProgressSpinner.setManaged(false);
+            }
+        } else {
+            if (asyncProgressSpinner != null) {
+                asyncProgressSpinner.setProgress(-1);
+                asyncProgressSpinner.setAccessibleText("Working: " + details.getOperationName());
+                asyncProgressSpinner.setVisible(true);
+                asyncProgressSpinner.setManaged(true);
+            }
+            if (asyncProgressBar != null) {
+                asyncProgressBar.setVisible(false);
+                asyncProgressBar.setManaged(false);
+            }
         }
     }
 
@@ -328,6 +371,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         operationExecutor.setProgressHandlers(
                 this::showAsyncProgress,
+                this::updateAsyncProgressDetails,
                 this::hideAsyncProgress
         );
 
@@ -1597,52 +1641,40 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public boolean hasCurrentResult() {
-        return lastPublishedResultSnapshot != null;
+        return lastPublishedResultSnapshot != null || !resolveCurrentOutputText().isBlank();
     }
 
     @FXML
     public void handleCopyOutput() {
-        if (lastPublishedResultSnapshot == null) {
-            updateStatus("No output available to copy");
+        String content = resolveCurrentOutputText();
+        if (content == null || content.isBlank()) {
+            updateStatus("Action blocked: No current output available to copy.");
             return;
         }
-        String content = resolveCurrentOutputText();
-
-        if (content != null && !content.isEmpty()) {
-            copyToClipboard(content);
-            updateStatus("Output copied to clipboard");
-        } else {
-            updateStatus("No output available to copy");
+        if (content.equals("***MASKED***")) {
+            updateStatus("Action blocked: Secret cannot be copied in current visibility mode.");
+            return;
         }
+        copyToClipboard(content);
+        updateStatus("Output copied to clipboard");
     }
 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
     @FXML
     public void handleAddCurrentOutputToShelf() {
-        if (lastPublishedResultSnapshot == null) {
-            showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
-            return;
-        }
-        String content = resolveCurrentOutputText();
+        TextArea area = preferredResultArea();
+        String content = resolveResultText(area);
         if (content == null || content.isBlank()) {
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
             return;
         }
-        // This is a whole published result, not a selection from a TextArea.
-        // Passing it as selected text makes the stale-selection guard reject it
-        // because no originating area exists.
-        handleAddToClipboardShelfSecure(null, null);
+        handleAddToClipboardShelfSecure(area, null);
     }
 
     /** Opens the active operation result in a large, independent viewer. */
     @FXML
     public void handleOpenExpandedResultViewer() {
-        if (lastPublishedResultSnapshot == null) {
-            showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
-            return;
-        }
-        TextArea requestedArea = preferredResultArea();
-        String content = resolveResultText(requestedArea);
+        String content = resolveCurrentOutputText();
         if (content == null || content.isBlank()) {
             showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
             return;
@@ -1659,9 +1691,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private TextArea preferredResultArea() {
-        // Enriched/binary snapshots are authoritative (for example GCM output
-        // plus its detached authentication tag). Operations that only publish
-        // metadata should use the actual visible result control instead.
         return resultAreaTracker.preferred(mainPane, hasPublishedPayload());
     }
 
@@ -1673,27 +1702,31 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return output != null && output.length > 0;
     }
 
-    /**
-     * Returns the text explicitly selected by the user when it is a registered
-     * result area.  This matters for generated key pairs: their public and
-     * private tabs are two independent outputs, not a single public payload.
-     */
     private String resolveResultText(TextArea requestedArea) {
-        if (resultAreaTracker.isRegistered(requestedArea)) {
+        if (ResultAreaTracker.isKeyPairResultArea(requestedArea) && resultAreaTracker.isRegistered(requestedArea)) {
             return renderResultArea(requestedArea);
         }
-        if (lastPublishedResultSnapshot == null) {
-            return "";
+        if (lastPublishedResultSnapshot != null) {
+            return renderPublishedResult(lastPublishedResultSnapshot,
+                    com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
         }
-        return renderPublishedResult(lastPublishedResultSnapshot,
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
+        if (resultAreaTracker.isRegistered(requestedArea) && !requestedArea.isEditable()) {
+            String rendered = renderResultArea(requestedArea);
+            if (rendered != null && !rendered.isBlank()) return rendered;
+        }
+        TextArea fallback = resultAreaTracker.findVisible(mainPane);
+        if (fallback != null && resultAreaTracker.isRegistered(fallback) && !fallback.isEditable()) {
+            String rendered = renderResultArea(fallback);
+            if (rendered != null && !rendered.isBlank()) return rendered;
+        }
+        return "";
     }
 
     private String renderResultArea(TextArea area) {
         if (area == null || area.getText() == null || area.getText().isBlank()) {
             return "";
         }
-        // Locally generated key pairs are explicit laboratory output.  Their
+        // Locally generated key pairs are explicit laboratory output. Their
         // public/private tabs must remain inspectable and reusable even when a
         // global history view is configured to mask secrets.
         if (ResultAreaTracker.isKeyPairResultArea(area)) {
@@ -1715,6 +1748,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
         if (ResultAreaTracker.isPrivateKeyResultArea(area)) {
             return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+        }
+        if (area != null) {
+            String id = area.getId() == null ? "" : area.getId().toLowerCase(java.util.Locale.ROOT);
+            if (id.contains("privatekey") || id.contains("secret") || id.contains("kdf") || id.contains("pin")
+                    || id.contains("pass") || id.contains("pwd") || id.contains("cvv") || id.contains("dukpt")
+                    || id.contains("keywrap")) {
+                return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+            }
+            if (id.contains("key") || id.contains("mac") || id.contains("iv") || id.contains("cipher")) {
+                return com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
+            }
         }
         if (lastPublishedResultSnapshot != null) {
             return classifyPublishedResult(lastPublishedResultSnapshot);
@@ -1750,38 +1794,43 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             updateStatus(result.getStatusMessage());
         }
 
-        if (resultSummaryBar != null) {
-            resultSummaryBar.setManaged(true);
-            resultSummaryBar.setVisible(true);
-            if (resultOpLabel != null) resultOpLabel.setText(result.getOperation());
+        boolean isFailed = result.getStatusMessage() != null && result.getStatusMessage().toLowerCase(java.util.Locale.ROOT).contains("failed");
+        boolean hasPayload = (result.getOutput() != null && result.getOutput().length > 0)
+                || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
+        boolean hasInspectableResult = hasPayload || !result.getDetails().isEmpty();
 
-            // Resolve algorithm
-            String algo = "N/A";
-            if (result.getDetails() != null) {
-                for (com.cryptocarver.model.OperationDetail d : result.getDetails()) {
-                    if ("Algorithm".equalsIgnoreCase(d.name()) || "Type".equalsIgnoreCase(d.name())) {
-                        algo = d.value();
-                        break;
+        if (resultSummaryBar != null) {
+            if (isFailed || !hasInspectableResult) {
+                resultSummaryBar.setManaged(false);
+                resultSummaryBar.setVisible(false);
+            } else {
+                resultSummaryBar.setManaged(true);
+                resultSummaryBar.setVisible(true);
+                if (resultOpLabel != null) resultOpLabel.setText(result.getOperation());
+
+                // Resolve algorithm
+                String algo = "N/A";
+                if (result.getDetails() != null) {
+                    for (com.cryptocarver.model.OperationDetail d : result.getDetails()) {
+                        if ("Algorithm".equalsIgnoreCase(d.name()) || "Type".equalsIgnoreCase(d.name())) {
+                            algo = d.value();
+                            break;
+                        }
                     }
                 }
-            }
-            if (resultAlgoLabel != null) resultAlgoLabel.setText(algo);
+                if (resultAlgoLabel != null) resultAlgoLabel.setText(algo);
 
-            // Resolve sizes
-            int inLen = result.getInput() != null ? result.getInput().length : 0;
-            int outLen = result.getOutput() != null ? result.getOutput().length : 0;
-            if (resultSizeLabel != null) resultSizeLabel.setText("In: " + inLen + "B / Out: " + outLen + "B");
+                // Resolve sizes
+                int inLen = result.getInput() != null ? result.getInput().length : 0;
+                int outLen = result.getOutput() != null ? result.getOutput().length : 0;
+                if (resultSizeLabel != null) resultSizeLabel.setText("In: " + inLen + "B / Out: " + outLen + "B");
 
-            // Resolve output format
-            String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
-            if (resultFormatLabel != null) resultFormatLabel.setText(outFormat);
+                // Resolve output format
+                String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
+                if (resultFormatLabel != null) resultFormatLabel.setText(outFormat);
 
-            // Success / Error status
-            if (resultStatusBadge != null) {
-                if (result.getStatusMessage() != null && result.getStatusMessage().toLowerCase().contains("failed")) {
-                    resultStatusBadge.setText("FAILED");
-                    resultStatusBadge.setStyle("-fx-background-color: #fde8e8; -fx-text-fill: #9b1c1c; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
-                } else {
+                // Success / Error status
+                if (resultStatusBadge != null) {
                     resultStatusBadge.setText("SUCCESS");
                     resultStatusBadge.setStyle("-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
                 }

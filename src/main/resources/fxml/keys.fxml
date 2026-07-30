@@ -402,7 +402,7 @@
                         <ComboBox fx:id="kdfAlgorithmCombo" GridPane.rowIndex="0" GridPane.columnIndex="1"
                                  GridPane.columnSpan="3" prefWidth="180" style="-fx-font-size: 11px;"/>
 
-                        <Label text="Input Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="Material format:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
                         <ComboBox fx:id="kdfInputFormatCombo" GridPane.rowIndex="1" GridPane.columnIndex="1"
                                  prefWidth="90" style="-fx-font-size: 11px;"/>
 
@@ -417,7 +417,10 @@
                         </HBox>
                     </GridPane>
 
-                    <TextField fx:id="kdfInputField" promptText="Input key material..."
+                    <Label fx:id="kdfInputHelpLabel" text="Input key material — encoded using Material format above."
+                           styleClass="helper-text"/>
+                    <TextField fx:id="kdfInputField" promptText="Input key material (UTF-8)..."
+                              accessibleText="Input key material. Its encoding is selected in Material format above."
                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
 
                     <HBox spacing="4">
@@ -425,6 +428,7 @@
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label text="Salt:" style="-fx-font-size: 10px;"/>
                                 <ComboBox fx:id="kdfSaltFormatCombo" prefWidth="70" style="-fx-font-size: 10px;"/>
+                                <Button text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 2 5;"/>
                             </HBox>
                             <TextField fx:id="kdfSaltField" promptText="Optional" style="-fx-font-size: 10px;"/>
                         </VBox>
@@ -440,6 +444,8 @@
 
                     <Button text="Derive Key" onAction="#handleDeriveKey"
                             styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                    <Label fx:id="kdfValidationLabel" visible="false" managed="false" wrapText="true"
+                           styleClass="helper-text,field-error"/>
 
                     <TextArea fx:id="kdfResultArea" prefHeight="250" editable="false" wrapText="true"
                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"

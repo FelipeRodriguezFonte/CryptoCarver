@@ -282,6 +282,10 @@ public class KeysController {
     private TextField kdfOutputLengthField;
     @FXML
     private TextArea kdfResultArea;
+    @FXML
+    private Label kdfInputHelpLabel;
+    @FXML
+    private Label kdfValidationLabel;
 
     // AES Key Wrap components
     @FXML
@@ -411,9 +415,6 @@ public class KeysController {
         setupHexValidation(component3Field);
         setupHexValidation(component4Field);
         setupHexValidation(component5Field);
-        setupHexValidation(kdfInputField);
-        setupHexValidation(kdfSaltField);
-
         if (keyTypeCombo != null) {
             keyTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
                 if (currentGeneratedKeySummary != null && (newVal == null || !newVal.equalsIgnoreCase(currentGeneratedKeySummary.getAlgorithm()))) {
@@ -1070,6 +1071,12 @@ public class KeysController {
             }
             keyMaterialReportArea.setText(report);
             updateStatus("Key material inspected successfully");
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Key Material Inspection")
+                        .enrichedOutput(report, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("Key material inspected successfully")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Key Material Inspector", "Cannot inspect material: " + e.getMessage());
         }
@@ -1080,12 +1087,19 @@ public class KeysController {
             java.security.PublicKey publicKey = parsePublicMaterial(keyComparePublicArea.getText().trim());
             java.security.PrivateKey privateKey = parsePrivateMaterial(keyComparePrivateArea.getText().trim());
             boolean matches = KeyMaterialInspector.matches(publicKey, privateKey);
-            keyCompareResultArea.setText("========================================\nKEY PAIR COMPARISON\n========================================\n\n"
+            String reportText = "========================================\nKEY PAIR COMPARISON\n========================================\n\n"
                     + "Public algorithm: " + publicKey.getAlgorithm() + "\nPrivate algorithm: " + privateKey.getAlgorithm() + "\n"
                     + "Public SHA-256: " + KeyMaterialInspector.fingerprint(publicKey.getEncoded()) + "\n\n"
                     + (matches ? "✓ MATCH: the private key successfully signed a challenge verified by the public key."
-                            : "✗ NO MATCH: signature verification failed or the algorithms are incompatible."));
+                            : "✗ NO MATCH: signature verification failed or the algorithms are incompatible.");
+            keyCompareResultArea.setText(reportText);
             updateStatus(matches ? "Key pair comparison: match" : "Key pair comparison: no match");
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Key Pair Comparison")
+                        .enrichedOutput(reportText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status(matches ? "Key pair comparison: match" : "Key pair comparison: no match")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Compare Key Pair", "Cannot compare material: " + e.getMessage());
         }
@@ -1110,6 +1124,12 @@ public class KeysController {
             }
             keyStoreReportArea.setText(text.toString());
             updateStatus("KeyStore inspected: " + report.entries().size() + " entries");
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("KeyStore Inspection")
+                        .enrichedOutput(text.toString(), unsafe ? com.cryptocarver.model.OperationDetail.Classification.SECRET : com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("KeyStore inspected: " + report.entries().size() + " entries")
+                        .build());
+            }
         } catch (Exception e) {
             showError("KeyStore Inspector", "Cannot inspect keystore: " + e.getMessage());
         } finally {
@@ -3214,6 +3234,13 @@ public class KeysController {
             tr31ImportResultArea.setManaged(true);
             updateStatus("TR-31 header parsed successfully");
 
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("TR-31 Header Parse")
+                        .enrichedOutput(result.toString(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("TR-31 header parsed successfully")
+                        .build());
+            }
+
         } catch (Exception e) {
             tr31ImportResultArea.setText("Error parsing header: " + e.getMessage());
             tr31ImportResultArea.setVisible(true);
@@ -3275,8 +3302,57 @@ public class KeysController {
         kdfAlgorithmCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             updateKDFParameters(newVal);
         });
+        kdfInputFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
+        kdfSaltFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
+        kdfInfoFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
+        kdfInputField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfInputField, kdfInputFormatCombo));
+        kdfSaltField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfSaltField, kdfSaltFormatCombo));
+        kdfInfoField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfInfoField, kdfInfoFormatCombo));
 
         updateKDFParameters("HKDF-SHA256");
+        updateKdfFormatHints();
+    }
+
+    private void updateKdfFormatHints() {
+        updateKdfEncodedFieldHint(kdfInputField, kdfInputFormatCombo, "Input key material");
+        updateKdfEncodedFieldHint(kdfSaltField, kdfSaltFormatCombo, "Salt");
+        updateKdfEncodedFieldHint(kdfInfoField, kdfInfoFormatCombo, "Info / application context");
+        if (kdfInputHelpLabel != null) {
+            String format = kdfInputFormatCombo == null || kdfInputFormatCombo.getValue() == null
+                    ? "UTF-8" : kdfInputFormatCombo.getValue();
+            kdfInputHelpLabel.setText("Input key material — interpreted as " + format + " using Material format above.");
+        }
+    }
+
+    private void updateKdfEncodedFieldHint(TextField field, ComboBox<String> formatCombo, String label) {
+        if (field == null) return;
+        String format = formatCombo == null || formatCombo.getValue() == null ? "UTF-8" : formatCombo.getValue();
+        field.setPromptText(label + " (" + format + ")...");
+        field.setAccessibleText(label + "; encoding: " + format);
+        validateKdfEncodedField(field, formatCombo);
+    }
+
+    private void validateKdfEncodedField(TextField field, ComboBox<String> formatCombo) {
+        if (field == null) return;
+        String value = field.getText() == null ? "" : field.getText().trim();
+        String format = formatCombo == null ? null : formatCombo.getValue();
+        boolean invalid = !value.isEmpty() && (format == null || parseData(value, format) == null);
+        if (invalid) {
+            if (!field.getStyleClass().contains("field-error")) field.getStyleClass().add("field-error");
+        } else {
+            field.getStyleClass().remove("field-error");
+        }
+    }
+
+    @FXML
+    public void handleGenerateKdfSalt() {
+        if (kdfSaltField == null || kdfSaltFormatCombo == null) return;
+        byte[] salt = new byte[16];
+        new java.security.SecureRandom().nextBytes(salt);
+        kdfSaltFormatCombo.setValue("Hex");
+        kdfSaltField.setText(DataConverter.bytesToHex(salt));
+        clearKdfValidation();
+        updateStatus("Generated a fresh 16-byte salt for key derivation");
     }
 
     /**
@@ -3395,6 +3471,7 @@ public class KeysController {
      */
     public void handleDeriveKey() {
         try {
+            clearKdfValidation();
             String algorithm = kdfAlgorithmCombo.getValue();
             String inputFormat = kdfInputFormatCombo.getValue();
             String saltFormat = kdfSaltFormatCombo.getValue();
@@ -3407,14 +3484,14 @@ public class KeysController {
             String outputLengthText = kdfOutputLengthField.getText().trim();
 
             if (inputText.isEmpty()) {
-                showError("Input Error", "Please enter input key material");
+                showKdfValidation("Enter input key material in the selected " + inputFormat + " format.", kdfInputField);
                 return;
             }
 
             // Parse input according to format
             byte[] input = parseData(inputText, inputFormat);
             if (input == null) {
-                showError("Input Error", "Invalid " + inputFormat + " format for input");
+                showKdfValidation("Input key material is not valid " + inputFormat + ".", kdfInputField);
                 return;
             }
 
@@ -3423,7 +3500,7 @@ public class KeysController {
             if (!saltText.isEmpty()) {
                 salt = parseData(saltText, saltFormat);
                 if (salt == null) {
-                    showError("Input Error", "Invalid " + saltFormat + " format for salt");
+                    showKdfValidation("Salt is not valid " + saltFormat + ". For Hex, use pairs of digits 0-9 and A-F.", kdfSaltField);
                     return;
                 }
             }
@@ -3433,7 +3510,7 @@ public class KeysController {
             if (!infoText.isEmpty()) {
                 info = parseData(infoText, infoFormat);
                 if (info == null) {
-                    showError("Input Error", "Invalid " + infoFormat + " format for info");
+                    showKdfValidation("Info / application context is not valid " + infoFormat + ".", kdfInfoField);
                     return;
                 }
             }
@@ -3443,7 +3520,7 @@ public class KeysController {
             try {
                 iterations = Integer.parseInt(iterationsText);
             } catch (Exception e) {
-                showError("Input Error", "Invalid iterations value");
+                showKdfValidation("Iterations must be a positive whole number.", kdfIterationsField);
                 return;
             }
 
@@ -3452,11 +3529,11 @@ public class KeysController {
             try {
                 outputLength = Integer.parseInt(outputLengthText);
                 if (outputLength < 1 || outputLength > 256) {
-                    showError("Input Error", "Output length must be between 1 and 256 bytes");
+                    showKdfValidation("Output length must be between 1 and 256 bytes.", kdfOutputLengthField);
                     return;
                 }
             } catch (Exception e) {
-                showError("Input Error", "Invalid output length");
+                showKdfValidation("Output length must be a whole number of bytes.", kdfOutputLengthField);
                 return;
             }
 
@@ -3492,7 +3569,7 @@ public class KeysController {
             } else if (algorithm.startsWith("PBKDF2")) {
                 // PBKDF2 requires salt
                 if (salt == null || salt.length == 0) {
-                    showError("Input Error", "PBKDF2 requires a salt (cannot be empty)");
+                    showKdfValidation("PBKDF2 requires a non-empty salt. Use Generate for a fresh 16-byte salt.", kdfSaltField);
                     return;
                 }
                 derivedKey = com.cryptocarver.crypto.KeyDerivation.pbkdf2(input, salt, iterations, outputLength,
@@ -3501,7 +3578,7 @@ public class KeysController {
             } else if (algorithm.equals("SCrypt")) {
                 // SCrypt requires salt
                 if (salt == null || salt.length == 0) {
-                    showError("Input Error", "SCrypt requires a salt (cannot be empty)");
+                    showKdfValidation("SCrypt requires a non-empty salt. Use Generate for a fresh 16-byte salt.", kdfSaltField);
                     return;
                 }
                 // N=iterations, r=8, p=1
@@ -3510,7 +3587,7 @@ public class KeysController {
             } else if (algorithm.equals("Argon2id")) {
                 // Argon2 requires salt
                 if (salt == null || salt.length < 8) {
-                    showError("Input Error", "Argon2 requires a salt with minimum 8 bytes");
+                    showKdfValidation("Argon2id requires a salt of at least 8 bytes. Use Generate for a fresh 16-byte salt.", kdfSaltField);
                     return;
                 }
                 // iterations=time, memory=64MB, parallelism=4
@@ -3518,7 +3595,7 @@ public class KeysController {
                         outputLength);
                 resultInfo = buildArgon2Result(input, salt, iterations, 65536, 4, outputLength, derivedKey);
             } else {
-                showError("Algorithm Error", "Unknown algorithm: " + algorithm);
+                showKdfValidation("Choose a supported KDF algorithm.", kdfAlgorithmCombo);
                 return;
             }
 
@@ -3531,18 +3608,42 @@ public class KeysController {
             // Add to history
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Derive - " + algorithm)
+                    .input(input)
+                    .output(derivedKey, com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                    .enrichedOutput(resultInfo, com.cryptocarver.model.OperationDetail.Classification.SECRET)
                     .details(java.util.List.of(
                         new com.cryptocarver.model.OperationDetail("Input Parameters", "Input: " + inputText.substring(0, Math.min(30, inputText.length())), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
                         new com.cryptocarver.model.OperationDetail("Output", "Derived: " + DataConverter.bytesToHex(derivedKey).substring(0,
                             Math.min(50, DataConverter.bytesToHex(derivedKey).length())), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
                     ))
+                    .status("Key derived successfully using " + algorithm)
                     .build());
             }
 
         } catch (Exception e) {
-            showError("Derivation Error", "Error deriving key: " + e.getMessage());
-            e.printStackTrace();
+            showKdfValidation("Cannot derive the key: " + e.getMessage(), null);
         }
+    }
+
+    private void clearKdfValidation() {
+        if (kdfValidationLabel != null) {
+            kdfValidationLabel.setText("");
+            kdfValidationLabel.setVisible(false);
+            kdfValidationLabel.setManaged(false);
+        }
+    }
+
+    private void showKdfValidation(String message, javafx.scene.Node field) {
+        if (kdfValidationLabel != null) {
+            kdfValidationLabel.setText("⚠ " + message);
+            kdfValidationLabel.setVisible(true);
+            kdfValidationLabel.setManaged(true);
+        }
+        if (field != null) {
+            if (!field.getStyleClass().contains("field-error")) field.getStyleClass().add("field-error");
+            field.requestFocus();
+        }
+        updateStatus(message);
     }
 
     /**

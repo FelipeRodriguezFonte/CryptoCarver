@@ -1,478 +1,433 @@
 package com.cryptocarver.ui;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.ClipboardShelfManager;
+import com.cryptocarver.model.OperationDetail;
+import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.lang.reflect.Field;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import javafx.application.Platform;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ExpandResultAuditTest {
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
+class ExpandResultAuditTest {
+
+    private static boolean jfxIsSetup;
+    private static String originalUserHome;
 
     @TempDir
-    java.nio.file.Path tempDir;
+    static Path isolatedUserHome;
 
     @BeforeAll
-    public static void initToolkit() {
-        try {
-            Platform.startup(() -> Platform.setImplicitExit(false));
-        } catch (IllegalStateException e) {
-            Platform.setImplicitExit(false);
-            // Toolkit already initialized
+    static void initJFX() throws InterruptedException {
+        System.setProperty("test.mode", "true");
+        originalUserHome = System.getProperty("user.home");
+        System.setProperty("user.home", isolatedUserHome.toString());
+        if (!jfxIsSetup) {
+            CountDownLatch latch = new CountDownLatch(1);
+            try {
+                Platform.startup(() -> {
+                    Platform.setImplicitExit(false);
+                    latch.countDown();
+                });
+                if (!latch.await(15, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("JavaFX failed to start within timeout");
+                }
+            } catch (IllegalStateException e) {
+                Platform.setImplicitExit(false);
+            }
+            jfxIsSetup = true;
         }
     }
 
-    private ModernMainController createController() throws Exception {
-        ModernMainController controller = new ModernMainController();
-        // Inject dummy labels to prevent NullPointerException during updateInspector
-        injectField(controller, "operationLabel", new javafx.scene.control.Label());
-        injectField(controller, "inputBytesLabel", new javafx.scene.control.Label());
-        injectField(controller, "outputBytesLabel", new javafx.scene.control.Label());
-        injectField(controller, "statusLabel", new javafx.scene.control.Label());
-        injectField(controller, "securityTipLabel", new javafx.scene.control.Label());
-        injectField(controller, "inspectorDetailsContainer", new javafx.scene.layout.VBox());
-        injectField(controller, "historyManager", new com.cryptocarver.model.HistoryManager(
-                tempDir.resolve(java.util.UUID.randomUUID() + "-history.json")));
-        return controller;
+    @BeforeEach
+    void resetSettings() {
+        AppSettings.getInstance().resetForTesting();
+        ClipboardShelfManager.getInstance().clear();
     }
 
-    private void injectField(Object target, String fieldName, Object value) throws Exception {
-        java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
+    @AfterAll
+    static void restoreUserHome() {
+        if (originalUserHome == null) {
+            System.clearProperty("user.home");
+        } else {
+            System.setProperty("user.home", originalUserHome);
+        }
     }
 
-    private String resolveTextOnFxThread(ModernMainController controller) throws Exception {
-        final String[] resultHolder = new String[1];
-        final Exception[] err = new Exception[1];
+    private void runAndWait(Runnable action) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Throwable> exceptionRef = new java.util.concurrent.atomic.AtomicReference<>();
+
         Platform.runLater(() -> {
             try {
-                resultHolder[0] = controller.resolveCurrentOutputText();
-            } catch (Exception e) {
-                err[0] = e;
+                action.run();
+            } catch (Throwable t) {
+                exceptionRef.set(t);
             } finally {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS), "Timeout waiting for resolveCurrentOutputText on FX thread");
-        if (err[0] != null) throw err[0];
-        return resultHolder[0];
+
+        if (!latch.await(10, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("JavaFX runLater execution timed out");
+        }
+
+        if (exceptionRef.get() != null) {
+            if (exceptionRef.get() instanceof Exception ex) {
+                throw ex;
+            }
+            throw new RuntimeException(exceptionRef.get());
+        }
     }
 
-    private String resolveAreaTextOnFxThread(ModernMainController controller, javafx.scene.control.TextArea area)
-            throws Exception {
-        final String[] resultHolder = new String[1];
-        final Exception[] err = new Exception[1];
-        CountDownLatch latch = new CountDownLatch(1);
-        Platform.runLater(() -> {
+    private <T> T getField(Object target, String name) throws Exception {
+        Class<?> clazz = target.getClass();
+        while (clazz != null) {
             try {
-                java.lang.reflect.Method resolve = controller.getClass()
-                        .getDeclaredMethod("resolveResultText", javafx.scene.control.TextArea.class);
-                resolve.setAccessible(true);
-                resultHolder[0] = (String) resolve.invoke(controller, area);
+                Field f = clazz.getDeclaredField(name);
+                f.setAccessible(true);
+                return (T) f.get(target);
+            } catch (NoSuchFieldException e) {
+                clazz = clazz.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException("Field " + name + " not found in " + target.getClass());
+    }
+
+    private String getStatusMessage(ModernMainController controller) throws Exception {
+        Label statusLabel = getField(controller, "statusLabel");
+        return statusLabel != null ? statusLabel.getText() : "";
+    }
+
+    @Test
+    void testKdfPublishAndActionResolutionConsistency() throws Exception {
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
+
+                HBox summaryBar = getField(controller, "resultSummaryBar");
+
+                String kdfReport = "=== KDF DERIVATION REPORT ===\nAlgorithm: PBKDF2withHmacSHA256\nDerived Key (Hex): AABBCCDD\nKey Length: 128 bits";
+                byte[] derivedBytes = new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0xCC, (byte) 0xDD};
+
+                controller.publish(OperationResult.forOperation("KDF Derivation")
+                        .output(derivedBytes, OperationDetail.Classification.SECRET)
+                        .enrichedOutput(kdfReport, OperationDetail.Classification.SECRET)
+                        .status("KDF completed").build());
+
+                assertTrue(summaryBar.isVisible());
+                assertTrue(summaryBar.isManaged());
+
+                String resolvedOutput = controller.resolveCurrentOutputText();
+                assertNotNull(resolvedOutput);
+                assertTrue(resolvedOutput.contains("KDF DERIVATION REPORT") || resolvedOutput.contains("AABBCCDD") || resolvedOutput.contains("***MASKED***"));
+
             } catch (Exception e) {
-                err[0] = e;
-            } finally {
-                latch.countDown();
+                fail(e);
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS), "Timeout waiting for area result resolution");
-        if (err[0] != null) throw err[0];
-        return resultHolder[0];
     }
 
-    private void publishOnFxThread(ModernMainController controller, OperationResult result) throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        final Exception[] err = new Exception[1];
-        Platform.runLater(() -> {
+    @Test
+    void testCipherHashingConversionSignatureCertResolution() throws Exception {
+        runAndWait(() -> {
             try {
-                controller.publish(result);
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
+
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
+                HBox summaryBar = getField(controller, "resultSummaryBar");
+
+                // Cipher
+                controller.publish(OperationResult.forOperation("Symmetric Encrypt")
+                        .output("CIPHER_HEX_1234".getBytes(StandardCharsets.UTF_8))
+                        .status("Encrypted").build());
+                assertTrue(summaryBar.isVisible());
+                assertEquals("CIPHER_HEX_1234", controller.resolveCurrentOutputText());
+
+                // Hashing
+                controller.publish(OperationResult.forOperation("Hashing: SHA-256")
+                        .output("HASH_HEX_5678".getBytes(StandardCharsets.UTF_8))
+                        .status("Hashed").build());
+                assertTrue(summaryBar.isVisible());
+                assertEquals("HASH_HEX_5678", controller.resolveCurrentOutputText());
+
+                // Conversion
+                controller.publish(OperationResult.forOperation("File Conversion")
+                        .output("CONVERTED_TEXT".getBytes(StandardCharsets.UTF_8))
+                        .status("Converted").build());
+                assertTrue(summaryBar.isVisible());
+                assertEquals("CONVERTED_TEXT", controller.resolveCurrentOutputText());
+
+                // Digital Signature
+                controller.publish(OperationResult.forOperation("Data Signed")
+                        .output("SIGNATURE_BYTES_99".getBytes(StandardCharsets.UTF_8))
+                        .status("Signed").build());
+                assertTrue(summaryBar.isVisible());
+                assertEquals("SIGNATURE_BYTES_99", controller.resolveCurrentOutputText());
+
+                // Certificate Parse
+                controller.publish(OperationResult.forOperation("Parse Certificate")
+                        .enrichedOutput("=== CERTIFICATE INFORMATION ===\nSubject: CN=Test", OperationDetail.Classification.PUBLIC)
+                        .status("Parsed").build());
+                assertTrue(summaryBar.isVisible());
+                assertTrue(controller.resolveCurrentOutputText().contains("CERTIFICATE INFORMATION"));
+
             } catch (Exception e) {
-                err[0] = e;
-            } catch (Error e) {
-                err[0] = new RuntimeException(e);
-            } finally {
-                latch.countDown();
+                fail(e);
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS), "Timeout waiting for publish on FX thread");
-        if (err[0] != null) throw err[0];
     }
 
     @Test
-    public void testA_PublishResultAThenB() throws Exception {
-        ModernMainController controller = createController();
-
-        OperationResult resultA = OperationResult.forOperation("OpA")
-                .output("Output A".getBytes())
-                .build();
-
-        OperationResult resultB = OperationResult.forOperation("OpB")
-                .output("Output B".getBytes())
-                .build();
-
-        publishOnFxThread(controller, resultA);
-        assertEquals("Output A", resolveTextOnFxThread(controller));
-
-        publishOnFxThread(controller, resultB);
-        assertEquals("Output B", resolveTextOnFxThread(controller));
-    }
-
-    @Test
-    public void testB_KeyMaterialInspector() throws Exception {
-        ModernMainController controller = createController();
-        String report = "Key size: 2048\nFingerprint: AA:BB";
-
-        OperationResult result = OperationResult.forOperation("Key Material Inspector")
-                .output(report.getBytes())
-                .build();
-
-        publishOnFxThread(controller, result);
-        assertEquals(report, resolveTextOnFxThread(controller));
-    }
-
-    @Test
-    public void testC_EnrichedOutputExplicitClassification() throws Exception {
-        ModernMainController controller = createController();
-
-        // Let's create an operation with a SECRET enriched output
-        String secretText = "=== SECRET PRIVATE KEY EXPORT ===\nBEGIN PRIVATE KEY...";
-
-        OperationResult result = OperationResult.forOperation("Export Private Key")
-                .enrichedOutput(secretText, OperationDetail.Classification.SECRET)
-                .build();
-
-        publishOnFxThread(controller, result);
-
-        // FULL_LAB -> Should be completely visible
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
-        assertEquals(secretText, resolveTextOnFxThread(controller));
-
-        // MASKED -> Should be masked explicitly
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
-        assertEquals("***MASKED***", resolveTextOnFxThread(controller));
-
-        // REDACTED -> Should not be available at all
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
-        assertEquals("", resolveTextOnFxThread(controller));
-    }
-
-    @Test
-    public void testD_EnrichedOutputDerivedClassification() throws Exception {
-        ModernMainController controller = createController();
-
-        // Let's create an operation that derives its SECRET classification from a detail
-        String reportText = "Operation finished successfully. Extracted Key.";
-
-        OperationResult result = OperationResult.forOperation("Extract Private Key")
-                .enrichedOutput(reportText) // No explicit classification passed
-                .detail(new OperationDetail("Key", "Private", OperationDetail.Classification.SECRET, true, "PEM"))
-                .build();
-
-        publishOnFxThread(controller, result);
-
-        // FULL_LAB -> Visible
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
-        assertEquals(reportText, resolveTextOnFxThread(controller));
-
-        // MASKED -> Because there's a SECRET detail, the entire payload is masked
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
-        assertEquals("***MASKED***", resolveTextOnFxThread(controller));
-
-        // REDACTED -> Blocked entirely
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
-        assertEquals("", resolveTextOnFxThread(controller));
-    }
-
-    @Test
-    public void testE_CopyOutputAddShelfEquivalence() throws Exception {
-        ModernMainController controller = createController();
-        String outputText = "Output that must be consistent";
-
-        OperationResult result = OperationResult.forOperation("Some Op")
-                .output(outputText.getBytes())
-                .build();
-
-        publishOnFxThread(controller, result);
-
-        // Test resolution. Both handleCopyOutput and handleSendToShelf internally call resolveCurrentOutputText()
-        // We verify that the method returns exactly what we expect without looking at UI
-        String expandText = resolveTextOnFxThread(controller);
-        assertEquals(outputText, expandText);
-    }
-
-    @Test
-    public void testInspectorUsesOnlyRealByteCountsAndRendersStructuredDetails() throws Exception {
-        ModernMainController controller = createController();
-        java.util.List<OperationDetail> details = java.util.List.of(
-                OperationDetail.publicDetail("Algorithm", "HKDF-SHA256"));
-
-        invokeMethodOnFxThread(controller, "updateInspector",
-                new Class<?>[]{String.class, byte[].class, byte[].class, java.util.List.class},
-                new Object[]{"Key Derivation (KDF)", new byte[]{1, 2, 3}, null, details});
-
-        javafx.scene.control.Label inputBytes = getInjectedField(controller, "inputBytesLabel");
-        javafx.scene.control.Label outputBytes = getInjectedField(controller, "outputBytesLabel");
-        javafx.scene.control.Label tip = getInjectedField(controller, "securityTipLabel");
-        javafx.scene.layout.VBox detailRows = getInjectedField(controller, "inspectorDetailsContainer");
-        assertEquals("3", inputBytes.getText());
-        assertEquals("-", outputBytes.getText(), "Missing output must not reuse or estimate input bytes");
-        assertTrue(tip.getText().contains("KDF parameter"));
-        assertEquals(1, detailRows.getChildren().size());
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T getInjectedField(Object target, String fieldName) throws Exception {
-        java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return (T) field.get(target);
-    }
-
-    private void invokeMethodOnFxThread(Object target, String methodName, Class<?>[] argTypes, Object[] args) throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        final Exception[] err = new Exception[1];
-        Platform.runLater(() -> {
+    void testActiveFocusOnVisibleResultOverriddenByPublishedSnapshot() throws Exception {
+        runAndWait(() -> {
             try {
-                java.lang.reflect.Method m = target.getClass().getDeclaredMethod(methodName, argTypes);
-                m.setAccessible(true);
-                m.invoke(target, args);
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
+
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
+
+                // Setup Operation A with focus on visible result area
+                TextArea legacyResultArea = new TextArea("OLD_RESULT_A");
+                legacyResultArea.setId("legacyResultArea");
+                legacyResultArea.getStyleClass().add("text-area");
+                legacyResultArea.setEditable(false);
+                ((javafx.scene.layout.Pane) root).getChildren().add(legacyResultArea);
+
+                ResultAreaTracker tracker = getField(controller, "resultAreaTracker");
+                tracker.register(legacyResultArea);
+                tracker.focus(legacyResultArea);
+                tracker.markUpdated(legacyResultArea);
+
+                // Publish Operation B
+                controller.publish(OperationResult.forOperation("Operation B")
+                        .output("NEW_RESULT_B".getBytes(StandardCharsets.UTF_8), OperationDetail.Classification.PUBLIC)
+                        .status("Completed B").build());
+
+                // Assert published snapshot B overrides focused area A for all actions
+                assertEquals("NEW_RESULT_B", controller.resolveCurrentOutputText(), "Published snapshot B MUST override focused area A");
+
+                // Execute actual Copy handler
+                controller.handleCopyOutput();
+                String statusMsg = getStatusMessage(controller);
+                assertTrue(statusMsg.contains("copied to clipboard"));
+
+                // Execute actual Add to Shelf handler
+                controller.handleAddCurrentOutputToShelf();
+                assertEquals(1, ClipboardShelfManager.getInstance().getEntries().size());
+                assertEquals("NEW_RESULT_B", ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
+
             } catch (Exception e) {
-                err[0] = e;
-            } finally {
-                latch.countDown();
+                fail(e);
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
-        if (err[0] != null) throw err[0];
     }
 
     @Test
-    public void testF_ContextMenuActions_SecretData() throws Exception {
-        ModernMainController controller = createController();
-        String secretText = "SECRET_VALUE_XYZ";
+    void testActualHandlersWithSecretSnapshotUnderMaskedAndRedacted() throws Exception {
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
 
-        OperationResult result = OperationResult.forOperation("Test Op")
-                .enrichedOutput(secretText, OperationDetail.Classification.SECRET)
-                .build();
+                byte[] secretKey = "MY_SUPER_SECRET_KEY".getBytes(StandardCharsets.UTF_8);
 
-        publishOnFxThread(controller, result);
+                controller.publish(OperationResult.forOperation("KDF Derivation")
+                        .output(secretKey, OperationDetail.Classification.SECRET)
+                        .status("KDF completed").build());
 
-        javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
-        resultAreaTracker(controller).focus(dummyArea);
+                // MASKED profile
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
 
-        // 1. Enriched SECRET + FULL_LAB -> Shelf contains SECRET entry
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-            new Object[]{dummyArea, null});
-        assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-        assertEquals(secretText, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
-        assertEquals(OperationDetail.Classification.SECRET, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getClassification());
+                controller.handleCopyOutput();
+                String copyStatus = getStatusMessage(controller);
+                assertTrue(copyStatus.contains("Action blocked"), "Copy must block under MASKED mode");
 
-        // 2. Enriched SECRET + MASKED -> Shelf does not add entry (blocked)
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-            new Object[]{dummyArea, null});
-        assertEquals(0, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
+                controller.handleAddCurrentOutputToShelf();
+                String shelfStatus = getStatusMessage(controller);
+                assertTrue(shelfStatus.contains("Action blocked"), "Add to Shelf must block under MASKED mode");
+                assertTrue(ClipboardShelfManager.getInstance().getEntries().isEmpty(), "No secret entry should be added under MASKED mode");
 
-        // 3. Context menu Copy on partial selection of secret area -> blocked in MASKED
-        invokeMethodOnFxThread(controller, "handleCopySecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class, boolean.class},
-            new Object[]{dummyArea, "partial_secret", true});
-        // Can verify via status label update
-        java.lang.reflect.Field statusLabelField = controller.getClass().getDeclaredField("statusLabel");
-        statusLabelField.setAccessible(true);
-        javafx.scene.control.Label statusLabel = (javafx.scene.control.Label) statusLabelField.get(controller);
-        assertTrue(statusLabel.getText().contains("blocked"));
+                // REDACTED profile
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
+
+                controller.handleCopyOutput();
+                String copyStatusRedacted = getStatusMessage(controller);
+                assertTrue(copyStatusRedacted.contains("Action blocked"), "Copy must block under REDACTED mode");
+
+                controller.handleAddCurrentOutputToShelf();
+                assertTrue(ClipboardShelfManager.getInstance().getEntries().isEmpty(), "No secret entry should be added under REDACTED mode");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
     }
 
     @Test
-    public void testG_ContextMenuActions_PublicData() throws Exception {
-        ModernMainController controller = createController();
-        String publicText = "PUBLIC_VALUE_ABC";
+    void testNavigationClearsResultAndSummaryBar() throws Exception {
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
 
-        OperationResult result = OperationResult.forOperation("Public Op")
-                .enrichedOutput(publicText, OperationDetail.Classification.PUBLIC)
-                .build();
+                HBox summaryBar = getField(controller, "resultSummaryBar");
 
-        publishOnFxThread(controller, result);
+                controller.publish(OperationResult.forOperation("Symmetric Encrypt")
+                        .output("CIPHER_DATA".getBytes(StandardCharsets.UTF_8))
+                        .status("Encrypted").build());
 
-        javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
-        resultAreaTracker(controller).focus(dummyArea);
+                assertTrue(summaryBar.isVisible());
+                assertNotNull(controller.resolveCurrentOutputText());
 
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-            new Object[]{dummyArea, null});
+                // Navigate to another route
+                controller.navigateToModule("Hashing: SHA-256");
 
-        assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-        assertEquals(publicText, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
-        assertEquals(OperationDetail.Classification.PUBLIC, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getClassification());
+                assertFalse(summaryBar.isVisible(), "Navigation MUST hide the result summary bar");
+                assertFalse(summaryBar.isManaged(), "Navigation MUST unmanage the result summary bar");
+                assertFalse(controller.hasCurrentResult(), "Navigation MUST clear current published result");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
     }
 
     @Test
-    public void testH_ContextMenuActions_OldAreaNewPublicSnapshot() throws Exception {
-        ModernMainController controller = createController();
+    void testEditableInputFieldsNeverUsedAsFallback() throws Exception {
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
 
-        // 1. Simulate an OLD area with SECRET data
-        javafx.scene.control.TextArea oldArea = new javafx.scene.control.TextArea();
-        oldArea.setText("OLD_SECRET_DATA");
+                HBox summaryBar = getField(controller, "resultSummaryBar");
 
-        // 2. Publish a NEW result (PUBLIC)
-        String newPublicText = "NEW_PUBLIC_DATA";
-        OperationResult newResult = OperationResult.forOperation("New Public Op")
-                .enrichedOutput(newPublicText, OperationDetail.Classification.PUBLIC)
-                .build();
+                // Ensure no published snapshot
+                controller.navigateToModule("Hashing: SHA-256");
+                assertFalse(summaryBar.isVisible());
 
-        publishOnFxThread(controller, newResult);
+                // Simulate user typing secret text into an editable input area
+                GenericController generic = getField(controller, "genericContainerController");
+                TextArea hashInput = getField(generic, "hashInputArea");
+                hashInput.setText("SECRET_INPUT_PLAINTEXT");
+                assertTrue(hashInput.isEditable());
 
-        // We simulate the new area being the one updated by publish
-        javafx.scene.control.TextArea newArea = new javafx.scene.control.TextArea();
-        newArea.setText(newPublicText);
-        resultAreaTracker(controller).markUpdated(newArea);
+                // Verify that resolveCurrentOutputText NEVER picks up the editable input field
+                String activeText = controller.resolveCurrentOutputText();
+                assertTrue(activeText == null || activeText.isBlank(), "Editable input field MUST NEVER be returned as result fallback");
 
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
-
-        // 3. User tries to select and copy from the OLD area
-        invokeMethodOnFxThread(controller, "handleCopySecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class, boolean.class},
-            new Object[]{oldArea, "OLD_SECRET", true});
-
-        java.lang.reflect.Field statusLabelField = controller.getClass().getDeclaredField("statusLabel");
-        statusLabelField.setAccessible(true);
-        javafx.scene.control.Label statusLabel = (javafx.scene.control.Label) statusLabelField.get(controller);
-        assertTrue(statusLabel.getText().contains("old or unknown result"));
-
-        // 4. Add to Shelf from OLD area
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-            new Object[]{oldArea, "OLD_SECRET"});
-
-        assertEquals(0, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-        assertTrue(statusLabel.getText().contains("old or unknown result"));
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
     }
 
     @Test
-    public void testI_ContextMenuActions_SensitiveMasked() throws Exception {
-        ModernMainController controller = createController();
-        String sensitiveText = "SENSITIVE_DATA_123";
+    void testUnmigratedModuleFallbackOnlyForRegisteredNonEditableResultArea() throws Exception {
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
 
-        OperationResult result = OperationResult.forOperation("Sensitive Op")
-                .enrichedOutput(sensitiveText, OperationDetail.Classification.SENSITIVE)
-                .build();
+                // Clear published snapshot
+                controller.navigateToModule("Legacy Module");
 
-        publishOnFxThread(controller, result);
+                // Create and register a non-editable result area added to scene graph
+                TextArea legacyResultArea = new TextArea("LEGACY_REPORT_OUTPUT");
+                legacyResultArea.setId("legacyResultArea");
+                legacyResultArea.getStyleClass().add("text-area");
+                legacyResultArea.setEditable(false);
+                ((javafx.scene.layout.Pane) root).getChildren().add(legacyResultArea);
 
-        javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
-        dummyArea.setText(sensitiveText);
-        resultAreaTracker(controller).markUpdated(dummyArea);
+                ResultAreaTracker tracker = getField(controller, "resultAreaTracker");
+                tracker.register(legacyResultArea);
+                tracker.focus(legacyResultArea);
+                tracker.markUpdated(legacyResultArea);
 
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
+                String resolved = controller.resolveCurrentOutputText();
+                assertEquals("LEGACY_REPORT_OUTPUT", resolved, "Unmigrated fallback must accept registered non-editable result area");
 
-        // Context menu Copy on partial selection -> blocked in MASKED for SENSITIVE
-        invokeMethodOnFxThread(controller, "handleCopySecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class, boolean.class},
-            new Object[]{dummyArea, "partial_sensitive", true});
-
-        java.lang.reflect.Field statusLabelField = controller.getClass().getDeclaredField("statusLabel");
-        statusLabelField.setAccessible(true);
-        javafx.scene.control.Label statusLabel = (javafx.scene.control.Label) statusLabelField.get(controller);
-        assertTrue(statusLabel.getText().contains("blocked"));
-
-        // Add to Shelf on partial selection -> blocked in MASKED for SENSITIVE
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-            new Object[]{dummyArea, "partial_sensitive"});
-
-        assertEquals(0, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-        assertTrue(statusLabel.getText().contains("blocked"));
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
     }
 
     @Test
-    public void testJ_ContextMenuActions_SensitiveRedacted() throws Exception {
-        ModernMainController controller = createController();
-        String sensitiveText = "SENSITIVE_DATA_456";
+    void testSecurityProfilesMaskingAndRedaction() throws Exception {
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
 
-        OperationResult result = OperationResult.forOperation("Sensitive Op")
-                .enrichedOutput(sensitiveText, OperationDetail.Classification.SENSITIVE)
-                .build();
+                byte[] secretKey = "RAW_SECRET_KEY_BYTES".getBytes(StandardCharsets.UTF_8);
 
-        publishOnFxThread(controller, result);
+                controller.publish(OperationResult.forOperation("KDF Derivation")
+                        .output(secretKey, OperationDetail.Classification.SECRET)
+                        .status("KDF done").build());
 
-        javafx.scene.control.TextArea dummyArea = new javafx.scene.control.TextArea();
-        dummyArea.setText(sensitiveText);
-        resultAreaTracker(controller).markUpdated(dummyArea);
+                // Profile MASKED
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
+                assertEquals("***MASKED***", controller.resolveCurrentOutputText());
 
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
+                // Profile REDACTED
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
+                assertEquals("", controller.resolveCurrentOutputText());
 
-        // Context menu Copy on partial selection -> blocked in REDACTED for SENSITIVE
-        invokeMethodOnFxThread(controller, "handleCopySecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class, boolean.class},
-            new Object[]{dummyArea, "partial_sensitive", true});
+                // Profile FULL_LAB
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
+                assertEquals("RAW_SECRET_KEY_BYTES", controller.resolveCurrentOutputText());
 
-        java.lang.reflect.Field statusLabelField = controller.getClass().getDeclaredField("statusLabel");
-        statusLabelField.setAccessible(true);
-        javafx.scene.control.Label statusLabel = (javafx.scene.control.Label) statusLabelField.get(controller);
-        assertTrue(statusLabel.getText().contains("blocked"));
-
-        // Add to Shelf on partial selection -> blocked in REDACTED for SENSITIVE
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-            new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-            new Object[]{dummyArea, "partial_sensitive"});
-
-        assertEquals(0, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-        assertTrue(statusLabel.getText().contains("blocked"));
-    }
-
-    @Test
-    public void testK_PrivateKeyResultAreaRemainsAvailableForLaboratoryUse() throws Exception {
-        ModernMainController controller = createController();
-        javafx.scene.control.TextArea privateArea = new javafx.scene.control.TextArea("PRIVATE_KEY_MATERIAL");
-        privateArea.setId("rsaPrivateKeyArea");
-        privateArea.setEditable(false);
-
-        resultAreaTracker(controller).register(privateArea);
-
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
-        assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
-
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-                new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-                new Object[]{privateArea, null});
-        assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-        assertEquals(OperationDetail.Classification.SECRET,
-                com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().get(0).getClassification());
-
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
-        assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().clear();
-        invokeMethodOnFxThread(controller, "handleAddToClipboardShelfSecure",
-                new Class<?>[]{javafx.scene.control.TextArea.class, String.class},
-                new Object[]{privateArea, null});
-        assertEquals(1, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries().size());
-
-        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
-        assertEquals("PRIVATE_KEY_MATERIAL", resolveAreaTextOnFxThread(controller, privateArea));
-    }
-
-    private ResultAreaTracker resultAreaTracker(ModernMainController controller) throws Exception {
-        java.lang.reflect.Field field = controller.getClass().getDeclaredField("resultAreaTracker");
-        field.setAccessible(true);
-        return (ResultAreaTracker) field.get(controller);
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
     }
 }

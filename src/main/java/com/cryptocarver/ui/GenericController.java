@@ -1896,6 +1896,7 @@ public class GenericController {
                 statusReporter.publish(OperationResult.forOperation("Modular Arithmetic")
                         .input((aHex + " " + bHex + " " + mHex).getBytes(java.nio.charset.StandardCharsets.UTF_8))
                         .output(modResultArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .enrichedOutput(modResultArea.getText())
                         .detail("Operation", operation).detail("Operand A", aHex)
                         .detail("Operand B", bHex).detail("Modulus", mHex)
                         .status("Modular operation completed").build());

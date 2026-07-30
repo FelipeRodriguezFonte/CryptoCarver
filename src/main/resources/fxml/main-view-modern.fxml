@@ -135,24 +135,21 @@
 
                 <!-- Result Summary Bar (Compact header) -->
                 <HBox fx:id="resultSummaryBar" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="result-summary-bar">
-                    <Label text="Last Result:" style="-fx-font-weight: bold; -fx-text-fill: -color-text-muted; -fx-font-size: 12px;"/>
-                    <Label fx:id="resultOpLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;"/>
-                    <Separator orientation="VERTICAL"/>
-                    <Label text="Algo:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
-                    <Label fx:id="resultAlgoLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
-                    <Separator orientation="VERTICAL"/>
-                    <Label text="Sizes:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
-                    <Label fx:id="resultSizeLabel" text="In: 0B / Out: 0B" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
-                    <Separator orientation="VERTICAL"/>
-                    <Label text="Format:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
-                    <Label fx:id="resultFormatLabel" text="HEX" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label fx:id="resultStatusBadge" text="SUCCESS"
-                           style="-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;"/>
+                    <FlowPane hgap="10" vgap="4" HBox.hgrow="ALWAYS" alignment="CENTER_LEFT">
+                        <Label text="Last Result:" style="-fx-font-weight: bold; -fx-text-fill: -color-text-muted; -fx-font-size: 12px;"/>
+                        <Label fx:id="resultOpLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;"/>
+                        <Label text="Algorithm:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
+                        <Label fx:id="resultAlgoLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
+                        <Label fx:id="resultSizeLabel" text="In: 0B / Out: 0B" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
+                        <Label fx:id="resultFormatLabel" text="Not applicable" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
+                        <Label fx:id="resultStatusBadge" text="SUCCESS"
+                               style="-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;"/>
+                    </FlowPane>
                     <HBox spacing="6" alignment="CENTER_RIGHT">
-                        <Button text="Expand" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
-                        <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
-                        <Button text="Copy" onAction="#handleCopyOutput" styleClass="action-button-primary" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
+                        <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button"/>
+                        <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button"/>
+                        <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary"/>
+                    </HBox>
                 </HBox>
 
                 <!-- Inline Actionable Error Banner -->
@@ -169,7 +166,6 @@
                         <Button fx:id="errorBannerCopyDetailsBtn" text="Copy technical details" onAction="#handleErrorBannerCopyDetails" styleClass="error-banner-btn-secondary"/>
                         <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" styleClass="error-banner-btn-close"/>
                     </HBox>
-                </HBox>
                 </HBox>
 
                 <!-- Guided Flow Panel (reusable) -->
@@ -419,6 +415,7 @@
             <Label fx:id="statusLabel" text="Ready" styleClass="status-label-main"/>
             <HBox fx:id="asyncProgressBox" visible="false" managed="false" alignment="CENTER_LEFT" spacing="8" styleClass="async-progress-box">
                 <ProgressIndicator fx:id="asyncProgressSpinner" prefWidth="16" prefHeight="16" styleClass="async-progress-spinner"/>
+                <ProgressBar fx:id="asyncProgressBar" prefWidth="120" prefHeight="14" visible="false" managed="false" styleClass="async-progress-bar"/>
                 <Label fx:id="asyncProgressLabel" text="Working..." styleClass="async-progress-label"/>
                 <Button fx:id="asyncCancelBtn" text="Cancel" onAction="#handleCancelAsyncOperation" styleClass="async-cancel-button"/>
             </HBox>

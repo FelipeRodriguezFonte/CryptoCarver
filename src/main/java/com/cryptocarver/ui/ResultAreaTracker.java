@@ -38,8 +38,11 @@ final class ResultAreaTracker {
     }
 
     TextArea preferred(Node root, boolean publishedPayloadIsAuthoritative) {
+        if (publishedPayloadIsAuthoritative) {
+            return isKeyPairResultArea(focused) && isEffectivelyVisible(focused) ? focused : null;
+        }
         if (focused != null && isEffectivelyVisible(focused)) return focused;
-        return publishedPayloadIsAuthoritative ? null : findVisible(root);
+        return findVisible(root);
     }
 
     TextArea findVisible(Node root) {
