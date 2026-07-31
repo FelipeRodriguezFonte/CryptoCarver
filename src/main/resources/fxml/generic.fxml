@@ -94,9 +94,10 @@
                 </VBox>
                 <TextArea fx:id="batchInputArea" prefRowCount="5" wrapText="false" styleClass="monospace-field" promptText="CSV: input&#10;hello&#10;or JSON Lines (.jsonl): {&quot;input&quot;:&quot;hello&quot;}&#10;{&quot;input&quot;:&quot;world&quot;}"/>
                 <Label text="JSON Lines (.jsonl) uses one JSON object per line; it is not a single JSON array/document." wrapText="true" styleClass="helper-text"/>
-                <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                <FlowPane prefWrapLength="900" styleClass="responsive-action-bar" hgap="8" vgap="8">
                     <Button text="Load CSV / JSON Lines…" onAction="#handleBrowseBatchInput" styleClass="secondary-button"/>
                     <Button text="Run Batch" onAction="#handleRunBatch" styleClass="action-button,primary-action"/>
+                    <Button text="Dry Run" onAction="#handleDryRunBatch" styleClass="secondary-button"/>
                     <Button text="Cancel" onAction="#handleCancelBatch" styleClass="secondary-button"/>
                     <ComboBox fx:id="batchExportFormatCombo" prefWidth="80" styleClass="form-field"/>
                     <Button text="Export Results…" onAction="#handleExportBatchResults" styleClass="secondary-button"/>

@@ -21,6 +21,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.Tooltip;
@@ -82,6 +84,11 @@ public class ProcessDesignerController {
     @FXML private TableColumn<ProcessExecutionRow, String> outputCol;
     @FXML private TableColumn<ProcessExecutionRow, String> statusCol;
     @FXML private TableColumn<ProcessExecutionRow, String> durationCol;
+    @FXML private TableColumn<ProcessExecutionRow, Void> inspectCol;
+    @FXML Button cancelProcessButton;
+    @FXML ProgressBar processProgressBar;
+    @FXML Label processStatusLabel;
+    private volatile boolean processCancellationRequested = false;
 
 
     @FXML VBox cryptoAlgorithmFieldGroup;
@@ -139,8 +146,8 @@ public class ProcessDesignerController {
     @FXML TextField kdfIterationsField;
     @FXML TextField kdfSaltField;
 
-    private final List<ProcessDefinition.Node> nodes = new ArrayList<>();
-    private final List<ProcessDefinition.Connection> connections = new ArrayList<>();
+    final List<ProcessDefinition.Node> nodes = new ArrayList<>();
+    final List<ProcessDefinition.Connection> connections = new ArrayList<>();
     private final Map<String, StackPane> views = new LinkedHashMap<>();
     /** Ordered pair: first selected block is the connection source, second is the destination. */
     final LinkedHashSet<String> selectedNodeIds = new LinkedHashSet<>();
@@ -336,7 +343,50 @@ public class ProcessDesignerController {
         outputCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getOutput()));
         statusCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getStatus()));
         durationCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getDuration()));
-        executionStatusTable.setPlaceholder(new Label("Run a process to see its execution steps."));
+
+        if (inspectCol != null) {
+            inspectCol.setCellFactory(col -> new TableCell<ProcessExecutionRow, Void>() {
+                private final Button btn = new Button("Inspect");
+                {
+                    btn.setStyle("-fx-font-size: 9px; -fx-padding: 1 4 1 4;");
+                    btn.setOnAction(evt -> {
+                        ProcessExecutionRow row = getTableRow() != null ? getTableRow().getItem() : null;
+                        if (row != null && row.getResultValue() != null) {
+                            expandedExecutionViewer.show(
+                                executionStatusTable.getScene() != null ? executionStatusTable.getScene().getWindow() : null,
+                                "Inspect Result - Step " + row.getStep() + " (" + row.getStepName() + ")",
+                                row.getResultValue().toString()
+                            );
+                        }
+                    });
+                }
+                @Override protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || getTableRow() == null || getTableRow().getItem() == null || getTableRow().getItem().getResultValue() == null) {
+                        setGraphic(null);
+                    } else {
+                        setGraphic(btn);
+                    }
+                }
+            });
+        }
+
+        executionStatusTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null && newV.getNodeId() != null) {
+                selectNodeById(newV.getNodeId());
+            }
+        });
+
+        executionStatusTable.setPlaceholder(new Label("Run or Dry Run a process to see its execution steps."));
+    }
+
+    public void selectNodeById(String nodeId) {
+        if (nodeId == null) return;
+        ProcessDefinition.Node target = nodes.stream().filter(n -> nodeId.equals(n.id)).findFirst().orElse(null);
+        if (target != null) {
+            select(target);
+            redraw();
+        }
     }
 
     @FXML public void handleAddConsoleInput() { addNode("CONSOLE_INPUT", "Console input", 60, 180); }
@@ -616,6 +666,67 @@ if (encrypt || decrypt || mac || sign || verify) {
     @FXML public void handleClearCanvas() { nodes.clear(); connections.clear(); views.clear(); selectedNodeIds.clear(); selected = null; selectedConnection = null; updateSelectionUi(); redraw(); }
 
     public Runnable onExecutionFinished;
+    public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
+
+    @FXML public void handleDryRunProcess() {
+        saveSelectedNodeSettings();
+        ProcessDefinition definition = toDefinition();
+        com.cryptocarver.model.process.DryRunSummary summary = com.cryptocarver.model.process.ProcessValidator.dryRun(definition);
+
+        if (executionStatusTable != null) {
+            executionStatusTable.getItems().clear();
+            int idx = 1;
+            for (com.cryptocarver.model.process.StepValidationResult v : summary.stepValidations()) {
+                String label = nodeLabel(v.targetNodeId());
+                executionStatusTable.getItems().add(new ProcessExecutionRow(
+                    v.targetNodeId(),
+                    String.valueOf(idx++),
+                    label,
+                    "DRY-RUN",
+                    "-",
+                    "-",
+                    v.status().name(),
+                    "0 ms",
+                    v.message()
+                ));
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== PROCESS DESIGNER DRY RUN ===\n");
+        sb.append("Total Steps: ").append(summary.totalSteps()).append('\n');
+        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
+          .append(", Warning=").append(summary.warningCount())
+          .append(", Incomplete=").append(summary.incompleteCount())
+          .append(", Blocked=").append(summary.blockedCount()).append('\n');
+
+        if (summary.firstBlockedReason() != null) {
+            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
+        }
+
+        sb.append("\nResolved Dependencies:\n");
+        for (String dep : summary.resolvedDependencies()) {
+            sb.append("  - ").append(dep).append('\n');
+        }
+
+        sb.append("\nExecution Order:\n");
+        for (String stepId : summary.executionOrder()) {
+            sb.append("  - ").append(nodeLabel(stepId)).append(" [").append(stepId).append("]\n");
+        }
+        sb.append("\n(Dry Run simulation finished: 0 cryptographic operations executed, 0 files written, 0 history entries created)");
+
+        executionOutputArea.setText(sb.toString());
+        if (processStatusLabel != null) {
+            processStatusLabel.setText("Dry Run: " + summary.readyCount() + " ready, " + summary.blockedCount() + " blocked");
+        }
+    }
+
+    @FXML public void handleCancelProcess() {
+        processCancellationRequested = true;
+        Platform.runLater(() -> {
+            if (processStatusLabel != null) processStatusLabel.setText("Cancelling process execution...");
+        });
+    }
 
     @FXML public void handleRunProcess() {
         saveSelectedNodeSettings();
@@ -646,18 +757,64 @@ if (encrypt || decrypt || mac || sign || verify) {
             }
         }
 
+        processCancellationRequested = false;
+        if (cancelProcessButton != null) cancelProcessButton.setDisable(false);
+        if (runProcessButton != null) runProcessButton.setDisable(true);
+        if (processProgressBar != null) processProgressBar.setProgress(0.0);
+        if (processStatusLabel != null) processStatusLabel.setText("Running process...");
+
         java.util.Queue<NodeExecutionEvent> events = new java.util.concurrent.ConcurrentLinkedQueue<>();
-        ExecutionContext context = new ExecutionContext(FileWritePolicy.ALLOW_OVERWRITE, events::add);
-        new Thread(() -> {
-            try {
-                Map<String, com.cryptocarver.model.process.FlowValue> result = ProcessEngine.execute(definition, context);
+        ExecutionContext context = new ExecutionContext(
+            FileWritePolicy.ALLOW_OVERWRITE,
+            event -> {
+                events.add(event);
+                if (onNodeExecutionEvent != null) onNodeExecutionEvent.accept(event);
                 Platform.runLater(() -> {
-                    renderExecutionResult(definition, result, events, null);
-                    if (onExecutionFinished != null) onExecutionFinished.run();
+                    if (processProgressBar != null && definition.nodes.size() > 0) {
+                        processProgressBar.setProgress((double) event.step() / definition.nodes.size());
+                    }
+                    if (processStatusLabel != null) {
+                        processStatusLabel.setText("Step " + event.step() + "/" + definition.nodes.size() + " — " + event.nodeLabel());
+                    }
                 });
+            },
+            () -> processCancellationRequested
+        );
+
+        new Thread(() -> {
+            Map<String, com.cryptocarver.model.process.FlowValue> result = Map.of();
+            Exception failure = null;
+            try {
+                result = ProcessEngine.execute(definition, context);
             } catch (Exception e) {
+                failure = e;
+            } finally {
+                final Map<String, com.cryptocarver.model.process.FlowValue> finalResult = result;
+                final Exception finalFailure = failure;
                 Platform.runLater(() -> {
-                    renderExecutionResult(definition, Map.of(), events, e);
+                    if (cancelProcessButton != null) cancelProcessButton.setDisable(true);
+                    if (runProcessButton != null) runProcessButton.setDisable(false);
+
+                    if (processCancellationRequested) {
+                        int completedSteps = finalResult.size();
+                        if (processProgressBar != null) {
+                            double prog = definition.nodes.size() > 0 ? (double) completedSteps / definition.nodes.size() : -1.0;
+                            if (prog >= 1.0) prog = 0.99;
+                            processProgressBar.setProgress(prog);
+                        }
+                        if (processStatusLabel != null) {
+                            processStatusLabel.setText("Cancelled after step " + completedSteps);
+                        }
+                        executionOutputArea.setText("Process cancelled after step " + completedSteps + ". Prior completed step results preserved.");
+                    } else if (finalFailure == null) {
+                        if (processProgressBar != null) processProgressBar.setProgress(1.0);
+                        if (processStatusLabel != null) processStatusLabel.setText("Completed successfully");
+                    } else {
+                        if (processProgressBar != null) processProgressBar.setProgress(0.0);
+                        if (processStatusLabel != null) processStatusLabel.setText("Process failed: " + finalFailure.getMessage());
+                    }
+
+                    renderExecutionResult(definition, finalResult, events, finalFailure);
                     if (onExecutionFinished != null) onExecutionFinished.run();
                 });
             }
@@ -687,10 +844,11 @@ if (encrypt || decrypt || mac || sign || verify) {
                         "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
             }
             for (NodeExecutionEvent event : finalEvents.values()) {
+                Object val = result != null ? result.get(event.nodeId()) : null;
                 executionStatusTable.getItems().add(new ProcessExecutionRow(event.nodeId(), String.valueOf(event.step()),
                         event.nodeLabel(), event.nodeType(), formatFlow(event.inputRepresentation(), event.inputSize()),
                         formatFlow(event.outputRepresentation(), event.outputSize()), event.state().name(),
-                        event.duration().toMillis() + " ms"));
+                        event.duration().toMillis() + " ms", val));
             }
         }
 

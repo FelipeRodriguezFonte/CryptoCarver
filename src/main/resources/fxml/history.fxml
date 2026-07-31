@@ -54,6 +54,11 @@
                     <Tooltip text="Open the complete value of the selected detail in the expanded viewer." />
                 </tooltip>
             </Button>
+            <Button fx:id="addHistoryToShelfBtn" onAction="#handleAddSelectedHistoryToShelf" style="-fx-background-color: #00897b; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Add Output to Shelf">
+                <tooltip>
+                    <Tooltip text="Save only the published output of the selected operation; never reruns it." />
+                </tooltip>
+            </Button>
             <Button fx:id="copyHistoryDetailBtn" onAction="#copySelectedHistoryDetail" style="-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Copy Selected Value" />
             <Button fx:id="exportJsonRecordBtn" onAction="#exportSelectedHistoryRecord" style="-fx-background-color: #1565c0; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Export JSON Record">
                 <tooltip>

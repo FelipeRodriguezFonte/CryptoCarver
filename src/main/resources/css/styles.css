@@ -2192,3 +2192,57 @@
     -fx-background-color: #334155;
     -fx-background-radius: 4px;
 }
+
+/* Step Status Badges & Action Buttons for UX-12 */
+.step-inspect-button {
+    -fx-font-size: 9px;
+    -fx-padding: 2px 6px;
+    -fx-background-color: #0288d1;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 3px;
+    -fx-cursor: hand;
+}
+
+.step-inspect-button:hover {
+    -fx-background-color: #039be5;
+}
+
+.step-status-ready {
+    -fx-background-color: #046c4e;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
+}
+
+.step-status-warning {
+    -fx-background-color: #fef3c7;
+    -fx-text-fill: #78350f;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
+}
+
+.step-status-incomplete {
+    -fx-background-color: #e0f2fe;
+    -fx-text-fill: #075985;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
+}
+
+.step-status-blocked {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #7f1d1d;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
+}
+
+.step-status-na {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #64748b;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
+}

@@ -422,7 +422,9 @@ public class GenericController {
             activeBatchTask = null;
         });
         task.setOnCancelled(event -> {
-            batchProgressBar.progressProperty().unbind(); batchStatusLabel.setText("Batch cancelled. Completed rows were discarded.");
+            batchProgressBar.progressProperty().unbind();
+            int completedCount = lastBatchReport != null ? lastBatchReport.results().size() : 0;
+            batchStatusLabel.setText("Batch cancelled after row " + completedCount + ". Completed row results preserved.");
             activeBatchTask = null;
         });
         task.setOnFailed(event -> {
@@ -432,9 +434,58 @@ public class GenericController {
         Thread worker = new Thread(task, "cryptocarver-batch-runner"); worker.setDaemon(true); worker.start();
     }
 
+    @FXML public void handleDryRunBatch() {
+        final java.util.List<java.util.Map<String, String>> rows;
+        final String srcCol = batchColumnField != null ? batchColumnField.getText().trim() : "input";
+        final String outCol = batchOutputColumnField != null ? batchOutputColumnField.getText().trim() : "result";
+        String rawText = batchInputArea != null ? batchInputArea.getText() : "";
+        try {
+            rows = isCsvBatchFormat(batchInputFormatCombo != null ? batchInputFormatCombo.getValue() : "CSV")
+                    ? com.cryptocarver.model.batch.BatchInputCodec.parseCsv(rawText)
+                    : com.cryptocarver.model.batch.BatchInputCodec.parseJsonLines(rawText);
+        } catch (Exception e) {
+            batchResultArea.setText("Dry Run failed: Invalid batch input formatting: " + e.getMessage());
+            if (batchStatusLabel != null) batchStatusLabel.setText("Dry Run blocked");
+            return;
+        }
+
+        String op = batchOperationCombo != null ? batchOperationCombo.getValue() : "None";
+        String alg = batchAlgorithmCombo != null ? batchAlgorithmCombo.getValue() : null;
+        String keyHex = batchKeyField != null ? batchKeyField.getText() : null;
+        String ivHex = batchIvNonceField != null ? batchIvNonceField.getText() : null;
+
+        com.cryptocarver.model.process.DryRunSummary summary =
+                com.cryptocarver.model.batch.BatchValidator.dryRun(rows, op, srcCol, outCol, alg, keyHex, ivHex);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== BATCH RUNNER DRY RUN ===\n");
+        sb.append("Total Rows: ").append(summary.totalSteps()).append('\n');
+        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
+          .append(", Warning=").append(summary.warningCount())
+          .append(", Blocked=").append(summary.blockedCount()).append('\n');
+        if (summary.firstBlockedReason() != null) {
+            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
+        }
+        sb.append("Resolved Dependencies:\n");
+        for (String dep : summary.resolvedDependencies()) {
+            sb.append("  - ").append(dep).append('\n');
+        }
+        sb.append("Execution Plan:\n");
+        for (String step : summary.executionOrder()) {
+            sb.append("  - ").append(step).append('\n');
+        }
+        sb.append("\n(Dry Run completed: 0 cryptographic operations called, 0 files written, 0 history entries created)");
+
+        batchResultArea.setText(sb.toString());
+        if (batchStatusLabel != null) {
+            batchStatusLabel.setText("Dry Run Summary: " + summary.readyCount() + " ready, " + summary.blockedCount() + " blocked");
+        }
+    }
+
     @FXML public void handleCancelBatch() {
         if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            activeBatchTask.cancel(); batchStatusLabel.setText("Cancelling batch…");
+            activeBatchTask.cancel();
+            batchStatusLabel.setText("Cancelling batch…");
         } else {
             batchStatusLabel.setText("No batch is running.");
         }

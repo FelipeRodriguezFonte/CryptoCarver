@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public final class ProcessEngine {
     private ProcessEngine() { }
 
-    private static final List<ProcessNodeHandler> HANDLERS = List.of(
+    private static final List<ProcessNodeHandler> HANDLERS = new java.util.concurrent.CopyOnWriteArrayList<>(List.of(
         new ConsoleNodeHandler(),
         new FileNodeHandler(),
         new HashNodeHandler(),
@@ -25,7 +25,15 @@ public final class ProcessEngine {
         new AdvancedCryptoNodeHandler(),
         new WssNodeHandler(),
         new RandomBytesNodeHandler()
-    );
+    ));
+
+    public static void registerHandler(ProcessNodeHandler handler) {
+        HANDLERS.add(0, handler);
+    }
+
+    public static void unregisterHandler(ProcessNodeHandler handler) {
+        HANDLERS.remove(handler);
+    }
 
     public static Map<String, Representation> validate(ProcessDefinition definition) {
         Set<String> ids = new HashSet<>();
@@ -193,11 +201,20 @@ public final class ProcessEngine {
 
         try {
             while (completed.size() < definition.nodes.size()) {
+                if (context != null && context.isCancelled()) {
+                    return values;
+                }
                 boolean progressed = false;
 
                 for (ProcessDefinition.Node node : definition.nodes) {
+                    if (context != null && context.isCancelled()) {
+                        return values;
+                    }
                     if (completed.contains(node.id) || !inputsReady(node, definition, completed)) {
                         continue;
+                    }
+                    if (context != null && context.isCancelled()) {
+                        return values;
                     }
 
                     Map<String, FlowValue> inputs = inputFor(node, definition, values);
@@ -231,7 +248,13 @@ public final class ProcessEngine {
                             ));
                         }
                         stepCount++;
+                        if (context != null && context.isCancelled()) {
+                            return values;
+                        }
                     } catch (Exception e) {
+                        if (context != null && context.isCancelled()) {
+                            return values;
+                        }
                         if (context.eventListener() != null) {
                             context.eventListener().accept(new NodeExecutionEvent(
                                 node.id, stepCount, node.label, node.type, NodeExecutionState.ERROR, Duration.ofNanos(System.nanoTime() - start),
@@ -283,9 +306,12 @@ public final class ProcessEngine {
     }
 
     public static ProcessNodeHandler getHandlerFor(String type) {
-        for (ProcessNodeHandler handler : HANDLERS) {
-            if (handler.supportedTypes().contains(type)) {
-                return handler;
+        if (type != null) {
+            String targetType = type.trim();
+            for (ProcessNodeHandler handler : HANDLERS) {
+                if (handler.supportedTypes().stream().anyMatch(t -> t.equalsIgnoreCase(targetType))) {
+                    return handler;
+                }
             }
         }
         throw new IllegalArgumentException("Node type is not executable: " + type);

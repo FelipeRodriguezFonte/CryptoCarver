@@ -1721,12 +1721,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (area == null || area.getText() == null || area.getText().isBlank()) {
             return "";
         }
-        // Locally generated key pairs are explicit laboratory output. Their
-        // public/private tabs must remain inspectable and reusable even when a
-        // global history view is configured to mask secrets.
-        if (ResultAreaTracker.isKeyPairResultArea(area)) {
-            return area.getText();
-        }
         com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
         com.cryptocarver.model.SecretVisibilityProfile visibility =
                 com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
@@ -1953,7 +1947,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
         boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                 || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-        if (requiresFullLab && !ResultAreaTracker.isKeyPairResultArea(area)
+        if (requiresFullLab
                 && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
             return;
@@ -1972,7 +1966,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
             boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                     || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-            if (requiresFullLab && !ResultAreaTracker.isKeyPairResultArea(area)
+            if (requiresFullLab
                     && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
                 return;
@@ -2000,15 +1994,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.model.ClipboardEntry.Format format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
         com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
         String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
+        String algorithm = null;
+        if (lastPublishedResultSnapshot != null && lastPublishedResultSnapshot.getDetails() != null) {
+            for (com.cryptocarver.model.OperationDetail detail : lastPublishedResultSnapshot.getDetails()) {
+                if (detail != null && ("Algorithm".equalsIgnoreCase(detail.name())
+                        || "Type".equalsIgnoreCase(detail.name()))) {
+                    algorithm = detail.value();
+                    break;
+                }
+            }
+        }
 
-        // Classification already determined by classifyPublishedResult
+        java.util.Optional<com.cryptocarver.model.ClipboardEntry> duplicate = com.cryptocarver.model.ClipboardShelfManager.getInstance().findDuplicate(text, sourceOp);
+        if (duplicate.isPresent()) {
+            updateStatus("Item already in Clipboard Shelf: " + duplicate.get().getLabel());
+            return;
+        }
 
         com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
                 "Copied from " + sourceOp,
                 text,
                 format,
                 cls,
-                sourceOp
+                sourceOp,
+                algorithm
         );
         com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
         updateStatus("Added to Clipboard Shelf");

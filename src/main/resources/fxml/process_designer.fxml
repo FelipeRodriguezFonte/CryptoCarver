@@ -6,10 +6,12 @@
              text="🧩 Process Designer (MVP)" expanded="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
     <VBox spacing="7" style="-fx-padding: 8;">
         <Label text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
-        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+        <FlowPane prefWrapLength="900" styleClass="responsive-action-bar" hgap="8" vgap="8">
             <Label text="Process:" style="-fx-font-size: 11px;"/>
             <TextField fx:id="processNameField" text="Untitled process" prefWidth="180"/>
             <Button fx:id="runProcessButton" text="Run" onAction="#handleRunProcess" styleClass="action-button"/>
+            <Button text="Dry Run" onAction="#handleDryRunProcess" styleClass="secondary-button"/>
+            <Button fx:id="cancelProcessButton" text="Cancel" onAction="#handleCancelProcess" styleClass="secondary-button" disable="true"/>
             <Button text="Expand results" onAction="#handleOpenExpandedExecutionResult" styleClass="secondary-button"/>
             <Button fx:id="reverseConnectionToolbarButton" text="Reverse connection" onAction="#handleReverseSelectedConnection" styleClass="secondary-button" disable="true"/>
             <Button fx:id="inspectorToggleButton" text="Hide inspector" onAction="#handleToggleInspector" styleClass="secondary-button"/>
@@ -25,6 +27,10 @@
             <Button text="Save…" onAction="#handleSaveProcess" styleClass="secondary-button"/>
             <Button text="Open…" onAction="#handleLoadProcess" styleClass="secondary-button"/>
         </FlowPane>
+        <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 2 0 2 0;">
+            <ProgressBar fx:id="processProgressBar" prefWidth="300" progress="0.0" HBox.hgrow="ALWAYS"/>
+            <Label fx:id="processStatusLabel" text="Ready" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+        </HBox>
         <HBox spacing="5" alignment="CENTER_LEFT" style="-fx-padding: 4 0 4 0;">
             <MenuButton text="Inputs" styleClass="secondary-button">
                 <items>

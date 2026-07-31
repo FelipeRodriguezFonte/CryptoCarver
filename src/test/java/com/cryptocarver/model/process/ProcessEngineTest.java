@@ -1304,4 +1304,148 @@ class ProcessEngineTest {
         );
         org.junit.jupiter.api.Assertions.assertTrue(ex.toString().contains("Unsupported envelope algorithm ID: 99"));
     }
+
+    @Test void cancelDuringStepOnePreventsStepTwoExecution() throws Exception {
+        ProcessDefinition process = new ProcessDefinition();
+        ProcessDefinition.Node input = new ProcessDefinition.Node("step1", "CONSOLE_INPUT", "Step 1", 0, 0);
+        input.configuration.put("value", "payload data");
+        ProcessDefinition.Node hash = new ProcessDefinition.Node("step2", "HASH", "Step 2", 1, 0);
+        hash.configuration.put("algorithm", "SHA-256");
+
+        process.nodes.add(input);
+        process.nodes.add(hash);
+        process.connections.add(new ProcessDefinition.Connection("step1", "step2"));
+
+        java.util.concurrent.atomic.AtomicBoolean cancellationTriggered = new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.util.concurrent.atomic.AtomicBoolean step2Invoked = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        ExecutionContext context = new ExecutionContext(
+            FileWritePolicy.ALLOW_OVERWRITE,
+            event -> {
+                if ("step1".equals(event.nodeId()) && event.state() == NodeExecutionState.RUNNING) {
+                    cancellationTriggered.set(true);
+                }
+                if ("step2".equals(event.nodeId())) {
+                    step2Invoked.set(true);
+                }
+            },
+            cancellationTriggered::get
+        );
+
+        java.util.Map<String, FlowValue> result = ProcessEngine.execute(process, context);
+
+        assertFalse(step2Invoked.get(), "Step 2 handler must NOT be invoked when process is cancelled during step 1");
+        assertFalse(result.containsKey("step2"), "Step 2 result must NOT be published");
+        assertEquals(1, result.size(), "Only step 1 result must be preserved");
+    }
+
+    @Test void dryRunDoesNotInvokeCryptoHistoryFilesOrShelfAndHidesSensitiveInputs() throws Exception {
+        String sensitivePayload = "CONFIDENTIAL_PAYLOAD_SECRET";
+        String sensitiveKey = "00112233445566778899AABBCCDDEEFF";
+        String sensitiveIv = "112233445566778899001122";
+
+        ProcessDefinition process = new ProcessDefinition();
+        ProcessDefinition.Node input = new ProcessDefinition.Node("in", "CONSOLE_INPUT", "Input", 0, 0);
+        input.configuration.put("value", sensitivePayload);
+        ProcessDefinition.Node encrypt = new ProcessDefinition.Node("enc", "ENCRYPT", "Encrypt", 1, 0);
+        encrypt.configuration.put("algorithm", "AES/GCM/NoPadding");
+        encrypt.configuration.put("keyFormat", "HEX");
+        encrypt.configuration.put("key", sensitiveKey);
+        encrypt.configuration.put("nonce", sensitiveIv);
+
+        process.nodes.add(input);
+        process.nodes.add(encrypt);
+        process.connections.add(new ProcessDefinition.Connection("in", "enc", "payload"));
+
+        java.util.concurrent.atomic.AtomicInteger cryptoCallsSpy = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger handlerExecutionsSpy = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        ProcessNodeHandler cryptoDoubleSpy = new com.cryptocarver.model.process.handlers.AdvancedCryptoNodeHandler() {
+            @Override
+            public FlowValue execute(ProcessDefinition.Node node, java.util.Map<String, FlowValue> inputs, ExecutionContext context) throws Exception {
+                handlerExecutionsSpy.incrementAndGet();
+                if ("ENCRYPT".equalsIgnoreCase(node.type) || "DECRYPT".equalsIgnoreCase(node.type)) {
+                    cryptoCallsSpy.incrementAndGet();
+                }
+                return super.execute(node, inputs, context);
+            }
+        };
+
+        // Ingest spy handler directly into ProcessEngine
+        ProcessEngine.registerHandler(cryptoDoubleSpy);
+
+        java.nio.file.Path tempTestDir = java.nio.file.Files.createTempDirectory("dryrun-obs-test");
+        long initialFileCount = java.nio.file.Files.list(tempTestDir).count();
+
+        com.cryptocarver.model.HistoryManager historyObservationDouble = new com.cryptocarver.model.HistoryManager(tempTestDir.resolve("history.json"));
+        int initialHistorySize = historyObservationDouble.getHistoryItems().size();
+
+        com.cryptocarver.model.ClipboardShelfManager shelfObservationDouble = com.cryptocarver.model.ClipboardShelfManager.getInstance();
+        int initialShelfSize = shelfObservationDouble.getEntries().size();
+
+        try {
+            // Perform Dry Run
+            DryRunSummary summary = ProcessValidator.dryRun(process);
+
+            // Verification 1: contador de llamadas criptográficas = 0
+            assertEquals(0, cryptoCallsSpy.get(), "Dry Run must invoke 0 cryptographic calls");
+            // Verification 2: contador de handlers/operaciones ejecutadas = 0
+            assertEquals(0, handlerExecutionsSpy.get(), "Dry Run must execute 0 handlers/operations");
+            // Verification 3: no se escriben ficheros
+            assertEquals(initialFileCount, java.nio.file.Files.list(tempTestDir).count(), "Dry Run must write 0 files to disk");
+            // Verification 4: no se añade historial
+            assertEquals(initialHistorySize, historyObservationDouble.getHistoryItems().size(), "Dry Run must create 0 history entries");
+            assertEquals(initialShelfSize, shelfObservationDouble.getEntries().size(), "Dry Run must add 0 entries to Clipboard Shelf");
+
+            String outputText = summary.stepValidations().toString() + summary.resolvedDependencies().toString() + summary.executionOrder().toString();
+            assertFalse(outputText.contains(sensitivePayload), "Dry Run output must NOT contain sensitive payload");
+            assertFalse(outputText.contains(sensitiveKey), "Dry Run output must NOT contain sensitive key");
+            assertFalse(outputText.contains(sensitiveIv), "Dry Run output must NOT contain sensitive IV");
+        } finally {
+            ProcessEngine.unregisterHandler(cryptoDoubleSpy);
+            java.nio.file.Files.deleteIfExists(tempTestDir.resolve("history.json"));
+            java.nio.file.Files.deleteIfExists(tempTestDir);
+        }
+    }
+
+    @Test void realExecutionInvokesRegisteredCryptoSpy() throws Exception {
+        ProcessDefinition process = new ProcessDefinition();
+        ProcessDefinition.Node input = new ProcessDefinition.Node("in", "CONSOLE_INPUT", "Input", 0, 0);
+        input.configuration.put("value", "real execution data");
+        ProcessDefinition.Node encrypt = new ProcessDefinition.Node("enc", "ENCRYPT", "Encrypt", 1, 0);
+        encrypt.configuration.put("algorithm", "AES/ECB/PKCS5Padding");
+        encrypt.configuration.put("keyFormat", "HEX");
+        encrypt.configuration.put("key", "00112233445566778899AABBCCDDEEFF");
+
+        process.nodes.add(input);
+        process.nodes.add(encrypt);
+        process.connections.add(new ProcessDefinition.Connection("in", "enc", "payload"));
+
+        java.util.concurrent.atomic.AtomicInteger cryptoCallsSpy = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger handlerExecutionsSpy = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        ProcessNodeHandler cryptoDoubleSpy = new com.cryptocarver.model.process.handlers.AdvancedCryptoNodeHandler() {
+            @Override
+            public FlowValue execute(ProcessDefinition.Node node, java.util.Map<String, FlowValue> inputs, ExecutionContext context) throws Exception {
+                handlerExecutionsSpy.incrementAndGet();
+                if ("ENCRYPT".equalsIgnoreCase(node.type) || "DECRYPT".equalsIgnoreCase(node.type)) {
+                    cryptoCallsSpy.incrementAndGet();
+                }
+                return super.execute(node, inputs, context);
+            }
+        };
+
+        // Ingest spy handler directly into ProcessEngine
+        ProcessEngine.registerHandler(cryptoDoubleSpy);
+
+        try {
+            java.util.Map<String, FlowValue> result = ProcessEngine.execute(process, new ExecutionContext(FileWritePolicy.ALLOW_OVERWRITE, null));
+
+            assertTrue(result.containsKey("enc"), "Real execution must return completed encrypt result");
+            assertTrue(handlerExecutionsSpy.get() > 0, "Real execution MUST invoke registered handler spy");
+            assertTrue(cryptoCallsSpy.get() > 0, "Real execution MUST invoke registered crypto spy");
+        } finally {
+            ProcessEngine.unregisterHandler(cryptoDoubleSpy);
+        }
+    }
 }
