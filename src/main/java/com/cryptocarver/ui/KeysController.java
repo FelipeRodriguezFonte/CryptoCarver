@@ -286,6 +286,22 @@ public class KeysController {
     private Label kdfInputHelpLabel;
     @FXML
     private Label kdfValidationLabel;
+    @FXML
+    private Label kdfIterationsLabel;
+    @FXML
+    private VBox kdfSaltBox;
+    @FXML
+    private VBox kdfInfoBox;
+    @FXML
+    private Label kdfInputBadgeLabel;
+    @FXML
+    private Label kdfSaltBadgeLabel;
+    @FXML
+    private Label kdfInfoBadgeLabel;
+
+    private com.cryptocarver.ui.component.MaterialFieldBadge kdfInputBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge kdfSaltBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge kdfInfoBadge;
 
     // AES Key Wrap components
     @FXML
@@ -3298,6 +3314,31 @@ public class KeysController {
         kdfSaltFormatCombo.setValue("Hex");
         kdfInfoFormatCombo.setValue("UTF-8");
 
+        if (kdfInputBadgeLabel != null && kdfInputBadge == null) {
+            kdfInputBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Input Key Material");
+            kdfInputBadge.attach(kdfInputField, kdfInputFormatCombo);
+            kdfInputBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfInputBadgeLabel.setText(newVal));
+            kdfInputBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                kdfInputBadgeLabel.getStyleClass().setAll(kdfInputBadge.getStyleClass());
+            });
+        }
+        if (kdfSaltBadgeLabel != null && kdfSaltBadge == null) {
+            kdfSaltBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Salt");
+            kdfSaltBadge.attach(kdfSaltField, kdfSaltFormatCombo);
+            kdfSaltBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfSaltBadgeLabel.setText(newVal));
+            kdfSaltBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                kdfSaltBadgeLabel.getStyleClass().setAll(kdfSaltBadge.getStyleClass());
+            });
+        }
+        if (kdfInfoBadgeLabel != null && kdfInfoBadge == null) {
+            kdfInfoBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Info");
+            kdfInfoBadge.attach(kdfInfoField, kdfInfoFormatCombo);
+            kdfInfoBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfInfoBadgeLabel.setText(newVal));
+            kdfInfoBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                kdfInfoBadgeLabel.getStyleClass().setAll(kdfInfoBadge.getStyleClass());
+            });
+        }
+
         // Add listener to update parameters based on algorithm
         kdfAlgorithmCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             updateKDFParameters(newVal);
@@ -3320,7 +3361,7 @@ public class KeysController {
         if (kdfInputHelpLabel != null) {
             String format = kdfInputFormatCombo == null || kdfInputFormatCombo.getValue() == null
                     ? "UTF-8" : kdfInputFormatCombo.getValue();
-            kdfInputHelpLabel.setText("Input key material — interpreted as " + format + " using Material format above.");
+            kdfInputHelpLabel.setText("Input key material — interpreted as " + format + " using Input key material format above.");
         }
     }
 
@@ -3342,6 +3383,9 @@ public class KeysController {
         } else {
             field.getStyleClass().remove("field-error");
         }
+        if (kdfInputBadge != null) kdfInputBadge.updateState();
+        if (kdfSaltBadge != null) kdfSaltBadge.updateState();
+        if (kdfInfoBadge != null) kdfInfoBadge.updateState();
     }
 
     @FXML
@@ -3352,6 +3396,7 @@ public class KeysController {
         kdfSaltFormatCombo.setValue("Hex");
         kdfSaltField.setText(DataConverter.bytesToHex(salt));
         clearKdfValidation();
+        if (kdfSaltBadge != null) kdfSaltBadge.updateState();
         updateStatus("Generated a fresh 16-byte salt for key derivation");
     }
 
@@ -3359,58 +3404,56 @@ public class KeysController {
      * Update KDF parameters based on selected algorithm
      */
     private void updateKDFParameters(String algorithm) {
-        if (algorithm == null)
-            return;
+        if (algorithm == null) return;
+
+        boolean requiresSalt = algorithm.startsWith("PBKDF2") || algorithm.equals("SCrypt") || algorithm.equals("Argon2id");
 
         if (algorithm.startsWith("HKDF")) {
-            kdfIterationsField.setText("1");
-            kdfIterationsField.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
-            kdfSaltField.setPromptText("Optional salt (zeros if omitted)");
-            kdfInfoField.setDisable(false);
-            kdfInfoFormatCombo.setDisable(false);
-            kdfInfoField.setPromptText("Optional application context");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
+            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Optional salt (zeros if omitted)"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
+            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Optional application context"); }
         } else if (algorithm.startsWith("NIST-800-108")) {
-            kdfIterationsField.setText("1");
-            kdfIterationsField.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
-            kdfSaltField.setPromptText("Label (optional)");
-            kdfInfoField.setDisable(false);
-            kdfInfoFormatCombo.setDisable(false);
-            kdfInfoField.setPromptText("Context (optional)");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
+            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Label (optional)"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
+            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Context (optional)"); }
         } else if (algorithm.startsWith("X9.63")) {
-            kdfIterationsField.setText("1");
-            kdfIterationsField.setDisable(true);
-            kdfSaltField.setDisable(true);
-            kdfSaltFormatCombo.setDisable(true);
-            kdfSaltField.setPromptText("Not used by X9.63");
-            kdfInfoField.setDisable(false);
-            kdfInfoFormatCombo.setDisable(false);
-            kdfInfoField.setPromptText("Shared info (optional)");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
+            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(false); kdfSaltBox.setManaged(false); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
+            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Shared info (optional)"); }
         } else if (algorithm.startsWith("PBKDF2")) {
-            kdfIterationsField.setText("600000");
-            kdfIterationsField.setDisable(false);
-            kdfInfoField.setDisable(true);
-            kdfInfoFormatCombo.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
-            kdfSaltField.setPromptText("Required salt");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
+            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("600000"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
         } else if (algorithm.equals("SCrypt")) {
-            kdfIterationsField.setText("32768");
-            kdfIterationsField.setDisable(false);
-            kdfInfoField.setDisable(true);
-            kdfInfoFormatCombo.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
+            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("32768"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
         } else if (algorithm.equals("Argon2id")) {
-            kdfIterationsField.setText("3");
-            kdfIterationsField.setDisable(false);
-            kdfInfoField.setDisable(true);
-            kdfInfoFormatCombo.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
+            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("3"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
+        }
+
+        if (kdfSaltBadge != null) {
+            if (requiresSalt && (kdfSaltField == null || kdfSaltField.getText().trim().isEmpty())) {
+                kdfSaltBadge.updateStateIncomplete("Salt required");
+            } else {
+                kdfSaltBadge.updateState();
+            }
         }
     }
 

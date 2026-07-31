@@ -597,16 +597,29 @@ public class CertificateGenerator {
                     "Input appears to be a Distinguished Name (DN), not a certificate.\nPlease paste the full PEM encoded certificate (starting with -----BEGIN CERTIFICATE-----).");
         }
 
-        // Check for headers
-        if (!cleaned.contains("-----BEGIN CERTIFICATE-----")) {
-            // Assume raw Base64 and wrap it
-            cleaned = "-----BEGIN CERTIFICATE-----\n" + cleaned + "\n-----END CERTIFICATE-----";
+        byte[] certBytes;
+        if (cleaned.contains("BEGIN CERTIFICATE")) {
+            String b64 = cleaned.replace("-----BEGIN CERTIFICATE-----", "")
+                                .replace("-----END CERTIFICATE-----", "")
+                                .replaceAll("\\s+", "");
+            certBytes = Base64.getDecoder().decode(b64);
+        } else {
+            String hexClean = cleaned.replaceAll("\\s+", "");
+            if (hexClean.matches("^[0-9a-fA-F]*$") && hexClean.length() % 2 == 0) {
+                certBytes = com.cryptocarver.util.DataConverter.hexToBytes(hexClean);
+            } else {
+                certBytes = Base64.getDecoder().decode(hexClean);
+            }
         }
 
-        java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
-        java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(
-                cleaned.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        return (X509Certificate) factory.generateCertificate(bais);
+        java.security.cert.CertificateFactory factory;
+        if (java.security.Security.getProvider("BC") != null) {
+            factory = java.security.cert.CertificateFactory.getInstance("X.509", "BC");
+        } else {
+            factory = java.security.cert.CertificateFactory.getInstance("X.509");
+        }
+
+        return (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(certBytes));
     }
 
     /**

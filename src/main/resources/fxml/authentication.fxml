@@ -7,7 +7,7 @@
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,authentication-module">
     <VBox spacing="12" styleClass="module-pane-content">
         <Label text="1. Data to authenticate" styleClass="form-label" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-        <Label text="Enter the message used to generate or verify the signature/MAC."
+        <Label text="Enter the message used to generate or verify the signature/MAC. Format is selected in the global 'Payload format' bar above."
                styleClass="helper-text"/>
         <TextArea fx:id="authInputArea" prefHeight="120" wrapText="true"
                   promptText="Enter the message to authenticate..."
@@ -44,6 +44,7 @@
                             <VBox spacing="8" styleClass="module-pane-content">
                                 <TextArea fx:id="signaturePrivateKeyArea" promptText="Paste Private Key PEM here..."
                                           wrapText="true" styleClass="monospace-field" VBox.vgrow="ALWAYS"/>
+                                <Label fx:id="sigPrivKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Paste Private Key from Clipboard" onAction="#handlePasteSignPrivateKey"
                                             styleClass="secondary-button"/>
@@ -57,6 +58,7 @@
                             <VBox spacing="8" styleClass="module-pane-content">
                                 <TextArea fx:id="signaturePublicKeyArea" promptText="Paste Public Key PEM here..."
                                           wrapText="true" styleClass="monospace-field" VBox.vgrow="ALWAYS"/>
+                                <Label fx:id="sigPubKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Paste Public Key from Clipboard" onAction="#handlePasteSignPublicKey"
                                             styleClass="secondary-button"/>
@@ -70,16 +72,22 @@
                     <Label fx:id="signatureKeyStatusLabel" text="Ready to sign/verify"
                            styleClass="helper-text"/>
                     <Separator/>
+                    <Label text="Sign Operation (Requires Private Key PEM):" styleClass="form-label"/>
                     <Button text="Sign" onAction="#handleSign"
                             styleClass="action-button,primary-action" maxWidth="200"/>
+                    <Label text="ℹ️ Sign: Input data in section 1 → generated signature in Result below."
+                           styleClass="helper-text"/>
                     <Separator/>
-                    <Label text="Verify Signature:" styleClass="form-label"/>
-                    <TextField fx:id="signatureVerifyField"
-                               promptText="Paste signature to verify (Format must match 'Output Format' selection)"
-                               styleClass="form-field" maxWidth="Infinity"/>
+                    <Label text="Verify Signature (Requires Public Key PEM &amp; Existing Signature):" styleClass="form-label"/>
+                    <VBox spacing="2">
+                        <TextField fx:id="signatureVerifyField"
+                                   promptText="Paste existing signature to verify (Format must match 'Output Format' selection)"
+                                   styleClass="form-field" maxWidth="Infinity"/>
+                        <Label fx:id="sigVerifyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                    </VBox>
                     <Button text="Verify Signature" onAction="#handleVerify"
                             styleClass="action-button,primary-action" maxWidth="200"/>
-                    <Label text="ℹ️ Sign: data in Input → signature in Output"
+                    <Label text="ℹ️ Verify: Compares input data, public key, and existing signature."
                            styleClass="helper-text"/>
                 </VBox>
             </TitledPane>
@@ -114,6 +122,7 @@
                             <ComboBox fx:id="macHsmKeyCombo" maxWidth="Infinity" visible="false"
                                       managed="false" styleClass="form-field"/>
                         </StackPane>
+                        <Label fx:id="macKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                         <FlowPane styleClass="responsive-action-bar">
                             <Button text="Paste MAC Key" onAction="#handlePasteMacKey" styleClass="secondary-button"/>
                             <Button text="Load MAC Key…" onAction="#handleLoadMacKey" styleClass="secondary-button"/>
@@ -141,9 +150,11 @@
                         <VBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0">
                             <Label text="Verify an existing MAC" styleClass="form-label"/>
                             <HBox spacing="6">
-                                <TextField fx:id="authMacVerifyField" promptText="Paste the expected MAC"
-                                           styleClass="monospace-field,form-field"
-                                           HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                    <TextField fx:id="authMacVerifyField" promptText="Paste the expected MAC"
+                                               styleClass="monospace-field,form-field" maxWidth="Infinity"/>
+                                    <Label fx:id="macVerifyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                                </VBox>
                                 <Button text="Verify" onAction="#handleVerifyMAC"
                                         styleClass="secondary-button" minWidth="90"/>
                             </HBox>

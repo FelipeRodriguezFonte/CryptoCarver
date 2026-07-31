@@ -27,15 +27,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class ModernMainControllerUITest {
 
     private static boolean jfxIsSetup;
-    private static String originalUserHome;
-
     @TempDir
     static java.nio.file.Path isolatedUserHome;
 
     @BeforeAll
     static void initJFX() throws InterruptedException {
-        originalUserHome = System.getProperty("user.home");
-        System.setProperty("user.home", isolatedUserHome.toString());
         if (!jfxIsSetup) {
             CountDownLatch latch = new CountDownLatch(1);
             try {
@@ -70,15 +66,6 @@ class ModernMainControllerUITest {
     @org.junit.jupiter.api.AfterEach
     void tearDownSettings() {
         com.cryptocarver.model.AppSettings.resetInstanceForTesting();
-    }
-
-    @AfterAll
-    static void restoreUserHome() {
-        if (originalUserHome == null) {
-            System.clearProperty("user.home");
-        } else {
-            System.setProperty("user.home", originalUserHome);
-        }
     }
 
     private <T> T getField(Object target, String name) throws Exception {
@@ -404,7 +391,7 @@ class ModernMainControllerUITest {
                 throw new RuntimeException(e);
             }
         });
-        assertEquals("module payload", historyStateRef.get().get("CipherController.cipherInputArea"));
+        assertEquals("[REDACTED_SECRET]", historyStateRef.get().get("CipherController.cipherInputArea"));
         assertEquals("[REDACTED_SECRET]", historyStateRef.get().get("CipherController.symmetricKeyField"));
         assertEquals(true, historyStateRef.get().get("CipherController.fileCipherCompactCbcCheck"));
 
@@ -2762,6 +2749,477 @@ class ModernMainControllerUITest {
             } catch (Exception e) {
                 fail(e);
             }
+        });
+    }
+
+    @Test
+    void testUx09AlgorithmDependentFormulasAndVisibility() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load();
+                ModernMainController mainCtrl = loader.getController();
+                mainCtrl.initialize();
+
+                CipherController cipherCtrl = getField(mainCtrl, "cipherContainerController");
+                assertNotNull(cipherCtrl);
+
+                javafx.scene.control.ComboBox<String> symAlgoCombo = getField(cipherCtrl, "symmetricAlgorithmCombo");
+                javafx.scene.control.ComboBox<String> cipherModeCombo = getField(cipherCtrl, "cipherModeCombo");
+                javafx.scene.control.ComboBox<String> paddingCombo = getField(cipherCtrl, "paddingCombo");
+                javafx.scene.control.TextField ivField = getField(cipherCtrl, "ivField");
+                javafx.scene.control.TextField gcmTagField = getField(cipherCtrl, "gcmTagField");
+                javafx.scene.control.TextField aadField = getField(cipherCtrl, "aadField");
+                javafx.scene.layout.VBox ecbWarningBox = getField(cipherCtrl, "ecbWarningBox");
+
+                // Test 1: ECB mode hides IV, Tag, AAD and shows ECB warning
+                symAlgoCombo.setValue("AES-256");
+                cipherModeCombo.setValue("ECB");
+                assertFalse(ivField.isVisible(), "ECB mode must hide IV field");
+                assertFalse(ivField.isManaged(), "ECB mode must unmanage IV field");
+                assertFalse(gcmTagField.isVisible(), "ECB mode must hide Tag field");
+                assertFalse(aadField.isVisible(), "ECB mode must hide AAD field");
+                assertTrue(ecbWarningBox.isVisible(), "ECB mode must show security warning box");
+                assertTrue(ecbWarningBox.isManaged(), "ECB mode must manage security warning box");
+
+                // Test 2: GCM mode shows IV, Tag, AAD and hides ECB warning
+                cipherModeCombo.setValue("GCM");
+                assertTrue(ivField.isVisible(), "GCM mode must show IV field");
+                assertTrue(gcmTagField.isVisible(), "GCM mode must show Tag field");
+                assertTrue(aadField.isVisible(), "GCM mode must show AAD field");
+                assertFalse(ecbWarningBox.isVisible(), "GCM mode must hide ECB warning box");
+
+                // Test 3: CBC mode shows IV, hides Tag & AAD
+                cipherModeCombo.setValue("CBC");
+                assertTrue(ivField.isVisible(), "CBC mode must show IV field");
+                assertFalse(gcmTagField.isVisible(), "CBC mode must hide Tag field");
+                assertFalse(aadField.isVisible(), "CBC mode must hide AAD field");
+
+                // Test 4: Programmatic change to ChaCha20-Poly1305 and XChaCha20-Poly1305
+                symAlgoCombo.setValue("ChaCha20-Poly1305");
+                assertTrue(gcmTagField.isVisible(), "ChaCha20-Poly1305 must show Tag field");
+                assertTrue(gcmTagField.isManaged(), "ChaCha20-Poly1305 must manage Tag field");
+                assertTrue(aadField.isVisible(), "ChaCha20-Poly1305 must show AAD field");
+                assertTrue(aadField.isManaged(), "ChaCha20-Poly1305 must manage AAD field");
+                assertTrue(ivField.getPromptText().contains("12 bytes"), "ChaCha20-Poly1305 must recommend 12-byte nonce");
+
+                symAlgoCombo.setValue("XChaCha20-Poly1305");
+                assertTrue(gcmTagField.isVisible(), "XChaCha20-Poly1305 must show Tag field");
+                assertTrue(aadField.isVisible(), "XChaCha20-Poly1305 must show AAD field");
+                assertTrue(ivField.getPromptText().contains("24 bytes"), "XChaCha20-Poly1305 must recommend 24-byte nonce");
+
+                // Test 5: Non-AEAD stream ciphers (Salsa20 & ChaCha20) hide Tag & AAD and disable mode/padding
+                symAlgoCombo.setValue("Salsa20");
+                assertFalse(gcmTagField.isVisible(), "Salsa20 must hide Tag field");
+                assertFalse(aadField.isVisible(), "Salsa20 must hide AAD field");
+                assertTrue(cipherModeCombo.isDisabled(), "Stream ciphers must disable mode combo");
+                assertTrue(paddingCombo.isDisabled(), "Stream ciphers must disable padding combo");
+
+                symAlgoCombo.setValue("ChaCha20");
+                assertFalse(gcmTagField.isVisible(), "ChaCha20 non-AEAD must hide Tag field");
+                assertFalse(aadField.isVisible(), "ChaCha20 non-AEAD must hide AAD field");
+
+                // Test 6: Restoration to AES/GCM and AES/ECB
+                symAlgoCombo.setValue("AES-256");
+                cipherModeCombo.setValue("GCM");
+                assertTrue(gcmTagField.isVisible(), "Restoration to AES-GCM must show Tag field");
+                assertTrue(aadField.isVisible(), "Restoration to AES-GCM must show AAD field");
+
+                cipherModeCombo.setValue("ECB");
+                assertFalse(ivField.isVisible(), "Restoration to AES-ECB must hide IV field");
+                assertFalse(gcmTagField.isVisible(), "Restoration to AES-ECB must hide Tag field");
+                assertTrue(ecbWarningBox.isVisible(), "Restoration to AES-ECB must show warning box");
+
+                // Test 7: Authentication Controller Sign/Verify/MAC requirements
+                AuthenticationController authCtrl = getField(mainCtrl, "authenticationContainerController");
+                assertNotNull(authCtrl);
+
+                javafx.scene.control.TextArea sigPrivKeyArea = getField(authCtrl, "signaturePrivateKeyArea");
+                javafx.scene.control.TextArea sigPubKeyArea = getField(authCtrl, "signaturePublicKeyArea");
+                javafx.scene.control.TextField sigVerifyField = getField(authCtrl, "signatureVerifyField");
+                javafx.scene.control.TextField authMacKeyField = getField(authCtrl, "authMacKeyField");
+
+                assertNotNull(sigPrivKeyArea);
+                assertNotNull(sigPubKeyArea);
+                assertNotNull(sigVerifyField);
+                assertNotNull(authMacKeyField);
+
+                // Test 8: KDF algorithm parameter visibility and input preservation
+                KeysController keysCtrl = getField(mainCtrl, "keysContainerController");
+                assertNotNull(keysCtrl);
+
+                javafx.scene.control.ComboBox<String> kdfAlgoCombo = getField(keysCtrl, "kdfAlgorithmCombo");
+                javafx.scene.control.TextField kdfInputField = getField(keysCtrl, "kdfInputField");
+                javafx.scene.control.TextField kdfIterationsField = getField(keysCtrl, "kdfIterationsField");
+                javafx.scene.layout.VBox kdfInfoBox = getField(keysCtrl, "kdfInfoBox");
+
+                kdfInputField.setText("user-input-secret-key");
+
+                kdfAlgoCombo.setValue("HKDF-SHA256");
+                assertFalse(kdfIterationsField.isVisible(), "HKDF must hide iterations field");
+                assertFalse(kdfIterationsField.isManaged(), "HKDF must unmanage iterations field");
+                assertTrue(kdfInfoBox.isVisible(), "HKDF must show info box");
+                assertEquals("user-input-secret-key", kdfInputField.getText(), "Changing KDF algorithm MUST NOT erase user input");
+
+                kdfAlgoCombo.setValue("PBKDF2-SHA256");
+                assertTrue(kdfIterationsField.isVisible(), "PBKDF2 must show iterations field");
+                assertTrue(kdfIterationsField.isManaged(), "PBKDF2 must manage iterations field");
+                assertFalse(kdfInfoBox.isVisible(), "PBKDF2 must hide info box");
+                assertEquals("user-input-secret-key", kdfInputField.getText(), "Changing KDF algorithm MUST NOT erase user input");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    @Test
+    void testUx09PreflightRealValidationChecks() throws Exception {
+        // 1. ChaCha20-Poly1305 / XChaCha20-Poly1305 decryption without tag -> INCOMPLETE, target gcmTagField
+        com.cryptocarver.model.PreflightReport reportNoTag1 = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "ChaCha20-Poly1305", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb", "", "", false);
+        assertFalse(reportNoTag1.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkNoTag1 = reportNoTag1.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.INCOMPLETE, checkNoTag1.getStatus());
+        assertEquals("gcmTagField", checkNoTag1.getTargetControlKey());
+
+        com.cryptocarver.model.PreflightReport reportNoTag2 = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "XChaCha20-Poly1305", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb00112233445566778899aabb", "", "", false);
+        assertFalse(reportNoTag2.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkNoTag2 = reportNoTag2.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.INCOMPLETE, checkNoTag2.getStatus());
+        assertEquals("gcmTagField", checkNoTag2.getTargetControlKey());
+
+        // 2. Invalid hex tag & tag size != 16 bytes -> BLOCKED, target gcmTagField
+        com.cryptocarver.model.PreflightReport reportInvalidHexTag = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "ChaCha20-Poly1305", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb", "NOT-HEX-TAG!", "", false);
+        assertFalse(reportInvalidHexTag.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkInvalidHexTag = reportInvalidHexTag.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.BLOCKED, checkInvalidHexTag.getStatus());
+        assertEquals("gcmTagField", checkInvalidHexTag.getTargetControlKey());
+
+        com.cryptocarver.model.PreflightReport reportBadSizeTag = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "ChaCha20-Poly1305", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb", "001122334455", "", false);
+        assertFalse(reportBadSizeTag.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkBadSizeTag = reportBadSizeTag.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.BLOCKED, checkBadSizeTag.getStatus());
+        assertEquals("gcmTagField", checkBadSizeTag.getTargetControlKey());
+
+        // 3. Valid 16-byte hex tag -> READY
+        com.cryptocarver.model.PreflightReport reportValidTag = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "ChaCha20-Poly1305", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb", "00112233445566778899aabbccddeeff", "", false);
+        assertTrue(reportValidTag.isExecutable());
+
+        // 4. Sign without private key -> INCOMPLETE pointing to signaturePrivateKeyArea
+        com.cryptocarver.model.PreflightReport reportNoSignKey = com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
+                "Message to sign", "SHA256withRSA", "", null, false, true);
+        assertFalse(reportNoSignKey.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkNoSignKey = reportNoSignKey.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.INCOMPLETE, checkNoSignKey.getStatus());
+        assertEquals("signaturePrivateKeyArea", checkNoSignKey.getTargetControlKey());
+
+        // 5. Verify without public key -> INCOMPLETE pointing to signaturePublicKeyArea
+        com.cryptocarver.model.PreflightReport reportNoVerifyPubKey = com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
+                "Message to verify", "SHA256withRSA", "", "existingSigHex", false, false);
+        assertFalse(reportNoVerifyPubKey.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkNoVerifyPubKey = reportNoVerifyPubKey.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.INCOMPLETE, checkNoVerifyPubKey.getStatus());
+        assertEquals("signaturePublicKeyArea", checkNoVerifyPubKey.getTargetControlKey());
+
+        // 6. Verify without signature -> INCOMPLETE pointing to signatureVerifyField
+        com.cryptocarver.model.PreflightReport reportNoVerifySig = com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
+                "Message to verify", "SHA256withRSA", "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----", "", false, false);
+        assertFalse(reportNoVerifySig.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkNoVerifySig = reportNoVerifySig.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.INCOMPLETE, checkNoVerifySig.getStatus());
+        assertEquals("signatureVerifyField", checkNoVerifySig.getTargetControlKey());
+
+        // 7. MAC manual without key -> INCOMPLETE pointing to authMacKeyField
+        com.cryptocarver.model.PreflightReport reportNoMacKey = com.cryptocarver.model.OperationPreflightEngine.checkMac(
+                "Message for MAC", "HMAC-SHA256", "Manual Input", "", null, false);
+        assertFalse(reportNoMacKey.isExecutable());
+        com.cryptocarver.model.PreflightCheck checkNoMacKey = reportNoMacKey.getFirstNonReadyCheck();
+        assertEquals(com.cryptocarver.model.PreflightStatus.INCOMPLETE, checkNoMacKey.getStatus());
+        assertEquals("authMacKeyField", checkNoMacKey.getTargetControlKey());
+    }
+
+    @Test
+    void testUx09StreamCipherPreflightModeWarningsAndVisibility() throws Exception {
+        // 1. ChaCha20-Poly1305 with inherited mode CBC: no ECB/CBC warnings in preflight
+        com.cryptocarver.model.PreflightReport reportChaChaCbc = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "ChaCha20-Poly1305", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb", "00112233445566778899aabbccddeeff", "", true);
+
+        boolean hasCbcOrEcbWarning = reportChaChaCbc.getChecks().stream()
+                .anyMatch(c -> c.getStatus() == com.cryptocarver.model.PreflightStatus.WARNING
+                        && c.getMessage().contains("vulnerable to padding oracle"));
+        assertFalse(hasCbcOrEcbWarning, "ChaCha20-Poly1305 with inherited CBC mode must NOT produce a CBC warning");
+
+        // 2. XChaCha20-Poly1305 with inherited mode ECB: no ECB warning in preflight report
+        com.cryptocarver.model.PreflightReport reportXChaChaEcb = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "XChaCha20-Poly1305", "ECB", "NoPadding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabb00112233445566778899aabb", "00112233445566778899aabbccddeeff", "", true);
+
+        boolean hasEcbWarning = reportXChaChaEcb.getChecks().stream()
+                .anyMatch(c -> c.getStatus() == com.cryptocarver.model.PreflightStatus.WARNING
+                        && c.getMessage().contains("ECB mode does not use an IV"));
+        assertFalse(hasEcbWarning, "XChaCha20-Poly1305 with inherited ECB mode must NOT produce an ECB warning");
+
+        // 3. UI Check: XChaCha20-Poly1305 with inherited mode ECB does NOT hide nonce/tag/AAD in UI
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load();
+                ModernMainController mainCtrl = loader.getController();
+                mainCtrl.initialize();
+
+                CipherController cipherCtrl = getField(mainCtrl, "cipherContainerController");
+                assertNotNull(cipherCtrl);
+
+                javafx.scene.control.ComboBox<String> symAlgoCombo = getField(cipherCtrl, "symmetricAlgorithmCombo");
+                javafx.scene.control.ComboBox<String> cipherModeCombo = getField(cipherCtrl, "cipherModeCombo");
+                javafx.scene.control.ComboBox<String> paddingCombo = getField(cipherCtrl, "paddingCombo");
+                javafx.scene.control.TextField ivField = getField(cipherCtrl, "ivField");
+                javafx.scene.control.TextField gcmTagField = getField(cipherCtrl, "gcmTagField");
+                javafx.scene.control.TextField aadField = getField(cipherCtrl, "aadField");
+
+                // Assert combo preservation before & after algorithm switch
+                symAlgoCombo.setValue("AES-256");
+                cipherModeCombo.setValue("ECB");
+                paddingCombo.setValue("PKCS7Padding");
+
+                assertEquals("ECB", cipherModeCombo.getValue(), "Mode combo initial value before stream cipher switch");
+                assertEquals("PKCS7Padding", paddingCombo.getValue(), "Padding combo initial value before stream cipher switch");
+
+                // Switch to stream cipher
+                symAlgoCombo.setValue("XChaCha20-Poly1305");
+
+                // Combos are disabled BUT preserve their user-selected values without reset or erase
+                assertTrue(cipherModeCombo.isDisabled(), "Mode combo must be disabled for XChaCha20-Poly1305");
+                assertTrue(paddingCombo.isDisabled(), "Padding combo must be disabled for XChaCha20-Poly1305");
+                assertEquals("ECB", cipherModeCombo.getValue(), "Mode combo MUST preserve pre-existing value 'ECB' after switching to stream cipher");
+                assertEquals("PKCS7Padding", paddingCombo.getValue(), "Padding combo MUST preserve pre-existing value 'PKCS7Padding' after switching to stream cipher");
+
+                assertTrue(ivField.isVisible(), "XChaCha20-Poly1305 with inherited ECB mode must keep IV/Nonce field visible");
+                assertTrue(gcmTagField.isVisible(), "XChaCha20-Poly1305 with inherited ECB mode must keep Tag field visible");
+                assertTrue(aadField.isVisible(), "XChaCha20-Poly1305 with inherited ECB mode must keep AAD field visible");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+
+        // 4. AES-256 / CBC continues generating CBC security warning
+        com.cryptocarver.model.PreflightReport reportAesCbc = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "AES-256", "CBC", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "00112233445566778899aabbccddeeff", "", "", true);
+
+        boolean hasAesCbcWarning = reportAesCbc.getChecks().stream()
+                .anyMatch(c -> c.getStatus() == com.cryptocarver.model.PreflightStatus.WARNING
+                        && c.getMessage().contains("vulnerable to padding oracle"));
+        assertTrue(hasAesCbcWarning, "AES-256 / CBC must generate CBC padding oracle warning");
+
+        // 5. AES-256 / ECB continues generating ECB security warning
+        com.cryptocarver.model.PreflightReport reportAesEcb = com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
+                "48656c6c6f", "Hex", "AES-256", "ECB", "PKCS7Padding",
+                "Manual Input", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", null, false,
+                "", "", "", true);
+
+        boolean hasAesEcbWarning = reportAesEcb.getChecks().stream()
+                .anyMatch(c -> c.getStatus() == com.cryptocarver.model.PreflightStatus.WARNING
+                        && c.getMessage().contains("ECB mode does not use an IV"));
+        assertTrue(hasAesEcbWarning, "AES-256 / ECB must generate ECB security warning");
+    }
+
+    @Test
+    void testNarrowViewportLayout() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                javafx.scene.Scene scene = new javafx.scene.Scene(root, 480, 800);
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setScene(scene);
+                stage.setWidth(480);
+                stage.setHeight(800);
+                stage.show();
+
+                root.applyCss();
+                root.layout();
+
+                assertNotNull(root);
+                assertEquals(480.0, scene.getWidth(), 1.0);
+                assertEquals(480.0, stage.getWidth(), 1.0);
+
+                // Verify child controls: visible buttons have non-empty text and visible controls are managed
+                java.util.List<Node> allNodes = new java.util.ArrayList<>();
+                collectAllNodes(root, allNodes);
+
+                for (Node node : allNodes) {
+                    boolean isEffectivelyVisible = node.isVisible() && node.getScene() != null && node.getParent() != null && node.getParent().isVisible();
+                    if (isEffectivelyVisible && (node instanceof javafx.scene.control.Button || node instanceof javafx.scene.control.TextInputControl || node instanceof javafx.scene.control.ComboBox)) {
+                        assertTrue(node.isManaged(), "Visible form control " + (node.getId() != null ? node.getId() : node.getClass().getSimpleName()) + " must have isManaged() == true");
+                    }
+                    if (node instanceof javafx.scene.control.Button btn && isEffectivelyVisible) {
+                        assertNotNull(btn.getText(), "Visible button must have non-null text");
+                        assertFalse(btn.getText().trim().isEmpty(), "Visible button text must not be empty or truncated away");
+                    }
+                    if (node.getClip() != null) {
+                        assertTrue(node.getClip().getBoundsInParent().getWidth() <= 480.0, "Clip bounds on container " + node.getId() + " must not exceed viewport width");
+                    }
+                }
+
+                stage.close();
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    private void collectAllNodes(Parent parent, java.util.List<Node> nodes) {
+        for (Node child : parent.getChildrenUnmodifiable()) {
+            nodes.add(child);
+            if (child instanceof Parent p) {
+                collectAllNodes(p, nodes);
+            }
+        }
+    }
+
+    @Test
+    void testResultSummaryNeutralAndSuccessStates() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.control.Label statusBadge = getField(controller, "resultStatusBadge");
+        assertNotNull(statusBadge);
+
+        runAndWait(() -> {
+            assertTrue(statusBadge.getStyleClass().contains("result-status-neutral")
+                    || statusBadge.getStyleClass().contains("result-status-success"));
+            assertNotNull(statusBadge.getAccessibleText());
+        });
+    }
+
+    @Test
+    void testHistoryCardWithReopenButton() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+
+        ModernMainController controller = controllerRef.get();
+        VBox historyContainer = getField(controller, "historyContainer");
+        assertNotNull(historyContainer);
+
+        runAndWait(() -> {
+            try {
+                Method refresh = ModernMainController.class.getDeclaredMethod("refreshHistoryUI");
+                refresh.setAccessible(true);
+                refresh.invoke(controller);
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    @Test
+    void testQuickStartCardStructure() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+
+        ModernMainController controller = controllerRef.get();
+        VBox quickStart = getField(controller, "quickStartContainer");
+        assertNotNull(quickStart);
+    }
+
+    @Test
+    void testButtonActionStylesFocusAndDisabledStates() throws Exception {
+        runAndWait(() -> {
+            VBox root = new VBox(10);
+            javafx.scene.Scene scene = new javafx.scene.Scene(root, 600, 400);
+            URL cssResource = getClass().getResource("/css/styles.css");
+            assertNotNull(cssResource, "styles.css must exist");
+            scene.getStylesheets().add(cssResource.toExternalForm());
+
+            javafx.scene.control.Button primary = new javafx.scene.control.Button("Primary");
+            primary.getStyleClass().addAll("action-button-primary", "primary-action");
+            primary.setDisable(true);
+
+            javafx.scene.control.Button secondary = new javafx.scene.control.Button("Secondary");
+            secondary.getStyleClass().addAll("secondary-button", "secondary-action");
+
+            javafx.scene.control.Button danger = new javafx.scene.control.Button("Danger");
+            danger.getStyleClass().addAll("btn-danger", "danger-action");
+
+            javafx.scene.control.Label subtle = new javafx.scene.control.Label("Subtle Label");
+            subtle.getStyleClass().add("subtle-text");
+
+            root.getChildren().addAll(primary, secondary, danger, subtle);
+
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            root.applyCss();
+            root.layout();
+
+            // Verify disabled state and computed properties
+            assertTrue(primary.isDisabled(), "Primary button must be disabled");
+            assertTrue(primary.getPseudoClassStates().stream().anyMatch(pc -> "disabled".equals(pc.getPseudoClassName())));
+            assertTrue(primary.getOpacity() > 0.0, "Primary button opacity should be valid");
+
+            // Verify focus state
+            secondary.requestFocus();
+            assertTrue(secondary.isFocused() || secondary.getPseudoClassStates().stream().anyMatch(pc -> "focused".equals(pc.getPseudoClassName())));
+
+            // Verify computed background styles are populated by JavaFX CSS engine
+            assertNotNull(primary.getBackground(), "Primary button computed background must not be null");
+            assertNotNull(secondary.getBackground(), "Secondary button computed background must not be null");
+            assertNotNull(danger.getBackground(), "Danger button computed background must not be null");
+
+            assertTrue(primary.getStyleClass().contains("primary-action"));
+            assertTrue(secondary.getStyleClass().contains("secondary-action"));
+            assertTrue(danger.getStyleClass().contains("danger-action"));
+            assertTrue(subtle.getStyleClass().contains("subtle-text"));
+
+            stage.close();
         });
     }
 }

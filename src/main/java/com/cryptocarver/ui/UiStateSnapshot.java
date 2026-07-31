@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** Captures and restores serializable JavaFX state across nested FXML controllers. */
-final class UiStateSnapshot {
+public final class UiStateSnapshot {
 
     /**
      * Read-only controls that contain reusable key material rather than a derived report.
@@ -44,8 +44,12 @@ final class UiStateSnapshot {
     private UiStateSnapshot() {
     }
 
-    static Map<String, Object> capture(Object rootController) {
+    public static Map<String, Object> capture(Object rootController) {
         return capture(rootController, CaptureMode.FULL);
+    }
+
+    public static Map<String, Object> capture(Object rootController, CaptureMode mode) {
+        return capture(rootController, mode, null, null);
     }
 
     /** Captures only selectors and toggles, suitable for automatic history records. */
@@ -53,12 +57,12 @@ final class UiStateSnapshot {
         return capture(rootController, CaptureMode.NON_TEXT);
     }
 
-    static Map<String, Object> capturePortableConfiguration(Object rootController) {
+    public static Map<String, Object> capturePortableConfiguration(Object rootController) {
         return capture(rootController, CaptureMode.EDITABLE_INPUTS);
     }
 
     /** Captures editable inputs and selectors, redacting secret fields for safe history storage. */
-    static Map<String, Object> captureHistoryRecipe(Object rootController) {
+    public static Map<String, Object> captureHistoryRecipe(Object rootController) {
         return capture(rootController, CaptureMode.HISTORY_RECIPE);
     }
 
@@ -73,10 +77,6 @@ final class UiStateSnapshot {
         return capture(rootController, CaptureMode.EDITABLE_INPUTS, sectionRoot, screenRoot);
     }
 
-    private static Map<String, Object> capture(Object rootController, CaptureMode mode) {
-        return capture(rootController, mode, null, null);
-    }
-
     private static Map<String, Object> capture(
             Object rootController, CaptureMode mode, Node scopeRoot, Parent screenRoot) {
         Map<String, Object> state = new LinkedHashMap<>();
@@ -87,8 +87,6 @@ final class UiStateSnapshot {
             if (mode == CaptureMode.EDITABLE_INPUTS && value instanceof TextInputControl text
                     && !text.isEditable() && !PORTABLE_READ_ONLY_ARTIFACTS.contains(key(owner, field))) return;
 
-            // Do not capture secret fields in history or configuration by default unless specifically allowed
-            // (Wait, actually we should just capture redacted values for secrets)
             Object captured = readControlValue(value);
             if (captured != null) {
                 if (mode == CaptureMode.HISTORY_RECIPE && isSecretField(field.getName(), value)) {
@@ -110,7 +108,11 @@ final class UiStateSnapshot {
             || lower.contains("pin") || lower.contains("secret")
             || lower.contains("iv") || lower.contains("nonce")
             || lower.contains("aad") || lower.contains("payload")
-            || lower.contains("token");
+            || lower.contains("token") || lower.contains("salt")
+            || lower.contains("info") || lower.contains("verify")
+            || lower.contains("signature") || lower.contains("mac")
+            || lower.contains("cert") || lower.contains("input")
+            || lower.contains("tag");
     }
 
     private static boolean isSharedScreenControl(Node node, Parent screenRoot) {
@@ -320,7 +322,7 @@ final class UiStateSnapshot {
         void accept(Object owner, Field field, Object value);
     }
 
-    private enum CaptureMode {
+    public enum CaptureMode {
         FULL,
         NON_TEXT,
         EDITABLE_INPUTS,

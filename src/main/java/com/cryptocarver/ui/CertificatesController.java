@@ -26,6 +26,8 @@ public class CertificatesController {
     @FXML private CheckBox certRootCaCheck;
 
     @FXML private TextArea certInputArea, certParseResultArea;
+    @FXML private Label certBadgeLabel;
+    private com.cryptocarver.ui.component.MaterialFieldBadge certBadge;
     @FXML private ComboBox<String> certTemplateCombo;
     private StatusReporter statusReporter;
     @FXML private TextArea certCompareLeftArea, certCompareRightArea, certCompareResultArea;
@@ -88,6 +90,15 @@ public class CertificatesController {
                 cmsEncryptLocalGrid, cmsEncryptPkcs11Box, cmsEncryptKeyAliasCombo);
 
         IngestionUIHelper.bindField(certInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
+
+        if (certBadgeLabel != null && certBadge == null) {
+            certBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Certificate");
+            certBadge.attach(certInputArea, "PEM / DER");
+            certBadge.textProperty().addListener((obs, oldVal, newVal) -> certBadgeLabel.setText(newVal));
+            certBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                certBadgeLabel.getStyleClass().setAll(certBadge.getStyleClass());
+            });
+        }
         IngestionUIHelper.bindField(certIssueCsrArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CSR);
         IngestionUIHelper.bindField(certIssueCaCertArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
         IngestionUIHelper.bindField(certIssueCaKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);

@@ -165,6 +165,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private VBox savedSessionsList;
 
     @FXML
+    private Label inputFormatLabel;
+
+    @FXML
     private ComboBox<String> inputFormatCombo;
 
     @FXML
@@ -926,11 +929,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             contractOperationLabel.setText(opText);
 
             // Add a tooltip for the contract description
+            String defaultPayloadTooltip = "Applies to the operation payload. Keys, IVs, salts, signatures and certificates have their own formats.";
             if (profile.contractDescription() != null && !profile.contractDescription().isEmpty()) {
                 Tooltip tooltipObj = new Tooltip(profile.contractDescription());
                 contractOperationLabel.setTooltip(tooltipObj);
                 if (inputFormatCombo != null) {
-                    inputFormatCombo.setTooltip(tooltipObj);
+                    inputFormatCombo.setTooltip(new Tooltip(defaultPayloadTooltip + "\n" + profile.contractDescription()));
                 }
                 if (outputFormatCombo != null) {
                     outputFormatCombo.setTooltip(tooltipObj);
@@ -938,7 +942,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             } else {
                 contractOperationLabel.setTooltip(null);
                 if (inputFormatCombo != null) {
-                    inputFormatCombo.setTooltip(null);
+                    inputFormatCombo.setTooltip(new Tooltip(defaultPayloadTooltip));
                 }
                 if (outputFormatCombo != null) {
                     outputFormatCombo.setTooltip(null);
@@ -1158,41 +1162,32 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (items.isEmpty()) {
             Label placeholder = new Label("No recent operations");
-            placeholder.setStyle("-fx-text-fill: -color-text-muted; -fx-font-size: 11px; -fx-padding: 10;");
+            placeholder.getStyleClass().add("muted-text");
+            placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 10;");
             historyContainer.getChildren().add(placeholder);
             return;
         }
 
         for (com.cryptocarver.model.HistoryCommand item : items) {
             HBox historyCommand = new HBox(8);
-            historyCommand.setStyle(
-                    "-fx-background-color: -color-bg-sidebar-hover; " +
-                            "-fx-padding: 8; " +
-                            "-fx-background-radius: 6;");
+            historyCommand.getStyleClass().add("history-card");
             historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
             VBox infoBox = new VBox(2);
             Label opLabel = new Label(item.getOperation());
-            opLabel.setStyle("-fx-text-fill: -color-text-light; -fx-font-weight: bold; -fx-font-size: 12px;");
+            opLabel.getStyleClass().add("history-card-title");
 
             String relTime = formatRelativeTime(item.getTimestamp());
             Label timeLabel = new Label(relTime);
-            timeLabel.setStyle("-fx-text-fill: -color-text-subtle; -fx-font-size: 10px;");
+            timeLabel.getStyleClass().add("history-card-time");
             Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
 
             infoBox.getChildren().addAll(opLabel, timeLabel);
             HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
 
             Button reopenButton = new Button("Reopen");
-            reopenButton.setStyle(
-                    "-fx-background-color: transparent; " +
-                            "-fx-border-color: -color-border; " +
-                            "-fx-border-width: 1; " +
-                            "-fx-border-radius: 3; " +
-                            "-fx-text-fill: -color-text-light; " +
-                            "-fx-font-size: 10px; " +
-                            "-fx-padding: 3 8; " +
-                            "-fx-cursor: hand;");
+            reopenButton.getStyleClass().add("history-card-action");
+            reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
 
             reopenButton.setOnAction(e -> {
                 restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
@@ -1832,7 +1827,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 // Success / Error status
                 if (resultStatusBadge != null) {
                     resultStatusBadge.setText("SUCCESS");
-                    resultStatusBadge.setStyle("-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
+                    resultStatusBadge.getStyleClass().setAll("result-status-success");
+                    resultStatusBadge.setStyle("");
                 }
             }
         }
@@ -2225,18 +2221,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         GridPane grid = new GridPane();
         grid.setHgap(15);
         grid.setVgap(8);
-        grid.setStyle("-fx-background-color: -color-bg-subtle; -fx-padding: 12; -fx-background-radius: 6;");
+        grid.getStyleClass().add("quick-start-card");
 
         int row = 0;
         for (com.cryptocarver.model.KeyboardShortcutEntry shortcut : com.cryptocarver.model.KeyboardShortcutRegistry.getShortcuts()) {
             Label comboLabel = new Label(shortcut.getDisplayCombination());
-            comboLabel.setStyle("-fx-font-family: monospace; -fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;");
+            comboLabel.getStyleClass().add("quick-start-title");
 
             Label actionLabel = new Label(shortcut.getActionName());
-            actionLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+            actionLabel.getStyleClass().add("heading-text");
+            actionLabel.setStyle("-fx-font-size: 12px;");
 
             Label descLabel = new Label(shortcut.getDescription());
-            descLabel.setStyle("-fx-text-fill: -color-text-muted; -fx-font-size: 11px;");
+            descLabel.getStyleClass().add("quick-start-description");
 
             grid.add(comboLabel, 0, row);
             grid.add(actionLabel, 1, row);
@@ -3437,19 +3434,23 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         switch (status) {
             case READY -> {
                 readinessStatusBadge.setText("✔ READY");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #059669;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-ready");
+                readinessStatusBadge.setStyle("");
             }
             case WARNING -> {
                 readinessStatusBadge.setText("⚠️ WARNING");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #d97706;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-warning");
+                readinessStatusBadge.setStyle("");
             }
             case INCOMPLETE -> {
                 readinessStatusBadge.setText("❓ INCOMPLETE");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #eab308;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-incomplete");
+                readinessStatusBadge.setStyle("");
             }
             case BLOCKED -> {
                 readinessStatusBadge.setText("⛔ BLOCKED");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #b91c1c;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-blocked");
+                readinessStatusBadge.setStyle("");
             }
         }
 
@@ -3469,7 +3470,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case BLOCKED -> "⛔ ";
             };
             checkBtn.setText(icon + check.getName() + ": " + check.getMessage());
-            checkBtn.setStyle("-fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            checkBtn.getStyleClass().add("readiness-check-button");
             checkBtn.setOnAction(e -> {
                 if (check.getTargetControlKey() != null) {
                     focusControl(check.getTargetControlKey());
@@ -3508,22 +3509,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             );
         } else if ("Digital Signatures".equals(opName)) {
             String keyText = isEncrypt ? getFieldText(authenticationContainerController, "signaturePrivateKeyArea") : getFieldText(authenticationContainerController, "signaturePublicKeyArea");
+            String verifyText = getFieldText(authenticationContainerController, "signatureVerifyField");
             return com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
                     getFieldText(authenticationContainerController, "authInputArea"),
                     getComboValue(authenticationContainerController, "signatureAlgorithmCombo"),
                     keyText,
+                    verifyText,
                     false,
                     isEncrypt
             );
         } else if ("Message Authentication Codes".equals(opName)) {
             String keySource = getComboValue(authenticationContainerController, "macKeySourceCombo");
             String keyReference = getComboValue(authenticationContainerController, "macHsmKeyCombo");
+            String macVerifyText = getFieldText(authenticationContainerController, "authMacVerifyField");
             return com.cryptocarver.model.OperationPreflightEngine.checkMac(
                     getFieldText(authenticationContainerController, "authInputArea"),
                     getComboValue(authenticationContainerController, "authMacAlgorithmCombo"),
                     keySource,
                     getFieldText(authenticationContainerController, "authMacKeyField"),
                     keyReference,
+                    macVerifyText,
+                    isEncrypt,
                     "Simulated HSM".equalsIgnoreCase(keySource) && isHsmKeyMetadataOnly(keyReference)
             );
         } else if ("Asymmetric Ciphers".equals(opName)) {
@@ -3653,14 +3659,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     row.setStyle("-fx-padding: 6 10;");
 
                     Label categoryBadge = new Label("[" + item.getCategory() + "]");
-                    categoryBadge.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 6; -fx-background-radius: 4; -fx-text-fill: #60a5fa; -fx-background-color: #1e3a8a;");
+                    categoryBadge.getStyleClass().add("command-palette-category");
 
                     VBox textContainer = new VBox(2);
                     Label titleLabel = new Label(item.getTitle());
-                    titleLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #f8fafc;");
+                    titleLabel.getStyleClass().add("history-card-title");
 
                     Label descLabel = new Label(item.getDescription());
-                    descLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #94a3b8;");
+                    descLabel.getStyleClass().add("subtle-text");
+                    descLabel.setStyle("-fx-font-size: 11px;");
 
                     textContainer.getChildren().addAll(titleLabel, descLabel);
                     HBox.setHgrow(textContainer, Priority.ALWAYS);
@@ -3669,7 +3676,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
                     if (item.getShortcut() != null && !item.getShortcut().isEmpty()) {
                         Label shortcutLabel = new Label(item.getShortcut());
-                        shortcutLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #94a3b8; -fx-padding: 2 6; -fx-background-color: #334155; -fx-background-radius: 4;");
+                        shortcutLabel.getStyleClass().add("command-palette-shortcut");
                         row.getChildren().add(shortcutLabel);
                     }
 

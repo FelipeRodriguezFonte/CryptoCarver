@@ -326,4 +326,33 @@ class ModernMainControllerFxmlStaticTest {
             assertTrue(textFound, "Critical button text containing '" + critText + "' missing in FXMLs");
         }
     }
+
+    @Test
+    void testNoInvalidInlineColorTokensInFxmlAndJava() throws Exception {
+        java.io.File fxmlDir = new java.io.File("src/main/resources/fxml");
+        if (fxmlDir.exists() && fxmlDir.isDirectory()) {
+            java.io.File[] files = fxmlDir.listFiles((dir, name) -> name.endsWith(".fxml"));
+            if (files != null) {
+                for (java.io.File f : files) {
+                    String content = java.nio.file.Files.readString(f.toPath());
+                    java.util.regex.Pattern p = java.util.regex.Pattern.compile("style=\\\"[^\\\"]*-color-[^\\\"]*\\\"");
+                    java.util.regex.Matcher m = p.matcher(content);
+                    assertFalse(m.find(), "FXML " + f.getName() + " must not contain inline style attributes with -color- tokens");
+                }
+            }
+        }
+
+        java.io.File uiDir = new java.io.File("src/main/java/com/cryptocarver/ui");
+        if (uiDir.exists() && uiDir.isDirectory()) {
+            java.io.File[] files = uiDir.listFiles((dir, name) -> name.endsWith(".java"));
+            if (files != null) {
+                for (java.io.File f : files) {
+                    String content = java.nio.file.Files.readString(f.toPath());
+                    java.util.regex.Pattern p = java.util.regex.Pattern.compile("setStyle\\s*\\([^)]*-color-[^)]*\\)");
+                    java.util.regex.Matcher m = p.matcher(content);
+                    assertFalse(m.find(), f.getName() + " must not use setStyle with unresolved -color- tokens");
+                }
+            }
+        }
+    }
 }

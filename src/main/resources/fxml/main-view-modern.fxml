@@ -85,8 +85,16 @@
 
                 <!-- Format Flow Bar -->
                 <HBox fx:id="formatFlowBar" alignment="CENTER" spacing="8" styleClass="format-flow-bar">
-                    <Label text="Input:" styleClass="format-flow-label"/>
-                    <ComboBox fx:id="inputFormatCombo" prefWidth="160" styleClass="format-combo"/>
+                    <Label fx:id="inputFormatLabel" text="Payload format:" styleClass="format-flow-label">
+                        <tooltip>
+                            <Tooltip text="Applies to the operation payload. Keys, IVs, salts, signatures and certificates have their own formats."/>
+                        </tooltip>
+                    </Label>
+                    <ComboBox fx:id="inputFormatCombo" prefWidth="160" styleClass="format-combo">
+                        <tooltip>
+                            <Tooltip text="Applies to the operation payload. Keys, IVs, salts, signatures and certificates have their own formats."/>
+                        </tooltip>
+                    </ComboBox>
 
                     <Label text="→" styleClass="format-flow-arrow"/>
 
@@ -136,19 +144,18 @@
                 <!-- Result Summary Bar (Compact header) -->
                 <HBox fx:id="resultSummaryBar" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="result-summary-bar">
                     <FlowPane hgap="10" vgap="4" HBox.hgrow="ALWAYS" alignment="CENTER_LEFT">
-                        <Label text="Last Result:" style="-fx-font-weight: bold; -fx-text-fill: -color-text-muted; -fx-font-size: 12px;"/>
-                        <Label fx:id="resultOpLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;"/>
-                        <Label text="Algorithm:" style="-fx-text-fill: -color-text-muted; -fx-font-size: 11px;"/>
-                        <Label fx:id="resultAlgoLabel" text="N/A" style="-fx-font-weight: bold; -fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
-                        <Label fx:id="resultSizeLabel" text="In: 0B / Out: 0B" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
-                        <Label fx:id="resultFormatLabel" text="Not applicable" style="-fx-text-fill: -color-text-primary; -fx-font-size: 11px;"/>
-                        <Label fx:id="resultStatusBadge" text="SUCCESS"
-                               style="-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;"/>
+                        <Label text="Last Result:" styleClass="result-summary-label"/>
+                        <Label fx:id="resultOpLabel" text="N/A" styleClass="result-summary-value"/>
+                        <Label text="Algorithm:" styleClass="result-summary-label"/>
+                        <Label fx:id="resultAlgoLabel" text="N/A" styleClass="result-summary-value"/>
+                        <Label fx:id="resultSizeLabel" text="In: 0B / Out: 0B" styleClass="result-summary-value"/>
+                        <Label fx:id="resultFormatLabel" text="Not applicable" styleClass="result-summary-value"/>
+                        <Label fx:id="resultStatusBadge" text="NEUTRAL" styleClass="result-status-neutral" accessibleText="Last operation result status: NEUTRAL"/>
                     </FlowPane>
                     <FlowPane prefWrapLength="400" hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="responsive-action-bar">
-                        <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button"/>
-                        <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button"/>
-                        <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary"/>
+                        <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" accessibleText="Expand result viewer"/>
+                        <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" accessibleText="Add current output to clipboard shelf"/>
+                        <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary" accessibleText="Copy output to clipboard"/>
                     </FlowPane>
                 </HBox>
 
@@ -184,7 +191,7 @@
 
                 <!-- Execution Readiness Panel (reusable compact card) -->
                 <HBox fx:id="readinessPanel" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="readiness-panel" style="-fx-padding: 8 14; -fx-background-radius: 6; -fx-margin: 4 0; -fx-background-color: #1e293b;">
-                    <Label fx:id="readinessStatusBadge" text="✔ READY" style="-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #059669;"/>
+                    <Label fx:id="readinessStatusBadge" text="✔ READY" styleClass="readiness-status-ready"/>
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <Label fx:id="readinessSummaryLabel" text="Execution Readiness Checklist" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #f8fafc;"/>
                         <FlowPane fx:id="readinessChecksContainer" hgap="10" vgap="4"/>
@@ -199,8 +206,8 @@
                         <!-- Quick Start Container -->
                         <VBox fx:id="quickStartContainer" managed="false" visible="false" spacing="20" style="-fx-padding: 20;">
                             <VBox spacing="5">
-                                <Label text="Laboratory Quick Start" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -color-primary-dark;"/>
-                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." style="-fx-text-fill: -color-text-muted; -fx-font-size: 13px;"/>
+                                <Label text="Laboratory Quick Start" styleClass="quick-start-title" style="-fx-font-size: 18px;"/>
+                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." styleClass="quick-start-description" style="-fx-font-size: 13px;"/>
                             </VBox>
 
                             <GridPane hgap="15" vgap="15">

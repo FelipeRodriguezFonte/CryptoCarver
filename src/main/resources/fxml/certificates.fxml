@@ -121,9 +121,12 @@
                     </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
-                    <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
-                              styleClass="monospace-field"
-                              promptText="Paste certificate in PEM format..."/>
+                    <VBox spacing="2">
+                        <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
+                                  styleClass="monospace-field"
+                                  promptText="Paste certificate in PEM format..."/>
+                        <Label fx:id="certBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                    </VBox>
 
                     <Button text="Parse Certificate" onAction="#handleParseCertificate"
                             styleClass="action-button,primary-action" maxWidth="180"/>

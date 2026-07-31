@@ -69,6 +69,18 @@ public class AuthenticationController {
     @FXML private ComboBox<String> macKeySourceCombo;
     @FXML private ComboBox<String> macHsmKeyCombo;
 
+    @FXML private Label sigPrivKeyBadgeLabel;
+    @FXML private Label sigPubKeyBadgeLabel;
+    @FXML private Label sigVerifyBadgeLabel;
+    @FXML private Label macKeyBadgeLabel;
+    @FXML private Label macVerifyBadgeLabel;
+
+    private com.cryptocarver.ui.component.MaterialFieldBadge sigPrivKeyBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge sigPubKeyBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge sigVerifyBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge macKeyBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge macVerifyBadge;
+
     public AuthenticationController() {
     }
 
@@ -84,6 +96,51 @@ public class AuthenticationController {
         IngestionUIHelper.bindField(signaturePrivateKeyArea, signatureKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
         IngestionUIHelper.bindField(signaturePublicKeyArea, signatureKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
         IngestionUIHelper.bindField(authMacKeyField, authMacKeyInfoLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
+
+        initBadges();
+    }
+
+    private void initBadges() {
+        if (sigPrivKeyBadgeLabel != null && sigPrivKeyBadge == null) {
+            sigPrivKeyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Private Key");
+            sigPrivKeyBadge.attach(signaturePrivateKeyArea, "PEM");
+            sigPrivKeyBadge.textProperty().addListener((obs, oldVal, newVal) -> sigPrivKeyBadgeLabel.setText(newVal));
+            sigPrivKeyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                sigPrivKeyBadgeLabel.getStyleClass().setAll(sigPrivKeyBadge.getStyleClass());
+            });
+        }
+        if (sigPubKeyBadgeLabel != null && sigPubKeyBadge == null) {
+            sigPubKeyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Public Key");
+            sigPubKeyBadge.attach(signaturePublicKeyArea, "PEM");
+            sigPubKeyBadge.textProperty().addListener((obs, oldVal, newVal) -> sigPubKeyBadgeLabel.setText(newVal));
+            sigPubKeyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                sigPubKeyBadgeLabel.getStyleClass().setAll(sigPubKeyBadge.getStyleClass());
+            });
+        }
+        if (sigVerifyBadgeLabel != null && sigVerifyBadge == null) {
+            sigVerifyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Signature to verify");
+            sigVerifyBadge.attach(signatureVerifyField, "Hex / Base64");
+            sigVerifyBadge.textProperty().addListener((obs, oldVal, newVal) -> sigVerifyBadgeLabel.setText(newVal));
+            sigVerifyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                sigVerifyBadgeLabel.getStyleClass().setAll(sigVerifyBadge.getStyleClass());
+            });
+        }
+        if (macKeyBadgeLabel != null && macKeyBadge == null) {
+            macKeyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("MAC Key");
+            macKeyBadge.attach(authMacKeyField, "Hex");
+            macKeyBadge.textProperty().addListener((obs, oldVal, newVal) -> macKeyBadgeLabel.setText(newVal));
+            macKeyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                macKeyBadgeLabel.getStyleClass().setAll(macKeyBadge.getStyleClass());
+            });
+        }
+        if (macVerifyBadgeLabel != null && macVerifyBadge == null) {
+            macVerifyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("MAC to verify");
+            macVerifyBadge.attach(authMacVerifyField, "Hex / Base64");
+            macVerifyBadge.textProperty().addListener((obs, oldVal, newVal) -> macVerifyBadgeLabel.setText(newVal));
+            macVerifyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                macVerifyBadgeLabel.getStyleClass().setAll(macVerifyBadge.getStyleClass());
+            });
+        }
     }
 
     public void init(StatusReporter mainController,
@@ -299,12 +356,17 @@ public class AuthenticationController {
         if (macKeySourceCombo != null) {
             macKeySourceCombo.getItems().addAll("Manual Input", "Simulated HSM", "PKCS#11 Token");
             macKeySourceCombo.setValue("Manual Input");
+            macKeySourceCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                updateMacKeySourceVisibility();
+                refreshHsmKeys();
+            });
             macKeySourceCombo.setOnAction(e -> {
                 updateMacKeySourceVisibility();
                 refreshHsmKeys();
             });
         }
 
+        updateMacKeySourceVisibility();
         refreshHsmKeys();
 
         // Populate MAC algorithms
@@ -622,15 +684,8 @@ public class AuthenticationController {
             if (signaturePrivateKeyArea != null && !signaturePrivateKeyArea.getText().trim().isEmpty()) {
                 try {
                     String pem = signaturePrivateKeyArea.getText().trim();
-                    if (algorithm.contains("Ed25519")) {
-                        currentPrivateKey = AsymmetricKeyOperations.importEd25519PrivateKeyPEM(pem);
-                    } else if (algorithm.contains("ECDSA")) {
-                        currentPrivateKey = AsymmetricKeyOperations.importECPrivateKeyPEM(pem);
-                    } else {
-                        currentPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEM(pem);
-                    }
+                    currentPrivateKey = com.cryptocarver.crypto.SharedMaterialParser.parsePrivateKeyPem(pem);
                 } catch (Exception e) {
-                    // Ignore, rely on loaded key or fail
                     mainController.showError("Key Parse Error",
                             "Could not parse private key from text area: " + e.getMessage());
                     return;
@@ -704,13 +759,7 @@ public class AuthenticationController {
             if (signaturePublicKeyArea != null && !signaturePublicKeyArea.getText().trim().isEmpty()) {
                 try {
                     String pem = signaturePublicKeyArea.getText().trim();
-                    if (algorithm.contains("Ed25519")) {
-                        currentPublicKey = AsymmetricKeyOperations.importEd25519PublicKeyPEM(pem);
-                    } else if (algorithm.contains("ECDSA")) {
-                        currentPublicKey = AsymmetricKeyOperations.importECPublicKeyPEM(pem);
-                    } else {
-                        currentPublicKey = AsymmetricKeyOperations.importPublicKeyPEM(pem);
-                    }
+                    currentPublicKey = com.cryptocarver.crypto.SharedMaterialParser.parsePublicKeyPem(pem);
                 } catch (Exception e) {
                     mainController.showError("Key Parse Error",
                             "Could not parse public key from text area: " + e.getMessage());
@@ -730,9 +779,11 @@ public class AuthenticationController {
                 return;
             }
 
-            byte[] signature = parseDataWithFormat(signatureText, outputFormatCombo.getValue());
-            if (signature == null || signature.length == 0) {
-                mainController.showError(new UserFacingError("Signature Error", "Invalid signature format.", "Check that the signature matches the selected output format.", "signatureVerifyField"));
+            byte[] signature;
+            try {
+                signature = com.cryptocarver.crypto.SharedMaterialParser.parseBytesByFormat(signatureText, "Hex / Base64");
+            } catch (Exception e) {
+                mainController.showError(new UserFacingError("Signature Error", "Invalid signature format: " + e.getMessage(), "Check that the signature is valid Hex or Base64.", "signatureVerifyField"));
                 return;
             }
 
@@ -1013,9 +1064,11 @@ public class AuthenticationController {
                 return;
             }
 
-            byte[] providedMac = parseDataWithFormat(macText, outputFormatCombo.getValue());
-            if (providedMac == null || providedMac.length == 0) {
-                mainController.showError(new UserFacingError("MAC Error", "Invalid MAC format.", "Check MAC format and output encoding.", "authMacVerifyField"));
+            byte[] providedMac;
+            try {
+                providedMac = com.cryptocarver.crypto.SharedMaterialParser.parseBytesByFormat(macText, "Hex / Base64");
+            } catch (Exception e) {
+                mainController.showError(new UserFacingError("MAC Error", "Invalid MAC format: " + e.getMessage(), "Check MAC format (Hex or Base64).", "authMacVerifyField"));
                 return;
             }
 
