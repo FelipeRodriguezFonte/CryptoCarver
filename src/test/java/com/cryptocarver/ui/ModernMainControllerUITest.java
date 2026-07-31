@@ -4,6 +4,8 @@ import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.control.Button;
 import javafx.scene.Node;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
@@ -31,23 +33,41 @@ class ModernMainControllerUITest {
     static java.nio.file.Path isolatedUserHome;
 
     @BeforeAll
-    static void initJFX() throws InterruptedException {
-        if (!jfxIsSetup) {
-            CountDownLatch latch = new CountDownLatch(1);
-            try {
-                Platform.startup(() -> {
-                    Platform.setImplicitExit(false);
-                    latch.countDown();
-                });
-                if (!latch.await(15, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException("JavaFX failed to start within timeout");
-                }
-            } catch (IllegalStateException e) {
-                Platform.setImplicitExit(false);
-                // Toolkit already initialized
-            }
-            jfxIsSetup = true;
+    static void initJFX() {
+        if (jfxIsSetup) return;
+
+        try {
+            java.nio.file.Path javafxCache = java.nio.file.Files.createTempDirectory("cryptocarver-javafx-cache-");
+            System.setProperty("javafx.cachedir", javafxCache.toString());
+        } catch (java.io.IOException e) {
+            throw new AssertionError("Could not create a writable JavaFX cache directory", e);
         }
+
+        CountDownLatch latch = new CountDownLatch(1);
+        try {
+            Platform.startup(() -> {
+                Platform.setImplicitExit(false);
+                latch.countDown();
+            });
+        } catch (IllegalStateException alreadyInitialized) {
+            // Another JavaFX test initialized the shared toolkit first.
+            Platform.setImplicitExit(false);
+            jfxIsSetup = true;
+            return;
+        } catch (Throwable startupFailure) {
+            throw new AssertionError("JavaFX toolkit initialization failed", startupFailure);
+        }
+
+        try {
+            if (!latch.await(15, TimeUnit.SECONDS)) {
+                throw new AssertionError("JavaFX toolkit did not become ready within 15 seconds");
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while starting JavaFX toolkit", interrupted);
+        }
+
+        jfxIsSetup = true;
     }
 
     @org.junit.jupiter.api.BeforeEach
@@ -3218,6 +3238,248 @@ class ModernMainControllerUITest {
             assertTrue(secondary.getStyleClass().contains("secondary-action"));
             assertTrue(danger.getStyleClass().contains("danger-action"));
             assertTrue(subtle.getStyleClass().contains("subtle-text"));
+
+            stage.close();
+        });
+    }
+
+    @Test
+    void testUX11RuntimeComponentRenderingAndCssStyles() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        AtomicReference<Parent> rootRef = new AtomicReference<>();
+
+        runAndWait(() -> {
+            try {
+                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                assertNotNull(resource, "main-view-modern.fxml must exist");
+                FXMLLoader loader = new FXMLLoader(resource);
+                Parent root = loader.load();
+                rootRef.set(root);
+                ModernMainController controller = loader.getController();
+                controllerRef.set(controller);
+
+                VBox wrapper = new VBox(root);
+                javafx.scene.Scene scene = new javafx.scene.Scene(wrapper, 1024, 768);
+                URL cssResource = getClass().getResource("/css/styles.css");
+                assertNotNull(cssResource, "styles.css must exist");
+                scene.getStylesheets().add(cssResource.toExternalForm());
+
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setScene(scene);
+                stage.show();
+
+                wrapper.applyCss();
+                wrapper.layout();
+
+                // 1. Result Summary Transition (Neutral -> SUCCESS)
+                javafx.scene.control.Label resultBadge = getField(controller, "resultStatusBadge");
+                assertNotNull(resultBadge);
+
+                // Trigger real transition to SUCCESS via publish(OperationResult)
+                com.cryptocarver.model.OperationResult opResult = com.cryptocarver.model.OperationResult
+                        .forOperation("AES-256 Encryption")
+                        .input(new byte[]{1,2,3})
+                        .output(new byte[]{4,5,6})
+                        .detail("Algorithm", "AES/CBC/PKCS5Padding")
+                        .build();
+                controller.publish(opResult);
+
+                wrapper.applyCss();
+                wrapper.layout();
+                assertTrue(resultBadge.getStyleClass().contains("result-status-success"), "resultBadge must have result-status-success after transition");
+                assertNotNull(resultBadge.getBackground(), "resultBadge background must be computed");
+                assertTrue(resultBadge.getOpacity() > 0.0);
+
+                // 2. Quick Start Cards & Content
+                VBox quickStart = getField(controller, "quickStartContainer");
+                assertNotNull(quickStart);
+                assertFalse(quickStart.getChildren().isEmpty(), "quickStartContainer must contain cards");
+                for (Node child : quickStart.getChildren()) {
+                    assertNotNull(child.getStyleClass());
+                    assertTrue(child.getOpacity() > 0.0);
+                }
+
+                // 3. History Entry, Card & Reopen Button
+                com.cryptocarver.model.HistoryManager historyManager = getField(controller, "historyManager");
+                assertNotNull(historyManager);
+                historyManager.addHistoryItem(new com.cryptocarver.model.HistoryCommand(
+                        "AES-GCM Encryption", "2026-07-31 18:00:00", java.util.Map.of("key", "secret")));
+
+                Method refreshHistory = ModernMainController.class.getDeclaredMethod("refreshHistoryUI");
+                refreshHistory.setAccessible(true);
+                refreshHistory.invoke(controller);
+
+                wrapper.applyCss();
+                wrapper.layout();
+
+                VBox historyContainer = getField(controller, "historyContainer");
+                assertNotNull(historyContainer);
+                assertFalse(historyContainer.getChildren().isEmpty(), "historyContainer must contain rendered history cards");
+
+                HBox firstHistoryCard = (HBox) historyContainer.getChildren().get(0);
+                assertTrue(firstHistoryCard.getStyleClass().contains("history-card"), "History card must have history-card styleClass");
+                assertNotNull(firstHistoryCard.getBackground(), "History card background must be computed");
+
+                Button reopenBtn = (Button) firstHistoryCard.getChildren().get(1);
+                assertTrue(reopenBtn.getStyleClass().contains("history-card-action"), "Reopen button must have history-card-action styleClass");
+                assertNotNull(reopenBtn.getBackground(), "Reopen button background must be computed");
+                assertTrue(reopenBtn.getOpacity() > 0.0);
+
+                // 4. Readiness Badges Real Flow (READY, WARNING, INCOMPLETE, BLOCKED)
+                javafx.scene.control.Label readinessBadge = getField(controller, "readinessStatusBadge");
+                assertNotNull(readinessBadge);
+
+                // Test READY report flow
+                com.cryptocarver.model.PreflightReport reportReady = new com.cryptocarver.model.PreflightReport(
+                        com.cryptocarver.model.PreflightStatus.READY, "System is ready",
+                        java.util.List.of(new com.cryptocarver.model.PreflightCheck("Key", com.cryptocarver.model.PreflightStatus.READY, "Valid", "keyControl")));
+                setField(controller, "currentPreflightReport", reportReady);
+                Method updateReadiness = ModernMainController.class.getDeclaredMethod("updateReadinessPanelUI");
+                updateReadiness.setAccessible(true);
+                updateReadiness.invoke(controller);
+
+                wrapper.applyCss();
+                wrapper.layout();
+                assertTrue(readinessBadge.getStyleClass().contains("readiness-status-ready"), "Readiness badge must contain readiness-status-ready");
+                assertNotNull(readinessBadge.getBackground(), "READY readiness badge background must be computed");
+
+                // Test WARNING report flow
+                com.cryptocarver.model.PreflightReport reportWarning = new com.cryptocarver.model.PreflightReport(
+                        com.cryptocarver.model.PreflightStatus.WARNING, "Warning detected",
+                        java.util.List.of(new com.cryptocarver.model.PreflightCheck("Key", com.cryptocarver.model.PreflightStatus.WARNING, "Weak key", "keyControl")));
+                setField(controller, "currentPreflightReport", reportWarning);
+                updateReadiness.invoke(controller);
+
+                wrapper.applyCss();
+                wrapper.layout();
+                assertTrue(readinessBadge.getStyleClass().contains("readiness-status-warning"), "Readiness badge must contain readiness-status-warning");
+                assertNotNull(readinessBadge.getBackground(), "WARNING readiness badge background must be computed");
+
+                // Test INCOMPLETE report flow
+                com.cryptocarver.model.PreflightReport reportIncomplete = new com.cryptocarver.model.PreflightReport(
+                        com.cryptocarver.model.PreflightStatus.INCOMPLETE, "Setup incomplete",
+                        java.util.List.of(new com.cryptocarver.model.PreflightCheck("Key", com.cryptocarver.model.PreflightStatus.INCOMPLETE, "Missing parameter", "keyControl")));
+                setField(controller, "currentPreflightReport", reportIncomplete);
+                updateReadiness.invoke(controller);
+
+                wrapper.applyCss();
+                wrapper.layout();
+                assertTrue(readinessBadge.getStyleClass().contains("readiness-status-incomplete"), "Readiness badge must contain readiness-status-incomplete");
+                assertNotNull(readinessBadge.getBackground(), "INCOMPLETE readiness badge background must be computed");
+
+                // Test BLOCKED report flow
+                com.cryptocarver.model.PreflightReport reportBlocked = new com.cryptocarver.model.PreflightReport(
+                        com.cryptocarver.model.PreflightStatus.BLOCKED, "Execution blocked",
+                        java.util.List.of(new com.cryptocarver.model.PreflightCheck("Key", com.cryptocarver.model.PreflightStatus.BLOCKED, "Blocked", "keyControl")));
+                setField(controller, "currentPreflightReport", reportBlocked);
+                updateReadiness.invoke(controller);
+
+                wrapper.applyCss();
+                wrapper.layout();
+                assertTrue(readinessBadge.getStyleClass().contains("readiness-status-blocked"), "Readiness badge must contain readiness-status-blocked");
+                assertNotNull(readinessBadge.getBackground(), "BLOCKED readiness badge background must be computed");
+
+                // 5. Inspector Presenter & Computed Details Nodes
+                VBox detailsContainer = getField(controller, "inspectorDetailsContainer");
+                assertNotNull(detailsContainer);
+                OperationInspectorPresenter inspector;
+                Method getInspector = ModernMainController.class.getDeclaredMethod("inspectorPresenter");
+                getInspector.setAccessible(true);
+                inspector = (OperationInspectorPresenter) getInspector.invoke(controller);
+
+                inspector.present("Symmetric Ciphers", new byte[]{1,2,3}, new byte[]{4,5,6},
+                        java.util.List.of(new com.cryptocarver.model.OperationDetail("Mode", "CBC",
+                                com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, "Text")));
+                wrapper.applyCss();
+                wrapper.layout();
+                assertFalse(detailsContainer.getChildren().isEmpty(), "Inspector details must render children");
+
+                boolean hasInspectorLabel = false;
+                boolean hasInspectorValue = false;
+
+                for (Node child : detailsContainer.getChildren()) {
+                    assertNotNull(child.getStyleClass(), "Inspector detail node must have styleClasses");
+                    assertTrue(child.getOpacity() > 0.0);
+                    if (child.getStyleClass().contains("inspector-label")) hasInspectorLabel = true;
+                    if (child.getStyleClass().contains("inspector-value")) hasInspectorValue = true;
+                    if (child instanceof Parent) {
+                        for (Node subChild : ((Parent) child).getChildrenUnmodifiable()) {
+                            if (subChild.getStyleClass().contains("inspector-label")) hasInspectorLabel = true;
+                            if (subChild.getStyleClass().contains("inspector-value")) hasInspectorValue = true;
+                        }
+                    }
+                }
+                assertTrue(hasInspectorLabel, "Inspector must render nodes with inspector-label style class");
+                assertTrue(hasInspectorValue, "Inspector must render nodes with inspector-value style class");
+
+                stage.close();
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    @Test
+    void testHistoryReopenButtonEnabledAndDisabledStates() throws Exception {
+        runAndWait(() -> {
+            VBox root = new VBox(10);
+            javafx.scene.Scene scene = new javafx.scene.Scene(root, 600, 400);
+            URL cssResource = getClass().getResource("/css/styles.css");
+            assertNotNull(cssResource, "styles.css must exist");
+            scene.getStylesheets().add(cssResource.toExternalForm());
+
+            Button enabledReopen = new Button("Reopen Enabled");
+            enabledReopen.getStyleClass().add("history-card-action");
+
+            Button disabledReopen = new Button("Reopen Disabled");
+            disabledReopen.getStyleClass().add("history-card-action");
+            disabledReopen.setDisable(true);
+
+            root.getChildren().addAll(enabledReopen, disabledReopen);
+
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setScene(scene);
+            stage.show();
+            root.setFocusTraversable(true);
+            root.requestFocus();
+
+            root.applyCss();
+            root.layout();
+
+            // 1. Style class verification
+            assertTrue(enabledReopen.getStyleClass().contains("history-card-action"));
+            assertTrue(disabledReopen.getStyleClass().contains("history-card-action"));
+
+            // 2. Disabled status and pseudo-class
+            assertFalse(enabledReopen.isDisabled());
+            assertTrue(disabledReopen.isDisabled());
+            assertTrue(disabledReopen.getPseudoClassStates().stream().anyMatch(pc -> "disabled".equals(pc.getPseudoClassName())));
+
+            // 3. Opacity difference verification (exact opacity 1.0 enabled vs 0.55 disabled)
+            double enabledOpacity = enabledReopen.getOpacity();
+            double disabledOpacity = disabledReopen.getOpacity();
+            assertEquals(1.0, enabledOpacity, 0.01, "Enabled button opacity must be 1.0");
+            assertEquals(0.55, disabledOpacity, 0.01, "Disabled button opacity must be 0.55");
+            assertNotEquals(enabledOpacity, disabledOpacity, "Enabled and disabled opacities must differ");
+
+            // 4. Focus state and computed focus border on enabled button
+            javafx.scene.layout.Border unfocusedBorder = enabledReopen.getBorder();
+            enabledReopen.requestFocus();
+            root.applyCss();
+            root.layout();
+
+            javafx.scene.layout.Border focusedBorder = enabledReopen.getBorder();
+            assertTrue(enabledReopen.isFocused(), "Enabled button must receive real keyboard focus");
+            assertNotNull(enabledReopen.getBackground(), "Enabled button must have computed background");
+            assertNotNull(focusedBorder, "Enabled button must have computed focus border");
+            assertNotEquals(unfocusedBorder, focusedBorder, "Focused border must differ from unfocused border");
+
+            // 5. Disabled button must not receive hover/focused pseudo-classes
+            assertFalse(disabledReopen.getPseudoClassStates().stream().anyMatch(pc -> "focused".equals(pc.getPseudoClassName())),
+                    "Disabled button must not be focused");
+            assertFalse(disabledReopen.getPseudoClassStates().stream().anyMatch(pc -> "hover".equals(pc.getPseudoClassName())),
+                    "Disabled button must not receive hover pseudo-class");
+            assertNotNull(disabledReopen.getBackground(), "Disabled button must have computed background");
 
             stage.close();
         });

@@ -74,7 +74,8 @@ public class HistoryController {
         actionCol.setCellFactory(col -> new TableCell<>() {
             private final Button btn = new Button("Reopen");
             {
-                btn.setStyle("-fx-background-color: #0288d1; -fx-text-fill: white; -fx-font-size: 10px; -fx-padding: 3 8; -fx-cursor: hand;");
+                btn.getStyleClass().add("history-card-action");
+                btn.setStyle("");
                 btn.setOnAction(event -> {
                     HistoryCommand item = getTableView().getItems().get(getIndex());
                     if (navigator != null) {

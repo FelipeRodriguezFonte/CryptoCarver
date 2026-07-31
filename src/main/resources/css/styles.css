@@ -2067,6 +2067,7 @@
     -fx-background-radius: 4px;
     -fx-cursor: hand;
     -fx-border-width: 0px;
+    -fx-opacity: 1.0;
 }
 
 .history-card-action:hover {
@@ -2076,6 +2077,15 @@
 .history-card-action:focused {
     -fx-border-color: #38bdf8;
     -fx-border-width: 1.5px;
+}
+
+.history-card-action:disabled {
+    -fx-opacity: 0.55;
+    -fx-cursor: default;
+    -fx-background-color: #0288d1;
+    -fx-text-fill: #ffffff;
+    -fx-border-color: transparent;
+    -fx-border-width: 0px;
 }
 
 /* Quick Start Cards */
