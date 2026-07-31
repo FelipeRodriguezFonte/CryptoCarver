@@ -2707,4 +2707,61 @@ class ModernMainControllerUITest {
             }
         });
     }
+
+    @Test
+    void testFxmlInjectionsAndNoAutoExecutionOnNavigation() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
+
+                assertNotNull(getField(controller, "keysContainerController"), "keysContainerController must be injected");
+                assertNotNull(getField(controller, "cipherContainerController"), "cipherContainerController must be injected");
+                assertNotNull(getField(controller, "authenticationContainerController"), "authenticationContainerController must be injected");
+                assertNotNull(getField(controller, "certificatesContainerController"), "certificatesContainerController must be injected");
+
+                // Verify navigation to modules does NOT auto-execute operations or publish results
+                controller.navigateToModule("Key Generation");
+                assertFalse(controller.hasCurrentResult(), "Navigation MUST NOT auto-execute crypto operations");
+
+                controller.navigateToModule("Symmetric Ciphers");
+                assertFalse(controller.hasCurrentResult(), "Navigation MUST NOT auto-execute crypto operations");
+
+                controller.navigateToModule("Digital Signatures");
+                assertFalse(controller.hasCurrentResult(), "Navigation MUST NOT auto-execute crypto operations");
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
+
+    @Test
+    void testMainActionButtonsTextSufficientWidth() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.initialize();
+
+                javafx.scene.layout.HBox summaryBar = getField(controller, "resultSummaryBar");
+                javafx.scene.control.Button expandBtn = summaryBar.getChildren().stream()
+                        .filter(node -> node instanceof javafx.scene.layout.FlowPane)
+                        .flatMap(fp -> ((javafx.scene.layout.FlowPane) fp).getChildren().stream())
+                        .filter(node -> node instanceof javafx.scene.control.Button)
+                        .map(node -> (javafx.scene.control.Button) node)
+                        .filter(btn -> "Expand Result".equals(btn.getText()))
+                        .findFirst().orElse(null);
+
+                assertNotNull(expandBtn, "Expand Result button must exist in resultSummaryBar");
+                assertEquals("Expand Result", expandBtn.getText());
+
+            } catch (Exception e) {
+                fail(e);
+            }
+        });
+    }
 }

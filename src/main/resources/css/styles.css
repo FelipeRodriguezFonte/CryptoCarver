@@ -1549,11 +1549,12 @@
 .responsive-action-bar {
     -fx-hgap: 8px;
     -fx-vgap: 8px;
-    -fx-padding: 4px 0 0 0;
+    -fx-padding: 6px 0;
 }
 
-.responsive-action-bar .button {
-    -fx-min-height: 34px;
+.responsive-action-bar .button,
+.responsive-action-bar .menu-button {
+    -fx-min-height: 32px;
 }
 
 /* Template selectors are controls, not a single unbreakable toolbar. */
@@ -1563,11 +1564,44 @@
     -fx-padding: 0 0 10px 0;
 }
 
-.action-button-primary {
+.action-button-primary,
+.primary-action {
     -fx-background-color: linear-gradient(to bottom, #3498db, #2980b9);
     -fx-text-fill: white;
     -fx-border-color: #2980b9;
     -fx-font-weight: bold;
+}
+
+.action-button-primary:hover,
+.primary-action:hover {
+    -fx-background-color: linear-gradient(to bottom, #4aa3df, #3498db);
+}
+
+.secondary-button,
+.secondary-action {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #1e293b;
+    -fx-border-color: #cbd5e1;
+}
+
+.secondary-button:hover,
+.secondary-action:hover {
+    -fx-background-color: #e2e8f0;
+    -fx-border-color: #94a3b8;
+}
+
+.btn-danger,
+.danger-action {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #991b1b;
+    -fx-border-color: #fca5a5;
+    -fx-font-weight: bold;
+}
+
+.btn-danger:hover,
+.danger-action:hover {
+    -fx-background-color: #fecaca;
+    -fx-border-color: #f87171;
 }
 
 .result-area {

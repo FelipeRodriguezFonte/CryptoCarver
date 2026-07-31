@@ -105,11 +105,11 @@
                                         </VBox>
                                     </GridPane>
                                     <Separator style="-fx-padding: 8 0;"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                                         <Button text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
                                         <Button fx:id="keyLabArchiveBtn" text="Archive" onAction="#handleKeyLabArchive" styleClass="secondary-button"/>
                                         <Button text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>
-                                    </HBox>
+                                    </FlowPane>
                                 </VBox>
                             </ScrollPane>
                         </SplitPane>
@@ -133,12 +133,12 @@
                                   selected="true" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
                     </GridPane>
 
-                    <HBox spacing="10" alignment="CENTER_LEFT">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Generate Key" onAction="#handleGenerateKey"
                                 styleClass="action-button,primary-action"/>
                         <Button fx:id="saveGeneratedKeyButton" text="Save to Simulated HSM / Key Lab…" onAction="#handleSaveGeneratedKeyToLab"
                                 disable="true" styleClass="action-button,secondary-action"/>
-                    </HBox>
+                    </FlowPane>
 
                     <VBox fx:id="generatedKeySummaryCard" visible="false" managed="false" spacing="8" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
                         <HBox alignment="CENTER_LEFT" spacing="10">
@@ -257,11 +257,11 @@
                         <TextField fx:id="pkcs11LibraryField" promptText="Native PKCS#11 library (.dylib, .so or .dll)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
                         <Button text="Browse…" onAction="#handleChoosePkcs11Library" styleClass="secondary-button"/>
                     </HBox>
-                    <HBox spacing="5" alignment="CENTER_LEFT">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11ProfileCombo" promptText="Saved Profiles" prefWidth="200"/>
                         <Button text="Save Profile" onAction="#handleSavePkcs11Profile" styleClass="secondary-button"/>
-                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="secondary-button"/>
-                    </HBox>
+                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="btn-danger"/>
+                    </FlowPane>
                     <HBox spacing="6">
                         <Button text="Connect &amp; Inspect" onAction="#handleConnectPkcs11" styleClass="action-button"/>
                         <Button text="Disconnect" onAction="#handleDisconnectPkcs11" styleClass="secondary-button"/>
@@ -284,11 +284,11 @@
                     <TextArea fx:id="pkcs11SignatureArea" prefHeight="55" promptText="Signature (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                     <Separator/>
                     <Label text="Public certificate chain" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                    <HBox spacing="6">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11CertificateAliasCombo" promptText="Certificate alias" HBox.hgrow="ALWAYS"/>
                         <Button text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
-                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button"/>
-                    </HBox>
+                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button-primary"/>
+                    </FlowPane>
                     <TextArea fx:id="pkcs11CertificateArea" prefHeight="90" editable="true" promptText="Paste PEM chain here to update, or use Show PEM Chain to view." wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                     <Separator/>
                     <Label text="JWT / JWS using token key" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>

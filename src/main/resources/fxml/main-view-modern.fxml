@@ -145,11 +145,11 @@
                         <Label fx:id="resultStatusBadge" text="SUCCESS"
                                style="-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;"/>
                     </FlowPane>
-                    <HBox spacing="6" alignment="CENTER_RIGHT">
+                    <FlowPane prefWrapLength="400" hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="responsive-action-bar">
                         <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button"/>
                         <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button"/>
                         <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary"/>
-                    </HBox>
+                    </FlowPane>
                 </HBox>
 
                 <!-- Inline Actionable Error Banner -->

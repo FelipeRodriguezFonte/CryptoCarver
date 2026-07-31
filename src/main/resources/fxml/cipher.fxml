@@ -95,10 +95,10 @@
                     </VBox>
 
                     <!-- Primary actions -->
-                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 4 0 0 142;">
+                    <FlowPane styleClass="responsive-action-bar" style="-fx-padding: 4 0 0 142;">
                         <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button-primary" style="-fx-min-width: 120;"/>
                         <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="secondary-button" style="-fx-min-width: 120;"/>
-                    </HBox>
+                    </FlowPane>
                 </VBox>
             </TitledPane>
 
@@ -188,10 +188,10 @@
                         </FlowPane>
                     </VBox>
                     <Separator orientation="HORIZONTAL"/>
-                    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
-                        <Button text="Encrypt (Public Key)" onAction="#handleAsymmetricEncrypt" styleClass="action-button"/>
-                        <Button text="Decrypt (Private Key)" onAction="#handleAsymmetricDecrypt" styleClass="action-button"/>
-                    </HBox>
+                    <FlowPane styleClass="responsive-action-bar">
+                        <Button text="Encrypt (Public Key)" onAction="#handleAsymmetricEncrypt" styleClass="action-button-primary"/>
+                        <Button text="Decrypt (Private Key)" onAction="#handleAsymmetricDecrypt" styleClass="secondary-button"/>
+                    </FlowPane>
                 </VBox>
             </TitledPane>
         </panes>
