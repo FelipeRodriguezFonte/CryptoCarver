@@ -5,6 +5,7 @@ import com.cryptocarver.model.LanguagePreference;
 import com.cryptocarver.service.I18nService;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.Menu;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,6 +78,14 @@ class ModernMainControllerI18nUITest {
 
         runAndWait(() -> I18nService.getInstance().setPreference(LanguagePreference.EN));
         assertEquals("File", fileMenu.get().getText());
+
+        runAndWait(() -> {
+            I18nService.getInstance().setPreference(LanguagePreference.ES);
+            controller.get().navigateTo("Manual Conversion");
+        });
+        Accordion generic = readField(controller.get(), "genericContainer");
+        assertEquals("🔤 Conversión manual", generic.getExpandedPane().getText(),
+                "Canonical sidebar routes must expand a pane after its visible text is localized");
     }
 
     @SuppressWarnings("unchecked")
