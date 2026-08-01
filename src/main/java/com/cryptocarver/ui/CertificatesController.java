@@ -17,6 +17,7 @@ import java.util.Map;
  */
 public class CertificatesController {
     @FXML private VBox certificatesContainer;
+    private ModuleI18n.Binding moduleI18n;
 
     @FXML private TextField certCNField, certOrgField, certOUField, certCountryField;
     @FXML private TextField certStateField, certLocalityField, certEmailField, certValidityField;
@@ -66,6 +67,7 @@ public class CertificatesController {
 
     public void init(StatusReporter reporter, KeysController sharedKeysController) {
         this.statusReporter = reporter;
+        if (moduleI18n == null) moduleI18n = ModuleI18n.bind(certificatesContainer, ModuleTextCatalog.certificates());
         this.keysController = sharedKeysController;
         refreshCertTemplateCombo();
         if (keysController == null) return;
@@ -241,7 +243,7 @@ public class CertificatesController {
         certParseResultArea.setText("");
         if (statusReporter != null) {
             statusReporter.setInputFormat("Plain Text");
-            statusReporter.updateStatus("Certificate parsing form reset to default");
+            statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.cert.reset"));
         }
     }
 }

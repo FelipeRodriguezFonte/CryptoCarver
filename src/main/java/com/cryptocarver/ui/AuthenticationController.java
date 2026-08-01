@@ -30,6 +30,9 @@ import java.util.Map;
  */
 public class AuthenticationController {
 
+    @FXML private VBox authenticationRoot;
+    private ModuleI18n.Binding moduleI18n;
+
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationController.class);
 
     private StatusReporter mainController;
@@ -86,6 +89,7 @@ public class AuthenticationController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(authenticationRoot, ModuleTextCatalog.authentication());
         initializeSignatures(signatureAlgorithmCombo, signatureKeyStatusLabel, signatureVerifyField,
                 signaturePrivateKeyArea, signaturePublicKeyArea);
         initializeMAC(authMacAlgorithmCombo, authMacKeyField, authMacKeyInfoLabel,
@@ -288,7 +292,7 @@ public class AuthenticationController {
         if (mainController != null) {
             mainController.setInputFormat("Plain Text");
             mainController.setOutputFormat("Hexadecimal");
-            mainController.updateStatus("Signature form reset to default");
+            mainController.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.auth.reset"));
         }
     }
 

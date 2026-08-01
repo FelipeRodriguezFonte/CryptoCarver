@@ -53,6 +53,9 @@ import java.util.Map;
  */
 public class CipherController {
 
+    @FXML private VBox cipherRoot;
+    private ModuleI18n.Binding moduleI18n;
+
     @FXML private TextArea cipherInputArea;
     @FXML private TextArea cipherOutputArea;
     private ComboBox<String> inputFormatCombo;
@@ -150,6 +153,7 @@ public class CipherController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(cipherRoot, ModuleTextCatalog.cipher());
         setSymmetricAlgorithmCombo(symmetricAlgorithmCombo);
         setCipherModeCombo(cipherModeCombo);
         setPaddingCombo(paddingCombo);
@@ -347,7 +351,7 @@ public class CipherController {
         if (statusReporter != null) {
             statusReporter.setInputFormat("Plain Text");
             statusReporter.setOutputFormat("Hexadecimal");
-            statusReporter.updateStatus("Cipher form reset to default");
+            statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.cipher.reset"));
         }
     }
 
@@ -1079,7 +1083,7 @@ public class CipherController {
 
             Runnable onCancelled = () -> {
                 if (statusReporter != null) {
-                    statusReporter.updateStatus("File cipher operation cancelled.");
+                    statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.cipher.cancelled"));
                 }
             };
 

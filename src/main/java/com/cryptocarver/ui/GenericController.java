@@ -51,6 +51,7 @@ public class GenericController {
     private StatusReporter statusReporter;
     private boolean preflightListenersInstalled;
     @FXML private Accordion genericContainer;
+    private ModuleI18n.Binding moduleI18n;
     @FXML private TextArea hashInputArea;
     @FXML private TextArea hashOutputArea;
 
@@ -424,7 +425,8 @@ public class GenericController {
         task.setOnCancelled(event -> {
             batchProgressBar.progressProperty().unbind();
             int completedCount = lastBatchReport != null ? lastBatchReport.results().size() : 0;
-            batchStatusLabel.setText("Batch cancelled after row " + completedCount + ". Completed row results preserved.");
+            batchStatusLabel.setText(com.cryptocarver.service.I18nService.getInstance().text(
+                    "module.generic.batchCancelled", completedCount));
             activeBatchTask = null;
         });
         task.setOnFailed(event -> {
@@ -554,6 +556,11 @@ public class GenericController {
     @FXML public void handleDecodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
 
     @FXML public void initialize() {
+        javafx.scene.Node[] excluded = genericContainer == null ? new javafx.scene.Node[0]
+                : genericContainer.getPanes().stream()
+                        .filter(pane -> pane.getText() != null && pane.getText().contains("Process Designer"))
+                        .toArray(javafx.scene.Node[]::new);
+        moduleI18n = ModuleI18n.bind(genericContainer, ModuleTextCatalog.generic(), excluded);
         if (batchInputFormatCombo != null) {
             batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchInputFormatCombo.setValue("CSV");

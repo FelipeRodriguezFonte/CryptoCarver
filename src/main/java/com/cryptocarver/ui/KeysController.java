@@ -32,6 +32,9 @@ import java.util.function.Consumer;
  */
 public class KeysController {
 
+    @FXML private VBox keysRoot;
+    private ModuleI18n.Binding moduleI18n;
+
     @FXML private VBox symmetricKeysContainer;
     @FXML private VBox asymmetricKeysContainer;
     @FXML private ComboBox<String> ecdsaCurveCombo;
@@ -397,6 +400,7 @@ public class KeysController {
 
     @FXML
     private void initialize() {
+        moduleI18n = ModuleI18n.bind(keysRoot, ModuleTextCatalog.keys());
         initialize(null, keyTypeCombo, forceOddParityCheck, generatedKeyField, keyInputField, validationResultArea,
                 numComponentsCombo, keyToSplitField, componentResultsArea,
                 component1Field, component2Field, component3Field, component4Field, component5Field);
@@ -745,7 +749,8 @@ public class KeysController {
         if (pkcs11ReportArea != null) {
             pkcs11ReportArea.setText(wasConnected ? "PKCS#11 session closed. Token keys remain on the token." : "No PKCS#11 session is open.");
         }
-        updateStatus(wasConnected ? "PKCS#11 session closed" : "No PKCS#11 session was open");
+        updateStatus(com.cryptocarver.service.I18nService.getInstance().text(
+                wasConnected ? "module.keys.pkcs11Closed" : "module.keys.pkcs11NotOpen"));
         refreshPkcs11SigningKeys();
         refreshPkcs11CertificateAliases();
     }
@@ -1952,7 +1957,7 @@ public class KeysController {
             validationResultArea.setText(result.toString());
             validationResultArea.setVisible(true);
             validationResultArea.setManaged(true);
-            updateStatus("Key validated successfully");
+            updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.keys.validated"));
 
             // Publish a coherent result so the inspector, history and expanded
             // viewer contain the actual validation report and the input key is
@@ -2330,7 +2335,7 @@ public class KeysController {
             };
 
             Runnable onCancelled = () -> {
-                updateStatus("DSA key generation cancelled.");
+                updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.keys.generationCancelled"));
             };
 
             if (mainController != null && mainController.getOperationExecutor() != null) {
