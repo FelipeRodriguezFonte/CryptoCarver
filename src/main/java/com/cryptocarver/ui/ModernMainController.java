@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 // Attempt to use DataConverter if available, otherwise will rely on local helpers or standard libs
 import com.cryptocarver.util.DataConverter;
+import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.service.I18nService;
 
 /**
  * Modern Main Controller for Rail + SidePanel navigation
@@ -138,6 +140,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label resultSizeLabel;
     @FXML private Label resultFormatLabel;
     @FXML private Label resultStatusBadge;
+    @FXML private Label resultLastLabel;
+    @FXML private Label resultAlgorithmStaticLabel;
 
     // Quick Start & Guided Workflows
     @FXML private VBox quickStartContainer;
@@ -146,6 +150,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label guideStepDescLabel;
     @FXML private Button guideBackBtn;
     @FXML private Button guideNextBtn;
+    @FXML private Button guideSkipBtn;
+    @FXML private Button guideExitBtn;
 
     public enum GuidedOperation {
         ENCRYPT, HASH, SIGN, CERT, CONVERT
@@ -239,6 +245,55 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private MenuBar mainMenuBar;
+    @FXML private Menu fileMenu;
+    @FXML private Menu editMenu;
+    @FXML private Menu viewMenu;
+    @FXML private Menu securityMenu;
+    @FXML private Menu toolsMenu;
+    @FXML private Menu helpMenu;
+    @FXML private Menu languageMenu;
+    @FXML private RadioMenuItem languageSystemMenuItem;
+    @FXML private RadioMenuItem languageEsMenuItem;
+    @FXML private RadioMenuItem languageEnMenuItem;
+    @FXML private ToggleGroup languagePreferenceGroup;
+    @FXML private MenuItem importKeyMenuItem;
+    @FXML private MenuItem exportScreenMenuItem;
+    @FXML private MenuItem importScreenMenuItem;
+    @FXML private MenuItem saveSessionMenuItem;
+    @FXML private MenuItem exportHistoryMenuItem;
+    @FXML private MenuItem exitMenuItem;
+    @FXML private MenuItem clearInputMenuItem;
+    @FXML private MenuItem clearOutputMenuItem;
+    @FXML private MenuItem copyOutputMenuItem;
+    @FXML private MenuItem addToShelfMenuItem;
+    @FXML private MenuItem quickStartMenuItem;
+    @FXML private MenuItem commandPaletteMenuItem;
+    @FXML private MenuItem toggleSidePanelMenuItem;
+    @FXML private MenuItem toggleInspectorMenuItem;
+    @FXML private MenuItem expandResultMenuItem;
+    @FXML private MenuItem expandTableMenuItem;
+    @FXML private MenuItem zoomInMenuItem;
+    @FXML private MenuItem zoomOutMenuItem;
+    @FXML private MenuItem resetViewMenuItem;
+    @FXML private RadioMenuItem visibilityFullLabMenuItem;
+    @FXML private RadioMenuItem visibilityMaskedMenuItem;
+    @FXML private RadioMenuItem visibilityRedactedMenuItem;
+    @FXML private MenuItem epochMenuItem;
+    @FXML private MenuItem jsonMenuItem;
+    @FXML private MenuItem byteInspectorMenuItem;
+    @FXML private MenuItem clearKeyCacheMenuItem;
+    @FXML private MenuItem shortcutsMenuItem;
+    @FXML private MenuItem diagnosticsMenuItem;
+    @FXML private MenuItem aboutMenuItem;
+    @FXML private Button toolbarSearchButton;
+    @FXML private Button toolbarSaveSessionButton;
+    @FXML private Button toolbarClearButton;
+    @FXML private Button toolbarExpandButton;
+    @FXML private Button toolbarShelfButton;
+    @FXML private Button toolbarCopyButton;
+    @FXML private Label outputFormatLabel;
+    private final I18nService i18n = I18nService.getInstance();
+    private java.util.function.Consumer<java.util.Locale> i18nListener;
 
     // Async Progress UI
     @FXML private HBox asyncProgressBox;
@@ -246,6 +301,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private ProgressBar asyncProgressBar;
     @FXML private Label asyncProgressLabel;
     @FXML private Button asyncCancelBtn;
+    @FXML private Label inspectorTitleLabel;
+    @FXML private Label inspectorInputBytesTitle;
+    @FXML private Label inspectorOutputBytesTitle;
+    @FXML private Label inspectorAlgorithmTitle;
+    @FXML private Label inspectorSecurityTipsTitle;
+    @FXML private Label inspectorWarningTitle;
+    @FXML private Label inspectorHistoryTitle;
+    @FXML private Button inspectorExportJsonButton;
+    @FXML private Button inspectorClearHistoryButton;
+    @FXML private Label commandEscapeLabel;
+    @FXML private Label commandNavigateLabel;
+    @FXML private Label commandSelectLabel;
+    @FXML private Label commandCancelLabel;
+    @FXML private Label commandTitleLabel;
 
     private final OperationExecutor operationExecutor = new OperationExecutor();
 
@@ -256,7 +325,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     public void showAsyncProgress(String operationName) {
         if (asyncProgressBox != null) {
             if (asyncProgressLabel != null) {
-                String title = (operationName != null && !operationName.isBlank()) ? operationName : "Operation";
+                String title = (operationName != null && !operationName.isBlank()) ? operationName : i18n.text("progress.operation");
                 asyncProgressLabel.setText(title + "…");
                 asyncProgressLabel.setAccessibleText(title);
             }
@@ -319,11 +388,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean cancelled = operationExecutor.cancelCurrentOperation();
         if (cancelled) {
             if (asyncProgressLabel != null) {
-                asyncProgressLabel.setText("Cancelling operation...");
+                asyncProgressLabel.setText(i18n.text("progress.cancelling"));
             }
         } else if (operationExecutor.isInCommitPhase()) {
             if (asyncProgressLabel != null) {
-                asyncProgressLabel.setText("Finishing file commit...");
+                asyncProgressLabel.setText(i18n.text("progress.finishing"));
             }
             if (asyncCancelBtn != null) {
                 asyncCancelBtn.setDisable(true);
@@ -423,6 +492,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         // Handle item selection from SidePanel
         sidePanel.setOnItemSelected(this::handleItemSelected);
 
+        i18n.refreshFromSettings();
+        i18nListener = locale -> {
+            Runnable refresh = this::applyLocalization;
+            if (Platform.isFxApplicationThread()) refresh.run();
+            else Platform.runLater(refresh);
+        };
+        i18n.addLocaleChangeListener(i18nListener);
+        applyLocalization();
+
         // Initialize History
         initializeHistory();
 
@@ -457,6 +535,195 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         System.out.println("ModernMainController initialized successfully!");
     }
+
+    /** Applies shell strings without changing operation names, routes or technical values. */
+    public void applyLocalization() {
+        setText(fileMenu, "menu.file");
+        setText(editMenu, "menu.edit");
+        setText(viewMenu, "menu.view");
+        setText(securityMenu, "menu.security");
+        setText(toolsMenu, "menu.tools");
+        setText(helpMenu, "menu.help");
+        setText(languageMenu, "menu.language");
+
+        setText(importKeyMenuItem, "menu.importKey");
+        setText(exportScreenMenuItem, "menu.exportScreen");
+        setText(importScreenMenuItem, "menu.importScreen");
+        setText(saveSessionMenuItem, "menu.saveSession");
+        setText(exportHistoryMenuItem, "menu.exportHistory");
+        setText(exitMenuItem, "menu.exit");
+        setText(clearInputMenuItem, "menu.clearInput");
+        setText(clearOutputMenuItem, "menu.clearOutput");
+        setText(copyOutputMenuItem, "menu.copyOutput");
+        setText(addToShelfMenuItem, "menu.addToShelf");
+        setText(quickStartMenuItem, "menu.quickStart");
+        setText(commandPaletteMenuItem, "menu.commandPalette");
+        setText(toggleSidePanelMenuItem, "menu.toggleSidePanel");
+        setText(toggleInspectorMenuItem, "menu.toggleInspector");
+        setText(expandResultMenuItem, "menu.expandResult");
+        setText(expandTableMenuItem, "menu.expandTable");
+        setText(zoomInMenuItem, "menu.zoomIn");
+        setText(zoomOutMenuItem, "menu.zoomOut");
+        setText(resetViewMenuItem, "menu.resetView");
+        setText(visibilityFullLabMenuItem, "menu.visibility.full");
+        setText(visibilityMaskedMenuItem, "menu.visibility.masked");
+        setText(visibilityRedactedMenuItem, "menu.visibility.redacted");
+        setText(epochMenuItem, "menu.epoch");
+        setText(jsonMenuItem, "menu.json");
+        setText(byteInspectorMenuItem, "menu.byteInspector");
+        setText(clearKeyCacheMenuItem, "menu.clearKeyCache");
+        setText(shortcutsMenuItem, "menu.shortcuts");
+        setText(diagnosticsMenuItem, "menu.diagnostics");
+        setText(aboutMenuItem, "menu.about");
+        if (mainMenuBar != null) {
+            mainMenuBar.getMenus().stream()
+                    .filter(menu -> "laboratory".equals(menu.getUserData()))
+                    .findFirst()
+                    .ifPresent(this::localizeLaboratoryMenu);
+        }
+
+        setText(languageSystemMenuItem, "app.language.system");
+        setText(languageEsMenuItem, "app.language.es");
+        setText(languageEnMenuItem, "app.language.en");
+        LanguagePreference selected = i18n.getPreference();
+        if (languageSystemMenuItem != null) languageSystemMenuItem.setSelected(selected == LanguagePreference.SYSTEM);
+        if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
+        if (languageEnMenuItem != null) languageEnMenuItem.setSelected(selected == LanguagePreference.EN);
+
+        setText(toolbarSearchButton, "toolbar.search");
+        setText(toolbarSaveSessionButton, "menu.saveSession");
+        setText(toolbarClearButton, "toolbar.clear");
+        setText(toolbarExpandButton, "toolbar.expand");
+        setText(toolbarShelfButton, "toolbar.addShelf");
+        setText(toolbarCopyButton, "toolbar.copy");
+        setAccessibleText(toolbarSearchButton);
+        setAccessibleText(toolbarSaveSessionButton);
+        setAccessibleText(toolbarClearButton);
+        setAccessibleText(toolbarExpandButton);
+        setAccessibleText(toolbarShelfButton);
+        setAccessibleText(toolbarCopyButton);
+        setText(inputFormatLabel, "toolbar.payloadFormat");
+        setText(outputFormatLabel, "toolbar.output");
+        if (inputFormatLabel != null) inputFormatLabel.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
+        if (inputFormatCombo != null) inputFormatCombo.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
+
+        setText(resultLastLabel, "result.last");
+        setText(resultAlgorithmStaticLabel, "result.algorithm");
+        if (resultStatusBadge != null) resultStatusBadge.setAccessibleText(i18n.text("result.status"));
+        setText(errorBannerTitle, "error.failed");
+        setText(errorBannerRemedy, "error.remedy");
+        setText(errorBannerGoToFieldBtn, "error.goToField");
+        setText(errorBannerCopyDetailsBtn, "error.copyDetails");
+        setText(guideBackBtn, "guide.back");
+        setText(guideNextBtn, "guide.next");
+        setText(guideSkipBtn, "guide.skip");
+        setText(guideExitBtn, "guide.exit");
+        setText(asyncProgressLabel, "progress.working");
+        setText(asyncCancelBtn, "progress.cancel");
+        setAccessibleText(asyncCancelBtn);
+        setText(inspectorTitleLabel, "inspector.title");
+        setText(inspectorInputBytesTitle, "inspector.inputBytes");
+        setText(inspectorOutputBytesTitle, "inspector.outputBytes");
+        setText(inspectorAlgorithmTitle, "inspector.algorithm");
+        setText(inspectorSecurityTipsTitle, "inspector.securityTips");
+        setText(inspectorWarningTitle, "inspector.warning");
+        setText(inspectorHistoryTitle, "inspector.history");
+        setText(inspectorExportJsonButton, "inspector.exportJson");
+        setText(inspectorClearHistoryButton, "toolbar.clear");
+        if (inspectorExportJsonButton != null) {
+            inspectorExportJsonButton.setTooltip(new Tooltip(i18n.text("inspector.exportJsonTooltip")));
+        }
+        if (commandSearchField != null) commandSearchField.setPromptText(i18n.text("command.prompt"));
+        setText(commandEscapeLabel, "command.escape");
+        setText(commandEmptyLabel, "command.empty");
+        setText(commandNavigateLabel, "command.navigate");
+        setText(commandSelectLabel, "command.select");
+        setText(commandCancelLabel, "command.cancel");
+        setText(commandTitleLabel, "command.title");
+
+        if (navigationRail != null) navigationRail.refreshLocalizedText();
+        if (sidePanel != null) sidePanel.refreshLocalizedText();
+        updateBreadcrumbs(currentActiveOperation);
+        updateFavoriteToggleState(currentActiveOperation);
+        if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
+                || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
+            statusLabel.setText(i18n.text("status.ready"));
+        }
+    }
+
+    private void setText(javafx.scene.control.MenuItem item, String key) {
+        if (item != null) item.setText(i18n.text(key));
+    }
+
+    private void setText(javafx.scene.control.Menu menu, String key) {
+        if (menu != null) menu.setText(i18n.text(key));
+    }
+
+    private void setText(javafx.scene.control.Button button, String key) {
+        if (button != null) button.setText(i18n.text(key));
+    }
+
+    private void setText(javafx.scene.control.Label label, String key) {
+        if (label != null) label.setText(i18n.text(key));
+    }
+
+    private void localizeLaboratoryMenu(javafx.scene.control.Menu menu) {
+        menu.setText(i18n.text("menu.laboratory"));
+        if (!menu.getItems().isEmpty()) setText(menu.getItems().get(0), "menu.quickStart");
+        for (javafx.scene.control.MenuItem item : menu.getItems()) {
+            if (item instanceof javafx.scene.control.Menu profile) {
+                for (javafx.scene.control.MenuItem profileItem : profile.getItems()) {
+                    if ("Load Data".equals(profileItem.getText()) || "Cargar datos".equals(profileItem.getText())) {
+                        setText(profileItem, "menu.loadData");
+                    } else if ("Run and Verify".equals(profileItem.getText()) || "Ejecutar y verificar".equals(profileItem.getText())) {
+                        setText(profileItem, "menu.runVerify");
+                    }
+                }
+            }
+        }
+    }
+
+    private void setAccessibleText(javafx.scene.control.ButtonBase control) {
+        if (control != null && control.getText() != null) control.setAccessibleText(control.getText());
+    }
+
+    private String localizedSectionText(String value) {
+        if (value == null) return "";
+        return switch (value) {
+            case "Cryptographic Operations" -> i18n.text("bread.cryptoOperations");
+            case "Symmetric Keys" -> i18n.text("bread.symmetricKeys");
+            case "Asymmetric Keys" -> i18n.text("bread.asymmetricKeys");
+            case "Ciphers" -> i18n.text("bread.ciphers");
+            case "Signatures & MAC" -> i18n.text("bread.signaturesMac");
+            case "Certificates", "Certificates & CMS" -> i18n.text("bread.certificatesCms");
+            case "JOSE / JWT" -> i18n.text("bread.joseJwt");
+            case "Post-Quantum", "Post-Quantum PQC" -> i18n.text("bread.postQuantumPqc");
+            case "XML Security" -> i18n.text("bread.xmlSecurity");
+            case "WSS Security" -> i18n.text("bread.wssSecurity");
+            case "EMV & Smartcards" -> i18n.text("bread.emvSmartcards");
+            case "Payment Cryptography" -> i18n.text("bread.paymentCryptography");
+            case "Utilities" -> i18n.text("bread.utilities");
+            case "History" -> i18n.text("bread.history");
+            case "Clipboard Shelf" -> i18n.text("bread.clipboardShelf");
+            case "Saved Sessions" -> i18n.text("bread.savedSessions");
+            default -> value;
+        };
+    }
+
+    private String localizedModuleText(String value) {
+        if (value == null) return "";
+        return switch (value) {
+            case "Symmetric" -> i18n.text("bread.symmetric");
+            case "Asymmetric" -> i18n.text("bread.asymmetric");
+            case "Tools" -> i18n.text("bread.tools");
+            case "General" -> i18n.text("bread.module");
+            default -> value;
+        };
+    }
+
+    @FXML private void handleLanguageSystem() { i18n.setPreference(LanguagePreference.SYSTEM); }
+    @FXML private void handleLanguageEs() { i18n.setPreference(LanguagePreference.ES); }
+    @FXML private void handleLanguageEn() { i18n.setPreference(LanguagePreference.EN); }
 
     /**
      * Keeps the working canvas usable on laptop-sized windows. The inspector
@@ -737,7 +1004,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             section = "Payments";
         }
 
-        if (contentTitleLabel != null) contentTitleLabel.setText(section);
+        if (contentTitleLabel != null) contentTitleLabel.setText(localizedSectionText(section));
         if (contentSubtitleLabel != null) contentSubtitleLabel.setText(subsection);
 
         // UX-07: Update Breadcrumbs, Favorites & Last Route
@@ -768,8 +1035,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void updateBreadcrumbs(String operationName) {
         if (breadcrumbContainer == null || operationName == null) return;
 
-        String sectionLabel = "Laboratory";
-        String moduleLabel = "General";
+        String sectionLabel = i18n.text("bread.section");
+        String moduleLabel = i18n.text("bread.module");
         String operationLabel = operationName;
         String canonicalModulePath = operationName;
 
@@ -777,22 +1044,22 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (resolved.isPresent()) {
             UiNavigationRegistry.Route route = resolved.get();
             sectionLabel = switch (route.module()) {
-                case KEYS_SYMMETRIC -> "Symmetric Keys";
-                case KEYS_ASYMMETRIC -> "Asymmetric Keys";
-                case CIPHER -> "Ciphers";
-                case AUTHENTICATION -> "Signatures & MAC";
-                case CERTIFICATES -> "Certificates & CMS";
-                case JOSE -> "JOSE / JWT";
-                case POST_QUANTUM -> "Post-Quantum PQC";
-                case XML_SECURITY -> "XML Security";
-                case WSS_SECURITY -> "WSS Security";
-                case EMV -> "EMV & Smartcards";
-                case PAYMENTS -> "Payment Cryptography";
-                case GENERIC -> "Utilities";
-                case HISTORY -> "History";
-                case CLIPBOARD_SHELF -> "Clipboard Shelf";
-                case SAVED_SESSIONS -> "Saved Sessions";
-                default -> "Laboratory";
+                case KEYS_SYMMETRIC -> i18n.text("bread.symmetricKeys");
+                case KEYS_ASYMMETRIC -> i18n.text("bread.asymmetricKeys");
+                case CIPHER -> i18n.text("bread.ciphers");
+                case AUTHENTICATION -> i18n.text("bread.signaturesMac");
+                case CERTIFICATES -> i18n.text("bread.certificatesCms");
+                case JOSE -> i18n.text("bread.joseJwt");
+                case POST_QUANTUM -> i18n.text("bread.postQuantumPqc");
+                case XML_SECURITY -> i18n.text("bread.xmlSecurity");
+                case WSS_SECURITY -> i18n.text("bread.wssSecurity");
+                case EMV -> i18n.text("bread.emvSmartcards");
+                case PAYMENTS -> i18n.text("bread.paymentCryptography");
+                case GENERIC -> i18n.text("bread.utilities");
+                case HISTORY -> i18n.text("bread.history");
+                case CLIPBOARD_SHELF -> i18n.text("bread.clipboardShelf");
+                case SAVED_SESSIONS -> i18n.text("bread.savedSessions");
+                default -> i18n.text("bread.section");
             };
 
             if (route.section() != null && !route.section().isBlank()) {
@@ -807,7 +1074,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(operationName);
             if (descriptor.isPresent()) {
                 com.cryptocarver.model.OperationDescriptor op = descriptor.get();
-                sectionLabel = op.getCategory() != null ? op.getCategory() : "Laboratory";
+                sectionLabel = op.getCategory() != null ? localizedSectionText(op.getCategory()) : i18n.text("bread.section");
                 moduleLabel = sectionLabel;
                 operationLabel = op.getTitle();
                 canonicalModulePath = op.getNavigationPath() != null ? op.getNavigationPath() : op.getTitle();
@@ -816,15 +1083,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (breadcrumbSectionBtn != null) {
             breadcrumbSectionBtn.setText(sectionLabel);
-            breadcrumbSectionBtn.setAccessibleText("Navigate to Section: " + sectionLabel);
-            breadcrumbSectionBtn.setTooltip(new Tooltip("Navigate to " + sectionLabel));
+            breadcrumbSectionBtn.setUserData(resolved.isPresent() ? resolved.get().module() : sectionLabel);
+            breadcrumbSectionBtn.setAccessibleText(i18n.text("bread.navigateSection", sectionLabel));
+            breadcrumbSectionBtn.setTooltip(new Tooltip(i18n.text("bread.navigateSection", sectionLabel)));
         }
 
         if (breadcrumbModuleBtn != null) {
-            breadcrumbModuleBtn.setText(moduleLabel);
+            breadcrumbModuleBtn.setText(localizedModuleText(moduleLabel));
             breadcrumbModuleBtn.setUserData(canonicalModulePath);
-            breadcrumbModuleBtn.setAccessibleText("Navigate to Module: " + moduleLabel);
-            breadcrumbModuleBtn.setTooltip(new Tooltip("Navigate to " + moduleLabel));
+            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel)));
+            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel))));
         }
 
         if (breadcrumbOperationLabel != null) {
@@ -835,6 +1103,21 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void handleBreadcrumbSectionClick() {
         if (breadcrumbSectionBtn == null) return;
+        if (breadcrumbSectionBtn.getUserData() instanceof UiNavigationRegistry.Module module) {
+            switch (module) {
+                case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> navigationRail.selectSection(NavigationRail.Section.KEYS);
+                case CIPHER -> navigationRail.selectSection(NavigationRail.Section.CIPHER);
+                case AUTHENTICATION -> navigationRail.selectSection(NavigationRail.Section.AUTHENTICATION);
+                case CERTIFICATES -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
+                case JOSE -> navigationRail.selectSection(NavigationRail.Section.JOSE);
+                case POST_QUANTUM -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
+                case XML_SECURITY, WSS_SECURITY -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
+                case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
+                case HISTORY -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
+                default -> showQuickStart();
+            }
+            return;
+        }
         String sectionText = breadcrumbSectionBtn.getText();
         if (navigationRail == null) {
             showQuickStart();
@@ -888,13 +1171,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (!favoriteToggleBtn.getStyleClass().contains("active")) {
                 favoriteToggleBtn.getStyleClass().add("active");
             }
-            favoriteToggleBtn.setAccessibleText("Remove " + operationName + " from Favorites");
-            favoriteToggleBtn.setTooltip(new Tooltip("Favorite active (Shortcut+Shift+F to toggle)"));
+            favoriteToggleBtn.setAccessibleText(i18n.text("favorite.remove", operationName));
+            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.active")));
         } else {
             favoriteToggleBtn.setText("☆");
             favoriteToggleBtn.getStyleClass().remove("active");
-            favoriteToggleBtn.setAccessibleText("Add " + operationName + " to Favorites");
-            favoriteToggleBtn.setTooltip(new Tooltip("Add to Favorites (Shortcut+Shift+F)"));
+            favoriteToggleBtn.setAccessibleText(i18n.text("favorite.add", operationName));
+            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.tooltip")));
         }
     }
 
@@ -929,7 +1212,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             contractOperationLabel.setText(opText);
 
             // Add a tooltip for the contract description
-            String defaultPayloadTooltip = "Applies to the operation payload. Keys, IVs, salts, signatures and certificates have their own formats.";
+            String defaultPayloadTooltip = i18n.text("toolbar.payloadTooltip");
             if (profile.contractDescription() != null && !profile.contractDescription().isEmpty()) {
                 Tooltip tooltipObj = new Tooltip(profile.contractDescription());
                 contractOperationLabel.setTooltip(tooltipObj);
@@ -1592,7 +1875,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (statusLabel == null) return;
         statusLabel.setText(message);
         statusResetTimer.stop();
-        statusResetTimer.setOnFinished(event -> statusLabel.setText("Ready"));
+        statusResetTimer.setOnFinished(event -> statusLabel.setText(i18n.text("status.ready")));
         statusResetTimer.playFromStart();
     }
 
@@ -1605,7 +1888,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleClearInput() {
         if (currentActiveOperation == null) {
-            updateStatus("No active operation to clear");
+            updateStatus(i18n.text("status.noActiveOperation"));
             return;
         }
 
@@ -1625,14 +1908,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         clearPublishedResultSnapshot();
-        updateStatus("Input cleared");
+        updateStatus(i18n.text("status.inputCleared"));
     }
 
     @FXML
     private void handleClearOutput() {
         // Reuse clear input logic for now (Clear All)
         handleClearInput();
-        updateStatus("Output cleared");
+        updateStatus(i18n.text("status.outputCleared"));
     }
 
     public boolean hasCurrentResult() {
@@ -1643,15 +1926,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     public void handleCopyOutput() {
         String content = resolveCurrentOutputText();
         if (content == null || content.isBlank()) {
-            updateStatus("Action blocked: No current output available to copy.");
+            updateStatus(i18n.text("status.noOutput"));
             return;
         }
         if (content.equals("***MASKED***")) {
-            updateStatus("Action blocked: Secret cannot be copied in current visibility mode.");
+            updateStatus(i18n.text("status.secretBlocked"));
             return;
         }
         copyToClipboard(content);
-        updateStatus("Output copied to clipboard");
+        updateStatus(i18n.text("status.outputCopied"));
     }
 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
@@ -1812,7 +2095,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 // Resolve sizes
                 int inLen = result.getInput() != null ? result.getInput().length : 0;
                 int outLen = result.getOutput() != null ? result.getOutput().length : 0;
-                if (resultSizeLabel != null) resultSizeLabel.setText("In: " + inLen + "B / Out: " + outLen + "B");
+                if (resultSizeLabel != null) resultSizeLabel.setText(i18n.text("result.size", inLen, outLen));
 
                 // Resolve output format
                 String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
@@ -1820,7 +2103,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
                 // Success / Error status
                 if (resultStatusBadge != null) {
-                    resultStatusBadge.setText("SUCCESS");
+                    resultStatusBadge.setText(i18n.text("result.success"));
                     resultStatusBadge.getStyleClass().setAll("result-status-success");
                     resultStatusBadge.setStyle("");
                 }
@@ -3272,8 +3555,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void setupGuidedFlowKeyboardAndTooltips() {
         if (guidedFlowPanel == null) return;
 
-        if (guideBackBtn != null) guideBackBtn.setTooltip(new Tooltip("Return to previous guided step"));
-        if (guideNextBtn != null) guideNextBtn.setTooltip(new Tooltip("Advance to next guided step"));
+        if (guideBackBtn != null) guideBackBtn.setTooltip(new Tooltip(i18n.text("guide.backTooltip")));
+        if (guideNextBtn != null) guideNextBtn.setTooltip(new Tooltip(i18n.text("guide.nextTooltip")));
 
         guidedFlowPanel.setOnKeyPressed(event -> {
             if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
@@ -3296,6 +3579,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "Laboratory".equals(m.getText()));
         if (!hasLabMenu) {
             javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
+            labMenu.setUserData("laboratory");
             labMenu.setStyle("-fx-text-fill: white;");
 
             javafx.scene.control.MenuItem quickStartItem = new javafx.scene.control.MenuItem("Quick Start");

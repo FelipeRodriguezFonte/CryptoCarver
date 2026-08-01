@@ -2,6 +2,7 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDescriptor;
 import com.cryptocarver.model.OperationRegistry;
+import com.cryptocarver.service.I18nService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -65,7 +66,8 @@ public class SidePanel extends VBox {
         searchIcon.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px;");
 
         searchField = new TextField();
-        searchField.setPromptText("Search");
+        searchField.setPromptText(I18nService.getInstance().text("side.search"));
+        searchField.setAccessibleText(I18nService.getInstance().text("side.search"));
         searchField.getStyleClass().add("search-field");
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
@@ -73,7 +75,7 @@ public class SidePanel extends VBox {
         searchField.setOnAction(event -> selectFirstSearchResult());
 
         collapseButton = new Button("«");
-        collapseButton.setTooltip(new Tooltip("Collapse panel"));
+        collapseButton.setTooltip(new Tooltip(I18nService.getInstance().text("side.collapse")));
         collapseButton.getStyleClass().add("button");
         collapseButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #7f8c8d; -fx-font-weight: bold;");
         collapseButton.setOnAction(e -> collapse());
@@ -125,9 +127,9 @@ public class SidePanel extends VBox {
 
                         // Keep category and aliases discoverable without making the narrow navigation tree wider.
                         String tooltipText = item.descriptor.getSubtitle()
-                                + "\nCategory: " + item.descriptor.getCategory();
+                                + "\n" + I18nService.getInstance().text("side.category", item.descriptor.getCategory());
                         if (!item.descriptor.getAliases().isEmpty()) {
-                            tooltipText += "\nAliases: " + String.join(", ", item.descriptor.getAliases());
+                            tooltipText += "\n" + I18nService.getInstance().text("side.aliases", String.join(", ", item.descriptor.getAliases()));
                         }
                         if (item.descriptor.getStatus() != OperationDescriptor.Status.STABLE) {
                             tooltipText += " (" + item.descriptor.getStatus() + ")";
@@ -193,7 +195,7 @@ public class SidePanel extends VBox {
             this.currentSection = section;
         }
 
-        rootItem = new TreeItem<>(new OperationNode(section.getLabel()));
+        rootItem = new TreeItem<>(new OperationNode(localizedSection(section)));
 
         switch (section) {
             case CIPHER:
@@ -230,7 +232,7 @@ public class SidePanel extends VBox {
                 buildHistoryTree();
                 break;
             case SEARCH:
-                rootItem.getChildren().add(new TreeItem<>(new OperationNode("Quick search across all operations")));
+                rootItem.getChildren().add(new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.quickSearch"))));
                 break;
         }
 
@@ -253,7 +255,7 @@ public class SidePanel extends VBox {
         List<String> favs = com.cryptocarver.model.AppSettings.getInstance().getFavorites();
         if (favs.isEmpty()) return;
 
-        TreeItem<OperationNode> favsGroup = new TreeItem<>(new OperationNode("★ Favorites"));
+        TreeItem<OperationNode> favsGroup = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.favorites")));
         for (String fav : favs) {
             OperationDescriptor desc = OperationRegistry.getInstance().resolveNavigation(fav).orElse(null);
             if (desc != null) {
@@ -270,7 +272,7 @@ public class SidePanel extends VBox {
         List<com.cryptocarver.model.HistoryCommand> items = historyManager.getHistoryItems();
         if (items.isEmpty()) return;
 
-        TreeItem<OperationNode> recentsGroup = new TreeItem<>(new OperationNode("Recent Executions"));
+        TreeItem<OperationNode> recentsGroup = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.recent")));
         for (com.cryptocarver.model.HistoryCommand item : items.stream().limit(8).toList()) {
             recentsGroup.getChildren().add(new TreeItem<>(new OperationNode(item)));
         }
@@ -280,7 +282,7 @@ public class SidePanel extends VBox {
     private void buildHistoryTree() {
         buildCategoryTree("History");
         if (historyManager == null || historyManager.getHistoryItems().isEmpty()) {
-            rootItem.getChildren().add(new TreeItem<>(new OperationNode("No executed operations yet")));
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.emptyHistory"))));
         } else {
             attachRecentsIfAny();
         }
@@ -335,14 +337,14 @@ public class SidePanel extends VBox {
         } else {
             List<OperationDescriptor> results = OperationRegistry.getInstance().search(filter);
             TreeItem<OperationNode> filteredRoot = new TreeItem<>(
-                    new OperationNode("Search Results (" + results.size() + ")"));
+                    new OperationNode(I18nService.getInstance().text("side.searchResults", results.size())));
 
             for (OperationDescriptor res : results) {
                 filteredRoot.getChildren().add(new TreeItem<>(new OperationNode(res)));
             }
 
             if (results.isEmpty()) {
-                filteredRoot.getChildren().add(new TreeItem<>(new OperationNode("No operations found")));
+                filteredRoot.getChildren().add(new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.noOperations"))));
             }
 
             navigationTree.setRoot(filteredRoot);
@@ -371,5 +373,24 @@ public class SidePanel extends VBox {
 
     public void setOnItemSelected(Consumer<String> handler) {
         this.onItemSelected = handler;
+    }
+
+    private String localizedSection(NavigationRail.Section section) {
+        String key = switch (section) {
+            case POST_QUANTUM -> "postQuantum";
+            case XML_SECURITY -> "xmlSecurity";
+            default -> section.name().toLowerCase(java.util.Locale.ROOT);
+        };
+        return I18nService.getInstance().text("nav." + key);
+    }
+
+    /** Refreshes labels/tooltips while preserving the current section and search text. */
+    public void refreshLocalizedText() {
+        searchField.setPromptText(I18nService.getInstance().text("side.search"));
+        searchField.setAccessibleText(I18nService.getInstance().text("side.search"));
+        collapseButton.setTooltip(new Tooltip(I18nService.getInstance().text("side.collapse")));
+        String query = searchField.getText();
+        if (query == null || query.isBlank()) updateContent(currentSection);
+        else filterTree(query);
     }
 }

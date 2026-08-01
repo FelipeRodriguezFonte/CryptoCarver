@@ -49,6 +49,15 @@ public final class AppSettings {
         data = new Settings();
     }
 
+    public synchronized LanguagePreference getLanguagePreference() {
+        return data.languagePreference == null ? LanguagePreference.SYSTEM : data.languagePreference;
+    }
+
+    public synchronized void setLanguagePreference(LanguagePreference preference) {
+        data.languagePreference = preference == null ? LanguagePreference.SYSTEM : preference;
+        save();
+    }
+
     public synchronized SecretVisibilityProfile getSecretVisibilityProfile() {
         return data.secretVisibility == null ? SecretVisibilityProfile.FULL_LAB : data.secretVisibility;
     }
@@ -230,6 +239,7 @@ public final class AppSettings {
         private List<TrustStoreProfile> trustStoreProfiles = new ArrayList<>();
         private List<Pkcs11Profile> pkcs11Profiles = new ArrayList<>();
         private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
+        private LanguagePreference languagePreference = LanguagePreference.SYSTEM;
         private List<String> favorites = new ArrayList<>();
         private String lastRoute = "";
     }
