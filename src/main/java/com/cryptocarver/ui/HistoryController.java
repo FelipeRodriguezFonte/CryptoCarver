@@ -11,6 +11,7 @@ import com.cryptocarver.model.OperationRecipe;
 import com.cryptocarver.model.RecipeVariables;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.utils.HistoryComparator;
+import com.cryptocarver.service.I18nService;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -59,6 +60,11 @@ public class HistoryController {
     @FXML private TableColumn<OperationDetail, String> nameCol;
     @FXML private TableColumn<OperationDetail, String> valCol;
     @FXML private TableColumn<OperationDetail, String> classCol;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return I18nService.getInstance().text(key, args);
+    }
 
     private OperationNavigator navigator;
     private HistoryManager historyManager;
@@ -67,6 +73,11 @@ public class HistoryController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(mainHistoryContainer, ModuleTextCatalog.history());
+        I18nService.getInstance().addLocaleChangeListener(locale -> {
+            refresh();
+            historyTable.refresh();
+        });
         historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         detailsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -75,7 +86,7 @@ public class HistoryController {
         opCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getOperation()));
 
         actionCol.setCellFactory(col -> new TableCell<>() {
-            private final Button btn = new Button("Reopen");
+            private final Button btn = new Button(t("module.history.reopen"));
             {
                 btn.getStyleClass().add("history-card-action");
                 btn.setStyle("");
@@ -233,8 +244,8 @@ public class HistoryController {
             if (historySummaryLabel != null) {
                 int total = historyManager.getHistoryItems().size();
                 historySummaryLabel.setText(filtered.size() == total
-                        ? total + (total == 1 ? " operation" : " operations")
-                        : filtered.size() + " of " + total + " operations");
+                        ? t(total == 1 ? "module.history.oneOperation" : "module.history.operations", total)
+                        : t("module.history.filteredOperations", filtered.size(), total));
             }
         }
     }

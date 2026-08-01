@@ -4,6 +4,7 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.ClipboardEntry;
 import com.cryptocarver.model.ResultComparator;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.service.I18nService;
 import com.cryptocarver.utils.ResultComparisonReportExporter;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -18,6 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 public class CompareResultsController {
+
+    @FXML private javafx.scene.layout.VBox compareResultsRoot;
+    private ModuleI18n.Binding moduleI18n;
 
     @FXML private Label statusBadgeLabel;
     @FXML private Label summaryLabel;
@@ -52,6 +56,16 @@ public class CompareResultsController {
     private ClipboardEntry entry2;
     private SecretVisibilityProfile profile;
 
+    private String t(String key, Object... args) {
+        return I18nService.getInstance().text(key, args);
+    }
+
+    @FXML
+    public void initialize() {
+        moduleI18n = ModuleI18n.bind(compareResultsRoot, ModuleTextCatalog.compareResults());
+        I18nService.getInstance().addLocaleChangeListener(locale -> refresh());
+    }
+
     public void setEntries(ClipboardEntry entry1, ClipboardEntry entry2) {
         this.entry1 = entry1;
         this.entry2 = entry2;
@@ -75,8 +89,8 @@ public class CompareResultsController {
 
         summaryLabel.setText(details.summary());
 
-        item1HeaderLabel.setText("Item 1 (" + entry1.getLabel() + ")");
-        item2HeaderLabel.setText("Item 2 (" + entry2.getLabel() + ")");
+        item1HeaderLabel.setText(t("module.compare.itemHeader", t("module.compare.item1"), entry1.getLabel()));
+        item2HeaderLabel.setText(t("module.compare.itemHeader", t("module.compare.item2"), entry2.getLabel()));
 
         item1Label.setText(entry1.getLabel());
         item2Label.setText(entry2.getLabel());
@@ -99,7 +113,7 @@ public class CompareResultsController {
         item1Hash.setText(details.fingerprint1() != null ? details.fingerprint1() : "—");
         item2Hash.setText(details.fingerprint2() != null ? details.fingerprint2() : "—");
 
-        diffDetailsArea.setText(details.textualDiff() != null ? details.textualDiff() : "No diff details");
+        diffDetailsArea.setText(details.textualDiff() != null ? details.textualDiff() : t("module.compare.noDiff"));
     }
 
     @FXML
@@ -107,7 +121,7 @@ public class CompareResultsController {
         if (entry1 == null || entry2 == null) return;
 
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export Comparison Report");
+        chooser.setTitle(t("module.compare.exportTitle"));
         chooser.setInitialFileName("comparison-report.md");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"),
@@ -127,12 +141,12 @@ public class CompareResultsController {
             }
             Files.writeString(file.toPath(), content, StandardCharsets.UTF_8);
 
-            Alert confirmation = new Alert(Alert.AlertType.INFORMATION, "Report saved to:\n" + file.getAbsolutePath(), ButtonType.OK);
-            confirmation.setTitle("Comparison Report Exported");
-            confirmation.setHeaderText("Report Exported Successfully");
+            Alert confirmation = new Alert(Alert.AlertType.INFORMATION, t("module.compare.saved", file.getAbsolutePath()), ButtonType.OK);
+            confirmation.setTitle(t("module.compare.exported"));
+            confirmation.setHeaderText(t("module.compare.exportedHeader"));
             confirmation.showAndWait();
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Unable to write report: " + e.getMessage(), ButtonType.OK);
+            Alert alert = new Alert(Alert.AlertType.ERROR, t("module.compare.writeError", e.getMessage()), ButtonType.OK);
             alert.showAndWait();
         }
     }

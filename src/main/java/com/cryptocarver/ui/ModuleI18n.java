@@ -13,6 +13,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +82,9 @@ public final class ModuleI18n {
             if (node instanceof Parent parent) {
                 for (Node child : parent.getChildrenUnmodifiable()) index(child);
             }
+            if (node instanceof TableView<?> tableView) {
+                for (TableColumn<?, ?> column : tableView.getColumns()) index(column);
+            }
             if (node instanceof TabPane tabPane) {
                 for (Tab tab : tabPane.getTabs()) index(tab);
             }
@@ -98,6 +103,12 @@ public final class ModuleI18n {
 
         private void index(Tab tab) {
             if (tab != null) addText(tab.getText(), tab::getText, tab::setText);
+        }
+
+        private void index(TableColumn<?, ?> column) {
+            if (column == null) return;
+            addText(column.getText(), column::getText, column::setText);
+            for (TableColumn<?, ?> child : column.getColumns()) index(child);
         }
 
         private void addText(String original, java.util.function.Supplier<String> getter,

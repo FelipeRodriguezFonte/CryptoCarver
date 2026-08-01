@@ -52,6 +52,10 @@ public class GenericController {
     private boolean preflightListenersInstalled;
     @FXML private Accordion genericContainer;
     private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     @FXML private TextArea hashInputArea;
     @FXML private TextArea hashOutputArea;
 
@@ -260,7 +264,7 @@ public class GenericController {
             batchInputArea.setText(java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8));
             String lower = file.getName().toLowerCase(java.util.Locale.ROOT);
             batchInputFormatCombo.setValue(lower.endsWith(".csv") ? "CSV" : "JSON Lines (.jsonl)");
-            batchStatusLabel.setText("Loaded " + file.getName() + ". Review the input before running.");
+            batchStatusLabel.setText(t("module.batch.loaded", file.getName()));
         } catch (java.io.IOException e) {
             if (statusReporter != null) statusReporter.showError("Batch input", "Unable to read file: " + e.getMessage());
         }
@@ -406,12 +410,12 @@ public class GenericController {
         };
         activeBatchTask = task;
         batchProgressBar.progressProperty().unbind(); batchProgressBar.progressProperty().bind(task.progressProperty());
-        batchStatusLabel.setText("Processing " + rows.size() + " rows…"); batchResultArea.clear();
+        batchStatusLabel.setText(t("module.batch.processing", rows.size())); batchResultArea.clear();
         task.setOnSucceeded(event -> {
             batchProgressBar.progressProperty().unbind(); batchProgressBar.setProgress(1);
             lastBatchReport = task.getValue();
             batchResultArea.setText(renderBatchReport(lastBatchReport));
-            batchStatusLabel.setText("Completed: " + lastBatchReport.succeeded() + " succeeded, " + lastBatchReport.failed() + " failed.");
+            batchStatusLabel.setText(t("module.batch.completed", lastBatchReport.succeeded(), lastBatchReport.failed()));
             if (statusReporter != null) {
                 java.util.Map<String, String> batchDetails = new java.util.LinkedHashMap<>();
                 batchDetails.put("Operation", operation);
@@ -431,7 +435,7 @@ public class GenericController {
         });
         task.setOnFailed(event -> {
             batchProgressBar.progressProperty().unbind(); Throwable error = task.getException();
-            batchStatusLabel.setText("Batch failed: " + (error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
+            batchStatusLabel.setText(t("module.batch.failed", error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
         });
         Thread worker = new Thread(task, "cryptocarver-batch-runner"); worker.setDaemon(true); worker.start();
     }
@@ -446,8 +450,8 @@ public class GenericController {
                     ? com.cryptocarver.model.batch.BatchInputCodec.parseCsv(rawText)
                     : com.cryptocarver.model.batch.BatchInputCodec.parseJsonLines(rawText);
         } catch (Exception e) {
-            batchResultArea.setText("Dry Run failed: Invalid batch input formatting: " + e.getMessage());
-            if (batchStatusLabel != null) batchStatusLabel.setText("Dry Run blocked");
+            batchResultArea.setText(t("module.batch.dryRunInvalid", e.getMessage()));
+            if (batchStatusLabel != null) batchStatusLabel.setText(t("module.batch.dryRunBlocked"));
             return;
         }
 
@@ -480,16 +484,16 @@ public class GenericController {
 
         batchResultArea.setText(sb.toString());
         if (batchStatusLabel != null) {
-            batchStatusLabel.setText("Dry Run Summary: " + summary.readyCount() + " ready, " + summary.blockedCount() + " blocked");
+            batchStatusLabel.setText(t("module.batch.dryRunSummary", summary.readyCount(), summary.blockedCount()));
         }
     }
 
     @FXML public void handleCancelBatch() {
         if (activeBatchTask != null && activeBatchTask.isRunning()) {
             activeBatchTask.cancel();
-            batchStatusLabel.setText("Cancelling batch…");
+            batchStatusLabel.setText(t("module.batch.cancelling"));
         } else {
-            batchStatusLabel.setText("No batch is running.");
+            batchStatusLabel.setText(t("module.batch.notRunning"));
         }
     }
 
@@ -499,7 +503,7 @@ public class GenericController {
             return;
         }
         boolean csv = isCsvBatchFormat(batchExportFormatCombo.getValue());
-        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser(); chooser.setTitle("Export Batch Results");
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser(); chooser.setTitle(t("module.batch.exportTitle"));
         chooser.setInitialFileName(csv ? "cryptocarver-batch-results.csv" : "cryptocarver-batch-results.jsonl");
         chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(csv ? "CSV" : "JSON Lines", csv ? "*.csv" : "*.jsonl"));
         java.io.File file = chooser.showSaveDialog(genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow());
@@ -508,7 +512,7 @@ public class GenericController {
             String output = csv ? com.cryptocarver.model.batch.BatchOutputCodec.toCsv(lastBatchReport)
                     : com.cryptocarver.model.batch.BatchOutputCodec.toJsonLines(lastBatchReport);
             java.nio.file.Files.writeString(file.toPath(), output, java.nio.charset.StandardCharsets.UTF_8);
-            batchStatusLabel.setText("Batch results exported: " + file.getName());
+            batchStatusLabel.setText(t("module.batch.exported", file.getName()));
         } catch (java.io.IOException e) {
             if (statusReporter != null) statusReporter.showError("Batch export", "Unable to save results: " + e.getMessage());
         }
@@ -561,6 +565,12 @@ public class GenericController {
                         .filter(pane -> pane.getText() != null && pane.getText().contains("Process Designer"))
                         .toArray(javafx.scene.Node[]::new);
         moduleI18n = ModuleI18n.bind(genericContainer, ModuleTextCatalog.generic(), excluded);
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+            if (batchStatusLabel == null) return;
+            if (activeBatchTask != null && activeBatchTask.isRunning()) {
+                batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
+            }
+        });
         if (batchInputFormatCombo != null) {
             batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchInputFormatCombo.setValue("CSV");

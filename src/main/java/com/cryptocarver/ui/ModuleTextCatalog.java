@@ -3,7 +3,7 @@ package com.cryptocarver.ui;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** English source-text to bundle-key maps for the UX-15A module slice. */
+/** English source-text to bundle-key maps for the progressively localized module slices. */
 public final class ModuleTextCatalog {
     private ModuleTextCatalog() { }
 
@@ -202,6 +202,174 @@ public final class ModuleTextCatalog {
         map.put("Decompress", "module.generic.decompress");
         map.put("Check Digit:", "module.generic.checkDigit");
         map.put("Validation Result:", "module.generic.validationResult");
+        map.put("Runs safe, deterministic transformations. Input must contain an input column; no secret keys are accepted.", "module.batch.help");
+        map.put("Key (Hex):", "module.batch.keyHex");
+        map.put("IV/Nonce:", "module.batch.ivNonce");
+        map.put("AAD:", "module.batch.aad");
+        map.put("Hex (Req. for CBC)", "module.batch.ivPrompt");
+        map.put("Hex (Optional for AEAD)", "module.batch.aadPrompt");
+        map.put("32 bytes (only in memory)", "module.batch.keyPrompt");
+        map.put("Charset:", "module.batch.charset");
+        map.put("Stop on error", "module.batch.stopOnError");
+        map.put("Compact records", "module.batch.compact");
+        map.put("Load CSV / JSON Lines…", "module.generic.loadBatch");
+        map.put("Export Results…", "module.generic.exportResults");
+        return map;
+    }
+
+    public static Map<String, String> processDesigner() {
+        Map<String, String> map = common();
+        map.put("🧩 Process Designer (MVP)", "module.process.title");
+        map.put("Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys.", "module.process.help");
+        map.put("Process:", "module.process.process");
+        map.put("Untitled process", "module.process.untitled");
+        map.put("Run", "module.process.run");
+        map.put("Dry Run", "module.process.dryRun");
+        map.put("Cancel", "module.common.cancel");
+        map.put("Expand results", "module.process.expandResults");
+        map.put("Reverse connection", "module.process.reverseConnection");
+        map.put("Hide inspector", "module.process.hideInspector");
+        map.put("Show inspector", "module.process.showInspector");
+        map.put("Presets", "module.process.presets");
+        map.put("Save…", "module.common.save");
+        map.put("Open…", "module.common.open");
+        map.put("Inputs", "module.process.inputs");
+        map.put("Conversions", "module.process.conversions");
+        map.put("Crypto", "module.process.crypto");
+        map.put("Outputs", "module.process.outputs");
+        map.put("Console input", "module.process.consoleInput");
+        map.put("File input", "module.process.fileInput");
+        map.put("Console output", "module.process.consoleOutput");
+        map.put("File output", "module.process.fileOutput");
+        map.put("Node name", "module.process.nodeName");
+        map.put("Describe this step", "module.process.nodePrompt");
+        map.put("Text / console value", "module.process.textValue");
+        map.put("File path", "module.process.filePath");
+        map.put("Browse", "module.common.browse");
+        map.put("Mode", "module.common.mode");
+        map.put("Charset", "module.process.charset");
+        map.put("Hash Algorithm", "module.process.hashAlgorithm");
+        map.put("Algorithm/Mode", "module.process.algorithmMode");
+        map.put("Username", "module.process.username");
+        map.put("Password", "module.process.password");
+        map.put("Key Format", "module.process.keyFormat");
+        map.put("Manual Key (Secret)", "module.process.manualKey");
+        map.put("Nonce / IV", "module.process.nonceIv");
+        map.put("Auto-generate", "module.process.autoGenerate");
+        map.put("Connected inputs", "module.process.connectedInputs");
+        map.put("Cipher output", "module.process.cipherOutput");
+        map.put("Key size (bits)", "module.process.keySize");
+        map.put("PBKDF2 iterations", "module.process.pbkdf2Iterations");
+        map.put("Generated key algorithm", "module.process.generatedKeyAlgorithm");
+        map.put("Length (bytes)", "module.process.lengthBytes");
+        map.put("Keystore path", "module.process.keystorePath");
+        map.put("Keystore Type", "module.process.keystoreType");
+        map.put("Alias", "module.process.alias");
+        map.put("Keystore Password", "module.process.keystorePassword");
+        map.put("Key Password", "module.process.keyPassword");
+        map.put("Public Material Path", "module.process.publicMaterialPath");
+        map.put("Material Type", "module.process.materialType");
+        map.put("Secrets are not stored in process files.", "module.process.secretsNotStored");
+        map.put("Save block settings", "module.process.saveBlock");
+        map.put("Select 2 blocks to connect", "module.process.selectTwo");
+        map.put("Connect to...", "module.process.connectTo");
+        map.put("Reverse selected connection", "module.process.reverseSelected");
+        map.put("Delete selected", "module.process.deleteSelected");
+        map.put("Clear canvas", "module.process.clearCanvas");
+        map.put("Execution status", "module.process.executionStatus");
+        map.put("Step", "module.process.step");
+        map.put("Operation", "module.process.operation");
+        map.put("Input", "module.common.input");
+        map.put("Output", "module.common.output");
+        map.put("Status", "module.process.status");
+        map.put("Duration", "module.process.duration");
+        map.put("Execution results", "module.process.executionResults");
+        map.put("Execution results and validation messages appear here.", "module.process.executionPrompt");
+        return map;
+    }
+
+    public static Map<String, String> history() {
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("Recent Operations", "module.history.title");
+        map.put("Values:", "module.history.values");
+        map.put("⚠ Unsafe lab: sensitive values are visible", "module.history.unsafe");
+        map.put("Filter:", "module.history.filter");
+        map.put("Operation, date or property", "module.history.filterPrompt");
+        map.put("Module:", "module.history.module");
+        map.put("All modules", "module.history.allModules");
+        map.put("Clear filters", "module.history.clearFilters");
+        map.put("Compare 2", "module.history.compareTwo");
+        map.put("Import Recipe", "module.history.importRecipe");
+        map.put("Clear History", "module.history.clear");
+        map.put("The latest operation is selected automatically. Select a different row to export it.", "module.history.help");
+        map.put("Open Selected Value", "module.history.openValue");
+        map.put("Add Output to Shelf", "module.history.addShelf");
+        map.put("Copy Selected Value", "module.history.copyValue");
+        map.put("Export JSON Record", "module.history.exportJson");
+        map.put("Export Visible JSON", "module.history.exportVisibleJson");
+        map.put("Export Markdown Report", "module.history.exportReport");
+        map.put("Copy Markdown Report", "module.history.copyReport");
+        map.put("Export JSON Recipe", "module.history.exportRecipe");
+        map.put("Time", "module.history.time");
+        map.put("Operation", "module.history.operation");
+        map.put("Action", "module.history.action");
+        map.put("Operation Details", "module.history.details");
+        map.put("Property", "module.history.property");
+        map.put("Value", "module.history.value");
+        map.put("Class", "module.history.class");
+        return map;
+    }
+
+    public static Map<String, String> clipboardShelf() {
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("Clipboard Shelf / Laboratory Notebook", "module.shelf.title");
+        map.put("Stores, tags, annotates and compares results generated or copied during this session.", "module.shelf.help");
+        map.put("Search label, operation, tag, note...", "module.shelf.searchPrompt");
+        map.put("All (Pinned & Unpinned)", "module.shelf.allPinned");
+        map.put("All Operations", "module.shelf.allOperations");
+        map.put("Any Format", "module.shelf.anyFormat");
+        map.put("Any Classification", "module.shelf.anyClassification");
+        map.put("Open Copy Window", "module.shelf.openCopy");
+        map.put("Clear Shelf", "module.shelf.clear");
+        map.put("No saved laboratory results yet", "module.shelf.empty");
+        map.put("Time", "module.shelf.time");
+        map.put("Label", "module.shelf.label");
+        map.put("Source", "module.shelf.source");
+        map.put("Algorithm", "module.shelf.algorithm");
+        map.put("Format", "module.shelf.format");
+        map.put("Class", "module.shelf.class");
+        map.put("Tags", "module.shelf.tags");
+        map.put("Preview", "module.shelf.preview");
+        map.put("Entry Details", "module.shelf.details");
+        map.put("⚠️ Contains sensitive data", "module.shelf.sensitive");
+        map.put("Pin", "module.shelf.pin");
+        map.put("Edit Note & Tags", "module.shelf.editNoteTags");
+        map.put("Compare...", "module.shelf.compare");
+        map.put("Use in...", "module.shelf.useIn");
+        map.put("Copy", "module.shelf.copy");
+        map.put("Open Expanded", "module.shelf.openExpanded");
+        map.put("Rename", "module.shelf.rename");
+        map.put("Delete", "module.shelf.delete");
+        return map;
+    }
+
+    public static Map<String, String> compareResults() {
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("Compare Laboratory Results", "module.compare.title");
+        map.put("Zero-crypto side-by-side comparison of stored result snapshots.", "module.compare.help");
+        map.put("Property", "module.compare.property");
+        map.put("Item 1", "module.compare.item1");
+        map.put("Item 2", "module.compare.item2");
+        map.put("Label", "module.compare.label");
+        map.put("Source Operation", "module.compare.source");
+        map.put("Algorithm", "module.compare.algorithm");
+        map.put("Timestamp", "module.compare.timestamp");
+        map.put("Format / Size", "module.compare.formatSize");
+        map.put("Classification", "module.compare.classification");
+        map.put("SHA-256 Hash", "module.compare.sha256");
+        map.put("Diff Details", "module.compare.diffDetails");
+        map.put("Export Comparison Report...", "module.compare.export");
+        map.put("Close", "module.common.close");
         return map;
     }
 }

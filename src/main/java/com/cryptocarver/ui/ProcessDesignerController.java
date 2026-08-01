@@ -43,9 +43,18 @@ import java.util.UUID;
 import javafx.scene.control.Button;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TitledPane;
+import com.cryptocarver.service.I18nService;
 
 /** Interactive MVP canvas: drag blocks, select them, connect selected blocks, save and run safe flows. */
 public class ProcessDesignerController {
+
+    @FXML private TitledPane processDesignerRoot;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return I18nService.getInstance().text(key, args);
+    }
 
     @FXML private Pane workflowCanvas;
     @FXML private TextField processNameField;
@@ -160,6 +169,17 @@ public class ProcessDesignerController {
     Label cryptoWarningLabel = new Label();
 
     @FXML public void initialize() {
+        moduleI18n = ModuleI18n.bind(processDesignerRoot, ModuleTextCatalog.processDesigner());
+        I18nService.getInstance().addLocaleChangeListener(locale -> {
+            if (processStatusLabel != null && (processStatusLabel.getText() == null || processStatusLabel.getText().isBlank())) {
+                processStatusLabel.setText(t("status.ready"));
+            }
+            if (executionStatusTable != null) {
+                executionStatusTable.setPlaceholder(new Label(t("module.process.executionPlaceholder")));
+            }
+            if (selected != null) updateNonceLabel();
+            updateSelectionUi();
+        });
         nodeCharsetCombo.getItems().setAll("UTF-8", "ISO-8859-1", "IBM037");
         nodeCharsetCombo.setValue("UTF-8");
         hashAlgorithmCombo.getItems().setAll("SHA-256", "SHA-384", "SHA-512", "SHA-1", "MD5");
@@ -307,7 +327,7 @@ public class ProcessDesignerController {
                 }
             });
         }
-        selectedNodeLabel.setText("Select a block to configure it");
+        selectedNodeLabel.setText(t("module.process.selectBlock"));
         if (nodeNameFieldGroup != null) {
             nodeNameFieldGroup.setVisible(false);
             nodeNameFieldGroup.setManaged(false);
@@ -346,7 +366,7 @@ public class ProcessDesignerController {
 
         if (inspectCol != null) {
             inspectCol.setCellFactory(col -> new TableCell<ProcessExecutionRow, Void>() {
-                private final Button btn = new Button("Inspect");
+                private final Button btn = new Button(t("module.process.inspect"));
                 {
                     btn.setStyle("-fx-font-size: 9px; -fx-padding: 1 4 1 4;");
                     btn.setOnAction(evt -> {
@@ -377,7 +397,7 @@ public class ProcessDesignerController {
             }
         });
 
-        executionStatusTable.setPlaceholder(new Label("Run or Dry Run a process to see its execution steps."));
+        executionStatusTable.setPlaceholder(new Label(t("module.process.executionPlaceholder")));
     }
 
     public void selectNodeById(String nodeId) {
@@ -717,14 +737,14 @@ if (encrypt || decrypt || mac || sign || verify) {
 
         executionOutputArea.setText(sb.toString());
         if (processStatusLabel != null) {
-            processStatusLabel.setText("Dry Run: " + summary.readyCount() + " ready, " + summary.blockedCount() + " blocked");
+            processStatusLabel.setText(t("module.process.drySummary", summary.readyCount(), summary.blockedCount()));
         }
     }
 
     @FXML public void handleCancelProcess() {
         processCancellationRequested = true;
         Platform.runLater(() -> {
-            if (processStatusLabel != null) processStatusLabel.setText("Cancelling process execution...");
+            if (processStatusLabel != null) processStatusLabel.setText(t("module.process.cancelling"));
         });
     }
 
@@ -761,7 +781,7 @@ if (encrypt || decrypt || mac || sign || verify) {
         if (cancelProcessButton != null) cancelProcessButton.setDisable(false);
         if (runProcessButton != null) runProcessButton.setDisable(true);
         if (processProgressBar != null) processProgressBar.setProgress(0.0);
-        if (processStatusLabel != null) processStatusLabel.setText("Running process...");
+        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.running"));
 
         java.util.Queue<NodeExecutionEvent> events = new java.util.concurrent.ConcurrentLinkedQueue<>();
         ExecutionContext context = new ExecutionContext(
@@ -774,7 +794,7 @@ if (encrypt || decrypt || mac || sign || verify) {
                         processProgressBar.setProgress((double) event.step() / definition.nodes.size());
                     }
                     if (processStatusLabel != null) {
-                        processStatusLabel.setText("Step " + event.step() + "/" + definition.nodes.size() + " — " + event.nodeLabel());
+                        processStatusLabel.setText(t("module.process.stepProgress", event.step(), definition.nodes.size(), event.nodeLabel()));
                     }
                 });
             },
@@ -803,15 +823,15 @@ if (encrypt || decrypt || mac || sign || verify) {
                             processProgressBar.setProgress(prog);
                         }
                         if (processStatusLabel != null) {
-                            processStatusLabel.setText("Cancelled after step " + completedSteps);
+                            processStatusLabel.setText(t("module.process.cancelled", completedSteps));
                         }
                         executionOutputArea.setText("Process cancelled after step " + completedSteps + ". Prior completed step results preserved.");
                     } else if (finalFailure == null) {
                         if (processProgressBar != null) processProgressBar.setProgress(1.0);
-                        if (processStatusLabel != null) processStatusLabel.setText("Completed successfully");
+                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.completed"));
                     } else {
                         if (processProgressBar != null) processProgressBar.setProgress(0.0);
-                        if (processStatusLabel != null) processStatusLabel.setText("Process failed: " + finalFailure.getMessage());
+                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.failed", finalFailure.getMessage()));
                     }
 
                     renderExecutionResult(definition, finalResult, events, finalFailure);

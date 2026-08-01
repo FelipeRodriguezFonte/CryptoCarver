@@ -3,7 +3,7 @@
 <?import javafx.scene.layout.*?>
 
 <TitledPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-             text="🧩 Process Designer (MVP)" expanded="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
+             fx:id="processDesignerRoot" text="🧩 Process Designer (MVP)" expanded="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
     <VBox spacing="7" style="-fx-padding: 8;">
         <Label text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar" hgap="8" vgap="8">

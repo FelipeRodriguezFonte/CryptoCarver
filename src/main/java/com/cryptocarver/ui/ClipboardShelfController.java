@@ -6,6 +6,7 @@ import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.ResultComparator;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.service.I18nService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -26,6 +27,9 @@ import java.util.List;
 import java.util.Optional;
 
 public class ClipboardShelfController {
+
+    @FXML private javafx.scene.layout.VBox clipboardShelfRoot;
+    private ModuleI18n.Binding moduleI18n;
 
     @FXML private TextField searchField;
     @FXML private ComboBox<String> pinnedFilterCombo;
@@ -61,14 +65,25 @@ public class ClipboardShelfController {
     private OperationNavigator navigator;
     private ModernMainController mainController;
 
+    private String t(String key, Object... args) {
+        return I18nService.getInstance().text(key, args);
+    }
+
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(clipboardShelfRoot, ModuleTextCatalog.clipboardShelf());
+        I18nService.getInstance().addLocaleChangeListener(locale -> {
+            pinnedFilterCombo.getItems().setAll(t("module.shelf.allPinned"), t("module.shelf.pinnedOnly"), t("module.shelf.unpinnedOnly"));
+            pinnedFilterCombo.setValue(t("module.shelf.allPinned"));
+            populateUseInMenu();
+            refresh();
+        });
         manager = ClipboardShelfManager.getInstance();
 
-        pinnedFilterCombo.getItems().setAll("All (Pinned & Unpinned)", "Pinned only", "Unpinned only");
-        pinnedFilterCombo.setValue("All (Pinned & Unpinned)");
+        pinnedFilterCombo.getItems().setAll(t("module.shelf.allPinned"), t("module.shelf.pinnedOnly"), t("module.shelf.unpinnedOnly"));
+        pinnedFilterCombo.setValue(t("module.shelf.allPinned"));
 
         formatFilterCombo.getItems().add(null);
         formatFilterCombo.getItems().addAll(ClipboardEntry.Format.values());
@@ -110,11 +125,11 @@ public class ClipboardShelfController {
         String query = searchField.getText();
         String pinnedSelection = pinnedFilterCombo.getValue();
         Boolean pinnedFilter = null;
-        if ("Pinned only".equalsIgnoreCase(pinnedSelection)) pinnedFilter = true;
-        else if ("Unpinned only".equalsIgnoreCase(pinnedSelection)) pinnedFilter = false;
+        if (t("module.shelf.pinnedOnly").equalsIgnoreCase(pinnedSelection)) pinnedFilter = true;
+        else if (t("module.shelf.unpinnedOnly").equalsIgnoreCase(pinnedSelection)) pinnedFilter = false;
 
         String sourceFilter = sourceFilterCombo.getValue();
-        if ("All Operations".equalsIgnoreCase(sourceFilter) || "All".equalsIgnoreCase(sourceFilter)) {
+        if (t("module.shelf.allOperations").equalsIgnoreCase(sourceFilter) || "All".equalsIgnoreCase(sourceFilter)) {
             sourceFilter = null;
         }
         ClipboardEntry.Format fmt = formatFilterCombo.getValue();
@@ -125,7 +140,7 @@ public class ClipboardShelfController {
 
         List<ClipboardEntry> filtered = manager.search(query, pinnedFilter, sourceFilter, fmt, cls);
         tableData.setAll(filtered);
-        itemCountLabel.setText(filtered.size() + " / 100 items");
+        itemCountLabel.setText(t("module.shelf.itemCount", filtered.size()));
 
         updateSelectionUi();
     }
@@ -133,7 +148,7 @@ public class ClipboardShelfController {
     private void refreshSourceFilterOptions(List<ClipboardEntry> entries) {
         String current = sourceFilterCombo.getValue();
         List<String> sources = new ArrayList<>();
-        sources.add("All Operations");
+        sources.add(t("module.shelf.allOperations"));
         entries.stream()
                 .map(ClipboardEntry::getSourceOperation)
                 .filter(s -> s != null && !s.isBlank())
@@ -146,7 +161,7 @@ public class ClipboardShelfController {
             if (current != null && sources.contains(current)) {
                 sourceFilterCombo.setValue(current);
             } else {
-                sourceFilterCombo.setValue("All Operations");
+                sourceFilterCombo.setValue(t("module.shelf.allOperations"));
             }
         }
     }
@@ -163,7 +178,7 @@ public class ClipboardShelfController {
         } else if (size == 2) {
             showComparisonSummary(selected.get(0), selected.get(1));
         } else {
-            detailsArea.setText("Multi-selection: " + size + " items selected.\nUse Delete to remove selected items.");
+            detailsArea.setText(t("module.shelf.multiSelection", size));
             warningLabel.setVisible(false);
             setActionAvailability(pinBtn, false, "Pin selected entry", "Select one entry to pin or unpin");
             setActionAvailability(editTagsNoteBtn, false, "Edit note and tags", "Select one entry to edit its note and tags");
@@ -229,7 +244,7 @@ public class ClipboardShelfController {
         }
 
         setActionAvailability(pinBtn, true, entry.isPinned() ? "Unpin entry" : "Pin entry", "Select one entry to pin or unpin");
-        pinBtn.setText(entry.isPinned() ? "Unpin" : "Pin");
+        pinBtn.setText(entry.isPinned() ? t("module.shelf.unpin") : t("module.shelf.pin"));
         setActionAvailability(editTagsNoteBtn, true, "Edit note and tags", "Select one entry to edit its note and tags");
         setActionAvailability(useInMenu, canCopy, "Use selected result in an operation",
                 "Unavailable under the active visibility profile");
@@ -265,7 +280,7 @@ public class ClipboardShelfController {
         boolean comparable = details.status() != ResultComparator.Status.NOT_COMPARABLE;
         compareBtn.setDisable(!comparable);
         if (comparable) {
-            compareBtn.setTooltip(new Tooltip("Click to open side-by-side comparison view"));
+            compareBtn.setTooltip(new Tooltip(t("module.shelf.compareTooltip")));
         } else {
             compareBtn.setTooltip(new Tooltip(details.summary()));
         }
@@ -341,7 +356,7 @@ public class ClipboardShelfController {
             controller.setEntries(selected.get(0), selected.get(1));
 
             Stage stage = new Stage();
-            stage.setTitle("Compare Laboratory Results");
+            stage.setTitle(t("module.compare.title"));
             stage.initModality(Modality.WINDOW_MODAL);
             Window owner = shelfTable.getScene() == null ? null : shelfTable.getScene().getWindow();
             if (owner != null) stage.initOwner(owner);
@@ -349,7 +364,7 @@ public class ClipboardShelfController {
             stage.setScene(new Scene(root, 750, 550));
             stage.show();
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Unable to open comparison view: " + e.getMessage(), ButtonType.OK);
+            Alert alert = new Alert(Alert.AlertType.ERROR, t("module.compare.openError", e.getMessage()), ButtonType.OK);
             alert.showAndWait();
         }
     }
@@ -396,8 +411,8 @@ public class ClipboardShelfController {
         ClipboardEntry entry = shelfTable.getSelectionModel().getSelectedItem();
         if (entry != null) {
             TextInputDialog dialog = new TextInputDialog(entry.getLabel());
-            dialog.setTitle("Rename Entry");
-            dialog.setHeaderText("Enter new label:");
+            dialog.setTitle(t("module.shelf.renameTitle"));
+            dialog.setHeaderText(t("module.shelf.renamePrompt"));
             Optional<String> result = dialog.showAndWait();
             result.ifPresent(newLabel -> {
                 manager.renameEntry(entry.getId(), newLabel);
@@ -420,13 +435,13 @@ public class ClipboardShelfController {
     private void populateUseInMenu() {
         useInMenu.getItems().clear();
 
-        MenuItem manualConv = new MenuItem("Manual Conversion Input");
+        MenuItem manualConv = new MenuItem(t("module.shelf.manualInput"));
         manualConv.setOnAction(e -> useInTarget("op_gen_manual", "MANUAL_CONVERSION"));
 
-        MenuItem symCipher = new MenuItem("Symmetric Cipher Input");
+        MenuItem symCipher = new MenuItem(t("module.shelf.cipherInput"));
         symCipher.setOnAction(e -> useInTarget("op_sym_ciphers", "SYMMETRIC_CIPHER"));
 
-        MenuItem hashInput = new MenuItem("Hashing Input");
+        MenuItem hashInput = new MenuItem(t("module.shelf.hashInput"));
         hashInput.setOnAction(e -> useInTarget("op_gen_hash", "HASHING"));
 
         MenuItem josePayload = new MenuItem("JOSE Payload (JWT)");
