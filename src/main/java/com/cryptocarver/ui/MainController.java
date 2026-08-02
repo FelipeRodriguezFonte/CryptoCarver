@@ -1472,6 +1472,45 @@ public class MainController implements StatusReporter {
         }
     }
 
+    /** Legacy shell bridge retained so the still-shipped main-view.fxml loads cleanly. */
+    @FXML
+    private void handleSymmetricEncryptFile() {
+        java.io.File input = chooseInputFile();
+        if (input == null || cipherController == null) return;
+        java.io.File output = chooseOutputFile();
+        if (output != null) cipherController.handleSymmetricEncryptFile(input.toPath(), output.toPath());
+    }
+
+    /** Legacy shell bridge retained so the still-shipped main-view.fxml loads cleanly. */
+    @FXML
+    private void handleSymmetricDecryptFile() {
+        java.io.File input = chooseInputFile();
+        if (input == null || cipherController == null) return;
+        java.io.File output = chooseOutputFile();
+        if (output != null) cipherController.handleSymmetricDecryptFile(input.toPath(), output.toPath());
+    }
+
+    /** Legacy shell bridge retained so the still-shipped main-view.fxml loads cleanly. */
+    @FXML
+    private void handleAnalyzeEncryptedFile() {
+        java.io.File input = chooseInputFile();
+        if (input != null && cipherController != null) cipherController.handleAnalyzeEncryptedFile(input.toPath());
+    }
+
+    private java.io.File chooseInputFile() {
+        javafx.stage.FileChooser chooser = LocalizedDialogSupport.fileChooser(
+                "dialog.file.load", null, "All files", "*.*");
+        return chooser.showOpenDialog(mainPane == null || mainPane.getScene() == null
+                ? null : mainPane.getScene().getWindow());
+    }
+
+    private java.io.File chooseOutputFile() {
+        javafx.stage.FileChooser chooser = LocalizedDialogSupport.fileChooser(
+                "dialog.file.save", null, "All files", "*.*");
+        return chooser.showSaveDialog(mainPane == null || mainPane.getScene() == null
+                ? null : mainPane.getScene().getWindow());
+    }
+
     // ==================== PAYMENTS TAB HANDLERS ====================
 
     @FXML

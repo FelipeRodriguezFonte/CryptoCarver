@@ -4,6 +4,8 @@ import com.cryptocarver.crypto.LineFileCipher;
 import com.cryptocarver.crypto.StreamingCipher;
 import com.cryptocarver.util.ProgressMonitor;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -19,6 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class FileCipherIntegrationTest {
 
     @Test

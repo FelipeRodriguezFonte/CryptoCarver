@@ -13,7 +13,9 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.Clipboard;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.io.ByteArrayOutputStream;
 import java.security.KeyPair;
@@ -35,6 +37,8 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class KeyCertificateWorkbenchUIFlowTest {
 
     private static boolean toolkitInitialized = false;

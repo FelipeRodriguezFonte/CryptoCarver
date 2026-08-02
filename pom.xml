@@ -214,6 +214,18 @@
                 </configuration>
             </plugin>
 
+            <!-- Keep the default quality gate deterministic and headless. UI,
+                 network/integration and benchmark suites are explicit opt-ins. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <excludedGroups>ui,integration,benchmark</excludedGroups>
+                    <useSystemClassLoader>true</useSystemClassLoader>
+                </configuration>
+            </plugin>
+
             <!-- JavaFX Plugin -->
             <plugin>
                 <groupId>org.openjfx</groupId>
@@ -301,6 +313,60 @@
             <properties>
                 <release.channel>experimental</release.channel>
             </properties>
+        </profile>
+        <profile>
+            <id>ui-tests</id>
+            <activation>
+                <property>
+                    <name>runUiTests</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <groups>ui</groups>
+                            <excludedGroups></excludedGroups>
+                            <systemPropertyVariables>
+                                <runUiTests>true</runUiTests>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <groups>integration</groups>
+                            <excludedGroups></excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>benchmark-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <groups>benchmark</groups>
+                            <excludedGroups></excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
