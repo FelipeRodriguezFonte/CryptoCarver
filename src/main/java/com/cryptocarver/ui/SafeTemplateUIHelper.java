@@ -1,5 +1,6 @@
 package com.cryptocarver.ui;
 
+import com.cryptocarver.service.I18nService;
 import com.cryptocarver.model.PersonalTemplateStore;
 import com.cryptocarver.model.SafeOperationTemplate;
 import com.cryptocarver.model.SafeTemplateAllowlist;
@@ -54,9 +55,10 @@ public final class SafeTemplateUIHelper {
         }
 
         TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Save Personal Template");
-        dialog.setHeaderText("Save Safe Operation Template for " + module);
-        dialog.setContentText("Template Name:");
+        I18nService i18n = I18nService.getInstance();
+        dialog = LocalizedDialogSupport.textInput(
+                "dialog.template.save.title", "dialog.template.save.header", "dialog.template.save.prompt", "");
+        dialog.setHeaderText(i18n.text("dialog.template.save.header", module));
         if (owner != null) dialog.initOwner(owner);
 
         Optional<String> nameResult = dialog.showAndWait();
@@ -93,9 +95,9 @@ public final class SafeTemplateUIHelper {
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Export Safe Operation Template");
+        fileChooser = LocalizedDialogSupport.fileChooser(
+                "dialog.template.export.title", "dialog.template.filter", "Safe Operation Template (*.json)", "*.json");
         fileChooser.setInitialFileName(sanitizeFileName(template.getName()) + ".json");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Safe Operation Template (*.json)", "*.json"));
 
         File file = fileChooser.showSaveDialog(owner);
         if (file != null) {
@@ -113,8 +115,8 @@ public final class SafeTemplateUIHelper {
 
     public static void importTemplate(Window owner, String module, Runnable refreshCallback, StatusReporter statusReporter) {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Import Safe Operation Template");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Safe Operation Template (*.json)", "*.json"));
+        fileChooser = LocalizedDialogSupport.fileChooser(
+                "dialog.template.import.title", "dialog.template.filter", "Safe Operation Template (*.json)", "*.json");
 
         File file = fileChooser.showOpenDialog(owner);
         if (file != null) {
@@ -145,8 +147,9 @@ public final class SafeTemplateUIHelper {
         }
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete personal template '" + template.getName() + "'?", ButtonType.YES, ButtonType.NO);
-        confirm.setTitle("Delete Personal Template");
-        confirm.setHeaderText("Confirm Deletion");
+        I18nService i18n = I18nService.getInstance();
+        confirm.setTitle(i18n.text("dialog.template.delete.title"));
+        confirm.setHeaderText(i18n.text("dialog.template.delete.header"));
         if (owner != null) confirm.initOwner(owner);
 
         Optional<ButtonType> result = confirm.showAndWait();

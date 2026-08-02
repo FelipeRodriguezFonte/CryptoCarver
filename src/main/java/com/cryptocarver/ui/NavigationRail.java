@@ -78,6 +78,8 @@ public class NavigationRail extends VBox {
         button.setMaxSize(40, 40);
         button.setTooltip(new Tooltip(localizedLabel(section)));
         button.setAccessibleText(localizedLabel(section));
+        button.setAccessibleHelp(localizedLabel(section));
+        button.setFocusTraversable(true);
 
         // Selection handler
         button.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
@@ -105,6 +107,7 @@ public class NavigationRail extends VBox {
                 String label = localizedLabel(section);
                 button.setTooltip(new Tooltip(label));
                 button.setAccessibleText(label);
+                button.setAccessibleHelp(label);
             }
         }
     }

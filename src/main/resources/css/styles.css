@@ -2223,6 +2223,48 @@
     -fx-background-radius: 4px;
 }
 
+/* UX-16: keyboard focus and non-colour state cues. */
+.button:focused,
+.toggle-button:focused,
+.combo-box:focused,
+.text-field:focused,
+.password-field:focused,
+.text-area:focused,
+.tree-view:focused,
+.table-view:focused,
+.list-view:focused,
+.tab-pane:focused,
+.titled-pane:focused,
+.breadcrumb-button:focused,
+.favorite-toggle-button:focused {
+    -fx-border-color: #1d4ed8;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
+}
+
+.text-field.field-error,
+.password-field.field-error,
+.text-area.field-error,
+.combo-box.field-error {
+    -fx-border-color: #b91c1c;
+    -fx-border-width: 2px;
+    -fx-background-color: #fff1f2;
+}
+
+.result-status-success,
+.result-status-warning,
+.result-status-blocked,
+.result-status-incomplete {
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+}
+
+.result-status-success { -fx-border-color: #047857; }
+.result-status-warning { -fx-border-color: #b45309; }
+.result-status-blocked { -fx-border-color: #b91c1c; }
+.result-status-incomplete { -fx-border-color: #0369a1; }
+
+
 .step-status-incomplete {
     -fx-background-color: #e0f2fe;
     -fx-text-fill: #075985;

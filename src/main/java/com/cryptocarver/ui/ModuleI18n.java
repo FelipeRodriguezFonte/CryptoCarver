@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.service.I18nService;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Control;
@@ -53,11 +54,29 @@ public final class ModuleI18n {
         }
 
         public void refresh() {
+            Node focused = focusedNodeWithinRoot();
             if (!indexed) {
                 index(root);
                 indexed = true;
             }
             for (TextEntry entry : entries) entry.refresh();
+            if (focused != null && focused.isFocusTraversable()) {
+                Platform.runLater(() -> {
+                    if (focused.getScene() != null && focused.isVisible() && !focused.isDisabled()) {
+                        focused.requestFocus();
+                    }
+                });
+            }
+        }
+
+        private Node focusedNodeWithinRoot() {
+            if (root == null || root.getScene() == null) return null;
+            Node focused = root.getScene().getFocusOwner();
+            if (focused == null || focused == root) return null;
+            for (Node current = focused; current != null; current = current.getParent()) {
+                if (current == root) return focused;
+            }
+            return null;
         }
 
         private void index(Node node) {
@@ -75,6 +94,9 @@ public final class ModuleI18n {
             }
             if (node.getAccessibleText() != null) {
                 addText(node.getAccessibleText(), node::getAccessibleText, node::setAccessibleText);
+            }
+            if (node.getAccessibleHelp() != null) {
+                addText(node.getAccessibleHelp(), node::getAccessibleHelp, node::setAccessibleHelp);
             }
             if (node instanceof MenuButton menuButton) {
                 for (MenuItem item : menuButton.getItems()) index(item);

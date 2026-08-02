@@ -6,6 +6,7 @@ import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.io.File;
@@ -142,6 +143,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label resultStatusBadge;
     @FXML private Label resultLastLabel;
     @FXML private Label resultAlgorithmStaticLabel;
+    @FXML private Button resultExpandButton;
+    @FXML private Button resultShelfButton;
+    @FXML private Button resultCopyButton;
+    @FXML private Button inspectorToggleButton;
 
     // Quick Start & Guided Workflows
     @FXML private VBox quickStartContainer;
@@ -538,6 +543,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Applies shell strings without changing operation names, routes or technical values. */
     public void applyLocalization() {
+        Node focusOwner = mainPane != null && mainPane.getScene() != null
+                ? mainPane.getScene().getFocusOwner() : null;
         setText(fileMenu, "menu.file");
         setText(editMenu, "menu.edit");
         setText(viewMenu, "menu.view");
@@ -604,6 +611,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setAccessibleText(toolbarCopyButton);
         setText(inputFormatLabel, "toolbar.payloadFormat");
         setText(outputFormatLabel, "toolbar.output");
+        setAccessibleText(resultExpandButton, "a11y.resultExpand");
+        setAccessibleText(resultShelfButton, "a11y.resultShelf");
+        setAccessibleText(resultCopyButton, "a11y.resultCopy");
+        setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
+        setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
+        if (inputFormatCombo != null) {
+            inputFormatCombo.setAccessibleText(i18n.text("a11y.payloadFormat"));
+            inputFormatCombo.setAccessibleHelp(i18n.text("toolbar.payloadTooltip"));
+        }
+        if (outputFormatCombo != null) {
+            outputFormatCombo.setAccessibleText(i18n.text("a11y.outputFormat"));
+            outputFormatCombo.setAccessibleHelp(i18n.text("a11y.outputFormat"));
+        }
+        if (commandSearchField != null) {
+            commandSearchField.setAccessibleText(i18n.text("a11y.commandSearch"));
+            commandSearchField.setAccessibleHelp(i18n.text("command.prompt"));
+        }
+        if (favoriteToggleBtn != null) {
+            favoriteToggleBtn.setAccessibleText(i18n.text("a11y.favorite"));
+            favoriteToggleBtn.setAccessibleHelp(i18n.text("favorite.tooltip"));
+        }
         if (inputFormatLabel != null) inputFormatLabel.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
         if (inputFormatCombo != null) inputFormatCombo.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
 
@@ -649,6 +677,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
             statusLabel.setText(i18n.text("status.ready"));
         }
+        if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
+            inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
+                    rootStackPane != null ? rootStackPane : mainPane);
+        }
+        restoreFocusAfterLocalization(focusOwner);
     }
 
     private void setText(javafx.scene.control.MenuItem item, String key) {
@@ -684,7 +717,25 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void setAccessibleText(javafx.scene.control.ButtonBase control) {
-        if (control != null && control.getText() != null) control.setAccessibleText(control.getText());
+        if (control != null && control.getText() != null) {
+            control.setAccessibleText(control.getText());
+        }
+    }
+
+    private void setAccessibleText(javafx.scene.control.ButtonBase control, String key) {
+        if (control != null && key != null) {
+            control.setAccessibleText(i18n.text(key));
+        }
+    }
+
+    private void restoreFocusAfterLocalization(Node focusOwner) {
+        if (focusOwner == null) return;
+        Platform.runLater(() -> {
+            if (focusOwner.getScene() != null && focusOwner.isVisible()
+                    && !focusOwner.isDisabled() && focusOwner.isFocusTraversable()) {
+                focusOwner.requestFocus();
+            }
+        });
     }
 
     private String localizedSectionText(String value) {
@@ -1599,17 +1650,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleExportHistory() {
         if (historyManager == null || historyManager.getHistoryItems().isEmpty()) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Export History");
-            alert.setHeaderText("No History to Export");
-            alert.setContentText("The history is currently empty.");
+            Alert alert = LocalizedDialogSupport.alert(Alert.AlertType.INFORMATION,
+                    "dialog.exportHistory.title", "dialog.exportHistory.emptyHeader",
+                    i18n.text("dialog.exportHistory.emptyContent"));
             alert.showAndWait();
             return;
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Export History");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+        FileChooser fileChooser = LocalizedDialogSupport.fileChooser(
+                "dialog.exportHistory.title", "dialog.exportHistory.filter", "JSON Files", "*.json");
         fileChooser.setInitialFileName("cryptocarver-history-export.json");
 
         File file = fileChooser.showSaveDialog(mainPane.getScene().getWindow());
@@ -1622,15 +1671,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 writer.write(json);
 
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Export Successful");
+                alert.setTitle(i18n.text("dialog.exportHistory.success"));
                 alert.setHeaderText(null);
                 alert.setContentText("History successfully exported using " + visibility + " policy to:\n"
                         + file.getAbsolutePath());
                 alert.showAndWait();
             } catch (IOException e) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Export Failed");
-                alert.setHeaderText("Error Saving File");
+                alert.setTitle(i18n.text("dialog.exportHistory.failure"));
+                alert.setHeaderText(i18n.text("dialog.exportHistory.saveFailure"));
                 alert.setContentText(e.getMessage());
                 alert.showAndWait();
             }
@@ -2106,6 +2155,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     resultStatusBadge.setText(i18n.text("result.success"));
                     resultStatusBadge.getStyleClass().setAll("result-status-success");
                     resultStatusBadge.setStyle("");
+                    resultStatusBadge.setAccessibleText(i18n.text("a11y.resultStatus", resultStatusBadge.getText()));
                 }
             }
         }
@@ -2608,8 +2658,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             System.err.println("SHOW_ERROR: " + error.title() + " - " + error.remedy());
         }
         if (inlineErrorPresenter != null) {
-            inlineErrorPresenter.showError(error, rootStackPane != null ? rootStackPane : mainPane);
+            inlineErrorPresenter.showError(localizedError(error), rootStackPane != null ? rootStackPane : mainPane);
         }
+    }
+
+    private UserFacingError localizedError(UserFacingError error) {
+        if (error == null) return null;
+        String title = error.title() == null ? "" : error.title().toLowerCase(java.util.Locale.ROOT);
+        String keyPrefix = null;
+        if (title.contains("authentication tag") || title.contains("tag verification") || title.contains("autenticación")) keyPrefix = "error.wrap.tag";
+        else if (title.contains("padding")) keyPrefix = "error.wrap.padding";
+        else if (title.contains("key parameter") || title.contains("parámetro de clave")) keyPrefix = "error.wrap.key";
+        else if (title.contains("hexadecimal")) keyPrefix = "error.wrap.hex";
+        else if (title.contains("base64")) keyPrefix = "error.wrap.base64";
+        else if (title.contains("certificate") || title.contains("certificado") || title.contains("key format")) keyPrefix = "error.wrap.cert";
+        else if (title.contains("timestamp authority") || title.contains("sellado de tiempo")) keyPrefix = "error.wrap.tsa";
+        if (keyPrefix == null) return error;
+        return new UserFacingError(
+                i18n.text(keyPrefix + ".title"),
+                i18n.text(keyPrefix + ".detail"),
+                i18n.text(keyPrefix + ".remedy"),
+                error.fieldKey(), error.cause());
     }
 
     @Override
@@ -3086,10 +3155,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         // Ask for name
-        TextInputDialog dialog = new TextInputDialog("My Session");
-        dialog.setTitle("Save Session");
-        dialog.setHeaderText("Save current workspace state");
-        dialog.setContentText("Session Name:");
+        TextInputDialog dialog = LocalizedDialogSupport.textInput(
+                "dialog.saveSession.title", "dialog.saveSession.header", "dialog.saveSession.prompt", "My Session");
 
         // Style the dialog roughly to match dark theme (optional/basic)
         dialog.getDialogPane().setStyle("-fx-background-color: #2d3748;");
@@ -3142,7 +3209,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         ChoiceDialog<String> modeDialog = new ChoiceDialog<>("Encrypted (.ccconfig)",
                 "Encrypted (.ccconfig)", "Plain JSON — unsafe");
-        modeDialog.setTitle("Export Screen Configuration");
+        modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
         modeDialog.setHeaderText("This configuration may contain keys, passwords, PINs or payloads.");
         modeDialog.setContentText("Protection:");
         java.util.Optional<String> mode = modeDialog.showAndWait();
@@ -3164,7 +3231,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export Screen Configuration");
+        chooser.setTitle(i18n.text("dialog.configuration.exportTitle"));
         chooser.setInitialFileName("cryptocarver-" + safeFileName(configuration.operation())
                 + (encrypted ? ".ccconfig" : ".json"));
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
@@ -3195,10 +3262,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleImportScreenConfiguration() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Import Screen Configuration");
+        chooser.setTitle(i18n.text("dialog.configuration.importTitle"));
         chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("CryptoCarver Screen Configuration", "*.ccconfig", "*.json"),
-                new FileChooser.ExtensionFilter("All Files", "*.*"));
+                new FileChooser.ExtensionFilter(i18n.text("dialog.configuration.filter"), "*.ccconfig", "*.json"),
+                new FileChooser.ExtensionFilter(i18n.text("dialog.allFiles"), "*.*"));
         File file = chooser.showOpenDialog(mainPane == null || mainPane.getScene() == null
                 ? null : mainPane.getScene().getWindow());
         if (file == null) return;

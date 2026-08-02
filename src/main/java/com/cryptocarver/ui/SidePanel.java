@@ -76,6 +76,8 @@ public class SidePanel extends VBox {
 
         collapseButton = new Button("«");
         collapseButton.setTooltip(new Tooltip(I18nService.getInstance().text("side.collapse")));
+        collapseButton.setAccessibleText(I18nService.getInstance().text("side.collapse"));
+        collapseButton.setFocusTraversable(true);
         collapseButton.getStyleClass().add("button");
         collapseButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #7f8c8d; -fx-font-weight: bold;");
         collapseButton.setOnAction(e -> collapse());
@@ -85,6 +87,7 @@ public class SidePanel extends VBox {
         // Navigation TreeView
         navigationTree = new TreeView<>();
         navigationTree.setShowRoot(false);
+        navigationTree.setAccessibleText(I18nService.getInstance().text("side.navigation"));
         navigationTree.getStyleClass().add("navigation-tree");
         searchField.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE && !searchField.getText().isBlank()) {
@@ -386,11 +389,22 @@ public class SidePanel extends VBox {
 
     /** Refreshes labels/tooltips while preserving the current section and search text. */
     public void refreshLocalizedText() {
+        javafx.scene.Node focusOwner = getScene() == null ? null : getScene().getFocusOwner();
         searchField.setPromptText(I18nService.getInstance().text("side.search"));
         searchField.setAccessibleText(I18nService.getInstance().text("side.search"));
         collapseButton.setTooltip(new Tooltip(I18nService.getInstance().text("side.collapse")));
+        collapseButton.setAccessibleText(I18nService.getInstance().text("side.collapse"));
+        navigationTree.setAccessibleText(I18nService.getInstance().text("side.navigation"));
         String query = searchField.getText();
         if (query == null || query.isBlank()) updateContent(currentSection);
         else filterTree(query);
+        if (focusOwner != null) {
+            javafx.application.Platform.runLater(() -> {
+                if (focusOwner.getScene() != null && focusOwner.isVisible()
+                        && !focusOwner.isDisabled() && focusOwner.isFocusTraversable()) {
+                    focusOwner.requestFocus();
+                }
+            });
+        }
     }
 }

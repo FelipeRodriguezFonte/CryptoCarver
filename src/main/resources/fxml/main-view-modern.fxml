@@ -97,7 +97,9 @@
                             <Tooltip text="Applies to the operation payload. Keys, IVs, salts, signatures and certificates have their own formats."/>
                         </tooltip>
                     </Label>
-                    <ComboBox fx:id="inputFormatCombo" prefWidth="160" styleClass="format-combo">
+                    <ComboBox fx:id="inputFormatCombo" prefWidth="160" styleClass="format-combo"
+                              accessibleText="Payload format selector"
+                              accessibleHelp="Select the format for the operation payload.">
                         <tooltip>
                             <Tooltip text="Applies to the operation payload. Keys, IVs, salts, signatures and certificates have their own formats."/>
                         </tooltip>
@@ -110,7 +112,9 @@
                     <Label text="→" styleClass="format-flow-arrow"/>
 
                     <Label fx:id="outputFormatLabel" text="Output:" styleClass="format-flow-label"/>
-                    <ComboBox fx:id="outputFormatCombo" prefWidth="160" styleClass="format-combo"/>
+                    <ComboBox fx:id="outputFormatCombo" prefWidth="160" styleClass="format-combo"
+                              accessibleText="Output format selector"
+                              accessibleHelp="Select the format used to display the operation output."/>
                 </HBox>
 
                 <HBox alignment="CENTER_RIGHT" spacing="10">
@@ -160,9 +164,9 @@
                         <Label fx:id="resultStatusBadge" text="NEUTRAL" styleClass="result-status-neutral" accessibleText="Last operation result status: NEUTRAL"/>
                     </FlowPane>
                     <FlowPane prefWrapLength="400" hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="responsive-action-bar">
-                        <Button text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" accessibleText="Expand result viewer"/>
-                        <Button text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" accessibleText="Add current output to clipboard shelf"/>
-                        <Button text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary" accessibleText="Copy output to clipboard"/>
+                        <Button fx:id="resultExpandButton" text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" accessibleText="Expand result viewer"/>
+                        <Button fx:id="resultShelfButton" text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" accessibleText="Add current output to clipboard shelf"/>
+                        <Button fx:id="resultCopyButton" text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary" accessibleText="Copy output to clipboard"/>
                     </FlowPane>
                 </HBox>
 
@@ -178,7 +182,7 @@
                     <HBox spacing="6" alignment="CENTER_RIGHT">
                         <Button fx:id="errorBannerGoToFieldBtn" text="Go to field" onAction="#handleErrorBannerGoToField" styleClass="error-banner-btn-secondary" managed="false" visible="false"/>
                         <Button fx:id="errorBannerCopyDetailsBtn" text="Copy technical details" onAction="#handleErrorBannerCopyDetails" styleClass="error-banner-btn-secondary"/>
-                        <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" styleClass="error-banner-btn-close"/>
+                        <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" styleClass="error-banner-btn-close" accessibleText="Dismiss the validation message"/>
                     </HBox>
                 </HBox>
 
@@ -351,7 +355,7 @@
                 <HBox alignment="CENTER_LEFT" spacing="8" styleClass="inspector-header-bar">
                     <Label fx:id="inspectorTitleLabel" text="Inspector" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button text="✕" onAction="#handleToggleInspector" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-cursor: hand;"/>
+                    <Button fx:id="inspectorToggleButton" text="✕" onAction="#handleToggleInspector" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-cursor: hand;" accessibleText="Close the Inspector panel"/>
                 </HBox>
 
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;">
