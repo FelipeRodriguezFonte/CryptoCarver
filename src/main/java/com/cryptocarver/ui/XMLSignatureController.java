@@ -72,6 +72,11 @@ public class XMLSignatureController {
     @FXML private PasswordField xmlTimestampTrustStorePasswordField;
 
     @FXML private Accordion xmlAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     private byte[] lastTimestampToken;
 
@@ -103,6 +108,7 @@ public class XMLSignatureController {
     }
 
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(xmlAccordion, ModuleTextCatalog.xmlSecurity());
         xmlSignLevelCombo.getItems().addAll("XAdES-BASELINE-B", "XAdES-BASELINE-T", "XAdES-BASELINE-LT", "XAdES-BASELINE-LTA");
         xmlSignLevelCombo.setValue("XAdES-BASELINE-B");
         xmlSignPackagingCombo.getItems().setAll("ENVELOPED", "ENVELOPING", "DETACHED");
@@ -190,10 +196,9 @@ public class XMLSignatureController {
             String password = xmlSignKeyPasswordField.getText();
 
             if (keyPath.isEmpty() || password.isEmpty()) {
-                statusReporter.showError("Input Error", "Please provide KeyStore Path and Password");
+                statusReporter.showError(t("module.xml.error.inputTitle"), t("module.xml.error.keyStorePassword"));
                 return;
             }
-
             java.util.List<String> aliases = XMLSignatureOperations.getKeyAliases(keyPath, password);
             xmlSignKeyAliasCombo.getItems().setAll(aliases);
 
@@ -390,10 +395,9 @@ public class XMLSignatureController {
         try {
             String xmlContent = xmlVerifyInputArea.getText();
             if (xmlContent.isEmpty()) {
-                statusReporter.showError("Input Error", "Please paste XML content to verify");
+                statusReporter.showError(t("module.xml.error.inputTitle"), t("module.xml.error.pasteXml"));
                 return;
             }
-
             String trustStorePath = xmlVerifyTrustStorePathField.getText().trim();
             String trustStorePassword = xmlVerifyTrustStorePasswordField.getText();
             XMLSignatureOperations.VerificationResult result = XMLSignatureOperations.verifyXAdES(xmlContent, trustStorePath, trustStorePassword);

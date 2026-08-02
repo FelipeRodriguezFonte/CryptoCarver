@@ -56,9 +56,20 @@ import java.util.ResourceBundle;
 public class JOSEController implements Initializable {
 
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        moduleI18n = ModuleI18n.bind(joseContainer, ModuleTextCatalog.jose());
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+            updateJwkInputPresentation();
+            if (detachedStatusLabel != null && detachedStatusLabel.getText() != null
+                    && detachedStatusLabel.getText().isBlank()) detachedStatusLabel.setText("");
+        });
         // Initialize Combo
             if (jwtAlgoCombo != null && jwtAlgoCombo.getItems().isEmpty()) {
                 jwtAlgoCombo.getItems().addAll(
@@ -109,25 +120,7 @@ public class JOSEController implements Initializable {
                 jwkKeyTypeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
                     if (newV == null)
                         return;
-                    if (newV.equals("OCT")) {
-                        if (jwkInputLabel != null)
-                            jwkInputLabel.setText("Input (Hex / Base64 Secret):");
-                        if (jwkInputArea != null)
-                            jwkInputArea.setPromptText("Paste Hex or Base64 Secret (e.g. 313233... or MTIz...)");
-                        if (pemToJwkBtn != null)
-                            pemToJwkBtn.setText("Secret -> JWK");
-                        if (jwkToPemBtn != null)
-                            jwkToPemBtn.setText("JWK -> Secret");
-                    } else {
-                        if (jwkInputLabel != null)
-                            jwkInputLabel.setText("Input (PEM):");
-                        if (jwkInputArea != null)
-                            jwkInputArea.setPromptText("Paste PEM Key (e.g. -----BEGIN...)");
-                        if (pemToJwkBtn != null)
-                            pemToJwkBtn.setText("PEM -> JWK");
-                        if (jwkToPemBtn != null)
-                            jwkToPemBtn.setText("JWK -> PEM");
-                    }
+                    updateJwkInputPresentation();
                 });
                 jwkKeyTypeCombo.getSelectionModel().selectFirst();
             }
@@ -179,6 +172,14 @@ public class JOSEController implements Initializable {
                     }
                 });
             }
+    }
+
+    private void updateJwkInputPresentation() {
+        boolean secret = jwkKeyTypeCombo != null && "OCT".equals(jwkKeyTypeCombo.getValue());
+        if (jwkInputLabel != null) jwkInputLabel.setText(t(secret ? "module.jose.inputSecret" : "module.jose.inputPem"));
+        if (jwkInputArea != null) jwkInputArea.setPromptText(t(secret ? "module.jose.inputSecretPrompt" : "module.jose.inputPemPrompt"));
+        if (pemToJwkBtn != null) pemToJwkBtn.setText(t(secret ? "module.jose.secretToJwk" : "module.jose.pemToJwk"));
+        if (jwkToPemBtn != null) jwkToPemBtn.setText(t(secret ? "module.jose.jwkToSecret" : "module.jose.jwkToPem"));
     }
 
     @FXML
@@ -996,17 +997,17 @@ public class JOSEController implements Initializable {
             } else if (JWSAlgorithm.Family.EC.contains(algo)) {
                 verifier = new ECDSAVerifier(requireEcPublicKey(algo, keyString));
             } else {
-                statusLabel.setText("Unsupported Algo for Verification");
+                statusLabel.setText(t("module.jose.unsupportedVerification"));
                 statusLabel.setStyle("-fx-text-fill: orange;");
                 return;
             }
 
             boolean verified = signedJWT.verify(verifier);
             if (verified) {
-                statusLabel.setText("VALID SIGNATURE");
+                statusLabel.setText(t("module.jose.validSignature"));
                 statusLabel.setStyle("-fx-text-fill: green;");
             } else {
-                statusLabel.setText("INVALID SIGNATURE");
+                statusLabel.setText(t("module.jose.invalidSignature"));
                 statusLabel.setStyle("-fx-text-fill: red;");
             }
             statusReporter.publish(OperationResult.forOperation("JWT Validation")
@@ -1016,7 +1017,7 @@ public class JOSEController implements Initializable {
                     .status("JWT validation: " + (verified ? "valid" : "invalid")).build());
 
         } catch (Exception e) {
-            statusLabel.setText("ERROR: " + e.getMessage());
+            statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
             headerOut.setText("");
             payloadOut.setText("");
@@ -1054,7 +1055,7 @@ public class JOSEController implements Initializable {
         try {
             String payload = JOSEService.verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM);
             payloadOut.setText(payload);
-            statusLabel.setText("SUCCESS: Decrypted & Verified");
+            statusLabel.setText(t("module.jose.decryptedVerified"));
             statusLabel.setStyle("-fx-text-fill: green;");
 
             statusReporter.publish(OperationResult.forOperation("Nested JWT Verification")
@@ -1063,7 +1064,7 @@ public class JOSEController implements Initializable {
                 .status("Nested JWT decrypted and signature verified successfully").build());
 
         } catch (Exception e) {
-            statusLabel.setText("ERROR: " + e.getMessage());
+            statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
             statusReporter.showError("Nested JWT Verification Error", e.getMessage());
             LOG.error("Nested JWT verification failed", e);
@@ -1239,7 +1240,7 @@ public class JOSEController implements Initializable {
                                             + "]"
                                     : "");
 
-            statusLabel.setText("DECRYPTION SUCCESSFUL");
+            statusLabel.setText(t("module.jose.decryptionSuccessful"));
             statusLabel.setStyle("-fx-text-fill: green;");
 
             String payload = jweObject.getPayload().toString();
@@ -1252,7 +1253,7 @@ public class JOSEController implements Initializable {
                     .status("JWE decrypted").build());
 
         } catch (Exception e) {
-            statusLabel.setText("DECRYPTION FAILED");
+            statusLabel.setText(t("module.jose.decryptionFailed"));
             statusLabel.setStyle("-fx-text-fill: red;");
             statusReporter.showError("JWE Decryption Error", e.getMessage());
             LOG.error("JWE decryption failed", e);

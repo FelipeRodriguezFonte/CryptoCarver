@@ -27,6 +27,11 @@ public class WssSecurityController {
 
     @FXML private VBox wssSecurityContainer;
     @FXML private Accordion wssAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     // Sign UI
     @FXML private TextArea wssSignInputArea;
@@ -75,6 +80,7 @@ public class WssSecurityController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(wssAccordion, ModuleTextCatalog.wssSecurity());
         for (WssSecurityOperations.WssSignatureAlgorithm algorithm : WssSecurityOperations.WssSignatureAlgorithm.values()) {
             wssSignAlgorithmCombo.getItems().add(algorithm.displayName());
         }
@@ -183,11 +189,11 @@ public class WssSecurityController {
         String keyPassStr = wssSignPrivateKeyPasswordField.getText();
 
         if (xml == null || xml.trim().isEmpty()) {
-            showError("Please provide the SOAP XML to sign.");
+            showError(t("module.wss.error.soapToSign"));
             return;
         }
         if (path == null || path.trim().isEmpty() || alias == null) {
-            showError("Please select a KeyStore and an alias.");
+            showError(t("module.wss.error.keyStoreAlias"));
             return;
         }
 
@@ -297,7 +303,7 @@ public class WssSecurityController {
         } catch (Exception e) {
             LOG.error("WSS Verify Error", e);
             showError("Verification failed: " + e.getMessage());
-            wssVerifyReportArea.setText("ERROR: " + e.getMessage());
+            wssVerifyReportArea.setText(t("module.wss.errorReport", e.getMessage()));
             wssVerifyReportArea.setStyle("-fx-control-inner-background: #fff3e0; -fx-font-family: 'Monospaced'; -fx-font-size: 10px;");
         }
     }
@@ -410,7 +416,7 @@ public class WssSecurityController {
             }
         } catch (Exception e) {
             LOG.error("WSS encryption error", e);
-            wssEncryptReportArea.setText("ERROR: " + e.getMessage());
+            wssEncryptReportArea.setText(t("module.wss.errorReport", e.getMessage()));
         }
     }
 
@@ -446,7 +452,7 @@ public class WssSecurityController {
             }
         } catch (Exception e) {
             LOG.error("WSS decryption error", e);
-            wssDecryptReportArea.setText("ERROR: " + e.getMessage());
+            wssDecryptReportArea.setText(t("module.wss.errorReport", e.getMessage()));
         } finally {
             Arrays.fill(storePassword, '\0');
             Arrays.fill(keyPassword, '\0');
@@ -528,7 +534,7 @@ public class WssSecurityController {
 
     private void showError(String msg) {
         Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
-        alert.setHeaderText("WSS Error");
+        alert.setHeaderText(t("module.wss.errorTitle"));
         alert.showAndWait();
     }
 }
