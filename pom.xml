@@ -328,8 +328,11 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <!-- JUnit 5 uses tags; the base configuration's
+                                 excludedGroups otherwise leaves the opt-in
+                                 profile with zero discovered UI tests. -->
                             <groups>ui</groups>
-                            <excludedGroups></excludedGroups>
+                            <excludedGroups>none</excludedGroups>
                             <systemPropertyVariables>
                                 <runUiTests>true</runUiTests>
                             </systemPropertyVariables>

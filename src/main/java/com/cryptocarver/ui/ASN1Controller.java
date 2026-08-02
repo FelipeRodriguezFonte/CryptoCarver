@@ -320,9 +320,22 @@ public class ASN1Controller {
         asn1InputArea.clear();
         if (asn1TreeView != null) asn1TreeView.setRoot(null);
         asn1DetailsArea.clear();
+        if (asn1EncodeInputArea != null) asn1EncodeInputArea.clear();
+        if (asn1EncodeOutputArea != null) asn1EncodeOutputArea.clear();
         asn1StatusLabel.setText("Ready");
         asn1StatusLabel.setStyle("");
         asn1LastParsedData = null;
+    }
+
+    /** Clears only this module's editable material and results. */
+    @FXML
+    public void resetModule() {
+        handleClearASN1();
+        if (asn1StrictDerCheck != null) asn1StrictDerCheck.setSelected(false);
+        if (asn1InputFormatCombo != null) asn1InputFormatCombo.setValue("Hexadecimal");
+        if (asn1TypeCombo != null) asn1TypeCombo.setValue("Auto-detect");
+        if (asn1EncodeTypeCombo != null) asn1EncodeTypeCombo.setValue("UTF8String");
+        if (asn1EncodeInputFormatCombo != null) asn1EncodeInputFormatCombo.setValue("Text");
     }
 
     @FXML

@@ -683,7 +683,16 @@ if (encrypt || decrypt || mac || sign || verify) {
         updateSelectionUi();
         redraw();
     }
-    @FXML public void handleClearCanvas() { nodes.clear(); connections.clear(); views.clear(); selectedNodeIds.clear(); selected = null; selectedConnection = null; updateSelectionUi(); redraw(); }
+    @FXML public void handleClearCanvas() {
+        nodes.clear(); connections.clear(); views.clear(); selectedNodeIds.clear(); selected = null; selectedConnection = null;
+        processCancellationRequested = false;
+        if (processNameField != null) processNameField.setText("Untitled process");
+        if (executionOutputArea != null) executionOutputArea.clear();
+        if (executionStatusTable != null) executionStatusTable.getItems().clear();
+        if (processProgressBar != null) processProgressBar.setProgress(0);
+        if (processStatusLabel != null) processStatusLabel.setText(t("status.ready"));
+        updateSelectionUi(); redraw();
+    }
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;

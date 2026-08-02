@@ -2223,6 +2223,37 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testHashTemplateReplacesStaleToolbarInputFormat() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.ComboBox<String> toolbarInput = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> toolbarOutput = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.navigateTo("Hashing");
+            toolbarInput.setValue("Hexadecimal");
+            javafx.scene.control.ComboBox<String> template = assertDoesNotThrow(() -> getField(generic, "hashTemplateCombo"));
+            template.setValue("SHA-256 — Text UTF-8 → Hex");
+            Method apply = assertDoesNotThrow(() -> GenericController.class.getDeclaredMethod("handleApplyHashTemplate"));
+            apply.setAccessible(true);
+            assertDoesNotThrow(() -> apply.invoke(generic));
+        });
+
+        assertEquals("Text (UTF-8)", toolbarInput.getValue());
+        assertEquals("Hexadecimal", toolbarOutput.getValue());
+    }
+
+    @Test
     void testTemplateSecretsExclusion() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
@@ -3483,5 +3514,197 @@ class ModernMainControllerUITest {
 
             stage.close();
         });
+    }
+
+    @Test
+    void testUx18HashSha256TextUtf8ToHexUsesHola() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.TextArea input = getField(generic, "hashInputArea");
+        javafx.scene.control.TextArea output = getField(generic, "hashOutputArea");
+        javafx.scene.control.ComboBox<String> inputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> outputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.navigateTo("Hashing");
+            inputFormat.setValue("Text (UTF-8)");
+            outputFormat.setValue("Hexadecimal");
+            input.setText("Hola");
+            generic.handleCalculateHash();
+        });
+
+        assertEquals("e633f4fc79badea1dc5db970cf397c8248bac47cc3acf9915ba60b5d76b0e88f", output.getText());
+    }
+
+    @Test
+    void testUx18ManualConversionTextUtf8ToBase64UsesSharedContract() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.TextArea input = getField(generic, "manualInputArea");
+        javafx.scene.control.TextArea output = getField(generic, "manualOutputArea");
+        javafx.scene.control.ComboBox<String> inputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> outputFormat = getField(controller, "outputFormatCombo");
+
+        runAndWait(() -> {
+            controller.navigateTo("Manual Conversion");
+            inputFormat.setValue("Text (UTF-8)");
+            outputFormat.setValue("Base64");
+            input.setText("Hola");
+            generic.handleManualConvert();
+        });
+
+        assertEquals("Text (UTF-8)", inputFormat.getValue());
+        assertEquals("Base64", outputFormat.getValue());
+        assertEquals("SG9sYQ==", output.getText());
+    }
+
+    @Test
+    void testUx18CipherTemplateSynchronizesFormatsAndControls() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        CipherController cipher = getField(controller, "cipherContainerController");
+        javafx.scene.control.ComboBox<String> template = getField(cipher, "cipherTemplateCombo");
+        javafx.scene.control.ComboBox<String> inputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> outputFormat = getField(controller, "outputFormatCombo");
+        javafx.scene.control.ComboBox<String> mode = getField(cipher, "cipherModeCombo");
+
+        runAndWait(() -> {
+            try {
+                controller.navigateTo("Symmetric Ciphers");
+                inputFormat.setValue("Hexadecimal");
+                template.setValue("AES-256-GCM — Text UTF-8 → Base64");
+                Method apply = CipherController.class.getDeclaredMethod("handleApplyCipherTemplate");
+                apply.setAccessible(true);
+                apply.invoke(cipher);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertEquals("Text (UTF-8)", inputFormat.getValue());
+        assertEquals("Base64", outputFormat.getValue());
+        assertEquals("GCM", mode.getValue());
+    }
+
+    @Test
+    void testUx18SidebarNavigationExpandsManualConversionAndUpdatesBreadcrumb() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        javafx.scene.control.Accordion accordion = getField(controller, "genericContainer");
+        javafx.scene.control.Label breadcrumb = getField(controller, "breadcrumbOperationLabel");
+
+        runAndWait(() -> controller.navigateTo("Manual Conversion"));
+
+        assertNotNull(accordion.getExpandedPane());
+        assertTrue(accordion.getExpandedPane().getText().contains("Manual Conversion"));
+        assertEquals("Manual Conversion", breadcrumb.getText());
+    }
+
+    @Test
+    void testUx18PersonalHashTemplateApplyResetAndRestoreFormats() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        GenericController generic = getField(controller, "genericContainerController");
+        javafx.scene.control.ComboBox<String> templateCombo = getField(generic, "hashTemplateCombo");
+        javafx.scene.control.ComboBox<String> inputFormat = getField(controller, "inputFormatCombo");
+        javafx.scene.control.ComboBox<String> outputFormat = getField(controller, "outputFormatCombo");
+        String name = "UX18 Hash " + java.util.UUID.randomUUID();
+        com.cryptocarver.model.SafeOperationTemplate template = new com.cryptocarver.model.SafeOperationTemplate(
+                name, "Hashing", "formats-only", java.util.Map.of(
+                        "hashAlgorithmCombo", "SHA-512",
+                        "inputFormatCombo", "Plain Text",
+                        "outputFormatCombo", "Base64"));
+        com.cryptocarver.model.PersonalTemplateStore store = com.cryptocarver.model.PersonalTemplateStore.getInstance();
+        store.saveTemplate(template);
+        try {
+            runAndWait(() -> {
+                try {
+                    controller.navigateTo("Hashing");
+                    inputFormat.setValue("Hexadecimal");
+                    templateCombo.setValue("[My Template] " + name);
+                    Method apply = GenericController.class.getDeclaredMethod("handleApplyHashTemplate");
+                    apply.setAccessible(true);
+                    apply.invoke(generic);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            assertEquals("Text (UTF-8)", inputFormat.getValue());
+            assertEquals("Base64", outputFormat.getValue());
+
+            runAndWait(() -> {
+                try {
+                    Method reset = GenericController.class.getDeclaredMethod("handleResetHashDefaults");
+                    reset.setAccessible(true);
+                    reset.invoke(generic);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            assertEquals("Text (UTF-8)", inputFormat.getValue());
+            assertEquals("Hexadecimal", outputFormat.getValue());
+
+            runAndWait(() -> {
+                try {
+                    inputFormat.setValue("Hexadecimal");
+                    templateCombo.setValue("[My Template] " + name);
+                    Method apply = GenericController.class.getDeclaredMethod("handleApplyHashTemplate");
+                    apply.setAccessible(true);
+                    apply.invoke(generic);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            assertEquals("Text (UTF-8)", inputFormat.getValue());
+        } finally {
+            store.deleteTemplate(template.getId());
+        }
     }
 }

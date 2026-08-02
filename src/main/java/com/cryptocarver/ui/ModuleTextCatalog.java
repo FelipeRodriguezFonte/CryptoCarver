@@ -33,6 +33,7 @@ public final class ModuleTextCatalog {
         map.put("Input:", "module.common.input");
         map.put("Output:", "module.common.output");
         map.put("Cancel", "module.common.cancel");
+        map.put("Reset", "module.common.reset");
         map.put("Ready", "module.common.ready");
         return map;
     }
@@ -163,6 +164,7 @@ public final class ModuleTextCatalog {
         map.put("Issue Laboratory Certificate", "module.cert.issueButton");
         map.put("🔍 Parse Certificate", "module.cert.parse");
         map.put("Paste PEM Certificate:", "module.cert.pastePem");
+        map.put("Certificate format:", "module.cert.format");
         map.put("Parse Certificate", "module.cert.parseButton");
         map.put("⚖ Compare Certificates", "module.cert.compare");
         map.put("Compare Certificates", "module.cert.compareButton");

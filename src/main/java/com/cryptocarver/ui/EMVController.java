@@ -49,6 +49,14 @@ public class EMVController {
                 for (String warning : result.warnings()) report.append("- ").append(warning).append("\n");
             }
             emvDolResultArea.setText(report.toString());
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("EMV DOL Build")
+                        .input(emvDolTemplateField.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(result.data().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Fields", String.valueOf(result.fields().size()))
+                        .detail("Warnings", String.valueOf(result.warnings().size()))
+                        .status("EMV DOL data built").build());
+            }
         } catch (Exception e) { emvDolResultArea.setText(t("module.emv.error.dol", e.getMessage())); }
     }
 
@@ -69,6 +77,14 @@ public class EMVController {
             report.append("TLV TREE\n");
             appendTlv(report, items, "");
             emvTlvResultArea.setText(report.toString());
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("EMV TLV Inspection")
+                        .input(emvTlvInputArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(report.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Top-level objects", String.valueOf(analysis.topLevelItems()))
+                        .detail("Total objects", String.valueOf(analysis.totalItems()))
+                        .status("EMV TLV inspected").build());
+            }
         } catch (Exception e) { emvTlvResultArea.setText(t("module.emv.error.tlv", e.getMessage())); }
     }
 
@@ -532,6 +548,14 @@ public class EMVController {
             arqcResultArea.setVisible(true);
             arqcResultArea.setManaged(true);
 
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("ARQC Verification")
+                        .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Valid", String.valueOf(valid))
+                        .detail("Padding", "Method " + paddingMethod)
+                        .status(valid ? "ARQC is valid" : "ARQC is invalid").build());
+            }
+
         } catch (Exception e) {
             arqcResultArea.setText("Error during verification: " + e.getMessage());
         }
@@ -750,6 +774,16 @@ public class EMVController {
             discretionaryDataField.clear();
         if (track2InputField != null)
             track2InputField.clear();
+    }
+
+    @FXML
+    public void handleReset() {
+        handleClear();
+    }
+
+    /** Public reset entry point used by the module toolbar and headless UI tests. */
+    public void resetModule() {
+        handleClear();
     }
 
     public String getOutputText() {

@@ -885,15 +885,41 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @Override
     public void setInputFormat(String format) {
         if (inputFormatCombo != null) {
-            inputFormatCombo.setValue(format);
+            setToolbarFormat(inputFormatCombo, format);
         }
     }
 
     @Override
     public void setOutputFormat(String format) {
         if (outputFormatCombo != null) {
-            outputFormatCombo.setValue(format);
+            setToolbarFormat(outputFormatCombo, format);
         }
+    }
+
+    private static void setToolbarFormat(ComboBox<String> combo, String format) {
+        String canonical = normalizeToolbarFormat(format);
+        if (canonical == null) {
+            combo.setValue(null);
+        } else if (combo.getItems().contains(canonical)) {
+            combo.setValue(canonical);
+        } else if (!combo.isDisabled()) {
+            // Do not leave a previous format selected when a template value is
+            // not representable by the active operation contract.
+            combo.setValue(null);
+        }
+    }
+
+    /**
+     * Keeps legacy module labels compatible with the canonical values exposed by
+     * the shared format toolbar. A ComboBox silently retains its previous value
+     * when assigned an item that it does not contain, which previously made a
+     * text template run with a stale hexadecimal input format.
+     */
+    static String normalizeToolbarFormat(String format) {
+        if ("Plain Text".equalsIgnoreCase(format) || "Text".equalsIgnoreCase(format)) {
+            return "Text (UTF-8)";
+        }
+        return format;
     }
 
     public void navigateToModule(String moduleName) {
@@ -1293,8 +1319,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (combo == null) return;
 
         if (allowedFormats == null || allowedFormats.isEmpty()) {
-            combo.getItems().setAll("Not applicable");
-            combo.setValue("Not applicable");
+            // Operations without a shared byte-format contract must not mutate
+            // the last meaningful toolbar selection while navigating.
             combo.setDisable(true);
             return;
         }
@@ -1791,7 +1817,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
 
             for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty() && pane.getText().contains(targetPane)) {
+                if (!targetPane.isEmpty() && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.payments())) {
                     accordion.setExpandedPane(pane);
                     revealExpandedPane(pane);
                     break;
@@ -2365,18 +2391,21 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         switch (targetType) {
             case "MANUAL_CONVERSION":
                 if (genericContainerController != null) {
+                    navigateToModule("Manual Conversion");
                     genericContainerController.fillManualConversionInput(value, format);
                     expandGenericAccordionPane("Manual Conversion");
                 }
                 break;
             case "SYMMETRIC_CIPHER":
                 if (cipherController != null) {
+                    navigateToModule("Symmetric Ciphers");
                     cipherController.fillSymmetricCipherInput(value, format);
                     expandCipherAccordionPane("Symmetric Ciphers");
                 }
                 break;
             case "HASHING":
                 if (genericContainerController != null) {
+                    navigateToModule("Hashing");
                     genericContainerController.fillHashInput(value);
                     expandGenericAccordionPane("Hashing");
                 }
@@ -2986,7 +3015,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (emvContainer.getChildren().get(0) instanceof Accordion) {
                 Accordion acc = (Accordion) emvContainer.getChildren().get(0);
                 for (TitledPane pane : acc.getPanes()) {
-                    if (pane.getText().contains(title)) {
+                    if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
                         acc.setExpandedPane(pane);
                         revealExpandedPane(pane);
                         break;
@@ -3872,7 +3901,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (cipherContainerController == null) return null;
             return com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
                     getFieldText(cipherContainerController, "cipherInputArea"),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Plain Text",
+                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text (UTF-8)",
                     getComboValue(cipherContainerController, "symmetricAlgorithmCombo"),
                     getComboValue(cipherContainerController, "cipherModeCombo"),
                     getComboValue(cipherContainerController, "paddingCombo"),
@@ -3888,7 +3917,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         } else if ("Hashing".equals(opName)) {
             return com.cryptocarver.model.OperationPreflightEngine.checkHashing(
                     getFieldText(genericContainerController, "hashInputArea"),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Plain Text",
+                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text (UTF-8)",
                     getComboValue(genericContainerController, "hashAlgorithmCombo")
             );
         } else if ("Digital Signatures".equals(opName)) {

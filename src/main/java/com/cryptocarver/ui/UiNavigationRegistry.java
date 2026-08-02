@@ -118,6 +118,7 @@ public final class UiNavigationRegistry {
                 "ASN.1 Decoder", "Decode ASN.1", "ASN.1 Parse");
         add(routes, new Route(Module.CERTIFICATES, "ASN.1 Decoder", Variant.ASN1_ENCODE),
                 "Encode ASN.1", "ASN.1 Encode");
+        add(routes, new Route(Module.CERTIFICATES, "ASN.1 Decoder"), "ASN.1");
 
         add(routes, new Route(Module.GENERIC, "Hashing"), "Hashing");
         add(routes, new Route(Module.GENERIC, "File Conversion"), "Encoding/Conversion", "File Conversion");
@@ -147,6 +148,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.XML_SECURITY, "Inspect Signed XML"), "Inspect Signed XML");
         add(routes, new Route(Module.XML_SECURITY, "RFC 3161 Timestamp"), "RFC 3161 Timestamp");
         add(routes, new Route(Module.WSS_SECURITY, "Sign SOAP"), "Sign SOAP (WSS)");
+        add(routes, new Route(Module.WSS_SECURITY, "Sign SOAP"), "WSS Security");
         add(routes, new Route(Module.WSS_SECURITY, "Add UsernameToken"), "Add UsernameToken (WSS)");
         add(routes, new Route(Module.WSS_SECURITY, "Encrypt SOAP Body"), "Encrypt SOAP Body (WSS)");
         add(routes, new Route(Module.WSS_SECURITY, "Decrypt SOAP Body"), "Decrypt SOAP Body (WSS)");
@@ -183,6 +185,7 @@ public final class UiNavigationRegistry {
                 "Clear PIN Blocks", "Encode PIN Block", "Decode PIN Block",
                 "PIN Block Operations", "PIN Block Encoding", "PIN Block Decoding",
                 "PIN Block Encoded", "PIN Block Decoded");
+        add(routes, new Route(Module.PAYMENTS, "Clear PIN Blocks"), "Payments");
         add(routes, new Route(Module.PAYMENTS, "Encrypted PIN Blocks"),
                 "Encrypted PIN Blocks", "ISO PIN Blocks", "ISO 0", "ISO 2");
         add(routes, new Route(Module.PAYMENTS, "PIN Generation"),

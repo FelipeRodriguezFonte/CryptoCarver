@@ -122,12 +122,21 @@ public class WssSecurityController {
     }
 
     public void expandAccordionPane(String paneName) {
+        if (wssAccordion == null) return;
         for (TitledPane pane : wssAccordion.getPanes()) {
-            if (pane.getText().contains(paneName)) {
+            if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.wssSecurity())) {
                 wssAccordion.setExpandedPane(pane);
                 break;
             }
         }
+    }
+
+    @FXML
+    public void handleReset() {
+        ModuleResetSupport.clearInputsAndKeepFocus(wssAccordion);
+        if (wssIncludeTimestampCheck != null) wssIncludeTimestampCheck.setSelected(false);
+        if (wssSignTimestampCheck != null) wssSignTimestampCheck.setSelected(false);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
     }
 
     @FXML

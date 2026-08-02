@@ -132,7 +132,9 @@ public final class SafeOperationTemplate {
         Map<String, String> copy = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : params.entrySet()) {
             if (entry.getKey() != null && !entry.getKey().isBlank()) {
-                copy.put(entry.getKey().trim(), entry.getValue() == null ? "" : entry.getValue().trim());
+                String key = entry.getKey().trim();
+                String value = entry.getValue() == null ? "" : entry.getValue().trim();
+                copy.put(key, SafeTemplateAllowlist.normalizeFormatValue(key, value));
             }
         }
         this.parameters = copy;

@@ -33,6 +33,7 @@
                 <Button text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
                 <Button text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
                 <Button text="Export Report" onAction="#handleExportReport" />
+                <Button text="Reset" onAction="#handleReset" styleClass="secondary-button"/>
             </FlowPane>
             
             <Label text="Inspection Results:" style="-fx-font-weight: bold;"/>

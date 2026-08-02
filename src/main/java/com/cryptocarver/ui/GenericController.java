@@ -602,13 +602,13 @@ public class GenericController {
             batchExportFormatCombo.setValue("CSV");
         }
         if (manualInputFormatCombo != null) {
-            for (ByteFormat format : ByteFormat.values()) manualInputFormatCombo.getItems().add(format.getDisplayName());
+            manualInputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
             manualInputFormatCombo.setValue("Text (UTF-8)");
             manualInputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
         }
         if (manualOutputFormatCombo != null) {
-            for (ByteFormat format : ByteFormat.values()) manualOutputFormatCombo.getItems().add(format.getDisplayName());
+            manualOutputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
             manualOutputFormatCombo.setValue("Text (UTF-8)");
             manualOutputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
@@ -706,7 +706,9 @@ public class GenericController {
         if (template == null) return;
 
         Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "hashAlgorithmCombo", v -> { if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue(v); }
+                "hashAlgorithmCombo", v -> { if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue(v); },
+                "inputFormatCombo", this::setSharedInputFormat,
+                "outputFormatCombo", this::setSharedOutputFormat
         );
 
         SafeTemplateUIHelper.applySelectedTemplate(
@@ -716,14 +718,14 @@ public class GenericController {
                     if (template.contains("SHA-256")) {
                         hashAlgorithmCombo.setValue("SHA-256");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Hexadecimal");
                             statusReporter.updateStatus("Template Applied: SHA-256 — Text UTF-8 → Hex. A hash is one-way; it cannot be decrypted.");
                         }
                     } else if (template.contains("SHA-512")) {
                         hashAlgorithmCombo.setValue("SHA-512");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Base64");
                             statusReporter.updateStatus("Template Applied: SHA-512 — Text UTF-8 → Base64. A hash is one-way; it cannot be decrypted.");
                         }
@@ -738,6 +740,8 @@ public class GenericController {
     private void handleSaveHashTemplate() {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         if (hashAlgorithmCombo != null && hashAlgorithmCombo.getValue() != null) params.put("hashAlgorithmCombo", hashAlgorithmCombo.getValue());
+        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
         javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, params, this::refreshHashTemplateCombo, statusReporter);
     }
@@ -764,7 +768,7 @@ public class GenericController {
     private void handleResetHashDefaults() {
         hashAlgorithmCombo.setValue("SHA-256");
         if (statusReporter != null) {
-            statusReporter.setInputFormat("Plain Text");
+            statusReporter.setInputFormat("Text (UTF-8)");
             statusReporter.setOutputFormat("Hexadecimal");
             statusReporter.updateStatus("Hash form reset to default");
         }
@@ -776,8 +780,10 @@ public class GenericController {
         if (template == null) return;
 
         Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "manualInputFormatCombo", v -> { if (manualInputFormatCombo != null) manualInputFormatCombo.setValue(v); },
-                "manualOutputFormatCombo", v -> { if (manualOutputFormatCombo != null) manualOutputFormatCombo.setValue(v); },
+                "manualInputFormatCombo", v -> selectIfSupported(manualInputFormatCombo, normalizeFormatName(v)),
+                "manualOutputFormatCombo", v -> selectIfSupported(manualOutputFormatCombo, normalizeFormatName(v)),
+                "inputFormatCombo", this::setSharedInputFormat,
+                "outputFormatCombo", this::setSharedOutputFormat,
                 "ebcdicDirectionCombo", v -> { if (ebcdicDirectionCombo != null) ebcdicDirectionCombo.setValue(v); }
         );
 
@@ -789,7 +795,7 @@ public class GenericController {
                         manualInputFormatCombo.setValue("Text (UTF-8)");
                         manualOutputFormatCombo.setValue("Base64");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Base64");
                             statusReporter.updateStatus("Template Applied: Convert Text UTF-8 → Base64");
                         }
@@ -798,7 +804,7 @@ public class GenericController {
                         manualOutputFormatCombo.setValue("Text (UTF-8)");
                         if (statusReporter != null) {
                             statusReporter.setInputFormat("Hexadecimal");
-                            statusReporter.setOutputFormat("Plain Text");
+                            statusReporter.setOutputFormat("Text (UTF-8)");
                             statusReporter.updateStatus("Template Applied: Convert Hex → Text UTF-8");
                         }
                     }
@@ -813,6 +819,8 @@ public class GenericController {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         if (manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null) params.put("manualInputFormatCombo", manualInputFormatCombo.getValue());
         if (manualOutputFormatCombo != null && manualOutputFormatCombo.getValue() != null) params.put("manualOutputFormatCombo", manualOutputFormatCombo.getValue());
+        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
         if (ebcdicDirectionCombo != null && ebcdicDirectionCombo.getValue() != null) params.put("ebcdicDirectionCombo", ebcdicDirectionCombo.getValue());
         javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, params, this::refreshManualTemplateCombo, statusReporter);
@@ -843,8 +851,8 @@ public class GenericController {
         manualInputArea.setText("");
         manualOutputArea.setText("");
         if (statusReporter != null) {
-            statusReporter.setInputFormat("Plain Text");
-            statusReporter.setOutputFormat("Plain Text");
+            statusReporter.setInputFormat("Text (UTF-8)");
+            statusReporter.setOutputFormat("Text (UTF-8)");
             statusReporter.updateStatus("Manual conversion form reset to default");
         }
     }
@@ -949,12 +957,36 @@ public class GenericController {
     }
 
     private static String normalizeFormatName(String format) {
-        return "Text".equals(format) ? "Text (UTF-8)" : format;
+        return "Text".equalsIgnoreCase(format) || "Plain Text".equalsIgnoreCase(format) ? "Text (UTF-8)" : format;
+    }
+
+    private void setSharedInputFormat(String format) {
+        if (statusReporter != null) {
+            statusReporter.setInputFormat(normalizeFormatName(format));
+        } else {
+            selectIfSupported(inputFormatCombo, normalizeFormatName(format));
+        }
+    }
+
+    private void setSharedOutputFormat(String format) {
+        if (statusReporter != null) {
+            statusReporter.setOutputFormat(normalizeFormatName(format));
+        } else {
+            selectIfSupported(outputFormatCombo, normalizeFormatName(format));
+        }
     }
 
     private static void selectIfSupported(ComboBox<String> combo, String value) {
-        if (combo != null && value != null && combo.getItems().contains(value)) {
+        if (combo == null) return;
+        if (value == null) {
+            combo.setValue(null);
+        } else if (combo.getItems().contains(value)) {
             combo.setValue(value);
+        } else {
+            // ComboBox#setValue may retain its previous selection for a value
+            // outside the active contract; clearing is safer than executing
+            // with stale format state.
+            combo.setValue(null);
         }
     }
 
@@ -1313,6 +1345,8 @@ public class GenericController {
     public void calculateHash(String input, String inputFormat, String outputFormat,
             String algorithm, TextInputControl targetOutputArea) {
         try {
+            inputFormat = normalizeFormatName(inputFormat);
+            outputFormat = normalizeFormatName(outputFormat);
             if (input == null || input.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to hash");
                 return;
@@ -1410,6 +1444,8 @@ public class GenericController {
 
     public void convert(String input, String inputFormat, String outputFormat, TextInputControl targetOutputArea) {
         try {
+            inputFormat = normalizeFormatName(inputFormat);
+            outputFormat = normalizeFormatName(outputFormat);
             if (input == null || input.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to convert");
                 return;

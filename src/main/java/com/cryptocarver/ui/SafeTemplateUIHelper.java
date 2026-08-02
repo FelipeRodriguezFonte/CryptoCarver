@@ -28,6 +28,11 @@ public final class SafeTemplateUIHelper {
     private SafeTemplateUIHelper() {
     }
 
+    /** Canonicalizes legacy template format labels before they reach a control. */
+    public static String normalizeFormatValue(String parameterKey, String value) {
+        return SafeTemplateAllowlist.normalizeFormatValue(parameterKey, value);
+    }
+
     public static void populateTemplateCombo(ComboBox<String> combo, String module, List<String> builtInTemplates) {
         if (combo == null) return;
         String currentSelection = combo.getValue();
@@ -176,7 +181,7 @@ public final class SafeTemplateUIHelper {
             for (Map.Entry<String, String> entry : params.entrySet()) {
                 String key = entry.getKey();
                 String simpleKey = key.contains(".") ? key.substring(key.lastIndexOf('.') + 1) : key;
-                String val = entry.getValue();
+                String val = normalizeFormatValue(key, entry.getValue());
 
                 if (controlSetters.containsKey(simpleKey)) {
                     controlSetters.get(simpleKey).accept(val);

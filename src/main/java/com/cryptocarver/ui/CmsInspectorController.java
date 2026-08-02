@@ -217,6 +217,23 @@ public class CmsInspectorController {
         }
     }
 
+    @FXML
+    void handleReset(ActionEvent event) {
+        cmsFileBytes = null;
+        contentFileBytes = null;
+        truststoreFile = null;
+        currentReport = null;
+        if (cmsFilePathLabel != null) cmsFilePathLabel.setText("No file selected");
+        if (cmsContentPathLabel != null) cmsContentPathLabel.setText("No file selected");
+        if (truststorePathLabel != null) truststorePathLabel.setText("No truststore selected");
+        if (cmsDetachedCheck != null) cmsDetachedCheck.setSelected(false);
+        if (cmsDetachedFileBox != null) { cmsDetachedFileBox.setVisible(false); cmsDetachedFileBox.setManaged(false); }
+        if (cmsContentArea != null) { cmsContentArea.clear(); cmsContentArea.setVisible(false); cmsContentArea.setManaged(false); }
+        if (truststorePasswordField != null) truststorePasswordField.clear();
+        if (cmsReportArea != null) cmsReportArea.clear();
+        if (statusReporter != null) statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.common.resetStatus"));
+    }
+
     private String formatReport(CmsInspectionReport report) {
         StringBuilder sb = new StringBuilder();
         sb.append("== CMS Inspection Report ==\n");

@@ -121,6 +121,10 @@
                     </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Certificate format:" styleClass="form-label"/>
+                        <ComboBox fx:id="certFormatCombo" prefWidth="130" styleClass="form-field"/>
+                    </HBox>
                     <VBox spacing="2">
                         <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
                                   styleClass="monospace-field"

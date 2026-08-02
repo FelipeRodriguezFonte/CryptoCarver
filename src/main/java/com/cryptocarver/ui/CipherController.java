@@ -258,7 +258,9 @@ public class CipherController {
                 "paddingCombo", v -> { if (paddingCombo != null) paddingCombo.setValue(v); },
                 "asymmetricInputFormatCombo", v -> { if (asymmetricInputFormatCombo != null) asymmetricInputFormatCombo.setValue(v); },
                 "asymmetricOutputFormatCombo", v -> { if (asymmetricOutputFormatCombo != null) asymmetricOutputFormatCombo.setValue(v); },
-                "rsaPaddingCombo", v -> { if (rsaPaddingCombo != null) rsaPaddingCombo.setValue(v); }
+                "rsaPaddingCombo", v -> { if (rsaPaddingCombo != null) rsaPaddingCombo.setValue(v); },
+                "inputFormatCombo", v -> { if (statusReporter != null) statusReporter.setInputFormat(v); },
+                "outputFormatCombo", v -> { if (statusReporter != null) statusReporter.setOutputFormat(v); }
         );
 
         SafeTemplateUIHelper.applySelectedTemplate(
@@ -277,7 +279,7 @@ public class CipherController {
                         gcmTagField.setText("");
                         aadField.setText("");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Base64");
                             statusReporter.updateStatus("Template Applied: AES-256-GCM — Text UTF-8 → Base64. GCM authenticates ciphertext; use a fresh nonce for every encryption.");
                         }
@@ -309,6 +311,10 @@ public class CipherController {
         if (cipherModeCombo != null && cipherModeCombo.getValue() != null) params.put("cipherModeCombo", cipherModeCombo.getValue());
         if (paddingCombo != null && paddingCombo.getValue() != null) params.put("paddingCombo", paddingCombo.getValue());
         if (rsaPaddingCombo != null && rsaPaddingCombo.getValue() != null) params.put("rsaPaddingCombo", rsaPaddingCombo.getValue());
+        if (asymmetricInputFormatCombo != null && asymmetricInputFormatCombo.getValue() != null) params.put("asymmetricInputFormatCombo", asymmetricInputFormatCombo.getValue());
+        if (asymmetricOutputFormatCombo != null && asymmetricOutputFormatCombo.getValue() != null) params.put("asymmetricOutputFormatCombo", asymmetricOutputFormatCombo.getValue());
+        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
 
         javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(
@@ -349,7 +355,7 @@ public class CipherController {
         gcmTagField.setText("");
         aadField.setText("");
         if (statusReporter != null) {
-            statusReporter.setInputFormat("Plain Text");
+            statusReporter.setInputFormat("Text (UTF-8)");
             statusReporter.setOutputFormat("Hexadecimal");
             statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.cipher.reset"));
         }

@@ -150,6 +150,19 @@ public final class PadesController {
     }
 
     @FXML
+    private void handleReset() {
+        ModuleResetSupport.clearInputsAndKeepFocus(padesAccordion);
+        lastValidation = null;
+        padesCrlEvidence = List.of();
+        if (padesTimestampCheck != null) padesTimestampCheck.setSelected(false);
+        if (padesVisibleSignatureCheck != null) padesVisibleSignatureCheck.setSelected(false);
+        handleTimestampOptionChanged();
+        handleVisibleSignatureOptionChanged();
+        handleSourceChanged();
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
+    }
+
+    @FXML
     private void handleSign() {
         char[] password = password();
         try {

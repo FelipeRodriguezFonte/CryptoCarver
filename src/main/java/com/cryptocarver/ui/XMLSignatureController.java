@@ -136,11 +136,22 @@ public class XMLSignatureController {
     public void expandAccordionPane(String itemName) {
         if (xmlAccordion == null) return;
         for (TitledPane pane : xmlAccordion.getPanes()) {
-            if (pane.getText().contains(itemName)) {
+            if (ModulePaneMatcher.matches(pane, itemName, ModuleTextCatalog.xmlSecurity())) {
                 xmlAccordion.setExpandedPane(pane);
                 break;
             }
         }
+    }
+
+    @FXML
+    public void handleReset() {
+        ModuleResetSupport.clearInputsAndKeepFocus(xmlAccordion);
+        lastTimestampToken = null;
+        if (xmlSignLevelCombo != null) xmlSignLevelCombo.setValue("XAdES-BASELINE-B");
+        if (xmlSignPackagingCombo != null) xmlSignPackagingCombo.setValue("ENVELOPED");
+        if (xmlSignTsaAuthTypeCombo != null) xmlSignTsaAuthTypeCombo.setValue("NONE");
+        if (xmlTimestampHashCombo != null) xmlTimestampHashCombo.setValue("SHA-256");
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
     }
 
     @FXML

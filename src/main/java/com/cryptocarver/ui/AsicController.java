@@ -77,6 +77,16 @@ public final class AsicController {
     }
 
     @FXML
+    private void handleReset() {
+        ModuleResetSupport.clearInputsAndKeepFocus(asicAccordion);
+        asicEPayloads = List.of();
+        if (asicPkcs11AliasCombo != null) asicPkcs11AliasCombo.getItems().clear();
+        if (asicResultArea != null) asicResultArea.clear();
+        handleSourceChanged();
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
+    }
+
+    @FXML
     private void handleLoadTokenKeys() {
         try {
             List<String> aliases = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance()

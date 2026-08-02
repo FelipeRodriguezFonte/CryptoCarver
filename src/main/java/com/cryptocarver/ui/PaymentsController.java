@@ -306,6 +306,22 @@ public class PaymentsController {
         this.mainController = reporter;
     }
 
+    /** Clears module-local inputs/results while retaining payment profiles and history. */
+    public void resetModule() {
+        ModuleResetSupport.clearInputsAndKeepFocus(paymentsContainer);
+        if (pinBlockFormatCombo != null) pinBlockFormatCombo.getSelectionModel().selectFirst();
+        if (pinBlockFormatDecodeCombo != null) pinBlockFormatDecodeCombo.getSelectionModel().selectFirst();
+        if (encPinBlockFormatCombo != null) encPinBlockFormatCombo.getSelectionModel().selectFirst();
+        if (cvvTypeCombo != null) cvvTypeCombo.getSelectionModel().selectFirst();
+        if (dukptSchemeCombo != null) dukptSchemeCombo.getSelectionModel().selectFirst();
+        updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.common.resetStatus"));
+    }
+
+    @FXML
+    public void handleReset() {
+        resetModule();
+    }
+
     public void initialize(StatusReporter mainController,
             TextField pinField,
             TextField panFieldEncode,

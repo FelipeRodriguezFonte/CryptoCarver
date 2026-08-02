@@ -234,7 +234,9 @@ public class AuthenticationController {
         if (template == null) return;
 
         Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "signatureAlgorithmCombo", v -> { if (signatureAlgorithmCombo != null) signatureAlgorithmCombo.setValue(v); }
+                "signatureAlgorithmCombo", v -> { if (signatureAlgorithmCombo != null) signatureAlgorithmCombo.setValue(v); },
+                "inputFormatCombo", v -> { if (mainController != null) mainController.setInputFormat(v); },
+                "outputFormatCombo", v -> { if (mainController != null) mainController.setOutputFormat(v); }
         );
 
         SafeTemplateUIHelper.applySelectedTemplate(
@@ -244,7 +246,7 @@ public class AuthenticationController {
                     if (template.contains("RSA-SHA256-PKCS1")) {
                         signatureAlgorithmCombo.setValue("RSA-SHA256-PKCS1");
                         if (mainController != null) {
-                            mainController.setInputFormat("Plain Text");
+                            mainController.setInputFormat("Text (UTF-8)");
                             mainController.setOutputFormat("Hexadecimal");
                             mainController.updateStatus("Template Applied: Sign/Verify RSA-SHA256-PKCS1");
                         }
@@ -259,6 +261,8 @@ public class AuthenticationController {
     private void handleSaveSignatureTemplate() {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         if (signatureAlgorithmCombo != null && signatureAlgorithmCombo.getValue() != null) params.put("signatureAlgorithmCombo", signatureAlgorithmCombo.getValue());
+        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
         javafx.stage.Window owner = signatureTemplateCombo != null && signatureTemplateCombo.getScene() != null ? signatureTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_DIGITAL_SIGNATURES, params, this::refreshSignatureTemplateCombo, mainController);
     }
@@ -290,7 +294,7 @@ public class AuthenticationController {
         authOutputArea.setText("");
         signatureVerifyField.setText("");
         if (mainController != null) {
-            mainController.setInputFormat("Plain Text");
+            mainController.setInputFormat("Text (UTF-8)");
             mainController.setOutputFormat("Hexadecimal");
             mainController.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.auth.reset"));
         }

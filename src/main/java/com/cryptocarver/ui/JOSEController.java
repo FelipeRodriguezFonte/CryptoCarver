@@ -299,6 +299,17 @@ public class JOSEController implements Initializable {
 
     }
 
+    @FXML
+    public void handleReset() {
+        ModuleResetSupport.clearInputsAndKeepFocus(joseContainer);
+        if (inspectorOutputFlow != null) inspectorOutputFlow.getChildren().clear();
+        if (jwtAlgoCombo != null && !jwtAlgoCombo.getItems().isEmpty()) jwtAlgoCombo.getSelectionModel().selectFirst();
+        if (jwsSerializationCombo != null) jwsSerializationCombo.setValue("Compact");
+        if (jwsUnencodedPayloadCheck != null) jwsUnencodedPayloadCheck.setSelected(false);
+        showSection("JWT (Signed)");
+        updateStatus(t("module.common.resetStatus"));
+    }
+
     public void fillJwtPayload(String value) {
         if (jwtPayloadArea != null) jwtPayloadArea.setText(value == null ? "" : value);
         showSection("JWT (Signed)");

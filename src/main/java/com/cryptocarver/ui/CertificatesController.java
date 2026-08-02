@@ -29,7 +29,7 @@ public class CertificatesController {
     @FXML private TextArea certInputArea, certParseResultArea;
     @FXML private Label certBadgeLabel;
     private com.cryptocarver.ui.component.MaterialFieldBadge certBadge;
-    @FXML private ComboBox<String> certTemplateCombo;
+    @FXML private ComboBox<String> certTemplateCombo, certFormatCombo;
     private StatusReporter statusReporter;
     @FXML private TextArea certCompareLeftArea, certCompareRightArea, certCompareResultArea;
     @FXML private TextArea certIssueCsrArea, certIssueCaCertArea, certIssueCaKeyArea, certIssueResultArea;
@@ -69,6 +69,10 @@ public class CertificatesController {
         this.statusReporter = reporter;
         if (moduleI18n == null) moduleI18n = ModuleI18n.bind(certificatesContainer, ModuleTextCatalog.certificates());
         this.keysController = sharedKeysController;
+        if (certFormatCombo != null) {
+            certFormatCombo.getItems().setAll("PEM");
+            certFormatCombo.setValue("PEM");
+        }
         refreshCertTemplateCombo();
         if (keysController == null) return;
 
@@ -132,8 +136,7 @@ public class CertificatesController {
             return;
         }
         accordion.getPanes().stream()
-                .filter(pane -> pane.getText().contains(paneName)
-                        || paneName.contains(stripEmoji(pane.getText())))
+                .filter(pane -> ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.certificates()))
                 .findFirst().ifPresent(accordion::setExpandedPane);
     }
 
@@ -149,10 +152,6 @@ public class CertificatesController {
 
     public void selectAsn1EncodeTab() {
         if (asn1Controller != null) asn1Controller.selectEncodeTab();
-    }
-
-    private String stripEmoji(String text) {
-        return text.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "").trim();
     }
 
     @FXML private void handleGenerateCertificate() { keysController.handleGenerateCertificate(); }
@@ -189,7 +188,7 @@ public class CertificatesController {
         if (template == null) return;
 
         Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "certFormatCombo", v -> { if (certTemplateCombo != null) certTemplateCombo.setValue(v); }
+                "certFormatCombo", v -> { if (certFormatCombo != null && certFormatCombo.getItems().contains(v)) certFormatCombo.setValue(v); }
         );
 
         SafeTemplateUIHelper.applySelectedTemplate(
@@ -197,11 +196,11 @@ public class CertificatesController {
                 com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION,
                 () -> {
                     if (template.contains("PEM")) {
+                        if (certFormatCombo != null) certFormatCombo.setValue("PEM");
                         if (certInputArea != null) {
                             certInputArea.setPromptText("Paste certificate in PEM format... (PEM Certificate template)");
                         }
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
                             statusReporter.updateStatus("Template Applied: Certificate inspection — PEM");
                         }
                     }
@@ -214,7 +213,7 @@ public class CertificatesController {
     @FXML
     private void handleSaveCertTemplate() {
         Map<String, String> params = new java.util.LinkedHashMap<>();
-        if (certTemplateCombo != null && certTemplateCombo.getValue() != null) params.put("certFormatCombo", certTemplateCombo.getValue());
+        if (certFormatCombo != null && certFormatCombo.getValue() != null) params.put("certFormatCombo", certFormatCombo.getValue());
         javafx.stage.Window owner = certTemplateCombo != null && certTemplateCombo.getScene() != null ? certTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CERTIFICATE_INSPECTION, params, this::refreshCertTemplateCombo, statusReporter);
     }
@@ -241,8 +240,8 @@ public class CertificatesController {
     private void handleResetCertDefaults() {
         certInputArea.setText("");
         certParseResultArea.setText("");
+        if (certFormatCombo != null) certFormatCombo.setValue("PEM");
         if (statusReporter != null) {
-            statusReporter.setInputFormat("Plain Text");
             statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.cert.reset"));
         }
     }
