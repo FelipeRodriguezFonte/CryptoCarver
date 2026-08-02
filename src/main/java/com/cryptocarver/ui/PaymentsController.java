@@ -21,6 +21,12 @@ public class PaymentsController {
     private static final Logger LOG = LoggerFactory.getLogger(PaymentsController.class);
 
     private StatusReporter mainController;
+    @FXML private VBox paymentsContainer;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     // Helper methods to call methods on MainController or ModernMainController
     private void updateStatus(String message) {
@@ -270,6 +276,7 @@ public class PaymentsController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(paymentsContainer, ModuleTextCatalog.payments());
         initialize(null,
                 pinField, panFieldEncode, pinBlockField, panFieldDecode,
                 pinBlockFormatCombo, pinBlockFormatDecodeCombo, pinBlockResultArea,
@@ -479,21 +486,21 @@ public class PaymentsController {
 
             // Validate inputs
             if (pin.isEmpty() || pan.isEmpty()) {
-                pinBlockResultArea.setText("Error: PIN and PAN are required");
+                pinBlockResultArea.setText(t("module.payments.error.pinPanRequired"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
             }
 
             if (!pin.matches("\\d{4,12}")) {
-                pinBlockResultArea.setText("Error: PIN must be 4-12 digits");
+                pinBlockResultArea.setText(t("module.payments.error.pinDigits"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
             }
 
             if (!pan.matches("\\d{13,19}")) {
-                pinBlockResultArea.setText("Error: PAN must be 13-19 digits");
+                pinBlockResultArea.setText(t("module.payments.error.panDigits"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
@@ -677,7 +684,7 @@ public class PaymentsController {
 
             // Validate inputs
             if (cvkA.isEmpty() || cvkB.isEmpty() || pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                cvvResultArea.setText("Error: All fields are required (ATC optional for static CVV)");
+                cvvResultArea.setText(t("module.payments.error.cvvRequired"));
                 return;
             }
 

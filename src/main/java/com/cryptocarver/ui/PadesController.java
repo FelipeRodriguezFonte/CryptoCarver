@@ -5,6 +5,7 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.OperationResult;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.RadioButton;
@@ -21,6 +22,12 @@ import java.util.List;
 
 /** Small, explicit PAdES Baseline-B laboratory panel. */
 public final class PadesController {
+    @FXML private Accordion padesAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     private static final long MAX_PDF_BYTES = 64L * 1024L * 1024L;
 
     @FXML private TextField padesInputPathField;
@@ -59,6 +66,7 @@ public final class PadesController {
 
     @FXML
     private void initialize() {
+        moduleI18n = ModuleI18n.bind(padesAccordion, ModuleTextCatalog.pades());
         handleTimestampOptionChanged();
         handleSourceChanged();
         handleVisibleSignatureOptionChanged();

@@ -15,6 +15,12 @@ import javafx.scene.control.*;
  * @author Felipe
  */
 public class EMVController {
+    @FXML private javafx.scene.layout.VBox emvContainer;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     @FXML private TextArea emvTlvInputArea, emvTlvResultArea;
     @FXML private TextField emvDolTemplateField;
     @FXML private TextArea emvDolValuesArea, emvDolResultArea;
@@ -43,7 +49,7 @@ public class EMVController {
                 for (String warning : result.warnings()) report.append("- ").append(warning).append("\n");
             }
             emvDolResultArea.setText(report.toString());
-        } catch (Exception e) { emvDolResultArea.setText("DOL error: " + e.getMessage()); }
+        } catch (Exception e) { emvDolResultArea.setText(t("module.emv.error.dol", e.getMessage())); }
     }
 
     public void handleInspectTlv() {
@@ -63,7 +69,7 @@ public class EMVController {
             report.append("TLV TREE\n");
             appendTlv(report, items, "");
             emvTlvResultArea.setText(report.toString());
-        } catch (Exception e) { emvTlvResultArea.setText("TLV error: " + e.getMessage()); }
+        } catch (Exception e) { emvTlvResultArea.setText(t("module.emv.error.tlv", e.getMessage())); }
     }
 
     private void appendTlv(StringBuilder out, java.util.List<EmvTlv.Item> items, String indent) {
@@ -139,6 +145,7 @@ public class EMVController {
 
     @FXML
     private void initialize() {
+        moduleI18n = ModuleI18n.bind(emvContainer, ModuleTextCatalog.emv());
         atcField = emvAtcField;
         setupARQCPaddingMethods();
         setupARPCMethods();
@@ -259,7 +266,7 @@ public class EMVController {
             String atc = atcField.getText().trim().replaceAll("\\s+", "");
 
             if (imk.isEmpty() || pan.isEmpty()) {
-                sessionKeyResultArea.setText("Error: IMK and PAN are required");
+                sessionKeyResultArea.setText(t("module.emv.error.sessionInputs"));
                 return;
             }
 

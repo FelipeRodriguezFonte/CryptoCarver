@@ -3,7 +3,7 @@
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.AsicController" spacing="10" styleClass="content-container-vbox">
-    <Accordion styleClass="module-accordion">
+    <Accordion fx:id="asicAccordion" styleClass="module-accordion">
         <panes>
             <TitledPane text="ASiC Containers" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">

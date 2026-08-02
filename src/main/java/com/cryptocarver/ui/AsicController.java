@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.AsicOperations;
 import com.cryptocarver.model.OperationResult;
 import javafx.fxml.FXML;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
@@ -18,6 +19,12 @@ import java.util.List;
 
 /** Explicit, bounded ASiC-S laboratory panel. */
 public final class AsicController {
+    @FXML private Accordion asicAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     private static final long MAX_BYTES = 64L * 1024L * 1024L;
 
     @FXML private TextField asicInputPathField;
@@ -44,6 +51,7 @@ public final class AsicController {
 
     @FXML
     private void initialize() {
+        moduleI18n = ModuleI18n.bind(asicAccordion, ModuleTextCatalog.asic());
         handleSourceChanged();
     }
 
