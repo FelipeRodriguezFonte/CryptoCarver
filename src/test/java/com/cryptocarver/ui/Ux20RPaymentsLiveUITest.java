@@ -85,6 +85,8 @@ class Ux20RPaymentsLiveUITest {
 
                 pan.setText("1234567890123");
                 pan.requestFocus();
+                root.applyCss();
+                root.layout();
                 controller.handleReset();
                 assertEquals("1234567890123", pan.getText(), "Reset Defaults must retain local data");
                 assertSame(pan, scene.getFocusOwner(), "Reset Defaults must restore the focused control");

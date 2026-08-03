@@ -52,7 +52,7 @@ class Ux21LiveUITest {
     }
 
     @Test
-    void historyReopenClearsResultsAndSecretsButRestoresSafeInput() throws Exception {
+    void historyReopenClearsResultsSecretsAndInputMaterial() throws Exception {
         ModernMainController controller = loadMain();
         GenericController generic = field(controller, "genericContainerController");
         TextArea input = field(generic, "hashInputArea");
@@ -64,7 +64,7 @@ class Ux21LiveUITest {
                     "GenericController.hashOutputArea", "old result",
                     "CipherController.symmetricKeyField", "[REDACTED_SECRET]"), "Hashing: SHA-256");
         });
-        assertEquals("safe input", input.getText());
+        assertEquals("", input.getText());
         assertEquals("", result.getText());
         assertTrue(((javafx.scene.Node) field(controller, "genericContainer")).isVisible());
     }

@@ -191,7 +191,7 @@ class Ux25CmsJoseValidationLiveUITest {
             }
             // Let deferred JavaFX focus/layout work complete before callers
             // assert the state of the visible scene.
-            Platform.runLater(done::countDown);
+            Platform.runLater(() -> Platform.runLater(done::countDown));
         });
         assertTrue(done.await(30, TimeUnit.SECONDS), "JavaFX action timed out");
         if (failure[0] != null) throw new AssertionError("UX-25 UI check failed", failure[0]);

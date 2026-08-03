@@ -1700,7 +1700,7 @@ class ModernMainControllerUITest {
             ), "Symmetric Ciphers");
         });
 
-        assertEquals("restored payload", input.getText());
+        assertEquals("", input.getText(), "History must not restore cipher input material");
         assertEquals("", key.getText(), "Reopen should clear redacted secrets and never leave [REDACTED_SECRET] in the field");
         assertTrue(((javafx.scene.Node) getField(controller, "cipherContainer")).isVisible());
     }
@@ -1729,7 +1729,7 @@ class ModernMainControllerUITest {
             ), "Hashing: SHA-512");
         });
 
-        assertEquals("hash this", input.getText());
+        assertEquals("", input.getText(), "History must not restore hash input material");
         assertEquals("SHA-512", algo.getValue());
         assertTrue(((javafx.scene.Node) getField(controller, "genericContainer")).isVisible());
     }

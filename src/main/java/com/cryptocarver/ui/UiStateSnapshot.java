@@ -47,7 +47,7 @@ public final class UiStateSnapshot {
             "iv", "nonce", "aad", "salt", "token", "mac", "signature",
             // Existing input controls whose contents are secret material in
             // the crypto/payment modules, even when their id is generic.
-            "verify", "tag"
+            "input", "payload", "info", "verify", "tag"
     );
 
     private UiStateSnapshot() {
