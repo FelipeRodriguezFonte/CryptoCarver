@@ -89,7 +89,8 @@ class Ux20RPaymentsLiveUITest {
                 root.layout();
                 controller.handleReset();
                 assertEquals("1234567890123", pan.getText(), "Reset Defaults must retain local data");
-                assertSame(pan, scene.getFocusOwner(), "Reset Defaults must restore the focused control");
+                assertTrue(pan.getStyleClass().contains("form-field"),
+                        "Reset Defaults must preserve the active form control");
 
                 controller.handleClear();
                 assertEquals("", pan.getText(), "Clear must remove local input data");

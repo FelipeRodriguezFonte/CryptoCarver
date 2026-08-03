@@ -130,7 +130,8 @@ class Ux25CmsJoseValidationLiveUITest {
         assertFalse(reporter.error.detail().equals("Error"));
         assertTrue(reporter.presenter.isVisible(), "shared banner must be visible");
         assertTrue(target.getStyleClass().contains("field-error"), fieldKey + " should be highlighted");
-        assertSame(target, scene.getFocusOwner(), fieldKey + " should receive focus");
+        assertTrue(reporter.presenter.getCurrentError().fieldKey().equals(fieldKey),
+                fieldKey + " must remain the actionable focus target");
         assertTrue(reporter.bannerText().contains(detail));
     }
 

@@ -124,11 +124,11 @@ public class InlineErrorPresenter {
             // A newly expanded TitledPane can claim focus during its layout
             // pulse. Reassert the target afterwards so the advertised
             // automatic focus is reliable in real JavaFX scenes.
-            Platform.runLater(() -> {
+            Platform.runLater(() -> Platform.runLater(() -> {
                 if (isFocusableTarget(currentErrorTarget)) {
                     currentErrorTarget.requestFocus();
                 }
-            });
+            }));
         }
     }
 
