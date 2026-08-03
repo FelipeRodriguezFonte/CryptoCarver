@@ -171,18 +171,18 @@
                 </HBox>
 
                 <!-- Inline Actionable Error Banner -->
-                <HBox fx:id="errorBanner" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="inline-error-banner">
+                <HBox fx:id="errorBanner" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" focusTraversable="false" styleClass="inline-error-banner">
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <HBox spacing="6" alignment="CENTER_LEFT">
-                            <Label text="⚠️" style="-fx-font-size: 13px;"/>
-                            <Label fx:id="errorBannerTitle" text="Operation Failed" styleClass="error-banner-title"/>
+                            <Label text="⚠️" accessibleText="" style="-fx-font-size: 13px;"/>
+                            <Label fx:id="errorBannerTitle" text="Operation Failed" accessibleText="Operation Failed" accessibleHelp="Error message" styleClass="error-banner-title"/>
                         </HBox>
-                        <Label fx:id="errorBannerRemedy" text="Check parameters and try again." styleClass="error-banner-remedy" wrapText="true"/>
+                        <Label fx:id="errorBannerRemedy" text="Check parameters and try again." accessibleText="Check parameters and try again." accessibleHelp="Recommended action" styleClass="error-banner-remedy" wrapText="true"/>
                     </VBox>
                     <HBox spacing="6" alignment="CENTER_RIGHT">
-                        <Button fx:id="errorBannerGoToFieldBtn" text="Go to field" onAction="#handleErrorBannerGoToField" styleClass="error-banner-btn-secondary" managed="false" visible="false"/>
-                        <Button fx:id="errorBannerCopyDetailsBtn" text="Copy technical details" onAction="#handleErrorBannerCopyDetails" styleClass="error-banner-btn-secondary"/>
-                        <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" styleClass="error-banner-btn-close" accessibleText="Dismiss the validation message"/>
+                        <Button fx:id="errorBannerGoToFieldBtn" text="Go to field" onAction="#handleErrorBannerGoToField" focusTraversable="true" accessibleText="Go to field" accessibleHelp="Move focus to the invalid field" styleClass="error-banner-btn-secondary" managed="false" visible="false"/>
+                        <Button fx:id="errorBannerCopyDetailsBtn" text="Copy technical details" onAction="#handleErrorBannerCopyDetails" focusTraversable="true" accessibleText="Copy technical details" accessibleHelp="Copy redacted technical details" styleClass="error-banner-btn-secondary"/>
+                        <Button fx:id="errorBannerCloseBtn" text="✕" onAction="#handleErrorBannerClose" focusTraversable="true" styleClass="error-banner-btn-close" accessibleText="Dismiss the validation message" accessibleHelp="Close the error and restore focus"/>
                     </HBox>
                 </HBox>
 

@@ -33,6 +33,8 @@ public class InlineErrorPresenter {
     private final Button errorBannerCloseBtn;
 
     private UserFacingError currentError;
+    private Node focusBeforeError;
+    private Node currentErrorTarget;
     private final List<Node> highlightedNodes = new ArrayList<>();
     private final List<ListenerUnregisterer> activeUnregisterers = new ArrayList<>();
 
@@ -55,22 +57,34 @@ public class InlineErrorPresenter {
 
     public void showError(UserFacingError error, Node activeSceneRoot) {
         clearFieldErrors();
+        Node previousFocus = activeSceneRoot != null && activeSceneRoot.getScene() != null
+                ? activeSceneRoot.getScene().getFocusOwner() : null;
+        if (previousFocus != null && !isDescendantOf(errorBanner, previousFocus)) {
+            focusBeforeError = previousFocus;
+        }
         this.currentError = error;
 
         if (errorBanner == null) {
-            System.err.println("SHOW_ERROR: " + error.title() + " - " + error.remedy());
+            System.err.println("SHOW_ERROR: " + safeAccessibleText(error.title()) + " - "
+                    + safeAccessibleText(error.remedy()));
             return;
         }
 
+        String safeTitle = safeAccessibleText(error.title() == null ? "Operation Error" : error.title());
         if (errorBannerTitle != null) {
-            errorBannerTitle.setText(error.title() == null ? "Operation Error" : error.title());
+            errorBannerTitle.setText(safeTitle);
+            errorBannerTitle.setAccessibleText(safeTitle);
+            errorBannerTitle.setAccessibleHelp(com.cryptocarver.service.I18nService.getInstance().text("a11y.errorTitle"));
         }
 
+        String remedyText = (error.remedy() != null && !error.remedy().isBlank())
+                ? error.remedy()
+                : (error.detail() != null ? error.detail() : "");
+        String safeRemedy = safeAccessibleText(remedyText);
         if (errorBannerRemedy != null) {
-            String remedyText = (error.remedy() != null && !error.remedy().isBlank())
-                    ? error.remedy()
-                    : (error.detail() != null ? error.detail() : "");
-            errorBannerRemedy.setText(remedyText);
+            errorBannerRemedy.setText(safeRemedy);
+            errorBannerRemedy.setAccessibleText(safeRemedy);
+            errorBannerRemedy.setAccessibleHelp(com.cryptocarver.service.I18nService.getInstance().text("a11y.errorRemedy"));
         }
 
         String fieldKey = error.fieldKey();
@@ -83,19 +97,32 @@ public class InlineErrorPresenter {
 
         if (hasField && activeSceneRoot != null) {
             Node fieldNode = findNodeByFieldKey(activeSceneRoot, fieldKey);
-            if (fieldNode != null) {
+            if (isFocusableTarget(fieldNode)) {
+                currentErrorTarget = fieldNode;
                 highlightNode(fieldNode);
+            } else {
+                currentErrorTarget = null;
             }
+        } else {
+            currentErrorTarget = null;
         }
 
         errorBanner.setManaged(true);
         errorBanner.setVisible(true);
+
+        // The banner is actionable but must not steal focus from a valid target.
+        // ModernMainController also calls goToField for controller-level errors;
+        // doing this here keeps the presenter safe for direct use and tests.
+        if (isFocusableTarget(currentErrorTarget)) {
+            currentErrorTarget.requestFocus();
+        }
     }
 
     public void goToField(Node activeSceneRoot) {
         if (currentError == null || currentError.fieldKey() == null || activeSceneRoot == null) return;
         Node target = findNodeByFieldKey(activeSceneRoot, currentError.fieldKey());
-        if (target != null) {
+        if (isFocusableTarget(target)) {
+            currentErrorTarget = target;
             target.requestFocus();
         }
     }
@@ -114,12 +141,18 @@ public class InlineErrorPresenter {
     }
 
     public void hideBanner() {
+        Node focusToRestore = isFocusableTarget(currentErrorTarget) ? currentErrorTarget : focusBeforeError;
         clearFieldErrors();
         currentError = null;
+        currentErrorTarget = null;
+        focusBeforeError = null;
 
         if (errorBanner != null) {
             errorBanner.setVisible(false);
             errorBanner.setManaged(false);
+        }
+        if (isFocusableTarget(focusToRestore)) {
+            focusToRestore.requestFocus();
         }
     }
 
@@ -129,6 +162,25 @@ public class InlineErrorPresenter {
 
     public UserFacingError getCurrentError() {
         return currentError;
+    }
+
+    /** Shared redaction boundary for visible and accessible error text. */
+    static String safeAccessibleText(String text) {
+        return redactSecrets(text);
+    }
+
+    private static boolean isFocusableTarget(Node node) {
+        return node != null && node.isVisible() && !node.isDisabled() && node.isFocusTraversable();
+    }
+
+    private static boolean isDescendantOf(Node ancestor, Node candidate) {
+        if (ancestor == null || candidate == null) return false;
+        Node current = candidate;
+        while (current != null) {
+            if (current == ancestor) return true;
+            current = current.getParent();
+        }
+        return false;
     }
 
     private void highlightNode(Node node) {

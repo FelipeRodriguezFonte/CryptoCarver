@@ -1804,6 +1804,14 @@
     -fx-background-color: #fee2e2;
 }
 
+.error-banner-btn-secondary:focused,
+.error-banner-btn-close:focused {
+    -fx-border-color: #1d4ed8;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
 .error-banner-btn-close {
     -fx-background-color: transparent;
     -fx-text-fill: #991b1b;
@@ -1816,6 +1824,10 @@
 .error-banner-btn-close:hover {
     -fx-background-color: #fecaca;
     -fx-background-radius: 4;
+}
+
+.error-banner-btn-close:focused {
+    -fx-background-color: #fee2e2;
 }
 
 /* Async Progress Bar UI */
@@ -2245,8 +2257,19 @@
 .text-field.field-error,
 .password-field.field-error,
 .text-area.field-error,
-.combo-box.field-error {
+.combo-box.field-error,
+.choice-box.field-error {
     -fx-border-color: #b91c1c;
+    -fx-border-width: 2px;
+    -fx-background-color: #fff1f2;
+}
+
+.text-field.field-error:focused,
+.password-field.field-error:focused,
+.text-area.field-error:focused,
+.combo-box.field-error:focused,
+.choice-box.field-error:focused {
+    -fx-border-color: #1d4ed8;
     -fx-border-width: 2px;
     -fx-background-color: #fff1f2;
 }

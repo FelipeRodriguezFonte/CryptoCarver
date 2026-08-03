@@ -642,6 +642,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(errorBannerRemedy, "error.remedy");
         setText(errorBannerGoToFieldBtn, "error.goToField");
         setText(errorBannerCopyDetailsBtn, "error.copyDetails");
+        if (errorBannerTitle != null) {
+            errorBannerTitle.setAccessibleHelp(i18n.text("a11y.errorTitle"));
+        }
+        if (errorBannerRemedy != null) {
+            errorBannerRemedy.setAccessibleHelp(i18n.text("a11y.errorRemedy"));
+        }
+        if (errorBannerGoToFieldBtn != null) {
+            errorBannerGoToFieldBtn.setAccessibleText(i18n.text("a11y.errorGoToField"));
+            errorBannerGoToFieldBtn.setAccessibleHelp(i18n.text("a11y.errorGoToFieldHelp"));
+        }
+        if (errorBannerCopyDetailsBtn != null) {
+            errorBannerCopyDetailsBtn.setAccessibleText(i18n.text("a11y.errorCopyDetails"));
+            errorBannerCopyDetailsBtn.setAccessibleHelp(i18n.text("a11y.errorCopyDetailsHelp"));
+        }
+        if (errorBannerCloseBtn != null) {
+            errorBannerCloseBtn.setAccessibleText(i18n.text("a11y.errorClose"));
+            errorBannerCloseBtn.setAccessibleHelp(i18n.text("a11y.errorCloseHelp"));
+        }
         setText(guideBackBtn, "guide.back");
         setText(guideNextBtn, "guide.next");
         setText(guideSkipBtn, "guide.skip");
