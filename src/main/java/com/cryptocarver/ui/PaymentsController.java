@@ -313,6 +313,10 @@ public class PaymentsController {
         updateStatus(t("module.payments.resetStatus"));
     }
 
+    public void fillClipboardInput(String value) {
+        if (pinBlockField != null) pinBlockField.setText(value);
+    }
+
     @FXML
     public void handleClear() {
         ModuleResetPolicy.apply(paymentsContainer, ModuleResetPolicy.Action.CLEAR,

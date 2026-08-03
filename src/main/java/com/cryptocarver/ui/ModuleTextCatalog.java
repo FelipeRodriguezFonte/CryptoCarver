@@ -354,6 +354,7 @@ public final class ModuleTextCatalog {
         map.put("Open Expanded", "module.shelf.openExpanded");
         map.put("Rename", "module.shelf.rename");
         map.put("Delete", "module.shelf.delete");
+        map.put("Reset", "module.common.reset");
         return map;
     }
 
@@ -374,6 +375,7 @@ public final class ModuleTextCatalog {
         map.put("Diff Details", "module.compare.diffDetails");
         map.put("Export Comparison Report...", "module.compare.export");
         map.put("Close", "module.common.close");
+        map.put("Reset", "module.common.reset");
         return map;
     }
 

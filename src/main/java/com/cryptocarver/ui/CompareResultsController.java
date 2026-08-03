@@ -74,7 +74,12 @@ public class CompareResultsController {
     }
 
     private void refresh() {
-        if (entry1 == null || entry2 == null) return;
+        if (entry1 == null || entry2 == null) {
+            statusBadgeLabel.setText(t("module.compare.empty"));
+            summaryLabel.setText(t("module.compare.emptyHelp"));
+            diffDetailsArea.clear();
+            return;
+        }
 
         ResultComparator.ComparisonDetails details = ResultComparator.compare(entry1, entry2, profile);
 
@@ -116,6 +121,12 @@ public class CompareResultsController {
         diffDetailsArea.setText(details.textualDiff() != null ? details.textualDiff() : t("module.compare.noDiff"));
     }
 
+    public void clearComparison() {
+        entry1 = null;
+        entry2 = null;
+        refresh();
+    }
+
     @FXML
     private void handleExportReport() {
         if (entry1 == null || entry2 == null) return;
@@ -155,5 +166,10 @@ public class CompareResultsController {
     private void handleClose() {
         Stage stage = (Stage) statusBadgeLabel.getScene().getWindow();
         stage.close();
+    }
+
+    @FXML
+    private void handleReset() {
+        clearComparison();
     }
 }

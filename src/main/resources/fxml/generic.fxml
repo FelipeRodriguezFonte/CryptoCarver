@@ -99,6 +99,7 @@
                     <Button text="Run Batch" onAction="#handleRunBatch" styleClass="action-button,primary-action"/>
                     <Button text="Dry Run" onAction="#handleDryRunBatch" styleClass="secondary-button"/>
                     <Button text="Cancel" onAction="#handleCancelBatch" styleClass="secondary-button"/>
+                    <Button text="Reset" onAction="#handleResetBatch" styleClass="secondary-button"/>
                     <ComboBox fx:id="batchExportFormatCombo" prefWidth="80" styleClass="form-field"/>
                     <Button text="Export Results…" onAction="#handleExportBatchResults" styleClass="secondary-button"/>
                 </FlowPane>

@@ -444,10 +444,32 @@ public class ClipboardShelfController {
         MenuItem hashInput = new MenuItem(t("module.shelf.hashInput"));
         hashInput.setOnAction(e -> useInTarget("op_gen_hash", "HASHING"));
 
+        MenuItem xml = new MenuItem(t("module.shelf.xmlInput"));
+        xml.setOnAction(e -> useInTarget("XML Security", "XML_SECURITY"));
+        MenuItem wss = new MenuItem(t("module.shelf.wssInput"));
+        wss.setOnAction(e -> useInTarget("WSS Security", "WSS_SECURITY"));
+        MenuItem payments = new MenuItem(t("module.shelf.paymentsInput"));
+        payments.setOnAction(e -> useInTarget("Payments", "PAYMENTS"));
+        MenuItem tr31 = new MenuItem(t("module.shelf.tr31Input"));
+        tr31.setOnAction(e -> useInTarget("TR-31 Key Blocks", "TR31"));
+
         MenuItem josePayload = new MenuItem("JOSE Payload (JWT)");
         josePayload.setOnAction(e -> useInTarget("op_jose_jwt", "JOSE_JWT"));
 
-        useInMenu.getItems().addAll(manualConv, symCipher, hashInput, josePayload);
+        useInMenu.getItems().addAll(manualConv, symCipher, hashInput, xml, wss, payments, tr31, josePayload);
+    }
+
+    static boolean supportsTarget(ClipboardEntry.Format format, String targetType) {
+        if (format == null || targetType == null) return false;
+        return switch (targetType) {
+            case "MANUAL_CONVERSION", "SYMMETRIC_CIPHER", "HASHING" ->
+                    format == ClipboardEntry.Format.TEXT || format == ClipboardEntry.Format.HEX
+                            || format == ClipboardEntry.Format.BASE64 || format == ClipboardEntry.Format.BASE64URL;
+            case "JOSE_JWT" -> format == ClipboardEntry.Format.TEXT || format == ClipboardEntry.Format.JSON;
+            case "XML_SECURITY", "WSS_SECURITY", "TR31" -> format == ClipboardEntry.Format.TEXT;
+            case "PAYMENTS" -> format == ClipboardEntry.Format.HEX;
+            default -> false;
+        };
     }
 
     private void useInTarget(String operationId, String targetType) {
@@ -455,21 +477,13 @@ public class ClipboardShelfController {
         if (entry == null || navigator == null || mainController == null) return;
 
         ClipboardEntry.Format fmt = entry.getFormat();
-        boolean valid = true;
-        if (targetType.equals("MANUAL_CONVERSION") || targetType.equals("SYMMETRIC_CIPHER") || targetType.equals("HASHING")) {
-            if (fmt != ClipboardEntry.Format.TEXT && fmt != ClipboardEntry.Format.HEX &&
-                fmt != ClipboardEntry.Format.BASE64 && fmt != ClipboardEntry.Format.BASE64URL) {
-                valid = false;
-            }
-        } else if (targetType.equals("JOSE_JWT")) {
-            if (fmt != ClipboardEntry.Format.TEXT && fmt != ClipboardEntry.Format.JSON) {
-                valid = false;
-            }
-        }
-
-        if (!valid) {
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Format " + fmt.name() + " is not supported for " + targetType + ".");
+        if (!supportsTarget(fmt, targetType)) {
+            String message = t("module.shelf.incompatible", fmt.name(), targetType);
+            Alert alert = new Alert(Alert.AlertType.WARNING, message, ButtonType.OK);
+            alert.setTitle(t("module.shelf.incompatibleTitle"));
+            alert.setHeaderText(t("module.shelf.incompatibleHeader"));
             alert.showAndWait();
+            if (navigator != null) navigator.updateStatus(message);
             return;
         }
 
@@ -478,5 +492,6 @@ public class ClipboardShelfController {
 
         navigator.navigateTo(operationId);
         mainController.fillClipboardTarget(targetType, val, entry.getFormat());
+        navigator.updateStatus(t("module.shelf.injected", entry.getFormat().name()));
     }
 }

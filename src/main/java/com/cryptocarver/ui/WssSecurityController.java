@@ -131,6 +131,10 @@ public class WssSecurityController {
         }
     }
 
+    public void fillClipboardInput(String value) {
+        if (wssVerifyInputArea != null) wssVerifyInputArea.setText(value);
+    }
+
     @FXML
     public void handleReset() {
         ModuleResetPolicy.apply(wssSecurityContainer, ModuleResetPolicy.Action.RESET_DEFAULTS,

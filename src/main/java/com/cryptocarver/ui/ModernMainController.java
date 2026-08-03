@@ -1666,7 +1666,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Restores an operation selected from the modular history view. */
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
         handleItemSelected(operation);
-        java.util.List<javafx.scene.Node> redacted = restoreUIState(state);
+        java.util.List<javafx.scene.Node> redacted = UiStateSnapshot.restoreHistoryRecipe(this, state);
         updateStatus("Restored state for: " + operation);
         if (redacted != null && !redacted.isEmpty()) {
             javafx.application.Platform.runLater(() -> redacted.get(0).requestFocus());
@@ -1714,11 +1714,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleClearHistory() {
-        if (historyManager != null) {
+        if (historyManager != null && (historyManager.getHistoryItems().isEmpty() || Boolean.getBoolean("test.mode")
+                || confirmClearHistory())) {
             historyManager.clearHistory();
             refreshHistoryUI();
             updateStatus("History cleared");
         }
+    }
+
+    private boolean confirmClearHistory() {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                i18n.text("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
+        confirmation.setTitle(i18n.text("module.history.clearTitle"));
+        confirmation.setHeaderText(i18n.text("module.history.clearHeader"));
+        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     /**
@@ -2406,8 +2415,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case "HASHING":
                 if (genericContainerController != null) {
                     navigateToModule("Hashing");
-                    genericContainerController.fillHashInput(value);
+                    genericContainerController.fillHashInput(value, format);
                     expandGenericAccordionPane("Hashing");
+                }
+                break;
+            case "XML_SECURITY":
+                if (xmlSecurityContainerController != null) {
+                    navigateToModule("XML Security");
+                    xmlSecurityContainerController.fillClipboardInput(value);
+                    expandXMLAccordionPane("Inspect Signed XML");
+                }
+                break;
+            case "WSS_SECURITY":
+                if (wssSecurityContainerController != null) {
+                    navigateToModule("WSS Security");
+                    wssSecurityContainerController.fillClipboardInput(value);
+                    expandWssAccordionPane("Sign SOAP");
+                }
+                break;
+            case "PAYMENTS":
+                if (paymentsContainerController != null) {
+                    navigateToModule("Payments");
+                    paymentsContainerController.fillClipboardInput(value);
+                    expandPaymentsAccordionPane("Clear PIN Blocks");
+                }
+                break;
+            case "TR31":
+                if (keysController != null) {
+                    navigateToModule("TR-31 Key Blocks");
+                    keysController.fillTR31KeyBlockInput(value);
+                    expandAccordionPane("TR-31 Key Blocks");
                 }
                 break;
             case "JOSE_JWT":

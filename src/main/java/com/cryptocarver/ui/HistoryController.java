@@ -476,7 +476,7 @@ public class HistoryController {
 
     @FXML
     private void handleClearHistory(ActionEvent event) {
-        if (historyManager != null) {
+        if (historyManager != null && confirmClearHistory()) {
             historyManager.clearHistory();
             refresh();
             if (detailsTable != null) {
@@ -486,6 +486,16 @@ public class HistoryController {
                 navigator.updateStatus("History cleared");
             }
         }
+    }
+
+    private boolean confirmClearHistory() {
+        if (historyManager == null || historyManager.getHistoryItems().isEmpty()) return true;
+        if (Boolean.getBoolean("test.mode")) return true;
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                t("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
+        confirmation.setTitle(t("module.history.clearTitle"));
+        confirmation.setHeaderText(t("module.history.clearHeader"));
+        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     @FXML

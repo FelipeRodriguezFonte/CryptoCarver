@@ -524,6 +524,10 @@
 
                                 <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
                                         styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <Button text="Clear" onAction="#handleTR31Clear" styleClass="secondary-button"/>
+                                    <Button text="Reset Defaults" onAction="#handleTR31Reset" styleClass="secondary-button"/>
+                                </HBox>
 
                                 <TextArea fx:id="tr31ExportResultArea" prefHeight="120" editable="false" wrapText="true"
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"

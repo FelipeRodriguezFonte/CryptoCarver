@@ -144,6 +144,10 @@ public class XMLSignatureController {
         }
     }
 
+    public void fillClipboardInput(String value) {
+        if (xmlInspectInputArea != null) xmlInspectInputArea.setText(value);
+    }
+
     @FXML
     public void handleReset() {
         ModuleResetPolicy.apply(xmlSecurityContainer, ModuleResetPolicy.Action.RESET_DEFAULTS,

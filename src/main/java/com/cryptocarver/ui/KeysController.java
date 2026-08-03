@@ -32,6 +32,10 @@ import java.util.function.Consumer;
  */
 public class KeysController {
 
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
+
     @FXML private VBox keysRoot;
     private ModuleI18n.Binding moduleI18n;
 
@@ -503,6 +507,42 @@ public class KeysController {
 
     public void expandAsymmetricPane(String paneName) {
         expandPane(asymmetricKeysContainer, paneName);
+    }
+
+    public void fillTR31KeyBlockInput(String value) {
+        if (tr31KeyBlockField != null) tr31KeyBlockField.setText(value);
+    }
+
+    @FXML
+    public void handleTR31Clear() {
+        clearTR31Fields();
+        if (mainController != null) mainController.updateStatus(t("module.keys.tr31ClearStatus"));
+    }
+
+    @FXML
+    public void handleTR31Reset() {
+        clearTR31Fields();
+        if (tr31VersionCombo != null) tr31VersionCombo.setValue("B - TDES Key Derivation Binding");
+        if (tr31UsageCombo != null) tr31UsageCombo.getSelectionModel().selectFirst();
+        if (tr31AlgorithmCombo != null) tr31AlgorithmCombo.getSelectionModel().selectFirst();
+        if (tr31ModeCombo != null) tr31ModeCombo.getSelectionModel().selectFirst();
+        if (tr31ExportabilityCombo != null) tr31ExportabilityCombo.getSelectionModel().selectFirst();
+        if (mainController != null) mainController.updateStatus(t("module.keys.tr31ResetStatus"));
+    }
+
+    private void clearTR31Fields() {
+        if (tr31KbpkExportField != null) tr31KbpkExportField.clear();
+        if (tr31KeyToWrapField != null) tr31KeyToWrapField.clear();
+        if (tr31OptionalBlocksField != null) tr31OptionalBlocksField.clear();
+        if (tr31KbpkImportField != null) tr31KbpkImportField.clear();
+        if (tr31KeyBlockField != null) tr31KeyBlockField.clear();
+        if (tr31KeyLengthField != null) tr31KeyLengthField.clear();
+        if (tr31ExportResultArea != null) tr31ExportResultArea.clear();
+        if (tr31ImportResultArea != null) {
+            tr31ImportResultArea.clear();
+            tr31ImportResultArea.setManaged(false);
+            tr31ImportResultArea.setVisible(false);
+        }
     }
 
     private void setSectionVisible(VBox section, boolean visible) {

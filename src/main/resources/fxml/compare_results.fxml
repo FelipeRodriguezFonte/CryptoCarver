@@ -67,6 +67,7 @@
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Export Comparison Report..." onAction="#handleExportReport"/>
+        <Button text="Reset" onAction="#handleReset"/>
         <Button text="Close" onAction="#handleClose"/>
     </HBox>
 </VBox>
