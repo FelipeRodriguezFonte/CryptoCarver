@@ -1808,7 +1808,7 @@ class ModernMainControllerUITest {
             ), "PIN Generation");
         });
 
-        assertEquals("123456789012345", pan.getText());
+        assertEquals("", pan.getText(), "PAN must remain redacted when reopening history");
         assertTrue(((javafx.scene.Node) getField(controller, "paymentsContainer")).isVisible());
     }
 
@@ -3543,7 +3543,7 @@ class ModernMainControllerUITest {
             generic.handleCalculateHash();
         });
 
-        assertEquals("e633f4fc79badea1dc5db970cf397c8248bac47cc3acf9915ba60b5d76b0e88f", output.getText());
+        assertEquals("E633F4FC79BADEA1DC5DB970CF397C8248BAC47CC3ACF9915BA60B5D76B0E88F", output.getText());
     }
 
     @Test

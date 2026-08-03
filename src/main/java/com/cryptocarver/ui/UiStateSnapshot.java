@@ -47,7 +47,7 @@ public final class UiStateSnapshot {
             "iv", "nonce", "aad", "salt", "token", "mac", "signature",
             // Existing input controls whose contents are secret material in
             // the crypto/payment modules, even when their id is generic.
-            "input", "payload", "info", "verify", "tag"
+            "verify", "tag"
     );
 
     private UiStateSnapshot() {
@@ -138,6 +138,9 @@ public final class UiStateSnapshot {
     private static boolean isHistorySensitiveField(String fieldName, Object control) {
         if (isSafeHistorySelector(fieldName, control)) return false;
         String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
+        // The certificate subject is public metadata, unlike certificate PEM
+        // inputs and issuance key material.
+        if ("certcnfield".equals(lower)) return false;
         return HISTORY_SENSITIVE_TOKENS.stream().anyMatch(lower::contains);
     }
 

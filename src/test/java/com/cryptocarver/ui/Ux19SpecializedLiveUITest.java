@@ -37,7 +37,7 @@ class Ux19SpecializedLiveUITest {
                     "jose.fxml", "payments.fxml", "process_designer.fxml")) {
                 try {
                     Parent root = new FXMLLoader(getClass().getResource("/fxml/" + resource)).load();
-                    assertFalse(root.getChildrenUnmodifiable().isEmpty(), resource + " must not be an empty panel");
+                    assertTrue(hasContent(root), resource + " must not be an empty panel");
                     assertTrue(findButtons(root).stream().anyMatch(button -> "Reset".equals(button.getText())
                             || "Clear".equals(button.getText())
                             || "Clear canvas".equals(button.getText())), resource + " has no reset/clear action");
@@ -77,6 +77,8 @@ class Ux19SpecializedLiveUITest {
         if (node instanceof Button button) result.add(button);
         if (node instanceof javafx.scene.control.Accordion accordion) {
             accordion.getPanes().forEach(pane -> result.addAll(findButtons(pane)));
+        } else if (node instanceof javafx.scene.control.TabPane tabPane) {
+            tabPane.getTabs().forEach(tab -> result.addAll(findButtons(tab.getContent())));
         } else if (node instanceof javafx.scene.control.TitledPane pane && pane.getContent() != null) {
             result.addAll(findButtons(pane.getContent()));
         } else if (node instanceof javafx.scene.Parent parent) {
@@ -90,12 +92,21 @@ class Ux19SpecializedLiveUITest {
         if (node instanceof TextArea area) result.add(area);
         if (node instanceof javafx.scene.control.Accordion accordion) {
             accordion.getPanes().forEach(pane -> result.addAll(findTextAreas(pane)));
+        } else if (node instanceof javafx.scene.control.TabPane tabPane) {
+            tabPane.getTabs().forEach(tab -> result.addAll(findTextAreas(tab.getContent())));
         } else if (node instanceof javafx.scene.control.TitledPane pane && pane.getContent() != null) {
             result.addAll(findTextAreas(pane.getContent()));
         } else if (node instanceof javafx.scene.Parent parent) {
             parent.getChildrenUnmodifiable().forEach(child -> result.addAll(findTextAreas(child)));
         }
         return result;
+    }
+
+    private static boolean hasContent(Node node) {
+        if (node instanceof javafx.scene.control.TitledPane pane) return pane.getContent() != null;
+        if (node instanceof javafx.scene.control.Accordion accordion) return !accordion.getPanes().isEmpty();
+        if (node instanceof javafx.scene.control.TabPane tabPane) return !tabPane.getTabs().isEmpty();
+        return node instanceof javafx.scene.Parent parent && !parent.getChildrenUnmodifiable().isEmpty();
     }
 
     private static void runAndWait(Runnable action) throws Exception {

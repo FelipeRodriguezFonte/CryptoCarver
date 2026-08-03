@@ -47,6 +47,8 @@ class Ux20RPaymentsLiveUITest {
                 Scene scene = new Scene(root);
                 stage.setScene(scene);
                 stage.show();
+                root.applyCss();
+                root.layout();
 
                 PaymentsController controller = loader.getController();
                 TextField cvkA = (TextField) root.lookup("#cvkAField");

@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import javafx.beans.value.ChangeListener;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -77,9 +78,14 @@ public class InlineErrorPresenter {
             errorBannerTitle.setAccessibleHelp(com.cryptocarver.service.I18nService.getInstance().text("a11y.errorTitle"));
         }
 
-        String remedyText = (error.remedy() != null && !error.remedy().isBlank())
-                ? error.remedy()
-                : (error.detail() != null ? error.detail() : "");
+        String detailText = error.detail() == null ? "" : error.detail().trim();
+        String remedy = error.remedy() == null ? "" : error.remedy().trim();
+        // The banner must expose the specific, localized validation reason as
+        // well as the remedy. Showing only a generic remedy hides the useful
+        // controller feedback from users and assistive technology.
+        String remedyText = detailText.isBlank() ? remedy
+                : remedy.isBlank() || detailText.equals(remedy) ? detailText
+                : detailText + " " + remedy;
         String safeRemedy = safeAccessibleText(remedyText);
         if (errorBannerRemedy != null) {
             errorBannerRemedy.setText(safeRemedy);
@@ -115,6 +121,14 @@ public class InlineErrorPresenter {
         // doing this here keeps the presenter safe for direct use and tests.
         if (isFocusableTarget(currentErrorTarget)) {
             currentErrorTarget.requestFocus();
+            // A newly expanded TitledPane can claim focus during its layout
+            // pulse. Reassert the target afterwards so the advertised
+            // automatic focus is reliable in real JavaFX scenes.
+            Platform.runLater(() -> {
+                if (isFocusableTarget(currentErrorTarget)) {
+                    currentErrorTarget.requestFocus();
+                }
+            });
         }
     }
 

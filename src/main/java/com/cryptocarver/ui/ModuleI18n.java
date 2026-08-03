@@ -33,7 +33,20 @@ public final class ModuleI18n {
     public static Binding bind(Node root, Map<String, String> keys, Node... excludedRoots) {
         Binding binding = new Binding(root, keys == null ? Map.of() : keys, excludedRoots);
         binding.refresh();
-        I18nService.getInstance().addLocaleChangeListener(locale -> binding.refresh());
+        I18nService.getInstance().addLocaleChangeListener(locale -> {
+            if (Platform.isFxApplicationThread()) {
+                binding.refresh();
+                return;
+            }
+            // Preferences can be changed by a background task (and by headless
+            // tests). Scene-graph mutations must always return to the FX thread.
+            try {
+                Platform.runLater(binding::refresh);
+            } catch (IllegalStateException ignored) {
+                // No toolkit is available yet; the next FXML initialization
+                // performs the initial refresh on the FX thread.
+            }
+        });
         return binding;
     }
 

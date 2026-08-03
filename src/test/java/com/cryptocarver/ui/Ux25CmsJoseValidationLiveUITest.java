@@ -182,9 +182,16 @@ class Ux25CmsJoseValidationLiveUITest {
         CountDownLatch done = new CountDownLatch(1);
         Throwable[] failure = new Throwable[1];
         Platform.runLater(() -> {
-            try { action.run(); }
-            catch (Throwable error) { failure[0] = error; }
-            finally { done.countDown(); }
+            try {
+                action.run();
+            } catch (Throwable error) {
+                failure[0] = error;
+                done.countDown();
+                return;
+            }
+            // Let deferred JavaFX focus/layout work complete before callers
+            // assert the state of the visible scene.
+            Platform.runLater(done::countDown);
         });
         assertTrue(done.await(30, TimeUnit.SECONDS), "JavaFX action timed out");
         if (failure[0] != null) throw new AssertionError("UX-25 UI check failed", failure[0]);
