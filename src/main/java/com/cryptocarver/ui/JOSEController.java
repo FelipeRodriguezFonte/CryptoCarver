@@ -495,6 +495,11 @@ public class JOSEController implements Initializable {
     @FXML
     public void handlePemToJwk() {
 
+            if (isBlank(jwkInputArea)) {
+                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
+                return;
+            }
+
             this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
                     jwkOutputArea);
             // History
@@ -548,9 +553,22 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    private void handleVerifyDetachedJWS() { this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel); }
+    private void handleVerifyDetachedJWS() {
+        if (isBlank(detachedTokenArea)) { showValidation(t("module.jose.feedback.detachedTokenRequired"), "detachedTokenArea"); return; }
+        if (isBlank(detachedPayloadArea)) { showValidation(t("module.jose.feedback.detachedPayloadRequired"), "detachedPayloadArea"); return; }
+        if (isBlank(detachedVerificationKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "detachedVerificationKeyArea"); return; }
+        if (detachedAlgoCombo == null || detachedAlgoCombo.getValue() == null) {
+            showValidation(t("module.jose.feedback.algorithmRequired"), "detachedAlgoCombo", "preflight.remedy.algorithm");
+            return;
+        }
+        this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel);
+    }
     @FXML
     private void handleVerifyNestedJWT() {
+
+            if (isBlank(nestedOutputArea)) { showValidation(t("module.jose.feedback.nestedTokenRequired"), "nestedOutputArea"); return; }
+            if (isBlank(nestedEncryptionKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedEncryptionKeyArea"); return; }
+            if (isBlank(nestedSigningKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedSigningKeyArea"); return; }
 
             String nestedToken = nestedOutputArea.getText();
             String decryptionKey = nestedEncryptionKeyArea.getText();
@@ -568,11 +586,18 @@ public class JOSEController implements Initializable {
             clipboard.setContent(cc);
             updateStatus(t("module.jose.feedback.copied"));
         } else {
-            showError("Copy Error", t("module.jose.feedback.copyEmpty"));
+            showValidation(t("module.jose.feedback.copyEmpty"), "inspectorInputArea");
         }
     }
     @FXML
     private void handleGenerateDetachedJWS() {
+
+            if (isBlank(detachedPayloadArea)) { showValidation(t("module.jose.feedback.detachedPayloadRequired"), "detachedPayloadArea"); return; }
+            if (isBlank(detachedSigningKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "detachedSigningKeyArea"); return; }
+            if (detachedAlgoCombo == null || detachedAlgoCombo.getValue() == null) {
+                showValidation(t("module.jose.feedback.algorithmRequired"), "detachedAlgoCombo", "preflight.remedy.algorithm");
+                return;
+            }
 
             String serialization = detachedSerializationCombo != null ? detachedSerializationCombo.getValue() : "Compact";
             boolean unencoded = detachedUnencodedCheck != null && detachedUnencodedCheck.isSelected();
@@ -581,6 +606,10 @@ public class JOSEController implements Initializable {
 
     @FXML
     private void handleGenerateNestedJWT() {
+
+            if (isBlank(nestedPayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "nestedPayloadArea"); return; }
+            if (isBlank(nestedSigningKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedSigningKeyArea"); return; }
+            if (isBlank(nestedEncryptionKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedEncryptionKeyArea"); return; }
 
             this.generateNestedJWT(
                     nestedPayloadArea.getText(),
@@ -613,6 +642,11 @@ public class JOSEController implements Initializable {
     @FXML
     public void handleCalculateThumbprint() {
         showSection("JWT");
+
+            if (isBlank(jwkInputArea)) {
+                showValidation(t("module.jose.feedback.thumbprintInput"), "jwkInputArea");
+                return;
+            }
 
             this.calculateThumbprint(jwkInputArea.getText(), jwkOutputArea);
             // History
@@ -662,6 +696,13 @@ public class JOSEController implements Initializable {
     @FXML
     private void handleGenerateSignedJWT() {
 
+            if (isBlank(jwtPayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwtPayloadArea"); return; }
+            if (isBlank(jwtKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtKeyArea"); return; }
+            if (jwtAlgoCombo == null || jwtAlgoCombo.getValue() == null) {
+                showValidation(t("module.jose.feedback.algorithmRequired"), "jwtAlgoCombo", "preflight.remedy.algorithm");
+                return;
+            }
+
             String algo = jwtAlgoCombo.getSelectionModel().getSelectedItem();
             String key = jwtKeyArea.getText();
             String serialization = jwsSerializationCombo != null ? jwsSerializationCombo.getValue() : "Compact";
@@ -695,6 +736,9 @@ public class JOSEController implements Initializable {
     @FXML
     private void handleValidateJWT() {
 
+            if (isBlank(jwtValidateTokenArea)) { showValidation(t("module.jose.feedback.tokenRequired"), "jwtValidateTokenArea"); return; }
+            if (isBlank(jwtValidateKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtValidateKeyArea"); return; }
+
             String iss = jwtExpectedIssField.getText();
             String aud = jwtExpectedAudField.getText();
             String skewStr = jwtClockSkewField.getText();
@@ -727,7 +771,7 @@ public class JOSEController implements Initializable {
         try {
             String alg = jwksRotateAlgoCombo.getValue();
             if (alg == null) {
-                showError("Rotate Error", t("module.jose.feedback.algorithmRequired"));
+                showValidation(t("module.jose.feedback.algorithmRequired"), "jwksRotateAlgoCombo", "preflight.remedy.algorithm");
                 return;
             }
             // Security Warning for Symmetric Keys in JWKS
@@ -763,6 +807,9 @@ public class JOSEController implements Initializable {
     @FXML
     private void handleGenerateJWE() {
 
+            if (isBlank(jwePayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwePayloadArea"); return; }
+            if (isBlank(jwePublicKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePublicKeyArea"); return; }
+
             this.generateJWE(
                     jwePayloadArea.getText(),
                     jweKeyAlgoCombo.getValue(),
@@ -778,6 +825,9 @@ public class JOSEController implements Initializable {
 
     @FXML
     private void handleDecryptJWE() {
+
+            if (isBlank(jweInputArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jweInputArea"); return; }
+            if (isBlank(jwePrivateKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePrivateKeyArea"); return; }
 
             this.decryptJWE(
                     jweInputArea.getText(),
@@ -797,6 +847,10 @@ public class JOSEController implements Initializable {
     @FXML
     private void handleInspectToken() {
         if (inspectorInputArea != null && inspectorOutputFlow != null) {
+            if (isBlank(inspectorInputArea)) {
+                showValidation(t("module.jose.feedback.inputRequired"), "inspectorInputArea");
+                return;
+            }
             this.inspectToken(inspectorInputArea.getText(), inspectorOutputFlow);
             // History
             java.util.Map<String, String> details = new java.util.HashMap<>();
@@ -840,6 +894,11 @@ public class JOSEController implements Initializable {
     }
     @FXML
     public void handleJwkToPem() {
+
+            if (isBlank(jwkInputArea)) {
+                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
+                return;
+            }
 
             this.convertJwkToPem(jwkInputArea.getText(), jwkOutputArea);
             // History
@@ -895,6 +954,19 @@ public class JOSEController implements Initializable {
         if (statusReporter != null) {
             statusReporter.showError(title, content);
         }
+    }
+
+    private static boolean isBlank(TextInputControl control) {
+        return control == null || control.getText() == null || control.getText().isBlank();
+    }
+
+    private void showValidation(String detail, String fieldKey) {
+        showValidation(detail, fieldKey, "preflight.remedy.input");
+    }
+
+    private void showValidation(String detail, String fieldKey, String remedyKey) {
+        InlineValidationSupport.show(statusReporter, t("preflight.title"), detail,
+                t(remedyKey), fieldKey, null);
     }
 
     private void showInfo(String title, String content) {

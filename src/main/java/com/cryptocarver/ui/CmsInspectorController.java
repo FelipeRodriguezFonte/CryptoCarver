@@ -142,7 +142,9 @@ public class CmsInspectorController {
                 if (!text.isEmpty()) {
                     inputBytes = text.getBytes();
                 } else {
-                    if (statusReporter != null) statusReporter.showError("Input Error", t("module.cms.inputRequired"));
+                    InlineValidationSupport.show(statusReporter, t("preflight.title"),
+                            t("module.cms.inputRequired"), t("preflight.remedy.input"),
+                            "cmsInputArea", null);
                     return;
                 }
             }
@@ -154,6 +156,11 @@ public class CmsInspectorController {
                     String text = cmsContentArea.getText().trim();
                     if (!text.isEmpty()) {
                         contentBytes = text.getBytes();
+                    } else {
+                        InlineValidationSupport.show(statusReporter, t("preflight.title"),
+                                t("module.cms.detachedContentRequired"), t("preflight.remedy.input"),
+                                "cmsContentArea", null);
+                        return;
                     }
                 }
             }
@@ -197,7 +204,9 @@ public class CmsInspectorController {
     @FXML
     void handleExportReport(ActionEvent event) {
         if (currentReport == null) {
-            if (statusReporter != null) statusReporter.showError("Export Error", t("module.cms.noReport"));
+            InlineValidationSupport.show(statusReporter, t("preflight.title"),
+                    t("module.cms.reportRequired"), t("preflight.remedy.input"),
+                    "cmsInputArea", null);
             return;
         }
 

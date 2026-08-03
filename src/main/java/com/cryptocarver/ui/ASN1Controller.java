@@ -117,14 +117,18 @@ public class ASN1Controller {
         try {
             String inputText = asn1InputArea.getText().trim();
             if (inputText.isEmpty()) {
-                if (reporter != null) reporter.showError("Input Error", t("module.asn1.feedback.inputRequired"));
+                InlineValidationSupport.show(reporter, t("preflight.title"),
+                        t("module.asn1.feedback.inputRequired"), t("preflight.remedy.input"),
+                        "asn1InputArea", null);
                 return;
             }
 
             byte[] data = parseASN1InputData(inputText);
 
             if (data == null || data.length == 0) {
-                if (reporter != null) reporter.showError("Parse Error", t("module.asn1.feedback.inputInvalid"));
+                InlineValidationSupport.show(reporter, t("error.wrap.fallback.title"),
+                        t("module.asn1.feedback.inputInvalid"), t("preflight.remedy.input"),
+                        "asn1InputArea", null);
                 return;
             }
 
@@ -133,8 +137,9 @@ public class ASN1Controller {
             com.cryptocarver.asn1.DerValidator.Report derReport = com.cryptocarver.asn1.DerValidator.validate(data);
 
             if (asn1StrictDerCheck != null && asn1StrictDerCheck.isSelected() && !derReport.validDer()) {
-                if (reporter != null) reporter.showError("Strict DER Validation Failed",
-                        t("module.asn1.feedback.strictDer", derReport.message()));
+                InlineValidationSupport.show(reporter, t("preflight.title"),
+                        t("module.asn1.feedback.strictDer", derReport.message()),
+                        t("preflight.remedy.input"), "asn1InputArea", null);
                 asn1StatusLabel.setText("✗ Invalid DER");
                 asn1StatusLabel.setStyle("-fx-text-fill: #e74c3c;");
                 return;
@@ -176,10 +181,9 @@ public class ASN1Controller {
             }
 
         } catch (Exception e) {
-            if (reporter != null) reporter.showError("Parse Error",
-                    t("module.asn1.feedback.parseFailed", e.getMessage()));
-            asn1StatusLabel.setText(t("module.asn1.feedback.parseFailed", e.getMessage()));
-            asn1StatusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            InlineValidationSupport.show(reporter, t("error.wrap.fallback.title"),
+                    t("module.asn1.feedback.parseFailed", e.getMessage()),
+                    t("preflight.remedy.input"), "asn1InputArea", e);
             LOG.error("ASN.1 parse failed", e);
         }
     }
@@ -226,8 +230,9 @@ public class ASN1Controller {
                 encoded = com.cryptocarver.asn1.ASN1Encoder.encodeNull();
             } else {
                 if (inputText == null || inputText.isEmpty()) {
-                    if (reporter != null) reporter.showError("Error",
-                            t("module.asn1.feedback.encodeRequired", type));
+                    InlineValidationSupport.show(reporter, t("preflight.title"),
+                            t("module.asn1.feedback.encodeRequired", type),
+                            t("preflight.remedy.input"), "asn1EncodeInputArea", null);
                     return;
                 }
 
@@ -306,8 +311,9 @@ public class ASN1Controller {
             }
 
         } catch (Exception e) {
-            if (reporter != null) reporter.showError("ASN.1 Encode Error",
-                    t("module.asn1.feedback.encodeFailed", e.getMessage()));
+            InlineValidationSupport.show(reporter, t("error.wrap.fallback.title"),
+                    t("module.asn1.feedback.encodeFailed", e.getMessage()),
+                    t("preflight.remedy.input"), "asn1EncodeInputArea", e);
             LOG.error("ASN.1 encode failed", e);
         }
     }

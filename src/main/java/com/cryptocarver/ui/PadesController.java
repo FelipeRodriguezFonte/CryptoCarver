@@ -123,9 +123,12 @@ public final class PadesController {
         try {
             java.util.List<String> aliases = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance()
                     .requireSession().listPrivateKeysWithCertificate();
-            if (aliases.isEmpty()) throw new IllegalArgumentException(t("module.pades.feedback.noTokenKeys"));
+            if (aliases.isEmpty()) throw new FieldValidationException(
+                    t("module.pades.feedback.noTokenKeys"), "padesPkcs11AliasCombo");
             padesPkcs11AliasCombo.getItems().setAll(aliases);
             padesPkcs11AliasCombo.getSelectionModel().selectFirst();
+        } catch (FieldValidationException validation) {
+            showValidation(validation);
         } catch (Exception error) {
             showError("PAdES PKCS#11", error.getMessage());
         }
@@ -184,7 +187,7 @@ public final class PadesController {
         try {
             File source = requireFile(padesInputPathField, "PDF input");
             File destination = requireNewFile(padesOutputPathField, "PDF output");
-            byte[] input = readBoundedPdf(source);
+            byte[] input = readBoundedPdf(source, "padesInputPathField");
             boolean timestamped = padesTimestampCheck != null && padesTimestampCheck.isSelected();
             String tsaUrl = padesTsaUrlField == null ? "" : padesTsaUrlField.getText();
             boolean tokenSource = padesSourcePkcs11Radio != null && padesSourcePkcs11Radio.isSelected();
@@ -214,6 +217,8 @@ public final class PadesController {
                     + "\n\nThis confirms PDF signature structure only. Certificate trust and revocation are not evaluated."
                     + (timestamped ? " TSA trust is not evaluated." : " Timestamping was not requested."));
             publish(profile + " Sign", source, destination, inspection.signatureCount(), profile);
+        } catch (FieldValidationException validation) {
+            showValidation(validation);
         } catch (Exception error) {
             showError("PAdES signing", t("module.pades.feedback.operation", "PAdES signing", error.getMessage()));
         } finally {
@@ -225,7 +230,8 @@ public final class PadesController {
     private void handleInspect() {
         try {
             File source = requireFile(padesInputPathField, "PDF input");
-            PadesOperations.PdfSignatureInspection inspection = PadesOperations.inspectSignatures(readBoundedPdf(source));
+            PadesOperations.PdfSignatureInspection inspection = PadesOperations.inspectSignatures(
+                    readBoundedPdf(source, "padesInputPathField"));
             String details = inspection.signatureCount() == 0 ? "No PDF signature dictionaries found." :
                     "PDF signature dictionaries: " + inspection.signatureCount() + "\n\n"
                             + String.join("\n", inspection.signatures());
@@ -235,6 +241,8 @@ public final class PadesController {
                         .detail("PDF signatures", String.valueOf(inspection.signatureCount()))
                         .status(t("module.pades.feedback.statusInspected")).build());
             }
+        } catch (FieldValidationException validation) {
+            showValidation(validation);
         } catch (Exception error) {
             showError("PAdES inspection", t("module.pades.feedback.operation", "PAdES inspection", error.getMessage()));
         }
@@ -248,7 +256,7 @@ public final class PadesController {
             File source = requireFile(padesInputPathField, "PDF input");
             File trustStore = optionalFile(padesTrustStorePathField, "Validation truststore");
             PadesOperations.PadesValidationResult validation = PadesOperations.validate(
-                    readBoundedPdf(source), trustStore, trustPassword, padesCrlEvidence);
+                    readBoundedPdf(source, "padesInputPathField"), trustStore, trustPassword, padesCrlEvidence);
             lastValidation = validation;
             padesResultArea.setText(validation.summary()
                     + "\nReport XML is available internally only; it can contain certificate PII.");
@@ -260,6 +268,8 @@ public final class PadesController {
                         .detail("Revocation", validation.localCrlCount() == 0 ? "NOT EVALUATED (offline)" : "Local CRL evidence supplied")
                         .status(t("module.pades.feedback.statusValidated")).build());
             }
+        } catch (FieldValidationException validation) {
+            showValidation(validation);
         } catch (Exception error) {
             showError("PAdES validation", t("module.pades.feedback.operation", "PAdES validation", error.getMessage()));
         } finally {
@@ -271,7 +281,10 @@ public final class PadesController {
     @FXML
     private void handleSaveValidationReports() {
         try {
-            if (lastValidation == null) throw new IllegalArgumentException(t("module.pades.feedback.reportRequired"));
+            if (lastValidation == null) {
+                showValidation(t("module.pades.feedback.reportRequired"), "padesInputPathField");
+                return;
+            }
             DirectoryChooser chooser = new DirectoryChooser();
             chooser.setTitle("Choose empty output location for PAdES DSS reports (contains certificate PII)");
             File directory = chooser.showDialog(owner());
@@ -304,41 +317,70 @@ public final class PadesController {
     }
 
     private static File requireFile(TextField field, String label) {
-        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(
-                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.required", label));
+        String fieldKey = fieldKeyForLabel(label);
+        if (field == null || field.getText().isBlank()) throw new FieldValidationException(
+                com.cryptocarver.service.I18nService.getInstance()
+                        .text("module.pades.feedback.required", label), fieldKey);
         File file = new File(field.getText().trim());
-        if (!file.isFile()) throw new IllegalArgumentException(
-                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.fileMissing", label));
+        if (!file.isFile()) throw new FieldValidationException(
+                com.cryptocarver.service.I18nService.getInstance()
+                        .text("module.pades.feedback.fileMissing", label), fieldKey);
         return file;
     }
 
     private String selectedTokenAlias() {
         if (padesPkcs11AliasCombo == null || padesPkcs11AliasCombo.getValue() == null
                 || padesPkcs11AliasCombo.getValue().isBlank()) {
-            throw new IllegalArgumentException(t("module.pades.feedback.tokenKey"));
+            throw new FieldValidationException(t("module.pades.feedback.tokenKey"), "padesPkcs11AliasCombo");
         }
         return padesPkcs11AliasCombo.getValue();
     }
 
     private PadesOperations.VisibleSignatureOptions visibleSignatureOptions() {
         if (padesVisibleSignatureCheck == null || !padesVisibleSignatureCheck.isSelected()) return null;
+        int page = parseInteger(text(padesVisiblePageField, "Visible signature page", "padesVisiblePageField"),
+                "padesVisiblePageField");
+        float x = parseFloat(text(padesVisibleXField, "Visible signature X", "padesVisibleXField"),
+                "padesVisibleXField");
+        float y = parseFloat(text(padesVisibleYField, "Visible signature Y", "padesVisibleYField"),
+                "padesVisibleYField");
+        float width = parseFloat(text(padesVisibleWidthField, "Visible signature width", "padesVisibleWidthField"),
+                "padesVisibleWidthField");
+        float height = parseFloat(text(padesVisibleHeightField, "Visible signature height", "padesVisibleHeightField"),
+                "padesVisibleHeightField");
+        return new PadesOperations.VisibleSignatureOptions(page, x, y, width, height,
+                text(padesVisibleTextField, "Visible signature text", "padesVisibleTextField"));
+    }
+
+    private static int parseInteger(String value, String fieldKey) {
         try {
-            return new PadesOperations.VisibleSignatureOptions(
-                    Integer.parseInt(text(padesVisiblePageField, "Visible signature page")),
-                    Float.parseFloat(text(padesVisibleXField, "Visible signature X")),
-                    Float.parseFloat(text(padesVisibleYField, "Visible signature Y")),
-                    Float.parseFloat(text(padesVisibleWidthField, "Visible signature width")),
-                    Float.parseFloat(text(padesVisibleHeightField, "Visible signature height")),
-                    text(padesVisibleTextField, "Visible signature text"));
+            return Integer.parseInt(value);
         } catch (NumberFormatException invalid) {
-            throw new IllegalArgumentException(t("module.pades.feedback.coordinates"), invalid);
+            throw coordinateValidation(invalid, fieldKey);
         }
     }
 
+    private static float parseFloat(String value, String fieldKey) {
+        try {
+            return Float.parseFloat(value);
+        } catch (NumberFormatException invalid) {
+            throw coordinateValidation(invalid, fieldKey);
+        }
+    }
+
+    private static FieldValidationException coordinateValidation(NumberFormatException cause, String fieldKey) {
+        return new FieldValidationException(com.cryptocarver.service.I18nService.getInstance()
+                .text("module.pades.feedback.coordinates"), cause, fieldKey);
+    }
+
     private static String text(TextField field, String label) {
+        return text(field, label, null);
+    }
+
+    private static String text(TextField field, String label, String fieldKey) {
         if (field == null || field.getText() == null || field.getText().isBlank()) {
-            throw new IllegalArgumentException(com.cryptocarver.service.I18nService.getInstance()
-                    .text("module.pades.feedback.required", label));
+            throw new FieldValidationException(com.cryptocarver.service.I18nService.getInstance()
+                    .text("module.pades.feedback.required", label), fieldKey);
         }
         return field.getText().trim();
     }
@@ -350,19 +392,21 @@ public final class PadesController {
     }
 
     private static File requireNewFile(TextField field, String label) {
-        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(
-                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.required", label));
+        String fieldKey = fieldKeyForLabel(label);
+        if (field == null || field.getText().isBlank()) throw new FieldValidationException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.required", label), fieldKey);
         File file = new File(field.getText().trim());
-        if (Files.exists(file.toPath())) throw new IllegalArgumentException(
-                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.outputExists", label));
+        if (Files.exists(file.toPath())) throw new FieldValidationException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.outputExists", label), fieldKey);
         return file;
     }
 
     private static File optionalFile(TextField field, String label) {
         if (field == null || field.getText().isBlank()) return null;
         File file = new File(field.getText().trim());
-        if (!file.isFile()) throw new IllegalArgumentException(
-                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.fileMissing", label));
+        if (!file.isFile()) throw new FieldValidationException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.fileMissing", label),
+                fieldKeyForLabel(label));
         return file;
     }
 
@@ -372,11 +416,30 @@ public final class PadesController {
         Files.writeString(target, content, java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
     }
 
-    private static byte[] readBoundedPdf(File file) throws Exception {
+    private static byte[] readBoundedPdf(File file, String fieldKey) throws Exception {
         long size = Files.size(file.toPath());
-        if (size > MAX_PDF_BYTES) throw new IllegalArgumentException(com.cryptocarver.service.I18nService
-                .getInstance().text("module.pades.feedback.fileTooLarge"));
+        if (size > MAX_PDF_BYTES) throw new FieldValidationException(com.cryptocarver.service.I18nService
+                .getInstance().text("module.pades.feedback.fileTooLarge"), fieldKey);
         return Files.readAllBytes(file.toPath());
+    }
+
+    private static String fieldKeyForLabel(String label) {
+        if (label == null) return null;
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("output")) return "padesOutputPathField";
+        if (normalized.contains("pkcs#12")) return "padesPkcs12PathField";
+        if (normalized.contains("truststore")) return "padesTrustStorePathField";
+        return "padesInputPathField";
+    }
+
+    private void showValidation(FieldValidationException validation) {
+        InlineValidationSupport.showValidation(statusReporter, t("preflight.title"), validation.getMessage(),
+                t("preflight.remedy.input"), validation);
+    }
+
+    private void showValidation(String detail, String fieldKey) {
+        InlineValidationSupport.show(statusReporter, t("preflight.title"), detail,
+                t("preflight.remedy.input"), fieldKey, null);
     }
 
     private char[] password() {
