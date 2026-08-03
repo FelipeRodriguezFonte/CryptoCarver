@@ -172,7 +172,7 @@ public class PaymentsController {
             String result = "--- DUKPT TDES KSN ---\nKSN: " + ksn.ksnHex() + "\nBase KSN: " + ksn.baseKsnHex()
                     + "\nDevice ID: " + ksn.deviceIdentifierHex() + "\nTransaction counter: " + ksn.transactionCounter()
                     + "\nCounter exhausted: " + DukptKsn.isTdesCounterExhausted(ksn.ksnHex())
-                    + "\nNext KSN: " + (DukptKsn.isTdesCounterExhausted(ksn.ksnHex()) ? "not available" : DukptKsn.nextTdesKsn(ksn.ksnHex()));
+                    + "\nNext KSN: " + (DukptKsn.isTdesCounterExhausted(ksn.ksnHex()) ? t("module.payments.status.notAvailable") : DukptKsn.nextTdesKsn(ksn.ksnHex()));
             if (!dukptBdkField.getText().isBlank()) {
                 String ipek = DukptKsn.deriveIpek(dukptBdkField.getText(), ksn.ksnHex());
                 DukptKsn.TdesDerivedKey derived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), selectedTdesUsage);
@@ -198,7 +198,7 @@ public class PaymentsController {
                 if (loadedDukptExpectedWorkingKey != null) {
                     boolean matches = loadedDukptExpectedWorkingKey.equalsIgnoreCase(derived.workingKeyHex());
                     result += "\n\n[Laboratory Expected Key]\n  └─ " + loadedDukptExpectedWorkingKey.toUpperCase();
-                    result += "\n[Vector Check]\n  └─ " + (matches ? "MATCH" : "MISMATCH");
+                    result += "\n[" + t("module.payments.result.vectorCheck") + "]\n  └─ " + t(matches ? "module.payments.status.match" : "module.payments.status.mismatch");
                 }
 
                 DukptKsn.TdesDerivedKey macDerived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.MAC_REQUEST);
@@ -208,8 +208,8 @@ public class PaymentsController {
                 result += "\n\n[Working Key (Data Variant)]\n  └─ " + dataDerived.workingKeyHex().toUpperCase();
             }
             dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true);
-            updateStatus("DUKPT KSN inspected");
-        } catch (Exception e) { showError("DUKPT", e.getMessage()); }
+            updateStatus(t("module.payments.status.dukptInspected"));
+        } catch (Exception e) { showError(t("module.payments.error.dukptTitle"), t("module.payments.error.operation", t("module.payments.error.dukptTitle"), e.getMessage())); }
     }
 
     private void inspectAesDukpt() throws Exception {
@@ -217,7 +217,7 @@ public class PaymentsController {
         String result = "--- AES DUKPT (ANSI X9.24-3) ---\nKSN: " + ksn.ksnHex() + "\nInitial Key ID: " + ksn.initialKeyIdHex()
                 + "\nBase KSN: " + ksn.baseKsnHex() + "\nTransaction counter: " + String.format("%08X", ksn.transactionCounter())
                 + "\nCounter exhausted: " + AesDukpt.isCounterExhausted(ksn.ksnHex())
-                + "\nNext KSN: " + (AesDukpt.isCounterExhausted(ksn.ksnHex()) ? "not available" : AesDukpt.nextKsn(ksn.ksnHex()));
+                + "\nNext KSN: " + (AesDukpt.isCounterExhausted(ksn.ksnHex()) ? t("module.payments.status.notAvailable") : AesDukpt.nextKsn(ksn.ksnHex()));
         if (!dukptBdkField.getText().isBlank()) {
             AesDukpt.KeyUsage usage = selectedAesUsage();
             AesDukpt.KeyType type = selectedAesKeyType();
@@ -235,7 +235,7 @@ public class PaymentsController {
             result += "\n\n[Working Key]\n  └─ " + derived.workingKeyHex().toUpperCase();
         }
 
-        dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus("AES DUKPT derivation tree rendered");
+        dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus(t("module.payments.status.aesDukptDerived"));
     }
     private AesDukpt.KeyUsage selectedAesUsage() {
         String selection = dukptAesUsageCombo == null ? "Data encryption (encrypt)" : dukptAesUsageCombo.getValue();
@@ -258,20 +258,20 @@ public class PaymentsController {
     public void handleAesDukptPinBlock() {
         try {
             if (dukptSchemeCombo == null || !dukptSchemeCombo.getValue().startsWith("AES")) {
-                throw new IllegalArgumentException("Select AES (X9.24-3, 12-byte KSN) before processing an AES PIN block");
+                throw new IllegalArgumentException(t("module.payments.error.aesDukptSelection"));
             }
-            if (dukptBdkField == null || dukptBdkField.getText().isBlank()) throw new IllegalArgumentException("An AES DUKPT BDK is required");
+            if (dukptBdkField == null || dukptBdkField.getText().isBlank()) throw new IllegalArgumentException(t("module.payments.error.aesDukptBdkRequired"));
             boolean decrypt = dukptAesPinOperationCombo != null && dukptAesPinOperationCombo.getValue().startsWith("Decrypt");
             AesDukpt.KeyType type = selectedAesKeyType();
             AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), dukptKsnField.getText(), AesDukpt.KeyUsage.PIN_ENCRYPTION, type);
             String output = AesDukpt.cryptPinBlock(dukptBdkField.getText(), dukptKsnField.getText(), type, dukptAesPinBlockField.getText(), decrypt);
             dukptResultArea.setText("--- AES DUKPT PIN block (lab operation) ---\nKSN: " + AesDukpt.parseKsn(dukptKsnField.getText()).ksnHex()
                     + "\nPIN key type: " + type + "\nDerived PIN key: " + derived.workingKeyHex()
-                    + "\nInput " + (decrypt ? "encrypted" : "formatted") + " PIN block: " + dukptAesPinBlockField.getText().replaceAll("\\s+", "").toUpperCase()
-                    + "\nOutput " + (decrypt ? "formatted" : "encrypted") + " PIN block: " + output
-                    + "\n\nNote: this uses AES/ECB/NoPadding over a 16-byte preformatted ISO 9564-4 PIN block.");
-            updateStatus("AES DUKPT PIN block " + (decrypt ? "decrypted" : "encrypted"));
-        } catch (Exception e) { showError("AES DUKPT PIN block", e.getMessage()); }
+                    + "\n" + t("module.payments.result.inputBlock", decrypt ? "encrypted" : "formatted") + " " + dukptAesPinBlockField.getText().replaceAll("\\s+", "").toUpperCase()
+                    + "\n" + t("module.payments.result.outputBlock", decrypt ? "formatted" : "encrypted") + " " + output
+                    + "\n\n" + t("module.payments.result.aesDukptNote"));
+            updateStatus(t("module.payments.status.aesPinBlockProcessed"));
+        } catch (Exception e) { showError(t("module.payments.operation.aesPinBlock"), t("module.payments.error.operation", t("module.payments.operation.aesPinBlock"), e.getMessage())); }
     }
 
     @FXML
@@ -306,15 +306,30 @@ public class PaymentsController {
         this.mainController = reporter;
     }
 
-    /** Clears module-local inputs/results while retaining payment profiles and history. */
+    /** Restores safe module defaults while retaining local data, profiles and history. */
     public void resetModule() {
-        ModuleResetSupport.clearInputsAndKeepFocus(paymentsContainer);
+        ModuleResetPolicy.apply(paymentsContainer, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+        updateStatus(t("module.payments.resetStatus"));
+    }
+
+    @FXML
+    public void handleClear() {
+        ModuleResetPolicy.apply(paymentsContainer, ModuleResetPolicy.Action.CLEAR,
+                this::clearModuleData, null);
+        updateStatus(t("module.payments.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        ModuleResetPolicy.clearTextInputs(paymentsContainer);
+    }
+
+    private void restoreSafeDefaults() {
         if (pinBlockFormatCombo != null) pinBlockFormatCombo.getSelectionModel().selectFirst();
         if (pinBlockFormatDecodeCombo != null) pinBlockFormatDecodeCombo.getSelectionModel().selectFirst();
         if (encPinBlockFormatCombo != null) encPinBlockFormatCombo.getSelectionModel().selectFirst();
         if (cvvTypeCombo != null) cvvTypeCombo.getSelectionModel().selectFirst();
         if (dukptSchemeCombo != null) dukptSchemeCombo.getSelectionModel().selectFirst();
-        updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.common.resetStatus"));
     }
 
     @FXML
@@ -509,14 +524,14 @@ public class PaymentsController {
             }
 
             if (!pin.matches("\\d{4,12}")) {
-                pinBlockResultArea.setText(t("module.payments.error.pinDigits"));
+                pinBlockResultArea.setText(t("module.payments.error.pinLength"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
             }
 
             if (!pan.matches("\\d{13,19}")) {
-                pinBlockResultArea.setText(t("module.payments.error.panDigits"));
+                pinBlockResultArea.setText(t("module.payments.error.panInvalid"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
@@ -565,18 +580,18 @@ public class PaymentsController {
             // Display result
             StringBuilder result = new StringBuilder();
             result.append("========================================\n");
-            result.append("PIN BLOCK ENCODING\n");
+            result.append(t("module.payments.result.pinBlockEncodingTitle")).append("\n");
             result.append("========================================\n\n");
-            result.append("Format:    ").append(format).append("\n");
-            result.append("PIN:       ").append(pin).append(" (").append(pin.length()).append(" digits)\n");
-            result.append("PAN:       ").append(pan).append("\n\n");
+            result.append(t("module.payments.result.format")).append("    ").append(format).append("\n");
+            result.append(t("module.payments.result.pin")).append("       ").append(pin).append(" (").append(t("module.payments.result.pinLength", pin.length())).append(")\n");
+            result.append(t("module.payments.result.pan")).append("       ").append(pan).append("\n\n");
 
             // For ISO-4, show both clear blocks
             if (isISO4) {
-                result.append("PIN Block Clear: ").append(clearPinField).append("\n");
-                result.append("PAN Block Clear: ").append(clearPanBlock).append("\n");
+                result.append(t("module.payments.result.pinBlockClear")).append(" ").append(clearPinField).append("\n");
+                result.append(t("module.payments.result.panBlockClear")).append(" ").append(clearPanBlock).append("\n");
             } else {
-                result.append("PIN Block: ").append(pinBlock).append("\n");
+                result.append(t("module.payments.result.pinBlock")).append(" ").append(pinBlock).append("\n");
             }
             result.append("========================================\n");
 
@@ -589,13 +604,13 @@ public class PaymentsController {
             details.put("PIN Length", pin.length() + " digits");
             mainController.publish(OperationResult.forOperation("Encode PIN Block")
                     .output(DataConverter.hexToBytes(pinBlock)).details(details)
-                    .status("PIN Block encoded successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            pinBlockResultArea.setText("Error encoding PIN block: " + e.getMessage());
+            pinBlockResultArea.setText(t("module.payments.error.operation", t("module.payments.result.pinBlockEncodingTitle"), e.getMessage()));
             pinBlockResultArea.setManaged(true);
             pinBlockResultArea.setVisible(true);
-            updateStatus("Error: " + e.getMessage());
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.pinBlockEncodingTitle"), e.getMessage()));
         }
     }
 
@@ -607,7 +622,7 @@ public class PaymentsController {
 
             // Validate inputs
             if (pinBlock.isEmpty() || pan.isEmpty()) {
-                pinBlockResultArea.setText("Error: PIN Block and PAN are required");
+                pinBlockResultArea.setText(t("module.payments.error.pinPanRequired"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
@@ -618,10 +633,7 @@ public class PaymentsController {
             int expectedLength = isISO4 ? 32 : 16;
 
             if (!pinBlock.matches("[0-9A-Fa-f]{" + expectedLength + "}")) {
-                pinBlockResultArea.setText(String.format(
-                        "Error: PIN Block must be %d hexadecimal characters for %s\n" +
-                                "Current length: %d characters\n" +
-                                "Note: ISO Format 4 uses 16-byte blocks (32 hex chars), other formats use 8-byte blocks (16 hex chars)",
+                pinBlockResultArea.setText(t("module.payments.error.pinBlockInvalid",
                         expectedLength, format, pinBlock.length()));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
@@ -633,7 +645,7 @@ public class PaymentsController {
             boolean isValidIso4PanBlock = isISO4 && pan.matches("[0-9A-Fa-f]{32}");
 
             if (!isValidPan && !isValidIso4PanBlock) {
-                pinBlockResultArea.setText("Error: PAN must be 13-19 digits");
+                pinBlockResultArea.setText(t("module.payments.error.panInvalid"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
                 return;
@@ -645,12 +657,12 @@ public class PaymentsController {
             // Display result
             StringBuilder result = new StringBuilder();
             result.append("========================================\n");
-            result.append("PIN BLOCK DECODING\n");
+            result.append(t("module.payments.result.pinBlockDecodingTitle")).append("\n");
             result.append("========================================\n\n");
-            result.append("Format:     ").append(format).append("\n");
-            result.append("PIN Block:  ").append(pinBlock.toUpperCase()).append("\n");
-            result.append("PAN:        ").append(pan).append("\n\n");
-            result.append("Decoded PIN: ").append(pin).append(" (").append(pin.length()).append(" digits)\n");
+            result.append(t("module.payments.result.format")).append("     ").append(format).append("\n");
+            result.append(t("module.payments.result.pinBlock")).append("  ").append(pinBlock.toUpperCase()).append("\n");
+            result.append(t("module.payments.result.pan")).append("        ").append(pan).append("\n\n");
+            result.append(t("module.payments.result.decodedPin")).append(" ").append(pin).append(" (").append(t("module.payments.result.pinLength", pin.length())).append(")\n");
             result.append("========================================\n");
 
             pinBlockResultArea.setText(result.toString());
@@ -663,13 +675,13 @@ public class PaymentsController {
             mainController.publish(OperationResult.forOperation("Decode PIN Block")
                     .input(DataConverter.hexToBytes(pinBlock))
                     .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("PIN Block decoded successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            pinBlockResultArea.setText("Error decoding PIN block: " + e.getMessage());
+            pinBlockResultArea.setText(t("module.payments.error.operation", t("module.payments.result.pinBlockDecodingTitle"), e.getMessage()));
             pinBlockResultArea.setManaged(true);
             pinBlockResultArea.setVisible(true);
-            updateStatus("Error: " + e.getMessage());
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.pinBlockDecodingTitle"), e.getMessage()));
         }
     }
 
@@ -705,27 +717,27 @@ public class PaymentsController {
             }
 
             if (!cvkA.matches("[0-9A-Fa-f]{16}")) {
-                cvvResultArea.setText("Error: CVK A must be 16 hexadecimal characters (8 bytes)");
+                cvvResultArea.setText(t("module.payments.error.cvkAInvalid"));
                 return;
             }
 
             if (!cvkB.matches("[0-9A-Fa-f]{16}")) {
-                cvvResultArea.setText("Error: CVK B must be 16 hexadecimal characters (8 bytes)");
+                cvvResultArea.setText(t("module.payments.error.cvkBInvalid"));
                 return;
             }
 
             if (!pan.matches("\\d{13,19}")) {
-                cvvResultArea.setText("Error: PAN must be 13-19 digits");
+                cvvResultArea.setText(t("module.payments.error.panInvalid"));
                 return;
             }
 
             if (!expiry.matches("\\d{4}")) {
-                cvvResultArea.setText("Error: Expiry date must be YYMM format (4 digits)");
+                cvvResultArea.setText(t("module.payments.error.expiryInvalid"));
                 return;
             }
 
             if (!serviceCode.matches("\\d{3}")) {
-                cvvResultArea.setText("Error: Service code must be 3 digits");
+                cvvResultArea.setText(t("module.payments.error.serviceCodeInvalid"));
                 return;
             }
 
@@ -734,7 +746,11 @@ public class PaymentsController {
             String serviceCodeForCalc = serviceCode;
             if (cvvType != null && cvvType.contains("dCVV")) {
                 if (atc.isEmpty()) {
-                    cvvResultArea.setText("Error: ATC is required for dCVV");
+                    cvvResultArea.setText(t("module.payments.error.atcRequired"));
+                    return;
+                }
+                if (!atc.matches("\\d{1,3}")) {
+                    cvvResultArea.setText(t("module.payments.error.atcInvalid"));
                     return;
                 }
                 // Use PAN Sequence Number "0" constant as determined by debug match
@@ -753,36 +769,35 @@ public class PaymentsController {
 
             // Display result
             StringBuilder result = new StringBuilder();
-            result.append("═══ CVV GENERATION ═══\n\n");
-            result.append("Type:         ").append(cvvType);
+            result.append("═══ ").append(t("module.payments.result.cvvGenerationTitle")).append(" ═══\n\n");
+            result.append(t("module.payments.result.type")).append("         ").append(cvvType);
             if (cvvType != null && cvvType.contains("dCVV")) {
                 result.append(" (Visa CVN 10)");
             }
             result.append("\n");
 
-            result.append("CVK A:        ").append(cvkA.toUpperCase()).append("\n");
-            result.append("CVK B:        ").append(cvkB.toUpperCase()).append("\n");
-            result.append("PAN:          ").append(pan).append("\n");
-            result.append("Expiry:       ").append(expiry).append("\n");
-            result.append("Expiry:       ").append(expiry).append("\n");
+            result.append(t("module.payments.result.cvkA")).append("        ").append(cvkA.toUpperCase()).append("\n");
+            result.append(t("module.payments.result.cvkB")).append("        ").append(cvkB.toUpperCase()).append("\n");
+            result.append(t("module.payments.result.pan")).append("          ").append(pan).append("\n");
+            result.append(t("module.payments.result.expiry")).append("       ").append(expiry).append("\n");
 
             // Always show Service Code, but note usage
-            result.append("Service Code: ").append(serviceCode);
+            result.append(t("module.payments.result.serviceCode")).append(" ").append(serviceCode);
             if (cvvType != null) {
                 if (cvvType.contains("CVV2") || cvvType.contains("iCVV")) {
-                    result.append(" (Forced to ").append(serviceCodeForCalc).append(" for calculation)");
+                    result.append(" ").append(t("module.payments.result.forcedCalculation", serviceCodeForCalc));
                 } else if (cvvType.contains("dCVV")) {
-                    result.append(" (Not used for dCVV)");
+                    result.append(" ").append(t("module.payments.result.notUsedDcvv"));
                 }
             }
             result.append("\n");
 
             if (!atc.isEmpty() || (cvvType != null && cvvType.contains("dCVV"))) {
-                result.append("ATC:          ").append(atc)
-                        .append(cvvType.contains("dCVV") ? " (Used for dCVV)" : " (Not used for static)\n");
+                result.append(t("module.payments.result.atc")).append("          ").append(atc)
+                        .append(cvvType.contains("dCVV") ? " " + t("module.payments.result.usedDcvv") : " " + t("module.payments.result.notUsedStatic") + "\n");
             }
             result.append("\n");
-            result.append("CVV:          ").append(cvv).append("\n");
+            result.append(t("module.payments.result.cvv")).append("          ").append(cvv).append("\n");
 
             cvvResultArea.setText(result.toString());
             java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
@@ -792,11 +807,11 @@ public class PaymentsController {
             details.put("Service Code", serviceCode);
             mainController.publish(OperationResult.forOperation("Generate CVV")
                     .output(cvv.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("CVV generated successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            cvvResultArea.setText("Error generating CVV: " + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            cvvResultArea.setText(t("module.payments.error.operation", t("module.payments.result.cvvGenerationTitle"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.cvvGenerationTitle"), e.getMessage()));
         }
     }
 
@@ -817,14 +832,34 @@ public class PaymentsController {
             // We can add a TextInputDialog.
 
             if (cvkA.isEmpty() || cvkB.isEmpty() || pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                cvvResultArea.setText("Error: Fill all fields to calculate the expected CVV for verification.");
+                cvvResultArea.setText(t("module.payments.error.cvvRequired"));
+                return;
+            }
+            if (!cvkA.matches("[0-9A-Fa-f]{16}")) {
+                cvvResultArea.setText(t("module.payments.error.cvkAInvalid"));
+                return;
+            }
+            if (!cvkB.matches("[0-9A-Fa-f]{16}")) {
+                cvvResultArea.setText(t("module.payments.error.cvkBInvalid"));
+                return;
+            }
+            if (!pan.matches("\\d{13,19}")) {
+                cvvResultArea.setText(t("module.payments.error.panInvalid"));
+                return;
+            }
+            if (!expiry.matches("\\d{4}")) {
+                cvvResultArea.setText(t("module.payments.error.expiryInvalid"));
+                return;
+            }
+            if (!serviceCode.matches("\\d{3}")) {
+                cvvResultArea.setText(t("module.payments.error.serviceCodeInvalid"));
                 return;
             }
 
             TextInputDialog dialog = new TextInputDialog();
-            dialog.setTitle("Verify CVV");
-            dialog.setHeaderText("Enter CVV to verify:");
-            dialog.setContentText("CVV:");
+            dialog.setTitle(t("module.payments.dialog.verifyCvvTitle"));
+            dialog.setHeaderText(t("module.payments.dialog.verifyCvvHeader"));
+            dialog.setContentText(t("module.payments.dialog.cvv"));
 
             java.util.Optional<String> outcome = dialog.showAndWait();
             if (outcome.isPresent()) {
@@ -838,7 +873,11 @@ public class PaymentsController {
                         cvvTypeCombo.getSelectionModel().getSelectedItem().contains("dCVV")) {
 
                     if (atc.isEmpty()) {
-                        cvvResultArea.setText("Error: ATC is required for dCVV verification");
+                        cvvResultArea.setText(t("module.payments.error.atcRequired"));
+                        return;
+                    }
+                    if (!atc.matches("\\d{1,3}")) {
+                        cvvResultArea.setText(t("module.payments.error.atcInvalid"));
                         return;
                     }
                     isValid = PaymentOperations.verifyDCVV(cvkA, cvkB, pan, "0", expiry, atc, inputCvv);
@@ -859,10 +898,10 @@ public class PaymentsController {
                 }
 
                 StringBuilder result = new StringBuilder();
-                result.append("═══ CVV VERIFICATION ═══\n\n");
-                result.append("Input CVV:    ").append(inputCvv).append("\n");
-                result.append("Calculated:   ").append(calculated).append("\n\n");
-                result.append("Result:       ").append(isValid ? "✓ MATCH" : "✗ MISMATCH").append("\n");
+                result.append("═══ ").append(t("module.payments.result.cvvVerificationTitle")).append(" ═══\n\n");
+                result.append(t("module.payments.result.inputCvv")).append("    ").append(inputCvv).append("\n");
+                result.append(t("module.payments.result.calculated")).append("   ").append(calculated).append("\n\n");
+                result.append(t("module.payments.result.result")).append("       ").append(t(isValid ? "module.payments.result.matchSymbol" : "module.payments.result.mismatchSymbol")).append("\n");
 
                 cvvResultArea.setText(result.toString());
                 java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
@@ -871,12 +910,12 @@ public class PaymentsController {
                 details.put("Result", isValid ? "VALID" : "INVALID");
                 mainController.publish(OperationResult.forOperation("Verify CVV")
                         .output(calculated.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                        .status(isValid ? "CVV verified: valid" : "CVV verified: invalid").build());
+                        .status(t(isValid ? "module.payments.status.cvvValid" : "module.payments.status.cvvInvalid")).build());
             }
 
         } catch (Exception e) {
-            cvvResultArea.setText("Error verifying CVV: " + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            cvvResultArea.setText(t("module.payments.error.operation", t("module.payments.result.cvvVerificationTitle"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.cvvVerificationTitle"), e.getMessage()));
         }
     }
 
@@ -895,17 +934,17 @@ public class PaymentsController {
 
             // Validate inputs
             if (macKey.isEmpty() || data.isEmpty()) {
-                macResultArea.setText("Error: MAC Key and Data are required");
+                macResultArea.setText(t("module.payments.error.macRequired"));
                 return;
             }
 
             if (!macKey.matches("[0-9A-Fa-f]{32}")) {
-                macResultArea.setText("Error: MAC Key must be 32 hexadecimal characters");
+                macResultArea.setText(t("module.payments.error.macKeyInvalid"));
                 return;
             }
 
             if (!data.matches("[0-9A-Fa-f]+")) {
-                macResultArea.setText("Error: Data must be hexadecimal");
+                macResultArea.setText(t("module.payments.error.macDataHex"));
                 return;
             }
 
@@ -915,9 +954,9 @@ public class PaymentsController {
             // Display result
             StringBuilder result = new StringBuilder();
             result.append("========================================\n");
-            result.append("MAC GENERATION\n");
+            result.append(t("module.payments.result.macGenerationTitle")).append("\n");
             result.append("========================================\n\n");
-            result.append("Algorithm: ").append(algorithm).append("\n");
+            result.append(t("module.common.algorithm")).append(" ").append(algorithm).append("\n");
             result.append("Key:       ").append(macKey.toUpperCase()).append("\n");
             result.append("Data:      ").append(data.toUpperCase()).append("\n");
             result.append("           (").append(data.length() / 2).append(" bytes)\n\n");
@@ -925,17 +964,17 @@ public class PaymentsController {
             result.append("========================================\n");
 
             macResultArea.setText(result.toString());
-            updateStatus("MAC generated successfully");
+            updateStatus(t("module.payments.status.success"));
 
         } catch (Exception e) {
-            macResultArea.setText("Error generating MAC: " + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            macResultArea.setText(t("module.payments.error.operation", t("module.payments.result.macGenerationTitle"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.macGenerationTitle"), e.getMessage()));
         }
     }
 
     public void handleVerifyMac() {
-        macResultArea.setText("MAC Verification - To be implemented");
-        updateStatus("Feature coming soon");
+        macResultArea.setText(t("module.payments.status.macVerificationComingSoon"));
+        updateStatus(t("module.payments.status.comingSoon"));
     }
 
     // ==================== NEW ADVANCED FEATURES ====================
@@ -1076,12 +1115,12 @@ public class PaymentsController {
             String targetFormat = pinTransTargetFormatCombo.getValue();
 
             if (sourceBlock.isEmpty() || pan.isEmpty()) {
-                pinTransResultArea.setText("Error: Please enter PIN block and PAN");
+                pinTransResultArea.setText(t("module.payments.error.pinBlockPanRequired"));
                 return;
             }
 
             if (sourceFormat.equals(targetFormat)) {
-                pinTransResultArea.setText("Warning: Source and target formats are the same");
+                pinTransResultArea.setText(t("module.payments.error.samePinFormats"));
                 return;
             }
 
@@ -1099,11 +1138,11 @@ public class PaymentsController {
                     .build());
             }
 
-            updateStatus("PIN block translated successfully");
+            updateStatus(t("module.payments.status.success"));
 
         } catch (Exception e) {
-            pinTransResultArea.setText("Error translating PIN block:\n" + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            pinTransResultArea.setText(t("module.payments.error.operation", t("module.payments.operation.pinTranslation"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.operation.pinTranslation"), e.getMessage()));
         }
     }
 
@@ -1117,11 +1156,15 @@ public class PaymentsController {
             String lengthStr = pvvLengthField.getText().trim();
 
             if (pin.isEmpty() || pan.isEmpty() || pvk.isEmpty()) {
-                pvvResultArea.setText("Error: Please enter PIN, PAN, and PVK");
+                pvvResultArea.setText(t("module.payments.error.pvvRequired"));
                 return;
             }
 
             int pvvLength = 4; // Default
+            if (!lengthStr.isEmpty() && !lengthStr.matches("\\d+")) {
+                pvvResultArea.setText(t("module.payments.error.pvvFormatInvalid"));
+                return;
+            }
             if (!lengthStr.isEmpty()) {
                 pvvLength = Integer.parseInt(lengthStr);
             }
@@ -1144,11 +1187,11 @@ public class PaymentsController {
                     .build());
             }
 
-            updateStatus("PVV generated successfully");
+            updateStatus(t("module.payments.status.success"));
 
         } catch (Exception e) {
-            pvvResultArea.setText("Error generating PVV:\n" + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            pvvResultArea.setText(t("module.payments.error.operation", t("module.payments.operation.pvvGeneration"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.operation.pvvGeneration"), e.getMessage()));
         }
     }
 
@@ -1161,11 +1204,19 @@ public class PaymentsController {
             String lengthStr = pvvLengthField.getText().trim();
 
             if (pin.isEmpty() || pan.isEmpty() || pvk.isEmpty() || pvvToVerify.isEmpty()) {
-                pvvResultArea.setText("Error: Please enter all fields including PVV to verify");
+                pvvResultArea.setText(t("module.payments.error.pvvRequired"));
                 return;
             }
 
             int pvvLength = pvvToVerify.length();
+            if (!pvvToVerify.matches("\\d+")) {
+                pvvResultArea.setText(t("module.payments.error.pvvFormatInvalid"));
+                return;
+            }
+            if (!lengthStr.isEmpty() && !lengthStr.matches("\\d+")) {
+                pvvResultArea.setText(t("module.payments.error.pvvFormatInvalid"));
+                return;
+            }
             if (!lengthStr.isEmpty()) {
                 pvvLength = Integer.parseInt(lengthStr);
             }
@@ -1175,10 +1226,10 @@ public class PaymentsController {
             boolean isValid = generatedPVV.equals(pvvToVerify);
 
             StringBuilder result = new StringBuilder();
-            result.append("═══ PVV VERIFICATION ═══\n\n");
-            result.append("Generated PVV: ").append(generatedPVV).append("\n");
-            result.append("Provided PVV:  ").append(pvvToVerify).append("\n\n");
-            result.append("Result: ").append(isValid ? "✓ VALID" : "✗ INVALID").append("\n");
+            result.append("═══ ").append(t("module.payments.result.pvvVerificationTitle")).append(" ═══\n\n");
+            result.append(t("module.payments.result.generatedPvv")).append(" ").append(generatedPVV).append("\n");
+            result.append(t("module.payments.result.providedPvv")).append("  ").append(pvvToVerify).append("\n\n");
+            result.append(t("module.payments.result.result")).append(" ").append(t(isValid ? "module.payments.result.validSymbol" : "module.payments.result.invalidSymbol")).append("\n");
 
             pvvResultArea.setText(result.toString());
 
@@ -1192,11 +1243,11 @@ public class PaymentsController {
                     .build());
             }
 
-            updateStatus(isValid ? "PVV is valid" : "PVV is invalid");
+            updateStatus(t(isValid ? "module.payments.status.valid" : "module.payments.status.invalid"));
 
         } catch (Exception e) {
-            pvvResultArea.setText("Error verifying PVV:\n" + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            pvvResultArea.setText(t("module.payments.error.operation", t("module.payments.operation.pvvVerification"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.operation.pvvVerification"), e.getMessage()));
         }
     }
 
@@ -1211,17 +1262,29 @@ public class PaymentsController {
             String discretionary = trackDiscretionaryField.getText().trim();
 
             if (pan.isEmpty() || name.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                trackResultArea.setText("Error: Please enter PAN, Name, Expiry, and Service Code");
+                trackResultArea.setText(t("module.payments.error.trackRequired"));
+                return;
+            }
+            if (!pan.matches("\\d{13,19}")) {
+                trackResultArea.setText(t("module.payments.error.panInvalid"));
+                return;
+            }
+            if (!expiry.matches("\\d{4}")) {
+                trackResultArea.setText(t("module.payments.error.expiryInvalid"));
+                return;
+            }
+            if (!serviceCode.matches("\\d{3}")) {
+                trackResultArea.setText(t("module.payments.error.serviceCodeInvalid"));
                 return;
             }
 
             String track1 = PaymentOperations.encodeTrack1(pan, name, expiry, serviceCode, discretionary);
 
             StringBuilder result = new StringBuilder();
-            result.append("═══ TRACK 1 ENCODED ═══\n\n");
-            result.append("Track 1: ").append(track1).append("\n\n");
-            result.append("Length: ").append(track1.length()).append(" characters\n");
-            result.append("Format: ISO/IEC 7813 Track 1\n");
+            result.append("═══ ").append(t("module.payments.result.track1EncodedTitle")).append(" ═══\n\n");
+            result.append(t("module.payments.result.track1")).append(" ").append(track1).append("\n\n");
+            result.append(t("module.payments.result.length", track1.length())).append("\n");
+            result.append(t("module.payments.result.isoTrackFormat", "1")).append("\n");
 
             trackResultArea.setText(result.toString());
 
@@ -1238,11 +1301,11 @@ public class PaymentsController {
                     .build());
             }
 
-            updateStatus("Track 1 data encoded successfully");
+            updateStatus(t("module.payments.status.success"));
 
         } catch (Exception e) {
-            trackResultArea.setText("Error encoding Track 1:\n" + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            trackResultArea.setText(t("module.payments.error.operation", t("module.payments.result.track1EncodedTitle"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.track1EncodedTitle"), e.getMessage()));
         }
     }
 
@@ -1254,18 +1317,30 @@ public class PaymentsController {
             String discretionary = trackDiscretionaryField.getText().trim();
 
             if (pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                trackResultArea.setText("Error: Please enter PAN, Expiry, and Service Code");
+                trackResultArea.setText(t("module.payments.error.trackRequired"));
+                return;
+            }
+            if (!pan.matches("\\d{13,19}")) {
+                trackResultArea.setText(t("module.payments.error.panInvalid"));
+                return;
+            }
+            if (!expiry.matches("\\d{4}")) {
+                trackResultArea.setText(t("module.payments.error.expiryInvalid"));
+                return;
+            }
+            if (!serviceCode.matches("\\d{3}")) {
+                trackResultArea.setText(t("module.payments.error.serviceCodeInvalid"));
                 return;
             }
 
             String track2 = PaymentOperations.encodeTrack2(pan, expiry, serviceCode, discretionary);
 
             StringBuilder result = new StringBuilder();
-            result.append("═══ TRACK 2 ENCODED ═══\n\n");
-            result.append("Track 2: ").append(track2).append("\n");
-            result.append("Track 2 Hex: ").append(PaymentOperations.track2ToHex(track2)).append("\n\n");
-            result.append("Length: ").append(track2.length()).append(" characters\n");
-            result.append("Format: ISO/IEC 7813 Track 2\n");
+            result.append("═══ ").append(t("module.payments.result.track2EncodedTitle")).append(" ═══\n\n");
+            result.append(t("module.payments.result.track2")).append(" ").append(track2).append("\n");
+            result.append(t("module.payments.result.track2Hex")).append(" ").append(PaymentOperations.track2ToHex(track2)).append("\n\n");
+            result.append(t("module.payments.result.length", track2.length())).append("\n");
+            result.append(t("module.payments.result.isoTrackFormat", "2")).append("\n");
 
             trackResultArea.setText(result.toString());
 
@@ -1282,11 +1357,11 @@ public class PaymentsController {
                     .build());
             }
 
-            updateStatus("Track 2 data encoded successfully");
+            updateStatus(t("module.payments.status.success"));
 
         } catch (Exception e) {
-            trackResultArea.setText("Error encoding Track 2:\n" + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            trackResultArea.setText(t("module.payments.error.operation", t("module.payments.result.track2EncodedTitle"), e.getMessage()));
+            updateStatus(t("module.payments.error.operation", t("module.payments.result.track2EncodedTitle"), e.getMessage()));
         }
     }
 
@@ -1295,7 +1370,7 @@ public class PaymentsController {
             String trackData = trackDataField.getText().trim();
 
             if (trackData.isEmpty()) {
-                trackResultArea.setText("Error: Please enter track data to parse");
+                trackResultArea.setText(t("module.payments.error.trackRequired"));
                 return;
             }
 
@@ -1305,9 +1380,7 @@ public class PaymentsController {
             } else if (trackData.startsWith(";")) {
                 result = PaymentOperations.parseTrack2(trackData);
             } else {
-                result = "Error: Unknown track format\n" +
-                        "Track 1 must start with %B\n" +
-                        "Track 2 must start with ;";
+                result = t("module.payments.error.trackFormatInvalid");
             }
 
             trackResultArea.setText(result);
@@ -1317,16 +1390,16 @@ public class PaymentsController {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Parse Track Data")
                     .details(java.util.List.of(
                         new com.cryptocarver.model.OperationDetail("Input Parameters", trackData.substring(0, Math.min(50, trackData.length())) + "...", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Parsed successfully", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
+                        new com.cryptocarver.model.OperationDetail("Output", t("module.payments.status.parsedSuccessfully"), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
                     ))
                     .build());
             }
 
-            updateStatus("Track data parsed successfully");
+            updateStatus(t("module.payments.status.success"));
 
         } catch (Exception e) {
-            trackResultArea.setText("Error parsing track data:\n" + e.getMessage());
-            updateStatus("Error: " + e.getMessage());
+            trackResultArea.setText(t("module.payments.error.operation", "Track parsing", e.getMessage()));
+            updateStatus(t("module.payments.error.operation", "Track parsing", e.getMessage()));
         }
     }
 
@@ -1337,7 +1410,7 @@ public class PaymentsController {
     public void handleEncodeEncryptedPinBlock() {
         try {
             if (encPinField == null || encPanFieldEncode == null || encResultArea == null) {
-                showError("Configuration Error", "Encrypted PIN controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "Encrypted PIN"));
                 return;
             }
 
@@ -1348,12 +1421,12 @@ public class PaymentsController {
             String format = encPinBlockFormatCombo.getSelectionModel().getSelectedItem();
 
             if (pin.isEmpty()) {
-                showError("Input Error", "Please enter PIN");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterValue", "PIN"));
                 return;
             }
             // Some formats might not need PAN, but mostly they do for XOR or binding
             if (pan.isEmpty() && (format.contains("ISO-0") || format.contains("ISO-3"))) {
-                showError("Input Error", "Please enter PAN for " + format);
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterPanForFormat", format));
                 return;
             }
 
@@ -1362,8 +1435,8 @@ public class PaymentsController {
             String clearPinBlock = PaymentOperations.encodePinBlock(pin, pan, format);
             String publishedBlock = clearPinBlock;
 
-            String result = "Format: " + format + "\n";
-            result += "Clear PIN Block:\n" + clearPinBlock;
+            String result = t("module.payments.result.format") + " " + format + "\n";
+            result += t("module.payments.result.clearPinBlock") + "\n" + clearPinBlock;
 
             // 2. Encrypt if key provided
             if (!keyHex.isEmpty()) {
@@ -1375,7 +1448,7 @@ public class PaymentsController {
                     byte[] encrypted = PaymentOperations.encryptDesEcb(clearBytes, key);
 
                     publishedBlock = DataConverter.bytesToHex(encrypted).toUpperCase();
-                    result += "\n\nEncrypted PIN Block:\n" + publishedBlock;
+                    result += "\n\n" + t("module.payments.result.encryptedPinBlock") + "\n" + publishedBlock;
                 } catch (Exception e) {
                     result += "\n\nEncryption Error: " + e.getMessage();
                 }
@@ -1392,10 +1465,10 @@ public class PaymentsController {
             details.put("Protected", keyHex.isEmpty() ? "No key supplied" : "TDES ECB");
             mainController.publish(OperationResult.forOperation("Encode Encrypted PIN Block")
                     .output(DataConverter.hexToBytes(publishedBlock)).details(details)
-                    .status("Encrypted PIN Block encoded successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError("Encoding Error", "Error encoding Encrypted PIN Block: " + e.getMessage());
+            showError(t("module.payments.error.encodingTitle"), t("module.payments.error.operation", t("module.payments.result.encryptedPinBlock"), e.getMessage()));
             LOG.error("Encrypted PIN block encoding failed", e);
         }
     }
@@ -1403,7 +1476,7 @@ public class PaymentsController {
     public void handleDecodeEncryptedPinBlock() {
         try {
             if (encPinBlockFieldDecode == null || encPanFieldDecode == null || encResultArea == null) {
-                showError("Configuration Error", "Encrypted PIN decode controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "Encrypted PIN decode"));
                 return;
             }
 
@@ -1415,7 +1488,7 @@ public class PaymentsController {
             String format = encPinBlockFormatCombo.getSelectionModel().getSelectedItem();
 
             if (pinBlockHex.isEmpty()) {
-                showError("Input Error", "Please enter PIN Block");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterValue", "PIN Block"));
                 return;
             }
 
@@ -1431,7 +1504,7 @@ public class PaymentsController {
                     byte[] decrypted = PaymentOperations.decryptDesEcb(encrypted, key);
                     clearPinBlockHex = DataConverter.bytesToHex(decrypted).toUpperCase();
                 } catch (Exception e) {
-                    showError("Decryption Error", "Error decrypting PIN Block: " + e.getMessage());
+                    showError(t("module.payments.error.decryptionTitle"), t("module.payments.error.operation", t("module.payments.operation.encryptedPinBlock"), e.getMessage()));
                     return;
                 }
             }
@@ -1439,8 +1512,8 @@ public class PaymentsController {
             // 2. Decode PIN block using PaymentOperations
             String pin = PaymentOperations.decodePinBlock(clearPinBlockHex, pan, format);
 
-            String result = "Format: " + format + "\n";
-            result += "Clear PIN Block: " + clearPinBlockHex + "\n\nDecoded PIN: " + pin;
+            String result = t("module.payments.result.format") + " " + format + "\n";
+            result += t("module.payments.result.clearPinBlock") + " " + clearPinBlockHex + "\n\n" + t("module.payments.result.decodedPinLine") + " " + pin;
 
             encResultArea.setText(result);
             encResultArea.setManaged(true);
@@ -1454,10 +1527,10 @@ public class PaymentsController {
             mainController.publish(OperationResult.forOperation("Decode Encrypted PIN Block")
                     .input(DataConverter.hexToBytes(pinBlockHex))
                     .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("Encrypted PIN Block decoded successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError("Decoding Error", "Error decoding Encrypted PIN Block: " + e.getMessage());
+            showError(t("module.payments.error.decodingTitle"), t("module.payments.error.operation", t("module.payments.operation.encryptedPinBlock"), e.getMessage()));
             LOG.error("Encrypted PIN block decoding failed", e);
         }
     }
@@ -1470,7 +1543,7 @@ public class PaymentsController {
         try {
             if (ibm3624PvkField == null || ibm3624OffsetField == null || ibm3624PanField == null
                     || ibm3624ResultArea == null) {
-                showError("Configuration Error", "IBM 3624 controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "IBM 3624"));
                 return;
             }
 
@@ -1481,7 +1554,7 @@ public class PaymentsController {
             String pan = ibm3624PanField.getText().trim();
 
             if (pvkHex.isEmpty() || offset.isEmpty() || pan.isEmpty()) {
-                showError("Input Error", "Please enter PVK, Offset, and PAN");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkOffsetPanRequired"));
                 return;
             }
 
@@ -1500,7 +1573,7 @@ public class PaymentsController {
                     if (startPos > 0)
                         startPos--;
                 } catch (NumberFormatException e) {
-                    showError("Invalid Start Position", "Start Position must be a number");
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
                     return;
                 }
             }
@@ -1509,7 +1582,7 @@ public class PaymentsController {
                 try {
                     length = Integer.parseInt(ibm3624LengthField.getText().trim());
                 } catch (NumberFormatException e) {
-                    showError("Invalid Length", "Length must be a number");
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
                     return;
                 }
             }
@@ -1552,13 +1625,13 @@ public class PaymentsController {
             // Show User's Start Input (startPos + 1) for clarity
             int displayStart = startPos + 1;
 
-            String result = "Generated PIN: " + pin + "\n\n" +
-                    "Method: IBM 3624\n" +
-                    "PAN: " + pan + "\n" +
+            String result = t("module.payments.result.pin") + " " + pin + "\n\n" +
+                    t("module.payments.result.method") + " IBM 3624\n" +
+                    t("module.payments.result.pan") + " " + pan + "\n" +
                     "Offset: " + offset + "\n" +
                     "Conversion Table: " + convTable + "\n" +
-                    "Validation Config: Start " + displayStart + ", Len " + length + ", Pad " + padChar + "\n" +
-                    "Validation Data Block (Computed): " + displayVd.toUpperCase();
+                    t("module.payments.result.validationConfig", displayStart, length, padChar) + "\n" +
+                    t("module.payments.result.validationDataBlock", " (Computed)") + " " + displayVd.toUpperCase();
 
             ibm3624ResultArea.setText(result);
             ibm3624ResultArea.setManaged(true);
@@ -1571,10 +1644,10 @@ public class PaymentsController {
             details.put("PIN", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Generate PIN (IBM 3624)")
                     .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("PIN generated successfully (IBM 3624)").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError("Generation Error", "Error generating PIN: " + e.getMessage());
+            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
             LOG.error("IBM 3624 PIN generation failed", e);
         }
     }
@@ -1583,7 +1656,7 @@ public class PaymentsController {
         try {
             if (ibm3624PvkField == null || ibm3624PinVerifyField == null || ibm3624PanField == null
                     || ibm3624ResultArea == null) {
-                showError("Configuration Error", "IBM 3624 verify controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "IBM 3624 verify"));
                 return;
             }
 
@@ -1595,7 +1668,7 @@ public class PaymentsController {
             String pinToVerify = ibm3624PinVerifyField.getText().trim();
 
             if (pvkHex.isEmpty() || pan.isEmpty() || pinToVerify.isEmpty()) {
-                showError("Input Error", "Please enter PVK, PAN, and PIN to verify");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPinRequired"));
                 return;
             }
 
@@ -1613,7 +1686,7 @@ public class PaymentsController {
                     if (startPos > 0)
                         startPos--; // 1-based to 0-based
                 } catch (NumberFormatException e) {
-                    showError("Invalid Start Position", "Start Position must be a number");
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
                     return;
                 }
             }
@@ -1622,7 +1695,7 @@ public class PaymentsController {
                 try {
                     length = Integer.parseInt(ibm3624LengthField.getText().trim());
                 } catch (NumberFormatException e) {
-                    showError("Invalid Length", "Length must be a number");
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
                     return;
                 }
             }
@@ -1664,14 +1737,14 @@ public class PaymentsController {
 
             boolean isValid = expectedPin.equals(pinToVerify);
 
-            String result = "PIN Verification: " + (isValid ? "✅ VALID" : "❌ INVALID") + "\n\n" +
-                    "Entered PIN: " + pinToVerify + "\n" +
-                    "Expected PIN: " + expectedPin + "\n" +
-                    "Method: IBM 3624\n" +
-                    "PAN: " + pan + "\n" +
+            String result = t("module.payments.result.pinVerification") + " " + t(isValid ? "module.payments.result.validSymbol" : "module.payments.result.invalidSymbol") + "\n\n" +
+                    t("module.payments.result.enteredPin") + " " + pinToVerify + "\n" +
+                    t("module.payments.result.expectedPin") + " " + expectedPin + "\n" +
+                    t("module.payments.result.method") + " IBM 3624\n" +
+                    t("module.payments.result.pan") + " " + pan + "\n" +
                     "Offset: " + offset + "\n" +
-                    "Validation Config: Start " + displayStart + ", Len " + length + ", Pad " + padChar + "\n" +
-                    "Validation Data Block: " + displayVd.toUpperCase();
+                    t("module.payments.result.validationConfig", displayStart, length, padChar) + "\n" +
+                    t("module.payments.result.validationDataBlock", "") + " " + displayVd.toUpperCase();
 
             ibm3624ResultArea.setText(result);
             ibm3624ResultArea.setManaged(true);
@@ -1684,10 +1757,10 @@ public class PaymentsController {
             details.put("PIN", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Verify PIN (IBM 3624)")
                     .output(expectedPin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("PIN verification: " + (isValid ? "VALID" : "INVALID")).build());
+                    .status(t(isValid ? "module.payments.status.valid" : "module.payments.status.invalid")).build());
 
         } catch (Exception e) {
-            showError("Verification Error", "Error verifying PIN: " + e.getMessage());
+            showError(t("module.payments.error.verificationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
             LOG.error("IBM 3624 PIN verification failed", e);
         }
     }
@@ -1698,7 +1771,7 @@ public class PaymentsController {
     public void handleGenerateOffsetUtility() {
         try {
             if (genOffsetPvkField == null || genOffsetResultArea == null) {
-                showError("Configuration Error", "Generator controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "PIN generator"));
                 return;
             }
 
@@ -1708,12 +1781,12 @@ public class PaymentsController {
             String pin = genOffsetPinField.getText().trim();
 
             if (pvk.isEmpty() || decTable.isEmpty() || pan.isEmpty() || pin.isEmpty()) {
-                showError("Input Error", "Please enter PVK, Decimalization Table, PAN, and Desired PIN");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"));
                 return;
             }
 
             if (decTable.length() != 16) {
-                showError("Input Error", "Decimalization Table must be 16 digits");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.decimalizationTable"));
                 return;
             }
 
@@ -1737,7 +1810,7 @@ public class PaymentsController {
                     if (startPos > 0)
                         startPos--; // 1-based to 0-based
                 } catch (NumberFormatException e) {
-                    showError("Invalid Start Position", "Start Position must be a number");
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
                     return;
                 }
             }
@@ -1746,7 +1819,7 @@ public class PaymentsController {
                 try {
                     length = Integer.parseInt(genOffsetLengthField.getText().trim());
                 } catch (NumberFormatException e) {
-                    showError("Invalid Length", "Length must be a number");
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
                     return;
                 }
             }
@@ -1787,12 +1860,10 @@ public class PaymentsController {
             int displayStart = startPos + 1;
 
             StringBuilder res = new StringBuilder();
-            res.append("Generated Offset (IBM 3624):\n").append(offset).append("\n\n");
-            res.append("For PIN: ").append(pin).append("\n");
-            res.append("Validation Config: Start ").append(displayStart)
-                    .append(", Len ").append(length)
-                    .append(", Pad ").append(padChar).append("\n");
-            res.append("Validation Data Block: ").append(displayVd.toUpperCase());
+            res.append(t("module.payments.result.generatedOffset")).append("\n").append(offset).append("\n\n");
+            res.append(t("module.payments.result.forPin")).append(" ").append(pin).append("\n");
+            res.append(t("module.payments.result.validationConfig", displayStart, length, padChar)).append("\n");
+            res.append(t("module.payments.result.validationDataBlock", "")).append(" ").append(displayVd.toUpperCase());
 
             genOffsetResultArea.setText(res.toString());
             genOffsetResultArea.setManaged(true);
@@ -1804,17 +1875,17 @@ public class PaymentsController {
             details.put("PIN", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Generate Offset")
                     .output(offset.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("Offset generated successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError("Generation Error", "Error generating Offset: " + e.getMessage());
+            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "Offset", e.getMessage()));
         }
     }
 
     public void handleGeneratePVVUtility() {
         try {
             if (genPvvPvkField == null || genPvvResultArea == null) {
-                showError("Configuration Error", "Generator controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "PVV generator"));
                 return;
             }
 
@@ -1826,15 +1897,15 @@ public class PaymentsController {
                 keyIndex = "0";
 
             if (pvk.isEmpty() || pan.isEmpty() || pin.isEmpty()) {
-                showError("Input Error", "Please enter PVK, PAN, and PIN");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"));
                 return;
             }
 
             String pvv = PaymentOperations.generatePVV(pin, pan, pvk, keyIndex, 4);
 
             StringBuilder res = new StringBuilder();
-            res.append("Generated PVV (VISA):\n").append(pvv).append("\n\n");
-            res.append("Key Index: ").append(keyIndex).append("\n");
+            res.append(t("module.payments.result.generatedPvv")).append(" ").append(pvv).append("\n\n");
+            res.append(t("module.payments.result.keyIndex")).append(" ").append(keyIndex).append("\n");
 
             genPvvResultArea.setText(res.toString());
             genPvvResultArea.setManaged(true);
@@ -1847,17 +1918,17 @@ public class PaymentsController {
             details.put("PIN", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Generate PVV")
                     .output(pvv.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("PVV generated successfully").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError("Generation Error", "Error generating PVV: " + e.getMessage());
+            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "PVV", e.getMessage()));
         }
     }
 
     public void handleDerivePinFromPvvUtility() {
         try {
             if (derivePvvPvkField == null || derivePvvResultArea == null) {
-                showError("Configuration Error", "Derive controls not initialized");
+                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "PVV derivation"));
                 return;
             }
 
@@ -1869,7 +1940,7 @@ public class PaymentsController {
                 keyIndex = "0";
 
             if (pvk.isEmpty() || pan.isEmpty() || targetPvv.isEmpty()) {
-                showError("Input Error", "Please enter PVK, PAN, and Target PVV");
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvvTargetRequired"));
                 return;
             }
 
@@ -1879,16 +1950,16 @@ public class PaymentsController {
             res.append("Derive PIN Results:\n");
             res.append("-------------------\n");
             res.append("PVK: ").append(pvk).append("\n");
-            res.append("PAN: ").append(pan).append("\n");
-            res.append("Target PVV: ").append(targetPvv).append("\n");
-            res.append("PVKI: ").append(keyIndex).append("\n\n");
+            res.append(t("module.payments.result.pan")).append(" ").append(pan).append("\n");
+            res.append(t("module.payments.result.targetPvv")).append(" ").append(targetPvv).append("\n");
+            res.append(t("module.payments.result.pvki")).append(" ").append(keyIndex).append("\n\n");
 
             if (matches.isEmpty()) {
-                res.append("❌ No PINs found that generate this PVV.");
+                res.append(t("module.payments.result.noPinsFound"));
             } else {
-                res.append("✅ Found ").append(matches.size()).append(" match(es):\n\n");
+                res.append(t("module.payments.result.foundMatches", matches.size())).append("\n\n");
                 for (String pin : matches) {
-                    res.append("  • PIN: ").append(pin).append("\n");
+                    res.append("  • ").append(t("module.payments.result.pin")).append(" ").append(pin).append("\n");
                 }
             }
 
@@ -1904,10 +1975,10 @@ public class PaymentsController {
             details.put("PINs", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Derive PIN from PVV")
                     .output(res.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("PIN derivation completed").build());
+                    .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError("Derivation Error", "Error deriving PIN: " + e.getMessage());
+            showError(t("module.payments.error.derivationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
         }
     }
     public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) {
@@ -1920,7 +1991,7 @@ public class PaymentsController {
             loadedDukptExpectedWorkingKey = p.getOutputs().get("workingKey");
             if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
             if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
-            updateStatus("Loaded DUKPT TDES profile: " + p.getName());
+            updateStatus(t("module.payments.status.profileLoaded", "DUKPT TDES - " + p.getName()));
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.DUKPT_AES) {
             if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("AES (X9.24-3, 12-byte KSN)");
             loadedDukptProfileName = p.getName();
@@ -1933,7 +2004,7 @@ public class PaymentsController {
             }
             if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
             if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
-            updateStatus("Loaded DUKPT AES profile: " + p.getName());
+            updateStatus(t("module.payments.status.profileLoaded", "DUKPT AES - " + p.getName()));
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.PIN) {
             if (p.getParameters().containsKey("format")) {
                 String formatStr = p.getParameters().get("format");
@@ -1964,7 +2035,7 @@ public class PaymentsController {
                     if (panFieldDecode != null && p.getInputs().containsKey("pan")) panFieldDecode.setText(p.getInputs().get("pan"));
                 }
             }
-            updateStatus("Loaded PIN profile: " + p.getName());
+            updateStatus(t("module.payments.status.profileLoaded", "PIN - " + p.getName()));
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
             if (macKeyField != null && p.getInputs().containsKey("sessionKey")) macKeyField.setText(p.getInputs().get("sessionKey"));
             if (macDataField != null && p.getInputs().containsKey("apdu")) macDataField.setText(p.getInputs().get("apdu"));
@@ -1978,7 +2049,7 @@ public class PaymentsController {
                     }
                 }
             }
-            updateStatus("Loaded Secure Messaging profile: " + p.getName());
+            updateStatus(t("module.payments.status.profileLoaded", "Secure Messaging - " + p.getName()));
         }
     }
 

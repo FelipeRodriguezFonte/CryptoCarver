@@ -19,6 +19,7 @@ import java.util.List;
 
 /** Explicit, bounded ASiC-S laboratory panel. */
 public final class AsicController {
+    @FXML private javafx.scene.layout.VBox asicRoot;
     @FXML private Accordion asicAccordion;
     private ModuleI18n.Binding moduleI18n;
 
@@ -51,7 +52,7 @@ public final class AsicController {
 
     @FXML
     private void initialize() {
-        moduleI18n = ModuleI18n.bind(asicAccordion, ModuleTextCatalog.asic());
+        moduleI18n = ModuleI18n.bind(asicRoot, ModuleTextCatalog.asic());
         handleSourceChanged();
     }
 
@@ -78,12 +79,27 @@ public final class AsicController {
 
     @FXML
     private void handleReset() {
-        ModuleResetSupport.clearInputsAndKeepFocus(asicAccordion);
+        ModuleResetPolicy.apply(asicRoot, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
+    }
+
+    @FXML
+    private void handleClear() {
+        ModuleResetPolicy.apply(asicRoot, ModuleResetPolicy.Action.CLEAR, this::clearModuleData, null);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        ModuleResetPolicy.clearTextInputs(asicRoot);
         asicEPayloads = List.of();
         if (asicPkcs11AliasCombo != null) asicPkcs11AliasCombo.getItems().clear();
         if (asicResultArea != null) asicResultArea.clear();
+    }
+
+    private void restoreSafeDefaults() {
+        if (asicSourceLocalRadio != null) asicSourceLocalRadio.setSelected(true);
         handleSourceChanged();
-        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
     }
 
     @FXML
@@ -91,7 +107,7 @@ public final class AsicController {
         try {
             List<String> aliases = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance()
                     .requireSession().listPrivateKeysWithCertificate();
-            if (aliases.isEmpty()) throw new IllegalArgumentException("No private PKCS#11 keys with X.509 certificates are available");
+            if (aliases.isEmpty()) throw new IllegalArgumentException(t("module.asic.feedback.noTokenKeys"));
             asicPkcs11AliasCombo.getItems().setAll(aliases);
             asicPkcs11AliasCombo.getSelectionModel().selectFirst();
         } catch (Exception error) {
@@ -133,7 +149,7 @@ public final class AsicController {
                     + "\n\nStructural/CAdES integrity only; certificate trust and LTV are not evaluated.");
             publish("ASiC-S Create" + (tokenSource ? " (PKCS#11)" : ""), input, output, inspection);
         } catch (Exception error) {
-            showError("ASiC-S creation", error.getMessage());
+            showError("ASiC-S creation", t("module.asic.feedback.operation", "ASiC-S creation", error.getMessage()));
         } finally {
             Arrays.fill(password, '\0');
         }
@@ -169,7 +185,7 @@ public final class AsicController {
                         .detail("Trust chain", inspection.trustState().name())
                         .detail("Trust details", inspection.trustDetails())
                         .detail("Revocation / LTV", "NOT EVALUATED (offline inspection)")
-                        .status("ASiC-E inspection completed").build());
+                        .status(t("module.asic.feedback.statusInspected", "ASiC-E")).build());
             } else if (AsicOperations.MIME_TYPE.equals(mimeType)) {
                 AsicOperations.AsicInspection inspection = AsicOperations.inspectAndVerify(container, trustStore);
                 asicResultArea.setText("ASiC-S inspection\nPayload: " + inspection.payloadName()
@@ -191,12 +207,12 @@ public final class AsicController {
                         .detail("Trust chain", inspection.trustState().name())
                         .detail("Trust details", inspection.trustDetails())
                         .detail("Revocation / LTV", "NOT EVALUATED (offline inspection)")
-                        .status("ASiC-S inspection completed").build());
+                        .status(t("module.asic.feedback.statusInspected", "ASiC-S")).build());
             } else {
-                throw new IllegalArgumentException("Unsupported ASiC mimetype: " + mimeType);
+                throw new IllegalArgumentException(t("module.asic.feedback.mime", mimeType));
             }
         } catch (Exception error) {
-            showError("ASiC-S inspection", error.getMessage());
+            showError("ASiC-S inspection", t("module.asic.feedback.operation", "ASiC-S inspection", error.getMessage()));
         } finally {
             Arrays.fill(trustStorePassword, '\0');
         }
@@ -207,7 +223,7 @@ public final class AsicController {
     private void handleCreateE() {
         char[] password = password();
         try {
-            if (asicEPayloads.isEmpty()) throw new IllegalArgumentException("Select one or more ASiC-E payload files first");
+            if (asicEPayloads.isEmpty()) throw new IllegalArgumentException(t("module.asic.feedback.payloads"));
             File output = requireNewFile(asicOutputPathField, "ASiC-E output");
             java.util.Map<String, byte[]> payloads = new java.util.LinkedHashMap<>();
             for (File payload : asicEPayloads) payloads.put(payload.getName(), readBounded(payload));
@@ -235,9 +251,9 @@ public final class AsicController {
                     .detail("CAdES profile", inspection.cadesProfile())
                     .detail("Certificate binding", inspection.certificateBindingValid() ? "VALID" : "INVALID")
                     .detail("Trust chain", "NOT EVALUATED (creation)")
-                    .status("Experimental ASiC-E container created").build());
+                    .status(t("module.asic.feedback.statusCreated", "experimental ASiC-E")).build());
         } catch (Exception error) {
-            showError("ASiC-E creation", error.getMessage());
+            showError("ASiC-E creation", t("module.asic.feedback.operation", "ASiC-E creation", error.getMessage()));
         } finally {
             Arrays.fill(password, '\0');
         }
@@ -255,21 +271,26 @@ public final class AsicController {
     }
 
     private static byte[] readBounded(File file) throws Exception {
-        if (Files.size(file.toPath()) > MAX_BYTES) throw new IllegalArgumentException("File exceeds the 64 MiB laboratory limit");
+        if (Files.size(file.toPath()) > MAX_BYTES) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.asic.feedback.fileTooLarge"));
         return Files.readAllBytes(file.toPath());
     }
 
     private static File requireFile(TextField field, String label) {
-        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(label + " is required");
+        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.asic.feedback.required", label));
         File file = new File(field.getText().trim());
-        if (!file.isFile()) throw new IllegalArgumentException(label + " does not exist or is not a file");
+        if (!file.isFile()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.asic.feedback.fileMissing", label));
         return file;
     }
 
     private static File requireNewFile(TextField field, String label) {
-        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(label + " is required");
+        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.asic.feedback.required", label));
         File file = new File(field.getText().trim());
-        if (Files.exists(file.toPath())) throw new IllegalArgumentException(label + " already exists; choose a new destination");
+        if (Files.exists(file.toPath())) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.asic.feedback.outputExists", label));
         return file;
     }
 
@@ -296,7 +317,7 @@ public final class AsicController {
     private String selectedTokenAlias() {
         if (asicPkcs11AliasCombo == null || asicPkcs11AliasCombo.getValue() == null
                 || asicPkcs11AliasCombo.getValue().isBlank()) {
-            throw new IllegalArgumentException("Load and select a PKCS#11 token signing key first");
+            throw new IllegalArgumentException(t("module.asic.feedback.tokenKey"));
         }
         return asicPkcs11AliasCombo.getValue();
     }
@@ -315,7 +336,7 @@ public final class AsicController {
                 .detail("CAdES signature", inspection.signatureValid() ? "VALID" : "INVALID")
                 .detail("Certificate binding", inspection.certificateBindingValid() ? "VALID" : "INVALID")
                 .detail("Trust chain", "NOT EVALUATED (creation)")
-                .status("ASiC-S container created").build());
+                .status(t("module.asic.feedback.statusCreated", "ASiC-S")).build());
     }
 
     private void showError(String title, String message) {

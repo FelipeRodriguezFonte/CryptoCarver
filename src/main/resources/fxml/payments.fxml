@@ -6,7 +6,8 @@
       fx:controller="com.cryptocarver.ui.PaymentsController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,payments-module">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Reset" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
     <Accordion styleClass="module-accordion">
         <panes>

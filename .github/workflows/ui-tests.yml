@@ -1,0 +1,45 @@
+name: JavaFX UI tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  javafx-ui:
+    name: JavaFX UI suite (Xvfb)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 17 and Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Install JavaFX display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            xvfb \
+            xauth \
+            libgtk-3-0 \
+            libgbm1 \
+            libx11-xcb1 \
+            libxtst6 \
+            libxrender1 \
+            libxxf86vm1 \
+            libgl1 \
+            libgl1-mesa-dri
+
+      - name: Run opt-in JavaFX tests with virtual display
+        run: bash scripts/run-ui-tests.sh

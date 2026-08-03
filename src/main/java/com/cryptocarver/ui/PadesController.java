@@ -22,6 +22,7 @@ import java.util.List;
 
 /** Small, explicit PAdES Baseline-B laboratory panel. */
 public final class PadesController {
+    @FXML private javafx.scene.layout.VBox padesRoot;
     @FXML private Accordion padesAccordion;
     private ModuleI18n.Binding moduleI18n;
 
@@ -66,7 +67,7 @@ public final class PadesController {
 
     @FXML
     private void initialize() {
-        moduleI18n = ModuleI18n.bind(padesAccordion, ModuleTextCatalog.pades());
+        moduleI18n = ModuleI18n.bind(padesRoot, ModuleTextCatalog.pades());
         handleTimestampOptionChanged();
         handleSourceChanged();
         handleVisibleSignatureOptionChanged();
@@ -122,7 +123,7 @@ public final class PadesController {
         try {
             java.util.List<String> aliases = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance()
                     .requireSession().listPrivateKeysWithCertificate();
-            if (aliases.isEmpty()) throw new IllegalArgumentException("No private PKCS#11 keys with X.509 certificates are available");
+            if (aliases.isEmpty()) throw new IllegalArgumentException(t("module.pades.feedback.noTokenKeys"));
             padesPkcs11AliasCombo.getItems().setAll(aliases);
             padesPkcs11AliasCombo.getSelectionModel().selectFirst();
         } catch (Exception error) {
@@ -151,15 +152,30 @@ public final class PadesController {
 
     @FXML
     private void handleReset() {
-        ModuleResetSupport.clearInputsAndKeepFocus(padesAccordion);
+        ModuleResetPolicy.apply(padesRoot, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
+    }
+
+    @FXML
+    private void handleClear() {
+        ModuleResetPolicy.apply(padesRoot, ModuleResetPolicy.Action.CLEAR, this::clearModuleData, null);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        ModuleResetPolicy.clearTextInputs(padesRoot);
         lastValidation = null;
         padesCrlEvidence = List.of();
+    }
+
+    private void restoreSafeDefaults() {
+        if (padesSourceLocalRadio != null) padesSourceLocalRadio.setSelected(true);
         if (padesTimestampCheck != null) padesTimestampCheck.setSelected(false);
         if (padesVisibleSignatureCheck != null) padesVisibleSignatureCheck.setSelected(false);
         handleTimestampOptionChanged();
         handleVisibleSignatureOptionChanged();
         handleSourceChanged();
-        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
     }
 
     @FXML
@@ -199,7 +215,7 @@ public final class PadesController {
                     + (timestamped ? " TSA trust is not evaluated." : " Timestamping was not requested."));
             publish(profile + " Sign", source, destination, inspection.signatureCount(), profile);
         } catch (Exception error) {
-            showError("PAdES signing", error.getMessage());
+            showError("PAdES signing", t("module.pades.feedback.operation", "PAdES signing", error.getMessage()));
         } finally {
             Arrays.fill(password, '\0');
         }
@@ -217,10 +233,10 @@ public final class PadesController {
             if (statusReporter != null) {
                 statusReporter.publish(OperationResult.forOperation("PAdES Inspect")
                         .detail("PDF signatures", String.valueOf(inspection.signatureCount()))
-                        .status("PAdES structural inspection completed").build());
+                        .status(t("module.pades.feedback.statusInspected")).build());
             }
         } catch (Exception error) {
-            showError("PAdES inspection", error.getMessage());
+            showError("PAdES inspection", t("module.pades.feedback.operation", "PAdES inspection", error.getMessage()));
         }
     }
 
@@ -242,10 +258,10 @@ public final class PadesController {
                         .detail("Truststore", trustStore == null ? "Not configured" : trustStore.getName())
                         .detail("Local CRL evidence", String.valueOf(validation.localCrlCount()))
                         .detail("Revocation", validation.localCrlCount() == 0 ? "NOT EVALUATED (offline)" : "Local CRL evidence supplied")
-                        .status("PAdES DSS validation completed").build());
+                        .status(t("module.pades.feedback.statusValidated")).build());
             }
         } catch (Exception error) {
-            showError("PAdES validation", error.getMessage());
+            showError("PAdES validation", t("module.pades.feedback.operation", "PAdES validation", error.getMessage()));
         } finally {
             Arrays.fill(trustPassword, '\0');
         }
@@ -255,7 +271,7 @@ public final class PadesController {
     @FXML
     private void handleSaveValidationReports() {
         try {
-            if (lastValidation == null) throw new IllegalArgumentException("Validate a PDF before exporting DSS reports");
+            if (lastValidation == null) throw new IllegalArgumentException(t("module.pades.feedback.reportRequired"));
             DirectoryChooser chooser = new DirectoryChooser();
             chooser.setTitle("Choose empty output location for PAdES DSS reports (contains certificate PII)");
             File directory = chooser.showDialog(owner());
@@ -267,11 +283,11 @@ public final class PadesController {
                     .detail("Directory", directory.getName())
                     .detail("Files", "3 XML reports")
                     .detail("Privacy", "Certificate PII may be included")
-                    .status("PAdES DSS reports exported by explicit user action").build());
+                    .status(t("module.pades.feedback.statusReports")).build());
             padesResultArea.appendText("\n\nDSS reports saved to: " + directory.getAbsolutePath()
                     + "\nWarning: the XML files may contain certificate PII.");
         } catch (Exception error) {
-            showError("PAdES reports export", error.getMessage());
+            showError("PAdES reports export", t("module.pades.feedback.operation", "PAdES reports export", error.getMessage()));
         }
     }
 
@@ -288,16 +304,18 @@ public final class PadesController {
     }
 
     private static File requireFile(TextField field, String label) {
-        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(label + " is required");
+        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.required", label));
         File file = new File(field.getText().trim());
-        if (!file.isFile()) throw new IllegalArgumentException(label + " does not exist or is not a file");
+        if (!file.isFile()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.fileMissing", label));
         return file;
     }
 
     private String selectedTokenAlias() {
         if (padesPkcs11AliasCombo == null || padesPkcs11AliasCombo.getValue() == null
                 || padesPkcs11AliasCombo.getValue().isBlank()) {
-            throw new IllegalArgumentException("Load and select a PKCS#11 token signing key first");
+            throw new IllegalArgumentException(t("module.pades.feedback.tokenKey"));
         }
         return padesPkcs11AliasCombo.getValue();
     }
@@ -313,13 +331,14 @@ public final class PadesController {
                     Float.parseFloat(text(padesVisibleHeightField, "Visible signature height")),
                     text(padesVisibleTextField, "Visible signature text"));
         } catch (NumberFormatException invalid) {
-            throw new IllegalArgumentException("Visible signature coordinates must be numeric", invalid);
+            throw new IllegalArgumentException(t("module.pades.feedback.coordinates"), invalid);
         }
     }
 
     private static String text(TextField field, String label) {
         if (field == null || field.getText() == null || field.getText().isBlank()) {
-            throw new IllegalArgumentException(label + " is required");
+            throw new IllegalArgumentException(com.cryptocarver.service.I18nService.getInstance()
+                    .text("module.pades.feedback.required", label));
         }
         return field.getText().trim();
     }
@@ -331,16 +350,19 @@ public final class PadesController {
     }
 
     private static File requireNewFile(TextField field, String label) {
-        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(label + " is required");
+        if (field == null || field.getText().isBlank()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.required", label));
         File file = new File(field.getText().trim());
-        if (Files.exists(file.toPath())) throw new IllegalArgumentException(label + " already exists; choose a new destination");
+        if (Files.exists(file.toPath())) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.outputExists", label));
         return file;
     }
 
     private static File optionalFile(TextField field, String label) {
         if (field == null || field.getText().isBlank()) return null;
         File file = new File(field.getText().trim());
-        if (!file.isFile()) throw new IllegalArgumentException(label + " does not exist or is not a file");
+        if (!file.isFile()) throw new IllegalArgumentException(
+                com.cryptocarver.service.I18nService.getInstance().text("module.pades.feedback.fileMissing", label));
         return file;
     }
 
@@ -352,7 +374,8 @@ public final class PadesController {
 
     private static byte[] readBoundedPdf(File file) throws Exception {
         long size = Files.size(file.toPath());
-        if (size > MAX_PDF_BYTES) throw new IllegalArgumentException("PDF exceeds the 64 MiB laboratory limit");
+        if (size > MAX_PDF_BYTES) throw new IllegalArgumentException(com.cryptocarver.service.I18nService
+                .getInstance().text("module.pades.feedback.fileTooLarge"));
         return Files.readAllBytes(file.toPath());
     }
 
@@ -368,7 +391,7 @@ public final class PadesController {
                     .detail("Output PDF", output.getName())
                     .detail("PDF signatures", String.valueOf(signatures))
                     .detail("Profile", profile)
-                    .status(profile + " PDF signed").build());
+                    .status(t("module.pades.feedback.statusSigned", profile)).build());
         }
     }
 

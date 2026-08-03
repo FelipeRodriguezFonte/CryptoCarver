@@ -10,18 +10,9 @@ final class ModuleResetSupport {
 
     static Node clearInputsAndKeepFocus(Parent root) {
         if (root == null) return null;
-        Node focused = root.getScene() == null ? null : root.getScene().getFocusOwner();
-        clear(root);
-        if (focused != null && focused.isFocusTraversable() && focused.isVisible() && focused.isManaged()) {
-            focused.requestFocus();
-        }
+        Node focused = ModuleResetPolicy.focusOwner(root);
+        ModuleResetPolicy.clearTextInputs(root);
+        ModuleResetPolicy.restoreFocus(focused);
         return focused;
-    }
-
-    private static void clear(Node node) {
-        if (node instanceof TextInputControl input) input.clear();
-        if (node instanceof Parent parent) {
-            for (Node child : parent.getChildrenUnmodifiable()) clear(child);
-        }
     }
 }

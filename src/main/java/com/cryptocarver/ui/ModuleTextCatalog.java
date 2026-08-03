@@ -33,7 +33,9 @@ public final class ModuleTextCatalog {
         map.put("Input:", "module.common.input");
         map.put("Output:", "module.common.output");
         map.put("Cancel", "module.common.cancel");
+        map.put("Clear", "module.common.clear");
         map.put("Reset", "module.common.reset");
+        map.put("Reset Defaults", "module.common.resetDefaults");
         map.put("Ready", "module.common.ready");
         return map;
     }
@@ -464,6 +466,14 @@ public final class ModuleTextCatalog {
         return map;
     }
 
+    public static Map<String, String> asn1() {
+        Map<String, String> map = common();
+        map.put("Clear", "module.common.clear");
+        map.put("Reset Defaults", "module.common.resetDefaults");
+        map.put("Ready", "module.common.ready");
+        return map;
+    }
+
     public static Map<String, String> wssSecurity() {
         Map<String, String> map = common();
         map.put("🔐 Sign SOAP (WSS)", "module.wss.signTitle");
@@ -681,6 +691,23 @@ public final class ModuleTextCatalog {
         map.put("Inspect KSN / Derive Key", "module.payments.inspectDerive");
         map.put("AES DUKPT PIN block (ISO 9564-4, 16 bytes; lab):", "module.payments.aesPinBlockHelp");
         map.put("Process AES PIN block", "module.payments.processAesPin");
+        map.put("Error: PIN and PAN are required.", "module.payments.error.pinPanRequired");
+        map.put("Error: PIN must be 4–12 digits.", "module.payments.error.pinLength");
+        map.put("Error: PAN must contain 13–19 digits.", "module.payments.error.panInvalid");
+        map.put("Error: CVK A must be exactly 16 hexadecimal characters (8 bytes).", "module.payments.error.cvkAInvalid");
+        map.put("Error: CVK B must be exactly 16 hexadecimal characters (8 bytes).", "module.payments.error.cvkBInvalid");
+        map.put("Error: expiry date must use YYMM format (4 digits).", "module.payments.error.expiryInvalid");
+        map.put("Error: service code must contain exactly 3 digits.", "module.payments.error.serviceCodeInvalid");
+        map.put("Error: ATC is required for dCVV.", "module.payments.error.atcRequired");
+        map.put("Error: ATC must contain 1–3 digits for dCVV.", "module.payments.error.atcInvalid");
+        map.put("Error: MAC key and data are required.", "module.payments.error.macRequired");
+        map.put("Error: MAC key must be exactly 32 hexadecimal characters (16 bytes).", "module.payments.error.macKeyInvalid");
+        map.put("Error: MAC data must be hexadecimal.", "module.payments.error.macDataHex");
+        map.put("Error: PIN block and PAN are required for PIN translation.", "module.payments.error.pinBlockPanRequired");
+        map.put("Error: PIN, PAN and PVK are required to generate or verify a PVV.", "module.payments.error.pvvRequired");
+        map.put("Error: PVV must use the configured numeric length.", "module.payments.error.pvvFormatInvalid");
+        map.put("Error: PAN, expiry and service code are required for Track 2.", "module.payments.error.trackRequired");
+        map.put("Error: Track data must start with %B for Track 1 or ; for Track 2.", "module.payments.error.trackFormatInvalid");
         return map;
     }
 
@@ -727,6 +754,29 @@ public final class ModuleTextCatalog {
         map.put("Encode Track 2", "module.emv.encodeTrack");
         map.put("Track 2 Hex / String:", "module.emv.trackInput");
         map.put("Decode Track 2", "module.emv.decodeTrack");
+        return map;
+    }
+
+    public static Map<String, String> cmsInspector() {
+        Map<String, String> map = common();
+        map.put("🔍 Inspect / Validate CMS", "module.cms.title");
+        map.put("CMS Source (Base64 / PEM / DER File):", "module.cms.source");
+        map.put("Load CMS file...", "module.cms.loadFile");
+        map.put("Or paste CMS bytes here...", "module.cms.inputPrompt");
+        map.put("Detached Content (Optional, for detached signature verification):", "module.cms.detachedContent");
+        map.put("Provide detached content", "module.cms.provideDetached");
+        map.put("Load Content file...", "module.cms.loadContent");
+        map.put("Truststore (Optional, for PKIX path validation):", "module.cms.truststore");
+        map.put("Select Truststore...", "module.cms.selectTruststore");
+        map.put("Password (not saved)", "module.cms.passwordPrompt");
+        map.put("Inspect CMS", "module.cms.inspect");
+        map.put("Validate SignedData", "module.cms.validate");
+        map.put("Export Report", "module.cms.export");
+        map.put("Reset", "module.common.reset");
+        map.put("Clear", "module.common.clear");
+        map.put("Reset Defaults", "module.common.resetDefaults");
+        map.put("No file selected", "module.cms.noFile");
+        map.put("No truststore selected", "module.cms.noTruststore");
         return map;
     }
 

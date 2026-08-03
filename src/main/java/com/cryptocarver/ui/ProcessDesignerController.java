@@ -211,7 +211,7 @@ public class ProcessDesignerController {
                         try {
                             com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(newV);
                             cryptoHelpLabel.setText(spec.helpText);
-                            cryptoWarningLabel.setText("WARNING: ECB mode is insecure for general use.");
+                            cryptoWarningLabel.setText(t("module.process.warningEcb"));
                             boolean isEcb = newV.contains("ECB");
                             cryptoWarningLabel.setVisible(isEcb);
                             cryptoWarningLabel.setManaged(isEcb);
@@ -225,7 +225,7 @@ public class ProcessDesignerController {
                         cryptoHelpLabel.setText(authenticated
                                 ? "SOAP Body content encryption. Authenticated encryption: yes."
                                 : "SOAP Body content encryption. Authenticated encryption: no.");
-                        cryptoWarningLabel.setText("WARNING: CBC encryption is not authenticated.");
+                        cryptoWarningLabel.setText(t("module.process.warningCbc"));
                         cryptoWarningLabel.setVisible(!authenticated);
                         cryptoWarningLabel.setManaged(!authenticated);
                     } else if ("WSS_SIGN_BODY".equals(selected.type)) {
@@ -457,11 +457,11 @@ public class ProcessDesignerController {
         if (inspectorVisible) {
             nodeInspector.setMinWidth(250); nodeInspector.setPrefWidth(280); nodeInspector.setMaxWidth(Double.MAX_VALUE);
             designerSplitPane.setDividerPositions(0.72);
-            inspectorToggleButton.setText("Hide inspector");
+            inspectorToggleButton.setText(t("module.process.hideInspector"));
         } else {
             nodeInspector.setMinWidth(0); nodeInspector.setPrefWidth(0); nodeInspector.setMaxWidth(0);
             designerSplitPane.setDividerPositions(1.0);
-            inspectorToggleButton.setText("Show inspector");
+            inspectorToggleButton.setText(t("module.process.showInspector"));
         }
     }
 
@@ -470,7 +470,7 @@ public class ProcessDesignerController {
         String trace = executionOutputArea == null ? "" : executionOutputArea.getText();
         if (trace == null || trace.isBlank()) {
             new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION,
-                    "Run this process before opening its expanded execution result.").showAndWait();
+                    t("module.process.runBeforeExpand")).showAndWait();
             return;
         }
         javafx.stage.Window owner = workflowCanvas == null || workflowCanvas.getScene() == null
@@ -487,7 +487,7 @@ public class ProcessDesignerController {
         if (targetPort != null) {
             boolean occupied = connections.stream().anyMatch(c -> c.to.equals(destination) && targetPort.equals(c.targetPort));
             if (occupied) {
-                executionOutputArea.setText("Error: The port '" + targetPort + "' on " + nodeLabel(destination) + " is already occupied. Delete existing connection first.");
+                executionOutputArea.setText(t("module.process.connectionOccupied", targetPort, nodeLabel(destination)));
                 return;
             }
         } else {
@@ -513,8 +513,8 @@ public class ProcessDesignerController {
         selectedNodeIds.clear();
         if (selected != null) selectedNodeIds.add(selected.id);
         String portStr = targetPort != null ? " [" + targetPort + "]" : "";
-        executionOutputArea.setText("Connected " + nodeLabel(source) + " → " + nodeLabel(destination) + portStr
-                + (keepReusableKeySourceSelected ? ". Select another crypto node to reuse this key." : ""));
+        executionOutputArea.setText(t("module.process.connected", nodeLabel(source), nodeLabel(destination), portStr
+                + (keepReusableKeySourceSelected ? ". Select another crypto node to reuse this key." : "")));
         updateSelectionUi();
         redraw();
     }
@@ -659,7 +659,7 @@ if (encrypt || decrypt || mac || sign || verify) {
         ProcessDefinition.Connection connection = selectedConnection != null ? selectedConnection : connectionBetweenSelectedNodes();
         if (connection != null) {
             connections.remove(connection);
-            executionOutputArea.setText("Deleted connection to port '" + connection.targetPort + "'.");
+            executionOutputArea.setText(t("module.process.deletedConnection", connection.targetPort));
             selectedConnection = null;
             updateSelectionUi();
             redraw();
@@ -678,20 +678,44 @@ if (encrypt || decrypt || mac || sign || verify) {
         selectedConnection = connection;
         selectedNodeIds.clear();
         selected = null;
-        selectedNodeLabel.setText("Connection reversed: " + nodeLabel(connection.from) + " → " + nodeLabel(connection.to));
-        executionOutputArea.setText("Connection direction reversed. Check the flow before running it.");
+        selectedNodeLabel.setText(t("module.process.feedback.connectionReversed",
+                nodeLabel(connection.from), nodeLabel(connection.to)));
+        executionOutputArea.setText(t("module.process.connectionReversed"));
         updateSelectionUi();
         redraw();
     }
     @FXML public void handleClearCanvas() {
+        ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.CLEAR,
+                this::clearCanvasState, null);
+        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.clearStatus"));
+    }
+
+    @FXML public void handleResetDefaults() {
+        ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                null, this::restoreSafeDefaults);
+        if (processStatusLabel != null) processStatusLabel.setText(t("module.common.resetStatus"));
+    }
+
+    private void clearCanvasState() {
         nodes.clear(); connections.clear(); views.clear(); selectedNodeIds.clear(); selected = null; selectedConnection = null;
         processCancellationRequested = false;
-        if (processNameField != null) processNameField.setText("Untitled process");
+        if (processNameField != null) processNameField.setText(t("module.process.untitled"));
         if (executionOutputArea != null) executionOutputArea.clear();
         if (executionStatusTable != null) executionStatusTable.getItems().clear();
         if (processProgressBar != null) processProgressBar.setProgress(0);
         if (processStatusLabel != null) processStatusLabel.setText(t("status.ready"));
         updateSelectionUi(); redraw();
+    }
+
+    private void restoreSafeDefaults() {
+        if (nodeCharsetCombo != null) nodeCharsetCombo.setValue("UTF-8");
+        if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue("SHA-256");
+        if (fileModeCombo != null && !fileModeCombo.getItems().isEmpty()) fileModeCombo.getSelectionModel().selectFirst();
+        if (cryptoAlgorithmCombo != null && !cryptoAlgorithmCombo.getItems().isEmpty()) cryptoAlgorithmCombo.getSelectionModel().selectFirst();
+        if (wssKeyTransportCombo != null && !wssKeyTransportCombo.getItems().isEmpty()) wssKeyTransportCombo.getSelectionModel().selectFirst();
+        if (wssTimestampEnabledCheck != null) wssTimestampEnabledCheck.setSelected(false);
+        if (wssTimestampSignedCheck != null) wssTimestampSignedCheck.setSelected(false);
+        if (wssTimestampMinutesField != null) wssTimestampMinutesField.setText("5");
     }
 
     public Runnable onExecutionFinished;
@@ -770,17 +794,17 @@ if (encrypt || decrypt || mac || sign || verify) {
                 try {
                     spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(alg);
                 } catch (Exception e) {
-                    showPreflightFailure("Error on " + n.label + ": " + e.getMessage());
+                    showPreflightFailure(t("module.process.feedback.nodeError", n.label, e.getMessage()));
                     return;
                 }
                 boolean hasAadConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "aad".equals(c.targetPort));
                 if (!spec.aead && hasAadConn) {
-                    showPreflightFailure("Validation error: " + n.label + " is connected to an 'aad' port, but " + alg + " does not support AAD. Please remove the connection or change the algorithm.");
+                    showPreflightFailure(t("module.process.feedback.aad", n.label, alg));
                     return;
                 }
                 boolean hasIvConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "iv".equals(c.targetPort));
                 if (spec.ivLength == 0 && hasIvConn) {
-                    showPreflightFailure("Validation error: " + n.label + " is connected to an 'iv' port, but " + alg + " does not use an IV. Please remove the connection.");
+                    showPreflightFailure(t("module.process.feedback.iv", n.label, alg));
                     return;
                 }
             }
@@ -834,7 +858,7 @@ if (encrypt || decrypt || mac || sign || verify) {
                         if (processStatusLabel != null) {
                             processStatusLabel.setText(t("module.process.cancelled", completedSteps));
                         }
-                        executionOutputArea.setText("Process cancelled after step " + completedSteps + ". Prior completed step results preserved.");
+                        executionOutputArea.setText(t("module.process.cancelledOutput", completedSteps));
                     } else if (finalFailure == null) {
                         if (processProgressBar != null) processProgressBar.setProgress(1.0);
                         if (processStatusLabel != null) processStatusLabel.setText(t("module.process.completed"));
@@ -855,7 +879,7 @@ if (encrypt || decrypt || mac || sign || verify) {
             executionStatusTable.getItems().setAll(new ProcessExecutionRow("validation", "-", "Validation",
                     "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
         }
-        executionOutputArea.setText("Process failed: " + message);
+        executionOutputArea.setText(t("module.process.feedback.failed", message));
     }
 
     private void renderExecutionResult(ProcessDefinition definition, Map<String, com.cryptocarver.model.process.FlowValue> result,
@@ -881,7 +905,8 @@ if (encrypt || decrypt || mac || sign || verify) {
             }
         }
 
-        StringBuilder trace = new StringBuilder(failure == null ? "Process completed successfully.\n" : "Process failed: " + failure.getMessage() + "\n");
+        StringBuilder trace = new StringBuilder(failure == null ? t("module.process.completed") + "\n"
+                : t("module.process.feedback.failed", failure.getMessage()) + "\n");
         for (NodeExecutionEvent event : finalEvents.values()) {
             trace.append('\n').append('[').append(event.step()).append("] ")
                     .append(event.nodeLabel().replace("\n", " ")).append(" · ").append(event.nodeType())
@@ -968,16 +993,16 @@ if (encrypt || decrypt || mac || sign || verify) {
         try {
             if (file != null) {
                 Files.writeString(file.toPath(), ProcessDefinitionCodec.serialize(toDefinition()));
-                executionOutputArea.setText("Saved process '" + processName + "' to " + file.getAbsolutePath());
+                executionOutputArea.setText(t("module.process.saveSuccess", processName, file.getAbsolutePath()));
             }
         }
-        catch (Exception e) { executionOutputArea.setText("Cannot save process: " + e.getMessage()); }
+        catch (Exception e) { executionOutputArea.setText(t("module.process.saveFailed", e.getMessage())); }
     }
     @FXML public void handleLoadProcess() {
         FileChooser chooser = new FileChooser(); chooser.setTitle("Open process"); chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoForge process", "*.cfprocess.json"));
         File file = chooser.showOpenDialog(workflowCanvas.getScene().getWindow());
         try { if (file != null) load(ProcessDefinitionCodec.deserialize(Files.readString(file.toPath()))); }
-        catch (Exception e) { executionOutputArea.setText("Cannot open process: " + e.getMessage()); }
+        catch (Exception e) { executionOutputArea.setText(t("module.process.openFailed", e.getMessage())); }
     }
 
     /** Loads an editable starter workflow; no secret material is embedded in presets. */
@@ -1070,7 +1095,7 @@ if (encrypt || decrypt || mac || sign || verify) {
     private void loadPreset(ProcessDefinition preset) {
         load(preset);
         if (executionOutputArea != null) {
-            executionOutputArea.setText("Loaded preset '" + preset.name + "'. You can edit every node before running it.");
+            executionOutputArea.setText(t("module.process.presetLoaded", preset.name));
         }
     }
 
@@ -1236,7 +1261,8 @@ if (encrypt || decrypt || mac || sign || verify) {
             if (fileModeFieldGroup != null) {
                 fileModeFieldGroup.setVisible(true); fileModeFieldGroup.setManaged(true);
                 if (fileModeLabel != null) {
-                    fileModeLabel.setText("FILE_INPUT".equals(node.type) ? "Read mode" : "Write mode");
+                    fileModeLabel.setText("FILE_INPUT".equals(node.type)
+                            ? t("module.process.feedback.readMode") : t("module.process.feedback.writeMode"));
                 }
                 String rm = "FILE_INPUT".equals(node.type) ?
                     selected.configuration.getOrDefault("readMode", "BINARY") :
@@ -1298,7 +1324,7 @@ if (cryptoAlgorithmFieldGroup != null) {
                     cryptoHelpLabel.setText(authenticated
                             ? "SOAP Body content encryption. Authenticated encryption: yes."
                             : "SOAP Body content encryption. Authenticated encryption: no.");
-                    cryptoWarningLabel.setText("WARNING: CBC encryption is not authenticated.");
+                    cryptoWarningLabel.setText(t("module.process.warningCbc"));
                     cryptoWarningLabel.setVisible(!authenticated);
                     cryptoWarningLabel.setManaged(!authenticated);
                 }
@@ -1489,11 +1515,11 @@ if (cryptoAlgorithmFieldGroup != null) {
             return;
         }
         if ("AES/GCM/NoPadding".equals(algorithm)) {
-            nonceLabel.setText("Nonce (12 bytes / 96 bits for AES-GCM)");
+            nonceLabel.setText(t("module.process.feedback.nonce") + " (12 bytes / 96 bits for AES-GCM)");
         } else if ("AES/CBC/PKCS7Padding".equals(algorithm) || "AES/CTR/NoPadding".equals(algorithm)) {
-            nonceLabel.setText("IV (16 bytes / AES block size)");
+            nonceLabel.setText(t("module.process.feedback.ivLabel"));
         } else {
-            nonceLabel.setText("Nonce / IV");
+            nonceLabel.setText(t("module.process.feedback.nonce"));
         }
     }
 

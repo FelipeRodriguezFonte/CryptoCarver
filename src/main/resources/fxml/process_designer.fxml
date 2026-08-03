@@ -26,7 +26,8 @@
             </MenuButton>
             <Button text="Save…" onAction="#handleSaveProcess" styleClass="secondary-button"/>
             <Button text="Open…" onAction="#handleLoadProcess" styleClass="secondary-button"/>
-            <Button text="Reset" onAction="#handleClearCanvas" styleClass="secondary-button"/>
+            <Button text="Clear canvas" onAction="#handleClearCanvas" styleClass="secondary-button"/>
+            <Button text="Reset Defaults" onAction="#handleResetDefaults" styleClass="secondary-button"/>
         </FlowPane>
         <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 2 0 2 0;">
             <ProgressBar fx:id="processProgressBar" prefWidth="300" progress="0.0" HBox.hgrow="ALWAYS"/>

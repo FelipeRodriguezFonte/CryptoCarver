@@ -6,7 +6,8 @@
 <VBox fx:id="emvContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.EMVController" spacing="14" styleClass="content-container-vbox,emv-module">
     <HBox alignment="CENTER_RIGHT">
-        <Button text="Reset" onAction="#handleReset" styleClass="secondary-button"/>
+        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
     <Accordion styleClass="module-accordion">
         <panes>

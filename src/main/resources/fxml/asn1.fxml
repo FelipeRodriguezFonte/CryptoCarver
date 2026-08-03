@@ -48,7 +48,7 @@
                                             <children>
                                                 <Button mnemonicParsing="false" onAction="#handleParseASN1" styleClass="action-button" text="Parse ASN.1" />
                                                 <Button mnemonicParsing="false" onAction="#handleClearASN1" text="Clear" />
-                                                <Button mnemonicParsing="false" onAction="#resetModule" text="Reset" styleClass="secondary-button"/>
+                                                <Button mnemonicParsing="false" onAction="#resetModule" text="Reset Defaults" styleClass="secondary-button"/>
                                                 <Button mnemonicParsing="false" onAction="#handleExportASN1Tree" text="Export Tree" />
                                                 <Button mnemonicParsing="false" onAction="#handleExportASN1Json" text="Export JSON" />
                                                 <Button mnemonicParsing="false" onAction="#handleExportASN1Markdown" text="Export Markdown" />
