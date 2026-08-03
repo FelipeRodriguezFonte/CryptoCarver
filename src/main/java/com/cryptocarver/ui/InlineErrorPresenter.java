@@ -226,20 +226,25 @@ public class InlineErrorPresenter {
         if (root == null || fieldKey == null || fieldKey.isBlank()) return null;
         String cleanKey = fieldKey.trim().toLowerCase();
 
-        // 1. Direct match by fx:id
-        if (Objects.equals(root.getId(), fieldKey)) return root;
+        // Complete the exact fx:id search before considering semantic aliases.
+        // A recursive alias fallback can otherwise select an earlier "input" field
+        // and prevent a later exact match from being reached.
+        Node exact = findNodeByExactId(root, fieldKey);
+        if (exact != null) return exact;
 
-        // 2. Search recursively in children
+        // Fallback semantic alias search across scene graph.
+        return findNodeByAlias(root, cleanKey);
+    }
+
+    private static Node findNodeByExactId(Node root, String fieldKey) {
+        if (Objects.equals(root.getId(), fieldKey)) return root;
         if (root instanceof javafx.scene.Parent parent) {
             for (Node child : parent.getChildrenUnmodifiable()) {
-                if (Objects.equals(child.getId(), fieldKey)) return child;
-                Node found = findNodeByFieldKey(child, fieldKey);
+                Node found = findNodeByExactId(child, fieldKey);
                 if (found != null) return found;
             }
         }
-
-        // 3. Fallback semantic alias search across scene graph
-        return findNodeByAlias(root, cleanKey);
+        return null;
     }
 
     private static Node findNodeByAlias(Node root, String alias) {

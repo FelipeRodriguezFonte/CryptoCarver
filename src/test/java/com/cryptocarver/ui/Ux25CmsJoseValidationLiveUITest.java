@@ -55,8 +55,8 @@ class Ux25CmsJoseValidationLiveUITest {
     void cmsEmptyInputAndDetachedContentUseRealFieldsAndBanner() throws Exception {
         I18nService.getInstance().setPreference(com.cryptocarver.model.LanguagePreference.EN);
         final CmsFixture[] fixture = new CmsFixture[1];
+        fx(() -> fixture[0] = CmsFixture.load());
         fx(() -> {
-            fixture[0] = CmsFixture.load();
             fixture[0].controller.init(fixture[0].reporter);
             fixture[0].root.setExpanded(true);
             fixture[0].input.clear();
@@ -84,8 +84,8 @@ class Ux25CmsJoseValidationLiveUITest {
     void joseJwtDetachedAlgorithmAndKeyValidationUseRealFieldsAndBanner() throws Exception {
         I18nService.getInstance().setPreference(com.cryptocarver.model.LanguagePreference.EN);
         final JoseFixture[] fixture = new JoseFixture[1];
+        fx(() -> fixture[0] = JoseFixture.load());
         fx(() -> {
-            fixture[0] = JoseFixture.load();
             fixture[0].controller.showSection("JWT");
 
             expandAncestors(fixture[0].jwtToken);
@@ -307,6 +307,7 @@ class Ux25CmsJoseValidationLiveUITest {
                 HBox errorBanner = (HBox) sceneRoot.getChildren().get(0);
                 InlineErrorPresenter presenter = presenter(errorBanner, sceneRoot);
                 RecordingReporter reporter = new RecordingReporter(presenter, sceneRoot, errorBanner);
+                controller.setReporter(reporter);
                 stage = new Stage(); stage.setScene(new Scene(sceneRoot, 1100, 800)); stage.show();
                 return new JoseFixture(controller, jwtToken, jwtKey, detachedAlgorithm, detachedPayload,
                         detachedSigningKey, detachedVerificationKey, detachedToken,

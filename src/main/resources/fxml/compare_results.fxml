@@ -25,8 +25,8 @@
     <GridPane hgap="15" vgap="8" style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-border-color: #e0e0e0; -fx-border-radius: 4;">
         <columnConstraints>
             <ColumnConstraints prefWidth="130"/>
-            <ColumnConstraints percentWidth="43" HBox.hgrow="ALWAYS"/>
-            <ColumnConstraints percentWidth="43" HBox.hgrow="ALWAYS"/>
+            <ColumnConstraints percentWidth="43"/>
+            <ColumnConstraints percentWidth="43"/>
         </columnConstraints>
 
         <Label text="Property" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
