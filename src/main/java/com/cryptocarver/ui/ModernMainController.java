@@ -2725,6 +2725,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         if (inlineErrorPresenter != null) {
             inlineErrorPresenter.showError(localizedError(error), rootStackPane != null ? rootStackPane : mainPane);
+            inlineErrorPresenter.goToField(rootStackPane != null ? rootStackPane : mainPane);
         }
     }
 
@@ -3834,9 +3835,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 readinessPanel.setManaged(true);
                 readinessPanel.setVisible(true);
             }
-            String msg = firstIssue != null ? firstIssue.getMessage() : "Incomplete operation setup";
+            String msg = firstIssue != null ? localizedPreflightMessage(firstIssue) : i18n.text("preflight.remedy.generic");
             String fieldKey = firstIssue != null ? firstIssue.getTargetControlKey() : null;
-            showError(new UserFacingError("Preflight Setup Required", msg, "Complete the highlighted setup steps before running the operation.", fieldKey));
+            showError(new UserFacingError(i18n.text("preflight.title"), msg,
+                    localizedPreflightRemedy(firstIssue), fieldKey));
             return false;
         }
         return true;
@@ -3904,7 +3906,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
         }
 
-        readinessSummaryLabel.setText(currentPreflightReport.getSummaryMessage());
+        readinessSummaryLabel.setText(localizedPreflightSummary(currentPreflightReport));
 
         readinessChecksContainer.getChildren().clear();
         java.util.List<com.cryptocarver.model.PreflightCheck> checks = currentPreflightReport.getChecks();
@@ -3919,7 +3921,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case INCOMPLETE -> "❓ ";
                 case BLOCKED -> "⛔ ";
             };
-            checkBtn.setText(icon + check.getName() + ": " + check.getMessage());
+            checkBtn.setText(icon + check.getName() + ": " + localizedPreflightMessage(check));
             checkBtn.getStyleClass().add("readiness-check-button");
             checkBtn.setOnAction(e -> {
                 if (check.getTargetControlKey() != null) {
@@ -3928,6 +3930,55 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             });
             readinessChecksContainer.getChildren().add(checkBtn);
         }
+    }
+
+    private String localizedPreflightSummary(com.cryptocarver.model.PreflightReport report) {
+        long issues = report.getChecks().stream()
+                .filter(check -> check.getStatus() != com.cryptocarver.model.PreflightStatus.READY)
+                .count();
+        return switch (report.getOverallStatus()) {
+            case READY -> i18n.text("preflight.summary.ready");
+            case BLOCKED -> i18n.text("preflight.summary.blocked", issues);
+            case INCOMPLETE -> i18n.text("preflight.summary.incomplete", issues);
+            case WARNING -> i18n.text("preflight.summary.warning", issues);
+        };
+    }
+
+    private String localizedPreflightMessage(com.cryptocarver.model.PreflightCheck check) {
+        if (check == null) return i18n.text("preflight.remedy.generic");
+        String message = check.getMessage() == null ? "" : check.getMessage();
+        String lower = message.toLowerCase(java.util.Locale.ROOT);
+        String target = check.getTargetControlKey() == null ? "" : check.getTargetControlKey().toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("empty") || lower.contains("required") || lower.contains("missing")) {
+            if (target.contains("tag")) return i18n.text("preflight.tag.required");
+            if (target.contains("signature")) return i18n.text("preflight.signature.required");
+            if (target.contains("algorithm")) return i18n.text("preflight.algorithm.required");
+            if (target.contains("mode")) return i18n.text("preflight.mode.required");
+            if (target.contains("key")) return i18n.text("preflight.key.required");
+            if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.iv.required");
+            return i18n.text("preflight.input.required");
+        }
+        if (lower.contains("non-hexadecimal") || lower.contains("invalid characters")) {
+            if (target.contains("key")) return i18n.text("preflight.key.invalid");
+            if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.iv.invalid");
+            if (target.contains("tag")) return i18n.text("preflight.tag.invalid");
+            return i18n.text("preflight.input.hex.invalid");
+        }
+        if (lower.contains("odd number")) return i18n.text("preflight.input.hex.odd");
+        if (lower.contains("base64")) return i18n.text("preflight.input.base64.invalid");
+        return message;
+    }
+
+    private String localizedPreflightRemedy(com.cryptocarver.model.PreflightCheck check) {
+        if (check == null || check.getTargetControlKey() == null) return i18n.text("preflight.remedy.generic");
+        String target = check.getTargetControlKey().toLowerCase(java.util.Locale.ROOT);
+        if (target.contains("algorithm")) return i18n.text("preflight.remedy.algorithm");
+        if (target.contains("mode")) return i18n.text("preflight.remedy.mode");
+        if (target.contains("key")) return i18n.text("preflight.remedy.key");
+        if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.remedy.iv");
+        if (target.contains("tag")) return i18n.text("preflight.remedy.tag");
+        if (target.contains("input") || target.contains("data")) return i18n.text("preflight.remedy.input");
+        return i18n.text("preflight.remedy.generic");
     }
 
     private com.cryptocarver.model.PreflightReport evaluatePreflightForOperation(String operation, boolean isEncrypt) {
@@ -4040,7 +4091,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void focusControl(String controlKey) {
         if (controlKey == null || controlKey.isEmpty()) return;
-        Object[] controllers = new Object[]{ this, cipherContainerController, genericContainerController, authenticationContainerController, certificatesContainerController };
+        Object[] controllers = new Object[]{ this, cipherContainerController, genericContainerController,
+                authenticationContainerController, certificatesContainerController, keysContainerController,
+                xmlSecurityContainerController, wssSecurityContainerController, paymentsContainerController,
+                emvContainerController, joseController };
         for (Object ctrl : controllers) {
             if (ctrl == null) continue;
             try {

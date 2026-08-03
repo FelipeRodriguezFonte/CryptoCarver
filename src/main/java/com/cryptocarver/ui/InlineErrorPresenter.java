@@ -109,7 +109,7 @@ public class InlineErrorPresenter {
         Clipboard.getSystemClipboard().setContent(content);
 
         if (reporter != null) {
-            reporter.updateStatus("Technical error details copied to clipboard (secrets redacted).");
+            reporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("error.detailsCopied"));
         }
     }
 

@@ -79,6 +79,13 @@ public class XMLSignatureController {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
 
+    private void showValidationError(String title, String message, String fieldKey) {
+        if (statusReporter != null) {
+            String safeMessage = InlineErrorPresenter.redactSecrets(message);
+            statusReporter.showError(new UserFacingError(title, safeMessage, safeMessage, fieldKey));
+        }
+    }
+
     private byte[] lastTimestampToken;
 
     public XMLSignatureController() {
@@ -344,7 +351,7 @@ public class XMLSignatureController {
         try {
             String inputPath = xmlSignInputPathField.getText();
             if (inputPath.isEmpty()) {
-                statusReporter.showError("Input Error", t("module.xml.inputRequired"));
+                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.inputRequired"), "xmlSignInputPathField");
                 return;
             }
 
@@ -354,11 +361,11 @@ public class XMLSignatureController {
             String tsaUrl = getTsaUrl();
 
             if (!"XAdES-BASELINE-B".equals(level) && tsaUrl == null) {
-                statusReporter.showError("TSA Required", t("module.xml.tsaRequired", level));
+                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.tsaRequired", level), "xmlSignTsaUrlCombo");
                 return;
             }
             if (tsaUrl != null && !isHttpUrl(tsaUrl)) {
-                statusReporter.showError("TSA URL Error", t("module.xml.tsaUrlInvalid"));
+                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.tsaUrlInvalid"), "xmlSignTsaUrlCombo");
                 return;
             }
             saveCustomTsa(tsaUrl);
@@ -376,7 +383,7 @@ public class XMLSignatureController {
             if (xmlSignSourcePkcs11Radio != null && xmlSignSourcePkcs11Radio.isSelected()) {
                 String alias = xmlSignKeyAliasCombo.getValue();
                 if (alias == null || alias.isEmpty()) {
-                    statusReporter.showError("Key Error", t("module.xml.feedback.aliasRequired"));
+                    showValidationError(t("module.xml.error.inputTitle"), t("module.xml.feedback.aliasRequired"), "xmlSignKeyAliasCombo");
                     return;
                 }
                 signedXml = XMLSignatureOperations.signXAdESWithPkcs11(
@@ -389,14 +396,14 @@ public class XMLSignatureController {
                 int keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
 
                 if (keyPath.isEmpty() || password.isEmpty()) {
-                    statusReporter.showError("Input Error", t("module.xml.feedback.keyStoreRequired"));
+                    showValidationError(t("module.xml.error.inputTitle"), t("module.xml.feedback.keyStoreRequired"), "xmlSignKeyPathField");
                     return;
                 }
                 if (keyIndex < 0) {
                     handleLoadXMLKeys();
                     keyIndex = xmlSignKeyAliasCombo.getSelectionModel().getSelectedIndex();
                     if (keyIndex < 0) {
-                        statusReporter.showError("Key Error", t("module.xml.feedback.aliasRequired"));
+                        showValidationError(t("module.xml.error.inputTitle"), t("module.xml.feedback.aliasRequired"), "xmlSignKeyAliasCombo");
                         return;
                     }
                 }
@@ -426,7 +433,7 @@ public class XMLSignatureController {
         try {
             String xmlContent = xmlVerifyInputArea.getText();
             if (xmlContent.isEmpty()) {
-                statusReporter.showError(t("module.xml.error.inputTitle"), t("module.xml.error.pasteXml"));
+                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.error.pasteXml"), "xmlVerifyInputArea");
                 return;
             }
             String trustStorePath = xmlVerifyTrustStorePathField.getText().trim();

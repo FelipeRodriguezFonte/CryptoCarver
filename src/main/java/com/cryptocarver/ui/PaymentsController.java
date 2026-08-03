@@ -34,7 +34,14 @@ public class PaymentsController {
     }
 
     private void showError(String title, String message) {
-        if (mainController != null) mainController.showError(title, message);
+        showError(title, message, null);
+    }
+
+    private void showError(String title, String message, String fieldKey) {
+        if (mainController != null) {
+            String safeMessage = InlineErrorPresenter.redactSecrets(message);
+            mainController.showError(new UserFacingError(title, safeMessage, safeMessage, fieldKey));
+        }
     }
 
     // PIN Block controls
@@ -1425,12 +1432,12 @@ public class PaymentsController {
             String format = encPinBlockFormatCombo.getSelectionModel().getSelectedItem();
 
             if (pin.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterValue", "PIN"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterValue", "PIN"), "encPinField");
                 return;
             }
             // Some formats might not need PAN, but mostly they do for XOR or binding
             if (pan.isEmpty() && (format.contains("ISO-0") || format.contains("ISO-3"))) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterPanForFormat", format));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterPanForFormat", format), "encPanFieldEncode");
                 return;
             }
 
@@ -1492,7 +1499,7 @@ public class PaymentsController {
             String format = encPinBlockFormatCombo.getSelectionModel().getSelectedItem();
 
             if (pinBlockHex.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterValue", "PIN Block"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterValue", "PIN Block"), "encPinBlockFieldDecode");
                 return;
             }
 
@@ -1558,7 +1565,7 @@ public class PaymentsController {
             String pan = ibm3624PanField.getText().trim();
 
             if (pvkHex.isEmpty() || offset.isEmpty() || pan.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkOffsetPanRequired"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkOffsetPanRequired"), "ibm3624PvkField");
                 return;
             }
 
@@ -1672,7 +1679,7 @@ public class PaymentsController {
             String pinToVerify = ibm3624PinVerifyField.getText().trim();
 
             if (pvkHex.isEmpty() || pan.isEmpty() || pinToVerify.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPinRequired"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPinRequired"), "ibm3624PvkField");
                 return;
             }
 
@@ -1785,7 +1792,7 @@ public class PaymentsController {
             String pin = genOffsetPinField.getText().trim();
 
             if (pvk.isEmpty() || decTable.isEmpty() || pan.isEmpty() || pin.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"), "genOffsetPvkField");
                 return;
             }
 
@@ -1901,7 +1908,7 @@ public class PaymentsController {
                 keyIndex = "0";
 
             if (pvk.isEmpty() || pan.isEmpty() || pin.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"), "genPvvPvkField");
                 return;
             }
 
@@ -1944,7 +1951,7 @@ public class PaymentsController {
                 keyIndex = "0";
 
             if (pvk.isEmpty() || pan.isEmpty() || targetPvv.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvvTargetRequired"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvvTargetRequired"), "derivePvvTargetPvvField");
                 return;
             }
 

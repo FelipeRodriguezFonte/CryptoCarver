@@ -12,6 +12,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -543,6 +545,35 @@ public class KeysController {
             tr31ImportResultArea.setManaged(false);
             tr31ImportResultArea.setVisible(false);
         }
+    }
+
+    private void showTR31Validation(String message, String fieldKey, TextArea feedbackArea) {
+        showTR31Validation(message, fieldKey, feedbackArea == null ? null : safeMessage -> {
+            feedbackArea.setText(safeMessage);
+            feedbackArea.setVisible(true);
+            feedbackArea.setManaged(true);
+        });
+    }
+
+    private void showTR31Validation(String message, String fieldKey, TR31FeedbackTarget feedbackTarget) {
+        String safeMessage = InlineErrorPresenter.redactSecrets(message);
+        UserFacingError error = new UserFacingError(t("module.keys.tr31.errorTitle"), safeMessage, safeMessage, fieldKey);
+        if (mainController != null) {
+            mainController.showError(error);
+        } else if (feedbackTarget != null) {
+            feedbackTarget.present(safeMessage);
+        }
+    }
+
+    @FunctionalInterface
+    interface TR31FeedbackTarget {
+        void present(String safeMessage);
+    }
+
+    private void logTR31Failure(String operation, Exception error) {
+        StringWriter trace = new StringWriter();
+        error.printStackTrace(new PrintWriter(trace));
+        System.err.print(InlineErrorPresenter.redactSecrets("TR-31 " + operation + " failed:\n" + trace));
     }
 
     private void setSectionVisible(VBox section, boolean visible) {
@@ -3004,23 +3035,23 @@ public class KeysController {
      */
     public void handleTR31Export() {
         try {
-            updateStatus("Starting TR-31 Export...");
+            updateStatus(t("module.keys.tr31.status.starting"));
             String kbpk = tr31KbpkExportField.getText().trim().replaceAll("\\s+", "");
             String key = tr31KeyToWrapField.getText().trim().replaceAll("\\s+", "");
 
             // Validate inputs
             if (kbpk.isEmpty() || key.isEmpty()) {
-                tr31ExportResultArea.setText("Error: KBPK and Key are required");
+                showTR31Validation(t("module.keys.tr31.required"), kbpk.isEmpty() ? "tr31KbpkExportField" : "tr31KeyToWrapField", tr31ExportResultArea);
                 return;
             }
 
             if (!kbpk.matches("[0-9A-Fa-f]+")) {
-                tr31ExportResultArea.setText("Error: KBPK must be hexadecimal");
+                showTR31Validation(t("module.keys.tr31.kbpkInvalid"), "tr31KbpkExportField", tr31ExportResultArea);
                 return;
             }
 
             if (!key.matches("[0-9A-Fa-f]+")) {
-                tr31ExportResultArea.setText("Error: Key must be hexadecimal");
+                showTR31Validation(t("module.keys.tr31.keyInvalid"), "tr31KeyToWrapField", tr31ExportResultArea);
                 return;
             }
 
@@ -3109,7 +3140,7 @@ public class KeysController {
                 }
             });
 
-            updateStatus("TR-31 key wrapped successfully");
+            updateStatus(t("module.keys.tr31.status.wrapped"));
 
             // Delegate to ModernMainController history if available
             if (mainController != null) {
@@ -3143,11 +3174,9 @@ public class KeysController {
             }
 
         } catch (Exception e) {
-            tr31ExportResultArea.setText("Error wrapping key: " + e.getMessage());
-            tr31ExportResultArea.setVisible(true);
-            tr31ExportResultArea.setManaged(true);
-            updateStatus("TR-31 wrap failed");
-            e.printStackTrace();
+            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyToWrapField", tr31ExportResultArea);
+            updateStatus(t("module.keys.tr31.status.wrapFailed"));
+            logTR31Failure("wrap", e);
         }
     }
 
@@ -3161,7 +3190,7 @@ public class KeysController {
 
             // Validate inputs
             if (kbpk.isEmpty() || keyBlock.isEmpty()) {
-                tr31ImportResultArea.setText("Error: KBPK and Key Block are required");
+                showTR31Validation(t("module.keys.tr31.keyBlockRequired"), kbpk.isEmpty() ? "tr31KbpkImportField" : "tr31KeyBlockField", tr31ImportResultArea);
                 return;
             }
 
@@ -3205,7 +3234,7 @@ public class KeysController {
             tr31ImportResultArea.setText(result.toString());
             tr31ImportResultArea.setVisible(true);
             tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 key unwrapped successfully");
+            updateStatus(t("module.keys.tr31.status.unwrapped"));
 
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Unwrap Key - " + TR31Operations.getKeyUsageDescription(header.keyUsage))
@@ -3217,11 +3246,9 @@ public class KeysController {
             }
 
         } catch (Exception e) {
-            tr31ImportResultArea.setText("Error unwrapping key: " + e.getMessage());
-            tr31ImportResultArea.setVisible(true);
-            tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 unwrap failed");
-            e.printStackTrace();
+            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyBlockField", tr31ImportResultArea);
+            updateStatus(t("module.keys.tr31.status.unwrapFailed"));
+            logTR31Failure("unwrap", e);
         }
     }
 
@@ -3233,7 +3260,7 @@ public class KeysController {
             String keyBlock = tr31KeyBlockField.getText().trim().replaceAll("\\s+", "");
 
             if (keyBlock.isEmpty()) {
-                tr31ImportResultArea.setText("Error: Key Block is required");
+                showTR31Validation(t("module.keys.tr31.keyBlockRequired"), "tr31KeyBlockField", tr31ImportResultArea);
                 return;
             }
 
@@ -3293,7 +3320,7 @@ public class KeysController {
             tr31ImportResultArea.setText(result.toString());
             tr31ImportResultArea.setVisible(true);
             tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 header parsed successfully");
+            updateStatus(t("module.keys.tr31.status.headerParsed"));
 
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("TR-31 Header Parse")
@@ -3303,11 +3330,9 @@ public class KeysController {
             }
 
         } catch (Exception e) {
-            tr31ImportResultArea.setText("Error parsing header: " + e.getMessage());
-            tr31ImportResultArea.setVisible(true);
-            tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 parse failed");
-            e.printStackTrace();
+            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyBlockField", tr31ImportResultArea);
+            updateStatus(t("module.keys.tr31.status.parseFailed"));
+            logTR31Failure("header parse", e);
         }
     }
 

@@ -196,7 +196,7 @@ public class WssSecurityController {
         String path = wssSignKeyPathField.getText();
         String pass = wssSignKeyPasswordField.getText();
         if (path == null || path.trim().isEmpty()) {
-            showError(t("module.wss.feedback.keyStoreRequired"));
+            showError(t("module.wss.feedback.keyStoreRequired"), "wssSignKeyPathField");
             return;
         }
 
@@ -213,7 +213,7 @@ public class WssSecurityController {
             if (!wssSignKeyAliasCombo.getItems().isEmpty()) {
                 wssSignKeyAliasCombo.getSelectionModel().selectFirst();
             } else {
-                showError(t("module.wss.feedback.keyAliasRequired"));
+                showError(t("module.wss.feedback.keyAliasRequired"), "wssSignKeyAliasCombo");
             }
         } catch (Exception e) {
             LOG.error("Failed to load WSS KeyStore", e);
@@ -230,11 +230,11 @@ public class WssSecurityController {
         String keyPassStr = wssSignPrivateKeyPasswordField.getText();
 
         if (xml == null || xml.trim().isEmpty()) {
-            showError(t("module.wss.error.soapToSign"));
+            showError(t("module.wss.error.soapToSign"), "wssSignInputArea");
             return;
         }
         if (path == null || path.trim().isEmpty() || alias == null) {
-            showError(t("module.wss.error.keyStoreAlias"));
+            showError(t("module.wss.error.keyStoreAlias"), "wssSignKeyPathField");
             return;
         }
 
@@ -305,7 +305,7 @@ public class WssSecurityController {
         String certPath = wssVerifyTrustStorePathField.getText();
 
         if (xml == null || xml.trim().isEmpty()) {
-            showError(t("module.wss.inputRequired"));
+            showError(t("module.wss.inputRequired"), "wssVerifyInputArea");
             return;
         }
 
@@ -574,7 +574,17 @@ public class WssSecurityController {
     }
 
     private void showError(String msg) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
+        showError(msg, null);
+    }
+
+    private void showError(String msg, String fieldKey) {
+        String safeMessage = InlineErrorPresenter.redactSecrets(msg);
+        if (statusReporter != null) {
+            statusReporter.showError(new UserFacingError(
+                    t("module.wss.errorTitle"), safeMessage, safeMessage, fieldKey));
+            return;
+        }
+        Alert alert = new Alert(Alert.AlertType.ERROR, safeMessage, ButtonType.OK);
         alert.setHeaderText(t("module.wss.errorTitle"));
         alert.showAndWait();
     }
