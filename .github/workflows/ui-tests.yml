@@ -9,6 +9,150 @@ permissions:
   contents: read
 
 jobs:
+  pkcs11-integration:
+    name: PKCS#11 inventory integration (SoftHSM2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 17 and Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Install SoftHSM2
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y softhsm2
+
+      - name: Configure ephemeral SoftHSM2 token
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+
+          softhsm_root="${RUNNER_TEMP}/cryptocarver-softhsm"
+          token_dir="${softhsm_root}/tokens"
+          conf_path="${softhsm_root}/softhsm2.conf"
+          mkdir -p "${token_dir}"
+          chmod 700 "${softhsm_root}" "${token_dir}"
+
+          printf '%s\n' \
+            "directories.tokendir = ${token_dir}" \
+            'objectstore.backend = file' \
+            'log.level = ERROR' \
+            'slots.removable = false' \
+            'slots.mechanisms = ALL' \
+            > "${conf_path}"
+          chmod 600 "${conf_path}"
+          export SOFTHSM2_CONF="${conf_path}"
+
+          module_path=""
+          while IFS= read -r candidate; do
+            if [[ -f "${candidate}" ]]; then
+              module_path="${candidate}"
+              break
+            fi
+          done < <(dpkg -L softhsm2 | awk '/\/libsofthsm2\.so(\.[0-9]+)*$/ { print }')
+
+          if [[ -z "${module_path}" ]]; then
+            while IFS= read -r candidate; do
+              if [[ -f "${candidate}" ]]; then
+                module_path="${candidate}"
+                break
+              fi
+            done < <(find /usr/lib /lib -type f \( -name 'libsofthsm2.so' -o -name 'libsofthsm2.so.*' \) -print 2>/dev/null)
+          fi
+
+          if [[ -z "${module_path}" ]]; then
+            echo "SoftHSM2 module was not found after installation" >&2
+            exit 1
+          fi
+          module_path="$(readlink -f -- "${module_path}")"
+          if [[ ! -f "${module_path}" || ! -r "${module_path}" ]]; then
+            echo "Resolved SoftHSM2 module is not a readable file: ${module_path}" >&2
+            exit 1
+          fi
+
+          so_pin="$(od -An -N16 -tx1 /dev/urandom | tr -d '[:space:]')"
+          user_pin="$(od -An -N16 -tx1 /dev/urandom | tr -d '[:space:]')"
+          softhsm2-util --init-token --free \
+            --label 'CryptoCarver CI' \
+            --so-pin "${so_pin}" \
+            --pin "${user_pin}" \
+            >/dev/null 2>&1
+
+          {
+            printf 'SOFTHSM2_CONF=%s\n' "${conf_path}"
+            printf 'SOFTHSM2_MODULE=%s\n' "${module_path}"
+          } >> "${GITHUB_ENV}"
+
+          echo "[pkcs11-integration] SoftHSM2 module: ${module_path}"
+          echo "[pkcs11-integration] SoftHSM2 configuration: ${conf_path}"
+          echo "[pkcs11-integration] ephemeral token initialized"
+
+      - name: Run explicit PKCS#11 inventory integration test
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset CRYPTOCARVER_SOFTHSM_PIN \
+            CRYPTOCARVER_SOFTHSM_SLOT_INDEX \
+            CRYPTOCARVER_SOFTHSM_ALIAS \
+            CRYPTOCARVER_SOFTHSM_AES_ALIAS
+          test -f "${SOFTHSM2_CONF}"
+          test -f "${SOFTHSM2_MODULE}"
+          echo "[pkcs11-integration] executing Pkcs11LibraryInventorySoftHsmIntegrationTest"
+          SOFTHSM2_CONF="${SOFTHSM2_CONF}" \
+          SOFTHSM2_MODULE="${SOFTHSM2_MODULE}" \
+            mvn -Pintegration-tests \
+              -Dtest=Pkcs11LibraryInventorySoftHsmIntegrationTest \
+              -DfailIfNoTests=true \
+              -Dsurefire.printSummary=true \
+              -Dsurefire.useFile=false test
+
+          report="target/surefire-reports/TEST-com.cryptocarver.crypto.hsm.Pkcs11LibraryInventorySoftHsmIntegrationTest.xml"
+          test -f "${report}"
+          python3 -c '
+          import sys
+          import xml.etree.ElementTree as ET
+
+          suite = ET.parse(sys.argv[1]).getroot()
+          tests = int(suite.attrib.get("tests", "0"))
+          skipped = int(suite.attrib.get("skipped", "0"))
+          failures = int(suite.attrib.get("failures", "0"))
+          errors = int(suite.attrib.get("errors", "0"))
+          if (tests, skipped, failures, errors) != (1, 0, 0, 0):
+              raise SystemExit(
+                  f"Inventory integration was not executed exactly once: "
+                  f"tests={tests} skipped={skipped} failures={failures} errors={errors}"
+              )
+          print(f"[pkcs11-integration] inventory test executed: tests={tests} skipped={skipped}")
+          ' "${report}"
+
+      - name: Run the complete integration test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset CRYPTOCARVER_SOFTHSM_PIN \
+            CRYPTOCARVER_SOFTHSM_SLOT_INDEX \
+            CRYPTOCARVER_SOFTHSM_ALIAS \
+            CRYPTOCARVER_SOFTHSM_AES_ALIAS
+          SOFTHSM2_CONF="${SOFTHSM2_CONF}" \
+          SOFTHSM2_MODULE="${SOFTHSM2_MODULE}" \
+            mvn -Pintegration-tests -DfailIfNoTests=true -Dsurefire.printSummary=true test
+
+      - name: Remove ephemeral SoftHSM2 data
+        if: always()
+        shell: bash
+        run: rm -rf -- "${RUNNER_TEMP}/cryptocarver-softhsm"
+
   javafx-ui:
     name: JavaFX UI suite (Xvfb)
     runs-on: ubuntu-24.04

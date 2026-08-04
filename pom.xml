@@ -72,6 +72,14 @@
             <version>1.17.1</version>
         </dependency>
 
+        <!-- Local PKCS#11 ABI bridge. JNA loads only the user-selected native
+             module; it does not provide networking or token persistence. -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>5.13.0</version>
+        </dependency>
+
         <!-- Gson para JSON serialization -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -165,6 +173,17 @@
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-spi</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-crl-parser</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <!-- DSS CRL parser implementation used by the shared offline CRL policy. -->
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-crl-parser-x509crl</artifactId>
             <version>${dss.version}</version>
         </dependency>
         <dependency>
