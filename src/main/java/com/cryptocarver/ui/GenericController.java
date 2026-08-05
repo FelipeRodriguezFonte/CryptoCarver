@@ -318,16 +318,7 @@ public class GenericController {
         }
     }
 
-    private java.util.Map<String, String> runSafeBatchOperation(String operation, java.util.Map<String, String> row, String srcCol, String outCol) throws Exception {
-        String input = row.get(srcCol);
-        if (input == null) throw new IllegalArgumentException(srcCol + " field is required");
-        if ("SHA-256 (UTF-8 → Hex)".equals(operation)) {
-            return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.sha256(input));
-        }
-        if ("UTF-8 → Base64URL".equals(operation)) return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.encodeBase64Url(input));
-        if ("Base64URL → UTF-8".equals(operation)) return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.decodeBase64Url(input));
-        throw new IllegalArgumentException("Unsupported batch operation: " + operation);
-    }
+
 
     private String renderBatchReport(com.cryptocarver.model.batch.BatchRunner.Report report) {
         StringBuilder text = new StringBuilder("Rows processed: ").append(report.results().size()).append("\nSucceeded: ")
@@ -436,7 +427,7 @@ public class GenericController {
         } else {
             rowOperation = (rowNum, row) -> {
                 try {
-                    return runSafeBatchOperation(operation, row, srcCol, outCol);
+                    return com.cryptocarver.model.batch.BatchOperationCatalog.execute(operation, row, srcCol, outCol);
                 } catch (Exception e) {
                     if (stopOnError) errorOccurred.set(true);
                     throw e;
@@ -633,8 +624,10 @@ public class GenericController {
         if (batchOperationCombo != null) {
             // Batch files are deliberately data-only. Secret/key-bearing
             // crypto operations remain available in their dedicated modules.
-            batchOperationCombo.getItems().setAll("SHA-256 (UTF-8 → Hex)", "UTF-8 → Base64URL", "Base64URL → UTF-8");
-            batchOperationCombo.setValue("SHA-256 (UTF-8 → Hex)");
+            batchOperationCombo.getItems().setAll(com.cryptocarver.model.batch.BatchOperationCatalog.getAvailableOperations());
+            if (!batchOperationCombo.getItems().isEmpty()) {
+                batchOperationCombo.setValue(batchOperationCombo.getItems().get(0));
+            }
             batchOperationCombo.valueProperty().addListener((obs, oldV, newV) -> {
                 boolean isCrypto = "Encrypt Record".equals(newV) || "Decrypt Record".equals(newV);
                 if (batchCryptoConfigBox != null) {

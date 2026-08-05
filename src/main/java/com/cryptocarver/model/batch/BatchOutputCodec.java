@@ -12,7 +12,7 @@ public final class BatchOutputCodec {
     private BatchOutputCodec() { }
 
     public static String toJsonLines(BatchRunner.Report report) {
-        if (report == null || report.results().isEmpty()) return "";
+        if (report == null || report.cancelled() || report.results().isEmpty()) return "";
         Gson gson = new Gson(); StringBuilder output = new StringBuilder();
         for (BatchRunner.RowResult row : report.results()) {
             Map<String, Object> object = new LinkedHashMap<>();
@@ -25,7 +25,8 @@ public final class BatchOutputCodec {
     }
 
     public static String toCsv(BatchRunner.Report report) {
-        if (report == null || report.results().isEmpty()) return "row,status,error\n";
+        if (report == null || report.cancelled()) return "";
+        if (report.results().isEmpty()) return "row,status,error\n";
         Set<String> inputKeys = new LinkedHashSet<>(), outputKeys = new LinkedHashSet<>();
         report.results().forEach(row -> { inputKeys.addAll(row.input().keySet()); outputKeys.addAll(row.output().keySet()); });
         StringBuilder output = new StringBuilder("row,status,error");

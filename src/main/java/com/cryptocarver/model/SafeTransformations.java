@@ -16,6 +16,48 @@ public final class SafeTransformations {
         return CodecRegistry.getInstance().encode(digest, ByteFormat.HEX).toLowerCase();
     }
 
+    public static String sha384(String value) throws Exception {
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
+        byte[] digest = MessageDigest.getInstance("SHA-384").digest(input);
+        return CodecRegistry.getInstance().encode(digest, ByteFormat.HEX).toLowerCase();
+    }
+
+    public static String sha512(String value) throws Exception {
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
+        byte[] digest = MessageDigest.getInstance("SHA-512").digest(input);
+        return CodecRegistry.getInstance().encode(digest, ByteFormat.HEX).toLowerCase();
+    }
+
+    public static String utf8ToHex(String value) {
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
+        return CodecRegistry.getInstance().encode(input, ByteFormat.HEX).toLowerCase();
+    }
+
+    public static String hexToUtf8(String value) {
+        byte[] decoded = CodecRegistry.getInstance().decode(value, ByteFormat.HEX);
+        return CodecRegistry.getInstance().encode(decoded, ByteFormat.TEXT_UTF8);
+    }
+
+    public static String utf8ToBase64(String value) {
+        byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
+        return CodecRegistry.getInstance().encode(input, ByteFormat.BASE64);
+    }
+
+    public static String base64ToUtf8(String value) {
+        byte[] decoded = CodecRegistry.getInstance().decode(value, ByteFormat.BASE64);
+        return CodecRegistry.getInstance().encode(decoded, ByteFormat.TEXT_UTF8);
+    }
+
+    public static String hexToBase64(String value) {
+        byte[] decoded = CodecRegistry.getInstance().decode(value, ByteFormat.HEX);
+        return CodecRegistry.getInstance().encode(decoded, ByteFormat.BASE64);
+    }
+
+    public static String base64ToHex(String value) {
+        byte[] decoded = CodecRegistry.getInstance().decode(value, ByteFormat.BASE64);
+        return CodecRegistry.getInstance().encode(decoded, ByteFormat.HEX).toLowerCase();
+    }
+
     public static String encodeBase64Url(String value) {
         byte[] input = CodecRegistry.getInstance().decode(value, ByteFormat.TEXT_UTF8);
         return CodecRegistry.getInstance().encode(input, ByteFormat.BASE64_URL);

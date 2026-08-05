@@ -118,8 +118,7 @@ public final class BatchValidator {
 
     private static boolean isSupportedOperation(String op) {
         if (op == null) return false;
-        String lower = op.trim().toLowerCase();
-        return lower.contains("sha-256") || lower.contains("base64url") || lower.contains("encrypt") || lower.contains("decrypt") || lower.contains("cipher");
+        return BatchOperationCatalog.isSupportedOperation(op) || isCipherOperation(op);
     }
 
     private static boolean isCipherOperation(String op) {
