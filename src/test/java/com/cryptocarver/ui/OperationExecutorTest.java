@@ -83,12 +83,14 @@ public class OperationExecutorTest {
     void testFailureHandlingAndCallbackOnFXThread() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean onFxThread = new AtomicBoolean(false);
+        AtomicBoolean taskOnFxThread = new AtomicBoolean(true);
         AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        Button trigger = new Button("TSA");
 
         executor.execute(
                 "Test Failure",
-                null,
-                () -> { throw new RuntimeException("Simulated background error"); },
+                trigger,
+                () -> { taskOnFxThread.set(Platform.isFxApplicationThread()); throw new RuntimeException("Simulated background error"); },
                 res -> fail("Task should not succeed"),
                 err -> {
                     onFxThread.set(Platform.isFxApplicationThread());
@@ -102,6 +104,8 @@ public class OperationExecutorTest {
         assertTrue(onFxThread.get(), "Failure callback must be executed on JavaFX Application Thread");
         assertNotNull(errorRef.get());
         assertEquals("Simulated background error", errorRef.get().getMessage());
+        assertFalse(taskOnFxThread.get(), "The potentially blocking task must run off the JavaFX Application Thread");
+        assertFalse(trigger.isDisable(), "The trigger must be restored after an error");
     }
 
     @Test
@@ -567,6 +571,8 @@ public class OperationExecutorTest {
         CountDownLatch workerStarted = new CountDownLatch(1);
         CountDownLatch blockWorker = new CountDownLatch(1);
         CountDownLatch cancelLatch = new CountDownLatch(1);
+        CountDownLatch fxQueueBlockStarted = new CountDownLatch(1);
+        CountDownLatch releaseFxQueue = new CountDownLatch(1);
 
         executor.executeWithProgress(
                 "Cancel Test",
@@ -589,12 +595,25 @@ public class OperationExecutorTest {
         thresholdField.setAccessible(true);
         thresholdField.set(executor, true);
 
-        // Queue progress report to FX thread
+        // Keep the FX queue blocked so this test can distinguish an enqueued
+        // callback from one that was already delivered before cancellation.
+        Platform.runLater(() -> {
+            fxQueueBlockStarted.countDown();
+            try {
+                releaseFxQueue.await(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        assertTrue(fxQueueBlockStarted.await(2, TimeUnit.SECONDS));
+
+        // Queue progress report to the blocked FX thread.
         executor.reportProgress(execId, "Cancel Test", 50, 100);
 
-        // Cancel operation IMMEDIATELY before FX queue flushes
+        // Cancel while the progress callback is still queued.
         executor.cancelCurrentOperation();
         blockWorker.countDown();
+        releaseFxQueue.countDown();
 
         assertTrue(cancelLatch.await(2, TimeUnit.SECONDS));
 
@@ -604,6 +623,65 @@ public class OperationExecutorTest {
         assertTrue(fxFlush.await(2, TimeUnit.SECONDS));
 
         assertEquals(0, updateCount.get(), "Queued progress reports MUST be discarded when operation is cancelled");
+    }
+
+    @Test
+    void testProgressDeliveryCannotRaceCancellationAfterStateCheck() throws Exception {
+        CountDownLatch workerStarted = new CountDownLatch(1);
+        CountDownLatch blockWorker = new CountDownLatch(1);
+        CountDownLatch handlerStarted = new CountDownLatch(1);
+        CountDownLatch releaseHandler = new CountDownLatch(1);
+        CountDownLatch cancellationRequested = new CountDownLatch(1);
+        CountDownLatch cancelReturned = new CountDownLatch(1);
+        AtomicInteger updateCount = new AtomicInteger();
+
+        executor.setProgressHandlers(s -> {}, details -> {
+            updateCount.incrementAndGet();
+            handlerStarted.countDown();
+            try {
+                releaseHandler.await(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, () -> {});
+
+        executor.executeWithProgress(
+                "Progress/Cancellation Race",
+                null,
+                monitor -> {
+                    workerStarted.countDown();
+                    blockWorker.await(2, TimeUnit.SECONDS);
+                    return "Done";
+                },
+                result -> fail("Should not succeed"),
+                error -> fail("Should not fail", error),
+                () -> {}
+        );
+
+        assertTrue(workerStarted.await(2, TimeUnit.SECONDS));
+        long execId = executor.getCurrentExecutionId();
+        Field thresholdField = OperationExecutor.class.getDeclaredField("thresholdReached");
+        thresholdField.setAccessible(true);
+        thresholdField.set(executor, true);
+
+        executor.reportProgress(execId, "Progress/Cancellation Race", 50, 100);
+        assertTrue(handlerStarted.await(2, TimeUnit.SECONDS));
+
+        Thread cancellationThread = new Thread(() -> {
+            cancellationRequested.countDown();
+            executor.cancelCurrentOperation();
+            cancelReturned.countDown();
+        }, "operation-cancellation-test");
+        cancellationThread.start();
+        assertTrue(cancellationRequested.await(2, TimeUnit.SECONDS));
+
+        // The handler is still the in-flight delivery. Releasing it establishes
+        // the ordering without relying on a sleep or scheduler timing.
+        releaseHandler.countDown();
+        assertTrue(cancelReturned.await(2, TimeUnit.SECONDS));
+        blockWorker.countDown();
+
+        assertEquals(1, updateCount.get(), "A delivery that started before cancellation must remain delivered");
     }
 
     @Test

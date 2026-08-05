@@ -19,6 +19,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -45,9 +46,12 @@ public class KeyboardShortcutsAndMockupCleanupTest {
 
     private void runAndWait(Runnable action) {
         CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
         Platform.runLater(() -> {
             try {
                 action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
             } finally {
                 latch.countDown();
             }
@@ -57,7 +61,15 @@ public class KeyboardShortcutsAndMockupCleanupTest {
                 fail("JavaFX execution timed out");
             }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             fail("Interrupted waiting for JavaFX thread");
+        }
+        if (failure.get() != null) {
+            Throwable throwable = failure.get();
+            if (throwable instanceof AssertionError error) {
+                throw error;
+            }
+            throw new AssertionError("Exception in JavaFX test action", throwable);
         }
     }
 

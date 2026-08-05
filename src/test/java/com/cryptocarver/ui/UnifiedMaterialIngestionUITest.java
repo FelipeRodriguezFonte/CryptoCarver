@@ -18,6 +18,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,9 +39,12 @@ public class UnifiedMaterialIngestionUITest {
 
     private void runAndWait(Runnable action) {
         CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
         Platform.runLater(() -> {
             try {
                 action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
             } finally {
                 latch.countDown();
             }
@@ -50,7 +54,15 @@ public class UnifiedMaterialIngestionUITest {
                 fail("JavaFX execution timed out");
             }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             fail("Interrupted waiting for JavaFX thread");
+        }
+        if (failure.get() != null) {
+            Throwable throwable = failure.get();
+            if (throwable instanceof AssertionError error) {
+                throw error;
+            }
+            throw new AssertionError("Exception in JavaFX test action", throwable);
         }
     }
 

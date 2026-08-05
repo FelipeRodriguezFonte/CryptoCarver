@@ -178,10 +178,13 @@ public class OperationExecutor {
                 if (executionId != currentExecutionId || currentState != State.RUNNING || updateProgressHandler == null) {
                     return; // Strictly accept ONLY RUNNING state for the current executionId
                 }
+                // Keep the state check and handler invocation in one critical section.
+                // Cancellation can therefore only linearize before delivery or after
+                // the callback has started; it cannot pass between those two points.
+                try {
+                    updateHandler.accept(new ProgressDetails(opName, processed, total, elapsed, formatted));
+                } catch (Exception ignored) {}
             }
-            try {
-                updateHandler.accept(new ProgressDetails(opName, processed, total, elapsed, formatted));
-            } catch (Exception ignored) {}
         });
     }
 

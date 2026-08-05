@@ -58,7 +58,7 @@ public class CipherController {
 
     @FXML private TextArea cipherInputArea;
     @FXML private TextArea cipherOutputArea;
-    private ComboBox<String> inputFormatCombo;
+    private ComboBox<String> cipherInputFormatCombo;
     private ComboBox<String> outputFormatCombo;
     private StatusReporter statusReporter;
     private java.util.function.Supplier<java.security.KeyPair> sharedKeyPairSupplier;
@@ -92,6 +92,10 @@ public class CipherController {
     @FXML private Label ivBadgeLabel;
     @FXML private Label gcmTagBadgeLabel;
     @FXML private Label aadBadgeLabel;
+
+    // Last AEAD encryption components, kept separately from the rendered result.
+    private String lastAeadCiphertext;
+    private String lastAeadTag;
 
     private com.cryptocarver.ui.component.MaterialFieldBadge symKeyBadge;
     private com.cryptocarver.ui.component.MaterialFieldBadge ivBadge;
@@ -313,7 +317,7 @@ public class CipherController {
         if (rsaPaddingCombo != null && rsaPaddingCombo.getValue() != null) params.put("rsaPaddingCombo", rsaPaddingCombo.getValue());
         if (asymmetricInputFormatCombo != null && asymmetricInputFormatCombo.getValue() != null) params.put("asymmetricInputFormatCombo", asymmetricInputFormatCombo.getValue());
         if (asymmetricOutputFormatCombo != null && asymmetricOutputFormatCombo.getValue() != null) params.put("asymmetricOutputFormatCombo", asymmetricOutputFormatCombo.getValue());
-        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (cipherInputFormatCombo != null && cipherInputFormatCombo.getValue() != null) params.put("inputFormatCombo", cipherInputFormatCombo.getValue());
         if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
 
         javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
@@ -366,7 +370,7 @@ public class CipherController {
             ComboBox<String> globalOutputFormatCombo,
             java.util.function.Supplier<java.security.KeyPair> keyPairSupplier) {
         this.statusReporter = reporter;
-        this.inputFormatCombo = globalInputFormatCombo;
+        this.cipherInputFormatCombo = globalInputFormatCombo;
         this.outputFormatCombo = globalOutputFormatCombo;
         this.sharedKeyPairSupplier = keyPairSupplier;
         asymmetricInputFormatCombo.valueProperty().bindBidirectional(globalInputFormatCombo.valueProperty());
@@ -649,7 +653,7 @@ public class CipherController {
         this.statusReporter = statusReporter;
         this.cipherInputArea = inputArea;
         this.cipherOutputArea = outputArea;
-        this.inputFormatCombo = inputFormatCombo;
+        this.cipherInputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
         this.publicKeyArea = publicKeyArea;
         this.privateKeyArea = privateKeyArea;
@@ -1509,6 +1513,8 @@ public class CipherController {
      * Handle symmetric encryption
      */
     public void handleSymmetricEncrypt() {
+        lastAeadCiphertext = null;
+        lastAeadTag = null;
         if (statusReporter != null && !statusReporter.checkPreflightReadiness("Symmetric Cipher", true)) {
             return;
         }
@@ -2795,7 +2801,7 @@ public class CipherController {
             return null;
         }
 
-        String format = inputFormatCombo.getValue();
+        String format = cipherInputFormatCombo.getValue();
         if (format == null)
             format = "Hexadecimal";
 
@@ -2905,6 +2911,9 @@ public class CipherController {
                     tagStr = DataConverter.bytesToHex(tag);
                     fullDataStr = DataConverter.bytesToHex(data);
             }
+
+            lastAeadCiphertext = ciphertextStr;
+            lastAeadTag = tagStr;
 
             // Build formatted output for ENCRYPTION
             StringBuilder output = new StringBuilder();
@@ -4392,7 +4401,7 @@ public class CipherController {
             default: break;
         }
 
-        if (inputFormatCombo != null && !inputFormatCombo.getItems().contains(targetFormat)) {
+        if (cipherInputFormatCombo != null && !cipherInputFormatCombo.getItems().contains(targetFormat)) {
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
             alert.setTitle("Format Not Supported");
             alert.setHeaderText("Incompatible Format");
@@ -4404,9 +4413,61 @@ public class CipherController {
         if (cipherInputArea != null) {
             cipherInputArea.setText(value);
         }
-        if (inputFormatCombo != null) {
-            inputFormatCombo.setValue(targetFormat);
+        if (cipherInputFormatCombo != null) {
+            cipherInputFormatCombo.setValue(targetFormat);
         }
+    }
+
+    /**
+     * Rehydrates a structured Shelf package without touching the user's key.
+     * The package is intentionally limited to public operation artefacts.
+     */
+    public void fillSymmetricCipherPackage(com.cryptocarver.model.ShelfPackage packageData) {
+        if (packageData == null || !com.cryptocarver.model.ShelfPackage.AUTHENTICATED_CIPHER
+                .equals(packageData.getType())) {
+            throw new IllegalArgumentException("Unsupported Symmetric Cipher shelf package");
+        }
+        String format = packageData.artifact("format");
+        com.cryptocarver.model.ClipboardEntry.Format entryFormat = switch (format) {
+            case "Hexadecimal" -> com.cryptocarver.model.ClipboardEntry.Format.HEX;
+            case "Base64" -> com.cryptocarver.model.ClipboardEntry.Format.BASE64;
+            case "Base64URL" -> com.cryptocarver.model.ClipboardEntry.Format.BASE64URL;
+            default -> com.cryptocarver.model.ClipboardEntry.Format.TEXT;
+        };
+        fillSymmetricCipherInput(packageData.artifact("ciphertext"), entryFormat);
+        if (symmetricAlgorithmCombo != null) symmetricAlgorithmCombo.setValue(packageData.artifact("algorithm"));
+        if (cipherModeCombo != null) cipherModeCombo.setValue(packageData.artifact("mode"));
+        if (paddingCombo != null) paddingCombo.setValue(packageData.artifact("padding"));
+        if (ivField != null) ivField.setText(packageData.artifact("nonce"));
+        if (gcmTagField != null) gcmTagField.setText(packageData.artifact("authTag"));
+        if (aadField != null) aadField.setText(packageData.artifact("aad") == null ? "" : packageData.artifact("aad"));
+    }
+
+    public com.cryptocarver.model.ShelfPackage createAuthenticatedCipherShelfPackage() {
+        if (lastAeadCiphertext == null || lastAeadTag == null || symmetricAlgorithmCombo == null) return null;
+        String algorithm = symmetricAlgorithmCombo.getValue();
+        String mode = cipherModeCombo == null ? "" : cipherModeCombo.getValue();
+        boolean supported = "GCM".equalsIgnoreCase(mode)
+                || "ChaCha20-Poly1305".equalsIgnoreCase(algorithm)
+                || "XChaCha20-Poly1305".equalsIgnoreCase(algorithm);
+        if (!supported || ivField == null || ivField.getText().isBlank()) return null;
+        java.util.Map<String, String> artifacts = new java.util.LinkedHashMap<>();
+        artifacts.put("ciphertext", lastAeadCiphertext);
+        artifacts.put("algorithm", algorithm);
+        artifacts.put("mode", mode);
+        artifacts.put("padding", paddingCombo == null || paddingCombo.getValue() == null ? "NoPadding" : paddingCombo.getValue());
+        String selectedFormat = outputFormatCombo == null || outputFormatCombo.getValue() == null
+                ? "Hexadecimal" : outputFormatCombo.getValue();
+        // The rendered AEAD splitter emits hexadecimal for unsupported display
+        // formats (Text/Binary/C Array), so persist the actual representation.
+        artifacts.put("format", "Base64".equals(selectedFormat) || "Hexadecimal".equals(selectedFormat)
+                ? selectedFormat : "Hexadecimal");
+        artifacts.put("authTag", "Base64".equals(artifacts.get("format"))
+                ? DataConverter.bytesToHex(org.apache.commons.codec.binary.Base64.decodeBase64(lastAeadTag))
+                : lastAeadTag);
+        artifacts.put("nonce", ivField.getText().trim());
+        if (aadField != null && !aadField.getText().isBlank()) artifacts.put("aad", aadField.getText().trim());
+        return com.cryptocarver.model.ShelfPackage.authenticatedCipher(artifacts);
     }
 
     private void setupHexValidation(TextField field) {
