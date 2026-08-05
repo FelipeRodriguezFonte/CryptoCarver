@@ -72,7 +72,9 @@ public class CheckDigitCalculator {
      */
     private static int calculateLuhn(String digits) {
         int sum = 0;
-        boolean alternate = false;
+        // The rightmost digit of the data is doubled when calculating the
+        // check digit; the appended check digit itself is not doubled.
+        boolean alternate = true;
 
         // Process digits from right to left
         for (int i = digits.length() - 1; i >= 0; i--) {

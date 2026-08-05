@@ -18,11 +18,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class BatchOperationCatalogTest {
 
     @Test
-    @DisplayName("Catalog lists all 11 initial permitted operations in exact expected order")
+    @DisplayName("Catalog lists all 17 permitted operations in exact expected order")
     void testCatalogAvailableOperations() {
         List<String> ops = BatchOperationCatalog.getAvailableOperations();
         assertNotNull(ops);
-        assertEquals(11, ops.size());
+        assertEquals(17, ops.size());
 
         assertEquals("SHA-256 (UTF-8 → Hex)", ops.get(0));
         assertEquals("SHA-384 (UTF-8 → Hex)", ops.get(1));
@@ -39,6 +39,13 @@ class BatchOperationCatalogTest {
 
         assertEquals("UTF-8 → Base64URL", ops.get(9));
         assertEquals("Base64URL → UTF-8", ops.get(10));
+
+        assertEquals("Luhn (Mod 10) → Calculate Check Digit", ops.get(11));
+        assertEquals("Luhn (Mod 10) → Validate Check Digit", ops.get(12));
+        assertEquals("Verhoeff → Calculate Check Digit", ops.get(13));
+        assertEquals("Verhoeff → Validate Check Digit", ops.get(14));
+        assertEquals("Damm → Calculate Check Digit", ops.get(15));
+        assertEquals("Damm → Validate Check Digit", ops.get(16));
     }
 
     @Test
@@ -49,6 +56,9 @@ class BatchOperationCatalogTest {
         assertFalse(BatchOperationCatalog.isSupportedOperation("custom SHA-256"));
         assertFalse(BatchOperationCatalog.isSupportedOperation("RSA Hex"));
         assertFalse(BatchOperationCatalog.isSupportedOperation("Base64 payload"));
+        assertFalse(BatchOperationCatalog.isSupportedOperation("Luhn"));
+        assertFalse(BatchOperationCatalog.isSupportedOperation("Luhn (Mod 10) → Calculate"));
+        assertFalse(BatchOperationCatalog.isSupportedOperation("Calculate Check Digit"));
 
         // Null and blank rejections
         assertFalse(BatchOperationCatalog.isSupportedOperation(null));
@@ -160,6 +170,39 @@ class BatchOperationCatalogTest {
     }
 
     @Test
+    @DisplayName("Check digit operations return stable calculate and validate outputs")
+    void testCheckDigitOperationsKnownSyntheticVectors() throws Exception {
+        assertEquals("3", execute(BatchOperationCatalog.LUHN_CALCULATE_CHECK_DIGIT, "7992739871"));
+        assertEquals("true", execute(BatchOperationCatalog.LUHN_VALIDATE_CHECK_DIGIT, "79927398713"));
+        assertEquals("false", execute(BatchOperationCatalog.LUHN_VALIDATE_CHECK_DIGIT, "79927398714"));
+
+        assertEquals("3", execute(BatchOperationCatalog.VERHOEFF_CALCULATE_CHECK_DIGIT, "236"));
+        assertEquals("true", execute(BatchOperationCatalog.VERHOEFF_VALIDATE_CHECK_DIGIT, "2363"));
+        assertEquals("false", execute(BatchOperationCatalog.VERHOEFF_VALIDATE_CHECK_DIGIT, "2364"));
+
+        assertEquals("4", execute(BatchOperationCatalog.DAMM_CALCULATE_CHECK_DIGIT, "572"));
+        assertEquals("true", execute(BatchOperationCatalog.DAMM_VALIDATE_CHECK_DIGIT, "5724"));
+        assertEquals("false", execute(BatchOperationCatalog.DAMM_VALIDATE_CHECK_DIGIT, "5725"));
+    }
+
+    @Test
+    @DisplayName("Check digit operations reject empty, short, non-ASCII and unsupported inputs with fixed errors")
+    void testCheckDigitInputValidationAndSanitizedErrors() {
+        assertCheckDigitError(BatchOperationCatalog.LUHN_CALCULATE_CHECK_DIGIT, "", "Check digit input must contain ASCII digits only");
+        assertCheckDigitError(BatchOperationCatalog.LUHN_VALIDATE_CHECK_DIGIT, "1", "Check digit validation requires at least two digits");
+
+        for (String invalid : List.of("12A3", "12 3", "12-3", "１２３", "١٢٣")) {
+            assertCheckDigitError(BatchOperationCatalog.LUHN_CALCULATE_CHECK_DIGIT, invalid,
+                    "Check digit input must contain ASCII digits only");
+            assertCheckDigitError(BatchOperationCatalog.LUHN_VALIDATE_CHECK_DIGIT, invalid,
+                    "Check digit input must contain ASCII digits only");
+        }
+
+        assertFalse(BatchOperationCatalog.isSupportedOperation("Verhoeff → Check Digit"));
+        assertFalse(BatchOperationCatalog.isSupportedOperation("Damm → Validate"));
+    }
+
+    @Test
     @DisplayName("Error sanitization: Corrupt inputs return exact fixed messages without leaking internal exceptions")
     void testErrorSanitizationExactMessages() {
         // Corrupt Base64URL
@@ -215,6 +258,35 @@ class BatchOperationCatalogTest {
         assertEquals(2, jsonlReport.succeeded());
         assertEquals("Q3J5cHRv", jsonlReport.results().get(0).output().get("b64_output"));
         assertEquals("Q2FydmVy", jsonlReport.results().get(1).output().get("b64_output"));
+
+        String checkDigitCsv = "value\n7992739871\n572\n";
+        List<Map<String, String>> checkDigitRows = BatchInputCodec.parseCsv(checkDigitCsv);
+        BatchRunner.Report checkDigitReport = BatchRunner.run(checkDigitRows,
+                (rowNum, row) -> BatchOperationCatalog.execute(
+                        BatchOperationCatalog.LUHN_CALCULATE_CHECK_DIGIT, row, "value", "check_digit"),
+                () -> false);
+        assertEquals(2, checkDigitReport.succeeded());
+        assertEquals("3", checkDigitReport.results().get(0).output().get("check_digit"));
+
+        String checkDigitJsonl = "{\"value\":\"2363\"}\n";
+        List<Map<String, String>> checkDigitJsonlRows = BatchInputCodec.parseJsonLines(checkDigitJsonl);
+        BatchRunner.Report checkDigitJsonlReport = BatchRunner.run(checkDigitJsonlRows,
+                (rowNum, row) -> BatchOperationCatalog.execute(
+                        BatchOperationCatalog.VERHOEFF_VALIDATE_CHECK_DIGIT, row, "value", "valid"),
+                () -> false);
+        assertEquals(1, checkDigitJsonlReport.succeeded());
+        assertEquals("true", checkDigitJsonlReport.results().get(0).output().get("valid"));
+    }
+
+    private static String execute(String operation, String input) throws Exception {
+        return BatchOperationCatalog.execute(operation, Map.of("input", input), "input", "output").get("output");
+    }
+
+    private static void assertCheckDigitError(String operation, String input, String expectedMessage) {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> BatchOperationCatalog.execute(operation, Map.of("input", input), "input", "output"));
+        assertEquals(expectedMessage, exception.getMessage());
+        assertNull(exception.getCause());
     }
 
     @Test

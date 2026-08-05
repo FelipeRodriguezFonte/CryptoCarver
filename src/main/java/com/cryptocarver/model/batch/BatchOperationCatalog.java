@@ -2,6 +2,7 @@ package com.cryptocarver.model.batch;
 
 import com.cryptocarver.codec.ByteFormat;
 import com.cryptocarver.codec.CodecException;
+import com.cryptocarver.crypto.CheckDigitCalculator;
 import com.cryptocarver.model.SafeTransformations;
 
 import java.util.HashMap;
@@ -31,6 +32,16 @@ public final class BatchOperationCatalog {
     public static final String UTF8_TO_BASE64URL = "UTF-8 → Base64URL";
     public static final String BASE64URL_TO_UTF8 = "Base64URL → UTF-8";
 
+    public static final String LUHN_CALCULATE_CHECK_DIGIT = "Luhn (Mod 10) → Calculate Check Digit";
+    public static final String LUHN_VALIDATE_CHECK_DIGIT = "Luhn (Mod 10) → Validate Check Digit";
+    public static final String VERHOEFF_CALCULATE_CHECK_DIGIT = "Verhoeff → Calculate Check Digit";
+    public static final String VERHOEFF_VALIDATE_CHECK_DIGIT = "Verhoeff → Validate Check Digit";
+    public static final String DAMM_CALCULATE_CHECK_DIGIT = "Damm → Calculate Check Digit";
+    public static final String DAMM_VALIDATE_CHECK_DIGIT = "Damm → Validate Check Digit";
+
+    private static final String CHECK_DIGIT_ASCII_ERROR = "Check digit input must contain ASCII digits only";
+    private static final String CHECK_DIGIT_VALIDATION_LENGTH_ERROR = "Check digit validation requires at least two digits";
+
     private static final List<String> OPERATIONS = List.of(
             SHA256_UTF8_HEX,
             SHA384_UTF8_HEX,
@@ -42,7 +53,13 @@ public final class BatchOperationCatalog {
             HEX_TO_BASE64,
             BASE64_TO_HEX,
             UTF8_TO_BASE64URL,
-            BASE64URL_TO_UTF8
+            BASE64URL_TO_UTF8,
+            LUHN_CALCULATE_CHECK_DIGIT,
+            LUHN_VALIDATE_CHECK_DIGIT,
+            VERHOEFF_CALCULATE_CHECK_DIGIT,
+            VERHOEFF_VALIDATE_CHECK_DIGIT,
+            DAMM_CALCULATE_CHECK_DIGIT,
+            DAMM_VALIDATE_CHECK_DIGIT
     );
 
     private static final Map<String, String> LOOKUP;
@@ -121,6 +138,13 @@ public final class BatchOperationCatalog {
                 case UTF8_TO_BASE64URL -> SafeTransformations.encodeBase64Url(input);
                 case BASE64URL_TO_UTF8 -> SafeTransformations.decodeBase64Url(input);
 
+                case LUHN_CALCULATE_CHECK_DIGIT -> executeCheckDigitCalculation(input, "Luhn (Mod 10)");
+                case LUHN_VALIDATE_CHECK_DIGIT -> executeCheckDigitValidation(input, "Luhn (Mod 10)");
+                case VERHOEFF_CALCULATE_CHECK_DIGIT -> executeCheckDigitCalculation(input, "Verhoeff");
+                case VERHOEFF_VALIDATE_CHECK_DIGIT -> executeCheckDigitValidation(input, "Verhoeff");
+                case DAMM_CALCULATE_CHECK_DIGIT -> executeCheckDigitCalculation(input, "Damm");
+                case DAMM_VALIDATE_CHECK_DIGIT -> executeCheckDigitValidation(input, "Damm");
+
                 default -> throw new IllegalArgumentException("Unsupported batch operation: " + operationName);
             };
         } catch (CodecException e) {
@@ -157,5 +181,32 @@ public final class BatchOperationCatalog {
             return "Invalid Base64URL format";
         }
         return "Batch operation failed";
+    }
+
+    private static String executeCheckDigitCalculation(String input, String algorithm) {
+        validateAsciiDigits(input, false);
+        try {
+            return Integer.toString(CheckDigitCalculator.calculateCheckDigit(input, algorithm));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Batch operation failed");
+        }
+    }
+
+    private static String executeCheckDigitValidation(String input, String algorithm) {
+        validateAsciiDigits(input, true);
+        try {
+            return Boolean.toString(CheckDigitCalculator.validateCheckDigit(input, algorithm));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Batch operation failed");
+        }
+    }
+
+    private static void validateAsciiDigits(String input, boolean validation) {
+        if (validation && input.length() < 2) {
+            throw new IllegalArgumentException(CHECK_DIGIT_VALIDATION_LENGTH_ERROR);
+        }
+        if (input.isEmpty() || input.chars().anyMatch(character -> character < '0' || character > '9')) {
+            throw new IllegalArgumentException(CHECK_DIGIT_ASCII_ERROR);
+        }
     }
 }
