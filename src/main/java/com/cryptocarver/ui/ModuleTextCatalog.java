@@ -129,6 +129,7 @@ public final class ModuleTextCatalog {
         map.put("Save Profile", "module.common.saveProfile");
         map.put("Inspect KeyStore", "module.keys.inspectKeystore");
         map.put("🔐 PKCS#11 Token", "module.keys.pkcs11");
+        map.put("PKCS#11 Profiles", "pkcs11.shortTitle");
         map.put("Connect & Inspect", "module.keys.connectInspect");
         map.put("Disconnect", "module.keys.disconnect");
         map.put("Sign Data", "module.keys.signData");
@@ -143,6 +144,31 @@ public final class ModuleTextCatalog {
         map.put("🔗 AES Key Wrap (RFC 3394 / RFC 5649)", "module.keys.keyWrap");
         map.put("Execute Key Wrap", "module.keys.executeWrap");
         map.put("🔒 TR-31 Key Blocks", "module.keys.tr31");
+        return map;
+    }
+
+    public static Map<String, String> pkcs11Profiles() {
+        Map<String, String> map = common();
+        map.put("🔐 PKCS#11 Profiles & Public Inventory", "pkcs11.title");
+        map.put("Manage non-secret profiles and inspect public slots, tokens and mechanisms. No credentials or token objects are requested.", "pkcs11.help");
+        map.put("Profile name", "pkcs11.profileName");
+        map.put("Library path", "pkcs11.libraryPath");
+        map.put("slotListIndex", "pkcs11.slotListIndex");
+        map.put("No PKCS#11 profiles saved.", "pkcs11.empty");
+        map.put("Profile name:", "pkcs11.profileNameLabel");
+        map.put("Library path:", "pkcs11.libraryPathLabel");
+        map.put("slotListIndex:", "pkcs11.slotListIndexLabel");
+        map.put("Public profile name", "pkcs11.profileNamePrompt");
+        map.put("Absolute native library path", "pkcs11.libraryPathPrompt");
+        map.put("Non-negative integer", "pkcs11.slotListIndexPrompt");
+        map.put("New profile", "pkcs11.new");
+        map.put("Save profile", "pkcs11.save");
+        map.put("Delete profile", "pkcs11.delete");
+        map.put("Diagnose", "pkcs11.diagnose");
+        map.put("Inventory", "pkcs11.inventory");
+        map.put("Cancel", "pkcs11.cancel");
+        map.put("Ready", "pkcs11.ready");
+        map.put("Public inventory results will appear here.", "pkcs11.resultPrompt");
         return map;
     }
 

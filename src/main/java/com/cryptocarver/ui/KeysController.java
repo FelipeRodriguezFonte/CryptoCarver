@@ -39,6 +39,8 @@ public class KeysController {
     }
 
     @FXML private VBox keysRoot;
+    @FXML private TitledPane pkcs11Profiles;
+    @FXML private Pkcs11ProfilesController pkcs11ProfilesController;
     private ModuleI18n.Binding moduleI18n;
 
     @FXML private VBox symmetricKeysContainer;
@@ -487,6 +489,10 @@ public class KeysController {
     public void init(StatusReporter reporter, Runnable hsmRefreshCallback) {
         this.mainController = reporter;
         this.hsmRefreshCallback = hsmRefreshCallback == null ? () -> { } : hsmRefreshCallback;
+        if (pkcs11ProfilesController != null && reporter != null) {
+            pkcs11ProfilesController.setStatusReporter(reporter);
+            pkcs11ProfilesController.setOperationExecutor(reporter.getOperationExecutor());
+        }
     }
 
     public void showSymmetricSection() {
@@ -504,6 +510,10 @@ public class KeysController {
     }
 
     public void expandSymmetricPane(String paneName) {
+        if (paneName != null && paneName.contains("PKCS#11 Profiles") && pkcs11ProfilesController != null) {
+            pkcs11ProfilesController.expand();
+            return;
+        }
         expandPane(symmetricKeysContainer, paneName);
     }
 

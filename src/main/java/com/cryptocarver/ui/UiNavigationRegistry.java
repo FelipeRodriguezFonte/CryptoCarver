@@ -80,6 +80,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Material Inspector"), "Key Material Inspector");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "KeyStore Inspector"), "KeyStore Inspector");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "PKCS#11 Token"), "PKCS#11 Token");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "PKCS#11 Profiles"), "PKCS#11 Profiles");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Compare Public / Private Key"),
                 "Compare Public / Private Key");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Sharing"),

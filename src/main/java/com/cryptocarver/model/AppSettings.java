@@ -146,6 +146,11 @@ public final class AppSettings {
         return pkcs11ProfileRepository.list();
     }
 
+    /** Exposes the dedicated non-secret repository to feature presenters. */
+    public Pkcs11ProfileRepository getPkcs11ProfileRepository() {
+        return pkcs11ProfileRepository;
+    }
+
     public synchronized void savePkcs11Profile(String name, String library, int slot) {
         pkcs11ProfileRepository.upsert(new Pkcs11Profile(name, library, slot));
         // Keep the legacy settings file present for callers that use it as a

@@ -570,6 +570,7 @@
             </TitledPane>
             </panes>
         </Accordion>
+        <fx:include fx:id="pkcs11Profiles" source="pkcs11_profiles.fxml"/>
     </VBox>
 
     <!-- Asymmetric Keys Accordion -->
