@@ -138,7 +138,9 @@ public class InlineErrorBannerTest {
             assertTrue(presenter.isVisible());
             assertTrue(banner.isManaged());
             assertEquals("Decryption Failed", titleLabel.getText());
-            assertEquals("Verify key and IV padding.", remedyLabel.getText());
+            assertEquals("Ciphertext padding error.", presenter.getCurrentError().detail());
+            assertEquals("Verify key and IV padding.", presenter.getCurrentError().remedy());
+            assertEquals("Ciphertext padding error. Verify key and IV padding.", remedyLabel.getText());
             assertTrue(goToFieldBtn.isVisible());
             assertTrue(goToFieldBtn.isManaged());
             assertTrue(inputArea.getStyleClass().contains("field-error"), "Target field must receive .field-error style class");
@@ -229,6 +231,11 @@ public class InlineErrorBannerTest {
                 AuthenticationController authController = (AuthenticationController) getPrivateField(controller, "authenticationContainerController");
                 assertNotNull(authController, "authenticationContainerController must be initialized");
 
+                // The handler's own input validation is the subject of this test. Let the
+                // real banner render errors, but keep global preflight from intercepting
+                // before handleGenerateMAC/handleVerifyMAC reaches its explicit branches.
+                setPrivateField(authController, "mainController", allowingPreflightReporter(controller));
+
                 ComboBox<String> macAlgoCombo = (ComboBox<String>) getPrivateField(authController, "authMacAlgorithmCombo");
                 macAlgoCombo.setValue("HMAC-SHA256");
 
@@ -242,14 +249,13 @@ public class InlineErrorBannerTest {
                 authController.handleGenerateMAC();
 
                 assertTrue(banner.isVisible(), "Banner must be visible when handleGenerateMAC fails");
-                assertTrue(titleLabel.getText().contains("Preflight") || titleLabel.getText().contains("Missing"),
-                        "Title must indicate missing setup or input data");
+                assertEquals("Missing Input Data", titleLabel.getText(),
+                        "Empty MAC input must reach the handler's explicit missing-input validation");
 
                 // Execute real MAC verify handler with missing verify value
                 authController.handleVerifyMAC();
                 assertTrue(banner.isVisible(), "Banner must be visible when handleVerifyMAC fails");
-                assertTrue(titleLabel.getText().contains("Preflight") || titleLabel.getText().contains("Missing") || titleLabel.getText().contains("MAC"),
-                        "Title must indicate MAC verification issue");
+                assertEquals("Missing MAC Verification Value", titleLabel.getText());
 
             } catch (Exception e) {
                 fail("Failed testing AuthenticationController handlers: " + e.getMessage());
@@ -320,12 +326,20 @@ public class InlineErrorBannerTest {
 
                 TextArea certInput = (TextArea) getPrivateField(keysController, "certInputArea");
                 certInput.setText(""); // Empty cert input -> trigger missing certificate error
+                TextArea certificatesInput = (TextArea) getPrivateField(
+                        getPrivateField(controller, "certificatesContainerController"), "certInputArea");
+                assertSame(certificatesInput, certInput,
+                        "KeysController must parse the certificate TextArea injected by CertificatesController");
+                assertEquals("", certInput.getText(), "Certificate fixture must be empty before invoking the handler");
 
                 // Execute real parse certificate handler
                 keysController.handleParseCertificate();
 
                 assertTrue(banner.isVisible(), "Banner must be visible when certificate parsing fails");
                 assertEquals("Missing Certificate Input", titleLabel.getText());
+                Label remedyLabel = (Label) getPrivateField(controller, "errorBannerRemedy");
+                assertEquals("Please paste a certificate in PEM format. Provide X.509 PEM certificate data in the input area.",
+                        remedyLabel.getText());
 
             } catch (Exception e) {
                 fail("Failed testing KeysController certificate handlers: " + e.getMessage());
@@ -343,5 +357,38 @@ public class InlineErrorBannerTest {
         Field f = obj.getClass().getDeclaredField(fieldName);
         f.setAccessible(true);
         f.set(obj, val);
+    }
+
+    private StatusReporter allowingPreflightReporter(ModernMainController controller) {
+        return new StatusReporter() {
+            @Override
+            public void updateStatus(String message) {
+            }
+
+            @Override
+            public void updateInspector(String operation, byte[] input, byte[] output,
+                    java.util.List<com.cryptocarver.model.OperationDetail> details) {
+            }
+
+            @Override
+            public void showError(String title, String message) {
+                controller.showError(title, message);
+            }
+
+            @Override
+            public void showError(UserFacingError error) {
+                controller.showError(error);
+            }
+
+            @Override
+            public void showError(Throwable cause, String contextTitle, String fieldKey) {
+                controller.showError(cause, contextTitle, fieldKey);
+            }
+
+            @Override
+            public boolean checkPreflightReadiness(String operation, boolean isEncrypt) {
+                return true;
+            }
+        };
     }
 }

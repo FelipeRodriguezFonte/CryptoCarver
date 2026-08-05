@@ -2756,7 +2756,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         else if (title.contains("key parameter") || title.contains("parámetro de clave")) keyPrefix = "error.wrap.key";
         else if (title.contains("hexadecimal")) keyPrefix = "error.wrap.hex";
         else if (title.contains("base64")) keyPrefix = "error.wrap.base64";
-        else if (title.contains("certificate") || title.contains("certificado") || title.contains("key format")) keyPrefix = "error.wrap.cert";
+        else if ((title.contains("certificate") || title.contains("certificado") || title.contains("key format"))
+                && !title.startsWith("missing ") && !title.startsWith("falta ")) keyPrefix = "error.wrap.cert";
         else if (title.contains("timestamp authority") || title.contains("sellado de tiempo")) keyPrefix = "error.wrap.tsa";
         if (keyPrefix == null) return error;
         return new UserFacingError(
