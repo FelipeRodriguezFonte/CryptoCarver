@@ -1527,6 +1527,7 @@ class ModernMainControllerUITest {
         AtomicReference<javafx.scene.control.TextArea> inputAreaRef = new AtomicReference<>();
         AtomicReference<javafx.scene.control.ComboBox<String>> opRef = new AtomicReference<>();
         AtomicReference<javafx.scene.control.ComboBox<String>> formatRef = new AtomicReference<>();
+        BlockingBatchExecutor blockingBatch = new BlockingBatchExecutor();
 
         runAndWait(() -> {
             try {
@@ -1540,9 +1541,10 @@ class ModernMainControllerUITest {
                 inputAreaRef.set(getField(generic, "batchInputArea"));
                 opRef.set(getField(generic, "batchOperationCombo"));
                 formatRef.set(getField(generic, "batchInputFormatCombo"));
+                generic.setBatchRunnerExecutorForTesting(blockingBatch.executor());
 
                 formatRef.get().setValue("CSV");
-                inputAreaRef.get().setText("input\nrow1\nrow2");
+                inputAreaRef.get().setText("input\nrow1");
                 opRef.get().setValue("SHA-256 (UTF-8 → Hex)");
 
                 com.cryptocarver.model.HistoryManager hm = getField(controller, "historyManager");
@@ -1557,78 +1559,153 @@ class ModernMainControllerUITest {
         GenericController generic = controllerRef.get();
         javafx.concurrent.Task<?> task = getField(generic, "activeBatchTask");
         assertNotNull(task);
+        assertTrue(blockingBatch.operationStarted.await(5, TimeUnit.SECONDS),
+                "Batch operation should start before cancellation is requested");
+        assertEquals(1L, blockingBatch.operationFinished.getCount(),
+                "Batch operation must remain blocked until cancellation has been requested");
 
-        // Wait deterministically for the task to finish using Future.get()
-        try {
-            task.get(10, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (java.util.concurrent.TimeoutException e) {
-            fail("Batch task timed out");
-        } catch (Exception e) {
-            // ignore
-        }
+        // Check RUNNING on the FX thread immediately before requesting cancellation.
+        runAndWait(() -> {
+            assertTrue(task.isRunning(), "Batch must be RUNNING before cancellation");
+            generic.handleCancelBatch();
+        });
+        blockingBatch.releaseWorker();
+        assertTrue(blockingBatch.operationFinished.await(5, TimeUnit.SECONDS),
+                "Blocked batch worker should be released after cancellation");
+        awaitTask(task, 5, "Cancelled batch task");
 
         runAndWait(() -> {
             try {
-                javafx.scene.control.TextArea batchResultArea = getField(generic, "batchResultArea");
-                assertNotNull(batchResultArea.getText());
-                assertTrue(batchResultArea.getText().contains("Rows processed: 2"), "Output should summarize rows");
-                assertTrue(batchResultArea.getText().contains("#1 OK"), "Output should contain OK for row 1");
-                assertTrue(batchResultArea.getText().contains("#2 OK"), "Output should contain OK for row 2");
-
                 Object lastReport = getField(generic, "lastBatchReport");
-                assertNotNull(lastReport, "Exportable report should be present after success");
-                java.lang.reflect.Method succeededMethod = lastReport.getClass().getDeclaredMethod("succeeded");
-                assertEquals(2L, ((Number) succeededMethod.invoke(lastReport)).longValue(), "Should have 2 successes");
+                assertNull(lastReport, "Cancelled batch must not expose a partial exportable report");
+                javafx.scene.control.TextArea batchResultArea = getField(generic, "batchResultArea");
+                assertTrue(batchResultArea.getText().isEmpty(), "Cancelled batch output must be cleared");
+                javafx.scene.control.ProgressBar progressBar = getField(generic, "batchProgressBar");
+                assertFalse(progressBar.progressProperty().isBound(), "Progress control must be restored after cancellation");
+                assertNull(getField(generic, "activeBatchTask"), "Batch controls must be restored after cancellation");
+                assertFalse(task.isRunning(), "Cancelled task must no longer be running");
+                assertEquals(com.cryptocarver.service.I18nService.getInstance().text("module.batch.cancelled"),
+                        ((javafx.scene.control.Label) getField(generic, "batchStatusLabel")).getText(),
+                        "Cancelled status must be visible after controls are restored");
 
-                // Verify publication to history
                 com.cryptocarver.model.HistoryManager hm = getField(mainControllerRef.get(), "historyManager");
                 assertNotNull(hm, "HistoryManager should be initialized");
-                assertFalse(hm.getHistoryItems().isEmpty(), "History should not be empty");
-                com.cryptocarver.model.HistoryCommand item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
-                assertEquals("Batch Runner", item.getOperation());
-                assertTrue(item.getDetails().contains("Rows"), "History should contain Rows");
-                assertTrue(item.getDetails().contains("2"), "History should contain 2");
-                assertTrue(item.getDetails().contains("Succeeded"), "History should contain Succeeded");
+                assertTrue(hm.getHistoryItems().isEmpty(), "Cancelled batch must not be published to history");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
 
-                // Test Cancel with a long operation
-                StringBuilder longInput = new StringBuilder("input\n");
-                for (int j = 0; j < 50000; j++) {
-                    longInput.append("row").append(j).append("\n");
-                }
-                inputAreaRef.get().setText(longInput.toString());
+    @Test
+    void testCompletedBatchRetainsReportWhenCancelledAfterCompletion() throws Exception {
+        AtomicReference<GenericController> controllerRef = new AtomicReference<>();
+        AtomicReference<ModernMainController> mainControllerRef = new AtomicReference<>();
+
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                ModernMainController controller = loader.getController();
+                mainControllerRef.set(controller);
+                GenericController generic = getField(controller, "genericContainerController");
+                controllerRef.set(generic);
+
+                javafx.scene.control.ComboBox<String> format = getField(generic, "batchInputFormatCombo");
+                javafx.scene.control.ComboBox<String> operation = getField(generic, "batchOperationCombo");
+                javafx.scene.control.TextArea input = getField(generic, "batchInputArea");
+                format.setValue("CSV");
+                operation.setValue("SHA-256 (UTF-8 → Hex)");
+                input.setText("input\nrow1\nrow2");
+                com.cryptocarver.model.HistoryManager hm = getField(controller, "historyManager");
+                if (hm != null) hm.clearHistory();
                 generic.handleRunBatch();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
 
-        javafx.concurrent.Task<?> task2 = getField(generic, "activeBatchTask");
-        assertNotNull(task2);
+        GenericController generic = controllerRef.get();
+        javafx.concurrent.Task<?> task = getField(generic, "activeBatchTask");
+        assertNotNull(task);
+        awaitTask(task, 5, "Completed batch task");
 
-        // Cancel immediately
-        runAndWait(() -> generic.handleCancelBatch());
-
-        try {
-            task2.get(5, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (Exception e) {
-            // CancellationException or others expected
-        }
-
+        AtomicReference<Object> completedReportRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                Object lastReport = getField(generic, "lastBatchReport");
-                assertNull(lastReport, "Exportable report should be null if cancelled or partial");
-
-                com.cryptocarver.model.HistoryManager hm = getField(mainControllerRef.get(), "historyManager");
-                if (hm != null && !hm.getHistoryItems().isEmpty()) {
-                    com.cryptocarver.model.HistoryCommand item = hm.getHistoryItems().get(hm.getHistoryItems().size() - 1);
-                    // It shouldn't be the cancelled batch. The last one should be the previous successful batch.
-                    assertFalse(item.getDetails().contains("50000"), "Cancelled batch should not be published");
-                }
+                Object report = getField(generic, "lastBatchReport");
+                completedReportRef.set(report);
+                assertNotNull(report, "Completed batch should expose its report");
+                java.lang.reflect.Method succeededMethod = report.getClass().getDeclaredMethod("succeeded");
+                assertEquals(2L, ((Number) succeededMethod.invoke(report)).longValue(), "Completed batch should retain both results");
+                assertFalse(((javafx.scene.control.ProgressBar) getField(generic, "batchProgressBar"))
+                        .progressProperty().isBound(), "Completed batch controls should be restored");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
+
+        runAndWait(() -> generic.handleCancelBatch());
+
+        runAndWait(() -> {
+            try {
+                assertSame(completedReportRef.get(), getField(generic, "lastBatchReport"),
+                        "Cancelling after completion must preserve the normal report");
+                com.cryptocarver.model.HistoryManager hm = getField(mainControllerRef.get(), "historyManager");
+                assertEquals(1, hm.getHistoryItems().size(), "Completed batch should remain the only history entry");
+                assertEquals("Batch Runner", hm.getHistoryItems().get(0).getOperation());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void awaitTask(javafx.concurrent.Task<?> task, long timeoutSeconds, String description) throws Exception {
+        try {
+            task.get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.CancellationException expected) {
+            // Expected for a task cancelled while its worker is blocked.
+        } catch (java.util.concurrent.ExecutionException e) {
+            fail(description + " failed", e.getCause());
+        } catch (java.util.concurrent.TimeoutException e) {
+            fail(description + " timed out", e);
+        }
+    }
+
+    private static final class BlockingBatchExecutor {
+        private final CountDownLatch operationStarted = new CountDownLatch(1);
+        private final CountDownLatch releaseOperation = new CountDownLatch(1);
+        private final CountDownLatch operationFinished = new CountDownLatch(1);
+
+        private GenericController.BatchRunnerExecutor executor() {
+            return (rows, operation, cancellationRequested, progressListener) ->
+                    com.cryptocarver.model.batch.BatchRunner.run(rows, (rowNumber, input) -> {
+                        operationStarted.countDown();
+                        awaitRelease();
+                        try {
+                            return operation.execute(rowNumber, input);
+                        } finally {
+                            operationFinished.countDown();
+                        }
+                    }, cancellationRequested, progressListener);
+        }
+
+        private void awaitRelease() {
+            boolean interrupted = false;
+            while (true) {
+                try {
+                    releaseOperation.await();
+                    if (interrupted) Thread.currentThread().interrupt();
+                    return;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        }
+
+        private void releaseWorker() {
+            releaseOperation.countDown();
+        }
     }
 
     @Test

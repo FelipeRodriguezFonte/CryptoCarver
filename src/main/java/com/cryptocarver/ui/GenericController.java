@@ -41,6 +41,15 @@ import java.util.Map;
  */
 public class GenericController {
 
+    @FunctionalInterface
+    interface BatchRunnerExecutor {
+        com.cryptocarver.model.batch.BatchRunner.Report run(
+                java.util.List<java.util.Map<String, String>> rows,
+                com.cryptocarver.model.batch.BatchRunner.RowOperation operation,
+                java.util.function.BooleanSupplier cancellationRequested,
+                com.cryptocarver.model.batch.BatchRunner.ProgressListener progressListener);
+    }
+
     private TextArea inputArea;
     private TextArea outputArea;
     private ComboBox<String> inputFormatCombo;
@@ -158,6 +167,8 @@ public class GenericController {
     // Batch State
     private javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> activeBatchTask;
     private com.cryptocarver.model.batch.BatchRunner.Report lastBatchReport;
+    private BatchRunnerExecutor batchRunnerExecutor = (rows, operation, cancellationRequested, progressListener) ->
+            com.cryptocarver.model.batch.BatchRunner.run(rows, operation, cancellationRequested, progressListener);
 
 
     /**
@@ -207,6 +218,11 @@ public class GenericController {
     }
 
     public GenericController() {}
+
+    /** Test seam for controlling batch execution without changing production timing. */
+    void setBatchRunnerExecutorForTesting(BatchRunnerExecutor executor) {
+        this.batchRunnerExecutor = java.util.Objects.requireNonNull(executor, "Batch runner executor is required");
+    }
 
         @FXML public void handleBrowseInputFile() {
         javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
@@ -432,7 +448,7 @@ public class GenericController {
         javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> task = new javafx.concurrent.Task<>() {
             @Override protected com.cryptocarver.model.batch.BatchRunner.Report call() {
                 try {
-                    return com.cryptocarver.model.batch.BatchRunner.run(rows, rowOperation, () -> isCancelled() || errorOccurred.get(),
+                    return batchRunnerExecutor.run(rows, rowOperation, () -> isCancelled() || errorOccurred.get(),
                             (completed, total) -> updateProgress(completed, total));
                 } finally {
                     if (key != null) java.util.Arrays.fill(key, (byte) 0);
