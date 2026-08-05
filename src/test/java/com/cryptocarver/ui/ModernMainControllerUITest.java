@@ -1558,6 +1558,7 @@ class ModernMainControllerUITest {
 
         GenericController generic = controllerRef.get();
         javafx.concurrent.Task<?> task = getField(generic, "activeBatchTask");
+        javafx.scene.control.Label batchStatusLabel = getField(generic, "batchStatusLabel");
         assertNotNull(task);
         assertTrue(blockingBatch.operationStarted.await(5, TimeUnit.SECONDS),
                 "Batch operation should start before cancellation is requested");
@@ -1568,6 +1569,9 @@ class ModernMainControllerUITest {
         runAndWait(() -> {
             assertTrue(task.isRunning(), "Batch must be RUNNING before cancellation");
             generic.handleCancelBatch();
+            assertEquals(com.cryptocarver.service.I18nService.getInstance().text("module.batch.cancelled"),
+                    batchStatusLabel.getText(),
+                    "Synchronous cancellation must leave the terminal status visible before the worker is released");
         });
         blockingBatch.releaseWorker();
         assertTrue(blockingBatch.operationFinished.await(5, TimeUnit.SECONDS),

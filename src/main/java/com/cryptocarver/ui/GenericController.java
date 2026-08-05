@@ -544,8 +544,8 @@ public class GenericController {
 
     @FXML public void handleCancelBatch() {
         if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            activeBatchTask.cancel();
             batchStatusLabel.setText(t("module.batch.cancelling"));
+            activeBatchTask.cancel();
         } else {
             batchStatusLabel.setText(t("module.batch.notRunning"));
         }
