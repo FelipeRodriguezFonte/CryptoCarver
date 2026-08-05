@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
+import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
+import com.sun.jna.Structure;
 import com.sun.jna.ptr.NativeLongByReference;
 
 import java.nio.file.Path;
@@ -66,11 +68,29 @@ class JnaPkcs11NativeBridgeTest {
         int functionPointerCount = 68; // v2 CK_FUNCTION_LIST, as declared by the OASIS header.
         JnaPkcs11NativeBridge.FunctionList functionList = new JnaPkcs11NativeBridge.FunctionList();
         int firstPointerOffset = align(2, Native.POINTER_SIZE);
+        if (!Platform.isWindows()) {
+            assertEquals(Native.POINTER_SIZE, NativeLong.SIZE);
+        }
         assertEquals(firstPointerOffset, functionList.nativeFieldOffset("cInitialize"));
         assertEquals(firstPointerOffset + Native.POINTER_SIZE,
                 functionList.nativeFieldOffset("cFinalize"));
         assertEquals(align(firstPointerOffset + functionPointerCount * Native.POINTER_SIZE,
                         Native.POINTER_SIZE), functionList.size());
+        String[] fieldOrder = JnaPkcs11NativeBridge.FunctionList.class
+                .getAnnotation(Structure.FieldOrder.class).value();
+        assertEquals(69, fieldOrder.length); // inline CK_VERSION plus 68 v2.40 pointers.
+        assertEquals(firstPointerOffset + 3 * Native.POINTER_SIZE,
+                functionList.nativeFieldOffset("cGetFunctionList"));
+        assertEquals(firstPointerOffset + 4 * Native.POINTER_SIZE,
+                functionList.nativeFieldOffset("cGetSlotList"));
+        assertEquals(firstPointerOffset + 6 * Native.POINTER_SIZE,
+                functionList.nativeFieldOffset("cGetTokenInfo"));
+        assertEquals(firstPointerOffset + 7 * Native.POINTER_SIZE,
+                functionList.nativeFieldOffset("cGetMechanismList"));
+        assertEquals(firstPointerOffset + 8 * Native.POINTER_SIZE,
+                functionList.nativeFieldOffset("cGetMechanismInfo"));
+        assertEquals(firstPointerOffset + 67 * Native.POINTER_SIZE,
+                functionList.nativeFieldOffset("cWaitForSlotEvent"));
 
         JnaPkcs11NativeBridge.TokenInfo tokenInfo = new JnaPkcs11NativeBridge.TokenInfo();
         int tokenFixedPrefix = 32 + 32 + 16 + 16;
@@ -121,7 +141,7 @@ class JnaPkcs11NativeBridgeTest {
         }
 
         @Override
-        public NativeLong getTokenInfo(NativeLong slotId, JnaPkcs11NativeBridge.TokenInfo info) {
+        public NativeLong getTokenInfo(NativeLong slotId, Pointer info) {
             calls.add("C_GetTokenInfo");
             return new NativeLong(Pkcs11NativeConstants.CKR_OK);
         }
@@ -135,7 +155,7 @@ class JnaPkcs11NativeBridgeTest {
 
         @Override
         public NativeLong getMechanismInfo(
-                NativeLong slotId, NativeLong mechanism, JnaPkcs11NativeBridge.MechanismInfo info) {
+                NativeLong slotId, NativeLong mechanism, Pointer info) {
             calls.add("C_GetMechanismInfo");
             return new NativeLong(Pkcs11NativeConstants.CKR_OK);
         }

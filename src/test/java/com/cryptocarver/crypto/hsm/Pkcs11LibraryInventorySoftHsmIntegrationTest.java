@@ -18,7 +18,11 @@ class Pkcs11LibraryInventorySoftHsmIntegrationTest {
         Assumptions.assumeTrue(module != null && !module.isBlank(),
                 "SoftHSM is optional; set SOFTHSM2_MODULE to run this integration check");
 
-        Pkcs11InventoryResult result = new Pkcs11LibraryInventoryService().inventory(Path.of(module));
+        JnaPkcs11NativeBridge bridge = new JnaPkcs11NativeBridge((operation, completed) -> {
+            System.err.println("[pkcs11-phase] " + operation + (completed ? "=completed" : "=started"));
+            System.err.flush();
+        });
+        Pkcs11InventoryResult result = new Pkcs11LibraryInventoryService(bridge).inventory(Path.of(module));
 
         assertTrue(result.status() == Pkcs11InventoryResult.Status.OK
                         || result.status() == Pkcs11InventoryResult.Status.MECHANISMS_NOT_AVAILABLE,
@@ -33,14 +37,6 @@ class Pkcs11LibraryInventorySoftHsmIntegrationTest {
         assertTrue(result.finalizationAttempted());
         assertTrue(result.finalizationSucceeded());
 
-        String slotEvidence = result.slots().stream()
-                .map(slot -> "index=" + slot.slotListIndex()
-                        + ",id=" + slot.slotId()
-                        + ",mechanisms=" + slot.mechanisms().stream()
-                                .map(mechanism -> mechanism.mechanismId() + ":" + mechanism.name())
-                                .toList())
-                .toList()
-                .toString();
-        System.out.println("[pkcs11-integration] real public inventory: " + slotEvidence);
+        System.err.println("[pkcs11-integration] real public inventory assertions passed");
     }
 }

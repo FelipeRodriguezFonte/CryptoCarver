@@ -32,16 +32,31 @@ import java.util.List;
  */
 public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
     private static final int MAX_NATIVE_ENTRIES = 100_000;
+    private static final PhaseObserver NO_PHASE_OBSERVER = (phase, completed) -> { };
 
     private final ModuleLoader moduleLoader;
+    private final PhaseObserver phaseObserver;
 
     public JnaPkcs11NativeBridge() {
-        this(JnaPkcs11NativeBridge::loadModule);
+        this.phaseObserver = NO_PHASE_OBSERVER;
+        this.moduleLoader = this::loadModule;
     }
 
     /** Package-private seam for ABI/order tests; production uses the default constructor. */
     JnaPkcs11NativeBridge(ModuleLoader moduleLoader) {
+        this(moduleLoader, NO_PHASE_OBSERVER);
+    }
+
+    /** Package-private test-only constructor for phase diagnosis against a real module. */
+    JnaPkcs11NativeBridge(PhaseObserver phaseObserver) {
+        this.phaseObserver = java.util.Objects.requireNonNull(phaseObserver, "phase observer is required");
+        this.moduleLoader = this::loadModule;
+    }
+
+    /** Package-private test seam for safe phase diagnosis; production keeps it disabled. */
+    JnaPkcs11NativeBridge(ModuleLoader moduleLoader, PhaseObserver phaseObserver) {
         this.moduleLoader = java.util.Objects.requireNonNull(moduleLoader, "module loader is required");
+        this.phaseObserver = java.util.Objects.requireNonNull(phaseObserver, "phase observer is required");
     }
 
     @Override
@@ -50,11 +65,15 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
 
         // The loader resolves C_GetFunctionList only. It must return the table
         // before this method is allowed to invoke C_Initialize.
+        phase("JNA module load", false);
         ModuleEntryPoint module = moduleLoader.load(library);
+        phase("JNA module load", true);
         if (module == null) {
             throw new Pkcs11NativeException("C_GetFunctionList", Long.MIN_VALUE);
         }
+        phase("C_GetFunctionList", false);
         FunctionTable functionTable = module.functionList();
+        phase("C_GetFunctionList", true);
         if (functionTable == null) {
             throw new Pkcs11NativeException("C_GetFunctionList", Long.MIN_VALUE);
         }
@@ -69,9 +88,13 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         return new Session(functionTable);
     }
 
-    private static ModuleEntryPoint loadModule(Path library) {
+    private void phase(String operation, boolean completed) {
+        phaseObserver.onPhase(operation, completed);
+    }
+
+    private ModuleEntryPoint loadModule(Path library) {
         Pkcs11Functions entryPoint = Native.load(library.toString(), Pkcs11Functions.class);
-        return new JnaModuleEntryPoint(entryPoint);
+        return new JnaModuleEntryPoint(entryPoint, phaseObserver);
     }
 
     private static long code(NativeLong returnValue) {
@@ -155,7 +178,7 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         @Override
         public NativeToken token(long slotId) throws Pkcs11NativeException {
             TokenInfo info = new TokenInfo();
-            check("C_GetTokenInfo", functionTable.getTokenInfo(new NativeLong(slotId), info));
+            check("C_GetTokenInfo", functionTable.getTokenInfo(new NativeLong(slotId), info.getPointer()));
             info.read();
             return new NativeToken(decode(info.label), decode(info.manufacturerID), info.flags.longValue());
         }
@@ -171,7 +194,7 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         public NativeMechanism mechanism(long slotId, long mechanismId) throws Pkcs11NativeException {
             MechanismInfo info = new MechanismInfo();
             check("C_GetMechanismInfo", functionTable.getMechanismInfo(
-                    new NativeLong(slotId), new NativeLong(mechanismId), info));
+                    new NativeLong(slotId), new NativeLong(mechanismId), info.getPointer()));
             info.read();
             return new NativeMechanism(info.minKeySize.longValue(), info.maxKeySize.longValue(), info.flags.longValue());
         }
@@ -199,9 +222,11 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
 
     private static final class JnaModuleEntryPoint implements ModuleEntryPoint {
         private final Pkcs11Functions entryPoint;
+        private final PhaseObserver phaseObserver;
 
-        private JnaModuleEntryPoint(Pkcs11Functions entryPoint) {
+        private JnaModuleEntryPoint(Pkcs11Functions entryPoint, PhaseObserver phaseObserver) {
             this.entryPoint = entryPoint;
+            this.phaseObserver = phaseObserver;
         }
 
         @Override
@@ -212,7 +237,7 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
             if (pointer == null) {
                 throw new Pkcs11NativeException("C_GetFunctionList", Long.MIN_VALUE);
             }
-            return new JnaFunctionTable(new FunctionList(pointer));
+            return new JnaFunctionTable(new FunctionList(pointer), phaseObserver);
         }
     }
 
@@ -223,8 +248,10 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         private final Function cGetTokenInfo;
         private final Function cGetMechanismList;
         private final Function cGetMechanismInfo;
+        private final PhaseObserver phaseObserver;
 
-        private JnaFunctionTable(FunctionList list) throws Pkcs11NativeException {
+        private JnaFunctionTable(FunctionList list, PhaseObserver phaseObserver) throws Pkcs11NativeException {
+            this.phaseObserver = phaseObserver;
             cInitialize = function("C_Initialize", list.cInitialize);
             cFinalize = function("C_Finalize", list.cFinalize);
             cGetSlotList = function("C_GetSlotList", list.cGetSlotList);
@@ -238,10 +265,13 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
             return Function.getFunction(pointer, Function.C_CONVENTION);
         }
 
-        private static NativeLong invoke(String operation, Function function, Object... arguments)
+        private NativeLong invoke(String operation, Function function, Object... arguments)
                 throws Pkcs11NativeException {
+            phaseObserver.onPhase(operation, false);
             try {
-                return (NativeLong) function.invoke(NativeLong.class, arguments);
+                NativeLong result = (NativeLong) function.invoke(NativeLong.class, arguments);
+                phaseObserver.onPhase(operation, true);
+                return result;
             } catch (RuntimeException | LinkageError failure) {
                 throw new Pkcs11NativeException(operation, Long.MIN_VALUE);
             }
@@ -264,7 +294,7 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         }
 
         @Override
-        public NativeLong getTokenInfo(NativeLong slotId, TokenInfo info) throws Pkcs11NativeException {
+        public NativeLong getTokenInfo(NativeLong slotId, Pointer info) throws Pkcs11NativeException {
             return invoke("C_GetTokenInfo", cGetTokenInfo, slotId, info);
         }
 
@@ -275,7 +305,7 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         }
 
         @Override
-        public NativeLong getMechanismInfo(NativeLong slotId, NativeLong mechanism, MechanismInfo info)
+        public NativeLong getMechanismInfo(NativeLong slotId, NativeLong mechanism, Pointer info)
                 throws Pkcs11NativeException {
             return invoke("C_GetMechanismInfo", cGetMechanismInfo, slotId, mechanism, info);
         }
@@ -455,6 +485,11 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         FunctionTable functionList() throws Pkcs11NativeException;
     }
 
+    @FunctionalInterface
+    interface PhaseObserver {
+        void onPhase(String operation, boolean completed);
+    }
+
     /** Tight seam used by tests; production implementation contains only the six allowed table calls. */
     interface FunctionTable {
         NativeLong initialize() throws Pkcs11NativeException;
@@ -464,12 +499,12 @@ public final class JnaPkcs11NativeBridge implements Pkcs11NativeBridge {
         NativeLong getSlotList(byte tokenPresent, Pointer slotList, NativeLongByReference count)
                 throws Pkcs11NativeException;
 
-        NativeLong getTokenInfo(NativeLong slotId, TokenInfo info) throws Pkcs11NativeException;
+        NativeLong getTokenInfo(NativeLong slotId, Pointer info) throws Pkcs11NativeException;
 
         NativeLong getMechanismList(NativeLong slotId, Pointer mechanismList, NativeLongByReference count)
                 throws Pkcs11NativeException;
 
-        NativeLong getMechanismInfo(NativeLong slotId, NativeLong mechanism, MechanismInfo info)
+        NativeLong getMechanismInfo(NativeLong slotId, NativeLong mechanism, Pointer info)
                 throws Pkcs11NativeException;
     }
 }

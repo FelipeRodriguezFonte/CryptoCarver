@@ -111,7 +111,7 @@ jobs:
           echo "[pkcs11-integration] executing Pkcs11LibraryInventorySoftHsmIntegrationTest"
           SOFTHSM2_CONF="${SOFTHSM2_CONF}" \
           SOFTHSM2_MODULE="${SOFTHSM2_MODULE}" \
-            mvn -Pintegration-tests \
+            timeout --signal=TERM --kill-after=5s 120s mvn -Pintegration-tests \
               -Dtest=Pkcs11LibraryInventorySoftHsmIntegrationTest \
               -DfailIfNoTests=true \
               -Dsurefire.printSummary=true \
@@ -146,7 +146,8 @@ jobs:
             CRYPTOCARVER_SOFTHSM_AES_ALIAS
           SOFTHSM2_CONF="${SOFTHSM2_CONF}" \
           SOFTHSM2_MODULE="${SOFTHSM2_MODULE}" \
-            mvn -Pintegration-tests -DfailIfNoTests=true -Dsurefire.printSummary=true test
+            timeout --signal=TERM --kill-after=5s 120s mvn -Pintegration-tests \
+              -DfailIfNoTests=true -Dsurefire.printSummary=true test
 
       - name: Remove ephemeral SoftHSM2 data
         if: always()

@@ -57,6 +57,7 @@ class Pkcs11LibraryInventoryServiceTest {
         assertTrue(result.selectableSlot(1).isPresent());
         assertTrue(bridge.initialized);
         assertTrue(bridge.finalized);
+        assertEquals(1, bridge.finalizeCalls);
         assertSafeEvidence(result);
     }
 
@@ -124,6 +125,7 @@ class Pkcs11LibraryInventoryServiceTest {
 
         assertEquals(Pkcs11InventoryResult.Status.QUERY_ERROR, result.status());
         assertTrue(bridge.finalized);
+        assertEquals(1, bridge.finalizeCalls);
         assertTrue(result.finalizationSucceeded());
     }
 
@@ -232,6 +234,7 @@ class Pkcs11LibraryInventoryServiceTest {
         private boolean closeFailure;
         private boolean initialized;
         private boolean finalized;
+        private int finalizeCalls;
 
         @Override
         public NativeSession initialize(Path library) throws Pkcs11NativeException {
@@ -262,6 +265,7 @@ class Pkcs11LibraryInventoryServiceTest {
 
                 @Override
                 public void close() throws Pkcs11NativeException {
+                    finalizeCalls++;
                     finalized = true;
                     if (closeFailure) throw new Pkcs11NativeException("C_Finalize", 0xCAFE);
                 }
