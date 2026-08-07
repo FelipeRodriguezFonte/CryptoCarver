@@ -304,6 +304,27 @@
                     <CheckBox fx:id="pkcs11CmsDetachedCheck" text="Detached CMS (do not embed content)" style="-fx-font-size: 10px;"/>
                     <Button text="Create CMS SignedData" onAction="#handleGeneratePkcs11Cms" styleClass="action-button"/>
                     <TextArea fx:id="pkcs11CmsOutputArea" prefHeight="75" editable="false" promptText="Base64 CMS/PKCS#7 will appear here" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <Separator/>
+                    <Label text="Wrap / Unwrap key objects (native token operation)" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label text="Wraps a token key object under another token key's public part without ever exposing raw key bytes to the JVM. Only tokens whose CKA_EXTRACTABLE attribute is true for the target key allow this — a rejection here is the token correctly enforcing that boundary, not an error." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                    <HBox spacing="6">
+                        <ComboBox fx:id="pkcs11WrappingKeyCombo" promptText="Wrapping key alias (public part)" HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="pkcs11WrapKeyCombo" promptText="Key to wrap alias" HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="pkcs11WrapTransformationCombo" prefWidth="230"/>
+                    </HBox>
+                    <Button text="Wrap Key" onAction="#handlePkcs11Wrap" styleClass="action-button"/>
+                    <TextArea fx:id="pkcs11WrapResultArea" prefHeight="65" editable="false" promptText="Wrapped key (hexadecimal) will appear here" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <HBox spacing="6">
+                        <ComboBox fx:id="pkcs11UnwrappingKeyCombo" promptText="Unwrapping key alias (private part)" HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="pkcs11UnwrapTransformationCombo" prefWidth="230"/>
+                    </HBox>
+                    <TextArea fx:id="pkcs11UnwrapDataArea" prefHeight="55" promptText="Wrapped key (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <HBox spacing="6">
+                        <TextField fx:id="pkcs11UnwrapAlgorithmField" promptText="Recovered key algorithm, e.g. AES" prefWidth="220"/>
+                        <ComboBox fx:id="pkcs11UnwrapTypeCombo" prefWidth="150"/>
+                    </HBox>
+                    <Button text="Unwrap Key" onAction="#handlePkcs11Unwrap" styleClass="action-button"/>
+                    <TextArea fx:id="pkcs11UnwrapResultArea" prefHeight="65" editable="false" promptText="Unwrap result summary will appear here (key material itself is never displayed)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                 </VBox>
             </TitledPane>
 

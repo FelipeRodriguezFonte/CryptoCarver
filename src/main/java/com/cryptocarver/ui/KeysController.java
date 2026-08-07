@@ -263,6 +263,26 @@ public class KeysController {
     private CheckBox pkcs11CmsDetachedCheck;
     @FXML
     private TextArea pkcs11CmsOutputArea;
+    @FXML
+    private ComboBox<String> pkcs11WrappingKeyCombo;
+    @FXML
+    private ComboBox<String> pkcs11WrapKeyCombo;
+    @FXML
+    private ComboBox<String> pkcs11WrapTransformationCombo;
+    @FXML
+    private TextArea pkcs11WrapResultArea;
+    @FXML
+    private ComboBox<String> pkcs11UnwrappingKeyCombo;
+    @FXML
+    private TextArea pkcs11UnwrapDataArea;
+    @FXML
+    private ComboBox<String> pkcs11UnwrapTransformationCombo;
+    @FXML
+    private TextField pkcs11UnwrapAlgorithmField;
+    @FXML
+    private ComboBox<String> pkcs11UnwrapTypeCombo;
+    @FXML
+    private TextArea pkcs11UnwrapResultArea;
 
     // Key Sharing components
     @FXML
@@ -434,6 +454,10 @@ public class KeysController {
         initializePkcs11Certificates(pkcs11CertificateAliasCombo, pkcs11CertificateArea);
         initializePkcs11Jwt(pkcs11JwtAlgorithmCombo, pkcs11JwtPayloadArea, pkcs11JwtOutputArea);
         initializePkcs11Cms(pkcs11CmsDataArea, pkcs11CmsDetachedCheck, pkcs11CmsOutputArea);
+        initializePkcs11Wrap(pkcs11WrappingKeyCombo, pkcs11WrapKeyCombo, pkcs11WrapTransformationCombo,
+                pkcs11WrapResultArea, pkcs11UnwrappingKeyCombo, pkcs11UnwrapDataArea,
+                pkcs11UnwrapTransformationCombo, pkcs11UnwrapAlgorithmField, pkcs11UnwrapTypeCombo,
+                pkcs11UnwrapResultArea);
         initializeKDF(kdfAlgorithmCombo, kdfInputFormatCombo, kdfSaltFormatCombo, kdfInfoFormatCombo,
                 kdfInputField, kdfSaltField, kdfInfoField, kdfIterationsField, kdfOutputLengthField, kdfResultArea);
         initializeKeyWrap(keyWrapModeCombo, keyWrapUnwrapCheck, keyWrapKekField, keyWrapDataField, keyWrapResultArea);
@@ -626,6 +650,8 @@ public class KeysController {
     @FXML private void handleShowPkcs11Certificate() { showPkcs11CertificateChain(); }
     @FXML private void handleGeneratePkcs11Jwt() { generatePkcs11Jwt(); }
     @FXML private void handleGeneratePkcs11Cms() { generatePkcs11Cms(); }
+    @FXML private void handlePkcs11Wrap() { wrapWithPkcs11(); }
+    @FXML private void handlePkcs11Unwrap() { unwrapWithPkcs11(); }
     @FXML private void handleLoadKeyStoreProfile() { loadKeyStoreProfile(); }
     @FXML private void handleAesKeyWrap() { handleKeyWrap(); }
     @FXML public void handleGenerateECDSA() { handleGenerateECDSAFp(); }
@@ -770,6 +796,42 @@ public class KeysController {
         this.pkcs11CmsOutputArea = outputArea;
     }
 
+    public void initializePkcs11Wrap(ComboBox<String> wrappingKeyCombo, ComboBox<String> keyToWrapCombo,
+            ComboBox<String> wrapTransformationCombo, TextArea wrapResultArea,
+            ComboBox<String> unwrappingKeyCombo, TextArea unwrapDataArea, ComboBox<String> unwrapTransformationCombo,
+            TextField unwrapAlgorithmField, ComboBox<String> unwrapTypeCombo, TextArea unwrapResultArea) {
+        this.pkcs11WrappingKeyCombo = wrappingKeyCombo;
+        this.pkcs11WrapKeyCombo = keyToWrapCombo;
+        this.pkcs11WrapTransformationCombo = wrapTransformationCombo;
+        this.pkcs11WrapResultArea = wrapResultArea;
+        this.pkcs11UnwrappingKeyCombo = unwrappingKeyCombo;
+        this.pkcs11UnwrapDataArea = unwrapDataArea;
+        this.pkcs11UnwrapTransformationCombo = unwrapTransformationCombo;
+        this.pkcs11UnwrapAlgorithmField = unwrapAlgorithmField;
+        this.pkcs11UnwrapTypeCombo = unwrapTypeCombo;
+        this.pkcs11UnwrapResultArea = unwrapResultArea;
+        // RSA/ECB/PKCS1Padding is what real tokens actually advertise in practice (confirmed
+        // empirically against SoftHSM — see Pkcs11Session#wrapKey); OAEP is offered too in case a
+        // specific token/HSM does expose it, but is not the safe default here.
+        java.util.List<String> transformations = java.util.List.of("RSA/ECB/PKCS1Padding", "RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+        if (pkcs11WrapTransformationCombo != null) {
+            pkcs11WrapTransformationCombo.getItems().setAll(transformations);
+            pkcs11WrapTransformationCombo.setValue(transformations.get(0));
+        }
+        if (pkcs11UnwrapTransformationCombo != null) {
+            pkcs11UnwrapTransformationCombo.getItems().setAll(transformations);
+            pkcs11UnwrapTransformationCombo.setValue(transformations.get(0));
+        }
+        if (pkcs11UnwrapTypeCombo != null) {
+            pkcs11UnwrapTypeCombo.getItems().setAll("Secret Key", "Private Key", "Public Key");
+            pkcs11UnwrapTypeCombo.setValue("Secret Key");
+        }
+        if (pkcs11UnwrapAlgorithmField != null && pkcs11UnwrapAlgorithmField.getText().isBlank()) {
+            pkcs11UnwrapAlgorithmField.setText("AES");
+        }
+        refreshPkcs11WrapKeyAliases();
+    }
+
     /** Opens a real JDK SunPKCS11 session. The PIN is used once and never persisted. */
     public void connectPkcs11() {
         char[] pin = pkcs11PinField == null ? new char[0] : pkcs11PinField.getText().toCharArray();
@@ -818,6 +880,7 @@ public class KeysController {
             pkcs11ReportArea.setText(report.toString());
             refreshPkcs11SigningKeys();
             refreshPkcs11CertificateAliases();
+            refreshPkcs11WrapKeyAliases();
             if (mainController != null) {
                 mainController.publish(OperationResult.forOperation("PKCS#11 Token Connect")
                         .output(report.toString().getBytes(StandardCharsets.UTF_8))
@@ -845,6 +908,7 @@ public class KeysController {
                 wasConnected ? "module.keys.pkcs11Closed" : "module.keys.pkcs11NotOpen"));
         refreshPkcs11SigningKeys();
         refreshPkcs11CertificateAliases();
+        refreshPkcs11WrapKeyAliases();
     }
 
     public void choosePkcs11Library() {
@@ -958,6 +1022,115 @@ public class KeysController {
         } catch (Exception ignored) {
             // No token session is expected before the user connects one.
         }
+    }
+
+    /** Wrapping/unwrapping key aliases can be any object on the token (private, public or
+     *  secret), unlike the signing combo which only lists private keys with a certificate. */
+    public void refreshPkcs11WrapKeyAliases() {
+        if (pkcs11WrappingKeyCombo == null && pkcs11WrapKeyCombo == null && pkcs11UnwrappingKeyCombo == null) return;
+        String selectedWrapping = pkcs11WrappingKeyCombo == null ? null : pkcs11WrappingKeyCombo.getValue();
+        String selectedTarget = pkcs11WrapKeyCombo == null ? null : pkcs11WrapKeyCombo.getValue();
+        String selectedUnwrapping = pkcs11UnwrappingKeyCombo == null ? null : pkcs11UnwrappingKeyCombo.getValue();
+        if (pkcs11WrappingKeyCombo != null) pkcs11WrappingKeyCombo.getItems().clear();
+        if (pkcs11WrapKeyCombo != null) pkcs11WrapKeyCombo.getItems().clear();
+        if (pkcs11UnwrappingKeyCombo != null) pkcs11UnwrappingKeyCombo.getItems().clear();
+        try {
+            var session = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession();
+            java.util.List<String> allAliases = session.listObjects().stream()
+                    .map(com.cryptocarver.crypto.hsm.Pkcs11ObjectInfo::alias)
+                    .distinct().toList();
+            java.util.List<String> privateAliases = session.listPrivateKeysWithCertificate();
+            if (pkcs11WrappingKeyCombo != null) {
+                pkcs11WrappingKeyCombo.getItems().addAll(privateAliases);
+                selectComboValue(pkcs11WrappingKeyCombo, selectedWrapping);
+            }
+            if (pkcs11UnwrappingKeyCombo != null) {
+                pkcs11UnwrappingKeyCombo.getItems().addAll(privateAliases);
+                selectComboValue(pkcs11UnwrappingKeyCombo, selectedUnwrapping);
+            }
+            if (pkcs11WrapKeyCombo != null) {
+                pkcs11WrapKeyCombo.getItems().addAll(allAliases);
+                selectComboValue(pkcs11WrapKeyCombo, selectedTarget);
+            }
+        } catch (Exception ignored) {
+            // No token session is expected before the user connects one.
+        }
+    }
+
+    private static void selectComboValue(ComboBox<String> combo, String previous) {
+        if (previous != null && combo.getItems().contains(previous)) {
+            combo.setValue(previous);
+        } else if (!combo.getItems().isEmpty()) {
+            combo.setValue(combo.getItems().get(0));
+        }
+    }
+
+    public void wrapWithPkcs11() {
+        try {
+            String wrappingAlias = requireComboValue(pkcs11WrappingKeyCombo,
+                    "Connect a token, then select a wrapping key alias");
+            String targetAlias = requireComboValue(pkcs11WrapKeyCombo,
+                    "Select the alias of the key to wrap");
+            String transformation = pkcs11WrapTransformationCombo == null || pkcs11WrapTransformationCombo.getValue() == null
+                    ? "RSA/ECB/PKCS1Padding" : pkcs11WrapTransformationCombo.getValue();
+            byte[] wrapped = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .wrapKey(wrappingAlias, targetAlias, transformation);
+            String hex = DataConverter.bytesToHex(wrapped);
+            pkcs11WrapResultArea.setText(hex);
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("PKCS#11 Wrap Key")
+                        .output(wrapped)
+                        .detail("Wrapping key alias", wrappingAlias)
+                        .detail("Wrapped key alias", targetAlias)
+                        .detail("Transformation", transformation)
+                        .status("Wrapped '" + targetAlias + "' under '" + wrappingAlias + "'").build());
+            }
+        } catch (Exception error) {
+            showError("PKCS#11 Wrap", "Unable to wrap key: " + safePkcs11Message(error));
+        }
+    }
+
+    public void unwrapWithPkcs11() {
+        try {
+            String unwrappingAlias = requireComboValue(pkcs11UnwrappingKeyCombo,
+                    "Connect a token, then select an unwrapping key alias");
+            byte[] wrapped = DataConverter.hexToBytes(requirePkcs11Text(pkcs11UnwrapDataArea, "Wrapped key"));
+            String transformation = pkcs11UnwrapTransformationCombo == null || pkcs11UnwrapTransformationCombo.getValue() == null
+                    ? "RSA/ECB/PKCS1Padding" : pkcs11UnwrapTransformationCombo.getValue();
+            String algorithm = pkcs11UnwrapAlgorithmField == null || pkcs11UnwrapAlgorithmField.getText().isBlank()
+                    ? "AES" : pkcs11UnwrapAlgorithmField.getText().trim();
+            int keyType = switch (pkcs11UnwrapTypeCombo == null || pkcs11UnwrapTypeCombo.getValue() == null
+                    ? "Secret Key" : pkcs11UnwrapTypeCombo.getValue()) {
+                case "Private Key" -> javax.crypto.Cipher.PRIVATE_KEY;
+                case "Public Key" -> javax.crypto.Cipher.PUBLIC_KEY;
+                default -> javax.crypto.Cipher.SECRET_KEY;
+            };
+            java.security.Key unwrapped = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                    .unwrapKey(unwrappingAlias, wrapped, transformation, algorithm, keyType);
+            // The recovered key material is never displayed or logged — only a description of the
+            // handle, matching how every other PKCS#11 operation in this class treats key material.
+            String summary = "Unwrapped " + unwrapped.getClass().getSimpleName()
+                    + " (algorithm=" + unwrapped.getAlgorithm() + ", format=" + unwrapped.getFormat() + ")";
+            pkcs11UnwrapResultArea.setText(summary);
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("PKCS#11 Unwrap Key")
+                        .input(wrapped)
+                        .detail("Unwrapping key alias", unwrappingAlias)
+                        .detail("Transformation", transformation)
+                        .detail("Recovered algorithm", unwrapped.getAlgorithm())
+                        .status(summary).build());
+            }
+        } catch (Exception error) {
+            showError("PKCS#11 Unwrap", "Unable to unwrap key: " + safePkcs11Message(error));
+        }
+    }
+
+    private static String requireComboValue(ComboBox<String> combo, String message) {
+        String value = combo == null ? null : combo.getValue();
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value;
     }
 
     public void showPkcs11CertificateChain() {
