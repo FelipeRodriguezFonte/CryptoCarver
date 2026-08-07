@@ -107,6 +107,13 @@ public class GenericController {
         return keyCertificateWorkbenchController;
     }
 
+    @FXML private CryptoEnvelopeInspectorController cryptoEnvelopeInspectorController;
+    @FXML private TitledPane cryptoEnvelopeInspector;
+
+    public CryptoEnvelopeInspectorController getCryptoEnvelopeInspectorController() {
+        return cryptoEnvelopeInspectorController;
+    }
+
 
     // UI Components for Generic tab
     @FXML private ComboBox<String> hashTemplateCombo;

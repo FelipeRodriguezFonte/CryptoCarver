@@ -45,6 +45,7 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_keys_kdf", "Key Derivation (KDF)", "Keys", "Derive keys", "🧬", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key Derivation (KDF)", Arrays.asList("HKDF", "PBKDF2")));
         register(new OperationDescriptor("op_keys_wrap", "AES Key Wrap", "Keys", "Wrap keys", "🎁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "AES Key Wrap", Arrays.asList("RFC 3394")));
         register(new OperationDescriptor("op_keys_tr31", "TR-31 Key Blocks", "Keys", "TR-31 operations", "📦", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "TR-31 Key Blocks", Arrays.asList("TR-31", "TR31")));
+        register(new OperationDescriptor("op_keys_kex_rsa", "RSA Key Exchange", "Keys", "Wrap/unwrap a symmetric key under RSA (Raw OAEP, JWE or CMS)", "🔁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "RSA Key Exchange", Arrays.asList("RSA-OAEP", "Key Transport", "TR-34")));
 
         // Keys -> Asymmetric
         register(new OperationDescriptor("op_keys_rsa", "RSA Key Generation", "Keys", "Generate RSA keys", "🗝", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "RSA Key Generation", Collections.emptyList()));
@@ -56,6 +57,7 @@ public class OperationRegistry {
         // Keys -> Tools
         register(new OperationDescriptor("op_keys_material", "Key Material Inspector", "Keys", "Inspect key material", "🔎", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Key Material Inspector", Collections.emptyList()));
         register(new OperationDescriptor("op_keys_format_workbench", "Key & Certificate Format Workbench", "Generic", "Inspect and convert keys and certificates", "🛠", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key & Certificate Format Workbench", Arrays.asList("PEM", "DER", "JWK", "PKCS12")));
+        register(new OperationDescriptor("op_gen_envelope_inspector", "Crypto Envelope Inspector", "Generic", "Inspect and unwrap crypto-agile envelope containers", "🔎", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Crypto Envelope Inspector", Arrays.asList("Envelope", "CMS", "JWE", "crypto-agility")));
         register(new OperationDescriptor("op_keys_store", "KeyStore Inspector", "Keys", "Inspect KeyStore", "🗄", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "KeyStore Inspector", Arrays.asList("JKS", "PKCS12")));
         register(new OperationDescriptor("op_keys_pkcs11", "PKCS#11 Token", "Keys", "Connect and inspect a laboratory PKCS#11 token", "🔐", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "PKCS#11 Token", Arrays.asList("HSM", "SunPKCS11", "SoftHSM")));
 

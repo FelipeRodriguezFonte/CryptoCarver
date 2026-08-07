@@ -328,5 +328,7 @@
                           wrapText="true" styleClass="result-area,monospace-field"/>
             </VBox>
         </TitledPane>
+
+        <fx:include fx:id="cryptoEnvelopeInspector" source="crypto_envelope_inspector.fxml" />
     </panes>
 </Accordion>

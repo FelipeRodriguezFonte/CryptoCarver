@@ -90,6 +90,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.KEYS_SYMMETRIC, "AES Key Wrap"), "AES Key Wrap");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-31 Key Blocks"),
                 "TR-31 Key Blocks", "TR-31 Export", "TR-31 Import", "TR-31 Parse");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "RSA Key Exchange"), "RSA Key Exchange");
 
         add(routes, new Route(Module.KEYS_ASYMMETRIC, "RSA Key Generation"),
                 "RSA Key Generation", "Generate RSA Key");
@@ -135,6 +136,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.GENERIC, "Modular Arithmetic"), "Modular Arithmetic");
         add(routes, new Route(Module.GENERIC, "Key & Certificate Format Workbench"),
                 "Key & Certificate Format Workbench");
+        add(routes, new Route(Module.GENERIC, "Crypto Envelope Inspector"), "Crypto Envelope Inspector");
 
         add(routes, new Route(Module.POST_QUANTUM, "Key Generation"),
                 "Post-Quantum Cryptography", "PQC Key Generation", "PQC Key Import",
