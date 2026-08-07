@@ -28,6 +28,10 @@ public class SidePanel extends VBox {
     private Consumer<String> onItemSelected;
     private TreeItem<OperationNode> rootItem;
     private NavigationRail.Section currentSection = NavigationRail.Section.KEYS;
+    /** First navigable leaf of the current section, captured before Favorites/Recents are
+     *  spliced in, so a bare section switch lands on that section's own content rather than
+     *  an unrelated global favorite. Null for sections with nothing selectable (e.g. Search). */
+    private TreeItem<OperationNode> firstPrimaryOperation;
 
     private Consumer<com.cryptocarver.model.HistoryCommand> onHistoryItemSelected;
 
@@ -239,6 +243,10 @@ public class SidePanel extends VBox {
                 break;
         }
 
+        // Snapshot the first real leaf of this section's own tree before Favorites/Recents
+        // (which are global, not section-scoped) get spliced in above/below it.
+        firstPrimaryOperation = section == NavigationRail.Section.SEARCH ? null : findFirstSelectableLeaf(rootItem);
+
         if (section != NavigationRail.Section.SEARCH) {
             attachFavoritesIfAny();
             if (section != NavigationRail.Section.HISTORY) {
@@ -248,6 +256,38 @@ public class SidePanel extends VBox {
 
         navigationTree.setRoot(rootItem);
         expandAll(rootItem);
+    }
+
+    /**
+     * Selects the first navigable operation of the current section without rebuilding the
+     * tree. Used when the user switches sections via the rail icon or the breadcrumb section
+     * pill, so the content pane lands on a real screen that matches the tree instead of
+     * leaving whatever module happened to be shown before the switch.
+     */
+    public void selectFirstOperation() {
+        if (firstPrimaryOperation != null) {
+            navigationTree.getSelectionModel().select(firstPrimaryOperation);
+            navigationTree.scrollTo(navigationTree.getRow(firstPrimaryOperation));
+        }
+    }
+
+    private TreeItem<OperationNode> findFirstSelectableLeaf(TreeItem<OperationNode> node) {
+        if (node == null) return null;
+        for (TreeItem<OperationNode> child : node.getChildren()) {
+            OperationNode value = child.getValue();
+            if (child.isLeaf()) {
+                if (value == null) continue;
+                if (value.historyCommand != null) return child;
+                if (value.descriptor != null
+                        && value.descriptor.getStatus() != OperationDescriptor.Status.PLANNED) {
+                    return child;
+                }
+            } else {
+                TreeItem<OperationNode> found = findFirstSelectableLeaf(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     public NavigationRail.Section getCurrentSection() {

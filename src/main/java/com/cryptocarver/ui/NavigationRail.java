@@ -120,6 +120,10 @@ public class NavigationRail extends VBox {
             sidePanel.setVisible(true);
             sidePanel.setManaged(true);
             sidePanel.updateContent(section);
+            // Without this, switching sections only refreshed the tree: the content pane,
+            // breadcrumb and toolbar kept showing whatever operation was active before the
+            // click, out of sync with the newly selected section.
+            sidePanel.selectFirstOperation();
         }
     }
 
