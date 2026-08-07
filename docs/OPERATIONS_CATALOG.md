@@ -94,6 +94,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔁 | RSA Key Exchange | `op_keys_kex_rsa` | STABLE | HIGH | `RSA Key Exchange` | RSA-OAEP, Key Transport, TR-34 |
 | 🗝 | RSA Key Generation | `op_keys_rsa` | STABLE | HIGH | `RSA Key Generation` | - |
 | 📦 | TR-31 Key Blocks | `op_keys_tr31` | STABLE | HIGH | `TR-31 Key Blocks` | TR-31, TR31 |
+| 🔀 | TR-34 Key Distribution | `op_keys_tr34` | EXPERIMENTAL | HIGH | `TR-34 Key Distribution` | TR-34, Remote Key Loading, KDH, KRD |
 | ✅ | Validation & KCV | `op_keys_val` | STABLE | HIGH | `Validation & KCV` | - |
 
 ## Payments

@@ -46,6 +46,7 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_keys_wrap", "AES Key Wrap", "Keys", "Wrap keys", "🎁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "AES Key Wrap", Arrays.asList("RFC 3394")));
         register(new OperationDescriptor("op_keys_tr31", "TR-31 Key Blocks", "Keys", "TR-31 operations", "📦", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "TR-31 Key Blocks", Arrays.asList("TR-31", "TR31")));
         register(new OperationDescriptor("op_keys_kex_rsa", "RSA Key Exchange", "Keys", "Wrap/unwrap a symmetric key under RSA (Raw OAEP, JWE or CMS)", "🔁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "RSA Key Exchange", Arrays.asList("RSA-OAEP", "Key Transport", "TR-34")));
+        register(new OperationDescriptor("op_keys_tr34", "TR-34 Key Distribution", "Keys", "Laboratory RSA remote key distribution (sign then envelope with CMS)", "🔀", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "TR-34 Key Distribution", Arrays.asList("TR-34", "Remote Key Loading", "KDH", "KRD")));
 
         // Keys -> Asymmetric
         register(new OperationDescriptor("op_keys_rsa", "RSA Key Generation", "Keys", "Generate RSA keys", "🗝", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "RSA Key Generation", Collections.emptyList()));

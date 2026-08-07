@@ -47,7 +47,7 @@ public final class CryptoEnvelopeCodec {
      * do not remove the allow-list.
      */
     private static final List<String> ALLOWED_ALGORITHMS = Arrays.asList(
-            "RSA-OAEP-256", "RSA-OAEP-512"
+            "RSA-OAEP-256", "RSA-OAEP-512", "TR34-CMS"
     );
 
     private static final Pattern HEX_PATTERN = Pattern.compile("^[0-9a-fA-F]*$");

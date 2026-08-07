@@ -145,6 +145,7 @@ public final class ModuleTextCatalog {
         map.put("Execute Key Wrap", "module.keys.executeWrap");
         map.put("🔒 TR-31 Key Blocks", "module.keys.tr31");
         map.put("🔁 RSA Key Exchange", "module.keys.rsaKex");
+        map.put("🔀 TR-34 Key Distribution", "module.keys.tr34");
         return map;
     }
 

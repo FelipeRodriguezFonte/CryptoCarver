@@ -3646,6 +3646,238 @@ public class KeysController {
         System.err.print(InlineErrorPresenter.redactSecrets("RSA Key Exchange " + operation + " failed:\n" + trace));
     }
 
+    // ============================================================================
+    // TR-34 KEY DISTRIBUTION — laboratory RSA remote key distribution, inspired by
+    // ANSI X9 TR-34 (sign then envelope with CMS). See TR34Operations for the
+    // "this is not a byte-for-byte TR-34 implementation" disclosure; the same
+    // caveat is shown to the user directly in the pane (keys.fxml).
+    // ============================================================================
+
+    @FXML private TextArea tr34SenderPrivateKeyArea;
+    @FXML private TextArea tr34SenderCertArea;
+    @FXML private TextArea tr34ReceiverCertArea;
+    @FXML private TextField tr34KeyToDistributeField;
+    @FXML private TextField tr34KeyIdField;
+    @FXML private CheckBox tr34IncludeEnvelopeCheck;
+    @FXML private TextArea tr34DistributeResultArea;
+
+    @FXML private TextArea tr34ReceiverPrivateKeyArea;
+    @FXML private TextArea tr34ExpectedSenderCertArea;
+    @FXML private TextArea tr34DistributedDataArea;
+    @FXML private TextArea tr34ReceiveResultArea;
+
+    private static X509Certificate parseCertificatePem(String pem) throws Exception {
+        java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
+        return (X509Certificate) factory.generateCertificate(
+                new java.io.ByteArrayInputStream(pem.getBytes(StandardCharsets.US_ASCII)));
+    }
+
+    /**
+     * Handle TR-34 Distribute (sender side: sign then envelope the key)
+     */
+    @FXML
+    public void handleTr34Distribute() {
+        try {
+            String privatePem = tr34SenderPrivateKeyArea.getText().trim();
+            String senderCertPem = tr34SenderCertArea.getText().trim();
+            String receiverCertPem = tr34ReceiverCertArea.getText().trim();
+            String keyHex = tr34KeyToDistributeField.getText().trim().replaceAll("\\s+", "");
+
+            if (privatePem.isEmpty() || senderCertPem.isEmpty() || receiverCertPem.isEmpty() || keyHex.isEmpty()) {
+                showTr34Validation(t("module.keys.tr34.required"),
+                        privatePem.isEmpty() ? "tr34SenderPrivateKeyArea"
+                                : senderCertPem.isEmpty() ? "tr34SenderCertArea"
+                                : receiverCertPem.isEmpty() ? "tr34ReceiverCertArea" : "tr34KeyToDistributeField",
+                        tr34DistributeResultArea::setText);
+                return;
+            }
+            if (!keyHex.matches("[0-9A-Fa-f]+")) {
+                showTr34Validation(t("module.keys.tr34.keyInvalid"), "tr34KeyToDistributeField", tr34DistributeResultArea::setText);
+                return;
+            }
+
+            byte[] keyToDistribute = DataConverter.hexToBytes(keyHex);
+            PrivateKey senderPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
+            X509Certificate senderCert = parseCertificatePem(senderCertPem);
+            X509Certificate receiverCert = parseCertificatePem(receiverCertPem);
+            String keyId = tr34KeyIdField == null ? "" : tr34KeyIdField.getText().trim();
+
+            byte[] distributed = TR34Operations.distributeKey(keyToDistribute, senderCert, senderPrivateKey,
+                    receiverCert, keyId.isEmpty() ? null : keyId);
+
+            boolean asEnvelope = tr34IncludeEnvelopeCheck != null && tr34IncludeEnvelopeCheck.isSelected();
+            String outputText;
+            if (asEnvelope) {
+                CryptoEnvelope.Builder builder = CryptoEnvelope.forAlgorithm("TR34-CMS")
+                        .ciphertext(distributed)
+                        .kcv(tr34KcvIfEligible(keyToDistribute));
+                if (!keyId.isEmpty()) builder.kid(keyId);
+                outputText = CryptoEnvelopeCodec.serializeCompact(builder.build());
+            } else {
+                outputText = java.util.Base64.getEncoder().encodeToString(distributed);
+            }
+
+            StringBuilder result = new StringBuilder();
+            result.append("========================================\n");
+            result.append("TR-34 KEY DISTRIBUTION — DISTRIBUTE\n");
+            result.append("========================================\n\n");
+            if (!keyId.isEmpty()) result.append("Key ID:         ").append(keyId).append("\n");
+            result.append("Envelope:       ").append(asEnvelope ? "yes (compact)" : "no").append("\n\n");
+            result.append("OUTPUT:\n");
+            result.append("------------------\n");
+            result.append(outputText).append("\n");
+            result.append("\n========================================\n");
+
+            tr34DistributeResultArea.setText(result.toString());
+            updateStatus(t("module.keys.tr34.status.distributed"));
+
+            if (mainController != null) {
+                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
+                if (!keyId.isEmpty()) details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key ID", keyId));
+                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Key to Distribute", keyHex));
+                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Output", outputText));
+                mainController.publish(OperationResult.forOperation("TR-34 Key Distribution")
+                        .input(keyToDistribute)
+                        .output(outputText.getBytes(StandardCharsets.UTF_8))
+                        .details(details)
+                        .status("TR-34 key distributed successfully")
+                        .build());
+            }
+        } catch (Exception e) {
+            showTr34Validation(t("module.keys.tr34.operation", e.getMessage()), "tr34KeyToDistributeField", tr34DistributeResultArea::setText);
+            updateStatus(t("module.keys.tr34.status.distributeFailed"));
+            logTr34Failure("distribute", e);
+        }
+    }
+
+    /**
+     * Handle TR-34 Receive (receiver side: decrypt then verify)
+     */
+    @FXML
+    public void handleTr34Receive() {
+        try {
+            String privatePem = tr34ReceiverPrivateKeyArea.getText().trim();
+            String expectedSenderCertPem = tr34ExpectedSenderCertArea.getText().trim();
+            String distributedText = tr34DistributedDataArea.getText().trim();
+
+            if (privatePem.isEmpty() || expectedSenderCertPem.isEmpty() || distributedText.isEmpty()) {
+                showTr34Validation(t("module.keys.tr34.receiveRequired"),
+                        privatePem.isEmpty() ? "tr34ReceiverPrivateKeyArea"
+                                : expectedSenderCertPem.isEmpty() ? "tr34ExpectedSenderCertArea" : "tr34DistributedDataArea",
+                        tr34ReceiveResultArea::setText);
+                return;
+            }
+
+            PrivateKey receiverPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
+            X509Certificate expectedSenderCert = parseCertificatePem(expectedSenderCertPem);
+
+            byte[] distributed;
+            CryptoEnvelope envelope = null;
+            if (CryptoEnvelopeCodec.looksLikeEnvelope(distributedText)) {
+                envelope = CryptoEnvelopeCodec.deserializeAuto(distributedText);
+                distributed = java.util.Base64.getDecoder().decode(envelope.getCiphertextB64());
+            } else {
+                distributed = java.util.Base64.getDecoder().decode(distributedText);
+            }
+
+            TR34Operations.ReceivedKey received = TR34Operations.receiveKey(distributed, receiverPrivateKey, expectedSenderCert);
+            String recoveredHex = DataConverter.bytesToHex(received.getKey());
+
+            StringBuilder result = new StringBuilder();
+            result.append("========================================\n");
+            result.append("TR-34 KEY DISTRIBUTION — RECEIVE\n");
+            result.append("========================================\n\n");
+            result.append("Signature Verified: ").append(received.isSignatureVerified() ? "YES" : "NO — do not trust this key").append("\n");
+            String keyId = received.getKeyId();
+            if (keyId != null) result.append("Key ID (authenticated): ").append(keyId).append("\n");
+            if (envelope != null) {
+                result.append("Envelope KCV:        ").append(envelope.getKcv() == null ? "-" : envelope.getKcv()).append("\n");
+            }
+            result.append("\nRECOVERED KEY:\n");
+            result.append("------------------\n");
+            result.append(recoveredHex.toUpperCase()).append("\n");
+            result.append("Key Length:     ").append(received.getKey().length).append(" bytes\n");
+            result.append("\n========================================\n");
+
+            tr34ReceiveResultArea.setText(result.toString());
+            if (!received.isSignatureVerified()) {
+                updateStatus(t("module.keys.tr34.status.receivedUnverified"));
+            } else {
+                updateStatus(t("module.keys.tr34.status.received"));
+            }
+
+            if (mainController != null) {
+                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
+                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Signature Verified", String.valueOf(received.isSignatureVerified())));
+                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Recovered Key (hex)", recoveredHex));
+                mainController.publish(OperationResult.forOperation("TR-34 Key Reception")
+                        .input(distributed)
+                        .output(received.getKey(), com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                        .details(details)
+                        .status(received.isSignatureVerified() ? "TR-34 key received and verified" : "TR-34 key received but NOT verified")
+                        .build());
+            }
+        } catch (Exception e) {
+            showTr34Validation(t("module.keys.tr34.operation", e.getMessage()), "tr34DistributedDataArea", tr34ReceiveResultArea::setText);
+            updateStatus(t("module.keys.tr34.status.receiveFailed"));
+            logTr34Failure("receive", e);
+        }
+    }
+
+    @FXML
+    public void handleTr34Clear() {
+        clearTr34Fields();
+        if (mainController != null) mainController.updateStatus(t("module.keys.tr34.clearStatus"));
+    }
+
+    @FXML
+    public void handleTr34Reset() {
+        clearTr34Fields();
+        if (tr34IncludeEnvelopeCheck != null) tr34IncludeEnvelopeCheck.setSelected(false);
+        if (mainController != null) mainController.updateStatus(t("module.keys.tr34.resetStatus"));
+    }
+
+    private void clearTr34Fields() {
+        if (tr34SenderPrivateKeyArea != null) tr34SenderPrivateKeyArea.clear();
+        if (tr34SenderCertArea != null) tr34SenderCertArea.clear();
+        if (tr34ReceiverCertArea != null) tr34ReceiverCertArea.clear();
+        if (tr34KeyToDistributeField != null) tr34KeyToDistributeField.clear();
+        if (tr34KeyIdField != null) tr34KeyIdField.clear();
+        if (tr34DistributeResultArea != null) tr34DistributeResultArea.clear();
+        if (tr34ReceiverPrivateKeyArea != null) tr34ReceiverPrivateKeyArea.clear();
+        if (tr34ExpectedSenderCertArea != null) tr34ExpectedSenderCertArea.clear();
+        if (tr34DistributedDataArea != null) tr34DistributedDataArea.clear();
+        if (tr34ReceiveResultArea != null) tr34ReceiveResultArea.clear();
+    }
+
+    /** KCV is only defined here for AES-length key material (16/24/32 bytes); anything else is best-effort skipped. */
+    private static String tr34KcvIfEligible(byte[] keyMaterial) {
+        if (keyMaterial.length != 16 && keyMaterial.length != 24 && keyMaterial.length != 32) {
+            return null;
+        }
+        try {
+            return DataConverter.bytesToHex(KeyOperations.calculateKCV_AES(keyMaterial));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void showTr34Validation(String message, String fieldKey, Consumer<String> feedbackTarget) {
+        String safeMessage = InlineErrorPresenter.redactSecrets(message);
+        UserFacingError error = new UserFacingError(t("module.keys.tr34.errorTitle"), safeMessage, safeMessage, fieldKey);
+        if (mainController != null) {
+            mainController.showError(error);
+        } else if (feedbackTarget != null) {
+            feedbackTarget.accept(safeMessage);
+        }
+    }
+
+    private void logTr34Failure(String operation, Exception error) {
+        StringWriter trace = new StringWriter();
+        error.printStackTrace(new PrintWriter(trace));
+        System.err.print(InlineErrorPresenter.redactSecrets("TR-34 " + operation + " failed:\n" + trace));
+    }
+
     /**
      * Initialize Key Derivation Functions
      */

@@ -633,6 +633,68 @@
                     </TabPane>
                 </VBox>
             </TitledPane>
+
+            <!-- TR-34 KEY DISTRIBUTION -->
+            <TitledPane text="🔀 TR-34 Key Distribution">
+                <VBox spacing="6" style="-fx-padding: 8;">
+                    <Label text="TR-34-inspired laboratory key distribution" styleClass="helper-text"/>
+                    <Label text="Signs then envelopes the key with CMS (RSA), the same mechanism TR-34 uses conceptually. Not a byte-for-byte ANSI X9 TR-34-2019 implementation and not verified against real KDH/KRD interop — do not use to load a production HSM."
+                           wrapText="true" styleClass="helper-text" style="-fx-text-fill: #9a3412;"/>
+                    <TabPane tabClosingPolicy="UNAVAILABLE">
+                        <Tab text="Distribute (Sender)">
+                            <VBox spacing="6" style="-fx-padding: 8;">
+                                <Label text="Sender Private Key (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34SenderPrivateKeyArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN PRIVATE KEY-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Sender Certificate (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34SenderCertArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Receiver Certificate (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ReceiverCertArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Key to Distribute (hex):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="tr34KeyToDistributeField" promptText="Symmetric key in hex"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Key ID (optional, authenticated):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="tr34KeyIdField" promptText="e.g. kek-2026-01"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <CheckBox fx:id="tr34IncludeEnvelopeCheck" text="Wrap key as Crypto Envelope before distributing" style="-fx-font-size: 11px;"/>
+                                <Button text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <Button text="Clear" onAction="#handleTr34Clear" styleClass="secondary-button"/>
+                                    <Button text="Reset Defaults" onAction="#handleTr34Reset" styleClass="secondary-button"/>
+                                </HBox>
+                                <TextArea fx:id="tr34DistributeResultArea" prefHeight="120" editable="false" wrapText="true"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                          promptText="Distribution results will appear here..."/>
+                            </VBox>
+                        </Tab>
+                        <Tab text="Receive (Receiver)">
+                            <VBox spacing="6" style="-fx-padding: 8;">
+                                <Label text="Receiver Private Key (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ReceiverPrivateKeyArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN PRIVATE KEY-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Expected Sender Certificate (PEM, for verification):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ExpectedSenderCertArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Distributed Data:" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34DistributedDataArea" prefHeight="80" wrapText="true"
+                                          promptText="Paste the distributed data (or a Crypto Envelope) here..."
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Button text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ReceiveResultArea" prefHeight="120" editable="false" wrapText="true"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                          promptText="Receive results will appear here..."/>
+                            </VBox>
+                        </Tab>
+                    </TabPane>
+                </VBox>
+            </TitledPane>
             </panes>
         </Accordion>
         <fx:include fx:id="pkcs11Profiles" source="pkcs11_profiles.fxml"/>

@@ -161,8 +161,16 @@ if [ $JPACKAGE_EXIT -eq 0 ]; then
         fi
         APP_BUNDLE="$OUTPUT_DIR/${APP_NAME}.app"
         echo "[INFO] Copying signed app bundle into $APP_BUNDLE ..."
+        # A previous app-image can contain read-only files (bundled JDK legal notices) that
+        # make `rm -rf` fail partway through without aborting the script (rm keeps going and
+        # only reports errors), leaving a stale nested directory behind. Clear write
+        # protection first, and always merge-copy with a trailing "/." on the source so a
+        # bundle left behind by a still-failed removal gets overwritten in place instead of
+        # nested inside itself.
+        chmod -R u+w "$APP_BUNDLE" 2>/dev/null || true
         rm -rf "$APP_BUNDLE"
-        cp -R "$BUILT_BUNDLE" "$APP_BUNDLE"
+        mkdir -p "$APP_BUNDLE"
+        cp -R "$BUILT_BUNDLE"/. "$APP_BUNDLE"/
         echo ""
         echo "SUCCESS! macOS app bundle built: $APP_BUNDLE"
         echo "Open $APP_BUNDLE to let macOS identify the application as CryptoCarver."
