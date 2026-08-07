@@ -144,6 +144,7 @@ public final class ModuleTextCatalog {
         map.put("🔗 AES Key Wrap (RFC 3394 / RFC 5649)", "module.keys.keyWrap");
         map.put("Execute Key Wrap", "module.keys.executeWrap");
         map.put("🔒 TR-31 Key Blocks", "module.keys.tr31");
+        map.put("🔁 RSA Key Exchange", "module.keys.rsaKex");
         return map;
     }
 
@@ -209,6 +210,7 @@ public final class ModuleTextCatalog {
         map.put("📦 CMS Operations", "module.cert.cms");
         map.put("Load Token Keys", "module.cert.loadTokenKeys");
         map.put("Output / Result:", "module.cert.outputResult");
+        map.put("Validate revocation online (OCSP/CRL)", "module.cms.onlineRevocation");
         return map;
     }
 
@@ -797,6 +799,7 @@ public final class ModuleTextCatalog {
         map.put("Truststore (Optional, for PKIX path validation):", "module.cms.truststore");
         map.put("Select Truststore...", "module.cms.selectTruststore");
         map.put("Password (not saved)", "module.cms.passwordPrompt");
+        map.put("Validate revocation online (OCSP/CRL)", "module.cms.onlineRevocation");
         map.put("Inspect CMS", "module.cms.inspect");
         map.put("Validate SignedData", "module.cms.validate");
         map.put("Export Report", "module.cms.export");
@@ -850,6 +853,9 @@ public final class ModuleTextCatalog {
         map.put("PDF Advanced Electronic Signatures (PAdES)", "module.pades.title");
         map.put("PAdES laboratory — local PKCS#12 signing key", "module.pades.help");
         map.put("Signs PDF incrementally as Baseline-B, or Baseline-T when timestamping is explicitly enabled. It never overwrites an output file. 64 MiB limit.", "module.pades.warning");
+        map.put("Signs PDF incrementally as Baseline-B, Baseline-T, Baseline-LT, or real Baseline-LTA. It never overwrites an output file. 64 MiB limit.", "module.pades.warningLt");
+        map.put("PAdES profile:", "module.pades.profile");
+        map.put("Baseline-LT requires validated revocation evidence. Baseline-LTA additionally adds a DSS RFC 3161 archive timestamp over the LT evidence; TSA and local evidence (or explicit online validation) are mandatory. Network is disabled by default.", "module.pades.ltRequirements");
         map.put("Input PDF:", "module.pades.input");
         map.put("Choose PDF…", "module.pades.choosePdf");
         map.put("Output PDF:", "module.pades.output");
@@ -860,6 +866,10 @@ public final class ModuleTextCatalog {
         map.put("Choose key…", "module.pades.chooseKey");
         map.put("Load Token Keys", "module.pades.loadKeys");
         map.put("Add RFC 3161 signature timestamp (PAdES-T)", "module.pades.addTimestamp");
+        map.put("Baseline-B", "module.pades.baselineB");
+        map.put("Baseline-T", "module.pades.baselineT");
+        map.put("Baseline-LT", "module.pades.baselineLt");
+        map.put("Baseline-LTA", "module.pades.baselineLta");
         map.put("Add visible signature text", "module.pades.visibleText");
         map.put("Page", "module.pades.page");
         map.put("Width", "module.pades.width");
@@ -870,6 +880,8 @@ public final class ModuleTextCatalog {
         map.put("Truststore:", "module.pades.truststore");
         map.put("Choose...", "module.pades.choose");
         map.put("CRL Evidence:", "module.pades.crlEvidence");
+        map.put("Validate revocation online (OCSP/CRL)", "module.pades.onlineRevocation");
+        map.put("Disabled by default; uses HTTP/HTTPS with bounded DSS timeouts and no redirects.", "module.pades.onlineRevocationHelp");
         map.put("Sign PDF", "module.pades.sign");
         map.put("Inspect Signatures", "module.pades.inspect");
         map.put("Validate PDF", "module.pades.validate");
@@ -899,6 +911,23 @@ public final class ModuleTextCatalog {
         map.put("Create ASiC-E", "module.asic.createE");
         map.put("Choose truststore…", "module.asic.chooseTruststore");
         map.put("ASiC result will appear here...", "module.asic.resultPrompt");
+        return map;
+    }
+
+    public static Map<String, String> cryptoEnvelopeInspector() {
+        Map<String, String> map = common();
+        map.put("🔎 Crypto Envelope Inspector", "module.envelope.title");
+        map.put("Envelope (compact CCE1.… or JSON):", "module.envelope.source");
+        map.put("Paste a Crypto Envelope here...", "module.envelope.inputPrompt");
+        map.put("Inspect", "module.envelope.inspect");
+        map.put("Header:", "module.envelope.header");
+        map.put("Unwrap (needs the recipient's private key):", "module.envelope.unwrapSection");
+        map.put("Profile:", "module.envelope.profile");
+        map.put("Unwrap", "module.envelope.unwrap");
+        map.put("Recovered key (hex):", "module.envelope.recoveredKey");
+        map.put("Reset", "module.common.reset");
+        map.put("Clear", "module.common.clear");
+        map.put("Reset Defaults", "module.common.resetDefaults");
         return map;
     }
 }

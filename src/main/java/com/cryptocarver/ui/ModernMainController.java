@@ -272,6 +272,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private MenuItem copyOutputMenuItem;
     @FXML private MenuItem addToShelfMenuItem;
     @FXML private MenuItem quickStartMenuItem;
+    @FXML private MenuItem clipboardShelfMenuItem;
     @FXML private MenuItem commandPaletteMenuItem;
     @FXML private MenuItem toggleSidePanelMenuItem;
     @FXML private MenuItem toggleInspectorMenuItem;
@@ -409,6 +410,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
+            if (clipboardShelfController != null) {
+                clipboardShelfController.dispose();
+            }
             if (operationExecutor != null) {
                 operationExecutor.shutdown();
             }
@@ -522,6 +526,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (genericContainerController != null && genericContainerController.getKeyCertificateWorkbenchController() != null) {
             genericContainerController.getKeyCertificateWorkbenchController().setStatusReporter(this);
         }
+        if (genericContainerController != null && genericContainerController.getCryptoEnvelopeInspectorController() != null) {
+            genericContainerController.getCryptoEnvelopeInspectorController().setStatusReporter(this);
+        }
         loadPostQuantumContent();
         loadXMLSecurityContent();
         loadWssSecurityContent();
@@ -564,6 +571,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(copyOutputMenuItem, "menu.copyOutput");
         setText(addToShelfMenuItem, "menu.addToShelf");
         setText(quickStartMenuItem, "menu.quickStart");
+        setText(clipboardShelfMenuItem, "menu.clipboardShelf");
         setText(commandPaletteMenuItem, "menu.commandPalette");
         setText(toggleSidePanelMenuItem, "menu.toggleSidePanel");
         setText(toggleInspectorMenuItem, "menu.toggleInspector");
@@ -942,6 +950,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void navigateToModule(String moduleName) {
         handleItemSelected(moduleName);
+    }
+
+    /** Opens the integrated Shelf view and refreshes its in-session contents. */
+    @FXML
+    public void handleOpenClipboardShelf() {
+        navigateToModule("Clipboard Shelf");
+    }
+
+    /** Uses a session-only private-key entry without exposing it to other targets. */
+    public void loadSessionOnlyPrivateKey(com.cryptocarver.model.ClipboardEntry entry) {
+        if (entry == null || !entry.isSessionOnlyPrivateKey()) {
+            updateStatus("Action blocked: only session-only private-key entries can be reused here.");
+            return;
+        }
+        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            updateStatus("Action blocked: session-only private keys require FULL_LAB.");
+            return;
+        }
+        navigateToModule("Key & Certificate Format Workbench");
+        if (genericContainerController != null && genericContainerController.getKeyCertificateWorkbenchController() != null) {
+            genericContainerController.getKeyCertificateWorkbenchController().loadSessionOnlyPrivateKey(entry.getValue());
+        }
     }
 
     /** Opens the signatures workspace with a generated laboratory key pair prepared, without executing it. */
@@ -2042,13 +2073,39 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
     @FXML
     public void handleAddCurrentOutputToShelf() {
-        TextArea area = preferredResultArea();
-        String content = resolveResultText(area);
+        if (keysController != null && isActiveAsymmetricKeyGeneration()) {
+            keysController.handleGlobalAsymmetricShelfAction(currentActiveOperation);
+            return;
+        }
+        KeyCertificateWorkbenchController workbench = activeWorkbenchForShelf();
+        if (workbench != null) {
+            workbench.sendCurrentMaterialToShelf();
+            return;
+        }
+        TextArea area = resultAreaTracker.shelfCaptureArea();
+        String content = resolveShelfCaptureText(area);
         if (content == null || content.isBlank()) {
+            updateStatus(isShelfCaptureBlockedByVisibility(area)
+                    ? "Action blocked: output hidden by visibility policy."
+                    : "No current output available.");
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
             return;
         }
         handleAddToClipboardShelfSecure(area, null);
+    }
+
+    private boolean isActiveAsymmetricKeyGeneration() {
+        return switch (currentActiveOperation) {
+            case "RSA Key Generation", "ECDSA Key Generation", "DSA Key Generation", "EdDSA Key Generation" -> true;
+            default -> false;
+        };
+    }
+
+    private KeyCertificateWorkbenchController activeWorkbenchForShelf() {
+        if (!isContainerVisible(genericContainer) || genericContainerController == null) return null;
+        KeyCertificateWorkbenchController workbench =
+                genericContainerController.getKeyCertificateWorkbenchController();
+        return workbench != null && workbench.isShelfMaterialViewVisible() ? workbench : null;
     }
 
     /** Opens the active operation result in a large, independent viewer. */
@@ -2102,6 +2159,57 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return "";
     }
 
+    /**
+     * Resolves only a real output for Shelf capture. A summary assembled from
+     * public details is useful to the viewer but is not a captured artifact.
+     */
+    private String resolveShelfCaptureText(TextArea requestedArea) {
+        TextArea area = requestedArea;
+        if (area == null) {
+            area = resultAreaTracker.shelfCaptureArea();
+        }
+        if (resultAreaTracker.isValidShelfCaptureArea(area)) {
+            String visible = renderResultArea(area);
+            if (visible == null || visible.isBlank()
+                    || "***MASKED***".equals(visible)
+                    || isPrivateMaterialPlaceholder(visible)) {
+                return "";
+            }
+            return visible;
+        }
+        if (lastPublishedResultSnapshot == null) return "";
+        boolean hasArtifact = (lastPublishedResultSnapshot.getEnrichedOutput() != null
+                && !lastPublishedResultSnapshot.getEnrichedOutput().isBlank())
+                || (lastPublishedResultSnapshot.getOutput() != null
+                && lastPublishedResultSnapshot.getOutput().length > 0);
+        return hasArtifact ? renderPublishedResult(lastPublishedResultSnapshot,
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()) : "";
+    }
+
+    private boolean isShelfCaptureBlockedByVisibility(TextArea area) {
+        com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
+        com.cryptocarver.model.SecretVisibilityProfile visibility =
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        return visibility != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
+                && (classification == com.cryptocarver.model.OperationDetail.Classification.SECRET
+                || classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE);
+    }
+
+    private boolean isPrivateMaterialPlaceholder(String text) {
+        if (text == null) return false;
+        String normalized = text.toUpperCase(java.util.Locale.ROOT);
+        return normalized.contains("PRIVATE KEY MATERIAL") && normalized.contains("NOT RECORDED");
+    }
+
+    private boolean isCompletePrivateKeyMaterial(String text) {
+        if (text == null || isPrivateMaterialPlaceholder(text)) return false;
+        String normalized = text.toUpperCase(java.util.Locale.ROOT);
+        return normalized.contains("-----BEGIN ")
+                && normalized.contains("PRIVATE KEY-----")
+                && normalized.contains("-----END ")
+                && normalized.contains("PRIVATE KEY-----");
+    }
+
     private String renderResultArea(TextArea area) {
         if (area == null || area.getText() == null || area.getText().isBlank()) {
             return "";
@@ -2122,6 +2230,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
         if (ResultAreaTracker.isPrivateKeyResultArea(area)) {
             return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+        }
+        if (ResultAreaTracker.isKeyPairResultArea(area)
+                && area.getId().toLowerCase(java.util.Locale.ROOT).contains("publickeyarea")) {
+            return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
+        }
+        if (lastPublishedResultSnapshot != null
+                && resultAreaTracker.isCurrentResultArea(area, true)) {
+            return classifyPublishedResult(lastPublishedResultSnapshot);
         }
         if (area != null) {
             String id = area.getId() == null ? "" : area.getId().toLowerCase(java.util.Locale.ROOT);
@@ -2359,26 +2475,55 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
             text = selectedText;
         } else {
-            text = resolveResultText(area);
+            text = resolveShelfCaptureText(area);
         }
 
         if (text == null || text.isEmpty()) {
-             updateStatus("Action blocked: Content hidden by security policy.");
+             updateStatus(isShelfCaptureBlockedByVisibility(area)
+                     ? "Action blocked: output hidden by visibility policy."
+                     : "No current output available.");
              return;
         }
 
-        if (text.equals("***MASKED***")) {
-             updateStatus("Action blocked: Cannot add masked content to shelf.");
-             return;
-        }
-
-        if (cipherController != null && cipherController.isPrimaryOutput(area)
-                && !cipherController.getAuthenticationTagText().isEmpty() && selectedText == null) {
-             text = text + cipherController.getAuthenticationTagText();
+        if (text.equals("***MASKED***") || isPrivateMaterialPlaceholder(text)) {
+             updateStatus(text.equals("***MASKED***")
+                     ? "Action blocked: output hidden by visibility policy."
+                     : "Action blocked: private output is not an explicit complete private-key area.");
+            return;
         }
 
         com.cryptocarver.model.ClipboardEntry.Format format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
         com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
+        if (cls == com.cryptocarver.model.OperationDetail.Classification.SECRET) {
+            boolean explicitPrivateKey = selectedText == null && ResultAreaTracker.isPrivateKeyResultArea(area);
+            if (explicitPrivateKey
+                    && isCompletePrivateKeyMaterial(text)
+                    && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                        == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+                String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation()
+                        : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
+                String algorithm = null;
+                if (lastPublishedResultSnapshot != null && lastPublishedResultSnapshot.getDetails() != null) {
+                    for (com.cryptocarver.model.OperationDetail detail : lastPublishedResultSnapshot.getDetails()) {
+                        if (detail != null && ("Algorithm".equalsIgnoreCase(detail.name())
+                                || "Type".equalsIgnoreCase(detail.name()))) {
+                            algorithm = detail.value();
+                            break;
+                        }
+                    }
+                }
+                com.cryptocarver.model.ClipboardEntry sessionEntry =
+                        com.cryptocarver.model.ClipboardShelfManager.getInstance()
+                                .addSessionOnlyPrivateKey(text, sourceOp, algorithm);
+                updateStatus(sessionEntry != null
+                        ? "Added private key to Clipboard Shelf (session only)."
+                        : "Action blocked: session-only private keys require FULL_LAB.");
+                revealShelfEntry(sessionEntry);
+                return;
+            }
+            updateStatus("Action blocked: private output is not an explicit complete private-key area.");
+            return;
+        }
         String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
         String algorithm = null;
         if (lastPublishedResultSnapshot != null && lastPublishedResultSnapshot.getDetails() != null) {
@@ -2405,8 +2550,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 sourceOp,
                 algorithm
         );
+        // Full authenticated-cipher results are stored as a typed package.
+        // A partial selection deliberately remains the historical simple value.
+        if (selectedText == null && cipherController != null && cipherController.isPrimaryOutput(area)) {
+            com.cryptocarver.model.ShelfPackage packageData = cipherController.createAuthenticatedCipherShelfPackage();
+            if (packageData != null) {
+                text = packageData.artifact("ciphertext");
+                format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
+                entry = new com.cryptocarver.model.ClipboardEntry(
+                        "Authenticated ciphertext from " + sourceOp, text, format, cls, sourceOp, algorithm)
+                        .withShelfPackage(packageData);
+            }
+        }
         com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
-        updateStatus("Added to Clipboard Shelf");
+        revealShelfEntry(entry);
+        updateStatus("Added public output to Clipboard Shelf.");
+    }
+
+    void revealShelfEntry(com.cryptocarver.model.ClipboardEntry entry) {
+        if (entry != null && clipboardShelfController != null) {
+            clipboardShelfController.refreshAndReveal(entry.getId());
+        }
     }
 
     public com.cryptocarver.model.OperationDetail.Classification classifyPublishedResult(com.cryptocarver.model.OperationResult result) {
@@ -2414,6 +2578,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void fillClipboardTarget(String targetType, String value, com.cryptocarver.model.ClipboardEntry.Format format) {
+        fillClipboardTarget(targetType, value, format, null);
+    }
+
+    public void fillClipboardTarget(String targetType, String value, com.cryptocarver.model.ClipboardEntry.Format format,
+                                    com.cryptocarver.model.ShelfPackage packageData) {
         if (value == null) return;
         switch (targetType) {
             case "MANUAL_CONVERSION":
@@ -2426,7 +2595,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case "SYMMETRIC_CIPHER":
                 if (cipherController != null) {
                     navigateToModule("Symmetric Ciphers");
-                    cipherController.fillSymmetricCipherInput(value, format);
+                    if (packageData != null) cipherController.fillSymmetricCipherPackage(packageData);
+                    else cipherController.fillSymmetricCipherInput(value, format);
                     expandCipherAccordionPane("Symmetric Ciphers");
                 }
                 break;

@@ -6,6 +6,8 @@ import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.GeneratedKeySummary;
 import com.cryptocarver.model.GeneratedAsymmetricKeySummary;
+import com.cryptocarver.model.CryptoEnvelope;
+import com.cryptocarver.model.CryptoEnvelopeCodec;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.fxml.FXML;
@@ -50,6 +52,10 @@ public class KeysController {
     @FXML private TextArea ecdsaPrivateKeyArea;
     @FXML private TextArea eddsaPublicKeyArea;
     @FXML private TextArea eddsaPrivateKeyArea;
+    @FXML private TabPane rsaKeyMaterialTabs;
+    @FXML private TabPane ecdsaKeyMaterialTabs;
+    @FXML private TabPane dsaKeyMaterialTabs;
+    @FXML private TabPane eddsaKeyMaterialTabs;
 
     // Key Lab FXML fields
     @FXML private TitledPane keyLabPane;
@@ -122,6 +128,7 @@ public class KeysController {
     @FXML private Button rsaExportPublicBtn;
     @FXML private Button rsaExportPrivateBtn;
     @FXML private Button rsaSendShelfBtn;
+    @FXML private Button rsaSendPrivateShelfBtn;
     @FXML private Button rsaUseCipherBtn;
     @FXML private Button rsaUseSignaturesBtn;
     @FXML private Button rsaUseCertificatesBtn;
@@ -140,6 +147,7 @@ public class KeysController {
     @FXML private Button ecdsaExportPublicBtn;
     @FXML private Button ecdsaExportPrivateBtn;
     @FXML private Button ecdsaSendShelfBtn;
+    @FXML private Button ecdsaSendPrivateShelfBtn;
     @FXML private Button ecdsaUseCipherBtn;
     @FXML private Button ecdsaUseSignaturesBtn;
     @FXML private Button ecdsaUseCertificatesBtn;
@@ -158,6 +166,7 @@ public class KeysController {
     @FXML private Button dsaExportPublicBtn;
     @FXML private Button dsaExportPrivateBtn;
     @FXML private Button dsaSendShelfBtn;
+    @FXML private Button dsaSendPrivateShelfBtn;
     @FXML private Button dsaUseCipherBtn;
     @FXML private Button dsaUseSignaturesBtn;
     @FXML private Button dsaUseCertificatesBtn;
@@ -176,6 +185,7 @@ public class KeysController {
     @FXML private Button eddsaExportPublicBtn;
     @FXML private Button eddsaExportPrivateBtn;
     @FXML private Button eddsaSendShelfBtn;
+    @FXML private Button eddsaSendPrivateShelfBtn;
     @FXML private Button eddsaUseCipherBtn;
     @FXML private Button eddsaUseSignaturesBtn;
     @FXML private Button eddsaUseCertificatesBtn;
@@ -409,6 +419,7 @@ public class KeysController {
     @FXML
     private void initialize() {
         moduleI18n = ModuleI18n.bind(keysRoot, ModuleTextCatalog.keys());
+        initializeRsaKexControls();
         initialize(null, keyTypeCombo, forceOddParityCheck, generatedKeyField, keyInputField, validationResultArea,
                 numComponentsCombo, keyToSplitField, componentResultsArea,
                 component1Field, component2Field, component3Field, component4Field, component5Field);
@@ -3346,6 +3357,295 @@ public class KeysController {
         }
     }
 
+    // ============================================================================
+    // RSA KEY EXCHANGE — export/import of a symmetric key under RSA (Raw OAEP,
+    // JWE Compact or CMS EnvelopedData), the RSA sibling of TR-31 above. See
+    // RsaKeyWrapOperations for the underlying wrap/unwrap primitives and
+    // CryptoEnvelope/CryptoEnvelopeCodec for the optional crypto-agility header.
+    // ============================================================================
+
+    @FXML private TextArea rsaKexRecipientPemArea;
+    @FXML private TextField rsaKexKeyToWrapField;
+    @FXML private ComboBox<String> rsaKexExportProfileCombo;
+    @FXML private CheckBox rsaKexIncludeEnvelopeCheck;
+    @FXML private javafx.scene.layout.HBox rsaKexEnvelopeFieldsBox;
+    @FXML private TextField rsaKexKidField;
+    @FXML private TextField rsaKexKeyVersionField;
+    @FXML private TextArea rsaKexExportResultArea;
+
+    @FXML private TextArea rsaKexPrivateKeyArea;
+    @FXML private TextArea rsaKexWrappedDataArea;
+    @FXML private ComboBox<String> rsaKexImportProfileCombo;
+    @FXML private TextArea rsaKexImportResultArea;
+
+    private void initializeRsaKexControls() {
+        if (rsaKexExportProfileCombo != null) {
+            rsaKexExportProfileCombo.getItems().setAll("Raw OAEP", "JWE Compact", "CMS EnvelopedData");
+            rsaKexExportProfileCombo.setValue("Raw OAEP");
+        }
+        if (rsaKexImportProfileCombo != null) {
+            rsaKexImportProfileCombo.getItems().setAll("Raw OAEP", "JWE Compact", "CMS EnvelopedData");
+            rsaKexImportProfileCombo.setValue("Raw OAEP");
+        }
+    }
+
+    @FXML
+    public void handleRsaKexEnvelopeToggle() {
+        boolean selected = rsaKexIncludeEnvelopeCheck != null && rsaKexIncludeEnvelopeCheck.isSelected();
+        if (rsaKexEnvelopeFieldsBox != null) {
+            rsaKexEnvelopeFieldsBox.setVisible(selected);
+            rsaKexEnvelopeFieldsBox.setManaged(selected);
+        }
+    }
+
+    private static RsaKeyWrapOperations.WrapProfile rsaKexProfileFromCombo(String value) {
+        if (value == null) return RsaKeyWrapOperations.WrapProfile.RAW_OAEP;
+        return switch (value) {
+            case "JWE Compact" -> RsaKeyWrapOperations.WrapProfile.JWE_COMPACT;
+            case "CMS EnvelopedData" -> RsaKeyWrapOperations.WrapProfile.CMS_ENVELOPED;
+            default -> RsaKeyWrapOperations.WrapProfile.RAW_OAEP;
+        };
+    }
+
+    /**
+     * Handle RSA Key Exchange Export (Wrap Key)
+     */
+    @FXML
+    public void handleRsaKexExport() {
+        try {
+            String pem = rsaKexRecipientPemArea.getText().trim();
+            String keyHex = rsaKexKeyToWrapField.getText().trim().replaceAll("\\s+", "");
+
+            if (pem.isEmpty() || keyHex.isEmpty()) {
+                showRsaKexValidation(t("module.keys.rsaKex.required"),
+                        pem.isEmpty() ? "rsaKexRecipientPemArea" : "rsaKexKeyToWrapField", rsaKexExportResultArea::setText);
+                return;
+            }
+            if (!keyHex.matches("[0-9A-Fa-f]+")) {
+                showRsaKexValidation(t("module.keys.rsaKex.keyInvalid"), "rsaKexKeyToWrapField", rsaKexExportResultArea::setText);
+                return;
+            }
+
+            byte[] keyToWrap = DataConverter.hexToBytes(keyHex);
+
+            PublicKey publicKey;
+            X509Certificate certificate = null;
+            if (pem.contains("BEGIN CERTIFICATE")) {
+                java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
+                certificate = (X509Certificate) factory.generateCertificate(
+                        new java.io.ByteArrayInputStream(pem.getBytes(StandardCharsets.US_ASCII)));
+                publicKey = certificate.getPublicKey();
+            } else if (pem.contains("BEGIN PUBLIC KEY")) {
+                publicKey = AsymmetricKeyOperations.importPublicKeyPEMAuto(pem);
+            } else {
+                showRsaKexValidation(t("module.keys.rsaKex.pemUnrecognized"), "rsaKexRecipientPemArea", rsaKexExportResultArea::setText);
+                return;
+            }
+
+            RsaKeyWrapOperations.WrapProfile profile = rsaKexProfileFromCombo(rsaKexExportProfileCombo.getValue());
+            RsaKeyWrapOperations.WrapResult wrapResult = RsaKeyWrapOperations.wrap(keyToWrap, publicKey, certificate, profile);
+
+            boolean asEnvelope = rsaKexIncludeEnvelopeCheck != null && rsaKexIncludeEnvelopeCheck.isSelected();
+            String outputText;
+            if (asEnvelope) {
+                CryptoEnvelope.Builder builder = CryptoEnvelope.forAlgorithm(wrapResult.getAlgorithm())
+                        .ciphertext(wrapResult.getWrapped())
+                        .kcv(wrapResult.getKcvHex())
+                        .extension("profile", profile.name());
+                String kid = rsaKexKidField == null ? "" : rsaKexKidField.getText().trim();
+                if (!kid.isEmpty()) builder.kid(kid);
+                String keyVersionText = rsaKexKeyVersionField == null ? "" : rsaKexKeyVersionField.getText().trim();
+                if (!keyVersionText.isEmpty()) {
+                    try {
+                        builder.keyVersion(Integer.parseInt(keyVersionText));
+                    } catch (NumberFormatException e) {
+                        showRsaKexValidation(t("module.keys.rsaKex.keyVersionInvalid"), "rsaKexKeyVersionField", rsaKexExportResultArea::setText);
+                        return;
+                    }
+                }
+                outputText = CryptoEnvelopeCodec.serializeCompact(builder.build());
+            } else if (profile == RsaKeyWrapOperations.WrapProfile.JWE_COMPACT) {
+                outputText = new String(wrapResult.getWrapped(), StandardCharsets.US_ASCII);
+            } else {
+                outputText = java.util.Base64.getEncoder().encodeToString(wrapResult.getWrapped());
+            }
+
+            StringBuilder result = new StringBuilder();
+            result.append("========================================\n");
+            result.append("RSA KEY EXCHANGE — EXPORT\n");
+            result.append("========================================\n\n");
+            result.append("Profile:        ").append(profile).append("\n");
+            result.append("Algorithm:      ").append(wrapResult.getAlgorithm()).append("\n");
+            if (wrapResult.getKcvHex() != null) {
+                result.append("Key KCV:        ").append(wrapResult.getKcvHex()).append("\n");
+            }
+            result.append("Envelope:       ").append(asEnvelope ? "yes (compact)" : "no").append("\n\n");
+            result.append("OUTPUT:\n");
+            result.append("------------------\n");
+            result.append(outputText).append("\n");
+            result.append("\n========================================\n");
+
+            rsaKexExportResultArea.setText(result.toString());
+            updateStatus(t("module.keys.rsaKex.status.wrapped"));
+
+            if (mainController != null) {
+                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
+                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Profile", profile.name()));
+                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", wrapResult.getAlgorithm()));
+                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Key to Wrap", keyHex));
+                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Output", outputText));
+                mainController.publish(OperationResult.forOperation("RSA Key Exchange Export")
+                        .input(keyToWrap)
+                        .output(outputText.getBytes(StandardCharsets.UTF_8))
+                        .details(details)
+                        .status("RSA key wrapped successfully (" + profile + ")")
+                        .build());
+            }
+        } catch (Exception e) {
+            showRsaKexValidation(t("module.keys.rsaKex.operation", e.getMessage()), "rsaKexKeyToWrapField", rsaKexExportResultArea::setText);
+            updateStatus(t("module.keys.rsaKex.status.wrapFailed"));
+            logRsaKexFailure("wrap", e);
+        }
+    }
+
+    /**
+     * Handle RSA Key Exchange Import (Unwrap Key)
+     */
+    @FXML
+    public void handleRsaKexImport() {
+        try {
+            String privatePem = rsaKexPrivateKeyArea.getText().trim();
+            String wrappedText = rsaKexWrappedDataArea.getText().trim();
+
+            if (privatePem.isEmpty() || wrappedText.isEmpty()) {
+                showRsaKexValidation(t("module.keys.rsaKex.importRequired"),
+                        privatePem.isEmpty() ? "rsaKexPrivateKeyArea" : "rsaKexWrappedDataArea", rsaKexImportResultArea::setText);
+                return;
+            }
+
+            PrivateKey privateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
+
+            byte[] wrapped;
+            RsaKeyWrapOperations.WrapProfile profile;
+            CryptoEnvelope envelope = null;
+            if (CryptoEnvelopeCodec.looksLikeEnvelope(wrappedText)) {
+                envelope = CryptoEnvelopeCodec.deserializeAuto(wrappedText);
+                wrapped = java.util.Base64.getDecoder().decode(envelope.getCiphertextB64());
+                String profileExt = envelope.getExtensions().get("profile");
+                profile = profileExt != null
+                        ? RsaKeyWrapOperations.WrapProfile.valueOf(profileExt)
+                        : rsaKexProfileFromCombo(rsaKexImportProfileCombo.getValue());
+            } else {
+                profile = rsaKexProfileFromCombo(rsaKexImportProfileCombo.getValue());
+                wrapped = profile == RsaKeyWrapOperations.WrapProfile.JWE_COMPACT
+                        ? wrappedText.getBytes(StandardCharsets.US_ASCII)
+                        : java.util.Base64.getDecoder().decode(wrappedText);
+            }
+
+            byte[] recovered = RsaKeyWrapOperations.unwrap(wrapped, privateKey, profile);
+            String recoveredHex = DataConverter.bytesToHex(recovered);
+            String recoveredKcv = null;
+            if (recovered.length == 16 || recovered.length == 24 || recovered.length == 32) {
+                try {
+                    recoveredKcv = DataConverter.bytesToHex(KeyOperations.calculateKCV_AES(recovered));
+                } catch (Exception ignored) {
+                    // Best-effort only — KCV is a convenience cross-check, not required.
+                }
+            }
+
+            StringBuilder result = new StringBuilder();
+            result.append("========================================\n");
+            result.append("RSA KEY EXCHANGE — IMPORT\n");
+            result.append("========================================\n\n");
+            result.append("Profile:        ").append(profile).append("\n");
+            if (envelope != null) {
+                result.append("Envelope:       yes\n");
+                result.append("Algorithm:      ").append(envelope.getAlg()).append("\n");
+                if (envelope.getKid() != null) result.append("Key ID:         ").append(envelope.getKid()).append("\n");
+                if (envelope.getKeyVersion() != null) result.append("Key Version:    ").append(envelope.getKeyVersion()).append("\n");
+                if (envelope.getKcv() != null) {
+                    boolean matches = recoveredKcv != null && recoveredKcv.equalsIgnoreCase(envelope.getKcv());
+                    result.append("Envelope KCV:   ").append(envelope.getKcv())
+                            .append(matches ? "  (matches recovered key)" : "  (!) does not match the recovered key's KCV")
+                            .append("\n");
+                }
+            } else {
+                result.append("Envelope:       no\n");
+            }
+            result.append("\nUNWRAPPED KEY:\n");
+            result.append("------------------\n");
+            result.append(recoveredHex.toUpperCase()).append("\n");
+            if (recoveredKcv != null) result.append("Recovered KCV:  ").append(recoveredKcv).append("\n");
+            result.append("Key Length:     ").append(recovered.length).append(" bytes\n");
+            result.append("\n========================================\n");
+
+            rsaKexImportResultArea.setText(result.toString());
+            updateStatus(t("module.keys.rsaKex.status.unwrapped"));
+
+            if (mainController != null) {
+                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
+                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Profile", profile.name()));
+                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Recovered Key (hex)", recoveredHex));
+                mainController.publish(OperationResult.forOperation("RSA Key Exchange Import")
+                        .input(wrapped)
+                        .output(recovered, com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                        .details(details)
+                        .status("RSA key unwrapped successfully (" + profile + ")")
+                        .build());
+            }
+        } catch (Exception e) {
+            showRsaKexValidation(t("module.keys.rsaKex.operation", e.getMessage()), "rsaKexWrappedDataArea", rsaKexImportResultArea::setText);
+            updateStatus(t("module.keys.rsaKex.status.unwrapFailed"));
+            logRsaKexFailure("unwrap", e);
+        }
+    }
+
+    @FXML
+    public void handleRsaKexClear() {
+        clearRsaKexFields();
+        if (mainController != null) mainController.updateStatus(t("module.keys.rsaKex.clearStatus"));
+    }
+
+    @FXML
+    public void handleRsaKexReset() {
+        clearRsaKexFields();
+        if (rsaKexExportProfileCombo != null) rsaKexExportProfileCombo.setValue("Raw OAEP");
+        if (rsaKexImportProfileCombo != null) rsaKexImportProfileCombo.setValue("Raw OAEP");
+        if (rsaKexIncludeEnvelopeCheck != null) rsaKexIncludeEnvelopeCheck.setSelected(false);
+        if (rsaKexEnvelopeFieldsBox != null) {
+            rsaKexEnvelopeFieldsBox.setVisible(false);
+            rsaKexEnvelopeFieldsBox.setManaged(false);
+        }
+        if (mainController != null) mainController.updateStatus(t("module.keys.rsaKex.resetStatus"));
+    }
+
+    private void clearRsaKexFields() {
+        if (rsaKexRecipientPemArea != null) rsaKexRecipientPemArea.clear();
+        if (rsaKexKeyToWrapField != null) rsaKexKeyToWrapField.clear();
+        if (rsaKexKidField != null) rsaKexKidField.clear();
+        if (rsaKexKeyVersionField != null) rsaKexKeyVersionField.clear();
+        if (rsaKexExportResultArea != null) rsaKexExportResultArea.clear();
+        if (rsaKexPrivateKeyArea != null) rsaKexPrivateKeyArea.clear();
+        if (rsaKexWrappedDataArea != null) rsaKexWrappedDataArea.clear();
+        if (rsaKexImportResultArea != null) rsaKexImportResultArea.clear();
+    }
+
+    private void showRsaKexValidation(String message, String fieldKey, Consumer<String> feedbackTarget) {
+        String safeMessage = InlineErrorPresenter.redactSecrets(message);
+        UserFacingError error = new UserFacingError(t("module.keys.rsaKex.errorTitle"), safeMessage, safeMessage, fieldKey);
+        if (mainController != null) {
+            mainController.showError(error);
+        } else if (feedbackTarget != null) {
+            feedbackTarget.accept(safeMessage);
+        }
+    }
+
+    private void logRsaKexFailure(String operation, Exception error) {
+        StringWriter trace = new StringWriter();
+        error.printStackTrace(new PrintWriter(trace));
+        System.err.print(InlineErrorPresenter.redactSecrets("RSA Key Exchange " + operation + " failed:\n" + trace));
+    }
+
     /**
      * Initialize Key Derivation Functions
      */
@@ -3959,6 +4259,8 @@ public class KeysController {
     private javafx.scene.layout.GridPane cmsEncryptLocalGrid;
     private javafx.scene.layout.HBox cmsEncryptPkcs11Box;
     private javafx.scene.control.ComboBox<String> cmsEncryptKeyAliasCombo;
+    private javafx.scene.control.Button cmsSignButton;
+    private CheckBox cmsOnlineRevocationCheck;
 
     /**
      * Initialize CMS components
@@ -3975,7 +4277,8 @@ public class KeysController {
             javafx.scene.control.RadioButton encryptSourcePkcs11Radio,
             javafx.scene.layout.GridPane encryptLocalGrid,
             javafx.scene.layout.HBox encryptPkcs11Box,
-            javafx.scene.control.ComboBox<String> encryptKeyAliasCombo) {
+            javafx.scene.control.ComboBox<String> encryptKeyAliasCombo, javafx.scene.control.Button signButton,
+            CheckBox onlineRevocationCheck) {
         this.cmsInputArea = inputArea;
         this.cmsOutputArea = outputArea;
         this.cmsDetachedCheck = detachedCheck;
@@ -3997,6 +4300,8 @@ public class KeysController {
         this.cmsEncryptLocalGrid = encryptLocalGrid;
         this.cmsEncryptPkcs11Box = encryptPkcs11Box;
         this.cmsEncryptKeyAliasCombo = encryptKeyAliasCombo;
+        this.cmsSignButton = signButton;
+        this.cmsOnlineRevocationCheck = onlineRevocationCheck;
         handleCadesTimestampOptionChanged();
     }
 
@@ -4081,82 +4386,90 @@ public class KeysController {
             }
 
             byte[] data = dataStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] signature;
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-
+            String alias = usePkcs11 ? cmsSignKeyAliasCombo.getSelectionModel().getSelectedItem() : null;
+            String certStr = usePkcs11 ? null : cmsSignCertArea.getText().trim();
+            String keyStr = usePkcs11 ? null : cmsSignKeyArea.getText().trim();
+            String tsaUrl = cadesT ? cmsCadesTsaUrlField == null ? "" : cmsCadesTsaUrlField.getText().trim() : null;
+            if (usePkcs11 && (alias == null || alias.isEmpty())) {
+                showError("Input Error", "Please select a token alias with a valid certificate.");
+                return;
+            }
+            if (!usePkcs11 && (certStr.isEmpty() || keyStr.isEmpty())) {
+                showError("Input Error", "Signer Certificate and Private Key are required for local signing");
+                return;
+            }
+            if (cadesT && !tsaUrl.startsWith("http://") && !tsaUrl.startsWith("https://")) {
+                showError("CAdES-T TSA", "Enter a valid http:// or https:// TSA URL for CAdES-T.");
+                return;
+            }
+            final boolean cadesBesOption = cadesBes;
+            final boolean cadesTOption = cadesT;
+            OperationExecutor executor = mainController == null ? null : mainController.getOperationExecutor();
+            if (executor == null) {
+                showError("Signing Error", "CMS operation executor is not available");
+                return;
+            }
             updateStatus("Signing data...");
-
-            if (usePkcs11) {
-                String alias = cmsSignKeyAliasCombo.getSelectionModel().getSelectedItem();
-                if (alias == null || alias.isEmpty()) {
-                    showError("Input Error", "Please select a token alias with a valid certificate.");
-                    return;
+            executor.execute("CMS/CAdES signing", cmsSignButton, () -> {
+                byte[] signature;
+                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+                if (usePkcs11) {
+                    signature = cadesBesOption
+                            ? com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                                    .signCadesBes(alias, data, detached)
+                            : com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
+                                    .signCms(alias, data, detached);
+                    details.put("Source", "PKCS#11 Token");
+                    details.put("Alias", alias);
+                } else {
+                    X509Certificate cert = CertificateGenerator.parseCertificate(certStr);
+                    PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
+                    signature = cadesBesOption
+                            ? CMSOperations.generateCadesBes(data, cert, privateKey, null, detached)
+                            : CMSOperations.generateSignedData(data, cert, privateKey, null, detached);
+                    details.put("Source", "Local PEM");
+                    details.put("Certificate", "Present");
+                    details.put("Private Key", "[not persisted]");
                 }
-                signature = cadesBes
-                        ? com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                                .signCadesBes(alias, data, detached)
-                        : com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                                .signCms(alias, data, detached);
-                details.put("Source", "PKCS#11 Token");
-                details.put("Alias", alias);
-            } else {
-                String certStr = cmsSignCertArea.getText().trim();
-                String keyStr = cmsSignKeyArea.getText().trim();
-
-                if (certStr.isEmpty() || keyStr.isEmpty()) {
-                    showError("Input Error", "Signer Certificate and Private Key are required for local signing");
-                    return;
+                if (cadesTOption) {
+                    AppSettings.getInstance().setCustomTsaUrl(tsaUrl);
+                    byte[] signatureValue = CMSOperations.cadesSignatureValue(signature);
+                    TsaDiagnostics.TokenResult timestamp = TsaDiagnostics.timestamp(tsaUrl, signatureValue, "SHA-256");
+                    signature = CMSOperations.addCadesTSignatureTimestamp(signature, timestamp.token());
+                    details.put("TSA", tsaUrl);
+                    details.put("Timestamp", timestamp.report().generationTime());
                 }
-
-                // Parse certificate
-                X509Certificate cert = CertificateGenerator.parseCertificate(certStr);
-                PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
-
-                signature = cadesBes
-                        ? CMSOperations.generateCadesBes(data, cert, privateKey, null, detached)
-                        : CMSOperations.generateSignedData(data, cert, privateKey, null, detached);
-                details.put("Source", "Local PEM");
-                details.put("Certificate", "Present");
-                details.put("Private Key", "[not persisted]");
-            }
-
-            if (cadesT) {
-                String tsaUrl = cmsCadesTsaUrlField == null ? "" : cmsCadesTsaUrlField.getText().trim();
-                if (!tsaUrl.startsWith("http://") && !tsaUrl.startsWith("https://")) {
-                    showError("CAdES-T TSA", "Enter a valid http:// or https:// TSA URL for CAdES-T.");
-                    return;
-                }
-                AppSettings.getInstance().setCustomTsaUrl(tsaUrl);
-                byte[] signatureValue = CMSOperations.cadesSignatureValue(signature);
-                TsaDiagnostics.TokenResult timestamp = TsaDiagnostics.timestamp(tsaUrl, signatureValue, "SHA-256");
-                signature = CMSOperations.addCadesTSignatureTimestamp(signature, timestamp.token());
-                details.put("TSA", tsaUrl);
-                details.put("Timestamp", timestamp.report().generationTime());
-            }
-
-            String output = "-----BEGIN PKCS7-----\n" +
-                    java.util.Base64.getEncoder().encodeToString(signature) +
-                    "\n-----END PKCS7-----";
-
-            cmsOutputArea.setText(output);
-            details.put("Type", detached ? "Detached SignedData" : "Encapsulated SignedData");
-            details.put("Profile", cadesT ? "CAdES-T" : (cadesBes ? "CAdES-BES" : "CMS / PKCS#7"));
-
-            mainController.publish(OperationResult.forOperation(cadesT ? "CAdES-T Sign" : (cadesBes ? "CAdES-BES Sign" : "CMS Sign"))
-                    .input(data).output(signature).details(details)
-                    .status((cadesT ? "CAdES-T" : (cadesBes ? "CAdES-BES" : "CMS")) + " signature generated successfully").build());
-
+                return new CadesSignResult(signature, details);
+            }, result -> {
+                String output = "-----BEGIN PKCS7-----\n" + java.util.Base64.getEncoder().encodeToString(result.signature())
+                        + "\n-----END PKCS7-----";
+                cmsOutputArea.setText(output);
+                result.details().put("Type", detached ? "Detached SignedData" : "Encapsulated SignedData");
+                result.details().put("Profile", cadesTOption ? "CAdES-T" : (cadesBesOption ? "CAdES-BES" : "CMS / PKCS#7"));
+                mainController.publish(OperationResult.forOperation(cadesTOption ? "CAdES-T Sign" : (cadesBesOption ? "CAdES-BES Sign" : "CMS Sign"))
+                        .input(data).output(result.signature()).details(result.details())
+                        .status((cadesTOption ? "CAdES-T" : (cadesBesOption ? "CAdES-BES" : "CMS")) + " signature generated successfully").build());
+            }, error -> {
+                showError("Signing Error", "Error signing data: " + error.getMessage());
+                error.printStackTrace();
+            }, () -> updateStatus("Signing cancelled"));
         } catch (Exception e) {
             showError("Signing Error", "Error signing data: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    private record CadesSignResult(byte[] signature, java.util.Map<String, String> details) { }
+
     /**
      * Handle CMS Verify
      */
     public void handleCMSVerify() {
         try {
+            if (cmsOnlineRevocationCheck != null && cmsOnlineRevocationCheck.isSelected()) {
+                handleCMSVerifyOnline();
+                return;
+            }
             String pkcs7Str = cmsInputArea.getText().trim();
 
             if (pkcs7Str.isEmpty()) {
@@ -4242,6 +4555,48 @@ public class KeysController {
             updateStatus("Verification failed");
             e.printStackTrace();
         }
+    }
+
+    private void handleCMSVerifyOnline() {
+        String input = cmsInputArea == null ? "" : cmsInputArea.getText().trim();
+        if (input.isEmpty()) {
+            showError("Input Error", "PKCS#7 Signature is required in Input");
+            return;
+        }
+        final byte[] cmsBytes;
+        try {
+            cmsBytes = decodeCmsArmored(input);
+        } catch (Exception error) {
+            showError("Verification Error", "Invalid CMS encoding");
+            return;
+        }
+        final byte[] detached = cmsVerifyDataArea != null && !cmsVerifyDataArea.getText().trim().isEmpty()
+                ? cmsVerifyDataArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8) : null;
+        OperationExecutor executor = mainController == null ? null : mainController.getOperationExecutor();
+        if (executor == null) {
+            showError("Verification Error", "CMS operation executor is not available");
+            return;
+        }
+        executor.execute("CMS/CAdES online revocation validation", null,
+                () -> new com.cryptocarver.crypto.CmsInspector().inspect(cmsBytes, detached, null, true, java.util.List.of()),
+                report -> {
+                    String integrity = report.getValidationSteps().stream()
+                            .filter(step -> "Signature/Integrity".equals(step.getStepName()))
+                            .map(step -> step.getState().name()).findFirst().orElse("NOT_EVALUATED");
+                    String text = "CMS/CAdES verification report\n"
+                            + "Integrity/signature: " + integrity + "\n"
+                            + "Trust chain: not evaluated (no truststore provided)\n"
+                            + "Revocation: " + report.getRevocation().status() + "\n"
+                            + "Evidence: " + report.getRevocation().evidence() + "\n"
+                            + (report.getRevocation().errors().isEmpty() ? "" : "Reason: " + String.join("; ", report.getRevocation().errors()) + "\n");
+                    cmsOutputArea.setText(text);
+                    updateStatus("CMS revocation validation completed: " + report.getRevocation().status());
+                },
+                error -> {
+                    cmsOutputArea.setText("Verification Failed: " + (error.getMessage() == null ? "CMS validation failed" : error.getMessage()));
+                    updateStatus("Verification failed");
+                },
+                () -> updateStatus("CMS validation cancelled"));
     }
 
     /**
@@ -4709,19 +5064,113 @@ public class KeysController {
     }
 
     private void sendPublicKeyToShelf(GeneratedAsymmetricKeySummary summary) {
-        if (summary == null || summary.getPublicKeyPem() == null) {
-            updateStatus("No public key available for shelf.");
+        sendAsymmetricKeyToShelf(summary, AsymmetricShelfMaterial.PUBLIC);
+    }
+
+    private enum AsymmetricShelfMaterial {
+        PUBLIC,
+        PRIVATE
+    }
+
+    /**
+     * Stores only canonical PEM material from the generated summary. The
+     * rendered diagnostic TextAreas are deliberately not consulted here.
+     */
+    private void sendAsymmetricKeyToShelf(GeneratedAsymmetricKeySummary summary,
+                                          AsymmetricShelfMaterial material) {
+        if (summary == null) {
+            updateStatus("No generated " + (material == AsymmetricShelfMaterial.PRIVATE ? "private" : "public")
+                    + " key pair available for Clipboard Shelf.");
+            return;
+        }
+
+        if (material == AsymmetricShelfMaterial.PRIVATE) {
+            if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                    != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+                updateStatus("Action blocked: private key material requires FULL_LAB.");
+                return;
+            }
+            String privatePem = summary.getPrivateKeyPem();
+            if (privatePem == null || privatePem.isBlank()) {
+                updateStatus("No generated private key available for Clipboard Shelf.");
+                return;
+            }
+            com.cryptocarver.model.ClipboardEntry entry =
+                    com.cryptocarver.model.ClipboardShelfManager.getInstance()
+                            .addSessionOnlyPrivateKey(privatePem, "Key Generation", summary.getAlgorithm());
+            if (entry == null) {
+                updateStatus("Action blocked: private key material requires FULL_LAB.");
+                return;
+            }
+            revealShelfEntry(entry);
+            updateStatus("Added " + summary.getAlgorithm() + " private key to Clipboard Shelf (session only).");
+            return;
+        }
+
+        String publicPem = summary.getPublicKeyPem();
+        if (publicPem == null || publicPem.isBlank()) {
+            updateStatus("No generated public key available for Clipboard Shelf.");
             return;
         }
         com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
                 summary.getAlgorithm() + " Public Key",
-                summary.getPublicKeyPem(),
+                publicPem,
                 com.cryptocarver.model.ClipboardEntry.Format.PEM,
                 com.cryptocarver.model.OperationDetail.Classification.PUBLIC,
-                "Key Generation"
+                "Key Generation",
+                summary.getAlgorithm()
         );
         com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
-        updateStatus("Added " + summary.getAlgorithm() + " public key to Clipboard Shelf");
+        revealShelfEntry(entry);
+        updateStatus("Added " + summary.getAlgorithm() + " public key to Clipboard Shelf.");
+    }
+
+    private void revealShelfEntry(com.cryptocarver.model.ClipboardEntry entry) {
+        if (entry != null && mainController instanceof ModernMainController modern) {
+            modern.revealShelfEntry(entry);
+        }
+    }
+
+    private GeneratedAsymmetricKeySummary summaryForGeneration(String operation) {
+        if (operation == null) return null;
+        return switch (operation) {
+            case "RSA Key Generation" -> currentRsaSummary;
+            case "ECDSA Key Generation" -> currentEcdsaSummary;
+            case "DSA Key Generation" -> currentDsaSummary;
+            case "EdDSA Key Generation" -> currentEddsaSummary;
+            default -> null;
+        };
+    }
+
+    private TabPane tabsForGeneration(String operation) {
+        if (operation == null) return null;
+        return switch (operation) {
+            case "RSA Key Generation" -> rsaKeyMaterialTabs;
+            case "ECDSA Key Generation" -> ecdsaKeyMaterialTabs;
+            case "DSA Key Generation" -> dsaKeyMaterialTabs;
+            case "EdDSA Key Generation" -> eddsaKeyMaterialTabs;
+            default -> null;
+        };
+    }
+
+    /** Entry point used only by ModernMainController's global Add to Shelf. */
+    public void handleGlobalAsymmetricShelfAction(String operation) {
+        GeneratedAsymmetricKeySummary summary = summaryForGeneration(operation);
+        TabPane tabs = tabsForGeneration(operation);
+        if (summary == null || tabs == null) {
+            String algorithm = operation == null ? "asymmetric" : operation.replace(" Key Generation", "");
+            updateStatus("No generated " + algorithm + " key pair available for Clipboard Shelf.");
+            return;
+        }
+        Tab selectedTab = tabs.getSelectionModel().getSelectedItem();
+        Object selectedMaterial = selectedTab == null ? null : selectedTab.getUserData();
+        if ("PRIVATE".equals(selectedMaterial)) {
+            sendAsymmetricKeyToShelf(summary, AsymmetricShelfMaterial.PRIVATE);
+        } else if ("PUBLIC".equals(selectedMaterial)) {
+            sendAsymmetricKeyToShelf(summary, AsymmetricShelfMaterial.PUBLIC);
+        } else {
+            updateStatus("Action blocked: select Public Key (PEM) or Private Key (PEM) before adding to Shelf.");
+        }
     }
 
     private void useInSignatures(GeneratedAsymmetricKeySummary summary) {
@@ -4756,6 +5205,7 @@ public class KeysController {
     @FXML public void handleExportRsaPublicPem() { exportPublicPem(currentRsaSummary, "rsa_public.pem"); }
     @FXML public void handleExportRsaPrivatePem() { exportPrivatePem(currentRsaSummary, "rsa_private.pem"); }
     @FXML public void handleSendRsaPublicToShelf() { sendPublicKeyToShelf(currentRsaSummary); }
+    @FXML public void handleSendRsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentRsaSummary, AsymmetricShelfMaterial.PRIVATE); }
     @FXML public void handleUseRsaInCipher() {
         if (currentRsaSummary == null) {
             updateStatus("No RSA key pair available for encryption.");
@@ -4783,6 +5233,7 @@ public class KeysController {
     @FXML public void handleExportEcdsaPublicPem() { exportPublicPem(currentEcdsaSummary, "ecdsa_public.pem"); }
     @FXML public void handleExportEcdsaPrivatePem() { exportPrivatePem(currentEcdsaSummary, "ecdsa_private.pem"); }
     @FXML public void handleSendEcdsaPublicToShelf() { sendPublicKeyToShelf(currentEcdsaSummary); }
+    @FXML public void handleSendEcdsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentEcdsaSummary, AsymmetricShelfMaterial.PRIVATE); }
     @FXML public void handleUseEcdsaInSignatures() { useInSignatures(currentEcdsaSummary); }
     @FXML public void handleUseEcdsaInCertificates() { useInCertificates(currentEcdsaSummary); }
     @FXML public void handleClearEcdsa() {
@@ -4802,6 +5253,7 @@ public class KeysController {
     @FXML public void handleExportDsaPublicPem() { exportPublicPem(currentDsaSummary, "dsa_public.pem"); }
     @FXML public void handleExportDsaPrivatePem() { exportPrivatePem(currentDsaSummary, "dsa_private.pem"); }
     @FXML public void handleSendDsaPublicToShelf() { sendPublicKeyToShelf(currentDsaSummary); }
+    @FXML public void handleSendDsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentDsaSummary, AsymmetricShelfMaterial.PRIVATE); }
     @FXML public void handleUseDsaInSignatures() { useInSignatures(currentDsaSummary); }
     @FXML public void handleUseDsaInCertificates() { useInCertificates(currentDsaSummary); }
     @FXML public void handleClearDsa() {
@@ -4819,6 +5271,7 @@ public class KeysController {
     @FXML public void handleExportEddsaPublicPem() { exportPublicPem(currentEddsaSummary, "ed25519_public.pem"); }
     @FXML public void handleExportEddsaPrivatePem() { exportPrivatePem(currentEddsaSummary, "ed25519_private.pem"); }
     @FXML public void handleSendEddsaPublicToShelf() { sendPublicKeyToShelf(currentEddsaSummary); }
+    @FXML public void handleSendEddsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentEddsaSummary, AsymmetricShelfMaterial.PRIVATE); }
     @FXML public void handleUseEddsaInSignatures() { useInSignatures(currentEddsaSummary); }
     @FXML public void handleUseEddsaInCertificates() { useInCertificates(currentEddsaSummary); }
     @FXML public void handleClearEd25519() {
@@ -4979,6 +5432,10 @@ public class KeysController {
 
     public void updateVisibilityControls() {
         boolean isFullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        if (rsaSendPrivateShelfBtn != null) rsaSendPrivateShelfBtn.setDisable(!isFullLab);
+        if (ecdsaSendPrivateShelfBtn != null) ecdsaSendPrivateShelfBtn.setDisable(!isFullLab);
+        if (dsaSendPrivateShelfBtn != null) dsaSendPrivateShelfBtn.setDisable(!isFullLab);
+        if (eddsaSendPrivateShelfBtn != null) eddsaSendPrivateShelfBtn.setDisable(!isFullLab);
         if (keyLabImportBytesField != null) {
             keyLabImportBytesField.setDisable(!isFullLab);
             if (!isFullLab) {
