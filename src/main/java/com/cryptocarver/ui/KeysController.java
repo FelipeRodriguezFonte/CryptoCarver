@@ -12,6 +12,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -22,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 /**
  * Controller for Keys tab - Enhanced with asymmetric cryptography
@@ -29,6 +33,15 @@ import java.util.UUID;
  * @author Felipe
  */
 public class KeysController {
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
+
+    @FXML private VBox keysRoot;
+    @FXML private TitledPane pkcs11Profiles;
+    @FXML private Pkcs11ProfilesController pkcs11ProfilesController;
+    private ModuleI18n.Binding moduleI18n;
 
     @FXML private VBox symmetricKeysContainer;
     @FXML private VBox asymmetricKeysContainer;
@@ -280,6 +293,26 @@ public class KeysController {
     private TextField kdfOutputLengthField;
     @FXML
     private TextArea kdfResultArea;
+    @FXML
+    private Label kdfInputHelpLabel;
+    @FXML
+    private Label kdfValidationLabel;
+    @FXML
+    private Label kdfIterationsLabel;
+    @FXML
+    private VBox kdfSaltBox;
+    @FXML
+    private VBox kdfInfoBox;
+    @FXML
+    private Label kdfInputBadgeLabel;
+    @FXML
+    private Label kdfSaltBadgeLabel;
+    @FXML
+    private Label kdfInfoBadgeLabel;
+
+    private com.cryptocarver.ui.component.MaterialFieldBadge kdfInputBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge kdfSaltBadge;
+    private com.cryptocarver.ui.component.MaterialFieldBadge kdfInfoBadge;
 
     // AES Key Wrap components
     @FXML
@@ -375,6 +408,7 @@ public class KeysController {
 
     @FXML
     private void initialize() {
+        moduleI18n = ModuleI18n.bind(keysRoot, ModuleTextCatalog.keys());
         initialize(null, keyTypeCombo, forceOddParityCheck, generatedKeyField, keyInputField, validationResultArea,
                 numComponentsCombo, keyToSplitField, componentResultsArea,
                 component1Field, component2Field, component3Field, component4Field, component5Field);
@@ -409,9 +443,6 @@ public class KeysController {
         setupHexValidation(component3Field);
         setupHexValidation(component4Field);
         setupHexValidation(component5Field);
-        setupHexValidation(kdfInputField);
-        setupHexValidation(kdfSaltField);
-
         if (keyTypeCombo != null) {
             keyTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
                 if (currentGeneratedKeySummary != null && (newVal == null || !newVal.equalsIgnoreCase(currentGeneratedKeySummary.getAlgorithm()))) {
@@ -458,6 +489,10 @@ public class KeysController {
     public void init(StatusReporter reporter, Runnable hsmRefreshCallback) {
         this.mainController = reporter;
         this.hsmRefreshCallback = hsmRefreshCallback == null ? () -> { } : hsmRefreshCallback;
+        if (pkcs11ProfilesController != null && reporter != null) {
+            pkcs11ProfilesController.setStatusReporter(reporter);
+            pkcs11ProfilesController.setOperationExecutor(reporter.getOperationExecutor());
+        }
     }
 
     public void showSymmetricSection() {
@@ -475,11 +510,80 @@ public class KeysController {
     }
 
     public void expandSymmetricPane(String paneName) {
+        if (paneName != null && paneName.contains("PKCS#11 Profiles") && pkcs11ProfilesController != null) {
+            pkcs11ProfilesController.expand();
+            return;
+        }
         expandPane(symmetricKeysContainer, paneName);
     }
 
     public void expandAsymmetricPane(String paneName) {
         expandPane(asymmetricKeysContainer, paneName);
+    }
+
+    public void fillTR31KeyBlockInput(String value) {
+        if (tr31KeyBlockField != null) tr31KeyBlockField.setText(value);
+    }
+
+    @FXML
+    public void handleTR31Clear() {
+        clearTR31Fields();
+        if (mainController != null) mainController.updateStatus(t("module.keys.tr31ClearStatus"));
+    }
+
+    @FXML
+    public void handleTR31Reset() {
+        clearTR31Fields();
+        if (tr31VersionCombo != null) tr31VersionCombo.setValue("B - TDES Key Derivation Binding");
+        if (tr31UsageCombo != null) tr31UsageCombo.getSelectionModel().selectFirst();
+        if (tr31AlgorithmCombo != null) tr31AlgorithmCombo.getSelectionModel().selectFirst();
+        if (tr31ModeCombo != null) tr31ModeCombo.getSelectionModel().selectFirst();
+        if (tr31ExportabilityCombo != null) tr31ExportabilityCombo.getSelectionModel().selectFirst();
+        if (mainController != null) mainController.updateStatus(t("module.keys.tr31ResetStatus"));
+    }
+
+    private void clearTR31Fields() {
+        if (tr31KbpkExportField != null) tr31KbpkExportField.clear();
+        if (tr31KeyToWrapField != null) tr31KeyToWrapField.clear();
+        if (tr31OptionalBlocksField != null) tr31OptionalBlocksField.clear();
+        if (tr31KbpkImportField != null) tr31KbpkImportField.clear();
+        if (tr31KeyBlockField != null) tr31KeyBlockField.clear();
+        if (tr31KeyLengthField != null) tr31KeyLengthField.clear();
+        if (tr31ExportResultArea != null) tr31ExportResultArea.clear();
+        if (tr31ImportResultArea != null) {
+            tr31ImportResultArea.clear();
+            tr31ImportResultArea.setManaged(false);
+            tr31ImportResultArea.setVisible(false);
+        }
+    }
+
+    private void showTR31Validation(String message, String fieldKey, TextArea feedbackArea) {
+        showTR31Validation(message, fieldKey, feedbackArea == null ? null : safeMessage -> {
+            feedbackArea.setText(safeMessage);
+            feedbackArea.setVisible(true);
+            feedbackArea.setManaged(true);
+        });
+    }
+
+    private void showTR31Validation(String message, String fieldKey, TR31FeedbackTarget feedbackTarget) {
+        String safeMessage = InlineErrorPresenter.redactSecrets(message);
+        UserFacingError error = new UserFacingError(t("module.keys.tr31.errorTitle"), safeMessage, safeMessage, fieldKey);
+        if (mainController != null) {
+            mainController.showError(error);
+        } else if (feedbackTarget != null) {
+            feedbackTarget.present(safeMessage);
+        }
+    }
+
+    @FunctionalInterface
+    interface TR31FeedbackTarget {
+        void present(String safeMessage);
+    }
+
+    private void logTR31Failure(String operation, Exception error) {
+        StringWriter trace = new StringWriter();
+        error.printStackTrace(new PrintWriter(trace));
+        System.err.print(InlineErrorPresenter.redactSecrets("TR-31 " + operation + " failed:\n" + trace));
     }
 
     private void setSectionVisible(VBox section, boolean visible) {
@@ -726,7 +830,8 @@ public class KeysController {
         if (pkcs11ReportArea != null) {
             pkcs11ReportArea.setText(wasConnected ? "PKCS#11 session closed. Token keys remain on the token." : "No PKCS#11 session is open.");
         }
-        updateStatus(wasConnected ? "PKCS#11 session closed" : "No PKCS#11 session was open");
+        updateStatus(com.cryptocarver.service.I18nService.getInstance().text(
+                wasConnected ? "module.keys.pkcs11Closed" : "module.keys.pkcs11NotOpen"));
         refreshPkcs11SigningKeys();
         refreshPkcs11CertificateAliases();
     }
@@ -1068,6 +1173,12 @@ public class KeysController {
             }
             keyMaterialReportArea.setText(report);
             updateStatus("Key material inspected successfully");
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Key Material Inspection")
+                        .enrichedOutput(report, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("Key material inspected successfully")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Key Material Inspector", "Cannot inspect material: " + e.getMessage());
         }
@@ -1078,12 +1189,19 @@ public class KeysController {
             java.security.PublicKey publicKey = parsePublicMaterial(keyComparePublicArea.getText().trim());
             java.security.PrivateKey privateKey = parsePrivateMaterial(keyComparePrivateArea.getText().trim());
             boolean matches = KeyMaterialInspector.matches(publicKey, privateKey);
-            keyCompareResultArea.setText("========================================\nKEY PAIR COMPARISON\n========================================\n\n"
+            String reportText = "========================================\nKEY PAIR COMPARISON\n========================================\n\n"
                     + "Public algorithm: " + publicKey.getAlgorithm() + "\nPrivate algorithm: " + privateKey.getAlgorithm() + "\n"
                     + "Public SHA-256: " + KeyMaterialInspector.fingerprint(publicKey.getEncoded()) + "\n\n"
                     + (matches ? "✓ MATCH: the private key successfully signed a challenge verified by the public key."
-                            : "✗ NO MATCH: signature verification failed or the algorithms are incompatible."));
+                            : "✗ NO MATCH: signature verification failed or the algorithms are incompatible.");
+            keyCompareResultArea.setText(reportText);
             updateStatus(matches ? "Key pair comparison: match" : "Key pair comparison: no match");
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Key Pair Comparison")
+                        .enrichedOutput(reportText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status(matches ? "Key pair comparison: match" : "Key pair comparison: no match")
+                        .build());
+            }
         } catch (Exception e) {
             showError("Compare Key Pair", "Cannot compare material: " + e.getMessage());
         }
@@ -1108,6 +1226,12 @@ public class KeysController {
             }
             keyStoreReportArea.setText(text.toString());
             updateStatus("KeyStore inspected: " + report.entries().size() + " entries");
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("KeyStore Inspection")
+                        .enrichedOutput(text.toString(), unsafe ? com.cryptocarver.model.OperationDetail.Classification.SECRET : com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("KeyStore inspected: " + report.entries().size() + " entries")
+                        .build());
+            }
         } catch (Exception e) {
             showError("KeyStore Inspector", "Cannot inspect keystore: " + e.getMessage());
         } finally {
@@ -1914,7 +2038,7 @@ public class KeysController {
             validationResultArea.setText(result.toString());
             validationResultArea.setVisible(true);
             validationResultArea.setManaged(true);
-            updateStatus("Key validated successfully");
+            updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.keys.validated"));
 
             // Publish a coherent result so the inspector, history and expanded
             // viewer contain the actual validation report and the input key is
@@ -2140,9 +2264,14 @@ public class KeysController {
     // ============================================================================
     // ADVANCED ASYMMETRIC KEY GENERATION
     // ============================================================================
+    @FXML private Button rsaGenerateBtn;
+    @FXML private Button dsaGenerateBtn;
 
     /**
-     * Generate RSA key pair
+     * Generate RSA key pair.
+     * Note: JCA KeyPairGenerator executes internal prime-finding loops that do not check Thread.interrupted().
+     * Cancellation here is UI/Interface Best-Effort cancellation: the UI thread detaches instantly, hides progress,
+     * re-enables controls, and discards all output/history, while the JCA background task completes off the UI thread.
      */
     public void handleGenerateRSA() {
         try {
@@ -2154,66 +2283,70 @@ public class KeysController {
 
             updateStatus("Generating RSA-" + keySize + " key pair... This may take a moment.");
 
-            // Generate key pair
-            KeyPair keyPair = AsymmetricKeyOperations.generateRSAKeyPair(keySize);
+            Callable<KeyPair> task = () -> AsymmetricKeyOperations.generateRSAKeyPair(keySize);
 
-            // Store for certificate generation
-            lastGeneratedKeyPair = keyPair;
-            lastKeyType = "RSA";
-
-            // Create and present GeneratedAsymmetricKeySummary
-            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "RSA", keySize + " bits");
-            this.currentRsaSummary = summary;
-            updateAsymmetricSummaryCard(rsaSummaryCard, rsaSummaryAlgoLabel, rsaSummaryFingerprintLabel, rsaSummaryPubLenLabel, rsaSummaryPrivLenLabel, rsaSummaryCreatedLabel, rsaSummarySavedStatusLabel, summary);
-
-            // Get key info
-            String publicKeyInfo = AsymmetricKeyOperations.getRSAPublicKeyInfo(keyPair.getPublic());
-            String privateKeyInfo = AsymmetricKeyOperations.getRSAPrivateKeyInfo(keyPair.getPrivate());
-
-            // Display
-            rsaPublicKeyArea.setText("=== RSA PUBLIC KEY ===\n\n" + publicKeyInfo +
-                    "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-            rsaPrivateKeyArea.setText("=== RSA PRIVATE KEY ===\n\n" + privateKeyInfo +
-                    "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-            updateStatus("RSA-" + keySize + " key pair generated successfully");
-
-            if (mainController != null) {
+            Consumer<KeyPair> onSuccess = keyPair -> {
                 try {
-                    java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Size", keySize + " bits"));
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
-                    details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
+                    lastGeneratedKeyPair = keyPair;
+                    lastKeyType = "RSA";
 
-                    mainController.publish(OperationResult.forOperation("Generate RSA Key")
-                            .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
-                                    .getBytes(StandardCharsets.UTF_8))
-                            .enrichedOutput(renderGeneratedKeyPair(
-                                    AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
-                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
-                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                            .details(details)
-                            .status("RSA-" + keySize + " key pair generated successfully")
-                            .build());
+                    GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "RSA", keySize + " bits");
+                    this.currentRsaSummary = summary;
+                    updateAsymmetricSummaryCard(rsaSummaryCard, rsaSummaryAlgoLabel, rsaSummaryFingerprintLabel, rsaSummaryPubLenLabel, rsaSummaryPrivLenLabel, rsaSummaryCreatedLabel, rsaSummarySavedStatusLabel, summary);
+
+                    String publicKeyInfo = AsymmetricKeyOperations.getRSAPublicKeyInfo(keyPair.getPublic());
+                    String privateKeyInfo = AsymmetricKeyOperations.getRSAPrivateKeyInfo(keyPair.getPrivate());
+
+                    rsaPublicKeyArea.setText("=== RSA PUBLIC KEY ===\n\n" + publicKeyInfo +
+                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
+
+                    rsaPrivateKeyArea.setText("=== RSA PRIVATE KEY ===\n\n" + privateKeyInfo +
+                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
+
+                    updateStatus("RSA-" + keySize + " key pair generated successfully");
+
+                    if (mainController != null) {
+                        try {
+                            java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
+                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Size", keySize + " bits"));
+                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
+                            details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
+
+                            mainController.publish(OperationResult.forOperation("Generate RSA Key")
+                                    .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
+                                            .getBytes(StandardCharsets.UTF_8))
+                                    .enrichedOutput(renderGeneratedKeyPair(
+                                            AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
+                                            AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
+                                            com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                                    .details(details)
+                                    .status("RSA-" + keySize + " key pair generated successfully")
+                                    .build());
+                        } catch (Exception e) {
+                            System.err.println("Failed to add to history: " + e.getMessage());
+                        }
+                    }
                 } catch (Exception e) {
-                    System.err.println("Failed to add to history: " + e.getMessage());
+                    showError("RSA Generation Error", e.getMessage());
                 }
-            } else {
-                if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Generate RSA-" + keySize)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Key Size: " + keySize + " bits", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Public Key:\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()) +
-                                "\n\nPrivate Key:\n"
-                                + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-            }
+            };
 
+            Consumer<Throwable> onFailure = err -> {
+                showError("RSA Generation Error", err != null ? err.getMessage() : "Unknown error during key generation");
+            };
+
+            Runnable onCancelled = () -> {
+                updateStatus("RSA key generation cancelled.");
+            };
+
+            if (mainController != null && mainController.getOperationExecutor() != null) {
+                mainController.getOperationExecutor().execute("RSA-" + keySize + " Key Generation", rsaGenerateBtn, task, onSuccess, onFailure, onCancelled);
+            } else {
+                KeyPair kp = task.call();
+                onSuccess.accept(kp);
+            }
         } catch (Exception e) {
-            showError("Generation Error", "Error generating RSA key: " + e.getMessage());
+            showError("RSA Generation Error", e.getMessage());
         }
     }
 
@@ -2230,59 +2363,70 @@ public class KeysController {
 
             updateStatus("Generating DSA-" + keySize + " key pair...");
 
-            KeyPair keyPair = AsymmetricKeyOperations.generateDSAKeyPair(keySize);
+            Callable<KeyPair> task = () -> AsymmetricKeyOperations.generateDSAKeyPair(keySize);
 
-            lastGeneratedKeyPair = keyPair;
-            lastKeyType = "DSA";
-
-            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "DSA", keySize + " bits");
-            this.currentDsaSummary = summary;
-            updateAsymmetricSummaryCard(dsaSummaryCard, dsaSummaryAlgoLabel, dsaSummaryFingerprintLabel, dsaSummaryPubLenLabel, dsaSummaryPrivLenLabel, dsaSummaryCreatedLabel, dsaSummarySavedStatusLabel, summary);
-
-            String publicKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPublic());
-            String privateKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPrivate());
-
-            dsaPublicKeyArea.setText("=== DSA PUBLIC KEY ===\n\n" + publicKeyInfo +
-                    "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-            dsaPrivateKeyArea.setText("=== DSA PRIVATE KEY ===\n\n" + privateKeyInfo +
-                    "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-            updateStatus("DSA-" + keySize + " key pair generated successfully");
-
-            if (mainController != null) {
+            Consumer<KeyPair> onSuccess = keyPair -> {
                 try {
-                    java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Size", keySize));
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
-                    details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
+                    lastGeneratedKeyPair = keyPair;
+                    lastKeyType = "DSA";
 
-                    mainController.publish(OperationResult.forOperation("Generate DSA Key")
-                            .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
-                                    .getBytes(StandardCharsets.UTF_8))
-                            .enrichedOutput(renderGeneratedKeyPair(
-                                    AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
-                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
-                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                            .details(details)
-                            .status("DSA-" + keySize + " key pair generated successfully")
-                            .build());
+                    GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "DSA", keySize + " bits");
+                    this.currentDsaSummary = summary;
+                    updateAsymmetricSummaryCard(dsaSummaryCard, dsaSummaryAlgoLabel, dsaSummaryFingerprintLabel, dsaSummaryPubLenLabel, dsaSummaryPrivLenLabel, dsaSummaryCreatedLabel, dsaSummarySavedStatusLabel, summary);
+
+                    String publicKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPublic());
+                    String privateKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPrivate());
+
+                    dsaPublicKeyArea.setText("=== DSA PUBLIC KEY ===\n\n" + publicKeyInfo +
+                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
+
+                    dsaPrivateKeyArea.setText("=== DSA PRIVATE KEY ===\n\n" + privateKeyInfo +
+                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
+
+                    updateStatus("DSA-" + keySize + " key pair generated successfully");
+
+                    if (mainController != null) {
+                        try {
+                            java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
+                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Size", keySize));
+                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
+                            details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
+
+                            mainController.publish(OperationResult.forOperation("Generate DSA Key")
+                                    .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
+                                            .getBytes(StandardCharsets.UTF_8))
+                                    .enrichedOutput(renderGeneratedKeyPair(
+                                            AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
+                                            AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
+                                            com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                                    .details(details)
+                                    .status("DSA-" + keySize + " key pair generated successfully")
+                                    .build());
+                        } catch (Exception e) {
+                            System.err.println("Failed to add to history: " + e.getMessage());
+                        }
+                    }
                 } catch (Exception e) {
-                    System.err.println("Failed to add to history: " + e.getMessage());
+                    showError("DSA Generation Error", e.getMessage());
                 }
-            } else {
-                if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Generate DSA-" + keySize)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "N/A", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Public key generated", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-            }
+            };
 
+            Consumer<Throwable> onFailure = err -> {
+                showError("DSA Generation Error", err != null ? err.getMessage() : "Unknown error during key generation");
+            };
+
+            Runnable onCancelled = () -> {
+                updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.keys.generationCancelled"));
+            };
+
+            if (mainController != null && mainController.getOperationExecutor() != null) {
+                mainController.getOperationExecutor().execute("DSA-" + keySize + " Key Generation", dsaGenerateBtn, task, onSuccess, onFailure, onCancelled);
+            } else {
+                KeyPair kp = task.call();
+                onSuccess.accept(kp);
+            }
         } catch (Exception e) {
-            showError("Generation Error", "Error generating DSA key: " + e.getMessage());
+            showError("DSA Generation Error", e.getMessage());
         }
     }
 
@@ -2901,23 +3045,23 @@ public class KeysController {
      */
     public void handleTR31Export() {
         try {
-            updateStatus("Starting TR-31 Export...");
+            updateStatus(t("module.keys.tr31.status.starting"));
             String kbpk = tr31KbpkExportField.getText().trim().replaceAll("\\s+", "");
             String key = tr31KeyToWrapField.getText().trim().replaceAll("\\s+", "");
 
             // Validate inputs
             if (kbpk.isEmpty() || key.isEmpty()) {
-                tr31ExportResultArea.setText("Error: KBPK and Key are required");
+                showTR31Validation(t("module.keys.tr31.required"), kbpk.isEmpty() ? "tr31KbpkExportField" : "tr31KeyToWrapField", tr31ExportResultArea);
                 return;
             }
 
             if (!kbpk.matches("[0-9A-Fa-f]+")) {
-                tr31ExportResultArea.setText("Error: KBPK must be hexadecimal");
+                showTR31Validation(t("module.keys.tr31.kbpkInvalid"), "tr31KbpkExportField", tr31ExportResultArea);
                 return;
             }
 
             if (!key.matches("[0-9A-Fa-f]+")) {
-                tr31ExportResultArea.setText("Error: Key must be hexadecimal");
+                showTR31Validation(t("module.keys.tr31.keyInvalid"), "tr31KeyToWrapField", tr31ExportResultArea);
                 return;
             }
 
@@ -3006,7 +3150,7 @@ public class KeysController {
                 }
             });
 
-            updateStatus("TR-31 key wrapped successfully");
+            updateStatus(t("module.keys.tr31.status.wrapped"));
 
             // Delegate to ModernMainController history if available
             if (mainController != null) {
@@ -3040,11 +3184,9 @@ public class KeysController {
             }
 
         } catch (Exception e) {
-            tr31ExportResultArea.setText("Error wrapping key: " + e.getMessage());
-            tr31ExportResultArea.setVisible(true);
-            tr31ExportResultArea.setManaged(true);
-            updateStatus("TR-31 wrap failed");
-            e.printStackTrace();
+            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyToWrapField", tr31ExportResultArea);
+            updateStatus(t("module.keys.tr31.status.wrapFailed"));
+            logTR31Failure("wrap", e);
         }
     }
 
@@ -3058,7 +3200,7 @@ public class KeysController {
 
             // Validate inputs
             if (kbpk.isEmpty() || keyBlock.isEmpty()) {
-                tr31ImportResultArea.setText("Error: KBPK and Key Block are required");
+                showTR31Validation(t("module.keys.tr31.keyBlockRequired"), kbpk.isEmpty() ? "tr31KbpkImportField" : "tr31KeyBlockField", tr31ImportResultArea);
                 return;
             }
 
@@ -3102,7 +3244,7 @@ public class KeysController {
             tr31ImportResultArea.setText(result.toString());
             tr31ImportResultArea.setVisible(true);
             tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 key unwrapped successfully");
+            updateStatus(t("module.keys.tr31.status.unwrapped"));
 
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Unwrap Key - " + TR31Operations.getKeyUsageDescription(header.keyUsage))
@@ -3114,11 +3256,9 @@ public class KeysController {
             }
 
         } catch (Exception e) {
-            tr31ImportResultArea.setText("Error unwrapping key: " + e.getMessage());
-            tr31ImportResultArea.setVisible(true);
-            tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 unwrap failed");
-            e.printStackTrace();
+            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyBlockField", tr31ImportResultArea);
+            updateStatus(t("module.keys.tr31.status.unwrapFailed"));
+            logTR31Failure("unwrap", e);
         }
     }
 
@@ -3130,7 +3270,7 @@ public class KeysController {
             String keyBlock = tr31KeyBlockField.getText().trim().replaceAll("\\s+", "");
 
             if (keyBlock.isEmpty()) {
-                tr31ImportResultArea.setText("Error: Key Block is required");
+                showTR31Validation(t("module.keys.tr31.keyBlockRequired"), "tr31KeyBlockField", tr31ImportResultArea);
                 return;
             }
 
@@ -3190,14 +3330,19 @@ public class KeysController {
             tr31ImportResultArea.setText(result.toString());
             tr31ImportResultArea.setVisible(true);
             tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 header parsed successfully");
+            updateStatus(t("module.keys.tr31.status.headerParsed"));
+
+            if (mainController != null) {
+                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("TR-31 Header Parse")
+                        .enrichedOutput(result.toString(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
+                        .status("TR-31 header parsed successfully")
+                        .build());
+            }
 
         } catch (Exception e) {
-            tr31ImportResultArea.setText("Error parsing header: " + e.getMessage());
-            tr31ImportResultArea.setVisible(true);
-            tr31ImportResultArea.setManaged(true);
-            updateStatus("TR-31 parse failed");
-            e.printStackTrace();
+            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyBlockField", tr31ImportResultArea);
+            updateStatus(t("module.keys.tr31.status.parseFailed"));
+            logTR31Failure("header parse", e);
         }
     }
 
@@ -3249,70 +3394,146 @@ public class KeysController {
         kdfSaltFormatCombo.setValue("Hex");
         kdfInfoFormatCombo.setValue("UTF-8");
 
+        if (kdfInputBadgeLabel != null && kdfInputBadge == null) {
+            kdfInputBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Input Key Material");
+            kdfInputBadge.attach(kdfInputField, kdfInputFormatCombo);
+            kdfInputBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfInputBadgeLabel.setText(newVal));
+            kdfInputBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                kdfInputBadgeLabel.getStyleClass().setAll(kdfInputBadge.getStyleClass());
+            });
+        }
+        if (kdfSaltBadgeLabel != null && kdfSaltBadge == null) {
+            kdfSaltBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Salt");
+            kdfSaltBadge.attach(kdfSaltField, kdfSaltFormatCombo);
+            kdfSaltBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfSaltBadgeLabel.setText(newVal));
+            kdfSaltBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                kdfSaltBadgeLabel.getStyleClass().setAll(kdfSaltBadge.getStyleClass());
+            });
+        }
+        if (kdfInfoBadgeLabel != null && kdfInfoBadge == null) {
+            kdfInfoBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Info");
+            kdfInfoBadge.attach(kdfInfoField, kdfInfoFormatCombo);
+            kdfInfoBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfInfoBadgeLabel.setText(newVal));
+            kdfInfoBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                kdfInfoBadgeLabel.getStyleClass().setAll(kdfInfoBadge.getStyleClass());
+            });
+        }
+
         // Add listener to update parameters based on algorithm
         kdfAlgorithmCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             updateKDFParameters(newVal);
         });
+        kdfInputFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
+        kdfSaltFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
+        kdfInfoFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
+        kdfInputField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfInputField, kdfInputFormatCombo));
+        kdfSaltField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfSaltField, kdfSaltFormatCombo));
+        kdfInfoField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfInfoField, kdfInfoFormatCombo));
 
         updateKDFParameters("HKDF-SHA256");
+        updateKdfFormatHints();
+    }
+
+    private void updateKdfFormatHints() {
+        updateKdfEncodedFieldHint(kdfInputField, kdfInputFormatCombo, "Input key material");
+        updateKdfEncodedFieldHint(kdfSaltField, kdfSaltFormatCombo, "Salt");
+        updateKdfEncodedFieldHint(kdfInfoField, kdfInfoFormatCombo, "Info / application context");
+        if (kdfInputHelpLabel != null) {
+            String format = kdfInputFormatCombo == null || kdfInputFormatCombo.getValue() == null
+                    ? "UTF-8" : kdfInputFormatCombo.getValue();
+            kdfInputHelpLabel.setText("Input key material — interpreted as " + format + " using Input key material format above.");
+        }
+    }
+
+    private void updateKdfEncodedFieldHint(TextField field, ComboBox<String> formatCombo, String label) {
+        if (field == null) return;
+        String format = formatCombo == null || formatCombo.getValue() == null ? "UTF-8" : formatCombo.getValue();
+        field.setPromptText(label + " (" + format + ")...");
+        field.setAccessibleText(label + "; encoding: " + format);
+        validateKdfEncodedField(field, formatCombo);
+    }
+
+    private void validateKdfEncodedField(TextField field, ComboBox<String> formatCombo) {
+        if (field == null) return;
+        String value = field.getText() == null ? "" : field.getText().trim();
+        String format = formatCombo == null ? null : formatCombo.getValue();
+        boolean invalid = !value.isEmpty() && (format == null || parseData(value, format) == null);
+        if (invalid) {
+            if (!field.getStyleClass().contains("field-error")) field.getStyleClass().add("field-error");
+        } else {
+            field.getStyleClass().remove("field-error");
+        }
+        if (kdfInputBadge != null) kdfInputBadge.updateState();
+        if (kdfSaltBadge != null) kdfSaltBadge.updateState();
+        if (kdfInfoBadge != null) kdfInfoBadge.updateState();
+    }
+
+    @FXML
+    public void handleGenerateKdfSalt() {
+        if (kdfSaltField == null || kdfSaltFormatCombo == null) return;
+        byte[] salt = new byte[16];
+        new java.security.SecureRandom().nextBytes(salt);
+        kdfSaltFormatCombo.setValue("Hex");
+        kdfSaltField.setText(DataConverter.bytesToHex(salt));
+        clearKdfValidation();
+        if (kdfSaltBadge != null) kdfSaltBadge.updateState();
+        updateStatus("Generated a fresh 16-byte salt for key derivation");
     }
 
     /**
      * Update KDF parameters based on selected algorithm
      */
     private void updateKDFParameters(String algorithm) {
-        if (algorithm == null)
-            return;
+        if (algorithm == null) return;
+
+        boolean requiresSalt = algorithm.startsWith("PBKDF2") || algorithm.equals("SCrypt") || algorithm.equals("Argon2id");
 
         if (algorithm.startsWith("HKDF")) {
-            kdfIterationsField.setText("1");
-            kdfIterationsField.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
-            kdfSaltField.setPromptText("Optional salt (zeros if omitted)");
-            kdfInfoField.setDisable(false);
-            kdfInfoFormatCombo.setDisable(false);
-            kdfInfoField.setPromptText("Optional application context");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
+            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Optional salt (zeros if omitted)"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
+            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Optional application context"); }
         } else if (algorithm.startsWith("NIST-800-108")) {
-            kdfIterationsField.setText("1");
-            kdfIterationsField.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
-            kdfSaltField.setPromptText("Label (optional)");
-            kdfInfoField.setDisable(false);
-            kdfInfoFormatCombo.setDisable(false);
-            kdfInfoField.setPromptText("Context (optional)");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
+            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Label (optional)"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
+            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Context (optional)"); }
         } else if (algorithm.startsWith("X9.63")) {
-            kdfIterationsField.setText("1");
-            kdfIterationsField.setDisable(true);
-            kdfSaltField.setDisable(true);
-            kdfSaltFormatCombo.setDisable(true);
-            kdfSaltField.setPromptText("Not used by X9.63");
-            kdfInfoField.setDisable(false);
-            kdfInfoFormatCombo.setDisable(false);
-            kdfInfoField.setPromptText("Shared info (optional)");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
+            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(false); kdfSaltBox.setManaged(false); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
+            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Shared info (optional)"); }
         } else if (algorithm.startsWith("PBKDF2")) {
-            kdfIterationsField.setText("600000");
-            kdfIterationsField.setDisable(false);
-            kdfInfoField.setDisable(true);
-            kdfInfoFormatCombo.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
-            kdfSaltField.setPromptText("Required salt");
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
+            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("600000"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
         } else if (algorithm.equals("SCrypt")) {
-            kdfIterationsField.setText("32768");
-            kdfIterationsField.setDisable(false);
-            kdfInfoField.setDisable(true);
-            kdfInfoFormatCombo.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
+            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("32768"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
         } else if (algorithm.equals("Argon2id")) {
-            kdfIterationsField.setText("3");
-            kdfIterationsField.setDisable(false);
-            kdfInfoField.setDisable(true);
-            kdfInfoFormatCombo.setDisable(true);
-            kdfSaltField.setDisable(false);
-            kdfSaltFormatCombo.setDisable(false);
+            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
+            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("3"); }
+            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
+            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
+            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
+        }
+
+        if (kdfSaltBadge != null) {
+            if (requiresSalt && (kdfSaltField == null || kdfSaltField.getText().trim().isEmpty())) {
+                kdfSaltBadge.updateStateIncomplete("Salt required");
+            } else {
+                kdfSaltBadge.updateState();
+            }
         }
     }
 
@@ -3373,6 +3594,7 @@ public class KeysController {
      */
     public void handleDeriveKey() {
         try {
+            clearKdfValidation();
             String algorithm = kdfAlgorithmCombo.getValue();
             String inputFormat = kdfInputFormatCombo.getValue();
             String saltFormat = kdfSaltFormatCombo.getValue();
@@ -3385,14 +3607,14 @@ public class KeysController {
             String outputLengthText = kdfOutputLengthField.getText().trim();
 
             if (inputText.isEmpty()) {
-                showError("Input Error", "Please enter input key material");
+                showKdfValidation("Enter input key material in the selected " + inputFormat + " format.", kdfInputField);
                 return;
             }
 
             // Parse input according to format
             byte[] input = parseData(inputText, inputFormat);
             if (input == null) {
-                showError("Input Error", "Invalid " + inputFormat + " format for input");
+                showKdfValidation("Input key material is not valid " + inputFormat + ".", kdfInputField);
                 return;
             }
 
@@ -3401,7 +3623,7 @@ public class KeysController {
             if (!saltText.isEmpty()) {
                 salt = parseData(saltText, saltFormat);
                 if (salt == null) {
-                    showError("Input Error", "Invalid " + saltFormat + " format for salt");
+                    showKdfValidation("Salt is not valid " + saltFormat + ". For Hex, use pairs of digits 0-9 and A-F.", kdfSaltField);
                     return;
                 }
             }
@@ -3411,7 +3633,7 @@ public class KeysController {
             if (!infoText.isEmpty()) {
                 info = parseData(infoText, infoFormat);
                 if (info == null) {
-                    showError("Input Error", "Invalid " + infoFormat + " format for info");
+                    showKdfValidation("Info / application context is not valid " + infoFormat + ".", kdfInfoField);
                     return;
                 }
             }
@@ -3421,7 +3643,7 @@ public class KeysController {
             try {
                 iterations = Integer.parseInt(iterationsText);
             } catch (Exception e) {
-                showError("Input Error", "Invalid iterations value");
+                showKdfValidation("Iterations must be a positive whole number.", kdfIterationsField);
                 return;
             }
 
@@ -3430,11 +3652,11 @@ public class KeysController {
             try {
                 outputLength = Integer.parseInt(outputLengthText);
                 if (outputLength < 1 || outputLength > 256) {
-                    showError("Input Error", "Output length must be between 1 and 256 bytes");
+                    showKdfValidation("Output length must be between 1 and 256 bytes.", kdfOutputLengthField);
                     return;
                 }
             } catch (Exception e) {
-                showError("Input Error", "Invalid output length");
+                showKdfValidation("Output length must be a whole number of bytes.", kdfOutputLengthField);
                 return;
             }
 
@@ -3470,7 +3692,7 @@ public class KeysController {
             } else if (algorithm.startsWith("PBKDF2")) {
                 // PBKDF2 requires salt
                 if (salt == null || salt.length == 0) {
-                    showError("Input Error", "PBKDF2 requires a salt (cannot be empty)");
+                    showKdfValidation("PBKDF2 requires a non-empty salt. Use Generate for a fresh 16-byte salt.", kdfSaltField);
                     return;
                 }
                 derivedKey = com.cryptocarver.crypto.KeyDerivation.pbkdf2(input, salt, iterations, outputLength,
@@ -3479,7 +3701,7 @@ public class KeysController {
             } else if (algorithm.equals("SCrypt")) {
                 // SCrypt requires salt
                 if (salt == null || salt.length == 0) {
-                    showError("Input Error", "SCrypt requires a salt (cannot be empty)");
+                    showKdfValidation("SCrypt requires a non-empty salt. Use Generate for a fresh 16-byte salt.", kdfSaltField);
                     return;
                 }
                 // N=iterations, r=8, p=1
@@ -3488,7 +3710,7 @@ public class KeysController {
             } else if (algorithm.equals("Argon2id")) {
                 // Argon2 requires salt
                 if (salt == null || salt.length < 8) {
-                    showError("Input Error", "Argon2 requires a salt with minimum 8 bytes");
+                    showKdfValidation("Argon2id requires a salt of at least 8 bytes. Use Generate for a fresh 16-byte salt.", kdfSaltField);
                     return;
                 }
                 // iterations=time, memory=64MB, parallelism=4
@@ -3496,7 +3718,7 @@ public class KeysController {
                         outputLength);
                 resultInfo = buildArgon2Result(input, salt, iterations, 65536, 4, outputLength, derivedKey);
             } else {
-                showError("Algorithm Error", "Unknown algorithm: " + algorithm);
+                showKdfValidation("Choose a supported KDF algorithm.", kdfAlgorithmCombo);
                 return;
             }
 
@@ -3509,18 +3731,42 @@ public class KeysController {
             // Add to history
             if (mainController != null) {
                 mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Derive - " + algorithm)
+                    .input(input)
+                    .output(derivedKey, com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                    .enrichedOutput(resultInfo, com.cryptocarver.model.OperationDetail.Classification.SECRET)
                     .details(java.util.List.of(
                         new com.cryptocarver.model.OperationDetail("Input Parameters", "Input: " + inputText.substring(0, Math.min(30, inputText.length())), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
                         new com.cryptocarver.model.OperationDetail("Output", "Derived: " + DataConverter.bytesToHex(derivedKey).substring(0,
                             Math.min(50, DataConverter.bytesToHex(derivedKey).length())), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
                     ))
+                    .status("Key derived successfully using " + algorithm)
                     .build());
             }
 
         } catch (Exception e) {
-            showError("Derivation Error", "Error deriving key: " + e.getMessage());
-            e.printStackTrace();
+            showKdfValidation("Cannot derive the key: " + e.getMessage(), null);
         }
+    }
+
+    private void clearKdfValidation() {
+        if (kdfValidationLabel != null) {
+            kdfValidationLabel.setText("");
+            kdfValidationLabel.setVisible(false);
+            kdfValidationLabel.setManaged(false);
+        }
+    }
+
+    private void showKdfValidation(String message, javafx.scene.Node field) {
+        if (kdfValidationLabel != null) {
+            kdfValidationLabel.setText("⚠ " + message);
+            kdfValidationLabel.setVisible(true);
+            kdfValidationLabel.setManaged(true);
+        }
+        if (field != null) {
+            if (!field.getStyleClass().contains("field-error")) field.getStyleClass().add("field-error");
+            field.requestFocus();
+        }
+        updateStatus(message);
     }
 
     /**

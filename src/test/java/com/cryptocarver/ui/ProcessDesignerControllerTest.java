@@ -10,8 +10,12 @@ import javafx.scene.layout.VBox;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class ProcessDesignerControllerTest {
 
     @BeforeAll static void startToolkit() {

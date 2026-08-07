@@ -6,6 +6,7 @@ import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.io.File;
@@ -21,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 // Attempt to use DataConverter if available, otherwise will rely on local helpers or standard libs
 import com.cryptocarver.util.DataConverter;
+import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.service.I18nService;
 
 /**
  * Modern Main Controller for Rail + SidePanel navigation
@@ -138,6 +141,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label resultSizeLabel;
     @FXML private Label resultFormatLabel;
     @FXML private Label resultStatusBadge;
+    @FXML private Label resultLastLabel;
+    @FXML private Label resultAlgorithmStaticLabel;
+    @FXML private Button resultExpandButton;
+    @FXML private Button resultShelfButton;
+    @FXML private Button resultCopyButton;
+    @FXML private Button inspectorToggleButton;
 
     // Quick Start & Guided Workflows
     @FXML private VBox quickStartContainer;
@@ -146,6 +155,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label guideStepDescLabel;
     @FXML private Button guideBackBtn;
     @FXML private Button guideNextBtn;
+    @FXML private Button guideSkipBtn;
+    @FXML private Button guideExitBtn;
 
     public enum GuidedOperation {
         ENCRYPT, HASH, SIGN, CERT, CONVERT
@@ -163,6 +174,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private VBox savedSessionsList;
+
+    @FXML
+    private Label inputFormatLabel;
 
     @FXML
     private ComboBox<String> inputFormatCombo;
@@ -236,12 +250,209 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private MenuBar mainMenuBar;
+    @FXML private Menu fileMenu;
+    @FXML private Menu editMenu;
+    @FXML private Menu viewMenu;
+    @FXML private Menu securityMenu;
+    @FXML private Menu toolsMenu;
+    @FXML private Menu helpMenu;
+    @FXML private Menu languageMenu;
+    @FXML private RadioMenuItem languageSystemMenuItem;
+    @FXML private RadioMenuItem languageEsMenuItem;
+    @FXML private RadioMenuItem languageEnMenuItem;
+    @FXML private ToggleGroup languagePreferenceGroup;
+    @FXML private MenuItem importKeyMenuItem;
+    @FXML private MenuItem exportScreenMenuItem;
+    @FXML private MenuItem importScreenMenuItem;
+    @FXML private MenuItem saveSessionMenuItem;
+    @FXML private MenuItem exportHistoryMenuItem;
+    @FXML private MenuItem exitMenuItem;
+    @FXML private MenuItem clearInputMenuItem;
+    @FXML private MenuItem clearOutputMenuItem;
+    @FXML private MenuItem copyOutputMenuItem;
+    @FXML private MenuItem addToShelfMenuItem;
+    @FXML private MenuItem quickStartMenuItem;
+    @FXML private MenuItem commandPaletteMenuItem;
+    @FXML private MenuItem toggleSidePanelMenuItem;
+    @FXML private MenuItem toggleInspectorMenuItem;
+    @FXML private MenuItem expandResultMenuItem;
+    @FXML private MenuItem expandTableMenuItem;
+    @FXML private MenuItem zoomInMenuItem;
+    @FXML private MenuItem zoomOutMenuItem;
+    @FXML private MenuItem resetViewMenuItem;
+    @FXML private RadioMenuItem visibilityFullLabMenuItem;
+    @FXML private RadioMenuItem visibilityMaskedMenuItem;
+    @FXML private RadioMenuItem visibilityRedactedMenuItem;
+    @FXML private MenuItem epochMenuItem;
+    @FXML private MenuItem jsonMenuItem;
+    @FXML private MenuItem byteInspectorMenuItem;
+    @FXML private MenuItem clearKeyCacheMenuItem;
+    @FXML private MenuItem shortcutsMenuItem;
+    @FXML private MenuItem diagnosticsMenuItem;
+    @FXML private MenuItem aboutMenuItem;
+    @FXML private Button toolbarSearchButton;
+    @FXML private Button toolbarSaveSessionButton;
+    @FXML private Button toolbarClearButton;
+    @FXML private Button toolbarExpandButton;
+    @FXML private Button toolbarShelfButton;
+    @FXML private Button toolbarCopyButton;
+    @FXML private Label outputFormatLabel;
+    private final I18nService i18n = I18nService.getInstance();
+    private java.util.function.Consumer<java.util.Locale> i18nListener;
+
+    // Async Progress UI
+    @FXML private HBox asyncProgressBox;
+    @FXML private ProgressIndicator asyncProgressSpinner;
+    @FXML private ProgressBar asyncProgressBar;
+    @FXML private Label asyncProgressLabel;
+    @FXML private Button asyncCancelBtn;
+    @FXML private Label inspectorTitleLabel;
+    @FXML private Label inspectorInputBytesTitle;
+    @FXML private Label inspectorOutputBytesTitle;
+    @FXML private Label inspectorAlgorithmTitle;
+    @FXML private Label inspectorSecurityTipsTitle;
+    @FXML private Label inspectorWarningTitle;
+    @FXML private Label inspectorHistoryTitle;
+    @FXML private Button inspectorExportJsonButton;
+    @FXML private Button inspectorClearHistoryButton;
+    @FXML private Label commandEscapeLabel;
+    @FXML private Label commandNavigateLabel;
+    @FXML private Label commandSelectLabel;
+    @FXML private Label commandCancelLabel;
+    @FXML private Label commandTitleLabel;
+
+    private final OperationExecutor operationExecutor = new OperationExecutor();
+
+    public OperationExecutor getOperationExecutor() {
+        return operationExecutor;
+    }
+
+    public void showAsyncProgress(String operationName) {
+        if (asyncProgressBox != null) {
+            if (asyncProgressLabel != null) {
+                String title = (operationName != null && !operationName.isBlank()) ? operationName : i18n.text("progress.operation");
+                asyncProgressLabel.setText(title + "…");
+                asyncProgressLabel.setAccessibleText(title);
+            }
+            if (asyncCancelBtn != null) {
+                asyncCancelBtn.setDisable(false);
+            }
+            asyncProgressBox.setManaged(true);
+            asyncProgressBox.setVisible(true);
+        }
+    }
+
+    public void updateAsyncProgressDetails(OperationExecutor.ProgressDetails details) {
+        if (asyncProgressBox == null || details == null) return;
+        if (!asyncProgressBox.isVisible()) {
+            asyncProgressBox.setManaged(true);
+            asyncProgressBox.setVisible(true);
+        }
+        if (asyncProgressLabel != null) {
+            asyncProgressLabel.setText(details.getFormattedText());
+            asyncProgressLabel.setAccessibleText(details.getFormattedText());
+        }
+
+        if (details.getTotalBytes() > 0) {
+            double ratio = Math.min(1.0, (double) details.getBytesProcessed() / details.getTotalBytes());
+            if (asyncProgressBar != null) {
+                asyncProgressBar.setProgress(ratio);
+                asyncProgressBar.setAccessibleText(String.format(java.util.Locale.US, "Progress: %d%%", Math.round(ratio * 100)));
+                asyncProgressBar.setVisible(true);
+                asyncProgressBar.setManaged(true);
+            }
+            if (asyncProgressSpinner != null) {
+                asyncProgressSpinner.setVisible(false);
+                asyncProgressSpinner.setManaged(false);
+            }
+        } else {
+            if (asyncProgressSpinner != null) {
+                asyncProgressSpinner.setProgress(-1);
+                asyncProgressSpinner.setAccessibleText("Working: " + details.getOperationName());
+                asyncProgressSpinner.setVisible(true);
+                asyncProgressSpinner.setManaged(true);
+            }
+            if (asyncProgressBar != null) {
+                asyncProgressBar.setVisible(false);
+                asyncProgressBar.setManaged(false);
+            }
+        }
+    }
+
+    public void hideAsyncProgress() {
+        if (asyncProgressBox != null) {
+            asyncProgressBox.setVisible(false);
+            asyncProgressBox.setManaged(false);
+        }
+    }
+
+    @FXML
+    private final java.util.concurrent.atomic.AtomicBoolean isShutdown = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    public void handleCancelAsyncOperation() {
+        boolean cancelled = operationExecutor.cancelCurrentOperation();
+        if (cancelled) {
+            if (asyncProgressLabel != null) {
+                asyncProgressLabel.setText(i18n.text("progress.cancelling"));
+            }
+        } else if (operationExecutor.isInCommitPhase()) {
+            if (asyncProgressLabel != null) {
+                asyncProgressLabel.setText(i18n.text("progress.finishing"));
+            }
+            if (asyncCancelBtn != null) {
+                asyncCancelBtn.setDisable(true);
+            }
+        } else {
+            hideAsyncProgress();
+        }
+    }
+
+    public void shutdown() {
+        if (isShutdown.compareAndSet(false, true)) {
+            if (operationExecutor != null) {
+                operationExecutor.shutdown();
+            }
+        }
+    }
+
+    private void setupWindowLifecycleListeners() {
+        javafx.scene.Node node = rootStackPane != null ? rootStackPane : asyncProgressBox;
+        if (node == null) return;
+
+        javafx.beans.value.ChangeListener<javafx.stage.Window> windowListener = (obsWindow, oldWindow, newWindow) -> {
+            if (newWindow != null) {
+                newWindow.addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, e -> shutdown());
+            }
+        };
+
+        javafx.beans.value.ChangeListener<javafx.scene.Scene> sceneListener = (obsScene, oldScene, newScene) -> {
+            if (newScene != null) {
+                if (newScene.getWindow() != null) {
+                    newScene.getWindow().addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, e -> shutdown());
+                }
+                newScene.windowProperty().addListener(windowListener);
+            }
+        };
+
+        if (node.getScene() != null) {
+            sceneListener.changed(null, null, node.getScene());
+        }
+        node.sceneProperty().addListener(sceneListener);
+    }
 
     @FXML
     public void initialize() {
         if (joseController != null) joseController.setReporter(this);
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
+
+        operationExecutor.setProgressHandlers(
+                this::showAsyncProgress,
+                this::updateAsyncProgressDetails,
+                this::hideAsyncProgress
+        );
+
+        setupWindowLifecycleListeners();
 
         setupLaboratoryMenu();
         initializeCommandPalette();
@@ -286,6 +497,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         // Handle item selection from SidePanel
         sidePanel.setOnItemSelected(this::handleItemSelected);
 
+        i18n.refreshFromSettings();
+        i18nListener = locale -> {
+            Runnable refresh = this::applyLocalization;
+            if (Platform.isFxApplicationThread()) refresh.run();
+            else Platform.runLater(refresh);
+        };
+        i18n.addLocaleChangeListener(i18nListener);
+        applyLocalization();
+
         // Initialize History
         initializeHistory();
 
@@ -320,6 +540,259 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         System.out.println("ModernMainController initialized successfully!");
     }
+
+    /** Applies shell strings without changing operation names, routes or technical values. */
+    public void applyLocalization() {
+        Node focusOwner = mainPane != null && mainPane.getScene() != null
+                ? mainPane.getScene().getFocusOwner() : null;
+        setText(fileMenu, "menu.file");
+        setText(editMenu, "menu.edit");
+        setText(viewMenu, "menu.view");
+        setText(securityMenu, "menu.security");
+        setText(toolsMenu, "menu.tools");
+        setText(helpMenu, "menu.help");
+        setText(languageMenu, "menu.language");
+
+        setText(importKeyMenuItem, "menu.importKey");
+        setText(exportScreenMenuItem, "menu.exportScreen");
+        setText(importScreenMenuItem, "menu.importScreen");
+        setText(saveSessionMenuItem, "menu.saveSession");
+        setText(exportHistoryMenuItem, "menu.exportHistory");
+        setText(exitMenuItem, "menu.exit");
+        setText(clearInputMenuItem, "menu.clearInput");
+        setText(clearOutputMenuItem, "menu.clearOutput");
+        setText(copyOutputMenuItem, "menu.copyOutput");
+        setText(addToShelfMenuItem, "menu.addToShelf");
+        setText(quickStartMenuItem, "menu.quickStart");
+        setText(commandPaletteMenuItem, "menu.commandPalette");
+        setText(toggleSidePanelMenuItem, "menu.toggleSidePanel");
+        setText(toggleInspectorMenuItem, "menu.toggleInspector");
+        setText(expandResultMenuItem, "menu.expandResult");
+        setText(expandTableMenuItem, "menu.expandTable");
+        setText(zoomInMenuItem, "menu.zoomIn");
+        setText(zoomOutMenuItem, "menu.zoomOut");
+        setText(resetViewMenuItem, "menu.resetView");
+        setText(visibilityFullLabMenuItem, "menu.visibility.full");
+        setText(visibilityMaskedMenuItem, "menu.visibility.masked");
+        setText(visibilityRedactedMenuItem, "menu.visibility.redacted");
+        setText(epochMenuItem, "menu.epoch");
+        setText(jsonMenuItem, "menu.json");
+        setText(byteInspectorMenuItem, "menu.byteInspector");
+        setText(clearKeyCacheMenuItem, "menu.clearKeyCache");
+        setText(shortcutsMenuItem, "menu.shortcuts");
+        setText(diagnosticsMenuItem, "menu.diagnostics");
+        setText(aboutMenuItem, "menu.about");
+        if (mainMenuBar != null) {
+            mainMenuBar.getMenus().stream()
+                    .filter(menu -> "laboratory".equals(menu.getUserData()))
+                    .findFirst()
+                    .ifPresent(this::localizeLaboratoryMenu);
+        }
+
+        setText(languageSystemMenuItem, "app.language.system");
+        setText(languageEsMenuItem, "app.language.es");
+        setText(languageEnMenuItem, "app.language.en");
+        LanguagePreference selected = i18n.getPreference();
+        if (languageSystemMenuItem != null) languageSystemMenuItem.setSelected(selected == LanguagePreference.SYSTEM);
+        if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
+        if (languageEnMenuItem != null) languageEnMenuItem.setSelected(selected == LanguagePreference.EN);
+
+        setText(toolbarSearchButton, "toolbar.search");
+        setText(toolbarSaveSessionButton, "menu.saveSession");
+        setText(toolbarClearButton, "toolbar.clear");
+        setText(toolbarExpandButton, "toolbar.expand");
+        setText(toolbarShelfButton, "toolbar.addShelf");
+        setText(toolbarCopyButton, "toolbar.copy");
+        setAccessibleText(toolbarSearchButton);
+        setAccessibleText(toolbarSaveSessionButton);
+        setAccessibleText(toolbarClearButton);
+        setAccessibleText(toolbarExpandButton);
+        setAccessibleText(toolbarShelfButton);
+        setAccessibleText(toolbarCopyButton);
+        setText(inputFormatLabel, "toolbar.payloadFormat");
+        setText(outputFormatLabel, "toolbar.output");
+        setAccessibleText(resultExpandButton, "a11y.resultExpand");
+        setAccessibleText(resultShelfButton, "a11y.resultShelf");
+        setAccessibleText(resultCopyButton, "a11y.resultCopy");
+        setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
+        setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
+        if (inputFormatCombo != null) {
+            inputFormatCombo.setAccessibleText(i18n.text("a11y.payloadFormat"));
+            inputFormatCombo.setAccessibleHelp(i18n.text("toolbar.payloadTooltip"));
+        }
+        if (outputFormatCombo != null) {
+            outputFormatCombo.setAccessibleText(i18n.text("a11y.outputFormat"));
+            outputFormatCombo.setAccessibleHelp(i18n.text("a11y.outputFormat"));
+        }
+        if (commandSearchField != null) {
+            commandSearchField.setAccessibleText(i18n.text("a11y.commandSearch"));
+            commandSearchField.setAccessibleHelp(i18n.text("command.prompt"));
+        }
+        if (favoriteToggleBtn != null) {
+            favoriteToggleBtn.setAccessibleText(i18n.text("a11y.favorite"));
+            favoriteToggleBtn.setAccessibleHelp(i18n.text("favorite.tooltip"));
+        }
+        if (inputFormatLabel != null) inputFormatLabel.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
+        if (inputFormatCombo != null) inputFormatCombo.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
+
+        setText(resultLastLabel, "result.last");
+        setText(resultAlgorithmStaticLabel, "result.algorithm");
+        if (resultStatusBadge != null) resultStatusBadge.setAccessibleText(i18n.text("result.status"));
+        setText(errorBannerTitle, "error.failed");
+        setText(errorBannerRemedy, "error.remedy");
+        setText(errorBannerGoToFieldBtn, "error.goToField");
+        setText(errorBannerCopyDetailsBtn, "error.copyDetails");
+        if (errorBannerTitle != null) {
+            errorBannerTitle.setAccessibleHelp(i18n.text("a11y.errorTitle"));
+        }
+        if (errorBannerRemedy != null) {
+            errorBannerRemedy.setAccessibleHelp(i18n.text("a11y.errorRemedy"));
+        }
+        if (errorBannerGoToFieldBtn != null) {
+            errorBannerGoToFieldBtn.setAccessibleText(i18n.text("a11y.errorGoToField"));
+            errorBannerGoToFieldBtn.setAccessibleHelp(i18n.text("a11y.errorGoToFieldHelp"));
+        }
+        if (errorBannerCopyDetailsBtn != null) {
+            errorBannerCopyDetailsBtn.setAccessibleText(i18n.text("a11y.errorCopyDetails"));
+            errorBannerCopyDetailsBtn.setAccessibleHelp(i18n.text("a11y.errorCopyDetailsHelp"));
+        }
+        if (errorBannerCloseBtn != null) {
+            errorBannerCloseBtn.setAccessibleText(i18n.text("a11y.errorClose"));
+            errorBannerCloseBtn.setAccessibleHelp(i18n.text("a11y.errorCloseHelp"));
+        }
+        setText(guideBackBtn, "guide.back");
+        setText(guideNextBtn, "guide.next");
+        setText(guideSkipBtn, "guide.skip");
+        setText(guideExitBtn, "guide.exit");
+        setText(asyncProgressLabel, "progress.working");
+        setText(asyncCancelBtn, "progress.cancel");
+        setAccessibleText(asyncCancelBtn);
+        setText(inspectorTitleLabel, "inspector.title");
+        setText(inspectorInputBytesTitle, "inspector.inputBytes");
+        setText(inspectorOutputBytesTitle, "inspector.outputBytes");
+        setText(inspectorAlgorithmTitle, "inspector.algorithm");
+        setText(inspectorSecurityTipsTitle, "inspector.securityTips");
+        setText(inspectorWarningTitle, "inspector.warning");
+        setText(inspectorHistoryTitle, "inspector.history");
+        setText(inspectorExportJsonButton, "inspector.exportJson");
+        setText(inspectorClearHistoryButton, "toolbar.clear");
+        if (inspectorExportJsonButton != null) {
+            inspectorExportJsonButton.setTooltip(new Tooltip(i18n.text("inspector.exportJsonTooltip")));
+        }
+        if (commandSearchField != null) commandSearchField.setPromptText(i18n.text("command.prompt"));
+        setText(commandEscapeLabel, "command.escape");
+        setText(commandEmptyLabel, "command.empty");
+        setText(commandNavigateLabel, "command.navigate");
+        setText(commandSelectLabel, "command.select");
+        setText(commandCancelLabel, "command.cancel");
+        setText(commandTitleLabel, "command.title");
+
+        if (navigationRail != null) navigationRail.refreshLocalizedText();
+        if (sidePanel != null) sidePanel.refreshLocalizedText();
+        updateBreadcrumbs(currentActiveOperation);
+        updateFavoriteToggleState(currentActiveOperation);
+        if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
+                || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
+            statusLabel.setText(i18n.text("status.ready"));
+        }
+        if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
+            inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
+                    rootStackPane != null ? rootStackPane : mainPane);
+        }
+        restoreFocusAfterLocalization(focusOwner);
+    }
+
+    private void setText(javafx.scene.control.MenuItem item, String key) {
+        if (item != null) item.setText(i18n.text(key));
+    }
+
+    private void setText(javafx.scene.control.Menu menu, String key) {
+        if (menu != null) menu.setText(i18n.text(key));
+    }
+
+    private void setText(javafx.scene.control.Button button, String key) {
+        if (button != null) button.setText(i18n.text(key));
+    }
+
+    private void setText(javafx.scene.control.Label label, String key) {
+        if (label != null) label.setText(i18n.text(key));
+    }
+
+    private void localizeLaboratoryMenu(javafx.scene.control.Menu menu) {
+        menu.setText(i18n.text("menu.laboratory"));
+        if (!menu.getItems().isEmpty()) setText(menu.getItems().get(0), "menu.quickStart");
+        for (javafx.scene.control.MenuItem item : menu.getItems()) {
+            if (item instanceof javafx.scene.control.Menu profile) {
+                for (javafx.scene.control.MenuItem profileItem : profile.getItems()) {
+                    if ("Load Data".equals(profileItem.getText()) || "Cargar datos".equals(profileItem.getText())) {
+                        setText(profileItem, "menu.loadData");
+                    } else if ("Run and Verify".equals(profileItem.getText()) || "Ejecutar y verificar".equals(profileItem.getText())) {
+                        setText(profileItem, "menu.runVerify");
+                    }
+                }
+            }
+        }
+    }
+
+    private void setAccessibleText(javafx.scene.control.ButtonBase control) {
+        if (control != null && control.getText() != null) {
+            control.setAccessibleText(control.getText());
+        }
+    }
+
+    private void setAccessibleText(javafx.scene.control.ButtonBase control, String key) {
+        if (control != null && key != null) {
+            control.setAccessibleText(i18n.text(key));
+        }
+    }
+
+    private void restoreFocusAfterLocalization(Node focusOwner) {
+        if (focusOwner == null) return;
+        Platform.runLater(() -> {
+            if (focusOwner.getScene() != null && focusOwner.isVisible()
+                    && !focusOwner.isDisabled() && focusOwner.isFocusTraversable()) {
+                focusOwner.requestFocus();
+            }
+        });
+    }
+
+    private String localizedSectionText(String value) {
+        if (value == null) return "";
+        return switch (value) {
+            case "Cryptographic Operations" -> i18n.text("bread.cryptoOperations");
+            case "Symmetric Keys" -> i18n.text("bread.symmetricKeys");
+            case "Asymmetric Keys" -> i18n.text("bread.asymmetricKeys");
+            case "Ciphers" -> i18n.text("bread.ciphers");
+            case "Signatures & MAC" -> i18n.text("bread.signaturesMac");
+            case "Certificates", "Certificates & CMS" -> i18n.text("bread.certificatesCms");
+            case "JOSE / JWT" -> i18n.text("bread.joseJwt");
+            case "Post-Quantum", "Post-Quantum PQC" -> i18n.text("bread.postQuantumPqc");
+            case "XML Security" -> i18n.text("bread.xmlSecurity");
+            case "WSS Security" -> i18n.text("bread.wssSecurity");
+            case "EMV & Smartcards" -> i18n.text("bread.emvSmartcards");
+            case "Payment Cryptography" -> i18n.text("bread.paymentCryptography");
+            case "Utilities" -> i18n.text("bread.utilities");
+            case "History" -> i18n.text("bread.history");
+            case "Clipboard Shelf" -> i18n.text("bread.clipboardShelf");
+            case "Saved Sessions" -> i18n.text("bread.savedSessions");
+            default -> value;
+        };
+    }
+
+    private String localizedModuleText(String value) {
+        if (value == null) return "";
+        return switch (value) {
+            case "Symmetric" -> i18n.text("bread.symmetric");
+            case "Asymmetric" -> i18n.text("bread.asymmetric");
+            case "Tools" -> i18n.text("bread.tools");
+            case "General" -> i18n.text("bread.module");
+            default -> value;
+        };
+    }
+
+    @FXML private void handleLanguageSystem() { i18n.setPreference(LanguagePreference.SYSTEM); }
+    @FXML private void handleLanguageEs() { i18n.setPreference(LanguagePreference.ES); }
+    @FXML private void handleLanguageEn() { i18n.setPreference(LanguagePreference.EN); }
 
     /**
      * Keeps the working canvas usable on laptop-sized windows. The inspector
@@ -430,15 +903,41 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @Override
     public void setInputFormat(String format) {
         if (inputFormatCombo != null) {
-            inputFormatCombo.setValue(format);
+            setToolbarFormat(inputFormatCombo, format);
         }
     }
 
     @Override
     public void setOutputFormat(String format) {
         if (outputFormatCombo != null) {
-            outputFormatCombo.setValue(format);
+            setToolbarFormat(outputFormatCombo, format);
         }
+    }
+
+    private static void setToolbarFormat(ComboBox<String> combo, String format) {
+        String canonical = normalizeToolbarFormat(format);
+        if (canonical == null) {
+            combo.setValue(null);
+        } else if (combo.getItems().contains(canonical)) {
+            combo.setValue(canonical);
+        } else if (!combo.isDisabled()) {
+            // Do not leave a previous format selected when a template value is
+            // not representable by the active operation contract.
+            combo.setValue(null);
+        }
+    }
+
+    /**
+     * Keeps legacy module labels compatible with the canonical values exposed by
+     * the shared format toolbar. A ComboBox silently retains its previous value
+     * when assigned an item that it does not contain, which previously made a
+     * text template run with a stale hexadecimal input format.
+     */
+    static String normalizeToolbarFormat(String format) {
+        if ("Plain Text".equalsIgnoreCase(format) || "Text".equalsIgnoreCase(format)) {
+            return "Text (UTF-8)";
+        }
+        return format;
     }
 
     public void navigateToModule(String moduleName) {
@@ -600,7 +1099,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             section = "Payments";
         }
 
-        if (contentTitleLabel != null) contentTitleLabel.setText(section);
+        if (contentTitleLabel != null) contentTitleLabel.setText(localizedSectionText(section));
         if (contentSubtitleLabel != null) contentSubtitleLabel.setText(subsection);
 
         // UX-07: Update Breadcrumbs, Favorites & Last Route
@@ -631,8 +1130,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void updateBreadcrumbs(String operationName) {
         if (breadcrumbContainer == null || operationName == null) return;
 
-        String sectionLabel = "Laboratory";
-        String moduleLabel = "General";
+        String sectionLabel = i18n.text("bread.section");
+        String moduleLabel = i18n.text("bread.module");
         String operationLabel = operationName;
         String canonicalModulePath = operationName;
 
@@ -640,22 +1139,22 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (resolved.isPresent()) {
             UiNavigationRegistry.Route route = resolved.get();
             sectionLabel = switch (route.module()) {
-                case KEYS_SYMMETRIC -> "Symmetric Keys";
-                case KEYS_ASYMMETRIC -> "Asymmetric Keys";
-                case CIPHER -> "Ciphers";
-                case AUTHENTICATION -> "Signatures & MAC";
-                case CERTIFICATES -> "Certificates & CMS";
-                case JOSE -> "JOSE / JWT";
-                case POST_QUANTUM -> "Post-Quantum PQC";
-                case XML_SECURITY -> "XML Security";
-                case WSS_SECURITY -> "WSS Security";
-                case EMV -> "EMV & Smartcards";
-                case PAYMENTS -> "Payment Cryptography";
-                case GENERIC -> "Utilities";
-                case HISTORY -> "History";
-                case CLIPBOARD_SHELF -> "Clipboard Shelf";
-                case SAVED_SESSIONS -> "Saved Sessions";
-                default -> "Laboratory";
+                case KEYS_SYMMETRIC -> i18n.text("bread.symmetricKeys");
+                case KEYS_ASYMMETRIC -> i18n.text("bread.asymmetricKeys");
+                case CIPHER -> i18n.text("bread.ciphers");
+                case AUTHENTICATION -> i18n.text("bread.signaturesMac");
+                case CERTIFICATES -> i18n.text("bread.certificatesCms");
+                case JOSE -> i18n.text("bread.joseJwt");
+                case POST_QUANTUM -> i18n.text("bread.postQuantumPqc");
+                case XML_SECURITY -> i18n.text("bread.xmlSecurity");
+                case WSS_SECURITY -> i18n.text("bread.wssSecurity");
+                case EMV -> i18n.text("bread.emvSmartcards");
+                case PAYMENTS -> i18n.text("bread.paymentCryptography");
+                case GENERIC -> i18n.text("bread.utilities");
+                case HISTORY -> i18n.text("bread.history");
+                case CLIPBOARD_SHELF -> i18n.text("bread.clipboardShelf");
+                case SAVED_SESSIONS -> i18n.text("bread.savedSessions");
+                default -> i18n.text("bread.section");
             };
 
             if (route.section() != null && !route.section().isBlank()) {
@@ -670,7 +1169,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(operationName);
             if (descriptor.isPresent()) {
                 com.cryptocarver.model.OperationDescriptor op = descriptor.get();
-                sectionLabel = op.getCategory() != null ? op.getCategory() : "Laboratory";
+                sectionLabel = op.getCategory() != null ? localizedSectionText(op.getCategory()) : i18n.text("bread.section");
                 moduleLabel = sectionLabel;
                 operationLabel = op.getTitle();
                 canonicalModulePath = op.getNavigationPath() != null ? op.getNavigationPath() : op.getTitle();
@@ -679,15 +1178,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (breadcrumbSectionBtn != null) {
             breadcrumbSectionBtn.setText(sectionLabel);
-            breadcrumbSectionBtn.setAccessibleText("Navigate to Section: " + sectionLabel);
-            breadcrumbSectionBtn.setTooltip(new Tooltip("Navigate to " + sectionLabel));
+            breadcrumbSectionBtn.setUserData(resolved.isPresent() ? resolved.get().module() : sectionLabel);
+            breadcrumbSectionBtn.setAccessibleText(i18n.text("bread.navigateSection", sectionLabel));
+            breadcrumbSectionBtn.setTooltip(new Tooltip(i18n.text("bread.navigateSection", sectionLabel)));
         }
 
         if (breadcrumbModuleBtn != null) {
-            breadcrumbModuleBtn.setText(moduleLabel);
+            breadcrumbModuleBtn.setText(localizedModuleText(moduleLabel));
             breadcrumbModuleBtn.setUserData(canonicalModulePath);
-            breadcrumbModuleBtn.setAccessibleText("Navigate to Module: " + moduleLabel);
-            breadcrumbModuleBtn.setTooltip(new Tooltip("Navigate to " + moduleLabel));
+            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel)));
+            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel))));
         }
 
         if (breadcrumbOperationLabel != null) {
@@ -698,6 +1198,21 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void handleBreadcrumbSectionClick() {
         if (breadcrumbSectionBtn == null) return;
+        if (breadcrumbSectionBtn.getUserData() instanceof UiNavigationRegistry.Module module) {
+            switch (module) {
+                case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> navigationRail.selectSection(NavigationRail.Section.KEYS);
+                case CIPHER -> navigationRail.selectSection(NavigationRail.Section.CIPHER);
+                case AUTHENTICATION -> navigationRail.selectSection(NavigationRail.Section.AUTHENTICATION);
+                case CERTIFICATES -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
+                case JOSE -> navigationRail.selectSection(NavigationRail.Section.JOSE);
+                case POST_QUANTUM -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
+                case XML_SECURITY, WSS_SECURITY -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
+                case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
+                case HISTORY -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
+                default -> showQuickStart();
+            }
+            return;
+        }
         String sectionText = breadcrumbSectionBtn.getText();
         if (navigationRail == null) {
             showQuickStart();
@@ -751,13 +1266,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (!favoriteToggleBtn.getStyleClass().contains("active")) {
                 favoriteToggleBtn.getStyleClass().add("active");
             }
-            favoriteToggleBtn.setAccessibleText("Remove " + operationName + " from Favorites");
-            favoriteToggleBtn.setTooltip(new Tooltip("Favorite active (Shortcut+Shift+F to toggle)"));
+            favoriteToggleBtn.setAccessibleText(i18n.text("favorite.remove", operationName));
+            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.active")));
         } else {
             favoriteToggleBtn.setText("☆");
             favoriteToggleBtn.getStyleClass().remove("active");
-            favoriteToggleBtn.setAccessibleText("Add " + operationName + " to Favorites");
-            favoriteToggleBtn.setTooltip(new Tooltip("Add to Favorites (Shortcut+Shift+F)"));
+            favoriteToggleBtn.setAccessibleText(i18n.text("favorite.add", operationName));
+            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.tooltip")));
         }
     }
 
@@ -792,11 +1307,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             contractOperationLabel.setText(opText);
 
             // Add a tooltip for the contract description
+            String defaultPayloadTooltip = i18n.text("toolbar.payloadTooltip");
             if (profile.contractDescription() != null && !profile.contractDescription().isEmpty()) {
                 Tooltip tooltipObj = new Tooltip(profile.contractDescription());
                 contractOperationLabel.setTooltip(tooltipObj);
                 if (inputFormatCombo != null) {
-                    inputFormatCombo.setTooltip(tooltipObj);
+                    inputFormatCombo.setTooltip(new Tooltip(defaultPayloadTooltip + "\n" + profile.contractDescription()));
                 }
                 if (outputFormatCombo != null) {
                     outputFormatCombo.setTooltip(tooltipObj);
@@ -804,7 +1320,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             } else {
                 contractOperationLabel.setTooltip(null);
                 if (inputFormatCombo != null) {
-                    inputFormatCombo.setTooltip(null);
+                    inputFormatCombo.setTooltip(new Tooltip(defaultPayloadTooltip));
                 }
                 if (outputFormatCombo != null) {
                     outputFormatCombo.setTooltip(null);
@@ -821,8 +1337,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (combo == null) return;
 
         if (allowedFormats == null || allowedFormats.isEmpty()) {
-            combo.getItems().setAll("Not applicable");
-            combo.setValue("Not applicable");
+            // Operations without a shared byte-format contract must not mutate
+            // the last meaningful toolbar selection while navigating.
             combo.setDisable(true);
             return;
         }
@@ -1024,41 +1540,32 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (items.isEmpty()) {
             Label placeholder = new Label("No recent operations");
-            placeholder.setStyle("-fx-text-fill: -color-text-muted; -fx-font-size: 11px; -fx-padding: 10;");
+            placeholder.getStyleClass().add("muted-text");
+            placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 10;");
             historyContainer.getChildren().add(placeholder);
             return;
         }
 
         for (com.cryptocarver.model.HistoryCommand item : items) {
             HBox historyCommand = new HBox(8);
-            historyCommand.setStyle(
-                    "-fx-background-color: -color-bg-sidebar-hover; " +
-                            "-fx-padding: 8; " +
-                            "-fx-background-radius: 6;");
+            historyCommand.getStyleClass().add("history-card");
             historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
             VBox infoBox = new VBox(2);
             Label opLabel = new Label(item.getOperation());
-            opLabel.setStyle("-fx-text-fill: -color-text-light; -fx-font-weight: bold; -fx-font-size: 12px;");
+            opLabel.getStyleClass().add("history-card-title");
 
             String relTime = formatRelativeTime(item.getTimestamp());
             Label timeLabel = new Label(relTime);
-            timeLabel.setStyle("-fx-text-fill: -color-text-subtle; -fx-font-size: 10px;");
+            timeLabel.getStyleClass().add("history-card-time");
             Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
 
             infoBox.getChildren().addAll(opLabel, timeLabel);
             HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
 
             Button reopenButton = new Button("Reopen");
-            reopenButton.setStyle(
-                    "-fx-background-color: transparent; " +
-                            "-fx-border-color: -color-border; " +
-                            "-fx-border-width: 1; " +
-                            "-fx-border-radius: 3; " +
-                            "-fx-text-fill: -color-text-light; " +
-                            "-fx-font-size: 10px; " +
-                            "-fx-padding: 3 8; " +
-                            "-fx-cursor: hand;");
+            reopenButton.getStyleClass().add("history-card-action");
+            reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
 
             reopenButton.setOnAction(e -> {
                 restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
@@ -1177,7 +1684,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Restores an operation selected from the modular history view. */
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
         handleItemSelected(operation);
-        java.util.List<javafx.scene.Node> redacted = restoreUIState(state);
+        java.util.List<javafx.scene.Node> redacted = UiStateSnapshot.restoreHistoryRecipe(this, state);
         updateStatus("Restored state for: " + operation);
         if (redacted != null && !redacted.isEmpty()) {
             javafx.application.Platform.runLater(() -> redacted.get(0).requestFocus());
@@ -1187,17 +1694,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleExportHistory() {
         if (historyManager == null || historyManager.getHistoryItems().isEmpty()) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Export History");
-            alert.setHeaderText("No History to Export");
-            alert.setContentText("The history is currently empty.");
+            Alert alert = LocalizedDialogSupport.alert(Alert.AlertType.INFORMATION,
+                    "dialog.exportHistory.title", "dialog.exportHistory.emptyHeader",
+                    i18n.text("dialog.exportHistory.emptyContent"));
             alert.showAndWait();
             return;
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Export History");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Files", "*.json"));
+        FileChooser fileChooser = LocalizedDialogSupport.fileChooser(
+                "dialog.exportHistory.title", "dialog.exportHistory.filter", "JSON Files", "*.json");
         fileChooser.setInitialFileName("cryptocarver-history-export.json");
 
         File file = fileChooser.showSaveDialog(mainPane.getScene().getWindow());
@@ -1210,15 +1715,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 writer.write(json);
 
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Export Successful");
+                alert.setTitle(i18n.text("dialog.exportHistory.success"));
                 alert.setHeaderText(null);
                 alert.setContentText("History successfully exported using " + visibility + " policy to:\n"
                         + file.getAbsolutePath());
                 alert.showAndWait();
             } catch (IOException e) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Export Failed");
-                alert.setHeaderText("Error Saving File");
+                alert.setTitle(i18n.text("dialog.exportHistory.failure"));
+                alert.setHeaderText(i18n.text("dialog.exportHistory.saveFailure"));
                 alert.setContentText(e.getMessage());
                 alert.showAndWait();
             }
@@ -1227,11 +1732,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleClearHistory() {
-        if (historyManager != null) {
+        if (historyManager != null && (historyManager.getHistoryItems().isEmpty() || Boolean.getBoolean("test.mode")
+                || confirmClearHistory())) {
             historyManager.clearHistory();
             refreshHistoryUI();
             updateStatus("History cleared");
         }
+    }
+
+    private boolean confirmClearHistory() {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                i18n.text("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
+        confirmation.setTitle(i18n.text("module.history.clearTitle"));
+        confirmation.setHeaderText(i18n.text("module.history.clearHeader"));
+        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     /**
@@ -1330,7 +1844,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
 
             for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty() && pane.getText().contains(targetPane)) {
+                if (!targetPane.isEmpty() && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.payments())) {
                     accordion.setExpandedPane(pane);
                     revealExpandedPane(pane);
                     break;
@@ -1463,7 +1977,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (statusLabel == null) return;
         statusLabel.setText(message);
         statusResetTimer.stop();
-        statusResetTimer.setOnFinished(event -> statusLabel.setText("Ready"));
+        statusResetTimer.setOnFinished(event -> statusLabel.setText(i18n.text("status.ready")));
         statusResetTimer.playFromStart();
     }
 
@@ -1476,7 +1990,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleClearInput() {
         if (currentActiveOperation == null) {
-            updateStatus("No active operation to clear");
+            updateStatus(i18n.text("status.noActiveOperation"));
             return;
         }
 
@@ -1496,63 +2010,51 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         clearPublishedResultSnapshot();
-        updateStatus("Input cleared");
+        updateStatus(i18n.text("status.inputCleared"));
     }
 
     @FXML
     private void handleClearOutput() {
         // Reuse clear input logic for now (Clear All)
         handleClearInput();
-        updateStatus("Output cleared");
+        updateStatus(i18n.text("status.outputCleared"));
     }
 
     public boolean hasCurrentResult() {
-        return lastPublishedResultSnapshot != null;
+        return lastPublishedResultSnapshot != null || !resolveCurrentOutputText().isBlank();
     }
 
     @FXML
     public void handleCopyOutput() {
-        if (lastPublishedResultSnapshot == null) {
-            updateStatus("No output available to copy");
+        String content = resolveCurrentOutputText();
+        if (content == null || content.isBlank()) {
+            updateStatus(i18n.text("status.noOutput"));
             return;
         }
-        String content = resolveCurrentOutputText();
-
-        if (content != null && !content.isEmpty()) {
-            copyToClipboard(content);
-            updateStatus("Output copied to clipboard");
-        } else {
-            updateStatus("No output available to copy");
+        if (content.equals("***MASKED***")) {
+            updateStatus(i18n.text("status.secretBlocked"));
+            return;
         }
+        copyToClipboard(content);
+        updateStatus(i18n.text("status.outputCopied"));
     }
 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
     @FXML
     public void handleAddCurrentOutputToShelf() {
-        if (lastPublishedResultSnapshot == null) {
-            showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
-            return;
-        }
-        String content = resolveCurrentOutputText();
+        TextArea area = preferredResultArea();
+        String content = resolveResultText(area);
         if (content == null || content.isBlank()) {
             showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
             return;
         }
-        // This is a whole published result, not a selection from a TextArea.
-        // Passing it as selected text makes the stale-selection guard reject it
-        // because no originating area exists.
-        handleAddToClipboardShelfSecure(null, null);
+        handleAddToClipboardShelfSecure(area, null);
     }
 
     /** Opens the active operation result in a large, independent viewer. */
     @FXML
     public void handleOpenExpandedResultViewer() {
-        if (lastPublishedResultSnapshot == null) {
-            showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
-            return;
-        }
-        TextArea requestedArea = preferredResultArea();
-        String content = resolveResultText(requestedArea);
+        String content = resolveCurrentOutputText();
         if (content == null || content.isBlank()) {
             showInfo("No result available", "Run an operation with output before opening the expanded viewer.");
             return;
@@ -1569,9 +2071,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private TextArea preferredResultArea() {
-        // Enriched/binary snapshots are authoritative (for example GCM output
-        // plus its detached authentication tag). Operations that only publish
-        // metadata should use the actual visible result control instead.
         return resultAreaTracker.preferred(mainPane, hasPublishedPayload());
     }
 
@@ -1583,31 +2082,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return output != null && output.length > 0;
     }
 
-    /**
-     * Returns the text explicitly selected by the user when it is a registered
-     * result area.  This matters for generated key pairs: their public and
-     * private tabs are two independent outputs, not a single public payload.
-     */
     private String resolveResultText(TextArea requestedArea) {
-        if (resultAreaTracker.isRegistered(requestedArea)) {
+        if (ResultAreaTracker.isKeyPairResultArea(requestedArea) && resultAreaTracker.isRegistered(requestedArea)) {
             return renderResultArea(requestedArea);
         }
-        if (lastPublishedResultSnapshot == null) {
-            return "";
+        if (lastPublishedResultSnapshot != null) {
+            return renderPublishedResult(lastPublishedResultSnapshot,
+                    com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
         }
-        return renderPublishedResult(lastPublishedResultSnapshot,
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
+        if (resultAreaTracker.isRegistered(requestedArea) && !requestedArea.isEditable()) {
+            String rendered = renderResultArea(requestedArea);
+            if (rendered != null && !rendered.isBlank()) return rendered;
+        }
+        TextArea fallback = resultAreaTracker.findVisible(mainPane);
+        if (fallback != null && resultAreaTracker.isRegistered(fallback) && !fallback.isEditable()) {
+            String rendered = renderResultArea(fallback);
+            if (rendered != null && !rendered.isBlank()) return rendered;
+        }
+        return "";
     }
 
     private String renderResultArea(TextArea area) {
         if (area == null || area.getText() == null || area.getText().isBlank()) {
             return "";
-        }
-        // Locally generated key pairs are explicit laboratory output.  Their
-        // public/private tabs must remain inspectable and reusable even when a
-        // global history view is configured to mask secrets.
-        if (ResultAreaTracker.isKeyPairResultArea(area)) {
-            return area.getText();
         }
         com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
         com.cryptocarver.model.SecretVisibilityProfile visibility =
@@ -1625,6 +2122,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
         if (ResultAreaTracker.isPrivateKeyResultArea(area)) {
             return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+        }
+        if (area != null) {
+            String id = area.getId() == null ? "" : area.getId().toLowerCase(java.util.Locale.ROOT);
+            if (id.contains("privatekey") || id.contains("secret") || id.contains("kdf") || id.contains("pin")
+                    || id.contains("pass") || id.contains("pwd") || id.contains("cvv") || id.contains("dukpt")
+                    || id.contains("keywrap")) {
+                return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+            }
+            if (id.contains("key") || id.contains("mac") || id.contains("iv") || id.contains("cipher")) {
+                return com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
+            }
         }
         if (lastPublishedResultSnapshot != null) {
             return classifyPublishedResult(lastPublishedResultSnapshot);
@@ -1660,40 +2168,47 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             updateStatus(result.getStatusMessage());
         }
 
-        if (resultSummaryBar != null) {
-            resultSummaryBar.setManaged(true);
-            resultSummaryBar.setVisible(true);
-            if (resultOpLabel != null) resultOpLabel.setText(result.getOperation());
+        boolean isFailed = result.getStatusMessage() != null && result.getStatusMessage().toLowerCase(java.util.Locale.ROOT).contains("failed");
+        boolean hasPayload = (result.getOutput() != null && result.getOutput().length > 0)
+                || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
+        boolean hasInspectableResult = hasPayload || !result.getDetails().isEmpty();
 
-            // Resolve algorithm
-            String algo = "N/A";
-            if (result.getDetails() != null) {
-                for (com.cryptocarver.model.OperationDetail d : result.getDetails()) {
-                    if ("Algorithm".equalsIgnoreCase(d.name()) || "Type".equalsIgnoreCase(d.name())) {
-                        algo = d.value();
-                        break;
+        if (resultSummaryBar != null) {
+            if (isFailed || !hasInspectableResult) {
+                resultSummaryBar.setManaged(false);
+                resultSummaryBar.setVisible(false);
+            } else {
+                resultSummaryBar.setManaged(true);
+                resultSummaryBar.setVisible(true);
+                if (resultOpLabel != null) resultOpLabel.setText(result.getOperation());
+
+                // Resolve algorithm
+                String algo = "N/A";
+                if (result.getDetails() != null) {
+                    for (com.cryptocarver.model.OperationDetail d : result.getDetails()) {
+                        if ("Algorithm".equalsIgnoreCase(d.name()) || "Type".equalsIgnoreCase(d.name())) {
+                            algo = d.value();
+                            break;
+                        }
                     }
                 }
-            }
-            if (resultAlgoLabel != null) resultAlgoLabel.setText(algo);
+                if (resultAlgoLabel != null) resultAlgoLabel.setText(algo);
 
-            // Resolve sizes
-            int inLen = result.getInput() != null ? result.getInput().length : 0;
-            int outLen = result.getOutput() != null ? result.getOutput().length : 0;
-            if (resultSizeLabel != null) resultSizeLabel.setText("In: " + inLen + "B / Out: " + outLen + "B");
+                // Resolve sizes
+                int inLen = result.getInput() != null ? result.getInput().length : 0;
+                int outLen = result.getOutput() != null ? result.getOutput().length : 0;
+                if (resultSizeLabel != null) resultSizeLabel.setText(i18n.text("result.size", inLen, outLen));
 
-            // Resolve output format
-            String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
-            if (resultFormatLabel != null) resultFormatLabel.setText(outFormat);
+                // Resolve output format
+                String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
+                if (resultFormatLabel != null) resultFormatLabel.setText(outFormat);
 
-            // Success / Error status
-            if (resultStatusBadge != null) {
-                if (result.getStatusMessage() != null && result.getStatusMessage().toLowerCase().contains("failed")) {
-                    resultStatusBadge.setText("FAILED");
-                    resultStatusBadge.setStyle("-fx-background-color: #fde8e8; -fx-text-fill: #9b1c1c; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
-                } else {
-                    resultStatusBadge.setText("SUCCESS");
-                    resultStatusBadge.setStyle("-fx-background-color: #def7ec; -fx-text-fill: #03543f; -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 10;");
+                // Success / Error status
+                if (resultStatusBadge != null) {
+                    resultStatusBadge.setText(i18n.text("result.success"));
+                    resultStatusBadge.getStyleClass().setAll("result-status-success");
+                    resultStatusBadge.setStyle("");
+                    resultStatusBadge.setAccessibleText(i18n.text("a11y.resultStatus", resultStatusBadge.getText()));
                 }
             }
         }
@@ -1818,7 +2333,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
         boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                 || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-        if (requiresFullLab && !ResultAreaTracker.isKeyPairResultArea(area)
+        if (requiresFullLab
                 && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
             return;
@@ -1837,7 +2352,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
             boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                     || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-            if (requiresFullLab && !ResultAreaTracker.isKeyPairResultArea(area)
+            if (requiresFullLab
                     && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
                 return;
@@ -1865,15 +2380,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.model.ClipboardEntry.Format format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
         com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
         String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
+        String algorithm = null;
+        if (lastPublishedResultSnapshot != null && lastPublishedResultSnapshot.getDetails() != null) {
+            for (com.cryptocarver.model.OperationDetail detail : lastPublishedResultSnapshot.getDetails()) {
+                if (detail != null && ("Algorithm".equalsIgnoreCase(detail.name())
+                        || "Type".equalsIgnoreCase(detail.name()))) {
+                    algorithm = detail.value();
+                    break;
+                }
+            }
+        }
 
-        // Classification already determined by classifyPublishedResult
+        java.util.Optional<com.cryptocarver.model.ClipboardEntry> duplicate = com.cryptocarver.model.ClipboardShelfManager.getInstance().findDuplicate(text, sourceOp);
+        if (duplicate.isPresent()) {
+            updateStatus("Item already in Clipboard Shelf: " + duplicate.get().getLabel());
+            return;
+        }
 
         com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
                 "Copied from " + sourceOp,
                 text,
                 format,
                 cls,
-                sourceOp
+                sourceOp,
+                algorithm
         );
         com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
         updateStatus("Added to Clipboard Shelf");
@@ -1888,20 +2418,51 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         switch (targetType) {
             case "MANUAL_CONVERSION":
                 if (genericContainerController != null) {
+                    navigateToModule("Manual Conversion");
                     genericContainerController.fillManualConversionInput(value, format);
                     expandGenericAccordionPane("Manual Conversion");
                 }
                 break;
             case "SYMMETRIC_CIPHER":
                 if (cipherController != null) {
+                    navigateToModule("Symmetric Ciphers");
                     cipherController.fillSymmetricCipherInput(value, format);
                     expandCipherAccordionPane("Symmetric Ciphers");
                 }
                 break;
             case "HASHING":
                 if (genericContainerController != null) {
-                    genericContainerController.fillHashInput(value);
+                    navigateToModule("Hashing");
+                    genericContainerController.fillHashInput(value, format);
                     expandGenericAccordionPane("Hashing");
+                }
+                break;
+            case "XML_SECURITY":
+                if (xmlSecurityContainerController != null) {
+                    navigateToModule("XML Security");
+                    xmlSecurityContainerController.fillClipboardInput(value);
+                    expandXMLAccordionPane("Inspect Signed XML");
+                }
+                break;
+            case "WSS_SECURITY":
+                if (wssSecurityContainerController != null) {
+                    navigateToModule("WSS Security");
+                    wssSecurityContainerController.fillClipboardInput(value);
+                    expandWssAccordionPane("Sign SOAP");
+                }
+                break;
+            case "PAYMENTS":
+                if (paymentsContainerController != null) {
+                    navigateToModule("Payments");
+                    paymentsContainerController.fillClipboardInput(value);
+                    expandPaymentsAccordionPane("Clear PIN Blocks");
+                }
+                break;
+            case "TR31":
+                if (keysController != null) {
+                    navigateToModule("TR-31 Key Blocks");
+                    keysController.fillTR31KeyBlockInput(value);
+                    expandAccordionPane("TR-31 Key Blocks");
                 }
                 break;
             case "JOSE_JWT":
@@ -2086,18 +2647,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         GridPane grid = new GridPane();
         grid.setHgap(15);
         grid.setVgap(8);
-        grid.setStyle("-fx-background-color: -color-bg-subtle; -fx-padding: 12; -fx-background-radius: 6;");
+        grid.getStyleClass().add("quick-start-card");
 
         int row = 0;
         for (com.cryptocarver.model.KeyboardShortcutEntry shortcut : com.cryptocarver.model.KeyboardShortcutRegistry.getShortcuts()) {
             Label comboLabel = new Label(shortcut.getDisplayCombination());
-            comboLabel.setStyle("-fx-font-family: monospace; -fx-font-weight: bold; -fx-text-fill: -color-primary-dark; -fx-font-size: 12px;");
+            comboLabel.getStyleClass().add("quick-start-title");
 
             Label actionLabel = new Label(shortcut.getActionName());
-            actionLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+            actionLabel.getStyleClass().add("heading-text");
+            actionLabel.setStyle("-fx-font-size: 12px;");
 
             Label descLabel = new Label(shortcut.getDescription());
-            descLabel.setStyle("-fx-text-fill: -color-text-muted; -fx-font-size: 11px;");
+            descLabel.getStyleClass().add("quick-start-description");
 
             grid.add(comboLabel, 0, row);
             grid.add(actionLabel, 1, row);
@@ -2180,8 +2742,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             System.err.println("SHOW_ERROR: " + error.title() + " - " + error.remedy());
         }
         if (inlineErrorPresenter != null) {
-            inlineErrorPresenter.showError(error, rootStackPane != null ? rootStackPane : mainPane);
+            inlineErrorPresenter.showError(localizedError(error), rootStackPane != null ? rootStackPane : mainPane);
+            inlineErrorPresenter.goToField(rootStackPane != null ? rootStackPane : mainPane);
         }
+    }
+
+    private UserFacingError localizedError(UserFacingError error) {
+        if (error == null) return null;
+        String title = error.title() == null ? "" : error.title().toLowerCase(java.util.Locale.ROOT);
+        String keyPrefix = null;
+        if (title.contains("authentication tag") || title.contains("tag verification") || title.contains("autenticación")) keyPrefix = "error.wrap.tag";
+        else if (title.contains("padding")) keyPrefix = "error.wrap.padding";
+        else if (title.contains("key parameter") || title.contains("parámetro de clave")) keyPrefix = "error.wrap.key";
+        else if (title.contains("hexadecimal")) keyPrefix = "error.wrap.hex";
+        else if (title.contains("base64")) keyPrefix = "error.wrap.base64";
+        else if ((title.contains("certificate") || title.contains("certificado") || title.contains("key format"))
+                && !title.startsWith("missing ") && !title.startsWith("falta ")) keyPrefix = "error.wrap.cert";
+        else if (title.contains("timestamp authority") || title.contains("sellado de tiempo")) keyPrefix = "error.wrap.tsa";
+        if (keyPrefix == null) return error;
+        return new UserFacingError(
+                i18n.text(keyPrefix + ".title"),
+                i18n.text(keyPrefix + ".detail"),
+                i18n.text(keyPrefix + ".remedy"),
+                error.fieldKey(), error.cause());
     }
 
     @Override
@@ -2407,12 +2990,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
 
         for (TitledPane pane : genericContainer.getPanes()) {
-            if (pane.getText().contains(paneName) || paneName.contains(stripEmoji(pane.getText()))) {
+            if (matchesGenericAccordionPane(pane, paneName)) {
                 genericContainer.setExpandedPane(pane);
                 revealExpandedPane(pane);
                 break;
             }
         }
+    }
+
+    /**
+     * Routes are intentionally stored in English canonical names, while UX-15
+     * may translate the visible titled-pane text. Compare against both forms so
+     * selecting a sidebar operation keeps working after a live language change.
+     */
+    private boolean matchesGenericAccordionPane(TitledPane pane, String canonicalPaneName) {
+        String visibleText = pane.getText() == null ? "" : pane.getText();
+        if (visibleText.contains(canonicalPaneName)
+                || canonicalPaneName.contains(stripEmoji(visibleText))) {
+            return true;
+        }
+
+        for (java.util.Map.Entry<String, String> entry : ModuleTextCatalog.generic().entrySet()) {
+            String sourceText = entry.getKey();
+            boolean isRequestedPane = sourceText.contains(canonicalPaneName)
+                    || canonicalPaneName.contains(stripEmoji(sourceText));
+            if (isRequestedPane
+                    && visibleText.equals(com.cryptocarver.service.I18nService.getInstance().text(entry.getValue()))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Helper methods
@@ -2465,7 +3072,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (emvContainer.getChildren().get(0) instanceof Accordion) {
                 Accordion acc = (Accordion) emvContainer.getChildren().get(0);
                 for (TitledPane pane : acc.getPanes()) {
-                    if (pane.getText().contains(title)) {
+                    if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
                         acc.setExpandedPane(pane);
                         revealExpandedPane(pane);
                         break;
@@ -2634,10 +3241,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         // Ask for name
-        TextInputDialog dialog = new TextInputDialog("My Session");
-        dialog.setTitle("Save Session");
-        dialog.setHeaderText("Save current workspace state");
-        dialog.setContentText("Session Name:");
+        TextInputDialog dialog = LocalizedDialogSupport.textInput(
+                "dialog.saveSession.title", "dialog.saveSession.header", "dialog.saveSession.prompt", "My Session");
 
         // Style the dialog roughly to match dark theme (optional/basic)
         dialog.getDialogPane().setStyle("-fx-background-color: #2d3748;");
@@ -2690,7 +3295,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         ChoiceDialog<String> modeDialog = new ChoiceDialog<>("Encrypted (.ccconfig)",
                 "Encrypted (.ccconfig)", "Plain JSON — unsafe");
-        modeDialog.setTitle("Export Screen Configuration");
+        modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
         modeDialog.setHeaderText("This configuration may contain keys, passwords, PINs or payloads.");
         modeDialog.setContentText("Protection:");
         java.util.Optional<String> mode = modeDialog.showAndWait();
@@ -2712,7 +3317,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export Screen Configuration");
+        chooser.setTitle(i18n.text("dialog.configuration.exportTitle"));
         chooser.setInitialFileName("cryptocarver-" + safeFileName(configuration.operation())
                 + (encrypted ? ".ccconfig" : ".json"));
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
@@ -2743,10 +3348,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleImportScreenConfiguration() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Import Screen Configuration");
+        chooser.setTitle(i18n.text("dialog.configuration.importTitle"));
         chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("CryptoCarver Screen Configuration", "*.ccconfig", "*.json"),
-                new FileChooser.ExtensionFilter("All Files", "*.*"));
+                new FileChooser.ExtensionFilter(i18n.text("dialog.configuration.filter"), "*.ccconfig", "*.json"),
+                new FileChooser.ExtensionFilter(i18n.text("dialog.allFiles"), "*.*"));
         File file = chooser.showOpenDialog(mainPane == null || mainPane.getScene() == null
                 ? null : mainPane.getScene().getWindow());
         if (file == null) return;
@@ -3127,8 +3732,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void setupGuidedFlowKeyboardAndTooltips() {
         if (guidedFlowPanel == null) return;
 
-        if (guideBackBtn != null) guideBackBtn.setTooltip(new Tooltip("Return to previous guided step"));
-        if (guideNextBtn != null) guideNextBtn.setTooltip(new Tooltip("Advance to next guided step"));
+        if (guideBackBtn != null) guideBackBtn.setTooltip(new Tooltip(i18n.text("guide.backTooltip")));
+        if (guideNextBtn != null) guideNextBtn.setTooltip(new Tooltip(i18n.text("guide.nextTooltip")));
 
         guidedFlowPanel.setOnKeyPressed(event -> {
             if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
@@ -3151,6 +3756,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "Laboratory".equals(m.getText()));
         if (!hasLabMenu) {
             javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
+            labMenu.setUserData("laboratory");
             labMenu.setStyle("-fx-text-fill: white;");
 
             javafx.scene.control.MenuItem quickStartItem = new javafx.scene.control.MenuItem("Quick Start");
@@ -3248,9 +3854,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 readinessPanel.setManaged(true);
                 readinessPanel.setVisible(true);
             }
-            String msg = firstIssue != null ? firstIssue.getMessage() : "Incomplete operation setup";
+            String msg = firstIssue != null ? localizedPreflightMessage(firstIssue) : i18n.text("preflight.remedy.generic");
             String fieldKey = firstIssue != null ? firstIssue.getTargetControlKey() : null;
-            showError(new UserFacingError("Preflight Setup Required", msg, "Complete the highlighted setup steps before running the operation.", fieldKey));
+            showError(new UserFacingError(i18n.text("preflight.title"), msg,
+                    localizedPreflightRemedy(firstIssue), fieldKey));
             return false;
         }
         return true;
@@ -3298,23 +3905,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         switch (status) {
             case READY -> {
                 readinessStatusBadge.setText("✔ READY");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #059669;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-ready");
+                readinessStatusBadge.setStyle("");
             }
             case WARNING -> {
                 readinessStatusBadge.setText("⚠️ WARNING");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #d97706;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-warning");
+                readinessStatusBadge.setStyle("");
             }
             case INCOMPLETE -> {
                 readinessStatusBadge.setText("❓ INCOMPLETE");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #eab308;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-incomplete");
+                readinessStatusBadge.setStyle("");
             }
             case BLOCKED -> {
                 readinessStatusBadge.setText("⛔ BLOCKED");
-                readinessStatusBadge.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 4; -fx-text-fill: #ffffff; -fx-background-color: #b91c1c;");
+                readinessStatusBadge.getStyleClass().setAll("readiness-status-blocked");
+                readinessStatusBadge.setStyle("");
             }
         }
 
-        readinessSummaryLabel.setText(currentPreflightReport.getSummaryMessage());
+        readinessSummaryLabel.setText(localizedPreflightSummary(currentPreflightReport));
 
         readinessChecksContainer.getChildren().clear();
         java.util.List<com.cryptocarver.model.PreflightCheck> checks = currentPreflightReport.getChecks();
@@ -3329,8 +3940,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case INCOMPLETE -> "❓ ";
                 case BLOCKED -> "⛔ ";
             };
-            checkBtn.setText(icon + check.getName() + ": " + check.getMessage());
-            checkBtn.setStyle("-fx-font-size: 10px; -fx-padding: 3 8; -fx-background-radius: 4; -fx-cursor: hand;");
+            checkBtn.setText(icon + check.getName() + ": " + localizedPreflightMessage(check));
+            checkBtn.getStyleClass().add("readiness-check-button");
             checkBtn.setOnAction(e -> {
                 if (check.getTargetControlKey() != null) {
                     focusControl(check.getTargetControlKey());
@@ -3338,6 +3949,55 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             });
             readinessChecksContainer.getChildren().add(checkBtn);
         }
+    }
+
+    private String localizedPreflightSummary(com.cryptocarver.model.PreflightReport report) {
+        long issues = report.getChecks().stream()
+                .filter(check -> check.getStatus() != com.cryptocarver.model.PreflightStatus.READY)
+                .count();
+        return switch (report.getOverallStatus()) {
+            case READY -> i18n.text("preflight.summary.ready");
+            case BLOCKED -> i18n.text("preflight.summary.blocked", issues);
+            case INCOMPLETE -> i18n.text("preflight.summary.incomplete", issues);
+            case WARNING -> i18n.text("preflight.summary.warning", issues);
+        };
+    }
+
+    private String localizedPreflightMessage(com.cryptocarver.model.PreflightCheck check) {
+        if (check == null) return i18n.text("preflight.remedy.generic");
+        String message = check.getMessage() == null ? "" : check.getMessage();
+        String lower = message.toLowerCase(java.util.Locale.ROOT);
+        String target = check.getTargetControlKey() == null ? "" : check.getTargetControlKey().toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("empty") || lower.contains("required") || lower.contains("missing")) {
+            if (target.contains("tag")) return i18n.text("preflight.tag.required");
+            if (target.contains("signature")) return i18n.text("preflight.signature.required");
+            if (target.contains("algorithm")) return i18n.text("preflight.algorithm.required");
+            if (target.contains("mode")) return i18n.text("preflight.mode.required");
+            if (target.contains("key")) return i18n.text("preflight.key.required");
+            if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.iv.required");
+            return i18n.text("preflight.input.required");
+        }
+        if (lower.contains("non-hexadecimal") || lower.contains("invalid characters")) {
+            if (target.contains("key")) return i18n.text("preflight.key.invalid");
+            if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.iv.invalid");
+            if (target.contains("tag")) return i18n.text("preflight.tag.invalid");
+            return i18n.text("preflight.input.hex.invalid");
+        }
+        if (lower.contains("odd number")) return i18n.text("preflight.input.hex.odd");
+        if (lower.contains("base64")) return i18n.text("preflight.input.base64.invalid");
+        return message;
+    }
+
+    private String localizedPreflightRemedy(com.cryptocarver.model.PreflightCheck check) {
+        if (check == null || check.getTargetControlKey() == null) return i18n.text("preflight.remedy.generic");
+        String target = check.getTargetControlKey().toLowerCase(java.util.Locale.ROOT);
+        if (target.contains("algorithm")) return i18n.text("preflight.remedy.algorithm");
+        if (target.contains("mode")) return i18n.text("preflight.remedy.mode");
+        if (target.contains("key")) return i18n.text("preflight.remedy.key");
+        if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.remedy.iv");
+        if (target.contains("tag")) return i18n.text("preflight.remedy.tag");
+        if (target.contains("input") || target.contains("data")) return i18n.text("preflight.remedy.input");
+        return i18n.text("preflight.remedy.generic");
     }
 
     private com.cryptocarver.model.PreflightReport evaluatePreflightForOperation(String operation, boolean isEncrypt) {
@@ -3348,7 +4008,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (cipherContainerController == null) return null;
             return com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
                     getFieldText(cipherContainerController, "cipherInputArea"),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Plain Text",
+                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text (UTF-8)",
                     getComboValue(cipherContainerController, "symmetricAlgorithmCombo"),
                     getComboValue(cipherContainerController, "cipherModeCombo"),
                     getComboValue(cipherContainerController, "paddingCombo"),
@@ -3364,27 +4024,32 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         } else if ("Hashing".equals(opName)) {
             return com.cryptocarver.model.OperationPreflightEngine.checkHashing(
                     getFieldText(genericContainerController, "hashInputArea"),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Plain Text",
+                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text (UTF-8)",
                     getComboValue(genericContainerController, "hashAlgorithmCombo")
             );
         } else if ("Digital Signatures".equals(opName)) {
             String keyText = isEncrypt ? getFieldText(authenticationContainerController, "signaturePrivateKeyArea") : getFieldText(authenticationContainerController, "signaturePublicKeyArea");
+            String verifyText = getFieldText(authenticationContainerController, "signatureVerifyField");
             return com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
                     getFieldText(authenticationContainerController, "authInputArea"),
                     getComboValue(authenticationContainerController, "signatureAlgorithmCombo"),
                     keyText,
+                    verifyText,
                     false,
                     isEncrypt
             );
         } else if ("Message Authentication Codes".equals(opName)) {
             String keySource = getComboValue(authenticationContainerController, "macKeySourceCombo");
             String keyReference = getComboValue(authenticationContainerController, "macHsmKeyCombo");
+            String macVerifyText = getFieldText(authenticationContainerController, "authMacVerifyField");
             return com.cryptocarver.model.OperationPreflightEngine.checkMac(
                     getFieldText(authenticationContainerController, "authInputArea"),
                     getComboValue(authenticationContainerController, "authMacAlgorithmCombo"),
                     keySource,
                     getFieldText(authenticationContainerController, "authMacKeyField"),
                     keyReference,
+                    macVerifyText,
+                    isEncrypt,
                     "Simulated HSM".equalsIgnoreCase(keySource) && isHsmKeyMetadataOnly(keyReference)
             );
         } else if ("Asymmetric Ciphers".equals(opName)) {
@@ -3445,7 +4110,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void focusControl(String controlKey) {
         if (controlKey == null || controlKey.isEmpty()) return;
-        Object[] controllers = new Object[]{ this, cipherContainerController, genericContainerController, authenticationContainerController, certificatesContainerController };
+        Object[] controllers = new Object[]{ this, cipherContainerController, genericContainerController,
+                authenticationContainerController, certificatesContainerController, keysContainerController,
+                xmlSecurityContainerController, wssSecurityContainerController, paymentsContainerController,
+                emvContainerController, joseController };
         for (Object ctrl : controllers) {
             if (ctrl == null) continue;
             try {
@@ -3514,14 +4182,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     row.setStyle("-fx-padding: 6 10;");
 
                     Label categoryBadge = new Label("[" + item.getCategory() + "]");
-                    categoryBadge.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 6; -fx-background-radius: 4; -fx-text-fill: #60a5fa; -fx-background-color: #1e3a8a;");
+                    categoryBadge.getStyleClass().add("command-palette-category");
 
                     VBox textContainer = new VBox(2);
                     Label titleLabel = new Label(item.getTitle());
-                    titleLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #f8fafc;");
+                    titleLabel.getStyleClass().add("history-card-title");
 
                     Label descLabel = new Label(item.getDescription());
-                    descLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #94a3b8;");
+                    descLabel.getStyleClass().add("subtle-text");
+                    descLabel.setStyle("-fx-font-size: 11px;");
 
                     textContainer.getChildren().addAll(titleLabel, descLabel);
                     HBox.setHgrow(textContainer, Priority.ALWAYS);
@@ -3530,7 +4199,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
                     if (item.getShortcut() != null && !item.getShortcut().isEmpty()) {
                         Label shortcutLabel = new Label(item.getShortcut());
-                        shortcutLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #94a3b8; -fx-padding: 2 6; -fx-background-color: #334155; -fx-background-radius: 4;");
+                        shortcutLabel.getStyleClass().add("command-palette-shortcut");
                         row.getChildren().add(shortcutLabel);
                     }
 

@@ -6,15 +6,19 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class ClipboardShelfInjectionTest {
 
     @BeforeAll
@@ -31,9 +35,12 @@ public class ClipboardShelfInjectionTest {
 
     private void runAndWait(Runnable action) {
         CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
         Platform.runLater(() -> {
             try {
                 action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
             } finally {
                 latch.countDown();
             }
@@ -43,7 +50,15 @@ public class ClipboardShelfInjectionTest {
                 fail("JavaFX runLater execution timed out");
             }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             fail("Interrupted waiting for JavaFX thread");
+        }
+        if (failure.get() != null) {
+            Throwable throwable = failure.get();
+            if (throwable instanceof AssertionError error) {
+                throw error;
+            }
+            throw new AssertionError("Exception in JavaFX test action", throwable);
         }
     }
 
@@ -66,23 +81,23 @@ public class ClipboardShelfInjectionTest {
     @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
     void testGenericControllerManualInputHex() {
         runAndWait(() -> {
+            GenericController controller = new GenericController();
+
+            TextArea manualInputArea = new TextArea();
+            ComboBox<String> manualInputFormatCombo = new ComboBox<>();
+            manualInputFormatCombo.getItems().addAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
+
             try {
-                GenericController controller = new GenericController();
-
-                TextArea manualInputArea = new TextArea();
-                ComboBox<String> manualInputFormatCombo = new ComboBox<>();
-                manualInputFormatCombo.getItems().addAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
-
                 setPrivateField(controller, "manualInputArea", manualInputArea);
                 setPrivateField(controller, "manualInputFormatCombo", manualInputFormatCombo);
-
-                controller.fillManualConversionInput("0a1b", ClipboardEntry.Format.HEX);
-
-                assertEquals("0a1b", manualInputArea.getText());
-                assertEquals("Hexadecimal", manualInputFormatCombo.getValue());
             } catch (Exception e) {
-                fail(e);
+                throw new AssertionError("Could not inject GenericController fields", e);
             }
+
+            controller.fillManualConversionInput("0a1b", ClipboardEntry.Format.HEX);
+
+            assertEquals("0a1b", manualInputArea.getText());
+            assertEquals("Hexadecimal", manualInputFormatCombo.getValue());
         });
     }
 
@@ -90,23 +105,23 @@ public class ClipboardShelfInjectionTest {
     @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
     void testCipherControllerInputText() {
         runAndWait(() -> {
+            CipherController controller = new CipherController(null, null, null, null, null, null, null);
+
+            TextArea cipherInputArea = new TextArea();
+            ComboBox<String> cipherInputFormatCombo = new ComboBox<>();
+            cipherInputFormatCombo.getItems().addAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
+
             try {
-                CipherController controller = new CipherController(null, null, null, null, null, null, null);
-
-                TextArea inputArea = new TextArea();
-                ComboBox<String> inputFormatCombo = new ComboBox<>();
-                inputFormatCombo.getItems().addAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
-
-                setPrivateField(controller, "inputArea", inputArea);
-                setPrivateField(controller, "inputFormatCombo", inputFormatCombo);
-
-                controller.fillSymmetricCipherInput("HelloWorld", ClipboardEntry.Format.TEXT);
-
-                assertEquals("HelloWorld", inputArea.getText());
-                assertEquals("Text (UTF-8)", inputFormatCombo.getValue());
+                setPrivateField(controller, "cipherInputArea", cipherInputArea);
+                setPrivateField(controller, "cipherInputFormatCombo", cipherInputFormatCombo);
             } catch (Exception e) {
-                fail(e);
+                throw new AssertionError("Could not inject CipherController fields", e);
             }
+
+            controller.fillSymmetricCipherInput("HelloWorld", ClipboardEntry.Format.TEXT);
+
+            assertEquals("HelloWorld", cipherInputArea.getText());
+            assertEquals("Text (UTF-8)", cipherInputFormatCombo.getValue());
         });
     }
 }

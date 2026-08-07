@@ -2,11 +2,13 @@ package com.cryptocarver.crypto;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
 
-public class TestEmvOptAReverse {
+/** Optional command-line EMV reverse-vector diagnostic; not a JUnit test. */
+public final class EmvOptAReverseManualSmoke {
+    private EmvOptAReverseManualSmoke() {
+    }
+
     public static void main(String[] args) throws Exception {
         byte[] imk = new BigInteger("0123456789ABCDEFFEDCBA9876543210", 16).toByteArray();
         if (imk[0] == 0 && imk.length > 16) {
@@ -24,14 +26,10 @@ public class TestEmvOptAReverse {
         byte[] tdesKey = new byte[24];
         System.arraycopy(imk, 0, tdesKey, 0, 16);
         System.arraycopy(imk, 0, tdesKey, 16, 8);
-
         Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(tdesKey, "DESede"));
-
-        byte[] div = cipher.doFinal(udkA);
-        for(byte b : div) {
-            System.out.printf("%02X", b);
-        }
+        byte[] derived = cipher.doFinal(udkA);
+        for (byte value : derived) System.out.printf("%02X", value);
         System.out.println();
     }
 }

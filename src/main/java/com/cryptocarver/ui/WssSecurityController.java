@@ -27,6 +27,11 @@ public class WssSecurityController {
 
     @FXML private VBox wssSecurityContainer;
     @FXML private Accordion wssAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     // Sign UI
     @FXML private TextArea wssSignInputArea;
@@ -75,6 +80,7 @@ public class WssSecurityController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(wssSecurityContainer, ModuleTextCatalog.wssSecurity());
         for (WssSecurityOperations.WssSignatureAlgorithm algorithm : WssSecurityOperations.WssSignatureAlgorithm.values()) {
             wssSignAlgorithmCombo.getItems().add(algorithm.displayName());
         }
@@ -116,11 +122,52 @@ public class WssSecurityController {
     }
 
     public void expandAccordionPane(String paneName) {
+        if (wssAccordion == null) return;
         for (TitledPane pane : wssAccordion.getPanes()) {
-            if (pane.getText().contains(paneName)) {
+            if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.wssSecurity())) {
                 wssAccordion.setExpandedPane(pane);
                 break;
             }
+        }
+    }
+
+    public void fillClipboardInput(String value) {
+        if (wssVerifyInputArea != null) wssVerifyInputArea.setText(value);
+    }
+
+    @FXML
+    public void handleReset() {
+        ModuleResetPolicy.apply(wssSecurityContainer, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.wss.resetStatus"));
+    }
+
+    @FXML
+    public void handleClear() {
+        ModuleResetPolicy.apply(wssSecurityContainer, ModuleResetPolicy.Action.CLEAR,
+                this::clearModuleData, null);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.wss.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        ModuleResetPolicy.clearTextInputs(wssSecurityContainer);
+    }
+
+    private void restoreSafeDefaults() {
+        if (wssIncludeTimestampCheck != null) wssIncludeTimestampCheck.setSelected(false);
+        if (wssSignTimestampCheck != null) wssSignTimestampCheck.setSelected(false);
+        if (wssSignAlgorithmCombo != null) wssSignAlgorithmCombo.getSelectionModel().selectFirst();
+        if (wssUsernamePasswordTypeCombo != null) wssUsernamePasswordTypeCombo.setValue(
+                WssUsernameTokenOperations.PasswordType.PASSWORD_DIGEST.displayName());
+        if (wssEncryptDataAlgorithmCombo != null) wssEncryptDataAlgorithmCombo.setValue(
+                WssEncryptionOperations.DataEncryptionAlgorithm.AES_256_GCM.displayName());
+        if (wssEncryptKeyTransportCombo != null) wssEncryptKeyTransportCombo.setValue(
+                WssEncryptionOperations.KeyTransportAlgorithm.RSA_OAEP_SHA256.displayName());
+        if (wssTimestampValiditySpinner != null && wssTimestampValiditySpinner.getValueFactory() != null) {
+            wssTimestampValiditySpinner.getValueFactory().setValue(5);
+        }
+        if (wssUsernameMaxAgeSpinner != null && wssUsernameMaxAgeSpinner.getValueFactory() != null) {
+            wssUsernameMaxAgeSpinner.getValueFactory().setValue(300);
         }
     }
 
@@ -131,7 +178,7 @@ public class WssSecurityController {
             try {
                 wssSignInputArea.setText(Files.readString(f.toPath()));
             } catch (Exception e) {
-                showError("Failed to read file: " + e.getMessage());
+                showError(t("module.wss.readFailed", e.getMessage()));
             }
         }
     }
@@ -149,7 +196,7 @@ public class WssSecurityController {
         String path = wssSignKeyPathField.getText();
         String pass = wssSignKeyPasswordField.getText();
         if (path == null || path.trim().isEmpty()) {
-            showError("KeyStore path is empty.");
+            showError(t("module.wss.feedback.keyStoreRequired"), "wssSignKeyPathField");
             return;
         }
 
@@ -166,11 +213,11 @@ public class WssSecurityController {
             if (!wssSignKeyAliasCombo.getItems().isEmpty()) {
                 wssSignKeyAliasCombo.getSelectionModel().selectFirst();
             } else {
-                showError("No private keys found in the KeyStore.");
+                showError(t("module.wss.feedback.keyAliasRequired"), "wssSignKeyAliasCombo");
             }
         } catch (Exception e) {
             LOG.error("Failed to load WSS KeyStore", e);
-            showError("Failed to load KeyStore: " + e.getMessage());
+            showError(t("module.wss.feedback.keyStoreLoad", e.getMessage()));
         }
     }
 
@@ -183,11 +230,11 @@ public class WssSecurityController {
         String keyPassStr = wssSignPrivateKeyPasswordField.getText();
 
         if (xml == null || xml.trim().isEmpty()) {
-            showError("Please provide the SOAP XML to sign.");
+            showError(t("module.wss.error.soapToSign"), "wssSignInputArea");
             return;
         }
         if (path == null || path.trim().isEmpty() || alias == null) {
-            showError("Please select a KeyStore and an alias.");
+            showError(t("module.wss.error.keyStoreAlias"), "wssSignKeyPathField");
             return;
         }
 
@@ -205,11 +252,11 @@ public class WssSecurityController {
                     xml, ks, alias, keyPass, algorithm, timestampOptions);
             wssSignOutputArea.setText(signedXml);
             if (statusReporter != null) {
-                statusReporter.updateStatus("WSS Signature applied successfully.");
+                statusReporter.updateStatus(t("module.wss.status.success"));
             }
         } catch (Exception e) {
             LOG.error("WSS Sign Error", e);
-            showError("Signature failed: " + e.getMessage());
+            showError(t("module.wss.error.generic", e.getMessage()));
         }
     }
 
@@ -224,10 +271,10 @@ public class WssSecurityController {
             try {
                 Files.writeString(f.toPath(), xml);
                 if (statusReporter != null) {
-                    statusReporter.updateStatus("Signed WSS XML saved to " + f.getName());
+                    statusReporter.updateStatus(t("module.wss.feedback.statusSaved", f.getName()));
                 }
             } catch (Exception e) {
-                showError("Failed to save file: " + e.getMessage());
+                showError(t("module.wss.saveFailed", e.getMessage()));
             }
         }
     }
@@ -239,7 +286,7 @@ public class WssSecurityController {
             try {
                 wssVerifyInputArea.setText(Files.readString(f.toPath()));
             } catch (Exception e) {
-                showError("Failed to read file: " + e.getMessage());
+                showError(t("module.wss.readFailed", e.getMessage()));
             }
         }
     }
@@ -258,7 +305,7 @@ public class WssSecurityController {
         String certPath = wssVerifyTrustStorePathField.getText();
 
         if (xml == null || xml.trim().isEmpty()) {
-            showError("Please provide the signed SOAP XML to verify.");
+            showError(t("module.wss.inputRequired"), "wssVerifyInputArea");
             return;
         }
 
@@ -291,13 +338,13 @@ public class WssSecurityController {
             }
 
             if (statusReporter != null) {
-                statusReporter.updateStatus("WSS Verification complete.");
+                statusReporter.updateStatus(t("module.wss.status.success"));
             }
 
         } catch (Exception e) {
             LOG.error("WSS Verify Error", e);
-            showError("Verification failed: " + e.getMessage());
-            wssVerifyReportArea.setText("ERROR: " + e.getMessage());
+            showError(t("module.wss.error.generic", e.getMessage()));
+            wssVerifyReportArea.setText(t("module.wss.errorReport", e.getMessage()));
             wssVerifyReportArea.setStyle("-fx-control-inner-background: #fff3e0; -fx-font-family: 'Monospaced'; -fx-font-size: 10px;");
         }
     }
@@ -322,10 +369,10 @@ public class WssSecurityController {
             String secured = WssUsernameTokenOperations.addUsernameToken(
                     wssUsernameCreateInputArea.getText(), wssUsernameCreateNameField.getText(), password, type);
             wssUsernameCreateOutputArea.setText(secured);
-            if (statusReporter != null) statusReporter.updateStatus("WSS UsernameToken added successfully.");
+            if (statusReporter != null) statusReporter.updateStatus(t("module.wss.status.success"));
         } catch (Exception e) {
             LOG.error("WSS UsernameToken creation error", e);
-            showError("UsernameToken creation failed: " + e.getMessage());
+            showError(t("module.wss.error.generic", e.getMessage()));
         } finally {
             Arrays.fill(password, '\0');
         }
@@ -339,9 +386,9 @@ public class WssSecurityController {
         if (file != null) {
             try {
                 Files.writeString(file.toPath(), xml);
-                if (statusReporter != null) statusReporter.updateStatus("UsernameToken SOAP XML saved.");
+                if (statusReporter != null) statusReporter.updateStatus(t("module.wss.status.success"));
             } catch (Exception e) {
-                showError("Failed to save file: " + e.getMessage());
+                showError(t("module.wss.saveFailed", e.getMessage()));
             }
         }
     }
@@ -364,7 +411,7 @@ public class WssSecurityController {
             };
             wssUsernameVerifyReportArea.setStyle("-fx-control-inner-background: " + background
                     + "; -fx-font-family: 'Monospaced'; -fx-font-size: 10px;");
-            if (statusReporter != null) statusReporter.updateStatus("WSS UsernameToken verification complete.");
+            if (statusReporter != null) statusReporter.updateStatus(t("module.wss.status.success"));
         } finally {
             Arrays.fill(password, '\0');
         }
@@ -406,11 +453,11 @@ public class WssSecurityController {
                             wssEncryptKeyTransportCombo.getValue()));
             renderEncryptionResult(result, wssEncryptOutputArea, wssEncryptReportArea);
             if (result.status() == WssEncryptionOperations.OperationResult.Status.SUCCESS && statusReporter != null) {
-                statusReporter.updateStatus("WSS SOAP Body encrypted successfully.");
+                statusReporter.updateStatus(t("module.wss.status.success"));
             }
         } catch (Exception e) {
             LOG.error("WSS encryption error", e);
-            wssEncryptReportArea.setText("ERROR: " + e.getMessage());
+            wssEncryptReportArea.setText(t("module.wss.errorReport", e.getMessage()));
         }
     }
 
@@ -442,11 +489,11 @@ public class WssSecurityController {
                     wssDecryptInputArea.getText(), keyStore, keyPassword);
             renderEncryptionResult(result, wssDecryptOutputArea, wssDecryptReportArea);
             if (result.status() == WssEncryptionOperations.OperationResult.Status.SUCCESS && statusReporter != null) {
-                statusReporter.updateStatus("WSS SOAP Body decrypted successfully.");
+                statusReporter.updateStatus(t("module.wss.status.success"));
             }
         } catch (Exception e) {
             LOG.error("WSS decryption error", e);
-            wssDecryptReportArea.setText("ERROR: " + e.getMessage());
+            wssDecryptReportArea.setText(t("module.wss.errorReport", e.getMessage()));
         } finally {
             Arrays.fill(storePassword, '\0');
             Arrays.fill(keyPassword, '\0');
@@ -483,7 +530,7 @@ public class WssSecurityController {
             try {
                 Files.writeString(file.toPath(), xml);
             } catch (Exception e) {
-                showError("Failed to save file: " + e.getMessage());
+                showError(t("module.wss.saveFailed", e.getMessage()));
             }
         }
     }
@@ -494,7 +541,7 @@ public class WssSecurityController {
             try {
                 target.setText(Files.readString(file.toPath()));
             } catch (Exception e) {
-                showError("Failed to read file: " + e.getMessage());
+                showError(t("module.wss.readFailed", e.getMessage()));
             }
         }
     }
@@ -527,8 +574,18 @@ public class WssSecurityController {
     }
 
     private void showError(String msg) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
-        alert.setHeaderText("WSS Error");
+        showError(msg, null);
+    }
+
+    private void showError(String msg, String fieldKey) {
+        String safeMessage = InlineErrorPresenter.redactSecrets(msg);
+        if (statusReporter != null) {
+            statusReporter.showError(new UserFacingError(
+                    t("module.wss.errorTitle"), safeMessage, safeMessage, fieldKey));
+            return;
+        }
+        Alert alert = new Alert(Alert.AlertType.ERROR, safeMessage, ButtonType.OK);
+        alert.setHeaderText(t("module.wss.errorTitle"));
         alert.showAndWait();
     }
 }

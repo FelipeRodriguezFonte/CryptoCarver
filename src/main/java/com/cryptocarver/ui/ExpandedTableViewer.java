@@ -27,7 +27,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -81,11 +80,14 @@ final class ExpandedTableViewer {
         maximizeButton.setOnAction(event -> stage.setMaximized(!stage.isMaximized()));
         Button closeButton = new Button("Close");
         closeButton.setOnAction(event -> stage.hide());
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, filterField, clearFilterButton, metricsLabel, spacer,
-                copyButton, copySelectedButton, saveButton, saveJsonButton, maximizeButton, closeButton);
-        toolbar.setAlignment(Pos.CENTER_LEFT);
+        HBox filterToolbar = new HBox(8, filterField, clearFilterButton, metricsLabel);
+        filterToolbar.setAlignment(Pos.CENTER_LEFT);
+        HBox primaryActions = new HBox(8, copyButton, copySelectedButton, saveButton);
+        primaryActions.setAlignment(Pos.CENTER_LEFT);
+        HBox windowActions = new HBox(8, saveJsonButton, maximizeButton, closeButton);
+        windowActions.setAlignment(Pos.CENTER_LEFT);
+        VBox toolbar = new VBox(8, filterToolbar, primaryActions, windowActions);
+        toolbar.getStyleClass().add("responsive-action-bar");
 
         VBox root = new VBox(10, toolbar, expandedTable);
         root.setPadding(new Insets(12));

@@ -23,6 +23,10 @@ public class ASN1Controller {
 
     private StatusReporter reporter;
 
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
+
     @FXML private TitledPane asn1Pane;
     @FXML private TabPane asn1TabPane;
     @FXML private ComboBox<String> asn1InputFormatCombo;
@@ -47,6 +51,7 @@ public class ASN1Controller {
 
     @FXML
     public void initialize() {
+        ModuleI18n.bind(asn1Pane, ModuleTextCatalog.asn1());
         setupASN1TreeView();
     }
 
@@ -112,14 +117,18 @@ public class ASN1Controller {
         try {
             String inputText = asn1InputArea.getText().trim();
             if (inputText.isEmpty()) {
-                if (reporter != null) reporter.showError("Input Error", "Please enter ASN.1 data in the input area");
+                InlineValidationSupport.show(reporter, t("preflight.title"),
+                        t("module.asn1.feedback.inputRequired"), t("preflight.remedy.input"),
+                        "asn1InputArea", null);
                 return;
             }
 
             byte[] data = parseASN1InputData(inputText);
 
             if (data == null || data.length == 0) {
-                if (reporter != null) reporter.showError("Parse Error", "Invalid input format");
+                InlineValidationSupport.show(reporter, t("error.wrap.fallback.title"),
+                        t("module.asn1.feedback.inputInvalid"), t("preflight.remedy.input"),
+                        "asn1InputArea", null);
                 return;
             }
 
@@ -128,7 +137,9 @@ public class ASN1Controller {
             com.cryptocarver.asn1.DerValidator.Report derReport = com.cryptocarver.asn1.DerValidator.validate(data);
 
             if (asn1StrictDerCheck != null && asn1StrictDerCheck.isSelected() && !derReport.validDer()) {
-                if (reporter != null) reporter.showError("Strict DER Validation Failed", derReport.message());
+                InlineValidationSupport.show(reporter, t("preflight.title"),
+                        t("module.asn1.feedback.strictDer", derReport.message()),
+                        t("preflight.remedy.input"), "asn1InputArea", null);
                 asn1StatusLabel.setText("✗ Invalid DER");
                 asn1StatusLabel.setStyle("-fx-text-fill: #e74c3c;");
                 return;
@@ -152,7 +163,7 @@ public class ASN1Controller {
 
             asn1DetailsArea.setText(details.toString());
 
-            asn1StatusLabel.setText("✓ Parsed successfully - " + detectedType);
+            asn1StatusLabel.setText(t("module.asn1.feedback.statusParsed", detectedType));
             asn1StatusLabel.setStyle("-fx-text-fill: #27ae60;");
 
             List<OperationDetail> histDetails = new ArrayList<>();
@@ -164,15 +175,15 @@ public class ASN1Controller {
                 com.cryptocarver.model.OperationResult result = com.cryptocarver.model.OperationResult.forOperation("ASN.1 Parse")
                         .input(data)
                         .details(histDetails)
-                        .status("✓ Parsed successfully - " + detectedType)
+                        .status(t("module.asn1.feedback.statusParsed", detectedType))
                         .build();
                 reporter.publish(result);
             }
 
         } catch (Exception e) {
-            if (reporter != null) reporter.showError("Parse Error", "Failed to parse ASN.1 data: " + e.getMessage());
-            asn1StatusLabel.setText("✗ Parse failed: " + e.getMessage());
-            asn1StatusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            InlineValidationSupport.show(reporter, t("error.wrap.fallback.title"),
+                    t("module.asn1.feedback.parseFailed", e.getMessage()),
+                    t("preflight.remedy.input"), "asn1InputArea", e);
             LOG.error("ASN.1 parse failed", e);
         }
     }
@@ -200,7 +211,7 @@ public class ASN1Controller {
 
         asn1InputFormatCombo.setValue("Hexadecimal");
         asn1InputArea.setText(example);
-        if (reporter != null) reporter.updateStatus("Loaded example: " + type);
+        if (reporter != null) reporter.updateStatus(t("module.asn1.feedback.statusExample", type));
         handleParseASN1();
     }
 
@@ -219,7 +230,9 @@ public class ASN1Controller {
                 encoded = com.cryptocarver.asn1.ASN1Encoder.encodeNull();
             } else {
                 if (inputText == null || inputText.isEmpty()) {
-                    if (reporter != null) reporter.showError("Error", "Input cannot be empty for " + type);
+                    InlineValidationSupport.show(reporter, t("preflight.title"),
+                            t("module.asn1.feedback.encodeRequired", type),
+                            t("preflight.remedy.input"), "asn1EncodeInputArea", null);
                     return;
                 }
 
@@ -291,14 +304,16 @@ public class ASN1Controller {
                     com.cryptocarver.model.OperationResult result = com.cryptocarver.model.OperationResult.forOperation("ASN.1 Encode")
                             .output(encoded)
                             .details(histDetails)
-                            .status("Encoded successfully")
+                            .status(t("module.asn1.feedback.statusEncoded"))
                             .build();
                     reporter.publish(result);
                 }
             }
 
         } catch (Exception e) {
-            if (reporter != null) reporter.showError("ASN.1 Encode Error", e.getMessage());
+            InlineValidationSupport.show(reporter, t("error.wrap.fallback.title"),
+                    t("module.asn1.feedback.encodeFailed", e.getMessage()),
+                    t("preflight.remedy.input"), "asn1EncodeInputArea", e);
             LOG.error("ASN.1 encode failed", e);
         }
     }
@@ -311,24 +326,45 @@ public class ASN1Controller {
             javafx.scene.input.ClipboardContent cc = new javafx.scene.input.ClipboardContent();
             cc.putString(content);
             clipboard.setContent(cc);
-            if (reporter != null) reporter.updateStatus("Copied ASN.1 output to clipboard");
+            if (reporter != null) reporter.updateStatus(t("module.asn1.feedback.statusCopied"));
         }
     }
 
     @FXML
     private void handleClearASN1() {
+        ModuleResetPolicy.apply(asn1Pane, ModuleResetPolicy.Action.CLEAR, this::clearModuleData, null);
+    }
+
+    private void clearModuleData() {
         asn1InputArea.clear();
         if (asn1TreeView != null) asn1TreeView.setRoot(null);
         asn1DetailsArea.clear();
-        asn1StatusLabel.setText("Ready");
+        if (asn1EncodeInputArea != null) asn1EncodeInputArea.clear();
+        if (asn1EncodeOutputArea != null) asn1EncodeOutputArea.clear();
+        asn1StatusLabel.setText(com.cryptocarver.service.I18nService.getInstance().text("module.common.ready"));
         asn1StatusLabel.setStyle("");
         asn1LastParsedData = null;
+    }
+
+    /** Clears only this module's editable material and results. */
+    @FXML
+    public void resetModule() {
+        ModuleResetPolicy.apply(asn1Pane, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+    }
+
+    private void restoreSafeDefaults() {
+        if (asn1StrictDerCheck != null) asn1StrictDerCheck.setSelected(false);
+        if (asn1InputFormatCombo != null) asn1InputFormatCombo.setValue("Hexadecimal");
+        if (asn1TypeCombo != null) asn1TypeCombo.setValue("Auto-detect");
+        if (asn1EncodeTypeCombo != null) asn1EncodeTypeCombo.setValue("UTF8String");
+        if (asn1EncodeInputFormatCombo != null) asn1EncodeInputFormatCombo.setValue("Text");
     }
 
     @FXML
     private void handleExportASN1Tree() {
         if (asn1LastParsedData == null || asn1LastParsedData.length == 0) {
-            if (reporter != null) reporter.showError("Export Error", "No parsed ASN.1 data available to export.");
+            if (reporter != null) reporter.showError("Export Error", t("module.asn1.feedback.exportRequired"));
             return;
         }
 
@@ -397,7 +433,7 @@ public class ASN1Controller {
 
     private void exportASN1Structured(String title, String name, String filterName, String extension, boolean json) {
         if (asn1LastParsedData == null || asn1LastParsedData.length == 0) {
-            if (reporter != null) reporter.showError("Export Error", "Parse ASN.1 data before exporting.");
+            if (reporter != null) reporter.showError("Export Error", t("module.asn1.feedback.exportRequired"));
             return;
         }
         FileChooser chooser = new FileChooser(); chooser.setTitle(title); chooser.setInitialFileName(name);
@@ -497,10 +533,12 @@ public class ASN1Controller {
                 if (java.util.Arrays.equals(node.getRawValue(), compareBytes)) {
                     if (reporter != null) reporter.showInfo("Compare Result", "The hex matches perfectly.");
                 } else {
-                    if (reporter != null) reporter.showError("Compare Result", "The hex does NOT match.");
+                    if (reporter != null) reporter.showError("Compare Result",
+                            t("module.asn1.feedback.compareMismatch"));
                 }
             } catch (Exception ex) {
-                if (reporter != null) reporter.showError("Error", "Invalid hex input: " + ex.getMessage());
+                if (reporter != null) reporter.showError("Error",
+                        t("module.asn1.feedback.hexInvalid", ex.getMessage()));
             }
         });
     }

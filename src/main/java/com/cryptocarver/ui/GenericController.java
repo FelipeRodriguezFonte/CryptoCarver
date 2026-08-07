@@ -41,6 +41,15 @@ import java.util.Map;
  */
 public class GenericController {
 
+    @FunctionalInterface
+    interface BatchRunnerExecutor {
+        com.cryptocarver.model.batch.BatchRunner.Report run(
+                java.util.List<java.util.Map<String, String>> rows,
+                com.cryptocarver.model.batch.BatchRunner.RowOperation operation,
+                java.util.function.BooleanSupplier cancellationRequested,
+                com.cryptocarver.model.batch.BatchRunner.ProgressListener progressListener);
+    }
+
     private TextArea inputArea;
     private TextArea outputArea;
     private ComboBox<String> inputFormatCombo;
@@ -51,6 +60,11 @@ public class GenericController {
     private StatusReporter statusReporter;
     private boolean preflightListenersInstalled;
     @FXML private Accordion genericContainer;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     @FXML private TextArea hashInputArea;
     @FXML private TextArea hashOutputArea;
 
@@ -129,6 +143,20 @@ public class GenericController {
         }
     }
 
+    public void fillHashInput(String text, com.cryptocarver.model.ClipboardEntry.Format format) {
+        fillHashInput(text);
+        if (statusReporter != null) statusReporter.setInputFormat(clipboardFormatName(format));
+    }
+
+    private String clipboardFormatName(com.cryptocarver.model.ClipboardEntry.Format format) {
+        return switch (format == null ? com.cryptocarver.model.ClipboardEntry.Format.UNKNOWN : format) {
+            case HEX -> "Hexadecimal";
+            case BASE64 -> "Base64";
+            case BASE64URL -> "Base64URL";
+            default -> "Text (UTF-8)";
+        };
+    }
+
     // Manual Conversion Components
     @FXML private ComboBox<String> manualTemplateCombo;
     @FXML private TextArea manualInputArea;
@@ -139,6 +167,8 @@ public class GenericController {
     // Batch State
     private javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> activeBatchTask;
     private com.cryptocarver.model.batch.BatchRunner.Report lastBatchReport;
+    private BatchRunnerExecutor batchRunnerExecutor = (rows, operation, cancellationRequested, progressListener) ->
+            com.cryptocarver.model.batch.BatchRunner.run(rows, operation, cancellationRequested, progressListener);
 
 
     /**
@@ -188,6 +218,11 @@ public class GenericController {
     }
 
     public GenericController() {}
+
+    /** Test seam for controlling batch execution without changing production timing. */
+    void setBatchRunnerExecutorForTesting(BatchRunnerExecutor executor) {
+        this.batchRunnerExecutor = java.util.Objects.requireNonNull(executor, "Batch runner executor is required");
+    }
 
         @FXML public void handleBrowseInputFile() {
         javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
@@ -247,6 +282,24 @@ public class GenericController {
 
     private boolean isCsvBatchFormat(String format) { return "CSV".equals(format); }
 
+    @FXML public void handleResetBatch() {
+        if (activeBatchTask != null && activeBatchTask.isRunning()) {
+            activeBatchTask.cancel();
+        }
+        if (batchInputArea != null) batchInputArea.clear();
+        if (batchResultArea != null) batchResultArea.clear();
+        if (batchKeyField != null) batchKeyField.clear();
+        if (batchIvNonceField != null) batchIvNonceField.clear();
+        if (batchAadField != null) batchAadField.clear();
+        if (batchProgressBar != null) {
+            batchProgressBar.progressProperty().unbind();
+            batchProgressBar.setProgress(0);
+        }
+        lastBatchReport = null;
+        activeBatchTask = null;
+        if (batchStatusLabel != null) batchStatusLabel.setText(t("module.batch.reset"));
+    }
+
     @FXML public void handleBrowseBatchInput() {
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
         chooser.setTitle("Load Batch Input");
@@ -259,22 +312,13 @@ public class GenericController {
             batchInputArea.setText(java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8));
             String lower = file.getName().toLowerCase(java.util.Locale.ROOT);
             batchInputFormatCombo.setValue(lower.endsWith(".csv") ? "CSV" : "JSON Lines (.jsonl)");
-            batchStatusLabel.setText("Loaded " + file.getName() + ". Review the input before running.");
+            batchStatusLabel.setText(t("module.batch.loaded", file.getName()));
         } catch (java.io.IOException e) {
-            if (statusReporter != null) statusReporter.showError("Batch input", "Unable to read file: " + e.getMessage());
+            if (statusReporter != null) statusReporter.showError(t("module.batch.inputErrorTitle"), "Unable to read file: " + e.getMessage());
         }
     }
 
-    private java.util.Map<String, String> runSafeBatchOperation(String operation, java.util.Map<String, String> row, String srcCol, String outCol) throws Exception {
-        String input = row.get(srcCol);
-        if (input == null) throw new IllegalArgumentException(srcCol + " field is required");
-        if ("SHA-256 (UTF-8 → Hex)".equals(operation)) {
-            return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.sha256(input));
-        }
-        if ("UTF-8 → Base64URL".equals(operation)) return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.encodeBase64Url(input));
-        if ("Base64URL → UTF-8".equals(operation)) return java.util.Map.of(outCol, com.cryptocarver.model.SafeTransformations.decodeBase64Url(input));
-        throw new IllegalArgumentException("Unsupported batch operation: " + operation);
-    }
+
 
     private String renderBatchReport(com.cryptocarver.model.batch.BatchRunner.Report report) {
         StringBuilder text = new StringBuilder("Rows processed: ").append(report.results().size()).append("\nSucceeded: ")
@@ -295,15 +339,14 @@ public class GenericController {
 
     @FXML public void handleRunBatch() {
         if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            if (statusReporter != null) statusReporter.showError("Batch Runner", "A batch is already running.");
+            if (statusReporter != null) statusReporter.showError(t("module.batch.errorTitle"), t("module.batch.alreadyRunning"));
             return;
         }
-        lastBatchReport = null;
         final java.util.List<java.util.Map<String, String>> rows;
         final String srcCol = batchColumnField.getText().trim();
         final String outCol = batchOutputColumnField.getText().trim();
         if (srcCol.isEmpty() || outCol.isEmpty()) {
-            if (statusReporter != null) statusReporter.showError("Batch config", "Source and output columns are required");
+            if (statusReporter != null) statusReporter.showError(t("module.batch.errorTitle"), t("module.batch.columnsRequired"));
             return;
         }
         try {
@@ -313,7 +356,7 @@ public class GenericController {
             if (rows.isEmpty()) throw new IllegalArgumentException("No batch rows found");
             if (rows.stream().anyMatch(row -> !row.containsKey(srcCol))) throw new IllegalArgumentException("Every row must contain the field: " + srcCol);
         } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Batch input", e.getMessage());
+            if (statusReporter != null) statusReporter.showError(t("module.batch.inputErrorTitle"), e.getMessage());
             return;
         }
         final String operation = batchOperationCombo.getValue();
@@ -359,7 +402,7 @@ public class GenericController {
                     }
                 }
             } catch (Exception e) {
-                if (statusReporter != null) statusReporter.showError("Batch crypto config", "Invalid crypto parameters: " + e.getMessage());
+                if (statusReporter != null) statusReporter.showError(t("module.batch.errorTitle"), "Invalid crypto parameters: " + e.getMessage());
                 return;
             }
         } else {
@@ -384,7 +427,7 @@ public class GenericController {
         } else {
             rowOperation = (rowNum, row) -> {
                 try {
-                    return runSafeBatchOperation(operation, row, srcCol, outCol);
+                    return com.cryptocarver.model.batch.BatchOperationCatalog.execute(operation, row, srcCol, outCol);
                 } catch (Exception e) {
                     if (stopOnError) errorOccurred.set(true);
                     throw e;
@@ -392,10 +435,11 @@ public class GenericController {
             };
         }
 
+        lastBatchReport = null;
         javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> task = new javafx.concurrent.Task<>() {
             @Override protected com.cryptocarver.model.batch.BatchRunner.Report call() {
                 try {
-                    return com.cryptocarver.model.batch.BatchRunner.run(rows, rowOperation, () -> isCancelled() || errorOccurred.get(),
+                    return batchRunnerExecutor.run(rows, rowOperation, () -> isCancelled() || errorOccurred.get(),
                             (completed, total) -> updateProgress(completed, total));
                 } finally {
                     if (key != null) java.util.Arrays.fill(key, (byte) 0);
@@ -405,12 +449,18 @@ public class GenericController {
         };
         activeBatchTask = task;
         batchProgressBar.progressProperty().unbind(); batchProgressBar.progressProperty().bind(task.progressProperty());
-        batchStatusLabel.setText("Processing " + rows.size() + " rows…"); batchResultArea.clear();
+        batchStatusLabel.setText(t("module.batch.processing", rows.size())); batchResultArea.clear();
         task.setOnSucceeded(event -> {
             batchProgressBar.progressProperty().unbind(); batchProgressBar.setProgress(1);
+            if (task.getValue() != null && task.getValue().cancelled()) {
+                lastBatchReport = null;
+                batchStatusLabel.setText(t("module.batch.cancelled"));
+                activeBatchTask = null;
+                return;
+            }
             lastBatchReport = task.getValue();
             batchResultArea.setText(renderBatchReport(lastBatchReport));
-            batchStatusLabel.setText("Completed: " + lastBatchReport.succeeded() + " succeeded, " + lastBatchReport.failed() + " failed.");
+            batchStatusLabel.setText(t("module.batch.completed", lastBatchReport.succeeded(), lastBatchReport.failed()));
             if (statusReporter != null) {
                 java.util.Map<String, String> batchDetails = new java.util.LinkedHashMap<>();
                 batchDetails.put("Operation", operation);
@@ -422,31 +472,83 @@ public class GenericController {
             activeBatchTask = null;
         });
         task.setOnCancelled(event -> {
-            batchProgressBar.progressProperty().unbind(); batchStatusLabel.setText("Batch cancelled. Completed rows were discarded.");
+            batchProgressBar.progressProperty().unbind();
+            lastBatchReport = null;
+            batchResultArea.clear();
+            batchStatusLabel.setText(t("module.batch.cancelled"));
             activeBatchTask = null;
         });
         task.setOnFailed(event -> {
             batchProgressBar.progressProperty().unbind(); Throwable error = task.getException();
-            batchStatusLabel.setText("Batch failed: " + (error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
+            batchStatusLabel.setText(t("module.batch.failed", error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
         });
         Thread worker = new Thread(task, "cryptocarver-batch-runner"); worker.setDaemon(true); worker.start();
     }
 
+    @FXML public void handleDryRunBatch() {
+        final java.util.List<java.util.Map<String, String>> rows;
+        final String srcCol = batchColumnField != null ? batchColumnField.getText().trim() : "input";
+        final String outCol = batchOutputColumnField != null ? batchOutputColumnField.getText().trim() : "result";
+        String rawText = batchInputArea != null ? batchInputArea.getText() : "";
+        try {
+            rows = isCsvBatchFormat(batchInputFormatCombo != null ? batchInputFormatCombo.getValue() : "CSV")
+                    ? com.cryptocarver.model.batch.BatchInputCodec.parseCsv(rawText)
+                    : com.cryptocarver.model.batch.BatchInputCodec.parseJsonLines(rawText);
+        } catch (Exception e) {
+            batchResultArea.setText(t("module.batch.dryRunInvalid", e.getMessage()));
+            if (batchStatusLabel != null) batchStatusLabel.setText(t("module.batch.dryRunBlocked"));
+            return;
+        }
+
+        String op = batchOperationCombo != null ? batchOperationCombo.getValue() : "None";
+        String alg = batchAlgorithmCombo != null ? batchAlgorithmCombo.getValue() : null;
+        String keyHex = batchKeyField != null ? batchKeyField.getText() : null;
+        String ivHex = batchIvNonceField != null ? batchIvNonceField.getText() : null;
+
+        com.cryptocarver.model.process.DryRunSummary summary =
+                com.cryptocarver.model.batch.BatchValidator.dryRun(rows, op, srcCol, outCol, alg, keyHex, ivHex);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== BATCH RUNNER DRY RUN ===\n");
+        sb.append("Total Rows: ").append(summary.totalSteps()).append('\n');
+        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
+          .append(", Warning=").append(summary.warningCount())
+          .append(", Blocked=").append(summary.blockedCount()).append('\n');
+        if (summary.firstBlockedReason() != null) {
+            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
+        }
+        sb.append("Resolved Dependencies:\n");
+        for (String dep : summary.resolvedDependencies()) {
+            sb.append("  - ").append(dep).append('\n');
+        }
+        sb.append("Execution Plan:\n");
+        for (String step : summary.executionOrder()) {
+            sb.append("  - ").append(step).append('\n');
+        }
+        sb.append("\n(Dry Run completed: 0 cryptographic operations called, 0 files written, 0 history entries created)");
+
+        batchResultArea.setText(sb.toString());
+        if (batchStatusLabel != null) {
+            batchStatusLabel.setText(t("module.batch.dryRunSummary", summary.readyCount(), summary.blockedCount()));
+        }
+    }
+
     @FXML public void handleCancelBatch() {
         if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            activeBatchTask.cancel(); batchStatusLabel.setText("Cancelling batch…");
+            batchStatusLabel.setText(t("module.batch.cancelling"));
+            activeBatchTask.cancel();
         } else {
-            batchStatusLabel.setText("No batch is running.");
+            batchStatusLabel.setText(t("module.batch.notRunning"));
         }
     }
 
     @FXML public void handleExportBatchResults() {
         if (lastBatchReport == null) {
-            if (statusReporter != null) statusReporter.showError("Batch export", "Run a batch successfully before exporting its results.");
+            if (statusReporter != null) statusReporter.showError(t("module.batch.exportErrorTitle"), t("module.batch.noResults"));
             return;
         }
         boolean csv = isCsvBatchFormat(batchExportFormatCombo.getValue());
-        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser(); chooser.setTitle("Export Batch Results");
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser(); chooser.setTitle(t("module.batch.exportTitle"));
         chooser.setInitialFileName(csv ? "cryptocarver-batch-results.csv" : "cryptocarver-batch-results.jsonl");
         chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(csv ? "CSV" : "JSON Lines", csv ? "*.csv" : "*.jsonl"));
         java.io.File file = chooser.showSaveDialog(genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow());
@@ -455,9 +557,9 @@ public class GenericController {
             String output = csv ? com.cryptocarver.model.batch.BatchOutputCodec.toCsv(lastBatchReport)
                     : com.cryptocarver.model.batch.BatchOutputCodec.toJsonLines(lastBatchReport);
             java.nio.file.Files.writeString(file.toPath(), output, java.nio.charset.StandardCharsets.UTF_8);
-            batchStatusLabel.setText("Batch results exported: " + file.getName());
+            batchStatusLabel.setText(t("module.batch.exported", file.getName()));
         } catch (java.io.IOException e) {
-            if (statusReporter != null) statusReporter.showError("Batch export", "Unable to save results: " + e.getMessage());
+            if (statusReporter != null) statusReporter.showError(t("module.batch.exportErrorTitle"), "Unable to save results: " + e.getMessage());
         }
     }
 
@@ -503,14 +605,29 @@ public class GenericController {
     @FXML public void handleDecodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
 
     @FXML public void initialize() {
+        javafx.scene.Node[] excluded = genericContainer == null ? new javafx.scene.Node[0]
+                : genericContainer.getPanes().stream()
+                        .filter(pane -> pane.getText() != null && pane.getText().contains("Process Designer"))
+                        .toArray(javafx.scene.Node[]::new);
+        moduleI18n = ModuleI18n.bind(genericContainer, ModuleTextCatalog.generic(), excluded);
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+            if (batchStatusLabel == null) return;
+            if (activeBatchTask != null && activeBatchTask.isRunning()) {
+                batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
+            }
+        });
         if (batchInputFormatCombo != null) {
             batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchInputFormatCombo.setValue("CSV");
         }
 
         if (batchOperationCombo != null) {
-            batchOperationCombo.getItems().setAll("SHA-256 (UTF-8 → Hex)", "UTF-8 → Base64URL", "Base64URL → UTF-8", "Encrypt Record", "Decrypt Record");
-            batchOperationCombo.setValue("SHA-256 (UTF-8 → Hex)");
+            // Batch files are deliberately data-only. Secret/key-bearing
+            // crypto operations remain available in their dedicated modules.
+            batchOperationCombo.getItems().setAll(com.cryptocarver.model.batch.BatchOperationCatalog.getAvailableOperations());
+            if (!batchOperationCombo.getItems().isEmpty()) {
+                batchOperationCombo.setValue(batchOperationCombo.getItems().get(0));
+            }
             batchOperationCombo.valueProperty().addListener((obs, oldV, newV) -> {
                 boolean isCrypto = "Encrypt Record".equals(newV) || "Decrypt Record".equals(newV);
                 if (batchCryptoConfigBox != null) {
@@ -534,13 +651,13 @@ public class GenericController {
             batchExportFormatCombo.setValue("CSV");
         }
         if (manualInputFormatCombo != null) {
-            for (ByteFormat format : ByteFormat.values()) manualInputFormatCombo.getItems().add(format.getDisplayName());
+            manualInputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
             manualInputFormatCombo.setValue("Text (UTF-8)");
             manualInputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
         }
         if (manualOutputFormatCombo != null) {
-            for (ByteFormat format : ByteFormat.values()) manualOutputFormatCombo.getItems().add(format.getDisplayName());
+            manualOutputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
             manualOutputFormatCombo.setValue("Text (UTF-8)");
             manualOutputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
@@ -638,7 +755,9 @@ public class GenericController {
         if (template == null) return;
 
         Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "hashAlgorithmCombo", v -> { if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue(v); }
+                "hashAlgorithmCombo", v -> { if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue(v); },
+                "inputFormatCombo", this::setSharedInputFormat,
+                "outputFormatCombo", this::setSharedOutputFormat
         );
 
         SafeTemplateUIHelper.applySelectedTemplate(
@@ -648,14 +767,14 @@ public class GenericController {
                     if (template.contains("SHA-256")) {
                         hashAlgorithmCombo.setValue("SHA-256");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Hexadecimal");
                             statusReporter.updateStatus("Template Applied: SHA-256 — Text UTF-8 → Hex. A hash is one-way; it cannot be decrypted.");
                         }
                     } else if (template.contains("SHA-512")) {
                         hashAlgorithmCombo.setValue("SHA-512");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Base64");
                             statusReporter.updateStatus("Template Applied: SHA-512 — Text UTF-8 → Base64. A hash is one-way; it cannot be decrypted.");
                         }
@@ -670,6 +789,8 @@ public class GenericController {
     private void handleSaveHashTemplate() {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         if (hashAlgorithmCombo != null && hashAlgorithmCombo.getValue() != null) params.put("hashAlgorithmCombo", hashAlgorithmCombo.getValue());
+        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
         javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, params, this::refreshHashTemplateCombo, statusReporter);
     }
@@ -696,7 +817,7 @@ public class GenericController {
     private void handleResetHashDefaults() {
         hashAlgorithmCombo.setValue("SHA-256");
         if (statusReporter != null) {
-            statusReporter.setInputFormat("Plain Text");
+            statusReporter.setInputFormat("Text (UTF-8)");
             statusReporter.setOutputFormat("Hexadecimal");
             statusReporter.updateStatus("Hash form reset to default");
         }
@@ -708,8 +829,10 @@ public class GenericController {
         if (template == null) return;
 
         Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "manualInputFormatCombo", v -> { if (manualInputFormatCombo != null) manualInputFormatCombo.setValue(v); },
-                "manualOutputFormatCombo", v -> { if (manualOutputFormatCombo != null) manualOutputFormatCombo.setValue(v); },
+                "manualInputFormatCombo", v -> selectIfSupported(manualInputFormatCombo, normalizeFormatName(v)),
+                "manualOutputFormatCombo", v -> selectIfSupported(manualOutputFormatCombo, normalizeFormatName(v)),
+                "inputFormatCombo", this::setSharedInputFormat,
+                "outputFormatCombo", this::setSharedOutputFormat,
                 "ebcdicDirectionCombo", v -> { if (ebcdicDirectionCombo != null) ebcdicDirectionCombo.setValue(v); }
         );
 
@@ -721,7 +844,7 @@ public class GenericController {
                         manualInputFormatCombo.setValue("Text (UTF-8)");
                         manualOutputFormatCombo.setValue("Base64");
                         if (statusReporter != null) {
-                            statusReporter.setInputFormat("Plain Text");
+                            statusReporter.setInputFormat("Text (UTF-8)");
                             statusReporter.setOutputFormat("Base64");
                             statusReporter.updateStatus("Template Applied: Convert Text UTF-8 → Base64");
                         }
@@ -730,7 +853,7 @@ public class GenericController {
                         manualOutputFormatCombo.setValue("Text (UTF-8)");
                         if (statusReporter != null) {
                             statusReporter.setInputFormat("Hexadecimal");
-                            statusReporter.setOutputFormat("Plain Text");
+                            statusReporter.setOutputFormat("Text (UTF-8)");
                             statusReporter.updateStatus("Template Applied: Convert Hex → Text UTF-8");
                         }
                     }
@@ -745,6 +868,8 @@ public class GenericController {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         if (manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null) params.put("manualInputFormatCombo", manualInputFormatCombo.getValue());
         if (manualOutputFormatCombo != null && manualOutputFormatCombo.getValue() != null) params.put("manualOutputFormatCombo", manualOutputFormatCombo.getValue());
+        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
+        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
         if (ebcdicDirectionCombo != null && ebcdicDirectionCombo.getValue() != null) params.put("ebcdicDirectionCombo", ebcdicDirectionCombo.getValue());
         javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, params, this::refreshManualTemplateCombo, statusReporter);
@@ -775,8 +900,8 @@ public class GenericController {
         manualInputArea.setText("");
         manualOutputArea.setText("");
         if (statusReporter != null) {
-            statusReporter.setInputFormat("Plain Text");
-            statusReporter.setOutputFormat("Plain Text");
+            statusReporter.setInputFormat("Text (UTF-8)");
+            statusReporter.setOutputFormat("Text (UTF-8)");
             statusReporter.updateStatus("Manual conversion form reset to default");
         }
     }
@@ -881,12 +1006,36 @@ public class GenericController {
     }
 
     private static String normalizeFormatName(String format) {
-        return "Text".equals(format) ? "Text (UTF-8)" : format;
+        return "Text".equalsIgnoreCase(format) || "Plain Text".equalsIgnoreCase(format) ? "Text (UTF-8)" : format;
+    }
+
+    private void setSharedInputFormat(String format) {
+        if (statusReporter != null) {
+            statusReporter.setInputFormat(normalizeFormatName(format));
+        } else {
+            selectIfSupported(inputFormatCombo, normalizeFormatName(format));
+        }
+    }
+
+    private void setSharedOutputFormat(String format) {
+        if (statusReporter != null) {
+            statusReporter.setOutputFormat(normalizeFormatName(format));
+        } else {
+            selectIfSupported(outputFormatCombo, normalizeFormatName(format));
+        }
     }
 
     private static void selectIfSupported(ComboBox<String> combo, String value) {
-        if (combo != null && value != null && combo.getItems().contains(value)) {
+        if (combo == null) return;
+        if (value == null) {
+            combo.setValue(null);
+        } else if (combo.getItems().contains(value)) {
             combo.setValue(value);
+        } else {
+            // ComboBox#setValue may retain its previous selection for a value
+            // outside the active contract; clearing is safer than executing
+            // with stale format state.
+            combo.setValue(null);
         }
     }
 
@@ -1245,6 +1394,8 @@ public class GenericController {
     public void calculateHash(String input, String inputFormat, String outputFormat,
             String algorithm, TextInputControl targetOutputArea) {
         try {
+            inputFormat = normalizeFormatName(inputFormat);
+            outputFormat = normalizeFormatName(outputFormat);
             if (input == null || input.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to hash");
                 return;
@@ -1342,6 +1493,8 @@ public class GenericController {
 
     public void convert(String input, String inputFormat, String outputFormat, TextInputControl targetOutputArea) {
         try {
+            inputFormat = normalizeFormatName(inputFormat);
+            outputFormat = normalizeFormatName(outputFormat);
             if (input == null || input.isEmpty()) {
                 statusReporter.showError("Input Error", "Please enter data to convert");
                 return;
@@ -1896,6 +2049,7 @@ public class GenericController {
                 statusReporter.publish(OperationResult.forOperation("Modular Arithmetic")
                         .input((aHex + " " + bHex + " " + mHex).getBytes(java.nio.charset.StandardCharsets.UTF_8))
                         .output(modResultArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .enrichedOutput(modResultArea.getText())
                         .detail("Operation", operation).detail("Operand A", aHex)
                         .detail("Operand B", bHex).detail("Modulus", mHex)
                         .status("Modular operation completed").build());

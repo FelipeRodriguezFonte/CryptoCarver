@@ -21,7 +21,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -72,6 +71,8 @@ final class ExpandedTextViewer {
 
         searchField = new TextField();
         searchField.setPromptText("Find in result");
+        searchField.setPrefWidth(220);
+        searchField.setMinWidth(160);
         searchField.setOnAction(event -> findNext());
         searchField.textProperty().addListener((observable, previous, current) -> resetSearch());
         Button findButton = new Button("Find next");
@@ -96,11 +97,13 @@ final class ExpandedTextViewer {
         closeButton.setOnAction(event -> stage.hide());
 
         metricsLabel = new Label();
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, searchField, findButton, findPreviousButton, findStatusLabel, wrapCheck, spacer, metricsLabel,
-                copyButton, copySelectionButton, saveButton, maximizeButton, closeButton);
-        toolbar.setAlignment(Pos.CENTER_LEFT);
+        HBox searchToolbar = new HBox(8, searchField, findButton, findPreviousButton, findStatusLabel, wrapCheck,
+                metricsLabel);
+        searchToolbar.setAlignment(Pos.CENTER_LEFT);
+        HBox actionToolbar = new HBox(8, copyButton, copySelectionButton, saveButton, maximizeButton, closeButton);
+        actionToolbar.setAlignment(Pos.CENTER_LEFT);
+        VBox toolbar = new VBox(8, searchToolbar, actionToolbar);
+        toolbar.getStyleClass().add("responsive-action-bar");
 
         VBox root = new VBox(10, toolbar, contentArea);
         root.setPadding(new Insets(12));

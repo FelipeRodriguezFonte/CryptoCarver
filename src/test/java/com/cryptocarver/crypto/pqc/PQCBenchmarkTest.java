@@ -2,12 +2,14 @@ package com.cryptocarver.crypto.pqc;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag("benchmark")
 class PQCBenchmarkTest {
 
     @BeforeAll

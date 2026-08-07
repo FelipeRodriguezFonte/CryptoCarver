@@ -231,4 +231,128 @@ class ModernMainControllerFxmlStaticTest {
         }
         return values;
     }
+
+    @Test
+    void testActionBarsWithMoreThanThreeButtonsMustWrap() throws Exception {
+        String[] fxmlFiles = {
+            "/fxml/keys.fxml",
+            "/fxml/cipher.fxml",
+            "/fxml/authentication.fxml",
+            "/fxml/certificates.fxml",
+            "/fxml/generic.fxml",
+            "/fxml/payments.fxml",
+            "/fxml/emv.fxml",
+            "/fxml/jose.fxml",
+            "/fxml/pqc.fxml"
+        };
+
+        for (String fxmlPath : fxmlFiles) {
+            InputStream is = getClass().getResourceAsStream(fxmlPath);
+            assertNotNull(is, "FXML file must exist: " + fxmlPath);
+
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(is);
+            Element root = doc.getDocumentElement();
+
+            List<Element> hBoxes = findElementsByTagName(root, "HBox");
+            for (Element hbox : hBoxes) {
+                List<Element> buttons = findElementsByTagName(hbox, "Button");
+                List<Element> menuButtons = findElementsByTagName(hbox, "MenuButton");
+                int actionCount = buttons.size() + menuButtons.size();
+                if (actionCount >= 4) {
+                    fail(fxmlPath + " contains an HBox with " + actionCount + " action buttons. Action bars with 4+ buttons MUST use FlowPane with responsive-action-bar styleClass.");
+                }
+            }
+        }
+    }
+
+    @Test
+    void testResultSummaryBarStructureAndHandlers() throws Exception {
+        InputStream is = getClass().getResourceAsStream("/fxml/main-view-modern.fxml");
+        assertNotNull(is);
+
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        Document doc = db.parse(is);
+        Element root = doc.getDocumentElement();
+
+        List<Element> hBoxes = findElementsByTagName(root, "HBox");
+        Element resultSummaryBar = null;
+        for (Element hbox : hBoxes) {
+            if ("resultSummaryBar".equals(hbox.getAttribute("fx:id"))) {
+                resultSummaryBar = hbox;
+                break;
+            }
+        }
+        assertNotNull(resultSummaryBar, "resultSummaryBar element missing in main-view-modern.fxml");
+
+        List<Element> buttons = findElementsByTagName(resultSummaryBar, "Button");
+        assertEquals(3, buttons.size(), "resultSummaryBar must contain 3 action buttons");
+
+        List<String> actionHandlers = extractAttributes(resultSummaryBar, "onAction");
+        assertTrue(actionHandlers.contains("#handleOpenExpandedResultViewer"), "Missing #handleOpenExpandedResultViewer");
+        assertTrue(actionHandlers.contains("#handleAddCurrentOutputToShelf"), "Missing #handleAddCurrentOutputToShelf");
+        assertTrue(actionHandlers.contains("#handleCopyOutput"), "Missing #handleCopyOutput");
+    }
+
+    @Test
+    void testCriticalButtonsHaveFullText() throws Exception {
+        String[] criticalTexts = {
+            "Expand Result", "Copy Output", "Add to Shelf", "Generate Key"
+        };
+
+        for (String critText : criticalTexts) {
+            boolean textFound = false;
+            String[] targetFxmls = {"/fxml/main-view-modern.fxml", "/fxml/keys.fxml"};
+            for (String fxmlPath : targetFxmls) {
+                InputStream is = getClass().getResourceAsStream(fxmlPath);
+                assertNotNull(is);
+                DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+                DocumentBuilder db = dbf.newDocumentBuilder();
+                Document doc = db.parse(is);
+                Element root = doc.getDocumentElement();
+
+                List<Element> buttons = findElementsByTagName(root, "Button");
+                for (Element b : buttons) {
+                    String text = b.getAttribute("text");
+                    if (text != null && text.contains(critText)) {
+                        textFound = true;
+                        break;
+                    }
+                }
+                if (textFound) break;
+            }
+            assertTrue(textFound, "Critical button text containing '" + critText + "' missing in FXMLs");
+        }
+    }
+
+    @Test
+    void testNoInvalidInlineColorTokensInFxmlAndJava() throws Exception {
+        java.io.File fxmlDir = new java.io.File("src/main/resources/fxml");
+        if (fxmlDir.exists() && fxmlDir.isDirectory()) {
+            java.io.File[] files = fxmlDir.listFiles((dir, name) -> name.endsWith(".fxml"));
+            if (files != null) {
+                for (java.io.File f : files) {
+                    String content = java.nio.file.Files.readString(f.toPath());
+                    java.util.regex.Pattern p = java.util.regex.Pattern.compile("style=\\\"[^\\\"]*-color-[^\\\"]*\\\"");
+                    java.util.regex.Matcher m = p.matcher(content);
+                    assertFalse(m.find(), "FXML " + f.getName() + " must not contain inline style attributes with -color- tokens");
+                }
+            }
+        }
+
+        java.io.File uiDir = new java.io.File("src/main/java/com/cryptocarver/ui");
+        if (uiDir.exists() && uiDir.isDirectory()) {
+            java.io.File[] files = uiDir.listFiles((dir, name) -> name.endsWith(".java"));
+            if (files != null) {
+                for (java.io.File f : files) {
+                    String content = java.nio.file.Files.readString(f.toPath());
+                    java.util.regex.Pattern p = java.util.regex.Pattern.compile("setStyle\\s*\\([^)]*-color-[^)]*\\)");
+                    java.util.regex.Matcher m = p.matcher(content);
+                    assertFalse(m.find(), f.getName() + " must not use setStyle with unresolved -color- tokens");
+                }
+            }
+        }
+    }
 }

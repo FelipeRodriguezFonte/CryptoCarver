@@ -5,6 +5,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import com.cryptocarver.service.I18nService;
 
 /**
  * Modern launcher for the new Rail + SidePanel UI
@@ -24,6 +25,7 @@ public class CryptoCalculatorModern extends Application {
         try {
             // Load modern FXML
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+            loader.setResources(I18nService.getInstance().getBundle());
             Parent root = loader.load();
 
             // Create scene

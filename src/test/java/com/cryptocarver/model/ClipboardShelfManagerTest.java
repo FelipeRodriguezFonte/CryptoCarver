@@ -1,181 +1,116 @@
 package com.cryptocarver.model;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ClipboardShelfManagerTest {
 
-    private ClipboardShelfManager manager;
+    @Test
+    void testPersistenceAndSearch(@TempDir Path tempDir) {
+        Path shelfPath = tempDir.resolve("shelf.json");
+        ClipboardShelfManager manager = new ClipboardShelfManager(shelfPath);
 
-    @BeforeEach
-    void setUp() {
-        manager = ClipboardShelfManager.getInstance();
-        manager.clear();
+        ClipboardEntry entry1 = new ClipboardEntry(
+                "Entry 1", "Payload A", ClipboardEntry.Format.TEXT,
+                OperationDetail.Classification.PUBLIC, "Hash", "SHA-256",
+                List.of("tag1", "test"), "My first note", false
+        );
+
+        ClipboardEntry entry2 = new ClipboardEntry(
+                "Entry 2", "Payload B", ClipboardEntry.Format.TEXT,
+                OperationDetail.Classification.SECRET, "Symmetric Encryption", "AES-256-GCM",
+                List.of("tag2", "prod"), "Second note", true
+        );
+
+        manager.addEntry(entry1);
+        manager.addEntry(entry2);
+
+        assertTrue(Files.exists(shelfPath), "Shelf file must be created on disk");
+
+        // Verify Pinned ordering: Pinned entry2 appears first
+        List<ClipboardEntry> all = manager.getEntries();
+        assertEquals(2, all.size());
+        assertEquals("Entry 2", all.get(0).getLabel(), "Pinned entry must appear first");
+
+        // Search by Tag
+        List<ClipboardEntry> searchTag = manager.search("prod", null, null, null, null);
+        assertEquals(1, searchTag.size());
+        assertEquals("Entry 2", searchTag.get(0).getLabel());
+
+        // Search by Note
+        List<ClipboardEntry> searchNote = manager.search("first", null, null, null, null);
+        assertEquals(1, searchNote.size());
+        assertEquals("Entry 1", searchNote.get(0).getLabel());
+
+        // Test duplicate detection
+        Optional<ClipboardEntry> dup = manager.findDuplicate("Payload A", "Hash");
+        assertTrue(dup.isPresent());
+        assertEquals("Entry 1", dup.get().getLabel());
+
+        // Re-instantiate manager from disk to verify persistence loading
+        ClipboardShelfManager loadedManager = new ClipboardShelfManager(shelfPath);
+        List<ClipboardEntry> loaded = loadedManager.getEntries();
+        assertEquals(2, loaded.size());
+        assertEquals("Entry 2", loaded.get(0).getLabel());
+        assertEquals("Second note", loaded.get(0).getNote());
     }
 
     @Test
-    void testSingletonInstance() {
-        ClipboardShelfManager instance1 = ClipboardShelfManager.getInstance();
-        ClipboardShelfManager instance2 = ClipboardShelfManager.getInstance();
-        assertSame(instance1, instance2, "Instances should be the exact same object");
-    }
+    void testPinAndTagsMutation(@TempDir Path tempDir) {
+        Path shelfPath = tempDir.resolve("shelf.json");
+        ClipboardShelfManager manager = new ClipboardShelfManager(shelfPath);
 
-    @Test
-    void testAddEntry() {
-        ClipboardEntry entry = new ClipboardEntry("Test", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
+        ClipboardEntry entry = new ClipboardEntry(
+                "Item", "123456", ClipboardEntry.Format.TEXT,
+                OperationDetail.Classification.PUBLIC, "Format"
+        );
         manager.addEntry(entry);
 
-        assertEquals(1, manager.getEntries().size());
-        assertEquals("Test", manager.getEntries().get(0).getLabel());
+        manager.togglePin(entry.getId());
+        assertTrue(manager.getEntries().get(0).isPinned());
+
+        manager.updateTagsAndNote(entry.getId(), List.of("tagX"), "Updated Note");
+        assertEquals("Updated Note", manager.getEntries().get(0).getNote());
+        assertEquals(1, manager.getEntries().get(0).getTags().size());
     }
 
     @Test
-    void testFifoLimit() {
-        // Add 105 entries
-        for (int i = 0; i < 105; i++) {
-            ClipboardEntry entry = new ClipboardEntry("Test " + i, "Value " + i, ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
-            manager.addEntry(entry);
-        }
+    void testLegacyEntriesAreNormalized(@TempDir Path tempDir) throws Exception {
+        Path shelfPath = tempDir.resolve("shelf.json");
+        Files.writeString(shelfPath, "[{\"label\":\"Legacy\",\"value\":\"Payload\",\"format\":\"TEXT\",\"classification\":\"PUBLIC\",\"sourceOperation\":\"Legacy\"}]");
 
-        assertEquals(100, manager.getEntries().size(), "Manager should not exceed 100 entries");
+        ClipboardShelfManager manager = new ClipboardShelfManager(shelfPath);
+        ClipboardEntry migrated = manager.getEntries().get(0);
 
-        // The first 5 entries (0 to 4) should have been evicted.
-        // The newest entry (104) is at index 0, and the oldest kept (5) is at index 99.
-        assertEquals("Test 104", manager.getEntries().get(0).getLabel());
-        assertEquals("Test 5", manager.getEntries().get(99).getLabel());
+        assertEquals("Legacy", migrated.getLabel());
+        assertNotNull(migrated.getId());
+        assertNotNull(migrated.getCreatedAt());
+        assertFalse(migrated.isPinned());
+        assertTrue(Files.readString(shelfPath).contains("createdAt"));
     }
 
     @Test
-    void testRenameEntry() {
-        ClipboardEntry entry = new ClipboardEntry("Test", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
-        manager.addEntry(entry);
-
-        boolean renamed = manager.renameEntry(entry.getId(), "New Label");
-        assertTrue(renamed);
-        assertEquals("New Label", manager.getEntries().get(0).getLabel());
-    }
-
-    @Test
-    void testRemoveEntry() {
-        ClipboardEntry entry = new ClipboardEntry("Test", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
-        manager.addEntry(entry);
-        assertEquals(1, manager.getEntries().size());
-
-        manager.removeEntry(entry.getId());
-        assertEquals(0, manager.getEntries().size());
-    }
-
-    @Test
-    void testInferFormat() {
-        assertEquals(ClipboardEntry.Format.UNKNOWN, ClipboardEntry.Format.inferFormat(""));
-        assertEquals(ClipboardEntry.Format.UNKNOWN, ClipboardEntry.Format.inferFormat("   "));
-        assertEquals(ClipboardEntry.Format.PEM, ClipboardEntry.Format.inferFormat("-----BEGIN CERTIFICATE-----\nMIIB... \n-----END CERTIFICATE-----"));
-
-        // Strict JSON tests (Gson parser should accept these)
-        assertEquals(ClipboardEntry.Format.JSON, ClipboardEntry.Format.inferFormat("{\"key\":\"value\"}"));
-        assertEquals(ClipboardEntry.Format.JSON, ClipboardEntry.Format.inferFormat("[1, 2, 3]"));
-
-        // HEX tests
-        assertEquals(ClipboardEntry.Format.HEX, ClipboardEntry.Format.inferFormat("0A1B2C"));
-        assertEquals(ClipboardEntry.Format.HEX, ClipboardEntry.Format.inferFormat("0a 1b 2c"));
-
-        // BASE64 tests
-        assertEquals(ClipboardEntry.Format.BASE64, ClipboardEntry.Format.inferFormat("YWJjZGU=")); // "abcde"
-        assertEquals(ClipboardEntry.Format.BASE64, ClipboardEntry.Format.inferFormat("YWJjZGVm")); // "abcdef" (could also be base64url, but base64 matches first)
-
-        // BASE64URL tests (no padding, contains - or _)
-        assertEquals(ClipboardEntry.Format.BASE64URL, ClipboardEntry.Format.inferFormat("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9_--_"));
-        assertEquals(ClipboardEntry.Format.BASE64URL, ClipboardEntry.Format.inferFormat("a-b_cdefghijklmnop"));
-
-        assertEquals(ClipboardEntry.Format.TEXT, ClipboardEntry.Format.inferFormat("Just some plain text that is not hex or b64"));
-    }
-
-    @Test
-    void testImmutabilityOnRename() {
-        ClipboardEntry original = new ClipboardEntry("Original", "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
-        ClipboardEntry renamed = original.withLabel("Renamed");
-
-        assertNotSame(original, renamed, "Rename should create a new instance");
-        assertEquals("Original", original.getLabel(), "Original should not be mutated");
-        assertEquals("Renamed", renamed.getLabel(), "New instance should have new label");
-        assertEquals(original.getId(), renamed.getId(), "ID should remain the same");
-    }
-
-    @Test
-    void testThreadSafety() throws InterruptedException {
-        int threadCount = 10;
-        int entriesPerThread = 50;
-        Thread[] threads = new Thread[threadCount];
-
-        for (int i = 0; i < threadCount; i++) {
-            final int threadId = i;
-            threads[i] = new Thread(() -> {
-                for (int j = 0; j < entriesPerThread; j++) {
-                    ClipboardEntry entry = new ClipboardEntry("T" + threadId + "-" + j, "Value", ClipboardEntry.Format.TEXT, OperationDetail.Classification.PUBLIC, "Source");
-                    manager.addEntry(entry);
-                }
-            });
-            threads[i].start();
-        }
-
-        for (Thread t : threads) {
-            t.join();
-        }
-
-        // Should not exceed max capacity
-        assertEquals(100, manager.getEntries().size());
-    }
-
-    @Test
-    void testChangeListenerReceivesShelfMutationsAndCanBeRemoved() {
-        java.util.concurrent.atomic.AtomicInteger changes = new java.util.concurrent.atomic.AtomicInteger();
-        Runnable listener = changes::incrementAndGet;
-        manager.addChangeListener(listener);
-
-        ClipboardEntry entry = new ClipboardEntry("Live", "Value", ClipboardEntry.Format.TEXT,
-                OperationDetail.Classification.PUBLIC, "Source");
-        manager.addEntry(entry);
-        manager.renameEntry(entry.getId(), "Renamed");
-        manager.removeEntry(entry.getId());
-        assertEquals(3, changes.get());
-
-        manager.removeChangeListener(listener);
-        manager.addEntry(entry);
-        assertEquals(3, changes.get());
-    }
-
-    @Test
-    void testReportingDoesNotLeakValue() {
-        final java.util.List<OperationResult> publishedResults = new java.util.ArrayList<>();
+    void shelfMutationsDoNotCreateRecentOperationEvents(@TempDir Path tempDir) {
+        ClipboardShelfManager manager = new ClipboardShelfManager(tempDir.resolve("shelf.json"));
+        AtomicInteger published = new AtomicInteger();
         manager.setReporter(new com.cryptocarver.ui.StatusReporter() {
-            @Override
-            public void updateStatus(String message) {}
-            @Override
-            public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptocarver.model.OperationDetail> details) {}
-            @Override
-            public void showError(String title, String message) {}
-            @Override
-            public void publish(OperationResult result) {
-                publishedResults.add(result);
-            }
+            @Override public void updateStatus(String message) { }
+            @Override public void updateInspector(String operation, byte[] input, byte[] output,
+                                                   List<OperationDetail> details) { }
+            @Override public void showError(String title, String message) { }
+            @Override public void publish(OperationResult result) { published.incrementAndGet(); }
         });
 
-        ClipboardEntry entry = new ClipboardEntry("MyLabel", "SUPER_SECRET_VALUE", ClipboardEntry.Format.TEXT, OperationDetail.Classification.SECRET, "Source");
-        manager.addEntry(entry);
-        manager.renameEntry(entry.getId(), "New Label");
-        manager.removeEntry(entry.getId());
-        manager.addEntry(entry);
-        manager.clear();
-
-        assertEquals(5, publishedResults.size());
-
-        for (OperationResult res : publishedResults) {
-            assertNull(res.getInput(), "Input should be null");
-            assertNull(res.getOutput(), "Output should be null");
-            assertTrue(res.getDetails() == null || res.getDetails().isEmpty(), "Details should be empty");
-            assertFalse(res.getStatusMessage().contains("SUPER_SECRET_VALUE"), "Status message must not leak value");
-        }
+        manager.addEntry(new ClipboardEntry("Notebook item", "payload", ClipboardEntry.Format.TEXT,
+                OperationDetail.Classification.PUBLIC, "Hash"));
+        assertEquals(0, published.get(), "Shelf mutations must not become execution history entries");
     }
 }

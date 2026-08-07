@@ -18,6 +18,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 /**
  * Controller for Post-Quantum Cryptography operations
@@ -30,10 +32,17 @@ public class PostQuantumController {
 
     @FXML
     private Accordion pqcAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     // UI Components - Key Gen
     @FXML
     private ComboBox<String> pqcAlgorithmCombo;
+    @FXML
+    private Button pqcGenerateKeyBtn;
     @FXML
     private TextArea pqcPublicKeyArea;
     @FXML
@@ -87,6 +96,10 @@ public class PostQuantumController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(pqcAccordion, ModuleTextCatalog.pqc());
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+            if (pqcKeyStatusLabel != null && currentPublicKey == null) pqcKeyStatusLabel.setText(t("status.ready"));
+        });
         IngestionUIHelper.bindField(pqcSignInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(pqcVerifySignatureField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
         IngestionUIHelper.bindField(pqcPublicKeyArea, pqcKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
@@ -137,37 +150,60 @@ public class PostQuantumController {
                 return;
             }
 
-            KeyPair kp = PostQuantumOperations.generateKeyPair(algo);
-            currentPublicKey = kp.getPublic();
-            currentPrivateKey = kp.getPrivate();
+            Callable<KeyPair> task = () -> PostQuantumOperations.generateKeyPair(algo);
 
-            String pubHex = DataConverter.bytesToHex(currentPublicKey.getEncoded());
-            String privHex = DataConverter.bytesToHex(currentPrivateKey.getEncoded());
+            Consumer<KeyPair> onSuccess = kp -> {
+                try {
+                    currentPublicKey = kp.getPublic();
+                    currentPrivateKey = kp.getPrivate();
 
-            try {
-                pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" +
-                    java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) +
-                    "\n-----END PUBLIC KEY-----");
+                    String pubHex = DataConverter.bytesToHex(currentPublicKey.getEncoded());
+                    String privHex = DataConverter.bytesToHex(currentPrivateKey.getEncoded());
 
-                pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" +
-                    java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) +
-                    "\n-----END PRIVATE KEY-----");
-            } catch (Exception e) {
-                pqcPublicKeyArea.setText(pubHex);
-                pqcPrivateKeyArea.setText(privHex);
-            }
+                    try {
+                        pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" +
+                            java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) +
+                            "\n-----END PUBLIC KEY-----");
 
-            if (pqcKeyStatusLabel != null) {
-                pqcKeyStatusLabel.setText("Generated " + algo + " Key Pair");
-            }
-            java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(algo, "Generated");
-            if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Key Generation")
-                        .output(currentPublicKey.getEncoded())
-                        .details(detailsWithKeyMaterial(details))
-                        .status("Generated " + algo + " Key Pair")
-                        .build());
+                        pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" +
+                            java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) +
+                            "\n-----END PRIVATE KEY-----");
+                    } catch (Exception e) {
+                        pqcPublicKeyArea.setText(pubHex);
+                        pqcPrivateKeyArea.setText(privHex);
+                    }
+
+                    if (pqcKeyStatusLabel != null) {
+                        pqcKeyStatusLabel.setText("Generated " + algo + " Key Pair");
+                    }
+                    java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(algo, "Generated");
+                    if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
+                    if (statusReporter != null) {
+                        statusReporter.publish(OperationResult.forOperation("PQC Key Generation")
+                                .output(currentPublicKey.getEncoded())
+                                .details(detailsWithKeyMaterial(details))
+                                .status("Generated " + algo + " Key Pair")
+                                .build());
+                    }
+                } catch (Exception e) {
+                    if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + e.getMessage());
+                }
+            };
+
+            Consumer<Throwable> onFailure = err -> {
+                if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + (err != null ? err.getMessage() : "Unknown error"));
+            };
+
+            Runnable onCancelled = () -> {
+                if (pqcKeyStatusLabel != null) pqcKeyStatusLabel.setText(t("module.pqc.cancelled"));
+                if (statusReporter != null) statusReporter.updateStatus(t("module.pqc.cancelled"));
+            };
+
+            if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
+                statusReporter.getOperationExecutor().execute("PQC-" + algo + " Key Generation", pqcGenerateKeyBtn, task, onSuccess, onFailure, onCancelled);
+            } else {
+                KeyPair kp = task.call();
+                onSuccess.accept(kp);
             }
 
         } catch (Exception e) {
@@ -481,7 +517,7 @@ public class PostQuantumController {
             pqcKemSharedSecretField.setText(DataConverter.bytesToHex(result.sharedSecret()));
             bobSecret = result.sharedSecret();
             if (pqcAliceSecretField != null) pqcAliceSecretField.clear();
-            pqcKemStatusLabel.setText("Shared secret encapsulated successfully. Send ciphertext to Alice.");
+            pqcKemStatusLabel.setText(t("module.pqc.encapsulated"));
             pqcKemStatusLabel.setStyle("");
             java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
                 com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", selectedAlgorithm),
@@ -514,14 +550,14 @@ public class PostQuantumController {
             if (bobSecret != null) {
                 boolean match = java.security.MessageDigest.isEqual(bobSecret, secret);
                 if (match) {
-                    pqcKemStatusLabel.setText("MATCH! Alice and Bob share the same secret.");
+                    pqcKemStatusLabel.setText(t("module.pqc.match"));
                     pqcKemStatusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
                 } else {
-                    pqcKemStatusLabel.setText("MISMATCH! The derived secrets differ.");
+                    pqcKemStatusLabel.setText(t("module.pqc.mismatch"));
                     pqcKemStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
                 }
             } else {
-                pqcKemStatusLabel.setText("Alice decrypted the secret, but Bob's secret is unknown.");
+                pqcKemStatusLabel.setText(t("module.pqc.bobSecretUnknown"));
             }
             Map<String, String> legacyDetails = new HashMap<>();
             legacyDetails.put("Algorithm", pqcKemAlgoCombo.getValue());
@@ -557,53 +593,47 @@ public class PostQuantumController {
 
     @FXML
     public void handlePQCBenchmark() {
-        if (activeBenchmarkTask != null && activeBenchmarkTask.isRunning()) {
-            activeBenchmarkTask.cancel();
-            return;
-        }
-
         String algo = pqcBenchmarkAlgoCombo.getValue();
         if (algo == null) {
             if (statusReporter != null) statusReporter.showError("Benchmark Error", "Select an algorithm to benchmark");
             return;
         }
 
-        pqcBenchmarkBtn.setText("Cancel Benchmark");
-        pqcBenchmarkProgress.setVisible(true);
-        pqcBenchmarkArea.setText("Benchmarking " + algo + " (1000 iterations). Please wait...\n");
+        if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(true);
+        if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarking", algo));
 
-        activeBenchmarkTask = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
+        Callable<String> task = () -> {
+            com.cryptocarver.crypto.pqc.PQCBenchmark bench = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
+            bench.run();
+            return bench.getValue();
+        };
 
-        activeBenchmarkTask.setOnSucceeded(e -> {
-            pqcBenchmarkArea.setText(activeBenchmarkTask.getValue());
-            pqcBenchmarkBtn.setText("Run Benchmark");
-            pqcBenchmarkProgress.setVisible(false);
-            activeBenchmarkTask = null;
-        });
+        Consumer<String> onSuccess = resultText -> {
+            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(resultText);
+            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
+        };
 
-        activeBenchmarkTask.setOnCancelled(e -> {
-            String partial = activeBenchmarkTask.getPartialResult();
-            if (partial != null) {
-                pqcBenchmarkArea.setText(partial);
-            } else {
-                pqcBenchmarkArea.setText("Benchmark canceled.");
+        Consumer<Throwable> onFailure = err -> {
+            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarkFailed", err != null ? err.getMessage() : t("error.unknown")));
+            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
+            if (statusReporter != null) statusReporter.showError("Benchmark Error", err != null ? err.getMessage() : "Unknown error");
+        };
+
+        Runnable onCancelled = () -> {
+            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarkCancelled"));
+            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
+        };
+
+        if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
+            statusReporter.getOperationExecutor().execute("PQC Benchmark (" + algo + ")", pqcBenchmarkBtn, task, onSuccess, onFailure, onCancelled);
+        } else {
+            try {
+                String res = task.call();
+                onSuccess.accept(res);
+            } catch (Exception e) {
+                onFailure.accept(e);
             }
-            pqcBenchmarkBtn.setText("Run Benchmark");
-            pqcBenchmarkProgress.setVisible(false);
-            activeBenchmarkTask = null;
-        });
-
-        activeBenchmarkTask.setOnFailed(e -> {
-            pqcBenchmarkArea.setText("Benchmark failed: " + activeBenchmarkTask.getException().getMessage());
-            pqcBenchmarkBtn.setText("Run Benchmark");
-            pqcBenchmarkProgress.setVisible(false);
-            if (statusReporter != null) statusReporter.showError("Benchmark Error", activeBenchmarkTask.getException().getMessage());
-            activeBenchmarkTask = null;
-        });
-
-        Thread th = new Thread(activeBenchmarkTask);
-        th.setDaemon(true);
-        th.start();
+        }
     }
 
     @FXML

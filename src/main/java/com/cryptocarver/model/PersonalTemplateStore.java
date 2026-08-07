@@ -153,6 +153,7 @@ public final class PersonalTemplateStore {
         }
 
         // Validate strictly using allowlist
+        imported.setParameters(imported.getParameters());
         SafeTemplateAllowlist.validateTemplate(imported);
 
         // Assign fresh ID if needed to prevent overwrite conflicts
@@ -192,6 +193,9 @@ public final class PersonalTemplateStore {
             if (loaded != null) {
                 for (SafeOperationTemplate template : loaded) {
                     try {
+                        // Gson hydrates fields directly, so re-run the model
+                        // setter to canonicalize legacy format aliases.
+                        template.setParameters(template.getParameters());
                         SafeTemplateAllowlist.validateTemplate(template);
                         templates.put(template.getId(), template);
                     } catch (Exception e) {

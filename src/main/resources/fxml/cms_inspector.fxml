@@ -4,7 +4,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
-<TitledPane text="🔍 Inspect / Validate CMS" expanded="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.CmsInspectorController">
+<TitledPane fx:id="cmsInspectorRoot" text="🔍 Inspect / Validate CMS" expanded="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.CmsInspectorController">
     <content>
         <VBox spacing="10" style="-fx-padding: 10;">
             <Label text="CMS Source (Base64 / PEM / DER File):" style="-fx-font-weight: bold;"/>
@@ -33,6 +33,8 @@
                 <Button text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
                 <Button text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
                 <Button text="Export Report" onAction="#handleExportReport" />
+                <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+                <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
             </FlowPane>
             
             <Label text="Inspection Results:" style="-fx-font-weight: bold;"/>

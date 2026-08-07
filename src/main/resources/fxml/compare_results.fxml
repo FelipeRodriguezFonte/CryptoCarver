@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="compareResultsRoot" spacing="12" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cryptocarver.ui.CompareResultsController"
+      prefWidth="750" prefHeight="550" stylesheets="@../css/styles.css">
+
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <VBox HBox.hgrow="ALWAYS">
+            <Label text="Compare Laboratory Results" styleClass="header-label"/>
+            <Label text="Zero-crypto side-by-side comparison of stored result snapshots." styleClass="description-label"/>
+        </VBox>
+        <Label fx:id="statusBadgeLabel" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 4 10; -fx-background-radius: 4;"/>
+    </HBox>
+
+    <Label fx:id="summaryLabel" style="-fx-font-size: 13px; -fx-text-fill: #2c3e50;" wrapText="true"/>
+
+    <GridPane hgap="15" vgap="8" style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-border-color: #e0e0e0; -fx-border-radius: 4;">
+        <columnConstraints>
+            <ColumnConstraints prefWidth="130"/>
+            <ColumnConstraints percentWidth="43"/>
+            <ColumnConstraints percentWidth="43"/>
+        </columnConstraints>
+
+        <Label text="Property" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label fx:id="item1HeaderLabel" text="Item 1" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+        <Label fx:id="item2HeaderLabel" text="Item 2" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+
+        <Label text="Label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <Label fx:id="item1Label" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+        <Label fx:id="item2Label" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+
+        <Label text="Source Operation" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <Label fx:id="item1Source" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+        <Label fx:id="item2Source" GridPane.rowIndex="2" GridPane.columnIndex="2"/>
+
+        <Label text="Algorithm" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <Label fx:id="item1Algorithm" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        <Label fx:id="item2Algorithm" GridPane.rowIndex="3" GridPane.columnIndex="2"/>
+
+        <Label text="Timestamp" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <Label fx:id="item1Time" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+        <Label fx:id="item2Time" GridPane.rowIndex="4" GridPane.columnIndex="2"/>
+
+        <Label text="Format / Size" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <Label fx:id="item1FormatSize" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+        <Label fx:id="item2FormatSize" GridPane.rowIndex="5" GridPane.columnIndex="2"/>
+
+        <Label text="Classification" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+        <Label fx:id="item1Class" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+        <Label fx:id="item2Class" GridPane.rowIndex="6" GridPane.columnIndex="2"/>
+
+        <Label text="SHA-256 Hash" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+        <Label fx:id="item1Hash" style="-fx-font-family: monospace;" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+        <Label fx:id="item2Hash" style="-fx-font-family: monospace;" GridPane.rowIndex="7" GridPane.columnIndex="2"/>
+    </GridPane>
+
+    <Label text="Diff Details" style="-fx-font-weight: bold;"/>
+    <TextArea fx:id="diffDetailsArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" style="-fx-font-family: monospace;"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Export Comparison Report..." onAction="#handleExportReport"/>
+        <Button text="Reset" onAction="#handleReset"/>
+        <Button text="Close" onAction="#handleClose"/>
+    </HBox>
+</VBox>

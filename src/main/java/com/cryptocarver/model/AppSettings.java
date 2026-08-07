@@ -14,6 +14,7 @@ import java.util.Objects;
 public final class AppSettings {
     private static final AppSettings INSTANCE = new AppSettings();
     private final Path file;
+    private final Pkcs11ProfileRepository pkcs11ProfileRepository;
     private Settings data = new Settings();
 
     private AppSettings() {
@@ -23,7 +24,9 @@ public final class AppSettings {
     /** Constructor for isolated settings instances (e.g. tests or custom paths). */
     public AppSettings(Path file) {
         this.file = Objects.requireNonNull(file, "Settings file is required").toAbsolutePath().normalize();
+        this.pkcs11ProfileRepository = new Pkcs11ProfileRepository(pkcs11ProfileFile(this.file));
         load();
+        migrateLegacyPkcs11Profiles();
     }
 
     private static Path defaultSettingsFile() {
@@ -47,6 +50,22 @@ public final class AppSettings {
 
     public synchronized void resetForTesting() {
         data = new Settings();
+        pkcs11ProfileRepository.resetInMemoryForTesting();
+    }
+
+    private static Path pkcs11ProfileFile(Path settingsFile) {
+        Path parent = settingsFile.getParent();
+        return (parent == null ? Path.of(".") : parent).resolve("pkcs11-profiles.json")
+                .toAbsolutePath().normalize();
+    }
+
+    public synchronized LanguagePreference getLanguagePreference() {
+        return data.languagePreference == null ? LanguagePreference.SYSTEM : data.languagePreference;
+    }
+
+    public synchronized void setLanguagePreference(LanguagePreference preference) {
+        data.languagePreference = preference == null ? LanguagePreference.SYSTEM : preference;
+        save();
     }
 
     public synchronized SecretVisibilityProfile getSecretVisibilityProfile() {
@@ -124,24 +143,26 @@ public final class AppSettings {
     public record TrustStoreProfile(String name, String path, String type) { }
 
     public synchronized List<Pkcs11Profile> getPkcs11Profiles() {
-        if (data.pkcs11Profiles == null) return List.of();
-        return data.pkcs11Profiles.stream().map(profile -> new Pkcs11Profile(profile.name(), profile.library(), profile.slot())).toList();
+        return pkcs11ProfileRepository.list();
+    }
+
+    /** Exposes the dedicated non-secret repository to feature presenters. */
+    public Pkcs11ProfileRepository getPkcs11ProfileRepository() {
+        return pkcs11ProfileRepository;
     }
 
     public synchronized void savePkcs11Profile(String name, String library, int slot) {
-        String normalizedName = name == null ? "" : name.trim();
-        String normalizedLibrary = library == null ? "" : library.trim();
-        if (normalizedName.isEmpty() || normalizedLibrary.isEmpty()) throw new IllegalArgumentException("Profile name and library path are required");
-        if (slot < 0) throw new IllegalArgumentException("PKCS#11 slot must be zero or greater");
-        if (data.pkcs11Profiles == null) data.pkcs11Profiles = new ArrayList<>();
-        data.pkcs11Profiles.removeIf(profile -> normalizedName.equalsIgnoreCase(profile.name()));
-        data.pkcs11Profiles.add(new Pkcs11Profile(normalizedName, normalizedLibrary, slot));
+        pkcs11ProfileRepository.upsert(new Pkcs11Profile(name, library, slot));
+        // Keep the legacy settings file present for callers that use it as a
+        // general settings anchor; profile data now lives in its own atomic,
+        // versioned file.
+        data.pkcs11Profiles = new ArrayList<>();
         save();
     }
 
     public synchronized void removePkcs11Profile(String name) {
-        if (data.pkcs11Profiles == null || name == null) return;
-        data.pkcs11Profiles.removeIf(profile -> name.trim().equalsIgnoreCase(profile.name()));
+        pkcs11ProfileRepository.delete(name);
+        data.pkcs11Profiles = new ArrayList<>();
         save();
     }
 
@@ -213,6 +234,29 @@ public final class AppSettings {
         }
     }
 
+    /**
+     * Migrates the original profiles embedded in settings.json once. Invalid
+     * legacy entries are rejected by Pkcs11Profile and never copied to the
+     * dedicated repository.
+     */
+    private void migrateLegacyPkcs11Profiles() {
+        if (data.pkcs11Profiles == null || data.pkcs11Profiles.isEmpty()
+                || Files.exists(pkcs11ProfileRepository.file())) {
+            return;
+        }
+        boolean migrated = false;
+        for (Pkcs11Profile profile : data.pkcs11Profiles) {
+            try {
+                pkcs11ProfileRepository.upsert(profile);
+                migrated = true;
+            } catch (IllegalArgumentException ignored) {
+                // Keep valid legacy profiles and isolate invalid entries.
+            }
+        }
+        data.pkcs11Profiles = new ArrayList<>();
+        if (migrated) save();
+    }
+
     private void save() {
         try {
             Files.createDirectories(file.getParent());
@@ -230,6 +274,7 @@ public final class AppSettings {
         private List<TrustStoreProfile> trustStoreProfiles = new ArrayList<>();
         private List<Pkcs11Profile> pkcs11Profiles = new ArrayList<>();
         private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
+        private LanguagePreference languagePreference = LanguagePreference.SYSTEM;
         private List<String> favorites = new ArrayList<>();
         private String lastRoute = "";
     }

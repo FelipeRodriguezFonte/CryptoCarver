@@ -14,8 +14,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class SidePanelTest {
     private static final AtomicReference<Throwable> startupFailure = new AtomicReference<>();
 

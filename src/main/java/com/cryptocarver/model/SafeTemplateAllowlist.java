@@ -14,6 +14,8 @@ import java.util.Set;
  */
 public final class SafeTemplateAllowlist {
 
+    public static final String CANONICAL_TEXT_FORMAT = "Text (UTF-8)";
+
     public static final String MODULE_CIPHER = "Cipher";
     public static final String MODULE_HASHING = "Hashing";
     public static final String MODULE_MANUAL_CONVERSION = "Manual Conversion";
@@ -79,6 +81,22 @@ public final class SafeTemplateAllowlist {
     public static Set<String> getAllowedFields(String module) {
         if (module == null) return Collections.emptySet();
         return ALLOWLIST_BY_MODULE.getOrDefault(module.trim(), Collections.emptySet());
+    }
+
+    /** Converts labels used by older screen versions to the shared canonical value. */
+    public static String normalizeFormatValue(String parameterKey, String value) {
+        if (value == null) return null;
+        String simpleKey = parameterKey == null ? "" : parameterKey.substring(parameterKey.lastIndexOf('.') + 1);
+        boolean formatKey = simpleKey.equalsIgnoreCase("inputFormatCombo")
+                || simpleKey.equalsIgnoreCase("outputFormatCombo")
+                || simpleKey.equalsIgnoreCase("asymmetricInputFormatCombo")
+                || simpleKey.equalsIgnoreCase("asymmetricOutputFormatCombo")
+                || simpleKey.equalsIgnoreCase("manualInputFormatCombo")
+                || simpleKey.equalsIgnoreCase("manualOutputFormatCombo");
+        if (formatKey && ("text".equalsIgnoreCase(value.trim()) || "plain text".equalsIgnoreCase(value.trim()))) {
+            return CANONICAL_TEXT_FORMAT;
+        }
+        return value;
     }
 
     public static void validateTemplate(SafeOperationTemplate template) {

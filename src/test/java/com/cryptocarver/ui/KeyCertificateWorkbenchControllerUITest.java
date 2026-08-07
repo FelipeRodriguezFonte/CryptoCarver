@@ -2,13 +2,17 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.service.KeyCertificateFormatService;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import static org.junit.jupiter.api.Assertions.*;
 
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class KeyCertificateWorkbenchControllerUITest {
 
     @BeforeAll

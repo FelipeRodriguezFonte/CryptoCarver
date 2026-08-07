@@ -19,6 +19,11 @@ public final class BatchRunner {
     public record RowResult(int rowNumber, Map<String, String> input, Map<String, String> output, String error) {
         public boolean succeeded() { return error == null; }
     }
+    /**
+     * A cancelled report may retain completed row results for diagnostics, but
+     * those results are not a successful batch outcome and must not be published
+     * or exported by consumers.
+     */
     public record Report(List<RowResult> results, boolean cancelled) {
         public long succeeded() { return results.stream().filter(RowResult::succeeded).count(); }
         public long failed() { return results.size() - succeeded(); }
@@ -36,6 +41,7 @@ public final class BatchRunner {
         int totalRows = rows.size();
         RowResult[] results = new RowResult[totalRows];
         java.util.concurrent.atomic.AtomicInteger completedRows = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicBoolean cancellationStarted = new java.util.concurrent.atomic.AtomicBoolean(false);
 
         java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(
                 Math.min(4, Runtime.getRuntime().availableProcessors()));
@@ -46,13 +52,28 @@ public final class BatchRunner {
                 final Map<String, String> row = rows.get(i);
 
                 tasks.add(() -> {
-                    if (cancellationRequested != null && cancellationRequested.getAsBoolean()) return null;
+                    if (cancellationStarted.get()
+                            || cancellationRequested != null && cancellationRequested.getAsBoolean()) return null;
 
                     Map<String, String> input = Map.copyOf(row == null ? Map.of() : row);
                     RowResult result;
                     try {
+                        if (cancellationStarted.get()
+                                || cancellationRequested != null && cancellationRequested.getAsBoolean()
+                                || Thread.currentThread().isInterrupted()) {
+                            if (Thread.currentThread().isInterrupted()) Thread.currentThread().interrupt();
+                            return null;
+                        }
+
                         Map<String, String> output = operation.execute(i + 1, input);
+                        if (Thread.currentThread().isInterrupted()) {
+                            Thread.currentThread().interrupt();
+                            return null;
+                        }
                         result = new RowResult(i + 1, input, Map.copyOf(output == null ? Map.of() : new LinkedHashMap<>(output)), null);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return null;
                     } catch (Exception e) {
                         String message = e.getMessage() == null || e.getMessage().isBlank() ? e.getClass().getSimpleName() : e.getMessage();
                         result = new RowResult(i + 1, input, Map.of(), message);
@@ -73,19 +94,23 @@ public final class BatchRunner {
 
             executor.shutdown();
             boolean cancelled = false;
+            boolean runnerInterrupted = false;
             while (!executor.isTerminated()) {
                 if (!cancelled && cancellationRequested != null && cancellationRequested.getAsBoolean()) {
+                    cancellationStarted.set(true);
                     executor.shutdownNow();
                     cancelled = true;
                 }
                 try {
                     executor.awaitTermination(100, java.util.concurrent.TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
+                    cancellationStarted.set(true);
                     executor.shutdownNow();
                     cancelled = true;
-                    Thread.currentThread().interrupt();
+                    runnerInterrupted = true;
                 }
             }
+            if (runnerInterrupted) Thread.currentThread().interrupt();
             // A worker may have raised the cancellation flag just before the
             // executor terminated. Treat that run as cancelled as well, but
             // preserve the collected RowResults so callers can inspect the error.

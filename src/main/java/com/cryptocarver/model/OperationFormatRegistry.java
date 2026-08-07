@@ -36,8 +36,8 @@ public class OperationFormatRegistry {
 
         // Manual Conversion
         register(new OperationFormatProfile("Manual Conversion",
-                List.of("Text (UTF-8)", "Hexadecimal", "Base64", "Binary", "Decimal"),
-                List.of("Text (UTF-8)", "Hexadecimal", "Base64", "Binary", "Decimal"),
+                List.of("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal"),
+                List.of("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal"),
                 "Text (UTF-8)", "Hexadecimal",
                 DataType.BYTES, DataType.BYTES, "Manually decodes and encodes bytes using specific text representations."));
 

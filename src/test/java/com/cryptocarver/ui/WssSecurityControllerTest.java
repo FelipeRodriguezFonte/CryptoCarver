@@ -9,7 +9,9 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
@@ -18,6 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class WssSecurityControllerTest {
 
     @BeforeAll static void startToolkit() {

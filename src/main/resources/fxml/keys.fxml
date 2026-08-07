@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<VBox fx:id="keysRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.KeysController" spacing="14" styleClass="content-container-vbox,keys-module">
     <VBox fx:id="symmetricKeysContainer" managed="true" visible="true">
         <Accordion styleClass="module-accordion">
@@ -105,11 +105,11 @@
                                         </VBox>
                                     </GridPane>
                                     <Separator style="-fx-padding: 8 0;"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                                         <Button text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
                                         <Button fx:id="keyLabArchiveBtn" text="Archive" onAction="#handleKeyLabArchive" styleClass="secondary-button"/>
                                         <Button text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>
-                                    </HBox>
+                                    </FlowPane>
                                 </VBox>
                             </ScrollPane>
                         </SplitPane>
@@ -133,12 +133,12 @@
                                   selected="true" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
                     </GridPane>
 
-                    <HBox spacing="10" alignment="CENTER_LEFT">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Generate Key" onAction="#handleGenerateKey"
                                 styleClass="action-button,primary-action"/>
                         <Button fx:id="saveGeneratedKeyButton" text="Save to Simulated HSM / Key Lab…" onAction="#handleSaveGeneratedKeyToLab"
                                 disable="true" styleClass="action-button,secondary-action"/>
-                    </HBox>
+                    </FlowPane>
 
                     <VBox fx:id="generatedKeySummaryCard" visible="false" managed="false" spacing="8" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
                         <HBox alignment="CENTER_LEFT" spacing="10">
@@ -257,11 +257,11 @@
                         <TextField fx:id="pkcs11LibraryField" promptText="Native PKCS#11 library (.dylib, .so or .dll)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
                         <Button text="Browse…" onAction="#handleChoosePkcs11Library" styleClass="secondary-button"/>
                     </HBox>
-                    <HBox spacing="5" alignment="CENTER_LEFT">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11ProfileCombo" promptText="Saved Profiles" prefWidth="200"/>
                         <Button text="Save Profile" onAction="#handleSavePkcs11Profile" styleClass="secondary-button"/>
-                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="secondary-button"/>
-                    </HBox>
+                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="btn-danger"/>
+                    </FlowPane>
                     <HBox spacing="6">
                         <Button text="Connect &amp; Inspect" onAction="#handleConnectPkcs11" styleClass="action-button"/>
                         <Button text="Disconnect" onAction="#handleDisconnectPkcs11" styleClass="secondary-button"/>
@@ -284,11 +284,11 @@
                     <TextArea fx:id="pkcs11SignatureArea" prefHeight="55" promptText="Signature (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                     <Separator/>
                     <Label text="Public certificate chain" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                    <HBox spacing="6">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11CertificateAliasCombo" promptText="Certificate alias" HBox.hgrow="ALWAYS"/>
                         <Button text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
-                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button"/>
-                    </HBox>
+                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button-primary"/>
+                    </FlowPane>
                     <TextArea fx:id="pkcs11CertificateArea" prefHeight="90" editable="true" promptText="Paste PEM chain here to update, or use Show PEM Chain to view." wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                     <Separator/>
                     <Label text="JWT / JWS using token key" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
@@ -402,11 +402,11 @@
                         <ComboBox fx:id="kdfAlgorithmCombo" GridPane.rowIndex="0" GridPane.columnIndex="1"
                                  GridPane.columnSpan="3" prefWidth="180" style="-fx-font-size: 11px;"/>
 
-                        <Label text="Input Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="Input key material format:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
                         <ComboBox fx:id="kdfInputFormatCombo" GridPane.rowIndex="1" GridPane.columnIndex="1"
                                  prefWidth="90" style="-fx-font-size: 11px;"/>
 
-                        <Label text="Iterations:" GridPane.rowIndex="1" GridPane.columnIndex="2" style="-fx-font-size: 11px;"/>
+                        <Label fx:id="kdfIterationsLabel" text="Iterations:" GridPane.rowIndex="1" GridPane.columnIndex="2" style="-fx-font-size: 11px;"/>
                         <TextField fx:id="kdfIterationsField" text="10000" GridPane.rowIndex="1" GridPane.columnIndex="3"
                                   prefWidth="60" style="-fx-font-size: 11px;"/>
 
@@ -417,29 +417,40 @@
                         </HBox>
                     </GridPane>
 
-                    <TextField fx:id="kdfInputField" promptText="Input key material..."
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                    <Label fx:id="kdfInputHelpLabel" text="Input key material — encoded using Input key material format above."
+                           styleClass="helper-text"/>
+                    <VBox spacing="2">
+                        <TextField fx:id="kdfInputField" promptText="Input key material (UTF-8)..."
+                                   accessibleText="Input key material. Its encoding is selected in Input key material format above."
+                                   style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                        <Label fx:id="kdfInputBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                    </VBox>
 
                     <HBox spacing="4">
-                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <VBox fx:id="kdfSaltBox" spacing="2" HBox.hgrow="ALWAYS">
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label text="Salt:" style="-fx-font-size: 10px;"/>
                                 <ComboBox fx:id="kdfSaltFormatCombo" prefWidth="70" style="-fx-font-size: 10px;"/>
+                                <Button text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 2 5;"/>
                             </HBox>
                             <TextField fx:id="kdfSaltField" promptText="Optional" style="-fx-font-size: 10px;"/>
+                            <Label fx:id="kdfSaltBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                         </VBox>
 
-                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <VBox fx:id="kdfInfoBox" spacing="2" HBox.hgrow="ALWAYS">
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label text="Info:" style="-fx-font-size: 10px;"/>
                                 <ComboBox fx:id="kdfInfoFormatCombo" prefWidth="70" style="-fx-font-size: 10px;"/>
                             </HBox>
                             <TextField fx:id="kdfInfoField" promptText="HKDF only" style="-fx-font-size: 10px;"/>
+                            <Label fx:id="kdfInfoBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                         </VBox>
                     </HBox>
 
                     <Button text="Derive Key" onAction="#handleDeriveKey"
                             styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                    <Label fx:id="kdfValidationLabel" visible="false" managed="false" wrapText="true"
+                           styleClass="helper-text,field-error"/>
 
                     <TextArea fx:id="kdfResultArea" prefHeight="250" editable="false" wrapText="true"
                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
@@ -513,6 +524,10 @@
 
                                 <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
                                         styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <Button text="Clear" onAction="#handleTR31Clear" styleClass="secondary-button"/>
+                                    <Button text="Reset Defaults" onAction="#handleTR31Reset" styleClass="secondary-button"/>
+                                </HBox>
 
                                 <TextArea fx:id="tr31ExportResultArea" prefHeight="120" editable="false" wrapText="true"
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
@@ -555,6 +570,7 @@
             </TitledPane>
             </panes>
         </Accordion>
+        <fx:include fx:id="pkcs11Profiles" source="pkcs11_profiles.fxml"/>
     </VBox>
 
     <!-- Asymmetric Keys Accordion -->
@@ -574,7 +590,7 @@
                         <HBox spacing="12" alignment="CENTER_LEFT">
                             <Label text="Key Size:" styleClass="form-label"/>
                             <ComboBox fx:id="rsaKeySizeCombo" prefWidth="120" styleClass="form-field"/>
-                            <Button text="Generate RSA Key Pair" onAction="#handleGenerateRSA" styleClass="action-button,primary-action"/>
+                            <Button fx:id="rsaGenerateBtn" text="Generate RSA Key Pair" onAction="#handleGenerateRSA" styleClass="action-button,primary-action"/>
                             <Label text="⚠️ Keys &gt; 4096 bits may take several seconds" style="-fx-text-fill: #e67e22; -fx-font-style: italic; -fx-font-size: 10px;"/>
                         </HBox>
 
@@ -720,7 +736,7 @@
                         <HBox spacing="12" alignment="CENTER_LEFT">
                             <Label text="Key Size:" styleClass="form-label"/>
                             <ComboBox fx:id="dsaKeySizeCombo" prefWidth="120" styleClass="form-field"/>
-                            <Button text="Generate DSA Key Pair" onAction="#handleGenerateDSA" styleClass="action-button,primary-action"/>
+                            <Button fx:id="dsaGenerateBtn" text="Generate DSA Key Pair" onAction="#handleGenerateDSA" styleClass="action-button,primary-action"/>
                         </HBox>
 
                         <!-- Block 3: Summary -->
