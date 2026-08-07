@@ -115,4 +115,107 @@ class TR34OperationsTest {
         assertTrue(received.isSignatureVerified());
         assertNull(received.getKeyId());
     }
+
+    @Test
+    void twoPassRoundTripVerifiesSignatureAndNonceBinding() throws Exception {
+        KeyPair sender = rsaKeyPair();
+        X509Certificate senderCert = selfSignedCertificate(sender, "TR-34 test KDH");
+        KeyPair receiver = rsaKeyPair();
+        X509Certificate receiverCert = selfSignedCertificate(receiver, "TR-34 test KRD");
+
+        byte[] key = new byte[32];
+        new java.security.SecureRandom().nextBytes(key);
+        byte[] nonce = TR34Operations.generateChallengeNonce();
+
+        byte[] distributed = TR34Operations.distributeKeyTwoPass(
+                key, senderCert, sender.getPrivate(), receiverCert, nonce, "kek-002");
+
+        TR34Operations.ReceivedKey received =
+                TR34Operations.receiveKeyTwoPass(distributed, receiver.getPrivate(), senderCert, nonce);
+
+        assertTrue(received.isSignatureVerified());
+        assertTrue(received.isNonceVerified());
+        assertArrayEquals(key, received.getKey());
+        assertEquals("kek-002", received.getKeyId());
+    }
+
+    @Test
+    void twoPassReceiveDetectsAMismatchedOrReplayedNonce() throws Exception {
+        KeyPair sender = rsaKeyPair();
+        X509Certificate senderCert = selfSignedCertificate(sender, "TR-34 test KDH");
+        KeyPair receiver = rsaKeyPair();
+        X509Certificate receiverCert = selfSignedCertificate(receiver, "TR-34 test KRD");
+
+        byte[] key = new byte[16];
+        byte[] nonceUsedForDistribution = TR34Operations.generateChallengeNonce();
+        byte[] distributed = TR34Operations.distributeKeyTwoPass(
+                key, senderCert, sender.getPrivate(), receiverCert, nonceUsedForDistribution, null);
+
+        // The receiver expects a DIFFERENT nonce than the one actually bound — e.g. a captured,
+        // replayed old response being presented against a fresh challenge. The signature is still
+        // perfectly valid (it really was signed by the real sender); only the freshness check fails.
+        byte[] freshExpectedNonce = TR34Operations.generateChallengeNonce();
+        TR34Operations.ReceivedKey received = TR34Operations.receiveKeyTwoPass(
+                distributed, receiver.getPrivate(), senderCert, freshExpectedNonce);
+
+        assertTrue(received.isSignatureVerified(), "Signature must still verify — only the nonce binding is stale");
+        assertFalse(received.isNonceVerified(), "A mismatched nonce must be flagged, not silently accepted");
+        assertArrayEquals(key, received.getKey());
+    }
+
+    @Test
+    void oneNonPassReceiveNeverReportsNonceVerified() throws Exception {
+        KeyPair sender = rsaKeyPair();
+        X509Certificate senderCert = selfSignedCertificate(sender, "TR-34 test KDH");
+        KeyPair receiver = rsaKeyPair();
+        X509Certificate receiverCert = selfSignedCertificate(receiver, "TR-34 test KRD");
+
+        byte[] key = new byte[16];
+        byte[] distributed = TR34Operations.distributeKey(key, senderCert, sender.getPrivate(), receiverCert, (String) null);
+        TR34Operations.ReceivedKey received = TR34Operations.receiveKey(distributed, receiver.getPrivate(), senderCert);
+
+        assertTrue(received.isSignatureVerified());
+        assertFalse(received.isNonceVerified(), "One-pass results never claim a nonce was checked");
+    }
+
+    @Test
+    void generateChallengeNonceProducesDistinctSixteenByteValues() {
+        byte[] first = TR34Operations.generateChallengeNonce();
+        byte[] second = TR34Operations.generateChallengeNonce();
+
+        assertEquals(16, first.length);
+        assertEquals(16, second.length);
+        assertFalse(java.util.Arrays.equals(first, second), "Two challenges must not collide");
+    }
+
+    @Test
+    void distributeKeyTwoPassRejectsMissingNonce() throws Exception {
+        KeyPair sender = rsaKeyPair();
+        X509Certificate senderCert = selfSignedCertificate(sender, "TR-34 test KDH");
+        KeyPair receiver = rsaKeyPair();
+        X509Certificate receiverCert = selfSignedCertificate(receiver, "TR-34 test KRD");
+        byte[] key = new byte[16];
+
+        assertThrows(IllegalArgumentException.class, () -> TR34Operations.distributeKeyTwoPass(
+                key, senderCert, sender.getPrivate(), receiverCert, null, "kek-003"));
+        assertThrows(IllegalArgumentException.class, () -> TR34Operations.distributeKeyTwoPass(
+                key, senderCert, sender.getPrivate(), receiverCert, new byte[0], "kek-003"));
+    }
+
+    @Test
+    void receiveKeyTwoPassRejectsMissingExpectedNonce() throws Exception {
+        KeyPair sender = rsaKeyPair();
+        X509Certificate senderCert = selfSignedCertificate(sender, "TR-34 test KDH");
+        KeyPair receiver = rsaKeyPair();
+        X509Certificate receiverCert = selfSignedCertificate(receiver, "TR-34 test KRD");
+
+        byte[] key = new byte[16];
+        byte[] distributed = TR34Operations.distributeKeyTwoPass(
+                key, senderCert, sender.getPrivate(), receiverCert, TR34Operations.generateChallengeNonce(), null);
+
+        assertThrows(IllegalArgumentException.class, () -> TR34Operations.receiveKeyTwoPass(
+                distributed, receiver.getPrivate(), senderCert, null));
+        assertThrows(IllegalArgumentException.class, () -> TR34Operations.receiveKeyTwoPass(
+                distributed, receiver.getPrivate(), senderCert, new byte[0]));
+    }
 }

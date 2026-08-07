@@ -659,7 +659,7 @@
             <TitledPane text="🔀 TR-34 Key Distribution">
                 <VBox spacing="6" style="-fx-padding: 8;">
                     <Label text="TR-34-inspired laboratory key distribution" styleClass="helper-text"/>
-                    <Label text="Signs then envelopes the key with CMS (RSA), the same mechanism TR-34 uses conceptually. Not a byte-for-byte ANSI X9 TR-34-2019 implementation and not verified against real KDH/KRD interop — do not use to load a production HSM."
+                    <Label text="Signs then envelopes the key with CMS (RSA), the same mechanism TR-34 uses conceptually — including an optional two-pass binding nonce for replay protection. Not a byte-for-byte ANSI X9 TR-34-2019 implementation (no standards-exact ASN.1/PDU profile) and not verified against real KDH/KRD interop — do not use to load a production HSM."
                            wrapText="true" styleClass="helper-text" style="-fx-text-fill: #9a3412;"/>
                     <TabPane tabClosingPolicy="UNAVAILABLE">
                         <Tab text="Distribute (Sender)">
@@ -681,6 +681,9 @@
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
                                 <Label text="Key ID (optional, authenticated):" style="-fx-font-size: 11px;"/>
                                 <TextField fx:id="tr34KeyIdField" promptText="e.g. kek-2026-01"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Binding Nonce (optional, from receiver's challenge — two-pass):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="tr34BindingNonceField" promptText="Hex nonce from the Receive tab's Generate Challenge — leave blank for one-pass"
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
                                 <CheckBox fx:id="tr34IncludeEnvelopeCheck" text="Wrap key as Crypto Envelope before distributing" style="-fx-font-size: 11px;"/>
                                 <Button text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
@@ -707,6 +710,13 @@
                                 <TextArea fx:id="tr34DistributedDataArea" prefHeight="80" wrapText="true"
                                           promptText="Paste the distributed data (or a Crypto Envelope) here..."
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Challenge Nonce (optional, two-pass — generate before Distribute):" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <TextField fx:id="tr34ChallengeNonceField" HBox.hgrow="ALWAYS"
+                                              promptText="Hex nonce — generate here, copy into the Distribute tab's Binding Nonce, leave blank for one-pass"
+                                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                    <Button text="Generate Challenge" onAction="#handleTr34GenerateChallenge" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                                </HBox>
                                 <Button text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
                                 <TextArea fx:id="tr34ReceiveResultArea" prefHeight="120" editable="false" wrapText="true"
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
