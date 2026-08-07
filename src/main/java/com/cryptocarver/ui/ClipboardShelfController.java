@@ -25,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public class ClipboardShelfController {
 
@@ -64,6 +65,16 @@ public class ClipboardShelfController {
     private final ObservableList<ClipboardEntry> tableData = FXCollections.observableArrayList();
     private OperationNavigator navigator;
     private ModernMainController mainController;
+    /** One-shot override used to reveal a just-created entry despite filters. */
+    private UUID entryToReveal;
+    private Runnable shelfChangeListener;
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+    private javafx.beans.value.ChangeListener<javafx.scene.Scene> shelfSceneListener;
+    private javafx.beans.value.ChangeListener<javafx.stage.Window> shelfWindowListener;
+    private javafx.stage.Window observedShelfWindow;
+    private javafx.event.EventHandler<javafx.stage.WindowEvent> shelfWindowHiddenHandler;
+    private boolean shelfChangeListenerAttached;
+    private boolean disposed;
 
     private String t(String key, Object... args) {
         return I18nService.getInstance().text(key, args);
@@ -74,13 +85,36 @@ public class ClipboardShelfController {
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(clipboardShelfRoot, ModuleTextCatalog.clipboardShelf());
-        I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
+            if (disposed) return;
             pinnedFilterCombo.getItems().setAll(t("module.shelf.allPinned"), t("module.shelf.pinnedOnly"), t("module.shelf.unpinnedOnly"));
             pinnedFilterCombo.setValue(t("module.shelf.allPinned"));
             populateUseInMenu();
             refresh();
-        });
+        };
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         manager = ClipboardShelfManager.getInstance();
+        shelfChangeListener = () -> {
+            if (disposed) return;
+            Runnable refreshTask = () -> {
+                if (disposed) return;
+                ClipboardEntry newest = manager.getEntries().stream()
+                        .max(java.util.Comparator.comparing(ClipboardEntry::getCreatedAt))
+                        .orElse(null);
+                if (newest != null) refreshAndReveal(newest.getId());
+                else refresh();
+            };
+            if (javafx.application.Platform.isFxApplicationThread()) refreshTask.run();
+            else javafx.application.Platform.runLater(refreshTask);
+        };
+
+        shelfWindowListener = (observable, oldWindow, newWindow) -> attachShelfWindow(newWindow);
+        shelfSceneListener = (observable, oldScene, newScene) -> {
+            if (oldScene != null && oldScene != newScene) detachShelfScene(oldScene);
+            if (newScene != null) attachShelfScene(newScene);
+        };
+        clipboardShelfRoot.sceneProperty().addListener(shelfSceneListener);
+        if (clipboardShelfRoot.getScene() != null) attachShelfScene(clipboardShelfRoot.getScene());
 
         pinnedFilterCombo.getItems().setAll(t("module.shelf.allPinned"), t("module.shelf.pinnedOnly"), t("module.shelf.unpinnedOnly"));
         pinnedFilterCombo.setValue(t("module.shelf.allPinned"));
@@ -97,8 +131,20 @@ public class ClipboardShelfController {
         dateCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getCreatedAt().format(TIME_FORMATTER)));
         labelCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getLabel()));
         sourceCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSourceOperation() != null ? cellData.getValue().getSourceOperation() : "—"));
-        algCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getAlgorithm() != null ? cellData.getValue().getAlgorithm() : "—"));
-        formatCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getFormat().name()));
+        algCol.setCellValueFactory(cellData -> {
+            ClipboardEntry entry = cellData.getValue();
+            if (entry.getShelfPackage() != null) {
+                return new SimpleStringProperty(entry.getShelfPackage().artifact("algorithm") + "/"
+                        + entry.getShelfPackage().artifact("mode"));
+            }
+            return new SimpleStringProperty(entry.getAlgorithm() != null ? entry.getAlgorithm() : "—");
+        });
+        formatCol.setCellValueFactory(cellData -> new SimpleStringProperty(
+                cellData.getValue().isSessionOnlyPrivateKey()
+                        ? "SESSION_ONLY_PRIVATE_KEY/" + cellData.getValue().getFormat().name()
+                : cellData.getValue().getEntryKind() == ClipboardEntry.EntryKind.STRUCTURED
+                        ? "PACKAGE/" + cellData.getValue().getFormat().name()
+                        : cellData.getValue().getFormat().name()));
         classCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getClassification().name()));
         tagsCol.setCellValueFactory(cellData -> new SimpleStringProperty(String.join(", ", cellData.getValue().getTags())));
         previewCol.setCellValueFactory(cellData -> new SimpleStringProperty(getMaskedValue(cellData.getValue(), true)));
@@ -114,6 +160,58 @@ public class ClipboardShelfController {
 
         populateUseInMenu();
         refresh();
+    }
+
+    private void attachShelfScene(javafx.scene.Scene scene) {
+        scene.windowProperty().addListener(shelfWindowListener);
+        attachShelfWindow(scene.getWindow());
+        if (!shelfChangeListenerAttached) {
+            manager.addChangeListener(shelfChangeListener);
+            shelfChangeListenerAttached = true;
+        }
+    }
+
+    private void detachShelfScene(javafx.scene.Scene scene) {
+        if (scene != null) scene.windowProperty().removeListener(shelfWindowListener);
+        detachShelfWindow();
+        if (shelfChangeListenerAttached) {
+            manager.removeChangeListener(shelfChangeListener);
+            shelfChangeListenerAttached = false;
+        }
+    }
+
+    private void attachShelfWindow(javafx.stage.Window window) {
+        if (observedShelfWindow == window) return;
+        detachShelfWindow();
+        if (window == null) return;
+        shelfWindowHiddenHandler = event -> dispose();
+        window.addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, shelfWindowHiddenHandler);
+        observedShelfWindow = window;
+    }
+
+    private void detachShelfWindow() {
+        if (observedShelfWindow != null && shelfWindowHiddenHandler != null) {
+            observedShelfWindow.removeEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, shelfWindowHiddenHandler);
+        }
+        observedShelfWindow = null;
+        shelfWindowHiddenHandler = null;
+    }
+
+    /** Releases the Shelf's manager/locale listeners when its view is closed. */
+    public void dispose() {
+        if (disposed) return;
+        disposed = true;
+        if (clipboardShelfRoot != null && shelfSceneListener != null) {
+            javafx.scene.Scene scene = clipboardShelfRoot.getScene();
+            clipboardShelfRoot.sceneProperty().removeListener(shelfSceneListener);
+            detachShelfScene(scene);
+        } else if (shelfChangeListenerAttached) {
+            manager.removeChangeListener(shelfChangeListener);
+            shelfChangeListenerAttached = false;
+        }
+        if (localeChangeListener != null) {
+            I18nService.getInstance().removeLocaleChangeListener(localeChangeListener);
+        }
     }
 
     public void setNavigator(OperationNavigator navigator, ModernMainController mainController) {
@@ -140,9 +238,46 @@ public class ClipboardShelfController {
 
         List<ClipboardEntry> filtered = manager.search(query, pinnedFilter, sourceFilter, fmt, cls);
         tableData.setAll(filtered);
-        itemCountLabel.setText(t("module.shelf.itemCount", filtered.size()));
+
+        UUID requestedReveal = entryToReveal;
+        ClipboardEntry entryToSelect = null;
+        if (requestedReveal != null) {
+            entryToSelect = manager.getEntries().stream()
+                    .filter(entry -> requestedReveal.equals(entry.getId()))
+                    .findFirst().orElse(null);
+            if (entryToSelect != null && !tableData.contains(entryToSelect)) {
+                // Preserve the user's filters while making the new result
+                // visible and selected for this one refresh only.
+                tableData.add(0, entryToSelect);
+            }
+        }
+        entryToReveal = entryToSelect != null && !isShelfViewEffectivelyVisible()
+                ? requestedReveal : null;
+        itemCountLabel.setText(t("module.shelf.itemCount", tableData.size()));
 
         updateSelectionUi();
+        if (entryToSelect != null) {
+            shelfTable.getSelectionModel().clearAndSelect(tableData.indexOf(entryToSelect));
+            shelfTable.scrollTo(entryToSelect);
+        }
+    }
+
+    /** Refreshes the integrated view and selects a newly-created entry once. */
+    public void refreshAndReveal(UUID entryId) {
+        if (entryId == null) {
+            refresh();
+            return;
+        }
+        entryToReveal = entryId;
+        refresh();
+    }
+
+    private boolean isShelfViewEffectivelyVisible() {
+        for (javafx.scene.Node node = clipboardShelfRoot; node != null; node = node.getParent()) {
+            if (!node.isVisible()) return false;
+            if (node instanceof TitledPane pane && !pane.isExpanded()) return false;
+        }
+        return true;
     }
 
     private void refreshSourceFilterOptions(List<ClipboardEntry> entries) {
@@ -174,6 +309,7 @@ public class ClipboardShelfController {
             clearDetails();
         } else if (size == 1) {
             showDetails(selected.get(0));
+            populateUseInMenu(selected.get(0));
             setActionAvailability(compareBtn, false, "Open comparison", "Select exactly two items to compare");
         } else if (size == 2) {
             showComparisonSummary(selected.get(0), selected.get(1));
@@ -216,13 +352,23 @@ public class ClipboardShelfController {
         SecretVisibilityProfile visibility = AppSettings.getInstance().getSecretVisibilityProfile();
         boolean isRedacted = isSensitive && visibility == SecretVisibilityProfile.REDACTED;
         boolean isMasked = isSensitive && visibility == SecretVisibilityProfile.MASKED;
-        boolean canCopy = !isRedacted && !isMasked;
+        boolean canCopy = !entry.isSessionOnlyPrivateKey() && !isRedacted && !isMasked;
+        boolean canUse = entry.isSessionOnlyPrivateKey()
+                ? visibility == SecretVisibilityProfile.FULL_LAB
+                : canCopy;
 
         StringBuilder sb = new StringBuilder();
         sb.append("Label: ").append(entry.getLabel()).append("\n");
         sb.append("Source: ").append(entry.getSourceOperation() != null ? entry.getSourceOperation() : "—").append("\n");
         sb.append("Algorithm: ").append(entry.getAlgorithm() != null ? entry.getAlgorithm() : "—").append("\n");
         sb.append("Format: ").append(entry.getFormat()).append(" · Size: ").append(entry.getByteLength() != null ? entry.getByteLength() + " bytes" : "—").append("\n");
+        sb.append("Shelf contract: ").append(entry.getEntryKind());
+        if (entry.isSessionOnlyPrivateKey()) {
+            sb.append(" · SESSION_ONLY_PRIVATE_KEY · session-only in memory; disappears when the application closes");
+        }
+        if (entry.getShelfPackage() != null) sb.append(" · ").append(entry.getShelfPackage().displaySummary());
+        if (entry.getNonReusableReason() != null) sb.append(" · ").append(entry.getNonReusableReason());
+        sb.append("\n");
         sb.append("Classification: ").append(entry.getClassification()).append("\n");
         sb.append("Pinned: ").append(entry.isPinned() ? "Yes 📌" : "No").append("\n");
         if (!entry.getTags().isEmpty()) {
@@ -238,23 +384,43 @@ public class ClipboardShelfController {
 
         warningLabel.setVisible(isSensitive);
         if (isSensitive) {
-            warningLabel.setText(visibility == SecretVisibilityProfile.FULL_LAB
-                ? "⚠️ Sensitive data displayed (Unsafe Lab mode)"
-                : "⚠️ Sensitive data (Masked/Redacted)");
+            warningLabel.setText(entry.isSessionOnlyPrivateKey()
+                ? (visibility == SecretVisibilityProfile.FULL_LAB
+                    ? "⚠️ Private key — session only. In memory only; disappears when the application closes."
+                    : "🔒 Private key — session only is blocked by the active visibility policy.")
+                : (visibility == SecretVisibilityProfile.FULL_LAB
+                    ? "⚠️ Sensitive data displayed (Unsafe Lab mode)"
+                    : "⚠️ Sensitive data (Masked/Redacted)"));
         }
 
         setActionAvailability(pinBtn, true, entry.isPinned() ? "Unpin entry" : "Pin entry", "Select one entry to pin or unpin");
         pinBtn.setText(entry.isPinned() ? t("module.shelf.unpin") : t("module.shelf.pin"));
         setActionAvailability(editTagsNoteBtn, true, "Edit note and tags", "Select one entry to edit its note and tags");
-        setActionAvailability(useInMenu, canCopy, "Use selected result in an operation",
+        setActionAvailability(useInMenu, canUse, "Use selected result in an operation",
                 "Unavailable under the active visibility profile");
         setActionAvailability(copyBtn, canCopy, "Copy result", "Unavailable under the active visibility profile");
         setActionAvailability(expandBtn, canCopy, "Open full result", "Unavailable under the active visibility profile");
         setActionAvailability(renameBtn, true, "Rename entry", "Select one entry to rename it");
         setActionAvailability(deleteBtn, true, "Delete selected entries", "Select an entry to delete it");
+        populateUseInMenu(entry);
     }
 
     private void showComparisonSummary(ClipboardEntry e1, ClipboardEntry e2) {
+        if (e1.isSessionOnlyPrivateKey() || e2.isSessionOnlyPrivateKey()) {
+            detailsArea.setText("Comparison blocked: session-only private-key entries cannot be compared or exported.");
+            warningLabel.setVisible(true);
+            warningLabel.setText("🔒 Session-only private keys are excluded from comparison and reports.");
+            setActionAvailability(pinBtn, false, "Pin selected entry", "Select one entry to pin or unpin");
+            setActionAvailability(editTagsNoteBtn, false, "Edit note and tags", "Select one entry to edit its note and tags");
+            setActionAvailability(useInMenu, false, "Use selected result in an operation", "Select one entry to use its result");
+            setActionAvailability(copyBtn, false, "Copy result", "Session-only private keys cannot be copied");
+            setActionAvailability(expandBtn, false, "Open full result", "Session-only private keys cannot be opened here");
+            setActionAvailability(renameBtn, false, "Rename entry", "Select one entry to rename it");
+            setActionAvailability(deleteBtn, true, "Delete selected entries", "Select an entry to delete it");
+            compareBtn.setDisable(true);
+            compareBtn.setTooltip(new Tooltip("Session-only private keys cannot be compared or exported"));
+            return;
+        }
         SecretVisibilityProfile profile = AppSettings.getInstance().getSecretVisibilityProfile();
         ResultComparator.ComparisonDetails details = ResultComparator.compare(e1, e2, profile);
 
@@ -348,6 +514,9 @@ public class ClipboardShelfController {
     private void handleCompare() {
         ObservableList<ClipboardEntry> selected = shelfTable.getSelectionModel().getSelectedItems();
         if (selected.size() != 2) return;
+        if (selected.stream().anyMatch(ClipboardEntry::isSessionOnlyPrivateKey)) {
+            return;
+        }
 
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/compare_results.fxml"));
@@ -384,7 +553,7 @@ public class ClipboardShelfController {
     @FXML
     private void handleCopy() {
         ClipboardEntry entry = shelfTable.getSelectionModel().getSelectedItem();
-        if (entry != null) {
+        if (entry != null && !entry.isSessionOnlyPrivateKey()) {
             String val = getMaskedValue(entry, false);
             if (!val.equals("[REDACTED]")) {
                 ClipboardContent content = new ClipboardContent();
@@ -397,7 +566,7 @@ public class ClipboardShelfController {
     @FXML
     private void handleOpenExpanded() {
         ClipboardEntry entry = shelfTable.getSelectionModel().getSelectedItem();
-        if (entry != null && mainController != null) {
+        if (entry != null && !entry.isSessionOnlyPrivateKey() && mainController != null) {
             String val = getMaskedValue(entry, false);
             if (!val.equals("[REDACTED]")) {
                 ExpandedTextViewer viewer = new ExpandedTextViewer();
@@ -433,30 +602,47 @@ public class ClipboardShelfController {
     }
 
     private void populateUseInMenu() {
+        populateUseInMenu(null);
+    }
+
+    private void populateUseInMenu(ClipboardEntry selected) {
         useInMenu.getItems().clear();
 
-        MenuItem manualConv = new MenuItem(t("module.shelf.manualInput"));
-        manualConv.setOnAction(e -> useInTarget("op_gen_manual", "MANUAL_CONVERSION"));
+        if (selected != null && selected.isSessionOnlyPrivateKey()) {
+            if (AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB) return;
+            MenuItem workbench = new MenuItem("Use in Key & Certificate Workbench");
+            workbench.setOnAction(e -> useInTarget("KEY_CERTIFICATE_WORKBENCH", "KEY_CERTIFICATE_WORKBENCH"));
+            useInMenu.getItems().add(workbench);
+            return;
+        }
+        if (selected != null && !selected.isReusable()) return;
+        boolean structured = selected != null && selected.getShelfPackage() != null;
+
+        if (!structured) {
+            MenuItem manualConv = new MenuItem(t("module.shelf.manualInput"));
+            manualConv.setOnAction(e -> useInTarget("op_gen_manual", "MANUAL_CONVERSION"));
+            useInMenu.getItems().add(manualConv);
+
+            MenuItem hashInput = new MenuItem(t("module.shelf.hashInput"));
+            hashInput.setOnAction(e -> useInTarget("op_gen_hash", "HASHING"));
+            useInMenu.getItems().add(hashInput);
+
+            MenuItem xml = new MenuItem(t("module.shelf.xmlInput"));
+            xml.setOnAction(e -> useInTarget("XML Security", "XML_SECURITY"));
+            MenuItem wss = new MenuItem(t("module.shelf.wssInput"));
+            wss.setOnAction(e -> useInTarget("WSS Security", "WSS_SECURITY"));
+            MenuItem payments = new MenuItem(t("module.shelf.paymentsInput"));
+            payments.setOnAction(e -> useInTarget("Payments", "PAYMENTS"));
+            MenuItem tr31 = new MenuItem(t("module.shelf.tr31Input"));
+            tr31.setOnAction(e -> useInTarget("TR-31 Key Blocks", "TR31"));
+            MenuItem josePayload = new MenuItem("JOSE Payload (JWT)");
+            josePayload.setOnAction(e -> useInTarget("op_jose_jwt", "JOSE_JWT"));
+            useInMenu.getItems().addAll(xml, wss, payments, tr31, josePayload);
+        }
 
         MenuItem symCipher = new MenuItem(t("module.shelf.cipherInput"));
         symCipher.setOnAction(e -> useInTarget("op_sym_ciphers", "SYMMETRIC_CIPHER"));
-
-        MenuItem hashInput = new MenuItem(t("module.shelf.hashInput"));
-        hashInput.setOnAction(e -> useInTarget("op_gen_hash", "HASHING"));
-
-        MenuItem xml = new MenuItem(t("module.shelf.xmlInput"));
-        xml.setOnAction(e -> useInTarget("XML Security", "XML_SECURITY"));
-        MenuItem wss = new MenuItem(t("module.shelf.wssInput"));
-        wss.setOnAction(e -> useInTarget("WSS Security", "WSS_SECURITY"));
-        MenuItem payments = new MenuItem(t("module.shelf.paymentsInput"));
-        payments.setOnAction(e -> useInTarget("Payments", "PAYMENTS"));
-        MenuItem tr31 = new MenuItem(t("module.shelf.tr31Input"));
-        tr31.setOnAction(e -> useInTarget("TR-31 Key Blocks", "TR31"));
-
-        MenuItem josePayload = new MenuItem("JOSE Payload (JWT)");
-        josePayload.setOnAction(e -> useInTarget("op_jose_jwt", "JOSE_JWT"));
-
-        useInMenu.getItems().addAll(manualConv, symCipher, hashInput, xml, wss, payments, tr31, josePayload);
+        useInMenu.getItems().add(symCipher);
     }
 
     static boolean supportsTarget(ClipboardEntry.Format format, String targetType) {
@@ -476,6 +662,28 @@ public class ClipboardShelfController {
         ClipboardEntry entry = shelfTable.getSelectionModel().getSelectedItem();
         if (entry == null || navigator == null || mainController == null) return;
 
+        if (entry.isSessionOnlyPrivateKey()) {
+            if (!"KEY_CERTIFICATE_WORKBENCH".equals(targetType)
+                    || AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB) {
+                navigator.updateStatus("Action blocked: session-only private keys require FULL_LAB.");
+                return;
+            }
+            mainController.loadSessionOnlyPrivateKey(entry);
+            navigator.updateStatus("Loaded session-only private key into Key & Certificate Workbench");
+            return;
+        }
+
+        if (!entry.isReusable()) {
+            String message = "This Shelf result is not reusable: " + entry.getNonReusableReason();
+            if (navigator != null) navigator.updateStatus(message);
+            return;
+        }
+        if (entry.getShelfPackage() != null && !entry.getShelfPackage().getCompatibleTargets().contains(targetType)) {
+            String message = "This structured Shelf package is not compatible with " + targetType;
+            if (navigator != null) navigator.updateStatus(message);
+            return;
+        }
+
         ClipboardEntry.Format fmt = entry.getFormat();
         if (!supportsTarget(fmt, targetType)) {
             String message = t("module.shelf.incompatible", fmt.name(), targetType);
@@ -491,7 +699,7 @@ public class ClipboardShelfController {
         if (val.equals("[REDACTED]") || val.contains("[MASKED]")) return;
 
         navigator.navigateTo(operationId);
-        mainController.fillClipboardTarget(targetType, val, entry.getFormat());
+        mainController.fillClipboardTarget(targetType, val, entry.getFormat(), entry.getShelfPackage());
         navigator.updateStatus(t("module.shelf.injected", entry.getFormat().name()));
     }
 }

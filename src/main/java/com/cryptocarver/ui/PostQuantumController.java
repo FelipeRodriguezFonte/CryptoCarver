@@ -6,6 +6,9 @@ import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +20,9 @@ import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -83,6 +89,8 @@ public class PostQuantumController {
     private PublicKey currentPublicKey;
     private PrivateKey currentPrivateKey;
     private byte[] bobSecret;
+
+    private record ParsedPqcKey(boolean publicKey, byte[] encoded, String displayValue) { }
 
     PublicKey getCurrentPublicKey() { return currentPublicKey; }
     PrivateKey getCurrentPrivateKey() { return currentPrivateKey; }
@@ -181,7 +189,7 @@ public class PostQuantumController {
                     if (statusReporter != null) {
                         statusReporter.publish(OperationResult.forOperation("PQC Key Generation")
                                 .output(currentPublicKey.getEncoded())
-                                .details(detailsWithKeyMaterial(details))
+                                .details(detailsWithPublicKeyMaterial(details))
                                 .status("Generated " + algo + " Key Pair")
                                 .build());
                     }
@@ -215,41 +223,73 @@ public class PostQuantumController {
     @FXML
     public void handleImportPQCKeys() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select PQC public and/or private PEM keys");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM files", "*.pem", "*.pub", "*.key"));
+        chooser.setTitle("Select PQC public and/or private PEM/DER keys");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                "PQC key files (PEM/DER)", "*.pem", "*.der", "*.pub", "*.key"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All files", "*.*"));
         java.util.List<File> files = chooser.showOpenMultipleDialog(null);
         if (files == null || files.isEmpty()) return;
 
-        java.util.List<String> pems = new java.util.ArrayList<>();
         try {
-            for (File f : files) {
-                pems.add(Files.readString(f.toPath(), StandardCharsets.US_ASCII));
-            }
-            importKeysFromContents(pems);
+            importKeysFromFiles(files);
         } catch (Exception e) {
             if (statusReporter != null) statusReporter.showError("Import Error", "Failed to load keys: " + e.getMessage());
         }
     }
 
     public void importKeysFromContents(java.util.List<String> pems) throws Exception {
+        if (pems == null || pems.isEmpty()) {
+            throw new IllegalArgumentException("Select at least one PQC public or private key.");
+        }
+        List<ParsedPqcKey> parsedKeys = new ArrayList<>();
+        for (String pem : pems) {
+            parsedKeys.add(parsePemKey(pem));
+        }
+        importParsedKeys(parsedKeys);
+    }
+
+    /** Imports one or both unencrypted PQC key files. Each file must contain one PEM or DER key. */
+    public void importKeysFromFiles(java.util.List<File> files) throws Exception {
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("Select at least one PQC public or private key.");
+        }
+        List<ParsedPqcKey> parsedKeys = new ArrayList<>();
+        for (File file : files) {
+            if (file == null) {
+                throw new IllegalArgumentException("The selected key file is missing.");
+            }
+            byte[] contents = Files.readAllBytes(file.toPath());
+            if (contents.length == 0) {
+                throw new IllegalArgumentException("Key file " + file.getName() + " is empty.");
+            }
+            String ascii = new String(contents, StandardCharsets.US_ASCII).stripLeading();
+            if (ascii.startsWith("-----BEGIN ")) {
+                parsedKeys.add(parsePemKey(ascii));
+            } else {
+                parsedKeys.add(parseDerKey(contents, file.getName()));
+            }
+        }
+        importParsedKeys(parsedKeys);
+    }
+
+    private void importParsedKeys(List<ParsedPqcKey> parsedKeys) throws Exception {
+        if (parsedKeys == null || parsedKeys.isEmpty()) {
+            throw new IllegalArgumentException("Select at least one PQC public or private key.");
+        }
         String lastDetectedAlgorithm = null;
         PublicKey tempPubKey = null;
         PrivateKey tempPrivKey = null;
         String tempPubKeyStr = null;
         String tempPrivKeyStr = null;
 
-        for (String pem : pems) {
-            byte[] encoded = decodePem(pem);
-            boolean isPublic = pem.contains("BEGIN PUBLIC KEY");
-            boolean isPrivate = pem.contains("BEGIN PRIVATE KEY");
-            if (!isPublic && !isPrivate) {
-                throw new IllegalArgumentException("Content is not a PKCS#8 or X.509 PEM key");
-            }
-
+        for (ParsedPqcKey parsedKey : parsedKeys) {
+            byte[] encoded = parsedKey.encoded();
+            boolean isPublic = parsedKey.publicKey();
             com.cryptocarver.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult result = PostQuantumOperations.detectAlgorithmFromEncoded(encoded, isPublic);
             if (result == null || !result.isSupported()) {
                 String oid = result != null ? result.originalOid() : "Unknown";
-                throw new IllegalArgumentException("Cannot detect PQC algorithm from PEM (OID: " + oid + "). Ensure you are using a supported NIST parameter set.");
+                throw new IllegalArgumentException("Cannot detect PQC algorithm in key (OID: " + oid
+                        + "). The key is not a supported PQC parameter set or its encoding is ambiguous.");
             }
 
             String detectedAlgorithm = result.nistName();
@@ -259,12 +299,37 @@ public class PostQuantumController {
             lastDetectedAlgorithm = detectedAlgorithm;
 
             if (isPublic) {
-                tempPubKey = PostQuantumOperations.importPublicKey(detectedAlgorithm, encoded);
-                tempPubKeyStr = pem.trim();
+                if (tempPubKey != null) {
+                    throw new IllegalArgumentException("Only one public PQC key may be imported at a time.");
+                }
+                try {
+                    tempPubKey = PostQuantumOperations.importPublicKey(detectedAlgorithm, encoded);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Unable to import the complete PQC public key for "
+                            + detectedAlgorithm + ". Expected X.509 SubjectPublicKeyInfo DER.", e);
+                }
+                tempPubKeyStr = parsedKey.displayValue();
             } else {
-                tempPrivKey = PostQuantumOperations.importPrivateKey(detectedAlgorithm, encoded);
-                tempPrivKeyStr = pem.trim();
+                if (tempPrivKey != null) {
+                    throw new IllegalArgumentException("Only one private PQC key may be imported at a time.");
+                }
+                try {
+                    tempPrivKey = PostQuantumOperations.importPrivateKey(detectedAlgorithm, encoded);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Unable to import the complete PQC private key for "
+                            + detectedAlgorithm + ". Expected unencrypted PKCS#8 DER.", e);
+                }
+                tempPrivKeyStr = parsedKey.displayValue();
             }
+        }
+
+        // Validate both sides before changing controller state. This also covers
+        // importing one side against an already loaded counterpart.
+        PublicKey candidatePublicKey = tempPubKey != null ? tempPubKey : currentPublicKey;
+        PrivateKey candidatePrivateKey = tempPrivKey != null ? tempPrivKey : currentPrivateKey;
+        if ((tempPubKey != null || tempPrivKey != null)
+                && candidatePublicKey != null && candidatePrivateKey != null) {
+            validateImportedKeyPair(candidatePublicKey, candidatePrivateKey);
         }
 
         // All files verified successfully, apply state
@@ -291,10 +356,116 @@ public class PostQuantumController {
         if (lastDetectedAlgorithm != null) {
             if (pqcKeyStatusLabel != null) pqcKeyStatusLabel.setText("Imported PQC key material for " + lastDetectedAlgorithm);
             java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(lastDetectedAlgorithm, "Imported");
+            if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
             if (statusReporter != null) {
                 statusReporter.publish(OperationResult.forOperation("PQC Import")
                         .details(details).status("Success").build());
             }
+        }
+    }
+
+    private ParsedPqcKey parsePemKey(String pem) {
+        if (pem == null || pem.isBlank()) {
+            throw new IllegalArgumentException("PEM key content is empty.");
+        }
+        String value = pem.trim();
+        String begin;
+        String end;
+        boolean publicKey;
+        if (value.startsWith("-----BEGIN PUBLIC KEY-----")) {
+            begin = "-----BEGIN PUBLIC KEY-----";
+            end = "-----END PUBLIC KEY-----";
+            publicKey = true;
+        } else if (value.startsWith("-----BEGIN PRIVATE KEY-----")) {
+            begin = "-----BEGIN PRIVATE KEY-----";
+            end = "-----END PRIVATE KEY-----";
+            publicKey = false;
+        } else if (value.startsWith("-----BEGIN ")) {
+            throw new IllegalArgumentException("Unsupported PEM label. Use PUBLIC KEY or unencrypted PRIVATE KEY (PKCS#8).");
+        } else {
+            throw new IllegalArgumentException("Content is not a PEM public key or unencrypted PKCS#8 private key.");
+        }
+        if (!value.endsWith(end)) {
+            throw new IllegalArgumentException("PEM key is truncated or has mismatched BEGIN/END labels.");
+        }
+
+        String body = value.substring(begin.length(), value.length() - end.length()).trim();
+        if (body.isEmpty() || body.contains("-----BEGIN") || body.contains("-----END")) {
+            throw new IllegalArgumentException("PEM key contains no complete base64 body or contains multiple PEM blocks.");
+        }
+        try {
+            byte[] encoded = Base64.getDecoder().decode(body.replaceAll("\\s", ""));
+            if (encoded.length == 0) {
+                throw new IllegalArgumentException("PEM key contains an empty DER body.");
+            }
+            return new ParsedPqcKey(publicKey, encoded, value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("PEM key contains invalid or truncated base64/DER content.", e);
+        }
+    }
+
+    private ParsedPqcKey parseDerKey(byte[] encoded, String fileName) {
+        boolean publicKey = isDerSubjectPublicKeyInfo(encoded);
+        boolean privateKey = isDerPrivateKeyInfo(encoded);
+        if (publicKey == privateKey) {
+            throw new IllegalArgumentException("DER key file " + fileName
+                    + " is not exactly one X.509 SubjectPublicKeyInfo or PKCS#8 PrivateKeyInfo.");
+        }
+        String display = "[DER " + (publicKey ? "PUBLIC KEY" : "PRIVATE KEY") + " imported]";
+        return new ParsedPqcKey(publicKey, encoded.clone(), display);
+    }
+
+    private boolean isDerSubjectPublicKeyInfo(byte[] encoded) {
+        try {
+            SubjectPublicKeyInfo.getInstance(ASN1Primitive.fromByteArray(encoded));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isDerPrivateKeyInfo(byte[] encoded) {
+        try {
+            PrivateKeyInfo.getInstance(ASN1Primitive.fromByteArray(encoded));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void validateImportedKeyPair(PublicKey publicKey, PrivateKey privateKey) throws Exception {
+        com.cryptocarver.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult publicResult =
+                PostQuantumOperations.detectAlgorithmFromEncoded(publicKey.getEncoded(), true);
+        com.cryptocarver.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult privateResult =
+                PostQuantumOperations.detectAlgorithmFromEncoded(privateKey.getEncoded(), false);
+        if (publicResult == null || privateResult == null
+                || !publicResult.isSupported() || !privateResult.isSupported()) {
+            throw new IllegalArgumentException("Public/private keys are not supported PQC keys.");
+        }
+        if (!publicResult.nistName().equals(privateResult.nistName())) {
+            throw new IllegalArgumentException("Incompatible public/private PQC parameter sets: public key is "
+                    + publicResult.nistName() + " but private key is " + privateResult.nistName() + ".");
+        }
+
+        try {
+            if (isKemAlgorithm(publicResult.nistName())) {
+                PostQuantumOperations.KEMResult kem = PostQuantumOperations.encapsulate(publicKey, publicResult.nistName());
+                byte[] recovered = PostQuantumOperations.decapsulate(privateKey, kem.encapsulation(), publicResult.nistName());
+                if (!MessageDigest.isEqual(kem.sharedSecret(), recovered)) {
+                    throw new IllegalArgumentException("Public/private keys do not form a matching " + publicResult.nistName() + " pair.");
+                }
+            } else {
+                byte[] challenge = "CryptoCarver PQC key-pair validation".getBytes(StandardCharsets.UTF_8);
+                byte[] signature = PostQuantumOperations.sign(privateKey, challenge, publicResult.nistName());
+                if (!PostQuantumOperations.verify(publicKey, challenge, signature, publicResult.nistName())) {
+                    throw new IllegalArgumentException("Public/private keys do not form a matching " + publicResult.nistName() + " pair.");
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to validate the imported " + publicResult.nistName()
+                    + " public/private key pair.", e);
         }
     }
 
@@ -326,11 +497,15 @@ public class PostQuantumController {
                 com.cryptocarver.model.OperationDetail.publicDetail("Output", file.getAbsolutePath())
             );
             if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Key Export")
-                        .output(key.getEncoded())
+                OperationResult.Builder result = OperationResult.forOperation("PQC Key Export")
                         .details(details)
-                        .status("PQC key exported: " + file.getName())
-                        .build());
+                        .status("PQC key exported: " + file.getName());
+                // A private key is written only to the explicitly selected file;
+                // it must never become an inspector/history payload.
+                if (!"PRIVATE KEY".equals(pemType)) {
+                    result.output(key.getEncoded());
+                }
+                statusReporter.publish(result.build());
             }
         } catch (Exception e) {
             if (statusReporter != null) statusReporter.showError("PQC Export Error", "Unable to export key: " + e.getMessage());
@@ -382,13 +557,10 @@ public class PostQuantumController {
         return result.toString();
     }
 
-    private java.util.List<com.cryptocarver.model.OperationDetail> detailsWithKeyMaterial(java.util.List<com.cryptocarver.model.OperationDetail> details) {
+    private java.util.List<com.cryptocarver.model.OperationDetail> detailsWithPublicKeyMaterial(java.util.List<com.cryptocarver.model.OperationDetail> details) {
         java.util.List<com.cryptocarver.model.OperationDetail> historyDetails = new java.util.ArrayList<>(details);
         if (currentPublicKey != null) {
             historyDetails.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key PEM", toPem("PUBLIC KEY", currentPublicKey.getEncoded())));
-        }
-        if (currentPrivateKey != null) {
-            historyDetails.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key PEM", toPem("PRIVATE KEY", currentPrivateKey.getEncoded())));
         }
         return historyDetails;
     }
@@ -414,7 +586,7 @@ public class PostQuantumController {
             String inputData = pqcSignInputArea.getText();
 
             if (currentPrivateKey == null) {
-                if (statusReporter != null) statusReporter.showError("Key Error", "Please generate a key pair first (Load from file not yet implemented for PQC)");
+                if (statusReporter != null) statusReporter.showError("Key Error", "Please generate or import a compatible PQC signature private key first.");
                 return;
             }
             if (!PostQuantumOperations.areAlgorithmsCompatible(algo, currentPrivateKey.getAlgorithm())) {

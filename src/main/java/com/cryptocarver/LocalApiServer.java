@@ -2,7 +2,9 @@ package com.cryptocarver;
 
 import com.cryptocarver.model.SafeTransformations;
 import com.cryptocarver.model.BuildInfo;
+import com.cryptocarver.codec.CodecException;
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -90,6 +92,11 @@ public final class LocalApiServer implements AutoCloseable {
         }
         return true;
     }
+
+    private static void respondError(HttpExchange exchange, int status, String error) throws IOException {
+        respond(exchange, status, Map.of("error", error));
+    }
+
     private final Map<String, Long> rateLimitMap = new LinkedHashMap<>();
 
     private void openApi(HttpExchange exchange) throws IOException {
@@ -99,11 +106,75 @@ public final class LocalApiServer implements AutoCloseable {
         {
           "openapi": "3.0.0",
           "info": { "title": "CryptoCarver Local API", "version": "%s" },
+          "components": {
+            "schemas": {
+              "Error": {
+                "type": "object",
+                "required": ["error"],
+                "properties": { "error": { "type": "string" } },
+                "additionalProperties": false
+              },
+              "RequestTooLargeError": {
+                "type": "object",
+                "required": ["error", "maxBytes"],
+                "properties": {
+                  "error": { "type": "string", "enum": ["request_too_large"] },
+                  "maxBytes": { "type": "integer", "example": 1048576 }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
           "paths": {
-            "/health": { "get": { "responses": { "200": { "description": "OK" } } } },
-            "/v1/sha256": { "post": { "responses": { "200": { "description": "OK" } } } },
-            "/v1/base64url/encode": { "post": { "responses": { "200": { "description": "OK" } } } },
-            "/v1/base64url/decode": { "post": { "responses": { "200": { "description": "OK" } } } }
+            "/health": {
+              "get": {
+                "responses": {
+                  "200": { "description": "OK" },
+                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
+                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
+                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } }
+                }
+              }
+            },
+            "/v1/sha256": {
+              "post": {
+                "responses": {
+                  "200": { "description": "OK" },
+                  "400": { "description": "Invalid request or input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "invalidRequest": { "value": { "error": "invalid_request" } }, "invalidInput": { "value": { "error": "invalid_input" } } } } } },
+                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
+                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
+                  "413": { "description": "Request body exceeds 1 MiB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestTooLargeError" }, "example": { "error": "request_too_large", "maxBytes": 1048576 } } } },
+                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } },
+                  "500": { "description": "Unexpected operation failure", "content": { "application/json": { "example": { "error": "operation_failed" } } } }
+                }
+              }
+            },
+            "/v1/base64url/encode": {
+              "post": {
+                "responses": {
+                  "200": { "description": "OK" },
+                  "400": { "description": "Invalid request or input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "invalidRequest": { "value": { "error": "invalid_request" } }, "invalidInput": { "value": { "error": "invalid_input" } } } } } },
+                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
+                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
+                  "413": { "description": "Request body exceeds 1 MiB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestTooLargeError" }, "example": { "error": "request_too_large", "maxBytes": 1048576 } } } },
+                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } },
+                  "500": { "description": "Unexpected operation failure", "content": { "application/json": { "example": { "error": "operation_failed" } } } }
+                }
+              }
+            },
+            "/v1/base64url/decode": {
+              "post": {
+                "responses": {
+                  "200": { "description": "OK" },
+                  "400": { "description": "Invalid request or input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "invalidRequest": { "value": { "error": "invalid_request" } }, "invalidInput": { "value": { "error": "invalid_input" } } } } } },
+                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
+                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
+                  "413": { "description": "Request body exceeds 1 MiB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestTooLargeError" }, "example": { "error": "request_too_large", "maxBytes": 1048576 } } } },
+                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } },
+                  "500": { "description": "Unexpected operation failure", "content": { "application/json": { "example": { "error": "operation_failed" } } } }
+                }
+              }
+            }
           }
         }
         """.formatted(BuildInfo.version());
@@ -121,9 +192,16 @@ public final class LocalApiServer implements AutoCloseable {
         try {
             byte[] bytes = exchange.getRequestBody().readNBytes(MAX_REQUEST_BYTES + 1);
             if (bytes.length > MAX_REQUEST_BYTES) { respond(exchange, 413, Map.of("error", "request_too_large", "maxBytes", MAX_REQUEST_BYTES)); return; }
-            @SuppressWarnings("unchecked") Map<String, Object> request = GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), Map.class);
+            Map<String, Object> request;
+            try {
+                @SuppressWarnings("unchecked") Map<String, Object> parsed = GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), Map.class);
+                request = parsed;
+            } catch (JsonParseException e) {
+                respondError(exchange, 400, "invalid_request");
+                return;
+            }
             Object input = request == null ? null : request.get("input");
-            if (!(input instanceof String value)) { respond(exchange, 400, Map.of("error", "input_must_be_a_string")); return; }
+            if (!(input instanceof String value)) { respondError(exchange, 400, "invalid_request"); return; }
             String result = switch (operation) {
                 case "sha256" -> SafeTransformations.sha256(value);
                 case "base64url-encode" -> SafeTransformations.encodeBase64Url(value);
@@ -131,7 +209,7 @@ public final class LocalApiServer implements AutoCloseable {
                 default -> throw new IllegalStateException("Unsupported operation");
             };
             respond(exchange, 200, Map.of("operation", operation, "result", result));
-        } catch (IllegalArgumentException e) { respond(exchange, 400, Map.of("error", "invalid_input", "message", e.getMessage())); }
-        catch (Exception e) { respond(exchange, 500, Map.of("error", "operation_failed", "message", e.getMessage() == null ? "unknown" : e.getMessage())); }
+        } catch (CodecException | IllegalArgumentException e) { respondError(exchange, 400, "invalid_input"); }
+        catch (Exception e) { respondError(exchange, 500, "operation_failed"); }
     }
 }

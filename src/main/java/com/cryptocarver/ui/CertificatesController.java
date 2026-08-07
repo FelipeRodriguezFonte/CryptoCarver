@@ -43,7 +43,7 @@ public class CertificatesController {
     @FXML private ComboBox<String> crlRevokeReasonCombo;
 
     @FXML private TextArea cmsInputArea, cmsOutputArea, cmsVerifyDataArea;
-    @FXML private CheckBox cmsDetachedCheck, cmsCadesBesCheck, cmsCadesTCheck;
+    @FXML private CheckBox cmsDetachedCheck, cmsCadesBesCheck, cmsCadesTCheck, cmsOnlineRevocationCheck;
     @FXML private TextField cmsCadesTsaUrlField;
     @FXML private HBox cmsCadesTsaBox;
     @FXML private TextArea cmsSignCertArea, cmsSignKeyArea, cmsEncryptCertArea, cmsDecryptKeyArea;
@@ -53,6 +53,7 @@ public class CertificatesController {
     @FXML private GridPane cmsSignLocalGrid, cmsEncryptLocalGrid;
     @FXML private HBox cmsSignPkcs11Box, cmsEncryptPkcs11Box;
     @FXML private ComboBox<String> cmsSignKeyAliasCombo, cmsEncryptKeyAliasCombo;
+    @FXML private javafx.scene.control.Button cmsSignButton;
 
     @FXML private VBox padesContainer;
     @FXML private PadesController padesContainerController;
@@ -93,7 +94,8 @@ public class CertificatesController {
                 cmsCadesTCheck, cmsCadesTsaUrlField, cmsCadesTsaBox, cmsSignCertArea, cmsSignKeyArea,
                 cmsEncryptCertArea, cmsDecryptKeyArea, cmsSignSourcePkcs11Radio, cmsSignLocalGrid,
                 cmsSignPkcs11Box, cmsSignKeyAliasCombo, cmsVerifyDataArea, cmsEncryptSourcePkcs11Radio,
-                cmsEncryptLocalGrid, cmsEncryptPkcs11Box, cmsEncryptKeyAliasCombo);
+                cmsEncryptLocalGrid, cmsEncryptPkcs11Box, cmsEncryptKeyAliasCombo, cmsSignButton,
+                cmsOnlineRevocationCheck);
 
         IngestionUIHelper.bindField(certInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
 

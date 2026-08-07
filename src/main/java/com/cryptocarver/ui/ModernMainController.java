@@ -2494,10 +2494,23 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         com.cryptocarver.model.ClipboardEntry.Format format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
         com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
-        if (cls == com.cryptocarver.model.OperationDetail.Classification.SECRET) {
-            boolean explicitPrivateKey = selectedText == null && ResultAreaTracker.isPrivateKeyResultArea(area);
-            if (explicitPrivateKey
-                    && isCompletePrivateKeyMaterial(text)
+        // Raw asymmetric private-key material (a complete PEM block) gets a dedicated,
+        // deliberately non-persistent path below: it is never written to the Shelf's
+        // JSON file on disk, only held in memory for this session. The check is on the
+        // *content shape* (isCompletePrivateKeyMaterial), not just the source area's id
+        // — a private key pasted or rendered somewhere other than a designated
+        // "…PrivateKeyArea" still gets the same protection. Every other SECRET-classified
+        // result (derived/symmetric keys from KDF, wrapped keys, PIN blocks, CVVs, DUKPT
+        // outputs, etc.) falls through to the normal Shelf entry path further down —
+        // classification plus the visibility profile (FULL_LAB/MASKED/REDACTED, already
+        // applied above in resolveShelfCaptureText/renderResultArea) are the security
+        // levels this lab tool uses to gate secret exposure; an additional hard block on
+        // top of those was redundant and silently dropped legitimate lab results (e.g.
+        // Add to Shelf after a KDF derivation) with no path to fix it.
+        boolean privateKeyMaterial = selectedText == null
+                && (ResultAreaTracker.isPrivateKeyResultArea(area) || isCompletePrivateKeyMaterial(text));
+        if (cls == com.cryptocarver.model.OperationDetail.Classification.SECRET && privateKeyMaterial) {
+            if (isCompletePrivateKeyMaterial(text)
                     && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
                         == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation()
@@ -2521,7 +2534,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 revealShelfEntry(sessionEntry);
                 return;
             }
-            updateStatus("Action blocked: private output is not an explicit complete private-key area.");
+            updateStatus(isCompletePrivateKeyMaterial(text)
+                    ? "Action blocked: private keys can only be added to the Shelf (session only) under FULL_LAB visibility."
+                    : "Action blocked: private-key area does not contain complete, exportable key material.");
             return;
         }
         String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");

@@ -253,8 +253,9 @@
                 <configuration>
                     <mainClass>com.cryptocarver.CryptoCalculatorModern</mainClass>
                     <options>
-                        <option>-Xdock:name="CryptoCarver"</option>
-                        <option>-Xdock:icon="${project.basedir}/src/main/resources/icons/app-icon.png"</option>
+                        <option>-Xdock:name=CryptoCarver</option>
+                        <option>-Xdock:icon=${project.basedir}/src/main/resources/icons/app-icon.png</option>
+                        <option>-Dapple.awt.application.name=CryptoCarver</option>
                     </options>
                 </configuration>
             </plugin>

@@ -35,6 +35,8 @@ public class ClipboardShelfManager {
     private final Path shelfPath;
     private final Gson gson;
     private final LinkedList<ClipboardEntry> entries = new LinkedList<>();
+    /** Session-only private keys never participate in shelf serialization. */
+    private final LinkedList<ClipboardEntry> sessionOnlyPrivateKeys = new LinkedList<>();
     private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
 
     private static final ClipboardShelfManager INSTANCE = new ClipboardShelfManager();
@@ -92,6 +94,10 @@ public class ClipboardShelfManager {
 
     public synchronized void addEntry(ClipboardEntry entry) {
         if (entry == null) return;
+        if (entry.isSessionOnlyPrivateKey()) {
+            addSessionOnlyPrivateKey(entry);
+            return;
+        }
         entries.addFirst(entry);
         if (entries.size() > MAX_ENTRIES) {
             entries.removeLast();
@@ -100,17 +106,60 @@ public class ClipboardShelfManager {
         notifyChanged();
     }
 
+    /**
+     * Adds a private key to the current JVM session only. This method is the
+     * sole manager entry point for temporary private-key Shelf material.
+     */
+    public synchronized ClipboardEntry addSessionOnlyPrivateKey(String value, String sourceOperation, String algorithm) {
+        if (AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB) {
+            return null;
+        }
+        if (isPrivateMaterialPlaceholder(value)) {
+            return null;
+        }
+        ClipboardEntry entry = ClipboardEntry.sessionOnlyPrivateKey(value, sourceOperation, algorithm);
+        addSessionOnlyPrivateKey(entry);
+        return entry;
+    }
+
+    /** Adds an already-created session-only entry without touching persistence. */
+    public synchronized ClipboardEntry addSessionOnlyPrivateKey(ClipboardEntry entry) {
+        if (entry == null || !entry.isSessionOnlyPrivateKey()
+                || AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB
+                || isPrivateMaterialPlaceholder(entry.getValue())) {
+            return null;
+        }
+        sessionOnlyPrivateKeys.addFirst(entry);
+        if (sessionOnlyPrivateKeys.size() > MAX_ENTRIES) {
+            sessionOnlyPrivateKeys.removeLast();
+        }
+        // Deliberately no saveShelf(): this collection is session-only in memory.
+        notifyChanged();
+        return entry;
+    }
+
+    private boolean isPrivateMaterialPlaceholder(String value) {
+        if (value == null) return false;
+        String normalized = value.toUpperCase(java.util.Locale.ROOT);
+        return normalized.contains("PRIVATE KEY MATERIAL") && normalized.contains("NOT RECORDED");
+    }
+
     public synchronized void removeEntry(UUID id) {
         if (entries.removeIf(e -> Objects.equals(e.getId(), id))) {
             saveShelf();
+            notifyChanged();
+        } else if (sessionOnlyPrivateKeys.removeIf(e -> Objects.equals(e.getId(), id))) {
             notifyChanged();
         }
     }
 
     public synchronized void clear() {
-        if (!entries.isEmpty()) {
+        boolean hadPersistentEntries = !entries.isEmpty();
+        boolean hadSessionEntries = !sessionOnlyPrivateKeys.isEmpty();
+        if (hadPersistentEntries || hadSessionEntries) {
             entries.clear();
-            saveShelf();
+            sessionOnlyPrivateKeys.clear();
+            if (hadPersistentEntries) saveShelf();
             notifyChanged();
         }
     }
@@ -125,6 +174,14 @@ public class ClipboardShelfManager {
                 return true;
             }
         }
+        for (int i = 0; i < sessionOnlyPrivateKeys.size(); i++) {
+            ClipboardEntry e = sessionOnlyPrivateKeys.get(i);
+            if (Objects.equals(e.getId(), id)) {
+                sessionOnlyPrivateKeys.set(i, e.withLabel(newLabel));
+                notifyChanged();
+                return true;
+            }
+        }
         return false;
     }
 
@@ -134,6 +191,14 @@ public class ClipboardShelfManager {
             if (Objects.equals(e.getId(), id)) {
                 entries.set(i, e.withTagsAndNote(tags, note));
                 saveShelf();
+                notifyChanged();
+                return true;
+            }
+        }
+        for (int i = 0; i < sessionOnlyPrivateKeys.size(); i++) {
+            ClipboardEntry e = sessionOnlyPrivateKeys.get(i);
+            if (Objects.equals(e.getId(), id)) {
+                sessionOnlyPrivateKeys.set(i, e.withTagsAndNote(tags, note));
                 notifyChanged();
                 return true;
             }
@@ -152,12 +217,20 @@ public class ClipboardShelfManager {
                 return true;
             }
         }
+        for (int i = 0; i < sessionOnlyPrivateKeys.size(); i++) {
+            ClipboardEntry e = sessionOnlyPrivateKeys.get(i);
+            if (Objects.equals(e.getId(), id)) {
+                sessionOnlyPrivateKeys.set(i, e.withPinned(!e.isPinned()));
+                notifyChanged();
+                return true;
+            }
+        }
         return false;
     }
 
     public synchronized Optional<ClipboardEntry> findDuplicate(String value, String sourceOperation) {
         if (value == null || value.isBlank()) return Optional.empty();
-        return entries.stream()
+        return allEntries().stream()
                 .filter(e -> Objects.equals(e.getValue(), value) && Objects.equals(e.getSourceOperation(), sourceOperation))
                 .findFirst();
     }
@@ -173,7 +246,7 @@ public class ClipboardShelfManager {
     }
 
     public synchronized List<ClipboardEntry> getEntries() {
-        List<ClipboardEntry> result = new ArrayList<>(entries);
+        List<ClipboardEntry> result = allEntries();
         result.sort((a, b) -> {
             if (a.isPinned() != b.isPinned()) {
                 return a.isPinned() ? -1 : 1;
@@ -183,6 +256,13 @@ public class ClipboardShelfManager {
             return bTime.compareTo(aTime);
         });
         return Collections.unmodifiableList(result);
+    }
+
+    private List<ClipboardEntry> allEntries() {
+        List<ClipboardEntry> result = new ArrayList<>(entries.size() + sessionOnlyPrivateKeys.size());
+        result.addAll(entries);
+        result.addAll(sessionOnlyPrivateKeys);
+        return result;
     }
 
     public synchronized List<ClipboardEntry> search(String query, Boolean pinned, String sourceOperation, ClipboardEntry.Format format, OperationDetail.Classification classification) {

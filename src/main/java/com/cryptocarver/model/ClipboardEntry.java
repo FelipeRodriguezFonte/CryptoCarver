@@ -22,6 +22,15 @@ public class ClipboardEntry {
     private final List<String> tags;
     private final String note;
     private final boolean pinned;
+    private final ShelfPackage shelfPackage;
+    private final String nonReusableReason;
+    /** Session-only provenance is intentionally never serialized by Gson. */
+    private final transient ShelfEntryOrigin origin;
+
+    public enum EntryKind { SIMPLE, STRUCTURED, NOT_REUSABLE, SESSION_ONLY_PRIVATE_KEY }
+
+    /** The only non-persistent Shelf provenance currently supported. */
+    public enum ShelfEntryOrigin { PERSISTENT, SESSION_ONLY_PRIVATE_KEY }
 
     public enum Format {
         TEXT,
@@ -95,13 +104,16 @@ public class ClipboardEntry {
         this(UUID.randomUUID(), LocalDateTime.now(), label != null ? label : "Copied Value",
              value != null ? value : "", format != null ? format : Format.UNKNOWN,
              classification != null ? classification : OperationDetail.Classification.SENSITIVE,
-             sourceOperation, algorithm, sanitizeTags(tags), sanitizeNote(note), pinned);
+             sourceOperation, algorithm, sanitizeTags(tags), sanitizeNote(note), pinned, null, null,
+             ShelfEntryOrigin.PERSISTENT);
     }
 
     private ClipboardEntry(UUID id, LocalDateTime createdAt, String label, String value,
                            Format format, OperationDetail.Classification classification,
                            String sourceOperation, String algorithm,
-                           List<String> tags, String note, boolean pinned) {
+                           List<String> tags, String note, boolean pinned,
+                           ShelfPackage shelfPackage, String nonReusableReason,
+                           ShelfEntryOrigin origin) {
         this.id = id;
         this.createdAt = createdAt;
         this.label = label;
@@ -113,22 +125,56 @@ public class ClipboardEntry {
         this.tags = sanitizeTags(tags);
         this.note = sanitizeNote(note);
         this.pinned = pinned;
+        this.shelfPackage = shelfPackage;
+        this.nonReusableReason = nonReusableReason;
+        this.origin = origin == null ? ShelfEntryOrigin.PERSISTENT : origin;
         this.byteLength = calculateByteLength(this.value, this.format);
+    }
+
+    /** Creates a private-key entry that lives only in the current JVM session. */
+    public static ClipboardEntry sessionOnlyPrivateKey(String value, String sourceOperation, String algorithm) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Private key material is required");
+        }
+        return new ClipboardEntry(UUID.randomUUID(), LocalDateTime.now(),
+                "Private key — session only", value, Format.inferFormat(value),
+                OperationDetail.Classification.SECRET, sourceOperation, algorithm,
+                java.util.Collections.emptyList(), "", false, null, null,
+                ShelfEntryOrigin.SESSION_ONLY_PRIVATE_KEY);
+    }
+
+    public ClipboardEntry withShelfPackage(ShelfPackage packageData) {
+        if (packageData == null) throw new IllegalArgumentException("Shelf package is required");
+        return new ClipboardEntry(this.id, this.createdAt, this.label, this.value, this.format,
+                this.classification, this.sourceOperation, this.algorithm, this.tags, this.note,
+                this.pinned, packageData, null, this.origin);
+    }
+
+    public static ClipboardEntry notReusable(String label, String value, Format format,
+                                              OperationDetail.Classification classification,
+                                              String sourceOperation, String reason) {
+        if (reason == null || reason.isBlank()) throw new IllegalArgumentException("Reason is required");
+        return new ClipboardEntry(UUID.randomUUID(), LocalDateTime.now(), label, value, format,
+                classification, sourceOperation, null, java.util.Collections.emptyList(), "", false,
+                null, reason, ShelfEntryOrigin.PERSISTENT);
     }
 
     public ClipboardEntry withLabel(String newLabel) {
         return new ClipboardEntry(this.id, this.createdAt, newLabel, this.value, this.format,
-                this.classification, this.sourceOperation, this.algorithm, this.tags, this.note, this.pinned);
+                this.classification, this.sourceOperation, this.algorithm, this.tags, this.note, this.pinned,
+                this.shelfPackage, this.nonReusableReason, this.origin);
     }
 
     public ClipboardEntry withTagsAndNote(List<String> newTags, String newNote) {
         return new ClipboardEntry(this.id, this.createdAt, this.label, this.value, this.format,
-                this.classification, this.sourceOperation, this.algorithm, newTags, newNote, this.pinned);
+                this.classification, this.sourceOperation, this.algorithm, newTags, newNote, this.pinned,
+                this.shelfPackage, this.nonReusableReason, this.origin);
     }
 
     public ClipboardEntry withPinned(boolean newPinned) {
         return new ClipboardEntry(this.id, this.createdAt, this.label, this.value, this.format,
-                this.classification, this.sourceOperation, this.algorithm, this.tags, this.note, newPinned);
+                this.classification, this.sourceOperation, this.algorithm, this.tags, this.note, newPinned,
+                this.shelfPackage, this.nonReusableReason, this.origin);
     }
 
     public static List<String> sanitizeTags(List<String> rawTags) {
@@ -193,6 +239,18 @@ public class ClipboardEntry {
     public List<String> getTags() { return tags == null ? java.util.Collections.emptyList() : tags; }
     public String getNote() { return note == null ? "" : note; }
     public boolean isPinned() { return pinned; }
+    public ShelfPackage getShelfPackage() { return shelfPackage; }
+    public EntryKind getEntryKind() {
+        return isSessionOnlyPrivateKey() ? EntryKind.SESSION_ONLY_PRIVATE_KEY
+                : nonReusableReason != null ? EntryKind.NOT_REUSABLE
+                : shelfPackage != null ? EntryKind.STRUCTURED : EntryKind.SIMPLE;
+    }
+    public boolean isReusable() { return getEntryKind() != EntryKind.NOT_REUSABLE; }
+    public String getNonReusableReason() { return nonReusableReason; }
+    public ShelfEntryOrigin getOrigin() { return origin; }
+    public boolean isSessionOnlyPrivateKey() {
+        return origin == ShelfEntryOrigin.SESSION_ONLY_PRIVATE_KEY;
+    }
 
     /**
      * Normalizes an entry read from an older shelf schema. Gson leaves newly
@@ -215,6 +273,6 @@ public class ClipboardEntry {
         String normalizedSource = sourceOperation != null ? sourceOperation : "Unknown";
         return new ClipboardEntry(normalizedId, normalizedCreatedAt, normalizedLabel, normalizedValue,
                 normalizedFormat, normalizedClassification, normalizedSource, algorithm,
-                tags, note, pinned);
+                tags, note, pinned, shelfPackage, nonReusableReason, ShelfEntryOrigin.PERSISTENT);
     }
 }

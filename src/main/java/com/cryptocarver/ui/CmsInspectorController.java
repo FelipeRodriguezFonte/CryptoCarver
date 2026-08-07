@@ -39,6 +39,7 @@ public class CmsInspectorController {
     @FXML private TextArea cmsContentArea;
     @FXML private Label truststorePathLabel;
     @FXML private PasswordField truststorePasswordField;
+    @FXML private CheckBox cmsOnlineRevocationCheck;
     @FXML private TextArea cmsReportArea;
 
     private byte[] cmsFileBytes;
@@ -178,27 +179,44 @@ public class CmsInspectorController {
                 }
             }
 
-            CmsInspectionReport report = inspector.inspect(inputBytes, contentBytes, ts);
-            this.currentReport = report;
-
-            String reportText = formatReport(report);
-            cmsReportArea.setText(reportText);
-
-            if (statusReporter != null) {
-                OperationResult result = OperationResult.forOperation("CMS_INSPECTOR")
-                    .input(inputBytes)
-                    .output(reportText.getBytes())
-                    .detail(new OperationDetail("Type", report.getType().name(), OperationDetail.Classification.PUBLIC, false, null))
-                    .detail(new OperationDetail("Content State", report.getContentState().name(), OperationDetail.Classification.PUBLIC, false, null))
-                    .status(t("module.cms.feedback.statusInspected", report.getType(), report.getContentState()))
-                    .build();
-                statusReporter.publish(result);
+            final byte[] cmsInput = inputBytes;
+            final byte[] detachedInput = contentBytes;
+            final KeyStore truststore = ts;
+            final boolean online = cmsOnlineRevocationCheck != null && cmsOnlineRevocationCheck.isSelected();
+            if (online && statusReporter != null && statusReporter.getOperationExecutor() != null) {
+                statusReporter.getOperationExecutor().execute("CMS/CAdES revocation validation", null,
+                        () -> inspector.inspect(cmsInput, detachedInput, truststore, true, List.of()),
+                        this::presentReport, this::presentInspectionError,
+                        () -> { if (statusReporter != null) statusReporter.updateStatus(t("module.cms.cancelled")); });
+            } else {
+                presentReport(inspector.inspect(cmsInput, detachedInput, truststore, online, List.of()));
             }
 
         } catch (Exception e) {
             if (statusReporter != null) statusReporter.showError("Inspection Error", t("module.cms.inspectFailed", e.getMessage()));
             cmsReportArea.setText(t("module.cms.errorGeneric", e.getMessage()));
         }
+    }
+
+    private void presentReport(CmsInspectionReport report) {
+        this.currentReport = report;
+        String reportText = formatReport(report);
+        cmsReportArea.setText(reportText);
+        if (statusReporter != null) {
+            statusReporter.publish(OperationResult.forOperation("CMS_INSPECTOR")
+                    .input(reportText.getBytes()).output(reportText.getBytes())
+                    .detail(new OperationDetail("Type", report.getType().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .detail(new OperationDetail("Content State", report.getContentState().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .detail(new OperationDetail("Revocation", report.getRevocation().status().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .detail(new OperationDetail("Evidence", report.getRevocation().evidence().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .status(t("module.cms.feedback.statusInspected", report.getType(), report.getContentState())).build());
+        }
+    }
+
+    private void presentInspectionError(Throwable error) {
+        String message = error == null || error.getMessage() == null ? "CMS validation failed" : error.getMessage();
+        if (statusReporter != null) statusReporter.showError("Inspection Error", t("module.cms.inspectFailed", message));
+        if (cmsReportArea != null) cmsReportArea.setText(t("module.cms.errorGeneric", message));
     }
 
     @FXML
@@ -261,11 +279,13 @@ public class CmsInspectorController {
         if (cmsContentArea != null) { cmsContentArea.clear(); cmsContentArea.setEditable(true); cmsContentArea.setVisible(false); cmsContentArea.setManaged(false); }
         if (cmsInputArea != null) { cmsInputArea.clear(); cmsInputArea.setEditable(true); }
         if (truststorePasswordField != null) truststorePasswordField.clear();
+        if (cmsOnlineRevocationCheck != null) cmsOnlineRevocationCheck.setSelected(false);
         if (cmsReportArea != null) cmsReportArea.clear();
     }
 
     private void restoreSafeDefaults() {
         if (cmsDetachedCheck != null) cmsDetachedCheck.setSelected(false);
+        if (cmsOnlineRevocationCheck != null) cmsOnlineRevocationCheck.setSelected(false);
     }
 
     private String formatReport(CmsInspectionReport report) {
@@ -289,6 +309,14 @@ public class CmsInspectorController {
             }
             sb.append("\n");
         }
+
+        sb.append("== Revocation ==\n");
+        sb.append("Status: ").append(report.getRevocation().status()).append("\n");
+        sb.append("Evidence: ").append(report.getRevocation().evidence()).append("\n");
+        if (!report.getRevocation().errors().isEmpty()) {
+            sb.append("Reason: ").append(String.join("; ", report.getRevocation().errors())).append("\n");
+        }
+        sb.append("\n");
 
         if (!report.getSigners().isEmpty()) {
             sb.append("== Signers ==\n");

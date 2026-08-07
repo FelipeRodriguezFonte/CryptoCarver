@@ -11,6 +11,7 @@ import java.util.Map;
 
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
+import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.SignerConfig;
 import com.cryptocarver.model.OperationResult;
 
@@ -41,9 +42,6 @@ import java.util.Set;
 import java.util.Collections;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.crypto.spec.OAEPParameterSpec;
-import javax.crypto.spec.PSource;
-import java.security.spec.MGF1ParameterSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
@@ -1192,13 +1190,13 @@ public class JOSEController implements Initializable {
                 // Pad or truncate to required length for the algorithm if needed, or assume user provides correct length
                 encrypter = new com.nimbusds.jose.crypto.AESEncrypter(keyBytes);
             } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                PublicKey ecPublicKey = requireEcPublicKey(new JWSAlgorithm(alg.getName()), publicKeyPEM);
+                PublicKey ecPublicKey = requireJweEcPublicKey(publicKeyPEM);
                 encrypter = new com.nimbusds.jose.crypto.ECDHEncrypter((java.security.interfaces.ECPublicKey) ecPublicKey);
             } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
                 if (publicKeyPEM.startsWith("-----BEGIN")) {
                     throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
                 }
-                encrypter = new com.nimbusds.jose.crypto.PasswordBasedEncrypter(publicKeyPEM.getBytes(StandardCharsets.UTF_8), 2048, 16);
+                encrypter = new com.nimbusds.jose.crypto.PasswordBasedEncrypter(publicKeyPEM.getBytes(StandardCharsets.UTF_8), 16, 2048);
             } else {
                 throw new IllegalArgumentException("Unsupported JWE Algorithm: " + alg.getName());
             }
@@ -1240,34 +1238,71 @@ public class JOSEController implements Initializable {
             TextArea jweHeaderArea, TextArea jweEncryptedKeyArea, TextArea jweDecryptedKeyArea,
             TextArea jweIVArea, TextArea jweCiphertextArea, TextArea jweAuthTagArea,
             Label statusLabel) {
+        String algorithmName = "(unknown)";
         try {
-            // 1. Parse
-            JWEObject jweObject = JWEObject.parse(jweString);
-
-            // 2. Key & Decrypter
-            JWEDecrypter decrypter;
-            JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
-            PrivateKey rsaPrivateKey = null; // Save for CEK display later if RSA
-
-            if (JWEAlgorithm.Family.RSA.contains(alg)) {
-                rsaPrivateKey = parseRSAPrivateKey(privateKeyPEM);
-                decrypter = new RSADecrypter(rsaPrivateKey);
-            } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
-                byte[] keyBytes = privateKeyPEM.getBytes(StandardCharsets.UTF_8);
-                if (privateKeyPEM.startsWith("-----BEGIN")) throw new IllegalArgumentException("AES Key Wrap requires a symmetric key (secret), not a PEM certificate/key.");
-                decrypter = new com.nimbusds.jose.crypto.AESDecrypter(keyBytes);
-            } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                PrivateKey ecPrivateKey = requireEcPrivateKey(new JWSAlgorithm(alg.getName()), privateKeyPEM);
-                decrypter = new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) ecPrivateKey);
-            } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
-                if (privateKeyPEM.startsWith("-----BEGIN")) throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
-                decrypter = new com.nimbusds.jose.crypto.PasswordBasedDecrypter(privateKeyPEM.getBytes(StandardCharsets.UTF_8));
-            } else {
-                throw new IllegalArgumentException("Unsupported JWE Algorithm: " + alg.getName());
+            if (jweString == null || jweString.isBlank()) {
+                throw new IllegalArgumentException("A JWE compact serialization is required.");
+            }
+            if (privateKeyPEM == null || privateKeyPEM.isBlank()) {
+                throw new IllegalArgumentException("Key material is required to decrypt the JWE.");
             }
 
-            // 3. Decryp
-            jweObject.decrypt(decrypter);
+            final JWEObject jweObject;
+            try {
+                jweObject = JWEObject.parse(jweString);
+            } catch (java.text.ParseException e) {
+                throw new IllegalArgumentException("The JWE is corrupt or has an invalid compact serialization.", e);
+            }
+
+            JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
+            algorithmName = alg == null ? "(missing)" : alg.getName();
+            if (!JWEManualCekRecovery.isSupported(alg)) {
+                throw new IllegalArgumentException("Unsupported JWE key-management algorithm for this application: " + algorithmName + ".");
+            }
+
+            JWEDecrypter decrypter;
+            PrivateKey privateKey = null;
+            byte[] secret = null;
+            String keyMaterial = privateKeyPEM.trim();
+
+            try {
+                if (JWEAlgorithm.Family.RSA.contains(alg)) {
+                    privateKey = parseRSAPrivateKey(keyMaterial);
+                    decrypter = new RSADecrypter(privateKey);
+                } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
+                    if (keyMaterial.startsWith("-----BEGIN")) {
+                        throw new IllegalArgumentException("AES-KW requires a symmetric key, not a PEM certificate/key.");
+                    }
+                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
+                    decrypter = new com.nimbusds.jose.crypto.AESDecrypter(secret);
+                } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
+                    privateKey = requireJweEcPrivateKey(keyMaterial);
+                    decrypter = new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) privateKey);
+                } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
+                    if (keyMaterial.startsWith("-----BEGIN")) {
+                        throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
+                    }
+                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
+                    decrypter = new com.nimbusds.jose.crypto.PasswordBasedDecrypter(secret);
+                } else if (JWEAlgorithm.DIR.equals(alg)) {
+                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
+                    decrypter = new com.nimbusds.jose.crypto.DirectDecrypter(secret);
+                } else {
+                    throw new IllegalArgumentException("Unsupported JWE key-management algorithm: " + algorithmName + ".");
+                }
+            } catch (IllegalArgumentException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Key material is missing or incompatible with JWE algorithm " + algorithmName + ".", e);
+            }
+
+            try {
+                jweObject.decrypt(decrypter);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        "JWE authentication failed for " + algorithmName
+                                + ": the supplied key may be incorrect/incompatible or the JWE header/ciphertext may be corrupt.", e);
+            }
 
             // 4. Display Parts
             headerOut.setText(jweObject.getHeader().toString());
@@ -1279,49 +1314,18 @@ public class JOSEController implements Initializable {
             Base64URL encryptedKey = jweObject.getEncryptedKey();
             jweEncryptedKeyArea.setText(encryptedKey != null ? encryptedKey.toString() : "");
 
-            if (encryptedKey != null) {
-                try {
-                    // Manual Decryption to show the CEK
-
-                    javax.crypto.Cipher cipher = null;
-                    if (rsaPrivateKey != null) {
-                        if (JWEAlgorithm.RSA_OAEP_256.equals(alg)) {
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/OAEPPadding");
-                            OAEPParameterSpec spec = new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256,
-                                    PSource.PSpecified.DEFAULT);
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey, spec);
-                        } else if (JWEAlgorithm.RSA_OAEP.equals(alg)) {
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/OAEPPadding");
-                            OAEPParameterSpec spec = new OAEPParameterSpec("SHA-1", "MGF1", MGF1ParameterSpec.SHA1,
-                                    PSource.PSpecified.DEFAULT);
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey, spec);
-                        } else if (JWEAlgorithm.RSA1_5.equals(alg)) {
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/PKCS1Padding");
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey);
-                        } else {
-                            // Fallback attemp
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey);
-                        }
-
-                        byte[] decryptedKeyBytes = cipher.doFinal(encryptedKey.decode());
-
-                        StringBuilder hexString = new StringBuilder();
-                        for (byte b : decryptedKeyBytes) {
-                            String hex = Integer.toHexString(0xff & b);
-                            if (hex.length() == 1)
-                                hexString.append('0');
-                            hexString.append(hex);
-                        }
-                        jweDecryptedKeyArea.setText(hexString.toString().toUpperCase());
-                    } else {
-                        jweDecryptedKeyArea.setText("Manual CEK preview not supported for " + alg.getName());
-                    }
-                } catch (Exception ex) {
-                    jweDecryptedKeyArea.setText("Decryption Error: " + ex.getMessage());
-                }
+            if (JWEAlgorithm.DIR.equals(alg)) {
+                // The direct key is the CEK. Keep it out of automatic preview,
+                // OperationResult, history, reports, clipboard and logs.
+                jweDecryptedKeyArea.setText(directCekPreviewMessage());
             } else {
-                jweDecryptedKeyArea.setText("Direct Encryption (No Key)");
+                try {
+                    byte[] cek = JWEManualCekRecovery.recover(jweObject, privateKey, secret);
+                    jweDecryptedKeyArea.setText(DataConverter.bytesToHex(cek));
+                    java.util.Arrays.fill(cek, (byte) 0);
+                } catch (JWEManualCekRecovery.ManualCekRecoveryException ex) {
+                    jweDecryptedKeyArea.setText("Manual CEK preview error: " + ex.getMessage());
+                }
             }
 
             jweIVArea.setText(jweObject.getIV() != null
@@ -1342,20 +1346,33 @@ public class JOSEController implements Initializable {
             statusLabel.setStyle("-fx-text-fill: green;");
 
             String payload = jweObject.getPayload().toString();
-            statusReporter.publish(OperationResult.forOperation("JWE Decryption")
-                    .input(jweString.getBytes(StandardCharsets.US_ASCII))
-                    .output(payload.getBytes(StandardCharsets.UTF_8))
-                    .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
-                    .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
-                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", privateKeyPEM))
-                    .status(t("module.jose.feedback.statusJweDecrypted")).build());
+            statusReporter.publish(buildJweDecryptionResult(jweString, payload, jweObject));
 
         } catch (Exception e) {
             statusLabel.setText(t("module.jose.decryptionFailed"));
             statusLabel.setStyle("-fx-text-fill: red;");
-            statusReporter.showError("JWE Decryption Error", e.getMessage());
-            LOG.error("JWE decryption failed", e);
+            String message = e.getMessage();
+            if (message == null || message.isBlank()) {
+                message = "JWE decryption failed for " + algorithmName + ".";
+            }
+            statusReporter.showError("JWE Decryption Error", message);
+            // Do not attach the exception: CEKs and other secret material must
+            // never reach application logs through a provider exception.
+            LOG.error("JWE decryption failed for key-management algorithm {}", algorithmName);
         }
+    }
+
+    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject) {
+        return OperationResult.forOperation("JWE Decryption")
+                .input(jweString.getBytes(StandardCharsets.US_ASCII))
+                .output(payload.getBytes(StandardCharsets.UTF_8))
+                .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
+                .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
+                .status(t("module.jose.feedback.statusJweDecrypted")).build();
+    }
+
+    static String directCekPreviewMessage() {
+        return "Direct encryption: the CEK is the supplied direct key and is not displayed automatically.";
     }
 
     // --- JWK ---
@@ -1433,6 +1450,26 @@ public class JOSEController implements Initializable {
     private java.security.interfaces.ECPublicKey requireEcPublicKey(JWSAlgorithm algorithm, String pem) throws Exception {
         java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
         validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
+        return key;
+    }
+
+    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
+    private java.security.interfaces.ECPublicKey requireJweEcPublicKey(String pem) throws Exception {
+        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
+        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
+        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
+            throw new IllegalArgumentException("The supplied EC public key curve is not supported by Nimbus ECDH-ES.");
+        }
+        return key;
+    }
+
+    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
+    private java.security.interfaces.ECPrivateKey requireJweEcPrivateKey(String pem) throws Exception {
+        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
+        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
+        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
+            throw new IllegalArgumentException("The supplied EC private key curve is not supported by Nimbus ECDH-ES.");
+        }
         return key;
     }
 

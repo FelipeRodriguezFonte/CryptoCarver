@@ -594,6 +594,10 @@ public class HistoryController {
         }
 
         SecretVisibilityProfile visibility = selectedVisibility();
+        if (output.classification() == OperationDetail.Classification.SECRET) {
+            showError("Clipboard Shelf", "SECRET material is never stored in Clipboard Shelf.");
+            return;
+        }
         boolean sensitive = output.classification() == OperationDetail.Classification.SECRET
                 || output.classification() == OperationDetail.Classification.SENSITIVE;
         if (sensitive && visibility != SecretVisibilityProfile.FULL_LAB) {

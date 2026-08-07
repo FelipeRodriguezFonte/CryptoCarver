@@ -1,22 +1,30 @@
 package com.cryptocarver.service;
 
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.OctetKeyPair;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.util.Base64URL;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
+import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
+import org.bouncycastle.crypto.params.Ed448PrivateKeyParameters;
+import org.bouncycastle.crypto.params.Ed448PublicKeyParameters;
 import org.bouncycastle.crypto.util.OpenSSHPrivateKeyUtil;
 import org.bouncycastle.crypto.util.OpenSSHPublicKeyUtil;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
 import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.crypto.util.PrivateKeyInfoFactory;
+import org.bouncycastle.math.ec.rfc8032.Ed25519;
+import org.bouncycastle.math.ec.rfc8032.Ed448;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
@@ -106,6 +114,9 @@ public class KeyCertificateFormatService {
         public Object parsedObject;
         public List<KeystoreEntrySummary> keystoreEntries; // Null if not a keystore
 
+        // Safe, non-material diagnostic for malformed JWK input. Never stores the input JSON.
+        public String validationError;
+
         // Original raw bytes used to identify this (so we can pass it into convert easily)
         public byte[] rawBytes;
     }
@@ -166,14 +177,20 @@ public class KeyCertificateFormatService {
         try {
             String str = new String(input, java.nio.charset.StandardCharsets.UTF_8).trim();
             if (str.startsWith("{")) {
-                JWK jwk = JWK.parse(str);
-                res.type = jwk.isPrivate() ? FormatType.JWK_PRIVATE : FormatType.JWK_PUBLIC;
-                res.parsedObject = jwk;
-                res.formatString = "JSON Web Key (JWK)";
-                res.hasPrivateKey = jwk.isPrivate();
-                res.algorithm = jwk.getKeyType().getValue();
-                res.keySize = jwk.size();
-                return res;
+                try {
+                    JWK jwk = JWK.parse(str);
+                    res.type = jwk.isPrivate() ? FormatType.JWK_PRIVATE : FormatType.JWK_PUBLIC;
+                    res.parsedObject = jwk;
+                    res.formatString = "JSON Web Key (JWK)";
+                    res.hasPrivateKey = jwk.isPrivate();
+                    res.algorithm = jwk.getKeyType().getValue();
+                    res.keySize = jwk.size();
+                    return res;
+                } catch (Exception e) {
+                    // Keep parse diagnostics structural and never expose the input or Nimbus' exception text.
+                    res.validationError = describeMalformedJwk(str);
+                    return res;
+                }
             }
         } catch (Exception e) {
             // Ignore
@@ -282,6 +299,12 @@ public class KeyCertificateFormatService {
     }
 
     public String convert(DetectionResult source, String targetFormat, SecretVisibilityProfile policy) throws Exception {
+        if (source == null) {
+            throw new Exception("No source material was supplied.");
+        }
+        if (source.validationError != null) {
+            throw new Exception(source.validationError);
+        }
         if (source.isEncrypted && source.type != FormatType.PKCS12) {
             throw new Exception("Cannot convert encrypted key without decryption logic.");
         }
@@ -564,6 +587,7 @@ public class KeyCertificateFormatService {
         if ("EC".equalsIgnoreCase(keyAlg) || "ECDSA".equalsIgnoreCase(keyAlg)) return "SHA256withECDSA";
         if ("EdDSA".equalsIgnoreCase(keyAlg)) return "EdDSA";
         if ("Ed25519".equalsIgnoreCase(keyAlg)) return "Ed25519";
+        if ("Ed448".equalsIgnoreCase(keyAlg)) return "Ed448";
         return null;
     }
 
@@ -585,7 +609,7 @@ public class KeyCertificateFormatService {
             if (jwk instanceof RSAKey) return ((RSAKey) jwk).toPublicKey();
             if (jwk instanceof ECKey) return ((ECKey) jwk).toECPublicKey();
             if (jwk instanceof OctetKeyPair) {
-                throw new Exception("Unsupported format: JWK OKP (Ed25519/Ed448) is not supported.");
+                return toEdDsaPublicKey((OctetKeyPair) jwk);
             }
         }
         if (res.type == FormatType.OPENSSH_PUBLIC_KEY) {
@@ -612,7 +636,7 @@ public class KeyCertificateFormatService {
             if (jwk instanceof RSAKey) return ((RSAKey) jwk).toPrivateKey();
             if (jwk instanceof ECKey) return ((ECKey) jwk).toECPrivateKey();
             if (jwk instanceof OctetKeyPair) {
-                throw new Exception("Unsupported format: JWK OKP (Ed25519/Ed448) is not supported.");
+                return toEdDsaPrivateKey((OctetKeyPair) jwk);
             }
         }
         throw new Exception("Not a supported private key format or it is encrypted.");
@@ -635,6 +659,9 @@ public class KeyCertificateFormatService {
             }
             return builder.build();
         }
+        if (isEdDsaKey(pub) || isEdDsaKey(priv)) {
+            return toEdDsaJwk(pub, priv);
+        }
         if (pub == null && priv instanceof ECPrivateKey) {
             // Cannot reliably derive ECPublicKey from ECPrivateKey in standard Java without BouncyCastle internals
             throw new Exception("Converting EC Private Key to JWK requires Public Key components. Not available or not implemented.");
@@ -642,7 +669,267 @@ public class KeyCertificateFormatService {
         if (pub == null && priv instanceof RSAPrivateKey) {
             throw new Exception("Converting RSA Private Key to JWK requires Public Key components (Modulus, Public Exponent). Not available or not implemented.");
         }
-        throw new Exception("Unsupported key algorithm for JWK conversion (e.g. Ed25519/Ed448 not supported).");
+        throw new Exception("Unsupported key algorithm for JWK conversion.");
+    }
+
+    /**
+     * The only OKP curves accepted by this service. X25519/X448 are deliberately
+     * excluded because they are key-agreement curves, not EdDSA signing keys.
+     */
+    private static final class OkpJwkMaterial {
+        private final String curveName;
+        private final byte[] x;
+        private final byte[] d;
+
+        private OkpJwkMaterial(String curveName, byte[] x, byte[] d) {
+            this.curveName = curveName;
+            this.x = x;
+            this.d = d;
+        }
+    }
+
+    private static final class EdDsaKeyMaterial {
+        private final String curveName;
+        private final byte[] publicBytes;
+        private final byte[] privateBytes;
+
+        private EdDsaKeyMaterial(String curveName, byte[] publicBytes, byte[] privateBytes) {
+            this.curveName = curveName;
+            this.publicBytes = publicBytes;
+            this.privateBytes = privateBytes;
+        }
+    }
+
+    private OkpJwkMaterial validateOkpJwk(JWK jwk) throws Exception {
+        if (!(jwk instanceof OctetKeyPair)) {
+            throw new Exception("Unsupported JWK key type; only OKP Ed25519 and Ed448 are supported here.");
+        }
+
+        OctetKeyPair okp = (OctetKeyPair) jwk;
+        String curveName = supportedOkpCurve(okp.getCurve());
+        int expectedLength = "Ed25519".equals(curveName) ? Ed25519.PUBLIC_KEY_SIZE : Ed448.PUBLIC_KEY_SIZE;
+        byte[] x = decodeOkpField(okp.getX(), "x", curveName, expectedLength);
+        byte[] d = okp.getD() == null
+                ? null
+                : decodeOkpField(okp.getD(), "d", curveName, expectedLength);
+
+        validateEdDsaPublicMaterial(curveName, x);
+        if (d != null) {
+            byte[] derived = deriveEdDsaPublic(curveName, d);
+            if (!java.security.MessageDigest.isEqual(x, derived)) {
+                throw invalidEdDsaMaterial(curveName);
+            }
+        }
+        return new OkpJwkMaterial(curveName, x, d);
+    }
+
+    private String supportedOkpCurve(Curve curve) throws Exception {
+        if (Curve.Ed25519.equals(curve)) return "Ed25519";
+        if (Curve.Ed448.equals(curve)) return "Ed448";
+        String curveName = curve == null ? "missing" : safeCurveLabel(curve.getName());
+        throw new Exception("Unsupported JWK OKP curve: " + curveName + "; only Ed25519 and Ed448 are supported.");
+    }
+
+    private byte[] decodeOkpField(Base64URL value, String field, String curveName, int expectedLength) throws Exception {
+        if (value == null) {
+            throw new Exception("Invalid JWK OKP " + curveName + " structure: " + field + " is missing.");
+        }
+        final byte[] decoded;
+        try {
+            decoded = value.decode();
+        } catch (Exception e) {
+            throw new Exception("Invalid JWK OKP " + curveName + " structure: " + field + " is invalid.");
+        }
+        if (decoded == null || decoded.length != expectedLength) {
+            throw new Exception("Invalid JWK OKP " + curveName + " structure: " + field
+                    + " has an invalid length.");
+        }
+        return decoded;
+    }
+
+    private void validateEdDsaPublicMaterial(String curveName, byte[] publicBytes) throws Exception {
+        boolean valid = "Ed25519".equals(curveName)
+                ? Ed25519.validatePublicKeyFull(publicBytes, 0)
+                : Ed448.validatePublicKeyFull(publicBytes, 0);
+        if (!valid) {
+            throw invalidEdDsaMaterial(curveName);
+        }
+    }
+
+    private byte[] deriveEdDsaPublic(String curveName, byte[] privateBytes) throws Exception {
+        try {
+            if ("Ed25519".equals(curveName)) {
+                return new Ed25519PrivateKeyParameters(privateBytes, 0).generatePublicKey().getEncoded();
+            }
+            return new Ed448PrivateKeyParameters(privateBytes, 0).generatePublicKey().getEncoded();
+        } catch (Exception e) {
+            throw invalidEdDsaMaterial(curveName);
+        }
+    }
+
+    private Exception invalidEdDsaMaterial(String curveName) {
+        return new Exception("Invalid JWK OKP " + curveName + " key material.");
+    }
+
+    private PublicKey toEdDsaPublicKey(OctetKeyPair jwk) throws Exception {
+        OkpJwkMaterial material = validateOkpJwk(jwk);
+        try {
+            AsymmetricKeyParameter parameters = edDsaPublicParameters(material.curveName, material.x);
+            SubjectPublicKeyInfo spki = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(parameters);
+            return new JcaPEMKeyConverter().getPublicKey(spki);
+        } catch (Exception e) {
+            throw invalidEdDsaMaterial(material.curveName);
+        }
+    }
+
+    private PrivateKey toEdDsaPrivateKey(OctetKeyPair jwk) throws Exception {
+        OkpJwkMaterial material = validateOkpJwk(jwk);
+        if (material.d == null) {
+            throw new Exception("Invalid JWK OKP " + material.curveName + " private structure: d is missing.");
+        }
+        try {
+            AsymmetricKeyParameter parameters = edDsaPrivateParameters(material.curveName, material.d);
+            PrivateKeyInfo pkcs8 = PrivateKeyInfoFactory.createPrivateKeyInfo(parameters);
+            return new JcaPEMKeyConverter().getPrivateKey(pkcs8);
+        } catch (Exception e) {
+            throw invalidEdDsaMaterial(material.curveName);
+        }
+    }
+
+    private AsymmetricKeyParameter edDsaPublicParameters(String curveName, byte[] publicBytes) {
+        if ("Ed25519".equals(curveName)) return new Ed25519PublicKeyParameters(publicBytes, 0);
+        return new Ed448PublicKeyParameters(publicBytes, 0);
+    }
+
+    private AsymmetricKeyParameter edDsaPrivateParameters(String curveName, byte[] privateBytes) {
+        if ("Ed25519".equals(curveName)) return new Ed25519PrivateKeyParameters(privateBytes, 0);
+        return new Ed448PrivateKeyParameters(privateBytes, 0);
+    }
+
+    private boolean isEdDsaKey(java.security.Key key) {
+        if (key == null || key.getAlgorithm() == null) return false;
+        String algorithm = key.getAlgorithm();
+        return "EdDSA".equalsIgnoreCase(algorithm)
+                || "Ed25519".equalsIgnoreCase(algorithm)
+                || "Ed448".equalsIgnoreCase(algorithm);
+    }
+
+    private JWK toEdDsaJwk(PublicKey pub, PrivateKey priv) throws Exception {
+        EdDsaKeyMaterial publicMaterial = pub == null ? null : extractEdDsaPublicMaterial(pub);
+        EdDsaKeyMaterial privateMaterial = priv == null ? null : extractEdDsaPrivateMaterial(priv);
+
+        String curveName;
+        byte[] publicBytes;
+        byte[] privateBytes = null;
+        if (publicMaterial != null && privateMaterial != null) {
+            if (!publicMaterial.curveName.equals(privateMaterial.curveName)) {
+                throw new Exception("EdDSA public/private key curves do not match.");
+            }
+            if (!java.security.MessageDigest.isEqual(publicMaterial.publicBytes, privateMaterial.publicBytes)) {
+                throw new Exception("EdDSA public/private key material does not match.");
+            }
+            curveName = publicMaterial.curveName;
+            publicBytes = publicMaterial.publicBytes;
+            privateBytes = privateMaterial.privateBytes;
+        } else if (publicMaterial != null) {
+            curveName = publicMaterial.curveName;
+            publicBytes = publicMaterial.publicBytes;
+        } else if (privateMaterial != null) {
+            curveName = privateMaterial.curveName;
+            publicBytes = privateMaterial.publicBytes;
+            privateBytes = privateMaterial.privateBytes;
+        } else {
+            throw new Exception("No EdDSA key material was supplied.");
+        }
+
+        Curve curve = "Ed25519".equals(curveName) ? Curve.Ed25519 : Curve.Ed448;
+        OctetKeyPair.Builder builder = new OctetKeyPair.Builder(curve, Base64URL.encode(publicBytes));
+        if (privateBytes != null) {
+            builder.d(Base64URL.encode(privateBytes));
+        }
+        return builder.build();
+    }
+
+    private EdDsaKeyMaterial extractEdDsaPublicMaterial(PublicKey publicKey) throws Exception {
+        try {
+            SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(publicKey.getEncoded());
+            AsymmetricKeyParameter parameters = PublicKeyFactory.createKey(spki);
+            if (parameters instanceof Ed25519PublicKeyParameters) {
+                byte[] publicBytes = ((Ed25519PublicKeyParameters) parameters).getEncoded();
+                validateEdDsaPublicMaterial("Ed25519", publicBytes);
+                return new EdDsaKeyMaterial("Ed25519", publicBytes, null);
+            }
+            if (parameters instanceof Ed448PublicKeyParameters) {
+                byte[] publicBytes = ((Ed448PublicKeyParameters) parameters).getEncoded();
+                validateEdDsaPublicMaterial("Ed448", publicBytes);
+                return new EdDsaKeyMaterial("Ed448", publicBytes, null);
+            }
+        } catch (Exception e) {
+            // Deliberately replace provider/parser details with a structural diagnostic.
+        }
+        throw new Exception("Invalid EdDSA public key material.");
+    }
+
+    private EdDsaKeyMaterial extractEdDsaPrivateMaterial(PrivateKey privateKey) throws Exception {
+        try {
+            PrivateKeyInfo pkcs8 = PrivateKeyInfo.getInstance(privateKey.getEncoded());
+            AsymmetricKeyParameter parameters = PrivateKeyFactory.createKey(pkcs8);
+            if (parameters instanceof Ed25519PrivateKeyParameters) {
+                byte[] privateBytes = ((Ed25519PrivateKeyParameters) parameters).getEncoded();
+                return new EdDsaKeyMaterial("Ed25519", deriveEdDsaPublic("Ed25519", privateBytes), privateBytes);
+            }
+            if (parameters instanceof Ed448PrivateKeyParameters) {
+                byte[] privateBytes = ((Ed448PrivateKeyParameters) parameters).getEncoded();
+                return new EdDsaKeyMaterial("Ed448", deriveEdDsaPublic("Ed448", privateBytes), privateBytes);
+            }
+        } catch (Exception e) {
+            // Deliberately replace provider/parser details with a structural diagnostic.
+        }
+        throw new Exception("Invalid EdDSA private key material.");
+    }
+
+    private String describeMalformedJwk(String json) {
+        try {
+            com.google.gson.JsonElement root = com.google.gson.JsonParser.parseString(json);
+            if (root.isJsonObject()) {
+                com.google.gson.JsonObject object = root.getAsJsonObject();
+                String kty = jsonStringField(object, "kty");
+                if ("OKP".equals(kty)) {
+                    String curve = jsonStringField(object, "crv");
+                    if (curve == null) {
+                        return "Invalid JWK OKP structure: curve is missing or invalid.";
+                    }
+                    if (!"Ed25519".equals(curve) && !"Ed448".equals(curve)) {
+                        return "Unsupported JWK OKP curve: " + safeCurveLabel(curve)
+                                + "; only Ed25519 and Ed448 are supported.";
+                    }
+                    return "Invalid JWK OKP " + curve + " structure: x/d material is missing or invalid.";
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall through to a generic structural diagnostic.
+        }
+        return "Invalid JWK structure.";
+    }
+
+    private String jsonStringField(com.google.gson.JsonObject object, String name) {
+        com.google.gson.JsonElement value = object.get(name);
+        return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                ? value.getAsString() : null;
+    }
+
+    private String safeCurveLabel(String curve) {
+        if (curve == null || curve.isEmpty()) return "missing";
+        StringBuilder safe = new StringBuilder();
+        for (int i = 0; i < curve.length() && safe.length() < 32; i++) {
+            char c = curve.charAt(i);
+            if (Character.isLetterOrDigit(c) || c == '-' || c == '_' || c == '.') {
+                safe.append(c);
+            } else {
+                safe.append('?');
+            }
+        }
+        return safe.toString();
     }
 
     private String toPEM(String type, byte[] data) throws Exception {
