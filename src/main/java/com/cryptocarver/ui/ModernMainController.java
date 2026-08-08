@@ -38,6 +38,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML private javafx.scene.control.Label contentPlaceholderLabel;
     @FXML private javafx.scene.layout.VBox jose;
+    @FXML private javafx.scene.layout.VBox cose;
     @FXML private GenericController genericContainerController;
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
@@ -247,6 +248,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private EMVController emvController;
     private CipherController cipherController;
     @FXML private JOSEController joseController;
+    @FXML private COSEController coseController;
 
     @FXML
     private MenuBar mainMenuBar;
@@ -447,6 +449,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void initialize() {
         if (joseController != null) joseController.setReporter(this);
+        if (coseController != null) coseController.setReporter(this);
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
 
@@ -1036,6 +1039,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         UiNavigationRegistry.Route route = resolved.get();
         switch (route.module()) {
             case JOSE -> showJOSE();
+            case COSE -> showCOSE();
             case EPOCH_CONVERTER -> handleEpochConverter();
             case JSON_FORMATTER -> handleJsonFormatter();
             case KEYS_SYMMETRIC -> {
@@ -1176,6 +1180,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case AUTHENTICATION -> i18n.text("bread.signaturesMac");
                 case CERTIFICATES -> i18n.text("bread.certificatesCms");
                 case JOSE -> i18n.text("bread.joseJwt");
+                case COSE -> i18n.text("bread.coseSign1");
                 case POST_QUANTUM -> i18n.text("bread.postQuantumPqc");
                 case XML_SECURITY -> i18n.text("bread.xmlSecurity");
                 case WSS_SECURITY -> i18n.text("bread.wssSecurity");
@@ -1236,6 +1241,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case AUTHENTICATION -> navigationRail.selectSection(NavigationRail.Section.AUTHENTICATION);
                 case CERTIFICATES -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
                 case JOSE -> navigationRail.selectSection(NavigationRail.Section.JOSE);
+                case COSE -> navigationRail.selectSection(NavigationRail.Section.COSE);
                 case POST_QUANTUM -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
                 case XML_SECURITY, WSS_SECURITY -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
                 case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
@@ -1523,6 +1529,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (route == null) return null;
         return switch (route.module()) {
             case JOSE -> new ConfigurationTarget(joseController, jose);
+            case COSE -> new ConfigurationTarget(coseController, cose);
             case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> new ConfigurationTarget(keysContainerController, keysContainer);
             case CERTIFICATES -> new ConfigurationTarget(certificatesContainerController, certificatesContainer);
             case GENERIC -> new ConfigurationTarget(genericContainerController, genericContainer);
@@ -3115,6 +3122,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             jose.setVisible(false);
             jose.setManaged(false);
         }
+        if (cose != null) {
+            cose.setVisible(false);
+            cose.setManaged(false);
+        }
         if (genericContainer != null) {
             genericContainer.setVisible(false);
             genericContainer.setManaged(false);
@@ -3167,6 +3178,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         if (joseController != null) {
             joseController.showSection(currentActiveOperation);
+        }
+    }
+
+    private void showCOSE() {
+        hideAllContainers();
+        if (cose != null) {
+            cose.setManaged(true);
+            cose.setVisible(true);
+        }
+        if (coseController != null) {
+            coseController.showSection(currentActiveOperation);
         }
     }
 
@@ -4298,7 +4320,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         Object[] controllers = new Object[]{ this, cipherContainerController, genericContainerController,
                 authenticationContainerController, certificatesContainerController, keysContainerController,
                 xmlSecurityContainerController, wssSecurityContainerController, paymentsContainerController,
-                emvContainerController, joseController };
+                emvContainerController, joseController, coseController };
         for (Object ctrl : controllers) {
             if (ctrl == null) continue;
             try {

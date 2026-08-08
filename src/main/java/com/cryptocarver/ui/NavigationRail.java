@@ -29,6 +29,7 @@ public class NavigationRail extends VBox {
         XML_SECURITY("📝", "XML Security"),
         CERTIFICATES("📜", "Certificates"),
         JOSE("🌐", "JOSE"),
+        COSE("📦", "COSE"),
         PAYMENTS("💳", "Payments"),
         ASN1("{}", "ASN.1"),
         HISTORY("⏱", "History");

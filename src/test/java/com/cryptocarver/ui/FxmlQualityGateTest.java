@@ -31,7 +31,7 @@ class FxmlQualityGateTest {
     private static final List<String> FXML_FILES = List.of(
             "asic.fxml", "asn1.fxml", "authentication.fxml", "certificates.fxml",
             "cipher.fxml", "clipboard_shelf.fxml", "cms_inspector.fxml", "compare_results.fxml",
-            "compressed_hex.fxml", "emv.fxml", "generic.fxml", "history.fxml", "jose.fxml",
+            "compressed_hex.fxml", "cose.fxml", "emv.fxml", "generic.fxml", "history.fxml", "jose.fxml",
             "key_certificate_workbench.fxml", "keys.fxml", "main-view-modern.fxml", "main-view.fxml",
             "openpgp.fxml", "pades.fxml", "payments.fxml", "pqc.fxml", "process_designer.fxml",
             "wss_security.fxml", "xml_security.fxml");

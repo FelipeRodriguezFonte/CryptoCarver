@@ -571,6 +571,21 @@ public final class ModuleTextCatalog {
         return map;
     }
 
+    public static Map<String, String> cose() {
+        Map<String, String> map = common();
+        map.put("COSE (RFC 9052/9053) — CBOR-binary sibling of JOSE", "module.cose.subtitle");
+        map.put("COSE_Sign1/COSE_Mac0/COSE_Encrypt0 (single-signer/single-key profile, same shape JOSE Compact covers). EdDSA is not offered: the underlying library has no code path for Ed25519 keys and hardcodes a JCA provider this app does not register.",
+                "module.cose.disclaimer");
+        map.put("COSE_Sign1", "module.cose.sign1Title");
+        map.put("COSE_Mac0", "module.cose.mac0Title");
+        map.put("COSE_Encrypt0", "module.cose.encrypt0Title");
+        map.put("Sign", "module.cose.sign");
+        map.put("Verify", "module.cose.verify");
+        map.put("Create MAC", "module.cose.createMac");
+        map.put("Verify MAC", "module.cose.verifyMac");
+        return map;
+    }
+
     public static Map<String, String> jose() {
         Map<String, String> map = common();
         map.put("JSON Web Token (JWT)", "module.jose.jwtTitle");

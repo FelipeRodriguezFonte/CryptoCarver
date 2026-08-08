@@ -94,6 +94,13 @@
             <version>9.37.3</version>
         </dependency>
 
+        <!-- COSE (RFC 9052/9053) -->
+        <dependency>
+            <groupId>com.augustcellars.cose</groupId>
+            <artifactId>cose-java</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+
         <!-- Runtime logger for DSS and other SLF4J-based dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>

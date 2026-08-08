@@ -16,6 +16,14 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | ✒ | Digital Signatures | `op_auth_sig` | STABLE | HIGH | `Digital Signatures` | RSA, ECDSA |
 | 🛡 | Message Authentication Codes | `op_auth_mac` | STABLE | HIGH | `Message Authentication Codes` | HMAC, CMAC |
 
+## COSE
+
+| Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
+|------|-------|----|--------|------|-----------------|---------|
+| 📦 | COSE_Encrypt0 | `op_cose_encrypt0` | EXPERIMENTAL | HIGH | `COSE Encrypt0` | CBOR, RFC 9052, AES-GCM |
+| 📦 | COSE_Mac0 | `op_cose_mac0` | EXPERIMENTAL | HIGH | `COSE MAC0` | CBOR, RFC 9052, HMAC |
+| 📦 | COSE_Sign1 | `op_cose_sign1` | EXPERIMENTAL | HIGH | `COSE Sign1` | CBOR, RFC 9052 |
+
 ## Certificates
 
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |

@@ -296,6 +296,7 @@
                         <!-- This is where Symmetric Keys Accordion will be loaded -->
                         <!-- Saved Sessions Container -->
                         <!-- JOSE CONTAINER -->                        <fx:include fx:id="jose" source="jose.fxml"/>
+                        <!-- COSE CONTAINER -->                        <fx:include fx:id="cose" source="cose.fxml"/>
 
 
                         <VBox fx:id="savedSessionsContainer" managed="false" visible="false" spacing="15" style="-fx-padding: 20;">

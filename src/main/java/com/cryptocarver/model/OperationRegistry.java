@@ -97,6 +97,11 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_jose_jwa", "JWA (Algorithms)", "JOSE", "JWA algorithms", "⚙", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "JWA (Algorithms)", Collections.emptyList()));
         register(new OperationDescriptor("op_jose_insp", "Token Inspector", "JOSE", "Inspect tokens", "🔍", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Token Inspector", Collections.emptyList()));
 
+        // COSE (RFC 9052/9053)
+        register(new OperationDescriptor("op_cose_sign1", "COSE_Sign1", "COSE", "Single-signer CBOR message signing (RFC 9052)", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "COSE Sign1", Arrays.asList("CBOR", "RFC 9052")));
+        register(new OperationDescriptor("op_cose_mac0", "COSE_Mac0", "COSE", "Symmetric-key CBOR message authentication (RFC 9052)", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "COSE MAC0", Arrays.asList("CBOR", "RFC 9052", "HMAC")));
+        register(new OperationDescriptor("op_cose_encrypt0", "COSE_Encrypt0", "COSE", "Single-key CBOR message encryption (RFC 9052)", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "COSE Encrypt0", Arrays.asList("CBOR", "RFC 9052", "AES-GCM")));
+
         // Payments
         register(new OperationDescriptor("op_pay_clear_pin", "Clear PIN Blocks", "Payments", "Clear PIN blocks", "💳", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Clear PIN Blocks", Collections.emptyList()));
         register(new OperationDescriptor("op_pay_enc_pin", "Encrypted PIN Blocks", "Payments", "Encrypted PIN blocks", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Encrypted PIN Blocks", Collections.emptyList()));

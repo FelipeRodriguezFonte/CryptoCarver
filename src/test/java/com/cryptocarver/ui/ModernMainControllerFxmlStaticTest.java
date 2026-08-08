@@ -43,6 +43,11 @@ class ModernMainControllerFxmlStaticTest {
     }
 
     @Test
+    void testCoseFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/cose.fxml", COSEController.class);
+    }
+
+    @Test
     void testCompressedHexFxml() throws Exception {
         verifyFxmlAgainstController("/fxml/compressed_hex.fxml", CompressedHexController.class);
     }
