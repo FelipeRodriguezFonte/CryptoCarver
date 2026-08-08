@@ -574,7 +574,7 @@ public final class ModuleTextCatalog {
     public static Map<String, String> cose() {
         Map<String, String> map = common();
         map.put("COSE (RFC 9052/9053) — CBOR-binary sibling of JOSE", "module.cose.subtitle");
-        map.put("COSE_Sign1/COSE_Mac0/COSE_Encrypt0 (single-signer/single-key profile, same shape JOSE Compact covers). EdDSA is not offered: the underlying library has no code path for Ed25519 keys and hardcodes a JCA provider this app does not register.",
+        map.put("COSE_Sign1/COSE_Mac0/COSE_Encrypt0 (single-signer/single-key profile, same shape JOSE Compact covers). ES256/384/512, PS256/384/512 and EdDSA (Ed25519) are supported for signing — EdDSA needed a small compatibility shim (COSE-java hardcodes an old JCA provider name) and hand-built keys, both documented in COSEOperations.",
                 "module.cose.disclaimer");
         map.put("COSE_Sign1", "module.cose.sign1Title");
         map.put("COSE_Mac0", "module.cose.mac0Title");

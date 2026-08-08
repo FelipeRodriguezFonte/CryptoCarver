@@ -34,6 +34,12 @@ class COSEOperationsTest {
         return generator.generateKeyPair();
     }
 
+    /** Same helper the app's own UI uses (AsymmetricKeyOperations), not a hand-rolled key —
+     *  this is what actually exercises the BC-backed key path COSEController will hit. */
+    private static KeyPair ed25519KeyPair() throws Exception {
+        return AsymmetricKeyOperations.generateEd25519KeyPair();
+    }
+
     private static byte[] randomBytes(int length) {
         byte[] bytes = new byte[length];
         new SecureRandom().nextBytes(bytes);
@@ -76,6 +82,31 @@ class COSEOperationsTest {
         byte[] message = COSEOperations.sign1(payload, signer.getPrivate(), signer.getPublic(), COSEOperations.SignAlgorithm.ES256);
 
         // Verifying against the impostor's public key must fail cleanly (verified=false), not throw.
+        COSEOperations.Sign1Result result = COSEOperations.verify1(message, impostor.getPublic());
+        assertFalse(result.isVerified());
+    }
+
+    @Test
+    void sign1ThenVerify1RecoversThePayloadWithEd25519Key() throws Exception {
+        KeyPair pair = ed25519KeyPair();
+        byte[] payload = "Hola COSE_Sign1 (EdDSA/Ed25519)".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        byte[] message = COSEOperations.sign1(payload, pair.getPrivate(), pair.getPublic(), COSEOperations.SignAlgorithm.EDDSA);
+        assertFalse(Arrays.equals(payload, message));
+
+        COSEOperations.Sign1Result result = COSEOperations.verify1(message, pair.getPublic());
+        assertTrue(result.isVerified());
+        assertArrayEquals(payload, result.getPayload());
+    }
+
+    @Test
+    void verify1FlagsATamperedEd25519SignatureWithoutThrowing() throws Exception {
+        KeyPair signer = ed25519KeyPair();
+        KeyPair impostor = ed25519KeyPair();
+        byte[] payload = "Payload signed by the real Ed25519 key".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        byte[] message = COSEOperations.sign1(payload, signer.getPrivate(), signer.getPublic(), COSEOperations.SignAlgorithm.EDDSA);
+
         COSEOperations.Sign1Result result = COSEOperations.verify1(message, impostor.getPublic());
         assertFalse(result.isVerified());
     }

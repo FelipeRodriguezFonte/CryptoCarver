@@ -11,8 +11,11 @@ import COSE.MessageTag;
 import COSE.OneKey;
 import COSE.Sign1Message;
 
+import COSE.KeyKeys;
+
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Arrays;
 
 /**
  * COSE (RFC 9052/9053) — the CBOR sibling of JOSE. Built on the reference
@@ -28,21 +31,88 @@ import java.security.PublicKey;
  * {@code COSE_Sign}/{@code COSE_Encrypt} are out of scope, the same way
  * JWS/JWE JSON General are not implemented for JOSE today.</p>
  *
- * <p><b>Key type support is limited by the underlying library — verified
- * against its source, not assumed.</b> {@code OneKey(PublicKey, PrivateKey)}
- * parses the key's own SPKI/PKCS8 ASN.1 and only recognizes EC (P-256/P-384/
- * P-521) and RSA — there is no code path for Ed25519/OKP keys. Separately,
- * the library's EdDSA signing/verification path hardcodes a JCA provider
- * literally named {@code "EdDSA"} (from the old {@code net.i2p.crypto.eddsa}
- * project), which this app does not have registered. For both independent
- * reasons, EdDSA/Ed25519 is intentionally not offered here — only
- * {@link SignAlgorithm#ES256}/{@link SignAlgorithm#ES384}/
- * {@link SignAlgorithm#ES512} (ECDSA) and {@link SignAlgorithm#PS256}/
- * {@link SignAlgorithm#PS384}/{@link SignAlgorithm#PS512} (RSA-PSS).</p>
+ * <p><b>EdDSA/Ed25519 support requires two workarounds, both verified against
+ * the library's decompiled source and proven with a standalone reproduction
+ * before being written here — not assumed.</b> {@code OneKey(PublicKey,
+ * PrivateKey)} parses the key's own SPKI/PKCS8 ASN.1 and only recognizes EC
+ * (P-256/P-384/P-521) and RSA — there is no code path for Ed25519/OKP keys,
+ * so {@link #sign1}/{@link #verify1} build the OKP {@code OneKey} by hand
+ * from the key's raw 32-byte material for {@link SignAlgorithm#EDDSA}
+ * (extracted as the last 32 bytes of {@link java.security.Key#getEncoded()},
+ * which is fixed-size and standardized for Ed25519 (RFC 8410) regardless of
+ * which provider produced the key). Separately, the library's EdDSA
+ * signing/verification and key-reconstruction paths hardcode a JCA provider
+ * literally named {@code "EdDSA"} (from the old, unmaintained
+ * {@code net.i2p.crypto.eddsa} project) that this app never registered —
+ * {@link EdDsaProviderShim} registers a provider under that exact name that
+ * delegates to the JDK's own built-in Ed25519 implementation (JEP 339, JDK
+ * 15+; BouncyCastle 1.78.1 was checked and does not expose an Ed25519/EdDSA
+ * {@code Signature} service, only {@code KeyFactory}, so BC alone would not
+ * have been enough here).</p>
  */
 public final class COSEOperations {
 
     private COSEOperations() {
+    }
+
+    /**
+     * Raw 32-byte Ed25519 private key seed. <b>Not</b> "last 32 bytes of the PKCS8 encoding" —
+     * confirmed empirically that this breaks for keys BouncyCastle generates itself (as opposed to
+     * ones it merely re-parses): BC's own {@code KeyPairGenerator.getInstance("Ed25519", "BC")}
+     * embeds the *public* key in an optional PKCS8 attribute trailing the private key, making the
+     * encoding 83 bytes instead of the plain 48 — so its last 32 bytes are the public key, not the
+     * private seed. Uses {@link EdECPrivateKey#getBytes()} instead, which every key object tested
+     * here — the JDK's own and BC 1.78.1's {@code BC15EdDSAPrivateKey} alike — already implements
+     * directly; a translate-through-SunEC fallback covers any provider that doesn't.
+     */
+    private static byte[] rawEd25519PrivateBytes(PrivateKey key) throws CoseException {
+        try {
+            java.security.interfaces.EdECPrivateKey edKey = key instanceof java.security.interfaces.EdECPrivateKey k
+                    ? k
+                    : (java.security.interfaces.EdECPrivateKey) java.security.KeyFactory.getInstance("Ed25519", "SunEC").translateKey(key);
+            return edKey.getBytes().orElseThrow(
+                    () -> new CoseException("This Ed25519 private key does not expose its raw byte material"));
+        } catch (java.security.GeneralSecurityException | ClassCastException e) {
+            throw new CoseException("Unable to extract raw Ed25519 private key material: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Raw 32-byte Ed25519 public key. Unlike the private-key case above, X.509/SPKI public-key
+     * encoding for Ed25519 has no optional-attribute complication — it is a fixed 44-byte
+     * structure (RFC 8410) whose last 32 bytes are the compressed point, confirmed across the
+     * JDK-native, BC-native, and BC-re-parsed cases alike, so the simpler tail-extraction is fine
+     * here (unlike for private keys).
+     */
+    private static byte[] rawEd25519PublicBytes(PublicKey key) {
+        byte[] encoded = key.getEncoded();
+        return Arrays.copyOfRange(encoded, encoded.length - 32, encoded.length);
+    }
+
+    private static boolean isEd25519(java.security.Key key) {
+        String alg = key == null ? null : key.getAlgorithm();
+        return "EdDSA".equalsIgnoreCase(alg) || "Ed25519".equalsIgnoreCase(alg);
+    }
+
+    /**
+     * Builds an OKP {@link OneKey} from raw Ed25519 key material, bypassing
+     * {@code OneKey(PublicKey, PrivateKey)}'s missing OKP support. Round-tripping through
+     * {@code OneKey(CBORObject)} (rather than just calling {@code add(...)} and stopping) is
+     * required — it is the only path that runs the library's internal {@code CheckOkpKey()},
+     * which is what actually populates the JCA key objects {@code sign1}/{@code verify1} need.
+     */
+    private static OneKey ed25519OneKey(byte[] rawPublic, byte[] rawPrivate) throws CoseException {
+        EdDsaProviderShim.ensureRegistered();
+        OneKey builder = new OneKey();
+        builder.add(KeyKeys.KeyType, KeyKeys.KeyType_OKP);
+        builder.add(KeyKeys.OKP_Curve, KeyKeys.OKP_Ed25519);
+        if (rawPublic != null) {
+            builder.add(KeyKeys.OKP_X, com.upokecenter.cbor.CBORObject.FromObject(rawPublic));
+        }
+        if (rawPrivate != null) {
+            builder.add(KeyKeys.OKP_D, com.upokecenter.cbor.CBORObject.FromObject(rawPrivate));
+        }
+        return new OneKey(builder.AsCBOR());
     }
 
     /**
@@ -62,10 +132,12 @@ public final class COSEOperations {
         }
     }
 
-    /** COSE_Sign1 / COSE_Sign algorithms this class supports — see the class javadoc for why EdDSA is absent. */
+    /** COSE_Sign1 / COSE_Sign algorithms this class supports. */
     public enum SignAlgorithm {
         ES256(AlgorithmID.ECDSA_256), ES384(AlgorithmID.ECDSA_384), ES512(AlgorithmID.ECDSA_512),
-        PS256(AlgorithmID.RSA_PSS_256), PS384(AlgorithmID.RSA_PSS_384), PS512(AlgorithmID.RSA_PSS_512);
+        PS256(AlgorithmID.RSA_PSS_256), PS384(AlgorithmID.RSA_PSS_384), PS512(AlgorithmID.RSA_PSS_512),
+        /** See the class javadoc — needs {@link EdDsaProviderShim} plus hand-built OKP keys. */
+        EDDSA(AlgorithmID.EDDSA);
 
         final AlgorithmID id;
 
@@ -123,7 +195,9 @@ public final class COSEOperations {
         Sign1Message message = new Sign1Message();
         message.SetContent(payload);
         message.addAttribute(HeaderKeys.Algorithm, algorithm.id.AsCBOR(), Attribute.PROTECTED);
-        OneKey key = new OneKey(publicKey, privateKey);
+        OneKey key = (algorithm == SignAlgorithm.EDDSA || isEd25519(privateKey))
+                ? ed25519OneKey(publicKey == null ? null : rawEd25519PublicBytes(publicKey), rawEd25519PrivateBytes(privateKey))
+                : new OneKey(publicKey, privateKey);
         message.sign(key);
         return message.EncodeToBytes();
     }
@@ -165,7 +239,7 @@ public final class COSEOperations {
         if (!(decoded instanceof Sign1Message message)) {
             throw new CoseException("Not a COSE_Sign1 message");
         }
-        OneKey key = new OneKey(publicKey, null);
+        OneKey key = isEd25519(publicKey) ? ed25519OneKey(rawEd25519PublicBytes(publicKey), null) : new OneKey(publicKey, null);
         boolean verified;
         try {
             verified = message.validate(key);

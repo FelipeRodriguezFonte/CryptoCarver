@@ -94,7 +94,7 @@ public class COSEController implements Initializable {
         moduleI18n = ModuleI18n.bind(coseContainer, ModuleTextCatalog.cose());
 
         if (sign1AlgoCombo != null && sign1AlgoCombo.getItems().isEmpty()) {
-            sign1AlgoCombo.getItems().addAll("ES256", "ES384", "ES512", "PS256", "PS384", "PS512");
+            sign1AlgoCombo.getItems().addAll("ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EDDSA");
             sign1AlgoCombo.getSelectionModel().selectFirst();
         }
         if (mac0AlgoCombo != null && mac0AlgoCombo.getItems().isEmpty()) {
@@ -161,9 +161,21 @@ public class COSEController implements Initializable {
 
             byte[] payload = payloadText.getBytes(StandardCharsets.UTF_8);
             PrivateKey privateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
-            PublicKey publicKey = isBlank(publicPem)
-                    ? AsymmetricKeyOperations.derivePublicKey(privateKey)
-                    : AsymmetricKeyOperations.importPublicKeyPEMAuto(publicPem);
+            PublicKey publicKey;
+            if (!isBlank(publicPem)) {
+                publicKey = AsymmetricKeyOperations.importPublicKeyPEMAuto(publicPem);
+            } else {
+                // derivePublicKey only supports RSA/EC (not Ed25519) — that's fine here, the
+                // public key is optional for signing; just proceed without it instead of
+                // failing the whole operation over a convenience that doesn't apply.
+                PublicKey derived = null;
+                try {
+                    derived = AsymmetricKeyOperations.derivePublicKey(privateKey);
+                } catch (Exception notDerivable) {
+                    // expected for Ed25519 — publicKey stays null
+                }
+                publicKey = derived;
+            }
             COSEOperations.SignAlgorithm algorithm = COSEOperations.SignAlgorithm.valueOf(algoName);
 
             byte[] message = COSEOperations.sign1(payload, privateKey, publicKey, algorithm);
