@@ -37,3 +37,6 @@ dependency-reduced-pom.xml
 *.rpm
 *.AppImage
 *.app-image
+
+# macOS
+.DS_Store
