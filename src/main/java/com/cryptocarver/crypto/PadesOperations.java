@@ -360,6 +360,9 @@ public final class PadesOperations {
             CommonCertificateVerifier verifier = new CommonCertificateVerifier();
             if (trustConfigured) verifier.setTrustedCertSources(loadTrustedCertificates(trustStoreFile, transientPassword));
             List<DSSDocument> localCrls = loadLocalCrlEvidence(localCrlFiles);
+            if (localCrlFiles != null && !localCrlFiles.isEmpty() && localCrls.isEmpty()) {
+                throw new IllegalArgumentException("No valid X.509 CRL evidence was provided");
+            }
             java.util.List<String> endpoints = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
             RevocationValidationService.Configuration revocationConfiguration =
                     new RevocationValidationService.Configuration(onlineRevocation, localCrls, endpoints::add);
@@ -420,7 +423,8 @@ public final class PadesOperations {
                     : String.valueOf(reports.getSimpleReport().getIndication(signatureId));
             summary.append("Cryptographic signature: ").append(indication).append("\n")
                     .append("Chain trust: ").append(trustConfigured ? "evaluated by configured truststore" : "not evaluated (no truststore)").append("\n")
-                    .append("Revocation: ").append(revocation.status()).append("\n")
+                    .append("Revocation: ").append(revocation.status() == RevocationValidationService.Status.DISABLED
+                            ? "NOT EVALUATED" : revocation.status()).append("\n")
                     .append("Evidence source: ").append(revocation.evidence()).append("\n")
                     .append("Online endpoints: ").append(revocation.endpoints().isEmpty() ? "none reported by DSS" : String.join(", ", revocation.endpoints())).append("\n");
             EmbeddedEvidence embedded = inspectEmbeddedEvidence(pdf);
