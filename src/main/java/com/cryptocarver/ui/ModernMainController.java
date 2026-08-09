@@ -2089,7 +2089,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             workbench.sendCurrentMaterialToShelf();
             return;
         }
-        TextArea area = resultAreaTracker.shelfCaptureArea();
+        TextArea area = resultAreaTracker.shelfCaptureArea(mainPane);
         String content = resolveShelfCaptureText(area);
         if (content == null || content.isBlank()) {
             updateStatus(isShelfCaptureBlockedByVisibility(area)
@@ -2173,7 +2173,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private String resolveShelfCaptureText(TextArea requestedArea) {
         TextArea area = requestedArea;
         if (area == null) {
-            area = resultAreaTracker.shelfCaptureArea();
+            area = resultAreaTracker.shelfCaptureArea(mainPane);
         }
         if (resultAreaTracker.isValidShelfCaptureArea(area)) {
             String visible = renderResultArea(area);

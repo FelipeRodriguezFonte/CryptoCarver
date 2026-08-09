@@ -2311,3 +2311,53 @@
     -fx-padding: 2px 6px;
     -fx-background-radius: 4px;
 }
+
+/*
+ * Button contrast and sizing guardrail.
+ *
+ * Older modules use `action-button` directly while newer ones use the
+ * primary/secondary aliases.  Keep every primary alias on the same dark blue
+ * surface so its white text remains readable, including hover and pressed
+ * states.  Action collections should use responsive-action-bar (a FlowPane),
+ * which lets labels wrap onto a new line instead of being reduced to an
+ * ellipsis by an HBox.
+ */
+.action-button,
+.action-button-primary,
+.primary-action,
+.button-primary {
+    -fx-background-color: #155380;
+    -fx-text-fill: #ffffff;
+    -fx-border-color: #0f4165;
+    -fx-font-weight: bold;
+}
+
+.action-button:hover,
+.action-button-primary:hover,
+.primary-action:hover,
+.button-primary:hover {
+    -fx-background-color: #1d6fa5;
+    -fx-text-fill: #ffffff;
+    -fx-border-color: #155380;
+}
+
+.action-button:pressed,
+.action-button-primary:pressed,
+.primary-action:pressed,
+.button-primary:pressed {
+    -fx-background-color: #0f4165;
+    -fx-text-fill: #ffffff;
+}
+
+.secondary-button,
+.secondary-action,
+.action-button-secondary,
+.button-secondary,
+.danger-button,
+.button-danger {
+    -fx-text-fill: #1e293b;
+}
+
+.responsive-action-bar {
+    -fx-pref-wrap-length: 900px;
+}

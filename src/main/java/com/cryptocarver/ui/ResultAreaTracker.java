@@ -51,10 +51,11 @@ final class ResultAreaTracker {
      * Result: an area updated by the active operation remains authoritative for
      * Shelf even when the global snapshot also contains an output.
      */
-    TextArea shelfCaptureArea() {
+    TextArea shelfCaptureArea(Node root) {
         if (isValidShelfCaptureArea(updated)) return updated;
         if (isValidShelfCaptureArea(focused)) return focused;
-        return null;
+        TextArea visible = findVisible(root);
+        return isValidShelfCaptureArea(visible) ? visible : null;
     }
 
     boolean isValidShelfCaptureArea(TextArea area) {

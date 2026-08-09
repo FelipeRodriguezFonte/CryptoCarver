@@ -33,6 +33,7 @@
                     <MenuItem fx:id="clearOutputMenuItem" text="Clear Output" onAction="#handleClearOutput" accelerator="Shortcut+Shift+O" />
                     <MenuItem fx:id="copyOutputMenuItem" text="Copy Output" onAction="#handleCopyOutput" accelerator="Shortcut+Shift+C" />
                     <MenuItem fx:id="addToShelfMenuItem" text="Add Output to Clipboard Shelf" onAction="#handleAddCurrentOutputToShelf" />
+                    <MenuItem fx:id="clipboardShelfMenuItem" text="Open Clipboard Shelf" onAction="#handleOpenClipboardShelf" accelerator="Shortcut+Shift+V" />
                 </Menu>
 
                 <Menu fx:id="viewMenu" text="View">
