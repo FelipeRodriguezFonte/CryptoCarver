@@ -1619,7 +1619,7 @@ public class GenericController {
             int checkDigit = CheckDigitCalculator.calculateCheckDigit(input, algorithm);
             String result = CheckDigitCalculator.formatWithCheckDigit(input, algorithm);
 
-            targetOutputArea.setText("Check Digit: " + checkDigit + "\nComplete: " + result);
+            targetOutputArea.setText("Check Digit: " + checkDigit + " - Complete: " + result);
             statusReporter.publish(OperationResult.forOperation("Check Digits")
                     .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                     .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
@@ -1636,20 +1636,12 @@ public class GenericController {
 
 
     public void handleCalculateCheckDigit() {
-        if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
+        if (checkDigitInput != null && checkDigitAlgorithmCombo != null && checkDigitOutput != null) {
+            calculateCheckDigit(checkDigitInput.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutput);
+        } else if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
             calculateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), outputArea);
         } else if (checkDigitAlgorithmCombo != null && checkDigitOutputArea != null && inputArea != null) {
-            // Case for Modern UI where specific fields are used but inputArea (generic)
-            // might be null?
-            // Wait, Check Digit Pane has its OWN input field in Modern UI?
-            // FXML shows: <TextField fx:id="checkDigitInput" .../>
-            // GenericController doesn't seem to have checkDigitInput field yet?
-            // I need to check if GenericController has a specific input field for Check
-            // Digit.
-            // If not, I am missing that too.
-            // Let's assume for now I should use a specific input field if it exists.
-            // But I only see `setCheckDigitAlgorithmCombo`.
-            // I likely missed the input field.
+            calculateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutputArea);
         }
     }
 
@@ -1684,8 +1676,12 @@ public class GenericController {
 
 
     public void handleValidateCheckDigit() {
-        if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
+        if (checkDigitInput != null && checkDigitAlgorithmCombo != null && checkDigitOutput != null) {
+            validateCheckDigit(checkDigitInput.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutput);
+        } else if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
             validateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), outputArea);
+        } else if (checkDigitAlgorithmCombo != null && checkDigitOutputArea != null && inputArea != null) {
+            validateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutputArea);
         }
     }
 

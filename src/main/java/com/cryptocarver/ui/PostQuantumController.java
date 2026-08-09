@@ -760,7 +760,9 @@ public class PostQuantumController {
     }
 
     private boolean isKemAlgorithm(String algorithm) {
-        return algorithm != null && (algorithm.startsWith("Kyber") || algorithm.startsWith("ML-KEM"));
+        if (algorithm == null) return false;
+        String normalized = algorithm.toUpperCase(java.util.Locale.ROOT);
+        return normalized.startsWith("KYBER") || normalized.startsWith("ML-KEM");
     }
 
     @FXML
