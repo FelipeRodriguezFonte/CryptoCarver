@@ -140,7 +140,8 @@ class Ux28bAsymmetricShelfLiveUITest {
         assertFalse(rsaPublic.getValue().contains("Modulus"));
         assertTrue(!rsaPublic.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(1)));
 
-        assertEquals("Shortcut+Shift+V", shelfShortcut.getAccelerator().getName());
+        assertEquals(javafx.scene.input.KeyCombination.valueOf("Shortcut+Shift+V"),
+                shelfShortcut.getAccelerator());
         runAndWait(shelfShortcut::fire);
         TableView<ClipboardEntry> shelfTable = readField(readField(mainController, "clipboardShelfController"), "shelfTable");
         assertTrue(shelfTable.getItems().contains(rsaPublic), "New public PEM must be revealed despite the active filter");

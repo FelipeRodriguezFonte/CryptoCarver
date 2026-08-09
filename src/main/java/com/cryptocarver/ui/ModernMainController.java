@@ -2084,12 +2084,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             keysController.handleGlobalAsymmetricShelfAction(currentActiveOperation);
             return;
         }
-        KeyCertificateWorkbenchController workbench = activeWorkbenchForShelf();
-        if (workbench != null) {
-            workbench.sendCurrentMaterialToShelf();
-            return;
+        // An explicitly focused/updated rendered result wins over a sibling
+        // Workbench that happens to remain visible in the generic accordion.
+        TextArea area = resultAreaTracker.shelfCaptureArea(null);
+        if (area == null) {
+            KeyCertificateWorkbenchController workbench = activeWorkbenchForShelf();
+            if (workbench != null) {
+                workbench.sendCurrentMaterialToShelf();
+                return;
+            }
+            area = resultAreaTracker.shelfCaptureArea(mainPane);
         }
-        TextArea area = resultAreaTracker.shelfCaptureArea(mainPane);
         String content = resolveShelfCaptureText(area);
         if (content == null || content.isBlank()) {
             updateStatus(isShelfCaptureBlockedByVisibility(area)

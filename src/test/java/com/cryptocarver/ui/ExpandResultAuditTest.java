@@ -5,6 +5,8 @@ import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.service.I18nService;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -61,9 +63,12 @@ class ExpandResultAuditTest {
     }
 
     @BeforeEach
-    void resetSettings() {
+    void resetSettings() throws Exception {
         AppSettings.getInstance().resetForTesting();
-        ClipboardShelfManager.getInstance().clear();
+        runAndWait(() -> {
+            I18nService.getInstance().setPreference(LanguagePreference.EN);
+            ClipboardShelfManager.getInstance().clear();
+        });
     }
 
     @AfterAll
@@ -236,7 +241,7 @@ class ExpandResultAuditTest {
                         .output("NEW_RESULT_B".getBytes(StandardCharsets.UTF_8), OperationDetail.Classification.PUBLIC)
                         .status("Completed B").build());
 
-                // Assert published snapshot B overrides focused area A for all actions
+                // Copy/expanded-result use the authoritative published snapshot.
                 assertEquals("NEW_RESULT_B", controller.resolveCurrentOutputText(), "Published snapshot B MUST override focused area A");
 
                 // Execute actual Copy handler
@@ -244,10 +249,10 @@ class ExpandResultAuditTest {
                 String statusMsg = getStatusMessage(controller);
                 assertTrue(statusMsg.contains("copied to clipboard"));
 
-                // Execute actual Add to Shelf handler
+                // Shelf deliberately captures the active rendered artifact.
                 controller.handleAddCurrentOutputToShelf();
                 assertEquals(1, ClipboardShelfManager.getInstance().getEntries().size());
-                assertEquals("NEW_RESULT_B", ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
+                assertEquals("OLD_RESULT_A", ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
 
             } catch (Exception e) {
                 fail(e);

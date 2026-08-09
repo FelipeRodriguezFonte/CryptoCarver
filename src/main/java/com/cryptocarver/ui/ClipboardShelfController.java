@@ -251,8 +251,10 @@ public class ClipboardShelfController {
                 tableData.add(0, entryToSelect);
             }
         }
-        entryToReveal = entryToSelect != null && !isShelfViewEffectivelyVisible()
-                ? requestedReveal : null;
+        // Keep the one-shot reveal pinned until another entry is requested.
+        // Clearing it merely because the Shelf is visible lets a filter refresh
+        // immediately discard the freshly-added row and its selection.
+        entryToReveal = entryToSelect != null ? requestedReveal : null;
         itemCountLabel.setText(t("module.shelf.itemCount", tableData.size()));
 
         updateSelectionUi();

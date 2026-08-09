@@ -9,6 +9,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 
 import java.util.ArrayList;
@@ -53,7 +55,25 @@ public class InlineErrorPresenter {
         this.errorBannerGoToFieldBtn = errorBannerGoToFieldBtn;
         this.errorBannerCopyDetailsBtn = errorBannerCopyDetailsBtn;
         this.errorBannerCloseBtn = errorBannerCloseBtn;
+        installKeyboardActivation(errorBannerGoToFieldBtn);
+        installKeyboardActivation(errorBannerCopyDetailsBtn);
+        installKeyboardActivation(errorBannerCloseBtn);
         hideBanner();
+    }
+
+    private static void installKeyboardActivation(Button button) {
+        if (button == null) return;
+        button.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+                event.consume();
+            }
+        });
+        button.addEventFilter(KeyEvent.KEY_RELEASED, event -> {
+            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+                button.fire();
+                event.consume();
+            }
+        });
     }
 
     public void showError(UserFacingError error, Node activeSceneRoot) {

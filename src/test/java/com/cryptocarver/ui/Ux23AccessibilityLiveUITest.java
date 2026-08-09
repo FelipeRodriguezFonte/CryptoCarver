@@ -49,6 +49,7 @@ class Ux23AccessibilityLiveUITest {
     static void stopStage() throws Exception {
         fx(() -> {
             if (stage != null) stage.hide();
+            I18nService.getInstance().setPreference(LanguagePreference.EN);
         });
     }
 
@@ -87,8 +88,8 @@ class Ux23AccessibilityLiveUITest {
         });
 
         I18nService i18n = I18nService.getInstance();
-        i18n.setPreference(LanguagePreference.EN);
         fx(() -> {
+            i18n.setPreference(LanguagePreference.EN);
             controller[0].applyLocalization();
             String secret = "00112233445566778899AABBCCDDEEFF";
             controller[0].showError(new UserFacingError(
@@ -136,8 +137,8 @@ class Ux23AccessibilityLiveUITest {
             assertSame(target[0], scene[0].getFocusOwner(), "Closing must restore the invalid field focus");
         });
 
-        i18n.setPreference(LanguagePreference.ES);
         fx(() -> {
+            i18n.setPreference(LanguagePreference.ES);
             controller[0].applyLocalization();
             controller[0].showError(new UserFacingError(
                     "Error de entrada", "Completa el campo.", "Corrige el valor.", "inputFormatCombo"));
