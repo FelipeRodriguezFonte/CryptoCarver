@@ -78,7 +78,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
 |------|-------|----|--------|------|-----------------|---------|
 | ⚙ | JWA (Algorithms) | `op_jose_jwa` | STABLE | NONE | `JWA (Algorithms)` | - |
-| 🔒 | JWE (Encrypted) | `op_jose_jwe` | STABLE | HIGH | `JWE (Encrypted)` | JWE |
+| 🔒 | JWE (Encrypted) | `op_jose_jwe` | STABLE | HIGH | `JWE (Encrypted)` | JWE, JWE Encryption, JWE Decryption |
 | 🔑 | JWK (Keys) | `op_jose_jwk` | STABLE | HIGH | `JWK (Keys)` | JWKS |
 | 🏷 | JWT (Signed) | `op_jose_jwt` | STABLE | HIGH | `JWT (Signed)` | JWS |
 | 🔍 | Token Inspector | `op_jose_insp` | STABLE | LOW | `Token Inspector` | - |

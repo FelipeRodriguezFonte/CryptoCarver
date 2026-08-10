@@ -67,6 +67,10 @@ class OperationRegistryTest {
                 .orElseThrow().getNavigationPath());
         assertEquals("TR-31 Key Blocks", registry.resolveNavigation("TR31")
                 .orElseThrow().getNavigationPath());
+        assertEquals("JWE (Encrypted)", registry.resolveNavigation("JWE Encryption")
+                .orElseThrow().getNavigationPath());
+        assertEquals("JWE (Encrypted)", registry.resolveNavigation("JWE Decryption")
+                .orElseThrow().getNavigationPath());
         assertTrue(registry.resolveNavigation("not an operation").isEmpty());
     }
 

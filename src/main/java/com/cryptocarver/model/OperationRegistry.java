@@ -92,7 +92,10 @@ public class OperationRegistry {
 
         // JOSE
         register(new OperationDescriptor("op_jose_jwt", "JWT (Signed)", "JOSE", "Signed JWTs", "🏷", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWT (Signed)", Arrays.asList("JWS")));
-        register(new OperationDescriptor("op_jose_jwe", "JWE (Encrypted)", "JOSE", "Encrypted JWTs", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWE (Encrypted)", Arrays.asList("JWE")));
+        // Keep execution-result names as navigation aliases so saved history can
+        // reopen the JWE workspace instead of falling through to the legacy
+        // placeholder view.
+        register(new OperationDescriptor("op_jose_jwe", "JWE (Encrypted)", "JOSE", "Encrypted JWTs", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWE (Encrypted)", Arrays.asList("JWE", "JWE Encryption", "JWE Decryption")));
         register(new OperationDescriptor("op_jose_jwk", "JWK (Keys)", "JOSE", "JWK keys", "🔑", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWK (Keys)", Arrays.asList("JWKS")));
         register(new OperationDescriptor("op_jose_jwa", "JWA (Algorithms)", "JOSE", "JWA algorithms", "⚙", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "JWA (Algorithms)", Collections.emptyList()));
         register(new OperationDescriptor("op_jose_insp", "Token Inspector", "JOSE", "Inspect tokens", "🔍", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Token Inspector", Collections.emptyList()));

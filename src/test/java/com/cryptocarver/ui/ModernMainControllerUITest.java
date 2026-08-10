@@ -830,6 +830,12 @@ class ModernMainControllerUITest {
                 assertFalse(jwt.isVisible());
                 assertTrue(jwe.isVisible());
 
+                // Execution history stores this result name. Reopening it must
+                // resolve back to the canonical JWE workspace.
+                route.invoke(controller, "JWE Encryption");
+                assertFalse(jwt.isVisible());
+                assertTrue(jwe.isVisible());
+
                 route.invoke(controller, "JWK (Keys)");
                 assertFalse(jwe.isVisible());
                 assertTrue(jwk.isVisible());
