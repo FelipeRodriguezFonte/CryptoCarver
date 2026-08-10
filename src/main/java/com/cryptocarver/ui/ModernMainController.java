@@ -1705,7 +1705,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @Override
     public void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        addToHistory(operation, details, currentActiveOperation);
+        addToHistory(operation, details, effectiveNavigationTarget(operation, currentActiveOperation));
+    }
+
+    /**
+     * Picks the value used to reopen a history entry. The currently active screen is
+     * preferred (it disambiguates sub-operations that share a display name), but only
+     * when it actually resolves to a catalogued operation. Otherwise — e.g. history is
+     * recorded before any navigation happened, or from a stale/default screen name —
+     * fall back to the operation label itself so the entry stays reopenable and its
+     * module filter/category stays correct instead of collapsing to "Other".
+     */
+    private String effectiveNavigationTarget(String operation, String candidateNavigationOperation) {
+        if (candidateNavigationOperation != null && !candidateNavigationOperation.isBlank()
+                && com.cryptocarver.model.OperationRegistry.getInstance()
+                        .resolveNavigation(candidateNavigationOperation).isPresent()) {
+            return candidateNavigationOperation;
+        }
+        return operation;
     }
 
     private void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details,
@@ -1759,7 +1776,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
 
         com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
-                operation, detailsString, state, rep, reason, inFmt, outFmt, currentActiveOperation);
+                operation, detailsString, state, rep, reason, inFmt, outFmt,
+                effectiveNavigationTarget(operation, currentActiveOperation));
 
         if (historyManager == null) {
             initializeHistory();
@@ -2349,7 +2367,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         lastPublishedOperation = result.getOperation();
         lastPublishedResultSnapshot = result;
         updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails());
-        addToHistory(result.getOperation(), detailsForHistory(result), currentActiveOperation);
+        addToHistory(result.getOperation(), detailsForHistory(result),
+                effectiveNavigationTarget(result.getOperation(), currentActiveOperation));
         if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) {
             updateStatus(result.getStatusMessage());
         }
