@@ -1279,9 +1279,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
         if (item == null || item.getOperation() == null) return;
-        navigateToModule(item.getOperation());
+        String navigationOperation = item.getNavigationOperation();
+        navigateToModule(navigationOperation);
         if (item.getParameters() != null && !item.getParameters().isEmpty()) {
-            restoreOperationState(item.getParameters(), item.getOperation());
+            restoreOperationState(item.getParameters(), navigationOperation);
         }
     }
 
@@ -1658,6 +1659,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @Override
     public void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details) {
+        addToHistory(operation, details, currentActiveOperation);
+    }
+
+    private void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details,
+                              String navigationOperation) {
         java.util.Map<String, Object> state = captureHistoryState();
 
         String detailsJson = "";
@@ -1682,7 +1688,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
 
         com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
-                operation, detailsJson, state, rep, reason, inFmt, outFmt);
+                operation, detailsJson, state, rep, reason, inFmt, outFmt, navigationOperation);
         item.setStructuredDetails(details);
 
         if (historyManager == null) {
@@ -1707,7 +1713,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
 
         com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
-                operation, detailsString, state, rep, reason, inFmt, outFmt);
+                operation, detailsString, state, rep, reason, inFmt, outFmt, currentActiveOperation);
 
         if (historyManager == null) {
             initializeHistory();
@@ -2295,7 +2301,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         lastPublishedOperation = result.getOperation();
         lastPublishedResultSnapshot = result;
         updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails());
-        addToHistory(result.getOperation(), detailsForHistory(result));
+        addToHistory(result.getOperation(), detailsForHistory(result), currentActiveOperation);
         if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) {
             updateStatus(result.getStatusMessage());
         }

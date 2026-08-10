@@ -846,6 +846,49 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testDynamicHistoryResultReopensItsOriginatingWorkspace() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        runAndWait(() -> {
+            try {
+                ModernMainController controller = controllerRef.get();
+                Method route = ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class);
+                route.setAccessible(true);
+                controller.getHistoryManager().clearHistory();
+                route.invoke(controller, "Key Derivation (KDF)");
+                controller.publish(com.cryptocarver.model.OperationResult.forOperation("Derive - HKDF-SHA256")
+                        .output(new byte[] {0x01}).build());
+
+                com.cryptocarver.model.HistoryCommand entry = controller.getHistoryManager().getHistoryItems().get(0);
+                assertEquals("Key Derivation (KDF)", entry.getNavigationOperation());
+
+                controller.reopenRecentHistoryCommand(entry);
+                KeysController keys = getField(controller, "keysContainerController");
+                javafx.scene.layout.VBox symmetric = getField(keys, "symmetricKeysContainer");
+                assertTrue(symmetric.isVisible());
+
+                // Existing history files only have the descriptive execution
+                // name, so they must use the legacy route without a placeholder.
+                route.invoke(controller, "Derive - HKDF-SHA256");
+                javafx.scene.control.Label placeholder = getField(controller, "contentPlaceholderLabel");
+                assertFalse(placeholder.isVisible());
+                assertTrue(symmetric.isVisible());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Test
     void testCompressedHexRouteExpandsDedicatedPane() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {

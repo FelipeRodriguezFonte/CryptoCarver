@@ -54,7 +54,42 @@ public final class UiNavigationRegistry {
 
     public static Optional<Route> resolve(String operation) {
         if (operation == null || operation.isBlank()) return Optional.empty();
-        return Optional.ofNullable(ROUTES.get(operation.trim()));
+        String candidate = operation.trim();
+        Route route = ROUTES.get(candidate);
+        return Optional.ofNullable(route != null ? route : resolveLegacyExecution(candidate));
+    }
+
+    /**
+     * Routes result labels created by older releases, which stored a detailed
+     * execution name instead of the workspace that produced it. New records
+     * persist their workspace separately in {@code HistoryCommand}.
+     */
+    private static Route resolveLegacyExecution(String operation) {
+        if (operation.startsWith("Derive - ") || operation.equals("KDF Derivation")) {
+            return new Route(Module.KEYS_SYMMETRIC, "Key Derivation");
+        }
+        if (operation.startsWith("Validate - ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "Validation & KCV");
+        }
+        if (operation.startsWith("Split - ") || operation.startsWith("Combine - ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "Key Sharing");
+        }
+        if (operation.startsWith("AES Key ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "AES Key Wrap");
+        }
+        if (operation.startsWith("Wrap Key - ") || operation.startsWith("Unwrap Key - ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "TR-31 Key Blocks");
+        }
+        if (operation.startsWith("Generate ECDSA F(p) - ")) {
+            return new Route(Module.KEYS_ASYMMETRIC, "ECDSA Key Generation");
+        }
+        if (operation.startsWith("Generate Certificate - ")) {
+            return new Route(Module.CERTIFICATES, "Generate Certificate");
+        }
+        if (operation.startsWith("Format Workbench: ")) {
+            return new Route(Module.GENERIC, "Key & Certificate Format Workbench");
+        }
+        return null;
     }
 
     static Map<String, Route> routes() {

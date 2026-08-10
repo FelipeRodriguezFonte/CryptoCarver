@@ -46,7 +46,7 @@ public class SidePanel extends VBox {
         OperationNode(com.cryptocarver.model.HistoryCommand cmd) {
             this.historyCommand = cmd;
             this.label = cmd.getOperation() + " (" + cmd.getTimestamp() + ")";
-            this.descriptor = OperationRegistry.getInstance().resolveNavigation(cmd.getOperation()).orElse(null);
+            this.descriptor = OperationRegistry.getInstance().resolveNavigation(cmd.getNavigationOperation()).orElse(null);
         }
 
         @Override

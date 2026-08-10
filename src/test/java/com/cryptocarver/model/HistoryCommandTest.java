@@ -10,6 +10,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class HistoryCommandTest {
 
     @Test
+    void navigationOperationKeepsTheOriginatingWorkspaceSeparateFromTheResultLabel() {
+        HistoryCommand command = new HistoryCommand("Derive - HKDF-SHA256", "", Map.of(),
+                HistoryCommand.Reproducibility.REPRODUCIBLE_WITHOUT_SECRETS, "", null, null,
+                "Key Derivation (KDF)");
+
+        assertEquals("Derive - HKDF-SHA256", command.getOperation());
+        assertEquals("Key Derivation (KDF)", command.getNavigationOperation());
+    }
+
+    @Test
     void defaultReproducibilityIsPartial() {
         HistoryCommand cmd = new HistoryCommand("Op", "details", Map.of());
         assertEquals(HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS, cmd.getReproducibility());

@@ -93,7 +93,7 @@ public class HistoryController {
                 btn.setOnAction(event -> {
                     HistoryCommand item = getTableView().getItems().get(getIndex());
                     if (navigator != null) {
-                        navigator.restoreOperationState(item.getParameters(), item.getOperation());
+                        navigator.restoreOperationState(item.getParameters(), item.getNavigationOperation());
                     }
                 });
             }
@@ -290,7 +290,7 @@ public class HistoryController {
         if (item == null) {
             return "Other";
         }
-        return OperationRegistry.getInstance().resolveNavigation(item.getOperation())
+        return OperationRegistry.getInstance().resolveNavigation(item.getNavigationOperation())
                 .map(com.cryptocarver.model.OperationDescriptor::getCategory)
                 .orElse("Other");
     }
