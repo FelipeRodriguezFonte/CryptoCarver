@@ -1281,6 +1281,21 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         reopenHistoryOperation(item);
     }
 
+    /**
+     * Opens a recorded execution for inspection. Selecting an entry under
+     * "Recent Executions" is a view action; restoring its recipe remains the
+     * explicit job of the Reopen button in the History view.
+     */
+    public void showRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
+        if (item == null) return;
+        navigateToModule("Recent Operations");
+        if (historyViewController != null) {
+            historyViewController.selectHistoryCommand(item);
+        }
+        updateInspector(item.getOperation(), null, null, visibleHistoryDetails(item));
+        updateStatus("Viewing historical execution: " + item.getOperation());
+    }
+
     @Override
     public void reopenHistoryOperation(com.cryptocarver.model.HistoryCommand item) {
         if (item == null || item.getOperation() == null) return;
@@ -1591,7 +1606,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         if (sidePanel != null) {
             sidePanel.setHistoryManager(historyManager);
-            sidePanel.setOnHistoryItemSelected(this::reopenRecentHistoryCommand);
+            sidePanel.setOnHistoryItemSelected(this::showRecentHistoryCommand);
         }
         if (historyViewController != null) {
             historyViewController.setHistoryManager(historyManager);

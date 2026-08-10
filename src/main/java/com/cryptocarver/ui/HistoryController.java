@@ -250,6 +250,21 @@ public class HistoryController {
         }
     }
 
+    /** Selects and reveals the exact execution chosen in the global side panel. */
+    public void selectHistoryCommand(HistoryCommand command) {
+        if (command == null || historyTable == null) return;
+        refresh();
+        for (int index = 0; index < historyTable.getItems().size(); index++) {
+            HistoryCommand candidate = historyTable.getItems().get(index);
+            if (java.util.Objects.equals(candidate.getId(), command.getId())) {
+                historyTable.getSelectionModel().clearAndSelect(index);
+                historyTable.scrollTo(index);
+                historyTable.requestFocus();
+                return;
+            }
+        }
+    }
+
     private void handleHistoryShortcut(KeyEvent event) {
         if (event.isShortcutDown() && event.getCode() == KeyCode.F) {
             historyFilterField.requestFocus();

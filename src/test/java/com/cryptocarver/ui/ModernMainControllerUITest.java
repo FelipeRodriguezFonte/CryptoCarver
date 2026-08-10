@@ -906,6 +906,53 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testSelectingRecentExecutionOpensHistoryDetailsWithoutReopeningRecipe() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        runAndWait(() -> {
+            try {
+                ModernMainController controller = controllerRef.get();
+                controller.getHistoryManager().clearHistory();
+                controller.navigateToModule("Key Derivation (KDF)");
+                controller.publish(com.cryptocarver.model.OperationResult.forOperation("Derive - HKDF-SHA256")
+                        .input("jjjj".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(new byte[] {0x01}, com.cryptocarver.model.OperationDetail.Classification.SECRET)
+                        .detail(new com.cryptocarver.model.OperationDetail("Input Parameters", "Input: jjjj",
+                                com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null))
+                        .build());
+                com.cryptocarver.model.HistoryCommand entry = controller.getHistoryManager().getHistoryItems().get(0);
+
+                controller.showRecentHistoryCommand(entry);
+
+                javafx.scene.layout.VBox historyView = getField(controller, "historyView");
+                assertTrue(historyView.isVisible(), "Selecting a recent execution must open the History detail view");
+                HistoryController history = getField(controller, "historyViewController");
+                javafx.scene.control.TableView<com.cryptocarver.model.HistoryCommand> historyTable =
+                        getField(history, "historyTable");
+                assertEquals(entry.getId(), historyTable.getSelectionModel().getSelectedItem().getId());
+                javafx.scene.control.TableView<com.cryptocarver.model.OperationDetail> detailsTable =
+                        getField(history, "detailsTable");
+                assertFalse(detailsTable.getItems().isEmpty(), "The selected execution details must be visible");
+
+                KeysController keys = getField(controller, "keysContainerController");
+                javafx.scene.control.TextField input = getField(keys, "kdfInputField");
+                assertEquals("", input.getText(), "Inspecting history must not inject a stored secret into the form");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Test
     void testCompressedHexRouteExpandsDedicatedPane() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
