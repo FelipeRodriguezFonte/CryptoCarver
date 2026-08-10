@@ -1278,12 +1278,44 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
+        reopenHistoryOperation(item);
+    }
+
+    @Override
+    public void reopenHistoryOperation(com.cryptocarver.model.HistoryCommand item) {
         if (item == null || item.getOperation() == null) return;
         String navigationOperation = item.getNavigationOperation();
         navigateToModule(navigationOperation);
-        if (item.getParameters() != null && !item.getParameters().isEmpty()) {
-            restoreOperationState(item.getParameters(), navigationOperation);
+        restoreOperationState(item.getParameters(), navigationOperation);
+        updateInspector(item.getOperation(), null, null, visibleHistoryDetails(item));
+        updateStatus("Reopened historical execution: " + item.getOperation());
+    }
+
+    private java.util.List<com.cryptocarver.model.OperationDetail> visibleHistoryDetails(
+            com.cryptocarver.model.HistoryCommand item) {
+        java.util.List<com.cryptocarver.model.OperationDetail> details = item.getStructuredDetails();
+        if (details == null || details.isEmpty()) {
+            if (item.getDetails() == null || item.getDetails().isBlank()) return java.util.List.of();
+            details = java.util.List.of(com.cryptocarver.model.OperationDetail.sensitiveDetail(
+                    "Legacy details", item.getDetails()));
         }
+        com.cryptocarver.model.SecretVisibilityProfile visibility =
+                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        return details.stream().filter(java.util.Objects::nonNull).map(detail -> {
+            String value = detail.value();
+            if (visibility == com.cryptocarver.model.SecretVisibilityProfile.REDACTED
+                    && detail.classification() == com.cryptocarver.model.OperationDetail.Classification.SECRET) {
+                value = "***REDACTED***";
+            } else if (visibility == com.cryptocarver.model.SecretVisibilityProfile.MASKED
+                    && detail.classification() != com.cryptocarver.model.OperationDetail.Classification.PUBLIC) {
+                value = "***MASKED***";
+            } else if (visibility == com.cryptocarver.model.SecretVisibilityProfile.REDACTED
+                    && detail.classification() == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE) {
+                value = "***MASKED***";
+            }
+            return new com.cryptocarver.model.OperationDetail(detail.name(), value,
+                    detail.classification(), detail.multiline(), detail.format());
+        }).toList();
     }
 
     @FXML
@@ -1605,8 +1637,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
 
                 reopenButton.setOnAction(e -> {
-                    restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
-                            ? item.getParameters() : item.getUiState(), item.getOperation());
+                    reopenHistoryOperation(item);
                 });
 
                 historyCommand.getChildren().addAll(infoBox, reopenButton);

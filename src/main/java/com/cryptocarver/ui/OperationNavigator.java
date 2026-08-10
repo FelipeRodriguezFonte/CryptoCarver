@@ -1,5 +1,6 @@
 package com.cryptocarver.ui;
 
+import com.cryptocarver.model.HistoryCommand;
 import java.util.Map;
 
 /**
@@ -15,6 +16,13 @@ public interface OperationNavigator {
     void navigateTo(String operation);
 
     void updateStatus(String message);
+
+    /** Reopens a recorded execution while preserving its history context. */
+    default void reopenHistoryOperation(HistoryCommand item) {
+        if (item != null) {
+            restoreOperationState(item.getParameters(), item.getNavigationOperation());
+        }
+    }
 
     /** Refreshes navigation elements that mirror the operation history. */
     default void refreshHistoryNavigation() {

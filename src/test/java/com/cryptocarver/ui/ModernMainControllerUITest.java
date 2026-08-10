@@ -871,12 +871,27 @@ class ModernMainControllerUITest {
                 com.cryptocarver.model.HistoryCommand entry = controller.getHistoryManager().getHistoryItems().get(0);
                 assertEquals("Key Derivation (KDF)", entry.getNavigationOperation());
 
+                com.cryptocarver.model.SecretVisibilityProfile originalVisibility =
+                        com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+                com.cryptocarver.model.AppSettings.getInstance()
+                        .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
                 controller.reopenRecentHistoryCommand(entry);
                 KeysController keys = getField(controller, "keysContainerController");
                 javafx.scene.layout.VBox symmetric = getField(keys, "symmetricKeysContainer");
                 assertTrue(symmetric.isVisible());
                 javafx.scene.control.TextField outputLength = getField(keys, "kdfOutputLengthField");
                 assertEquals("32", outputLength.getText());
+                javafx.scene.control.Label inspectorOperation = getField(controller, "operationLabel");
+                assertEquals("Derive - HKDF-SHA256", inspectorOperation.getText());
+                Method visibleDetails = ModernMainController.class.getDeclaredMethod(
+                        "visibleHistoryDetails", com.cryptocarver.model.HistoryCommand.class);
+                visibleDetails.setAccessible(true);
+                @SuppressWarnings("unchecked")
+                java.util.List<com.cryptocarver.model.OperationDetail> details =
+                        (java.util.List<com.cryptocarver.model.OperationDetail>) visibleDetails.invoke(controller, entry);
+                assertTrue(details.stream().anyMatch(detail -> detail.name().startsWith("Output")
+                        && "01".equals(detail.value())));
+                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(originalVisibility);
 
                 // Existing history files only have the descriptive execution
                 // name, so they must use the legacy route without a placeholder.

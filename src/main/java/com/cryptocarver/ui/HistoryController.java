@@ -93,7 +93,7 @@ public class HistoryController {
                 btn.setOnAction(event -> {
                     HistoryCommand item = getTableView().getItems().get(getIndex());
                     if (navigator != null) {
-                        navigator.restoreOperationState(item.getParameters(), item.getNavigationOperation());
+                        navigator.reopenHistoryOperation(item);
                     }
                 });
             }
