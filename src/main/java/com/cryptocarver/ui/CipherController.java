@@ -117,6 +117,7 @@ public class CipherController {
     @FXML private CheckBox fileCipherCompactCbcCheck;
     @FXML private Button fileCipherEncryptBtn;
     @FXML private Button fileCipherDecryptBtn;
+    @FXML private Button fileCipherAnalyzeBtn;
 
     // Asymmetric cipher UI components
     @FXML private ComboBox<String> rsaPaddingCombo;
@@ -865,6 +866,59 @@ public class CipherController {
 
     public void handleFileCipherDecrypt() {
         executeFileCipher(false);
+    }
+
+    /**
+     * Runs the encrypted-file analyser using the material shown in the File Cipher
+     * panel.  The analyser itself is shared with the expert Cipher workflow, so
+     * its key/IV/AAD/tag controls are kept in sync immediately before execution.
+     * This lets an operator investigate the file they have just encrypted or
+     * received without manually duplicating the same material in another panel.
+     */
+    @FXML
+    public void handleAnalyzeFileCipher() {
+        try {
+            Path source = requiredPath(fileCipherSourceField == null ? null : fileCipherSourceField.getText(),
+                    "Source file path");
+            if (!Files.isRegularFile(source)) {
+                throw new IllegalArgumentException("Source file does not exist or is not a regular file");
+            }
+
+            byte[] key = requiredHex(fileCipherKeyField == null ? null : fileCipherKeyField.getText(), "Key");
+            if (symmetricKeyField != null) {
+                symmetricKeyField.setText(DataConverter.bytesToHex(key));
+            }
+            if (ivField != null && fileCipherNonceField != null) {
+                ivField.setText(fileCipherNonceField.getText().trim());
+            }
+            if (aadField != null && fileCipherAadField != null) {
+                aadField.setText(fileCipherAadField.getText().trim());
+            }
+
+            // Streaming AEAD stores the authentication tag separately.  The
+            // analysis engine expects it in the common GCM/tag field.
+            if (gcmTagField != null && fileCipherTagField != null && !fileCipherTagField.getText().isBlank()) {
+                Path tagPath = Path.of(fileCipherTagField.getText().trim());
+                if (!Files.isRegularFile(tagPath)) {
+                    // Fail loudly instead of silently keeping whatever tag was left over
+                    // from a previous, unrelated run: a stale tag makes every AEAD
+                    // combination fail authentication with no indication why.
+                    throw new IllegalArgumentException("Tag file does not exist or is not a regular file: " + tagPath);
+                }
+                gcmTagField.setText(DataConverter.bytesToHex(Files.readAllBytes(tagPath)));
+            }
+
+            handleAnalyzeEncryptedFile(source);
+            if (cipherOutputArea != null && fileCipherResultArea != null) {
+                fileCipherResultArea.setText(cipherOutputArea.getText());
+            }
+        } catch (IllegalArgumentException e) {
+            if (statusReporter != null) statusReporter.showError("Encrypted File Analysis", e.getMessage());
+        } catch (Exception e) {
+            if (statusReporter != null) {
+                statusReporter.showError("Encrypted File Analysis", "Cannot analyse file: " + e.getMessage());
+            }
+        }
     }
 
     public void handleExportFileCipherRecipe() {

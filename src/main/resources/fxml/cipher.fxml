@@ -156,6 +156,7 @@
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button fx:id="fileCipherEncryptBtn" text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
                         <Button fx:id="fileCipherDecryptBtn" text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
+                        <Button fx:id="fileCipherAnalyzeBtn" text="Analyze Encrypted File" onAction="#handleAnalyzeFileCipher" styleClass="secondary-button"/>
                         <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
                         <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
                     </FlowPane>
