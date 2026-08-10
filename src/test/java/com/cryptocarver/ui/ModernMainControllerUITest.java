@@ -875,6 +875,8 @@ class ModernMainControllerUITest {
                 KeysController keys = getField(controller, "keysContainerController");
                 javafx.scene.layout.VBox symmetric = getField(keys, "symmetricKeysContainer");
                 assertTrue(symmetric.isVisible());
+                javafx.scene.control.TextField outputLength = getField(keys, "kdfOutputLengthField");
+                assertEquals("32", outputLength.getText());
 
                 // Existing history files only have the descriptive execution
                 // name, so they must use the legacy route without a placeholder.

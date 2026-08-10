@@ -40,8 +40,11 @@ class UiStateSnapshotTest {
         @FXML public TextField certInputArea;
         @FXML public TextField certIssueCaKeyArea;
         @FXML public TextArea technicalResultArea;
+        @FXML public TextField outputLengthField;
+        @FXML public TextField outputPathField;
         @FXML public ComboBox<String> algoCombo;
         @FXML public ComboBox<String> tr31FormatCombo;
+        @FXML public ComboBox<String> outputFormatCombo;
         @FXML public ComboBox<String> tr31ModeCombo;
         @FXML public ComboBox<String> tr31KeySizeCombo;
         @FXML public ComboBox<String> tr31UsageCombo;
@@ -63,10 +66,13 @@ class UiStateSnapshotTest {
             certInputArea = new TextField("-----BEGIN CERTIFICATE-----secret-----END CERTIFICATE-----");
             certIssueCaKeyArea = new TextField("ca-private-key");
             technicalResultArea = new TextArea("B0096P0TE00E000000000000000000000000000");
+            outputLengthField = new TextField("32");
+            outputPathField = new TextField("/tmp/cryptocarver-result.bin");
             algoCombo = new ComboBox<>();
             algoCombo.getItems().add("AES");
             algoCombo.setValue("AES");
             tr31FormatCombo = selector("HEX");
+            outputFormatCombo = selector("Base64");
             tr31ModeCombo = selector("Derive");
             tr31KeySizeCombo = selector("256");
             tr31UsageCombo = selector("C0 - CVK");
@@ -105,9 +111,12 @@ class UiStateSnapshotTest {
         assertEquals("[REDACTED_SECRET]", state.get("DummyController.certInputArea"));
         assertEquals("[REDACTED_SECRET]", state.get("DummyController.certIssueCaKeyArea"));
         assertEquals(null, state.get("DummyController.technicalResultArea"));
+        assertEquals("32", state.get("DummyController.outputLengthField"));
+        assertEquals("/tmp/cryptocarver-result.bin", state.get("DummyController.outputPathField"));
         assertEquals("hello world", state.get("DummyController.dataField"));
         assertEquals("AES", state.get("DummyController.algoCombo"));
         assertEquals("HEX", state.get("DummyController.tr31FormatCombo"));
+        assertEquals("Base64", state.get("DummyController.outputFormatCombo"));
         assertEquals("Derive", state.get("DummyController.tr31ModeCombo"));
         assertEquals("256", state.get("DummyController.tr31KeySizeCombo"));
         assertEquals("C0 - CVK", state.get("DummyController.tr31UsageCombo"));
@@ -128,18 +137,23 @@ class UiStateSnapshotTest {
         controller.certInputArea.setText("old-certificate");
         controller.certIssueCaKeyArea.setText("old-ca-key");
         controller.technicalResultArea.setText("old-result");
+        controller.outputLengthField.clear();
+        controller.outputPathField.clear();
 
-        UiStateSnapshot.restoreHistoryRecipe(controller, Map.of(
-                "DummyController.tr31KbpkExportField", "[REDACTED_SECRET]",
-                "DummyController.cvkField", "[REDACTED_SECRET]",
-                "DummyController.pvkField", "[REDACTED_SECRET]",
-                "DummyController.certInputArea", "[REDACTED_SECRET]",
-                "DummyController.certIssueCaKeyArea", "[REDACTED_SECRET]",
-                "DummyController.technicalResultArea", "old-result",
-                "DummyController.tr31ModeCombo", "Wrap",
-                "DummyController.tr31KeySizeCombo", "128",
-                "DummyController.encodingFormatChoice", "HEX",
-                "DummyController.algorithmModeCheck", false));
+        UiStateSnapshot.restoreHistoryRecipe(controller, Map.ofEntries(
+                Map.entry("DummyController.tr31KbpkExportField", "[REDACTED_SECRET]"),
+                Map.entry("DummyController.cvkField", "[REDACTED_SECRET]"),
+                Map.entry("DummyController.pvkField", "[REDACTED_SECRET]"),
+                Map.entry("DummyController.certInputArea", "[REDACTED_SECRET]"),
+                Map.entry("DummyController.certIssueCaKeyArea", "[REDACTED_SECRET]"),
+                Map.entry("DummyController.technicalResultArea", "old-result"),
+                Map.entry("DummyController.outputLengthField", "64"),
+                Map.entry("DummyController.outputPathField", "/tmp/derived.bin"),
+                Map.entry("DummyController.outputFormatCombo", "Hex"),
+                Map.entry("DummyController.tr31ModeCombo", "Wrap"),
+                Map.entry("DummyController.tr31KeySizeCombo", "128"),
+                Map.entry("DummyController.encodingFormatChoice", "HEX"),
+                Map.entry("DummyController.algorithmModeCheck", false)));
 
         assertEquals("", controller.tr31KbpkExportField.getText());
         assertEquals("", controller.cvkField.getText());
@@ -147,6 +161,9 @@ class UiStateSnapshotTest {
         assertEquals("", controller.certInputArea.getText());
         assertEquals("", controller.certIssueCaKeyArea.getText());
         assertEquals("", controller.technicalResultArea.getText());
+        assertEquals("64", controller.outputLengthField.getText());
+        assertEquals("/tmp/derived.bin", controller.outputPathField.getText());
+        assertEquals("Hex", controller.outputFormatCombo.getValue());
         assertEquals("Wrap", controller.tr31ModeCombo.getValue());
         assertEquals("128", controller.tr31KeySizeCombo.getValue());
         assertEquals("HEX", controller.encodingFormatChoice.getValue());

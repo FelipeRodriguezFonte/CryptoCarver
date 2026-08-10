@@ -1733,9 +1733,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
         handleItemSelected(operation);
         java.util.List<javafx.scene.Node> redacted = UiStateSnapshot.restoreHistoryRecipe(this, state);
-        updateStatus("Restored state for: " + operation);
         if (redacted != null && !redacted.isEmpty()) {
+            updateStatus("Restored configuration for: " + operation + ". Re-enter redacted sensitive values.");
             javafx.application.Platform.runLater(() -> redacted.get(0).requestFocus());
+        } else {
+            updateStatus("Restored state for: " + operation);
         }
     }
 

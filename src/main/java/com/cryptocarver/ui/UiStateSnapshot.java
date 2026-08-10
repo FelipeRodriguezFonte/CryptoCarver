@@ -158,6 +158,14 @@ public final class UiStateSnapshot {
 
     private static boolean isResultField(String fieldName) {
         String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
+        // These are input settings despite containing "output" in their FXML
+        // id. They are needed to reproduce a history recipe and contain no
+        // derived data or secret material.
+        if (lower.contains("outputlength") || lower.contains("outputpath")
+                || lower.contains("outputcolumn") || lower.contains("outputformat")
+                || lower.contains("outputfile")) {
+            return false;
+        }
         return lower.contains("output") || lower.contains("result") || lower.contains("report")
                 || lower.contains("diagnostic") || lower.contains("fingerprint")
                 || lower.contains("kcv") || lower.contains("summary");
