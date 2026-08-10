@@ -483,6 +483,7 @@ public class HistoryController {
                 detailsTable.getItems().clear();
             }
             if (navigator != null) {
+                navigator.refreshHistoryNavigation();
                 navigator.updateStatus("History cleared");
             }
         }

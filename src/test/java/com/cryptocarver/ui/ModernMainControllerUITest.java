@@ -1154,6 +1154,49 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testClearingHistoryRefreshesRecentExecutionsInSidePanel() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        ModernMainController controller = controllerRef.get();
+        String previousTestMode = System.getProperty("test.mode");
+        System.setProperty("test.mode", "true");
+        try {
+            runAndWait(() -> {
+                try {
+                    controller.getHistoryManager().clearHistory();
+                    controller.addToHistory("Hashing", java.util.List.of());
+                    SidePanel sidePanel = getField(controller, "sidePanel");
+                    sidePanel.updateContent(NavigationRail.Section.HISTORY);
+
+                    HistoryController historyController = getField(controller, "historyViewController");
+                    Method clear = HistoryController.class.getDeclaredMethod("handleClearHistory", javafx.event.ActionEvent.class);
+                    clear.setAccessible(true);
+                    clear.invoke(historyController, new javafx.event.ActionEvent());
+
+                    javafx.scene.control.TreeView<?> tree = getField(sidePanel, "navigationTree");
+                    assertFalse(tree.getRoot().getChildren().stream()
+                            .map(item -> item.getValue().toString())
+                            .anyMatch(label -> label.contains("Recent Executions")));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } finally {
+            if (previousTestMode == null) System.clearProperty("test.mode");
+            else System.setProperty("test.mode", previousTestMode);
+        }
+    }
+
+    @Test
     void testExpandedResultUsesLatestPublishedOperation() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {

@@ -1581,40 +1581,44 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             placeholder.getStyleClass().add("muted-text");
             placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 10;");
             historyContainer.getChildren().add(placeholder);
-            return;
+        } else {
+            for (com.cryptocarver.model.HistoryCommand item : items) {
+                HBox historyCommand = new HBox(8);
+                historyCommand.getStyleClass().add("history-card");
+                historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+                VBox infoBox = new VBox(2);
+                Label opLabel = new Label(item.getOperation());
+                opLabel.getStyleClass().add("history-card-title");
+
+                String relTime = formatRelativeTime(item.getTimestamp());
+                Label timeLabel = new Label(relTime);
+                timeLabel.getStyleClass().add("history-card-time");
+                Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
+
+                infoBox.getChildren().addAll(opLabel, timeLabel);
+                HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
+
+                Button reopenButton = new Button("Reopen");
+                reopenButton.getStyleClass().add("history-card-action");
+                reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
+
+                reopenButton.setOnAction(e -> {
+                    restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
+                            ? item.getParameters() : item.getUiState(), item.getOperation());
+                });
+
+                historyCommand.getChildren().addAll(infoBox, reopenButton);
+                historyContainer.getChildren().add(historyCommand);
+            }
         }
 
-        for (com.cryptocarver.model.HistoryCommand item : items) {
-            HBox historyCommand = new HBox(8);
-            historyCommand.getStyleClass().add("history-card");
-            historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        refreshHistoryNavigation();
+    }
 
-            VBox infoBox = new VBox(2);
-            Label opLabel = new Label(item.getOperation());
-            opLabel.getStyleClass().add("history-card-title");
-
-            String relTime = formatRelativeTime(item.getTimestamp());
-            Label timeLabel = new Label(relTime);
-            timeLabel.getStyleClass().add("history-card-time");
-            Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
-
-            infoBox.getChildren().addAll(opLabel, timeLabel);
-            HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
-
-            Button reopenButton = new Button("Reopen");
-            reopenButton.getStyleClass().add("history-card-action");
-            reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
-
-            reopenButton.setOnAction(e -> {
-                restoreOperationState(item.getParameters() != null && !item.getParameters().isEmpty()
-                        ? item.getParameters() : item.getUiState(), item.getOperation());
-            });
-
-            historyCommand.getChildren().addAll(infoBox, reopenButton);
-            historyContainer.getChildren().add(historyCommand);
-        }
-
-        if (sidePanel != null && sidePanel.isVisible()) {
+    @Override
+    public void refreshHistoryNavigation() {
+        if (sidePanel != null) {
             sidePanel.updateContent(sidePanel.getCurrentSection());
         }
     }

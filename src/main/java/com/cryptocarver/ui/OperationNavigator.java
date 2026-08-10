@@ -15,4 +15,9 @@ public interface OperationNavigator {
     void navigateTo(String operation);
 
     void updateStatus(String message);
+
+    /** Refreshes navigation elements that mirror the operation history. */
+    default void refreshHistoryNavigation() {
+        // Optional for shells that do not expose a navigation history list.
+    }
 }
