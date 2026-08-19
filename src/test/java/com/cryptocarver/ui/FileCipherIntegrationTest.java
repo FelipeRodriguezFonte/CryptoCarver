@@ -4,6 +4,8 @@ import com.cryptocarver.crypto.LineFileCipher;
 import com.cryptocarver.crypto.StreamingCipher;
 import com.cryptocarver.util.ProgressMonitor;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -19,6 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class FileCipherIntegrationTest {
 
     @Test
@@ -272,5 +276,77 @@ public class FileCipherIntegrationTest {
                         "No staging or backup file should remain: " + name);
             }
         }
+    }
+
+    @Test
+    void testRealProgressTrackingFromZeroToTotal(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("plain_5mb.bin");
+        Path destination = tempDir.resolve("cipher_5mb.bin");
+        Path tag = tempDir.resolve("auth_5mb.tag");
+
+        byte[] plainData = new byte[2 * 1024 * 1024]; // 2MB
+        new SecureRandom().nextBytes(plainData);
+        Files.write(source, plainData);
+
+        byte[] key = new byte[32];
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(key);
+        new SecureRandom().nextBytes(iv);
+
+        java.util.concurrent.atomic.AtomicLong maxReportedBytes = new java.util.concurrent.atomic.AtomicLong(0);
+        java.util.concurrent.atomic.AtomicLong totalReportedBytes = new java.util.concurrent.atomic.AtomicLong(0);
+
+        ProgressMonitor progressMonitor = new ProgressMonitor() {
+            @Override
+            public void updateProgress(long bytesProcessed, long totalBytes) {
+                maxReportedBytes.accumulateAndGet(bytesProcessed, Math::max);
+                totalReportedBytes.set(totalBytes);
+            }
+
+            @Override
+            public boolean isCancelled() { return false; }
+        };
+
+        StreamingCipher.encrypt(source, destination, key, "AES-256", "GCM", iv, null, tag, progressMonitor);
+
+        assertEquals(plainData.length, totalReportedBytes.get(), "Total reported bytes must equal source file size");
+        assertEquals(plainData.length, maxReportedBytes.get(), "Final reported progress must reach 100% of source bytes");
+    }
+
+    @Test
+    void testIntermediateCancellationDoesNotPublish100Percent(@TempDir Path tempDir) throws Exception {
+        Path source = tempDir.resolve("plain_10mb.bin");
+        Path destination = tempDir.resolve("cipher_10mb.bin");
+        Path tag = tempDir.resolve("auth_10mb.tag");
+
+        byte[] plainData = new byte[5 * 1024 * 1024]; // 5MB
+        new SecureRandom().nextBytes(plainData);
+        Files.write(source, plainData);
+
+        byte[] key = new byte[32];
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(key);
+        new SecureRandom().nextBytes(iv);
+
+        java.util.concurrent.atomic.AtomicLong maxReportedBytes = new java.util.concurrent.atomic.AtomicLong(0);
+
+        ProgressMonitor cancellingMonitor = new ProgressMonitor() {
+            private int chunks = 0;
+            @Override
+            public void updateProgress(long bytesProcessed, long totalBytes) {
+                chunks++;
+                maxReportedBytes.set(bytesProcessed);
+            }
+
+            @Override
+            public boolean isCancelled() { return chunks > 3; }
+        };
+
+        assertThrows(CancellationException.class, () ->
+                StreamingCipher.encrypt(source, destination, key, "AES-256", "GCM", iv, null, tag, cancellingMonitor)
+        );
+
+        assertTrue(maxReportedBytes.get() < plainData.length, "Cancelled operation must never reach 100% total bytes");
+        assertFalse(Files.exists(destination));
     }
 }

@@ -146,7 +146,7 @@ class ASN1ControllerTest {
         assertEquals("ASN.1 Parse", res.getOperation());
         assertNotNull(res.getInput(), "Input should be recorded");
         assertTrue(res.getDetails().size() >= 2, "Should contain parsed details");
-        assertTrue(res.getStatusMessage().contains("Parsed successfully"), "Status should indicate success");
+        assertTrue(res.getStatusMessage().contains("parsed successfully"), "Status should indicate success");
     }
 
     @Test
@@ -172,7 +172,7 @@ class ASN1ControllerTest {
 
         assertNull(publishedResultRef.get(), "Should not publish on failure");
         assertNotNull(errorTitleRef.get(), "Should show error dialog");
-        assertEquals("Parse Error", errorTitleRef.get());
+        assertEquals("Operation Failed", errorTitleRef.get());
     }
 
     @Test
@@ -201,7 +201,7 @@ class ASN1ControllerTest {
         assertEquals("ASN.1 Encode", res.getOperation());
         assertNotNull(res.getOutput(), "Output should be recorded");
         assertTrue(res.getDetails().size() >= 3, "Should contain encode details");
-        assertEquals("Encoded successfully", res.getStatusMessage());
+        assertEquals("ASN.1 encoded successfully.", res.getStatusMessage());
     }
 
     @Test
@@ -227,6 +227,6 @@ class ASN1ControllerTest {
 
         assertNull(publishedResultRef.get(), "Should not publish on failure");
         assertNotNull(errorTitleRef.get(), "Should show error dialog");
-        assertEquals("ASN.1 Encode Error", errorTitleRef.get());
+        assertEquals("Operation Failed", errorTitleRef.get());
     }
 }

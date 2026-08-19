@@ -16,6 +16,14 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | ✒ | Digital Signatures | `op_auth_sig` | STABLE | HIGH | `Digital Signatures` | RSA, ECDSA |
 | 🛡 | Message Authentication Codes | `op_auth_mac` | STABLE | HIGH | `Message Authentication Codes` | HMAC, CMAC |
 
+## COSE
+
+| Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
+|------|-------|----|--------|------|-----------------|---------|
+| 📦 | COSE_Encrypt0 | `op_cose_encrypt0` | EXPERIMENTAL | HIGH | `COSE Encrypt0` | CBOR, RFC 9052, AES-GCM |
+| 📦 | COSE_Mac0 | `op_cose_mac0` | EXPERIMENTAL | HIGH | `COSE MAC0` | CBOR, RFC 9052, HMAC |
+| 📦 | COSE_Sign1 | `op_cose_sign1` | EXPERIMENTAL | HIGH | `COSE Sign1` | CBOR, RFC 9052 |
+
 ## Certificates
 
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
@@ -48,6 +56,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔢 | Check Digits | `op_gen_check_digits` | STABLE | NONE | `Check Digits` | Luhn |
 | 📋 | Clipboard Shelf | `op_gen_clipboard` | STABLE | LOW | `Clipboard Shelf` | Clipboard, Copy history, Shelf |
 | ↔️ | Compressed Hex (2-row) | `op_gen_compressed_hex` | STABLE | NONE | `Compressed Hex (2-row)` | Host hex, Interleaved hex, Two-row hex |
+| 🔎 | Crypto Envelope Inspector | `op_gen_envelope_inspector` | STABLE | LOW | `Crypto Envelope Inspector` | Envelope, CMS, JWE, crypto-agility |
 | 📁 | File Conversion | `op_gen_file` | STABLE | NONE | `File Conversion` | - |
 | 🧩 | Hashing | `op_gen_hash` | STABLE | NONE | `Hashing` | SHA, MD5 |
 | 🛠 | Key & Certificate Format Workbench | `op_keys_format_workbench` | STABLE | HIGH | `Key & Certificate Format Workbench` | PEM, DER, JWK, PKCS12 |
@@ -69,7 +78,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
 |------|-------|----|--------|------|-----------------|---------|
 | ⚙ | JWA (Algorithms) | `op_jose_jwa` | STABLE | NONE | `JWA (Algorithms)` | - |
-| 🔒 | JWE (Encrypted) | `op_jose_jwe` | STABLE | HIGH | `JWE (Encrypted)` | JWE |
+| 🔒 | JWE (Encrypted) | `op_jose_jwe` | STABLE | HIGH | `JWE (Encrypted)` | JWE, JWE Encryption, JWE Decryption |
 | 🔑 | JWK (Keys) | `op_jose_jwk` | STABLE | HIGH | `JWK (Keys)` | JWKS |
 | 🏷 | JWT (Signed) | `op_jose_jwt` | STABLE | HIGH | `JWT (Signed)` | JWS |
 | 🔍 | Token Inspector | `op_jose_insp` | STABLE | LOW | `Token Inspector` | - |
@@ -90,8 +99,10 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | ✂ | Key Sharing (XOR Split/Combine) | `op_keys_share` | STABLE | HIGH | `Key Sharing (XOR Split/Combine)` | - |
 | 🗄 | KeyStore Inspector | `op_keys_store` | STABLE | LOW | `KeyStore Inspector` | JKS, PKCS12 |
 | 🔐 | PKCS#11 Token | `op_keys_pkcs11` | EXPERIMENTAL | HIGH | `PKCS#11 Token` | HSM, SunPKCS11, SoftHSM |
+| 🔁 | RSA Key Exchange | `op_keys_kex_rsa` | STABLE | HIGH | `RSA Key Exchange` | RSA-OAEP, Key Transport, TR-34 |
 | 🗝 | RSA Key Generation | `op_keys_rsa` | STABLE | HIGH | `RSA Key Generation` | - |
 | 📦 | TR-31 Key Blocks | `op_keys_tr31` | STABLE | HIGH | `TR-31 Key Blocks` | TR-31, TR31 |
+| 🔀 | TR-34 Key Distribution | `op_keys_tr34` | EXPERIMENTAL | HIGH | `TR-34 Key Distribution` | TR-34, Remote Key Loading, KDH, KRD |
 | ✅ | Validation & KCV | `op_keys_val` | STABLE | HIGH | `Validation & KCV` | - |
 
 ## Payments

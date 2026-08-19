@@ -154,4 +154,46 @@ class SafeOperationTemplateTest {
         assertTrue(store.deleteTemplate(template.getId()));
         assertTrue(store.getTemplateById(template.getId()).isEmpty());
     }
+
+    @Test
+    void normalizesLegacyTextLabelsWithoutChangingTechnicalArtifacts() {
+        SafeOperationTemplate template = new SafeOperationTemplate(
+                "Hash UTF-8",
+                "Hashing",
+                "Formats only",
+                Map.of(
+                        "hashAlgorithmCombo", "SHA-256",
+                        "inputFormatCombo", "Plain Text",
+                        "outputFormatCombo", "Hexadecimal"
+                )
+        );
+
+        SafeTemplateAllowlist.validateTemplate(template);
+        assertEquals("Text (UTF-8)", template.getParameters().get("inputFormatCombo"));
+        assertEquals("Hexadecimal", template.getParameters().get("outputFormatCombo"));
+        assertFalse(template.getParameters().containsKey("inputArea"));
+        assertFalse(template.getParameters().containsKey("resultArea"));
+    }
+
+    @Test
+    void allowsAllSharedFormatSelectorsButRejectsTechnicalArtifacts() {
+        SafeOperationTemplate template = new SafeOperationTemplate(
+                "Cipher formats",
+                "Cipher",
+                "Selectors only",
+                Map.of(
+                        "symmetricAlgorithmCombo", "AES-256",
+                        "cipherModeCombo", "GCM",
+                        "paddingCombo", "NoPadding",
+                        "inputFormatCombo", "Text",
+                        "outputFormatCombo", "Base64"
+                )
+        );
+
+        SafeTemplateAllowlist.validateTemplate(template);
+        assertEquals("Text (UTF-8)", template.getParameters().get("inputFormatCombo"));
+        SafeOperationTemplate unsafe = new SafeOperationTemplate(
+                "not safe", "Cipher", "", Map.of("ivField", "0011"));
+        assertThrows(IllegalArgumentException.class, () -> SafeTemplateAllowlist.validateTemplate(unsafe));
+    }
 }

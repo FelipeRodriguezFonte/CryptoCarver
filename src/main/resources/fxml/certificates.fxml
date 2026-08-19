@@ -63,10 +63,10 @@
                         <TextField fx:id="certSanIpField" promptText="Comma-separated (e.g. 127.0.0.1)" maxWidth="Infinity" GridPane.rowIndex="11" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
-                    <HBox spacing="8">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Generate Certificate" onAction="#handleGenerateCertificate" styleClass="action-button,primary-action"/>
                         <Button text="Generate CSR" onAction="#handleGenerateCSR" styleClass="secondary-button"/>
-                    </HBox>
+                    </FlowPane>
                     <CheckBox fx:id="certRootCaCheck" text="Generate as laboratory Root CA (CA:TRUE, keyCertSign)" styleClass="helper-text"/>
 
                     <TextArea fx:id="certOutputArea" prefHeight="200" editable="false" wrapText="true"
@@ -121,9 +121,16 @@
                     </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
-                    <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
-                              styleClass="monospace-field"
-                              promptText="Paste certificate in PEM format..."/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Certificate format:" styleClass="form-label"/>
+                        <ComboBox fx:id="certFormatCombo" prefWidth="130" styleClass="form-field"/>
+                    </HBox>
+                    <VBox spacing="2">
+                        <TextArea fx:id="certInputArea" prefHeight="100" wrapText="true"
+                                  styleClass="monospace-field"
+                                  promptText="Paste certificate in PEM format..."/>
+                        <Label fx:id="certBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                    </VBox>
 
                     <Button text="Parse Certificate" onAction="#handleParseCertificate"
                             styleClass="action-button,primary-action" maxWidth="180"/>
@@ -199,10 +206,10 @@
                         <TextField fx:id="crlRevokeSerialField" promptText="Serial Number to Revoke (Hex)" styleClass="form-field" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                         <ComboBox fx:id="crlRevokeReasonCombo" promptText="Reason" styleClass="form-field"/>
                     </HBox>
-                    <HBox spacing="8">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Generate Empty CRL" onAction="#handleGenerateCrl" styleClass="secondary-button"/>
                         <Button text="Revoke &amp; Update CRL" onAction="#handleRevokeCrl" styleClass="action-button,primary-action"/>
-                    </HBox>
+                    </FlowPane>
                     <TextArea fx:id="crlResultArea" prefHeight="150" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>

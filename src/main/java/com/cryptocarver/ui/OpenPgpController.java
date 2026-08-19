@@ -14,6 +14,7 @@ import com.cryptocarver.model.OperationResult;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -22,6 +23,12 @@ import javafx.stage.FileChooser;
 
 /** OpenPGP laboratory UI, interoperable with ASCII-armored GnuPG material. */
 public final class OpenPgpController {
+    @FXML private Accordion openPgpAccordion;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     private static final long MAX_TEXT_FILE_BYTES = 16L * 1024L * 1024L;
 
     @FXML private TextField openPgpUserIdField;
@@ -39,6 +46,7 @@ public final class OpenPgpController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(openPgpAccordion, ModuleTextCatalog.openPgp());
         IngestionUIHelper.bindField(openPgpPublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PUBLIC_KEY);
         IngestionUIHelper.bindField(openPgpSecretKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_PRIVATE_KEY);
         IngestionUIHelper.bindField(openPgpInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.OPENPGP_MESSAGE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
@@ -351,7 +359,7 @@ public final class OpenPgpController {
             showError("GnuPG interoperability", error.getMessage());
             return;
         }
-        openPgpGnuPgStatusLabel.setText("Running isolated GnuPG interoperability exercise…");
+        openPgpGnuPgStatusLabel.setText(t("module.pgp.gpgRunning"));
         CompletableFuture.supplyAsync(() -> {
             try {
                 return GnuPgInterop.exerciseBidirectional(publicKey, secretKey, passphrase, data);
@@ -363,12 +371,12 @@ public final class OpenPgpController {
         }).whenComplete((result, error) -> Platform.runLater(() -> {
             if (error != null) {
                 String message = error.getCause() == null ? error.getMessage() : error.getCause().getMessage();
-                openPgpGnuPgStatusLabel.setText("GnuPG interoperability failed");
+                openPgpGnuPgStatusLabel.setText(t("module.pgp.gpgFailed"));
                 showError("GnuPG interoperability", message);
                 return;
             }
             String status = result.successful() ? "SUCCESS" : "FAILED";
-            openPgpGnuPgStatusLabel.setText("GnuPG interoperability: " + status);
+            openPgpGnuPgStatusLabel.setText(t("module.pgp.gpgStatus", status));
             openPgpOutputArea.setText("GnuPG / CryptoCarver interoperability: " + status + "\n" + result.message()
                     + "\n\nThe isolated GnuPG home has been removed. Trust is not evaluated.");
             publish("OpenPGP GnuPG Interoperability", data, null, "Result", status);
@@ -386,7 +394,7 @@ public final class OpenPgpController {
             showError("GnuPG verification", error.getMessage());
             return;
         }
-        openPgpGnuPgStatusLabel.setText("Verifying detached signature with external GnuPG…");
+        openPgpGnuPgStatusLabel.setText(t("module.pgp.gpgVerifyRunning"));
         CompletableFuture.supplyAsync(() -> {
             try {
                 return GnuPgInterop.verifyDetached(publicKey, data, signature);
@@ -396,7 +404,7 @@ public final class OpenPgpController {
         }).whenComplete((result, error) -> Platform.runLater(() -> {
             if (error != null) {
                 String message = error.getCause() == null ? error.getMessage() : error.getCause().getMessage();
-                openPgpGnuPgStatusLabel.setText("GnuPG verification unavailable or failed");
+                openPgpGnuPgStatusLabel.setText(t("module.pgp.gpgVerifyFailed"));
                 showError("GnuPG verification", message);
                 return;
             }

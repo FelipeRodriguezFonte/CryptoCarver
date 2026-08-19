@@ -22,9 +22,10 @@ class ExpandedTextViewerUITest {
     @BeforeAll
     static void startToolkit() throws Exception {
         try {
-            Platform.startup(() -> { });
+            Platform.startup(() -> Platform.setImplicitExit(false));
         } catch (IllegalStateException ignored) {
             // The JavaFX toolkit is shared with the other UI tests.
+            Platform.setImplicitExit(false);
         }
     }
 

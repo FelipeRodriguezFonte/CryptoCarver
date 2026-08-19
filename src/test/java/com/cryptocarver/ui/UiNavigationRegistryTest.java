@@ -40,6 +40,16 @@ class UiNavigationRegistryTest {
     }
 
     @Test
+    void legacyDynamicExecutionNamesResolveToTheirOriginatingWorkspace() {
+        assertEquals(UiNavigationRegistry.resolve("Key Derivation (KDF)"),
+                UiNavigationRegistry.resolve("Derive - HKDF-SHA256"));
+        assertEquals(UiNavigationRegistry.resolve("Key Sharing (XOR Split/Combine)"),
+                UiNavigationRegistry.resolve("Split - 3 components"));
+        assertEquals(UiNavigationRegistry.resolve("Generate Certificate"),
+                UiNavigationRegistry.resolve("Generate Certificate - RSA 2048"));
+    }
+
+    @Test
     void publishedRouteMapIsImmutable() {
         assertThrows(UnsupportedOperationException.class, () ->
                 UiNavigationRegistry.routes().put("Unexpected", new UiNavigationRegistry.Route(

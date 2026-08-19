@@ -86,11 +86,12 @@ elif [ -f "$ICON_SOURCE" ]; then
         echo "Successfully generated $ICON_TARGET"
         APP_ICON="$ICON_TARGET"
     else
-        echo "Warning: Failed to generate ICNS. Using PNG (might show default Java icon)."
-        APP_ICON="$ICON_SOURCE"
+        echo "Error: Failed to generate the required macOS ICNS icon." >&2
+        exit 1
     fi
 else
-    echo "Warning: No icon file found at $ICON_SOURCE"
+    echo "Error: No macOS icon found at $ICON_TARGET or source PNG at $ICON_SOURCE" >&2
+    exit 1
 fi
 
 
@@ -110,6 +111,20 @@ echo "[2/3] Skipping cleanup to preserve previous releases..."
 # 3. Run jpackage
 echo "[3/3] Creating macOS ${PACKAGE_TYPE} package..."
 
+# jpackage's ad-hoc codesign step fails whenever the destination bundle carries
+# Finder/FileProvider metadata (com.apple.FinderInfo, com.apple.fileprovider.*).
+# If this repo lives under a cloud-synced folder (iCloud Drive, Internxt Drive,
+# etc.), that daemon re-tags files within moments of creation, so signing
+# in-place under $OUTPUT_DIR is unreliable no matter how often xattrs are
+# cleared beforehand. Building and signing in a plain local temp directory
+# sidesteps the daemon entirely; only the already-signed result is then copied
+# into $OUTPUT_DIR, so the destination folder's sync status no longer matters.
+JPACKAGE_WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cryptocarver-jpackage.XXXXXX")"
+cleanup_jpackage_work_dir() {
+    rm -rf "$JPACKAGE_WORK_DIR"
+}
+trap cleanup_jpackage_work_dir EXIT
+
 # Build jpackage arguments
 JPACKAGE_ARGS=(
   --name "$APP_NAME"
@@ -118,7 +133,12 @@ JPACKAGE_ARGS=(
   --main-jar "$(basename "$MAIN_JAR")"
   --main-class "$MAIN_CLASS"
   --type "$PACKAGE_TYPE"
-  --dest "$OUTPUT_DIR"
+  --dest "$JPACKAGE_WORK_DIR"
+  # jpackage's automatic jdeps scan of the shaded uber-jar does not reliably
+  # detect every JDK module the app touches at runtime (AWT/Taskbar, ImageIO,
+  # PKCS#11, XML DOM, JAAS, etc.), so the full set is listed explicitly here
+  # rather than relying on that detection alone.
+  --add-modules "java.se,jdk.charsets,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.unsupported.desktop,jdk.security.auth,jdk.accessibility,jdk.xml.dom,jdk.naming.dns"
   --java-options "--enable-preview"
   --java-options "-Xmx512m"
   --verbose
@@ -129,10 +149,38 @@ if [ -n "$APP_ICON" ]; then
 fi
 
 "$JPACKAGE" "${JPACKAGE_ARGS[@]}"
+JPACKAGE_EXIT=$?
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "SUCCESS! macOS artifact built in: $OUTPUT_DIR"
+if [ $JPACKAGE_EXIT -eq 0 ]; then
+    mkdir -p "$OUTPUT_DIR"
+    if [ "$PACKAGE_TYPE" = "app-image" ]; then
+        BUILT_BUNDLE="$JPACKAGE_WORK_DIR/${APP_NAME}.app"
+        if [ ! -d "$BUILT_BUNDLE" ]; then
+            echo "FAILED. Expected app bundle not found: $BUILT_BUNDLE" >&2
+            exit 1
+        fi
+        APP_BUNDLE="$OUTPUT_DIR/${APP_NAME}.app"
+        echo "[INFO] Copying signed app bundle into $APP_BUNDLE ..."
+        # A previous app-image can contain read-only files (bundled JDK legal notices) that
+        # make `rm -rf` fail partway through without aborting the script (rm keeps going and
+        # only reports errors), leaving a stale nested directory behind. Clear write
+        # protection first, and always merge-copy with a trailing "/." on the source so a
+        # bundle left behind by a still-failed removal gets overwritten in place instead of
+        # nested inside itself.
+        chmod -R u+w "$APP_BUNDLE" 2>/dev/null || true
+        rm -rf "$APP_BUNDLE"
+        mkdir -p "$APP_BUNDLE"
+        cp -R "$BUILT_BUNDLE"/. "$APP_BUNDLE"/
+        echo ""
+        echo "SUCCESS! macOS app bundle built: $APP_BUNDLE"
+        echo "Open $APP_BUNDLE to let macOS identify the application as CryptoCarver."
+    else
+        echo "[INFO] Copying ${PACKAGE_TYPE} output into $OUTPUT_DIR ..."
+        cp -R "$JPACKAGE_WORK_DIR"/. "$OUTPUT_DIR"/
+        echo ""
+        echo "SUCCESS! macOS ${PACKAGE_TYPE} built in: $OUTPUT_DIR"
+    fi
+    echo "A generic JAR launched with java -jar may be identified by macOS as java."
     echo "Use PACKAGE_TYPE=dmg ./package_macos.sh to create a distributable DMG."
 else
     echo ""

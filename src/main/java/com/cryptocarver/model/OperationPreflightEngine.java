@@ -73,7 +73,20 @@ public final class OperationPreflightEngine {
         }
 
         // 3. Mode & Padding Checks
-        if (mode == null || mode.trim().isEmpty()) {
+        boolean isStreamCipher = algorithm != null && (algorithm.equalsIgnoreCase("Salsa20")
+                || algorithm.equalsIgnoreCase("ChaCha20")
+                || algorithm.equalsIgnoreCase("ChaCha20-Poly1305")
+                || algorithm.equalsIgnoreCase("XChaCha20-Poly1305"));
+
+        boolean isChaChaPoly = algorithm != null && algorithm.equalsIgnoreCase("ChaCha20-Poly1305");
+        boolean isXChaChaPoly = algorithm != null && algorithm.equalsIgnoreCase("XChaCha20-Poly1305");
+        boolean isGcm = !isStreamCipher && mode != null && mode.equalsIgnoreCase("GCM");
+        boolean isEcb = !isStreamCipher && mode != null && mode.equalsIgnoreCase("ECB");
+        boolean isAead = isGcm || isChaChaPoly || isXChaChaPoly;
+
+        if (isStreamCipher) {
+            checks.add(new PreflightCheck("Cipher Mode", PreflightStatus.READY, "Mode: Not applicable for " + algorithm + ".", "cipherModeCombo"));
+        } else if (mode == null || mode.trim().isEmpty()) {
             checks.add(new PreflightCheck("Cipher Mode", PreflightStatus.INCOMPLETE, "Cipher mode is not selected.", "cipherModeCombo"));
         } else {
             String modeUpper = mode.toUpperCase();
@@ -123,39 +136,58 @@ public final class OperationPreflightEngine {
         }
 
         // 5. IV / Nonce Check
-        boolean requiresIv = mode != null && !"ECB".equalsIgnoreCase(mode);
+        boolean requiresIv = !isEcb;
         if (requiresIv) {
+            String label = isStreamCipher ? "Nonce" : "IV / Nonce";
             if (ivHex == null || ivHex.trim().isEmpty()) {
-                checks.add(new PreflightCheck("IV / Nonce", PreflightStatus.INCOMPLETE, mode + " mode requires an Initialization Vector (IV/nonce).", "ivField"));
+                String reqMsg = isStreamCipher
+                        ? algorithm + " requires a Nonce."
+                        : mode + " mode requires an Initialization Vector (IV/nonce).";
+                checks.add(new PreflightCheck(label, PreflightStatus.INCOMPLETE, reqMsg, "ivField"));
             } else {
                 String cleanIv = ivHex.replaceAll("\\s+", "");
                 if (!isValidHex(cleanIv)) {
-                    checks.add(new PreflightCheck("IV / Nonce", PreflightStatus.BLOCKED, "IV/nonce contains non-hexadecimal characters.", "ivField"));
+                    checks.add(new PreflightCheck(label, PreflightStatus.BLOCKED, label + " contains non-hexadecimal characters.", "ivField"));
                 } else {
                     int ivBytes = cleanIv.length() / 2;
-                    if ("GCM".equalsIgnoreCase(mode)) {
+                    if (isGcm) {
                         if (ivBytes != 12) {
-                            checks.add(new PreflightCheck("IV / Nonce", PreflightStatus.WARNING, "NIST SP 800-38D recommends a 12-byte (24 hex char) IV/nonce for GCM. Current: " + ivBytes + " bytes.", "ivField"));
+                            checks.add(new PreflightCheck(label, PreflightStatus.WARNING, "NIST SP 800-38D recommends a 12-byte (24 hex char) IV/nonce for GCM. Current: " + ivBytes + " bytes.", "ivField"));
                         } else {
-                            checks.add(new PreflightCheck("IV / Nonce", PreflightStatus.READY, "GCM IV/nonce valid (12 bytes).", "ivField"));
+                            checks.add(new PreflightCheck(label, PreflightStatus.READY, "GCM IV/nonce valid (12 bytes).", "ivField"));
+                        }
+                    } else if (isChaChaPoly) {
+                        if (ivBytes != 12) {
+                            checks.add(new PreflightCheck(label, PreflightStatus.WARNING, "RFC 8439 recommends a 12-byte (24 hex char) nonce for ChaCha20-Poly1305. Current: " + ivBytes + " bytes.", "ivField"));
+                        } else {
+                            checks.add(new PreflightCheck(label, PreflightStatus.READY, "ChaCha20-Poly1305 nonce valid (12 bytes).", "ivField"));
+                        }
+                    } else if (isXChaChaPoly) {
+                        if (ivBytes != 24) {
+                            checks.add(new PreflightCheck(label, PreflightStatus.WARNING, "XChaCha20-Poly1305 requires a 24-byte (48 hex char) nonce. Current: " + ivBytes + " bytes.", "ivField"));
+                        } else {
+                            checks.add(new PreflightCheck(label, PreflightStatus.READY, "XChaCha20-Poly1305 nonce valid (24 bytes).", "ivField"));
                         }
                     } else {
-                        checks.add(new PreflightCheck("IV / Nonce", PreflightStatus.READY, "IV valid (" + ivBytes + " bytes).", "ivField"));
+                        checks.add(new PreflightCheck(label, PreflightStatus.READY, label + " valid (" + ivBytes + " bytes).", "ivField"));
                     }
                 }
             }
         }
 
-        // 6. AEAD GCM Tag & AAD Checks
-        if ("GCM".equalsIgnoreCase(mode) && !isEncrypt) {
+        // 6. AEAD Tag & AAD Checks
+        if (isAead && !isEncrypt) {
             if (gcmTagHex == null || gcmTagHex.trim().isEmpty()) {
-                checks.add(new PreflightCheck("GCM Auth Tag", PreflightStatus.INCOMPLETE, "GCM decryption requires an Authentication Tag.", "gcmTagField"));
+                checks.add(new PreflightCheck("AEAD Auth Tag", PreflightStatus.INCOMPLETE, "AEAD decryption requires an Authentication Tag.", "gcmTagField"));
             } else {
                 String cleanTag = gcmTagHex.replaceAll("\\s+", "");
                 if (!isValidHex(cleanTag)) {
-                    checks.add(new PreflightCheck("GCM Auth Tag", PreflightStatus.BLOCKED, "GCM Auth Tag contains non-hexadecimal characters.", "gcmTagField"));
+                    checks.add(new PreflightCheck("AEAD Auth Tag", PreflightStatus.BLOCKED, "AEAD Auth Tag contains non-hexadecimal characters.", "gcmTagField"));
+                } else if (cleanTag.length() != 32) {
+                    int tagBytes = cleanTag.length() / 2;
+                    checks.add(new PreflightCheck("AEAD Auth Tag", PreflightStatus.BLOCKED, "AEAD Auth Tag must be exactly 16 bytes (32 hex characters). Current: " + tagBytes + " bytes.", "gcmTagField"));
                 } else {
-                    checks.add(new PreflightCheck("GCM Auth Tag", PreflightStatus.READY, "GCM Auth Tag valid.", "gcmTagField"));
+                    checks.add(new PreflightCheck("AEAD Auth Tag", PreflightStatus.READY, "AEAD Auth Tag valid (16 bytes).", "gcmTagField"));
                 }
             }
         }
@@ -208,6 +240,17 @@ public final class OperationPreflightEngine {
             boolean isKeyMetadataOnly,
             boolean isSignMode
     ) {
+        return checkDigitalSignature(inputData, algorithm, keyText, null, isKeyMetadataOnly, isSignMode);
+    }
+
+    public static PreflightReport checkDigitalSignature(
+            String inputData,
+            String algorithm,
+            String keyText,
+            String signatureVerifyText,
+            boolean isKeyMetadataOnly,
+            boolean isSignMode
+    ) {
         List<PreflightCheck> checks = new ArrayList<>();
 
         if (inputData == null || inputData.trim().isEmpty()) {
@@ -227,8 +270,32 @@ public final class OperationPreflightEngine {
             checks.add(new PreflightCheck("Signature Key", PreflightStatus.INCOMPLETE, (isSignMode ? "Private" : "Public") + " key is missing.", keyFieldTarget));
         } else if (isKeyMetadataOnly) {
             checks.add(new PreflightCheck("Signature Key", PreflightStatus.BLOCKED, "Selected key is metadata-only without key material.", keyFieldTarget));
-        } else {
-            checks.add(new PreflightCheck("Signature Key", PreflightStatus.READY, (isSignMode ? "Private" : "Public") + " key present.", keyFieldTarget));
+        }
+
+        if (!isSignMode) {
+            if (signatureVerifyText == null || signatureVerifyText.trim().isEmpty()) {
+                checks.add(new PreflightCheck("Existing Signature", PreflightStatus.INCOMPLETE, "Existing signature is required for verification.", "signatureVerifyField"));
+            } else {
+                try {
+                    com.cryptocarver.crypto.SharedMaterialParser.parseBytesByFormat(signatureVerifyText, "Hex / Base64");
+                    checks.add(new PreflightCheck("Existing Signature", PreflightStatus.READY, "Existing signature structure valid.", "signatureVerifyField"));
+                } catch (Exception e) {
+                    checks.add(new PreflightCheck("Existing Signature", PreflightStatus.BLOCKED, "Invalid signature format (Hex or Base64 expected).", "signatureVerifyField"));
+                }
+            }
+        }
+
+        if (keyText != null && !keyText.trim().isEmpty() && !isKeyMetadataOnly) {
+            try {
+                if (isSignMode) {
+                    com.cryptocarver.crypto.SharedMaterialParser.parsePrivateKeyPem(keyText);
+                } else {
+                    com.cryptocarver.crypto.SharedMaterialParser.parsePublicKeyPem(keyText);
+                }
+                checks.add(new PreflightCheck("Signature Key", PreflightStatus.READY, (isSignMode ? "Private" : "Public") + " key structure valid.", keyFieldTarget));
+            } catch (Exception e) {
+                checks.add(new PreflightCheck("Signature Key", PreflightStatus.BLOCKED, "Invalid " + (isSignMode ? "Private" : "Public") + " key PEM structure: " + e.getMessage(), keyFieldTarget));
+            }
         }
 
         return buildReport(checks);
@@ -238,7 +305,7 @@ public final class OperationPreflightEngine {
      * Inspects MAC parameters.
      */
     public static PreflightReport checkMac(String inputData, String algorithm, String keyHex, boolean isMetadataOnly) {
-        return checkMac(inputData, algorithm, "Manual Input", keyHex, null, isMetadataOnly);
+        return checkMac(inputData, algorithm, "Manual Input", keyHex, null, null, true, isMetadataOnly);
     }
 
     /**
@@ -252,18 +319,31 @@ public final class OperationPreflightEngine {
             String selectedKeyReference,
             boolean isMetadataOnly
     ) {
+        return checkMac(inputData, algorithm, keySource, manualKeyHex, selectedKeyReference, null, true, isMetadataOnly);
+    }
+
+    public static PreflightReport checkMac(
+            String inputData,
+            String algorithm,
+            String keySource,
+            String manualKeyHex,
+            String selectedKeyReference,
+            String macVerifyText,
+            boolean isGenerateMode,
+            boolean isMetadataOnly
+    ) {
         List<PreflightCheck> checks = new ArrayList<>();
 
         if (inputData == null || inputData.trim().isEmpty()) {
-            checks.add(new PreflightCheck("MAC Input", PreflightStatus.INCOMPLETE, "Input payload for MAC calculation is empty.", "macInputArea"));
+            checks.add(new PreflightCheck("MAC Input", PreflightStatus.INCOMPLETE, "Input payload for MAC calculation is empty.", "authInputArea"));
         } else {
-            checks.add(new PreflightCheck("MAC Input", PreflightStatus.READY, "Input payload present.", "macInputArea"));
+            checks.add(new PreflightCheck("MAC Input", PreflightStatus.READY, "Input payload present.", "authInputArea"));
         }
 
         if (algorithm == null || algorithm.trim().isEmpty()) {
-            checks.add(new PreflightCheck("MAC Algorithm", PreflightStatus.INCOMPLETE, "MAC algorithm is not selected.", "macAlgorithmCombo"));
+            checks.add(new PreflightCheck("MAC Algorithm", PreflightStatus.INCOMPLETE, "MAC algorithm is not selected.", "authMacAlgorithmCombo"));
         } else {
-            checks.add(new PreflightCheck("MAC Algorithm", PreflightStatus.READY, "MAC algorithm selected: " + algorithm, "macAlgorithmCombo"));
+            checks.add(new PreflightCheck("MAC Algorithm", PreflightStatus.READY, "MAC algorithm selected: " + algorithm, "authMacAlgorithmCombo"));
         }
 
         boolean externalKeySource = "Simulated HSM".equalsIgnoreCase(keySource)
@@ -286,6 +366,19 @@ public final class OperationPreflightEngine {
                     "Manual MAC key contains non-hexadecimal characters.", "authMacKeyField"));
         } else {
             checks.add(new PreflightCheck("MAC Key", PreflightStatus.READY, "Manual MAC key present.", "authMacKeyField"));
+        }
+
+        if (!isGenerateMode) {
+            if (macVerifyText == null || macVerifyText.trim().isEmpty()) {
+                checks.add(new PreflightCheck("MAC Verification Value", PreflightStatus.INCOMPLETE, "Existing MAC is required for verification.", "authMacVerifyField"));
+            } else {
+                try {
+                    com.cryptocarver.crypto.SharedMaterialParser.parseBytesByFormat(macVerifyText, "Hex / Base64");
+                    checks.add(new PreflightCheck("MAC Verification Value", PreflightStatus.READY, "Verification MAC structure valid.", "authMacVerifyField"));
+                } catch (Exception e) {
+                    checks.add(new PreflightCheck("MAC Verification Value", PreflightStatus.BLOCKED, "Invalid MAC format (Hex or Base64 expected).", "authMacVerifyField"));
+                }
+            }
         }
 
         return buildReport(checks);

@@ -41,23 +41,25 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
 
     @Override
     public void validateConfiguration(ProcessDefinition.Node node) throws IllegalArgumentException {
-        switch (node.type) {
+        switch (node.type != null ? node.type.toUpperCase() : "") {
             case "ENCRYPT":
             case "DECRYPT":
             case "MAC":
+            case "CRYPTO":
+            case "ADVANCED_CRYPTO":
                 String macAlgorithm = null;
-                if ("MAC".equals(node.type)) {
+                if ("MAC".equalsIgnoreCase(node.type)) {
                     macAlgorithm = normalizeMacAlgorithm(node.configuration.getOrDefault("algorithm", "HmacSHA256"));
                     validateMacAlgorithm(macAlgorithm);
                 }
-                if (!"MAC".equals(node.type)) {
+                if (!"MAC".equalsIgnoreCase(node.type)) {
                     SymmetricCipherSpec spec = SymmetricCipherSpec.fromAlgorithm(node.configuration.getOrDefault("algorithm", "AES/GCM/NoPadding"));
                     if (!spec.supportsEnvelope && "ENVELOPE".equals(node.configuration.getOrDefault("outputFormat", "RAW"))) {
                         throw new IllegalArgumentException("Unsupported envelope algorithm: " + spec.algorithm);
                     }
                     if (spec.ivLength > 0) {
                         boolean needsIv = true;
-                        if ("DECRYPT".equals(node.type) && "ENVELOPE".equals(node.configuration.getOrDefault("outputFormat", "RAW"))) {
+                        if ("DECRYPT".equalsIgnoreCase(node.type) && "ENVELOPE".equals(node.configuration.getOrDefault("outputFormat", "RAW"))) {
                             needsIv = false;
                         }
                         if (needsIv) {
@@ -67,18 +69,24 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
                 }
 
                 if (!Boolean.parseBoolean(node.configuration.getOrDefault("keyFromFlow", "false"))) {
-                    byte[] key = getKeyFromConfig(node);
-                    try {
-                        if ("MAC".equals(node.type)) {
-                            validateMacKey(key, macAlgorithm);
-                        } else {
-                            SymmetricCipherSpec spec = SymmetricCipherSpec.fromAlgorithm(node.configuration.getOrDefault("algorithm", "AES/GCM/NoPadding"));
-                            if (key.length > 0 && !spec.acceptedKeySizes.contains(key.length)) {
-                                throw new IllegalArgumentException(spec.algorithm + " requires a key size of " + spec.acceptedKeySizes + " bytes. Actual: " + key.length);
+                    String rawKey = node.configuration.get("key");
+                    if (rawKey == null) rawKey = node.configuration.get("manualKey");
+                    if (rawKey != null && rawKey.contains("[METADATA_ONLY]")) {
+                        // Metadata-only keys represent restricted secrets in static validation profile
+                    } else {
+                        byte[] key = getKeyFromConfig(node);
+                        try {
+                            if ("MAC".equalsIgnoreCase(node.type)) {
+                                validateMacKey(key, macAlgorithm);
+                            } else {
+                                SymmetricCipherSpec spec = SymmetricCipherSpec.fromAlgorithm(node.configuration.getOrDefault("algorithm", "AES/GCM/NoPadding"));
+                                if (key.length > 0 && !spec.acceptedKeySizes.contains(key.length)) {
+                                    throw new IllegalArgumentException(spec.algorithm + " requires a key size of " + spec.acceptedKeySizes + " bytes. Actual: " + key.length);
+                                }
                             }
+                        } finally {
+                            clearArray(key);
                         }
-                    } finally {
-                        clearArray(key);
                     }
                 }
                 break;
@@ -136,7 +144,7 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
 
     @Override
     public Set<String> supportedTypes() {
-        return Set.of("ENCRYPT", "DECRYPT", "MAC", "SIGN", "VERIFY");
+        return Set.of("ENCRYPT", "DECRYPT", "MAC", "SIGN", "VERIFY", "CRYPTO", "ADVANCED_CRYPTO");
     }
 
     @Override

@@ -45,6 +45,8 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_keys_kdf", "Key Derivation (KDF)", "Keys", "Derive keys", "🧬", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key Derivation (KDF)", Arrays.asList("HKDF", "PBKDF2")));
         register(new OperationDescriptor("op_keys_wrap", "AES Key Wrap", "Keys", "Wrap keys", "🎁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "AES Key Wrap", Arrays.asList("RFC 3394")));
         register(new OperationDescriptor("op_keys_tr31", "TR-31 Key Blocks", "Keys", "TR-31 operations", "📦", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "TR-31 Key Blocks", Arrays.asList("TR-31", "TR31")));
+        register(new OperationDescriptor("op_keys_kex_rsa", "RSA Key Exchange", "Keys", "Wrap/unwrap a symmetric key under RSA (Raw OAEP, JWE or CMS)", "🔁", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "RSA Key Exchange", Arrays.asList("RSA-OAEP", "Key Transport", "TR-34")));
+        register(new OperationDescriptor("op_keys_tr34", "TR-34 Key Distribution", "Keys", "Laboratory RSA remote key distribution (sign then envelope with CMS)", "🔀", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "TR-34 Key Distribution", Arrays.asList("TR-34", "Remote Key Loading", "KDH", "KRD")));
 
         // Keys -> Asymmetric
         register(new OperationDescriptor("op_keys_rsa", "RSA Key Generation", "Keys", "Generate RSA keys", "🗝", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "RSA Key Generation", Collections.emptyList()));
@@ -56,6 +58,7 @@ public class OperationRegistry {
         // Keys -> Tools
         register(new OperationDescriptor("op_keys_material", "Key Material Inspector", "Keys", "Inspect key material", "🔎", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Key Material Inspector", Collections.emptyList()));
         register(new OperationDescriptor("op_keys_format_workbench", "Key & Certificate Format Workbench", "Generic", "Inspect and convert keys and certificates", "🛠", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Key & Certificate Format Workbench", Arrays.asList("PEM", "DER", "JWK", "PKCS12")));
+        register(new OperationDescriptor("op_gen_envelope_inspector", "Crypto Envelope Inspector", "Generic", "Inspect and unwrap crypto-agile envelope containers", "🔎", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Crypto Envelope Inspector", Arrays.asList("Envelope", "CMS", "JWE", "crypto-agility")));
         register(new OperationDescriptor("op_keys_store", "KeyStore Inspector", "Keys", "Inspect KeyStore", "🗄", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "KeyStore Inspector", Arrays.asList("JKS", "PKCS12")));
         register(new OperationDescriptor("op_keys_pkcs11", "PKCS#11 Token", "Keys", "Connect and inspect a laboratory PKCS#11 token", "🔐", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "PKCS#11 Token", Arrays.asList("HSM", "SunPKCS11", "SoftHSM")));
 
@@ -89,10 +92,18 @@ public class OperationRegistry {
 
         // JOSE
         register(new OperationDescriptor("op_jose_jwt", "JWT (Signed)", "JOSE", "Signed JWTs", "🏷", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWT (Signed)", Arrays.asList("JWS")));
-        register(new OperationDescriptor("op_jose_jwe", "JWE (Encrypted)", "JOSE", "Encrypted JWTs", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWE (Encrypted)", Arrays.asList("JWE")));
+        // Keep execution-result names as navigation aliases so saved history can
+        // reopen the JWE workspace instead of falling through to the legacy
+        // placeholder view.
+        register(new OperationDescriptor("op_jose_jwe", "JWE (Encrypted)", "JOSE", "Encrypted JWTs", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWE (Encrypted)", Arrays.asList("JWE", "JWE Encryption", "JWE Decryption")));
         register(new OperationDescriptor("op_jose_jwk", "JWK (Keys)", "JOSE", "JWK keys", "🔑", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "JWK (Keys)", Arrays.asList("JWKS")));
         register(new OperationDescriptor("op_jose_jwa", "JWA (Algorithms)", "JOSE", "JWA algorithms", "⚙", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.NONE, "JWA (Algorithms)", Collections.emptyList()));
         register(new OperationDescriptor("op_jose_insp", "Token Inspector", "JOSE", "Inspect tokens", "🔍", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Token Inspector", Collections.emptyList()));
+
+        // COSE (RFC 9052/9053)
+        register(new OperationDescriptor("op_cose_sign1", "COSE_Sign1", "COSE", "Single-signer CBOR message signing (RFC 9052)", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "COSE Sign1", Arrays.asList("CBOR", "RFC 9052")));
+        register(new OperationDescriptor("op_cose_mac0", "COSE_Mac0", "COSE", "Symmetric-key CBOR message authentication (RFC 9052)", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "COSE MAC0", Arrays.asList("CBOR", "RFC 9052", "HMAC")));
+        register(new OperationDescriptor("op_cose_encrypt0", "COSE_Encrypt0", "COSE", "Single-key CBOR message encryption (RFC 9052)", "📦", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "COSE Encrypt0", Arrays.asList("CBOR", "RFC 9052", "AES-GCM")));
 
         // Payments
         register(new OperationDescriptor("op_pay_clear_pin", "Clear PIN Blocks", "Payments", "Clear PIN blocks", "💳", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Clear PIN Blocks", Collections.emptyList()));

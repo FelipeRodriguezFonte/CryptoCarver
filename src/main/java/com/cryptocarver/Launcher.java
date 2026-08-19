@@ -7,6 +7,12 @@ public class Launcher {
             CryptoCarverCli.main(cliArguments);
             return;
         }
+        // Must be set before AWT/JavaFX touch the toolkit, or macOS keeps
+        // showing the launching JVM's process name ("java") in the system
+        // menu bar for dev-mode runs (java -jar, mvn javafx:run, IDE runs).
+        // Packaged .app builds (see package_macos.sh) get this for free from
+        // the bundle's Info.plist instead.
+        System.setProperty("apple.awt.application.name", "CryptoCarver");
         CryptoCalculatorModern.main(args);
     }
 

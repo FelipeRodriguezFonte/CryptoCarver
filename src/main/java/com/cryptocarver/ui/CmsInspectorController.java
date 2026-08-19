@@ -11,6 +11,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -23,6 +24,13 @@ import java.util.List;
 
 public class CmsInspectorController {
 
+    @FXML private TitledPane cmsInspectorRoot;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
+
     @FXML private Label cmsFilePathLabel;
     @FXML private TextArea cmsInputArea;
     @FXML private CheckBox cmsDetachedCheck;
@@ -31,6 +39,7 @@ public class CmsInspectorController {
     @FXML private TextArea cmsContentArea;
     @FXML private Label truststorePathLabel;
     @FXML private PasswordField truststorePasswordField;
+    @FXML private CheckBox cmsOnlineRevocationCheck;
     @FXML private TextArea cmsReportArea;
 
     private byte[] cmsFileBytes;
@@ -41,6 +50,7 @@ public class CmsInspectorController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(cmsInspectorRoot, ModuleTextCatalog.cmsInspector());
         IngestionUIHelper.bindField(cmsInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64);
     }
 
@@ -58,7 +68,7 @@ public class CmsInspectorController {
         File file = fileChooser.showOpenDialog(window);
         if (file != null) {
             if (file.length() > 16 * 1024 * 1024) {
-                if (statusReporter != null) statusReporter.showError("File Error", "CMS file exceeds 16 MiB limit");
+                if (statusReporter != null) statusReporter.showError("File Error", t("module.cms.fileTooLarge", "CMS"));
                 return;
             }
             try {
@@ -67,7 +77,7 @@ public class CmsInspectorController {
                 cmsInputArea.setText(file.getName() + " loaded (" + cmsFileBytes.length + " bytes)");
                 cmsInputArea.setEditable(false);
             } catch (Exception e) {
-                if (statusReporter != null) statusReporter.showError("File Error", "Failed to load CMS file: " + e.getMessage());
+                if (statusReporter != null) statusReporter.showError("File Error", t("module.cms.loadFailed", "CMS", e.getMessage()));
             }
         }
     }
@@ -89,7 +99,7 @@ public class CmsInspectorController {
         File file = fileChooser.showOpenDialog(window);
         if (file != null) {
             if (file.length() > 16 * 1024 * 1024) {
-                if (statusReporter != null) statusReporter.showError("File Error", "Content file exceeds 16 MiB limit");
+                if (statusReporter != null) statusReporter.showError("File Error", t("module.cms.fileTooLarge", "content"));
                 return;
             }
             try {
@@ -98,7 +108,7 @@ public class CmsInspectorController {
                 cmsContentArea.setText(file.getName() + " loaded (" + contentFileBytes.length + " bytes)");
                 cmsContentArea.setEditable(false);
             } catch (Exception e) {
-                if (statusReporter != null) statusReporter.showError("File Error", "Failed to load content file: " + e.getMessage());
+                if (statusReporter != null) statusReporter.showError("File Error", t("module.cms.loadFailed", "content", e.getMessage()));
             }
         }
     }
@@ -133,7 +143,9 @@ public class CmsInspectorController {
                 if (!text.isEmpty()) {
                     inputBytes = text.getBytes();
                 } else {
-                    if (statusReporter != null) statusReporter.showError("Input Error", "Please provide CMS input (file or text)");
+                    InlineValidationSupport.show(statusReporter, t("preflight.title"),
+                            t("module.cms.inputRequired"), t("preflight.remedy.input"),
+                            "cmsInputArea", null);
                     return;
                 }
             }
@@ -145,6 +157,11 @@ public class CmsInspectorController {
                     String text = cmsContentArea.getText().trim();
                     if (!text.isEmpty()) {
                         contentBytes = text.getBytes();
+                    } else {
+                        InlineValidationSupport.show(statusReporter, t("preflight.title"),
+                                t("module.cms.detachedContentRequired"), t("preflight.remedy.input"),
+                                "cmsContentArea", null);
+                        return;
                     }
                 }
             }
@@ -162,33 +179,52 @@ public class CmsInspectorController {
                 }
             }
 
-            CmsInspectionReport report = inspector.inspect(inputBytes, contentBytes, ts);
-            this.currentReport = report;
-
-            String reportText = formatReport(report);
-            cmsReportArea.setText(reportText);
-
-            if (statusReporter != null) {
-                OperationResult result = OperationResult.forOperation("CMS_INSPECTOR")
-                    .input(inputBytes)
-                    .output(reportText.getBytes())
-                    .detail(new OperationDetail("Type", report.getType().name(), OperationDetail.Classification.PUBLIC, false, null))
-                    .detail(new OperationDetail("Content State", report.getContentState().name(), OperationDetail.Classification.PUBLIC, false, null))
-                    .status("Successfully inspected " + report.getType() + " - " + report.getContentState())
-                    .build();
-                statusReporter.publish(result);
+            final byte[] cmsInput = inputBytes;
+            final byte[] detachedInput = contentBytes;
+            final KeyStore truststore = ts;
+            final boolean online = cmsOnlineRevocationCheck != null && cmsOnlineRevocationCheck.isSelected();
+            if (online && statusReporter != null && statusReporter.getOperationExecutor() != null) {
+                statusReporter.getOperationExecutor().execute("CMS/CAdES revocation validation", null,
+                        () -> inspector.inspect(cmsInput, detachedInput, truststore, true, List.of()),
+                        this::presentReport, this::presentInspectionError,
+                        () -> { if (statusReporter != null) statusReporter.updateStatus(t("module.cms.cancelled")); });
+            } else {
+                presentReport(inspector.inspect(cmsInput, detachedInput, truststore, online, List.of()));
             }
 
         } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Inspection Error", "CMS Inspection failed: " + e.getMessage());
-            cmsReportArea.setText("Error: " + e.getMessage());
+            if (statusReporter != null) statusReporter.showError("Inspection Error", t("module.cms.inspectFailed", e.getMessage()));
+            cmsReportArea.setText(t("module.cms.errorGeneric", e.getMessage()));
         }
+    }
+
+    private void presentReport(CmsInspectionReport report) {
+        this.currentReport = report;
+        String reportText = formatReport(report);
+        cmsReportArea.setText(reportText);
+        if (statusReporter != null) {
+            statusReporter.publish(OperationResult.forOperation("CMS_INSPECTOR")
+                    .input(reportText.getBytes()).output(reportText.getBytes())
+                    .detail(new OperationDetail("Type", report.getType().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .detail(new OperationDetail("Content State", report.getContentState().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .detail(new OperationDetail("Revocation", report.getRevocation().status().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .detail(new OperationDetail("Evidence", report.getRevocation().evidence().name(), OperationDetail.Classification.PUBLIC, false, null))
+                    .status(t("module.cms.feedback.statusInspected", report.getType(), report.getContentState())).build());
+        }
+    }
+
+    private void presentInspectionError(Throwable error) {
+        String message = error == null || error.getMessage() == null ? "CMS validation failed" : error.getMessage();
+        if (statusReporter != null) statusReporter.showError("Inspection Error", t("module.cms.inspectFailed", message));
+        if (cmsReportArea != null) cmsReportArea.setText(t("module.cms.errorGeneric", message));
     }
 
     @FXML
     void handleExportReport(ActionEvent event) {
         if (currentReport == null) {
-            if (statusReporter != null) statusReporter.showError("Export Error", "No report to export");
+            InlineValidationSupport.show(statusReporter, t("preflight.title"),
+                    t("module.cms.reportRequired"), t("preflight.remedy.input"),
+                    "cmsInputArea", null);
             return;
         }
 
@@ -210,11 +246,46 @@ public class CmsInspectorController {
                     content = formatReport(currentReport); // formatReport already outputs a Markdown-like structure
                 }
                 Files.write(file.toPath(), content.getBytes());
-                if (statusReporter != null) statusReporter.updateStatus("Report exported to " + file.getName());
+                if (statusReporter != null) statusReporter.updateStatus(t("module.cms.feedback.statusExported", file.getName()));
             } catch (Exception e) {
-                if (statusReporter != null) statusReporter.showError("Export Error", "Failed to export report: " + e.getMessage());
+                if (statusReporter != null) statusReporter.showError("Export Error", t("module.cms.exportFailed", e.getMessage()));
             }
         }
+    }
+
+    @FXML
+    void handleReset(ActionEvent event) {
+        ModuleResetPolicy.apply(cmsInspectorRoot, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.common.resetStatus"));
+    }
+
+    @FXML
+    void handleClear(ActionEvent event) {
+        ModuleResetPolicy.apply(cmsInspectorRoot, ModuleResetPolicy.Action.CLEAR,
+                this::clearModuleData, null);
+        if (statusReporter != null) statusReporter.updateStatus(t("module.cms.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        cmsFileBytes = null;
+        contentFileBytes = null;
+        truststoreFile = null;
+        currentReport = null;
+        if (cmsFilePathLabel != null) cmsFilePathLabel.setText(t("module.cms.noFile"));
+        if (cmsContentPathLabel != null) cmsContentPathLabel.setText(t("module.cms.noFile"));
+        if (truststorePathLabel != null) truststorePathLabel.setText(t("module.cms.noTruststore"));
+        if (cmsDetachedFileBox != null) { cmsDetachedFileBox.setVisible(false); cmsDetachedFileBox.setManaged(false); }
+        if (cmsContentArea != null) { cmsContentArea.clear(); cmsContentArea.setEditable(true); cmsContentArea.setVisible(false); cmsContentArea.setManaged(false); }
+        if (cmsInputArea != null) { cmsInputArea.clear(); cmsInputArea.setEditable(true); }
+        if (truststorePasswordField != null) truststorePasswordField.clear();
+        if (cmsOnlineRevocationCheck != null) cmsOnlineRevocationCheck.setSelected(false);
+        if (cmsReportArea != null) cmsReportArea.clear();
+    }
+
+    private void restoreSafeDefaults() {
+        if (cmsDetachedCheck != null) cmsDetachedCheck.setSelected(false);
+        if (cmsOnlineRevocationCheck != null) cmsOnlineRevocationCheck.setSelected(false);
     }
 
     private String formatReport(CmsInspectionReport report) {
@@ -238,6 +309,14 @@ public class CmsInspectorController {
             }
             sb.append("\n");
         }
+
+        sb.append("== Revocation ==\n");
+        sb.append("Status: ").append(report.getRevocation().status()).append("\n");
+        sb.append("Evidence: ").append(report.getRevocation().evidence()).append("\n");
+        if (!report.getRevocation().errors().isEmpty()) {
+            sb.append("Reason: ").append(String.join("; ", report.getRevocation().errors())).append("\n");
+        }
+        sb.append("\n");
 
         if (!report.getSigners().isEmpty()) {
             sb.append("== Signers ==\n");

@@ -15,6 +15,12 @@ import javafx.scene.control.*;
  * @author Felipe
  */
 public class EMVController {
+    @FXML private javafx.scene.layout.VBox emvContainer;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
     @FXML private TextArea emvTlvInputArea, emvTlvResultArea;
     @FXML private TextField emvDolTemplateField;
     @FXML private TextArea emvDolValuesArea, emvDolResultArea;
@@ -28,7 +34,7 @@ public class EMVController {
             for (String line : emvDolValuesArea.getText().split("\\R")) {
                 if (line.isBlank()) continue;
                 String[] pair = line.split("=", 2);
-                if (pair.length != 2) throw new IllegalArgumentException("Use one TAG=HEX value per line");
+                if (pair.length != 2) throw new IllegalArgumentException(t("module.emv.feedback.dolFormat"));
                 values.put(pair[0].trim().toUpperCase(java.util.Locale.ROOT), pair[1].trim());
             }
             EmvTlv.DolBuildResult result = EmvTlv.buildDolDetailed(emvDolTemplateField.getText(), values);
@@ -43,7 +49,15 @@ public class EMVController {
                 for (String warning : result.warnings()) report.append("- ").append(warning).append("\n");
             }
             emvDolResultArea.setText(report.toString());
-        } catch (Exception e) { emvDolResultArea.setText("DOL error: " + e.getMessage()); }
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("EMV DOL Build")
+                        .input(emvDolTemplateField.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(result.data().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Fields", String.valueOf(result.fields().size()))
+                        .detail("Warnings", String.valueOf(result.warnings().size()))
+                        .status(t("module.emv.status.dol")).build());
+            }
+        } catch (Exception e) { emvDolResultArea.setText(t("module.emv.error.dol", e.getMessage())); }
     }
 
     public void handleInspectTlv() {
@@ -63,7 +77,15 @@ public class EMVController {
             report.append("TLV TREE\n");
             appendTlv(report, items, "");
             emvTlvResultArea.setText(report.toString());
-        } catch (Exception e) { emvTlvResultArea.setText("TLV error: " + e.getMessage()); }
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("EMV TLV Inspection")
+                        .input(emvTlvInputArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(report.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Top-level objects", String.valueOf(analysis.topLevelItems()))
+                        .detail("Total objects", String.valueOf(analysis.totalItems()))
+                        .status(t("module.emv.status.tlv")).build());
+            }
+        } catch (Exception e) { emvTlvResultArea.setText(t("module.emv.error.tlv", e.getMessage())); }
     }
 
     private void appendTlv(StringBuilder out, java.util.List<EmvTlv.Item> items, String indent) {
@@ -139,6 +161,7 @@ public class EMVController {
 
     @FXML
     private void initialize() {
+        moduleI18n = ModuleI18n.bind(emvContainer, ModuleTextCatalog.emv());
         atcField = emvAtcField;
         setupARQCPaddingMethods();
         setupARPCMethods();
@@ -259,7 +282,7 @@ public class EMVController {
             String atc = atcField.getText().trim().replaceAll("\\s+", "");
 
             if (imk.isEmpty() || pan.isEmpty()) {
-                sessionKeyResultArea.setText("Error: IMK and PAN are required");
+                sessionKeyResultArea.setText(t("module.emv.feedback.sessionRequired"));
                 return;
             }
 
@@ -302,10 +325,10 @@ public class EMVController {
             details.put("IMK", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Session Key Derivation")
                     .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status("EMV session key derivation completed").build());
+                    .status(t("module.emv.status.session")).build());
 
         } catch (Exception e) {
-            sessionKeyResultArea.setText("Error: " + e.getMessage());
+            sessionKeyResultArea.setText(t("module.emv.error.generate", e.getMessage()));
             sessionKeyResultArea.setVisible(true);
             sessionKeyResultArea.setManaged(true);
         }
@@ -357,7 +380,7 @@ public class EMVController {
                 un = unField.getText().trim().replaceAll("\\s+", "");
 
                 if (sk.isEmpty() || amount.isEmpty()) {
-                    arqcResultArea.setText("Error: Session Key and Amount are required");
+                    arqcResultArea.setText(t("module.emv.feedback.arqcRequired"));
                     return;
                 }
 
@@ -443,10 +466,10 @@ public class EMVController {
             details.put("Session Key", "[not persisted]");
             mainController.publish(OperationResult.forOperation("ARQC Generation")
                     .output(com.cryptocarver.util.DataConverter.hexToBytes(arqc)).details(details)
-                    .status("ARQC generated successfully").build());
+                    .status(t("module.emv.status.arqc")).build());
 
         } catch (Exception e) {
-            arqcResultArea.setText("Error: " + e.getMessage());
+            arqcResultArea.setText(t("module.emv.error.generate", e.getMessage()));
             arqcResultArea.setVisible(true);
             arqcResultArea.setManaged(true);
         }
@@ -468,7 +491,7 @@ public class EMVController {
             }
 
             if (sk.isEmpty() || arqcToVerify.isEmpty() || arqcToVerify.length() != 16) {
-                arqcResultArea.setText("Error: Please generate an ARQC first to verify");
+                arqcResultArea.setText(t("module.emv.error.generateFirst"));
                 return;
             }
 
@@ -478,7 +501,7 @@ public class EMVController {
                 txData = lastArqcTransactionData;
                 paddingMethod = lastArqcPaddingMethod;
             } else {
-                if (amount.isEmpty()) throw new IllegalArgumentException("Amount is required to reconstruct ARQC data");
+                if (amount.isEmpty()) throw new IllegalArgumentException(t("module.emv.feedback.arqcAmountRequired"));
                 String amountOther = amountOtherField == null ? "" : amountOtherField.getText().trim().replaceAll("\\s+", "");
                 String currency = currencyField.getText().trim().replaceAll("\\s+", "");
                 String country = countryField.getText().trim().replaceAll("\\s+", "");
@@ -525,8 +548,16 @@ public class EMVController {
             arqcResultArea.setVisible(true);
             arqcResultArea.setManaged(true);
 
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("ARQC Verification")
+                        .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .detail("Valid", String.valueOf(valid))
+                        .detail("Padding", "Method " + paddingMethod)
+                        .status(t(valid ? "module.emv.feedback.arqcValid" : "module.emv.feedback.arqcInvalid")).build());
+            }
+
         } catch (Exception e) {
-            arqcResultArea.setText("Error during verification: " + e.getMessage());
+            arqcResultArea.setText(t("module.emv.error.verification", e.getMessage()));
         }
     }
 
@@ -542,7 +573,7 @@ public class EMVController {
             String csu = csuField.getText().trim().replaceAll("\\s+", "");
 
             if (sk.isEmpty() || arqc.isEmpty() || arc.isEmpty()) {
-                arpcResultArea.setText("Error: Session Key, ARQC, and ARC are required");
+                arpcResultArea.setText(t("module.emv.feedback.arpcRequired"));
                 return;
             }
 
@@ -586,10 +617,10 @@ public class EMVController {
             details.put("Session Key", "[not persisted]");
             mainController.publish(OperationResult.forOperation("ARPC Generation")
                     .output(com.cryptocarver.util.DataConverter.hexToBytes(arpc)).details(details)
-                    .status("ARPC generated successfully").build());
+                    .status(t("module.emv.status.arpc")).build());
 
         } catch (Exception e) {
-            arpcResultArea.setText("Error: " + e.getMessage());
+            arpcResultArea.setText(t("module.emv.error.generate", e.getMessage()));
             arpcResultArea.setVisible(true);
             arpcResultArea.setManaged(true);
         }
@@ -612,7 +643,7 @@ public class EMVController {
             String discretionaryData = discretionaryDataField.getText().trim();
 
             if (pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                track2ResultArea.setText("Error: PAN, Expiry Date, and Service Code are required");
+                track2ResultArea.setText(t("module.emv.feedback.trackRequired"));
                 return;
             }
 
@@ -649,10 +680,10 @@ public class EMVController {
             details.put("Service Code", serviceCode);
             mainController.publish(OperationResult.forOperation("Track 2 Encoding")
                     .output(track2.getBytes(java.nio.charset.StandardCharsets.US_ASCII)).details(details)
-                    .status("Track 2 encoded successfully").build());
+                    .status(t("module.emv.status.trackEncoded")).build());
 
         } catch (Exception e) {
-            track2ResultArea.setText("Error: " + e.getMessage());
+            track2ResultArea.setText(t("module.emv.error.generate", e.getMessage()));
         }
     }
 
@@ -661,7 +692,7 @@ public class EMVController {
             String track2Input = track2InputField.getText().trim().replaceAll("\\s+", "");
 
             if (track2Input.isEmpty()) {
-                track2ResultArea.setText("Error: Track 2 data is required");
+                track2ResultArea.setText(t("module.emv.feedback.trackDataRequired"));
                 return;
             }
 
@@ -674,16 +705,28 @@ public class EMVController {
                     .input(track2Input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
                     .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                     .detail("PAN", "[contained in Track 2; not persisted]")
-                    .status("Track 2 decoded successfully").build());
+                    .status(t("module.emv.status.trackDecoded")).build());
 
         } catch (Exception e) {
-            track2ResultArea.setText("Error: " + e.getMessage());
+            track2ResultArea.setText(t("module.emv.error.generate", e.getMessage()));
         }
     }
 
     // --- Helper Methods for Global Toolbar ---
 
+    @FXML
     public void handleClear() {
+        if (emvContainer != null) {
+            ModuleResetPolicy.apply(emvContainer, ModuleResetPolicy.Action.CLEAR,
+                    this::clearModuleData, null);
+        } else {
+            clearModuleData();
+        }
+        if (mainController != null) mainController.updateStatus(t("module.emv.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        if (emvContainer != null) ModuleResetPolicy.clearTextInputs(emvContainer);
         // Clear Result Areas
         if (sessionKeyResultArea != null)
             sessionKeyResultArea.clear();
@@ -743,6 +786,34 @@ public class EMVController {
             discretionaryDataField.clear();
         if (track2InputField != null)
             track2InputField.clear();
+        if (emvTlvInputArea != null) emvTlvInputArea.clear();
+        if (emvTlvResultArea != null) emvTlvResultArea.clear();
+        if (emvDolTemplateField != null) emvDolTemplateField.clear();
+        if (emvDolValuesArea != null) emvDolValuesArea.clear();
+        if (emvDolResultArea != null) emvDolResultArea.clear();
+        lastArqcTransactionData = null;
+        lastArqcValue = null;
+    }
+
+    @FXML
+    public void handleReset() {
+        if (emvContainer != null) {
+            ModuleResetPolicy.apply(emvContainer, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                    null, this::restoreSafeDefaults);
+        } else {
+            restoreSafeDefaults();
+        }
+        if (mainController != null) mainController.updateStatus(t("module.emv.resetStatus"));
+    }
+
+    /** Public reset entry point used by the module toolbar and headless UI tests. */
+    public void resetModule() {
+        handleReset();
+    }
+
+    private void restoreSafeDefaults() {
+        if (arqcPaddingMethodCombo != null) arqcPaddingMethodCombo.getSelectionModel().selectFirst();
+        if (arpcMethodCombo != null) arpcMethodCombo.getSelectionModel().selectFirst();
     }
 
     public String getOutputText() {

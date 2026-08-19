@@ -76,6 +76,28 @@ public class KeyCertificateWorkbenchController {
     // Cache the last parsed result so conversion uses it
     private DetectionResult lastParsedResult;
     private OperationDetail.Classification currentOutputClassification = OperationDetail.Classification.PUBLIC;
+    private String lastParsedInput;
+    private ShelfOutputState shelfOutputState = ShelfOutputState.NONE;
+
+    private enum ShelfOutputState {
+        NONE,
+        CONVERTED_MATERIAL,
+        SUMMARY,
+        VALIDATION,
+        ERROR
+    }
+
+    private record ShelfMaterial(String text, boolean privateMaterial, String algorithm) { }
+
+    private record ShelfResolution(ShelfMaterial material, String blockedMessage) {
+        static ShelfResolution accepted(ShelfMaterial material) {
+            return new ShelfResolution(material, null);
+        }
+
+        static ShelfResolution blocked(String message) {
+            return new ShelfResolution(null, message);
+        }
+    }
 
     public void setStatusReporter(StatusReporter statusReporter) {
         this.statusReporter = statusReporter;
@@ -201,11 +223,24 @@ public class KeyCertificateWorkbenchController {
 
     // Visible for testing
     boolean canLoadFromShelf(ClipboardEntry selected) {
+        if (selected == null) return false;
         if (selected.getClassification() == com.cryptocarver.model.OperationDetail.Classification.SECRET
             && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             return false;
         }
         return true;
+    }
+
+    /** Loads a validated session-only private key without publishing its value. */
+    void loadSessionOnlyPrivateKey(String value) {
+        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            return;
+        }
+        if (value == null || value.isBlank()) return;
+        workbenchInputArea.setText(value);
+        workbenchOutputArea.clear();
+        handleParse(null);
     }
 
     private byte[] getRawBytes(String input) {
@@ -229,13 +264,19 @@ public class KeyCertificateWorkbenchController {
         lblFingerprint.setText("N/A");
         lblValidity.setText("N/A");
         lastParsedResult = null;
+        lastParsedInput = null;
+        shelfOutputState = ShelfOutputState.NONE;
         currentOutputClassification = OperationDetail.Classification.PUBLIC;
     }
 
     @FXML
     private void handleParse(ActionEvent event) {
         String inputStr = workbenchInputArea.getText().trim();
-        if (inputStr.isEmpty()) return;
+        if (inputStr.isEmpty()) {
+            clearUI();
+            workbenchOutputArea.clear();
+            return;
+        }
 
         clearUI();
 
@@ -267,6 +308,7 @@ public class KeyCertificateWorkbenchController {
             }
 
             lastParsedResult = result;
+            lastParsedInput = inputStr;
 
             if (result.keystoreEntries != null) {
                 // It's a keystore
@@ -295,6 +337,9 @@ public class KeyCertificateWorkbenchController {
                 statusReporter.updateStatus("Parsed as " + lblFormat.getText());
             }
         } catch (Exception e) {
+            lastParsedResult = null;
+            lastParsedInput = null;
+            shelfOutputState = ShelfOutputState.ERROR;
             lblFormat.setText("Error: " + e.getMessage());
         } finally {
             if (password != null) {
@@ -317,6 +362,8 @@ public class KeyCertificateWorkbenchController {
             handleParse(null);
             if (lastParsedResult == null) return;
         }
+
+        shelfOutputState = ShelfOutputState.NONE;
 
         String targetFormat = convertToCombo.getValue();
         char[] password = null;
@@ -345,6 +392,8 @@ public class KeyCertificateWorkbenchController {
                         AppSettings.getInstance().getSecretVisibilityProfile());
 
                 workbenchOutputArea.setText(converted);
+                shelfOutputState = isShelfMaterialOutput(converted)
+                        ? ShelfOutputState.CONVERTED_MATERIAL : ShelfOutputState.SUMMARY;
 
                 // Do not leak alias data unnecessarily, but it is useful for history
                 String safeOpDetail = "Extracted " + targetFormat + " for alias: " + selected.getAlias();
@@ -378,6 +427,7 @@ public class KeyCertificateWorkbenchController {
                 if ("PKCS12 Summary".equals(targetFormat)) {
                     String summary = formatService.getChainSummary(lastParsedResult.rawBytes, password);
                     workbenchOutputArea.setText(summary);
+                    shelfOutputState = ShelfOutputState.SUMMARY;
                     currentOutputClassification = OperationDetail.Classification.PUBLIC;
                     publishResult("PKCS12 Chain Summary", summary);
                     return;
@@ -392,10 +442,13 @@ public class KeyCertificateWorkbenchController {
 
             String converted = formatService.convert(lastParsedResult, targetFormat, AppSettings.getInstance().getSecretVisibilityProfile());
             workbenchOutputArea.setText(converted);
+            shelfOutputState = isShelfMaterialOutput(converted)
+                    ? ShelfOutputState.CONVERTED_MATERIAL : ShelfOutputState.SUMMARY;
             currentOutputClassification = (lastParsedResult != null && lastParsedResult.hasPrivateKey) ? OperationDetail.Classification.SECRET : OperationDetail.Classification.PUBLIC;
             publishResult("Convert to " + targetFormat, converted);
 
         } catch (Exception e) {
+            shelfOutputState = ShelfOutputState.ERROR;
             if (statusReporter != null) {
                 statusReporter.showError("Conversion Error", e.getMessage());
             }
@@ -409,6 +462,7 @@ public class KeyCertificateWorkbenchController {
 
     @FXML
     private void handleValidate(ActionEvent event) {
+        shelfOutputState = ShelfOutputState.VALIDATION;
         String secondaryStr = validationSecondaryInput.getText().trim();
         if (secondaryStr.isEmpty() || lastParsedResult == null) {
             if (statusReporter != null) {
@@ -462,56 +516,214 @@ public class KeyCertificateWorkbenchController {
 
     @FXML
     private void handleSendToShelf(ActionEvent event) {
-        String text = workbenchOutputArea.getText();
-        if (text == null || text.trim().isEmpty()) return;
+        sendCurrentMaterialToShelf();
+    }
 
-        boolean isSecret = (currentOutputClassification == OperationDetail.Classification.SECRET);
-        OperationDetail.Classification classification = currentOutputClassification;
+    /** Shared by the Workbench button and the shell's global Add to Shelf action. */
+    void sendCurrentMaterialToShelf() {
+        ShelfResolution resolution = resolveShelfMaterial();
+        if (resolution.material() == null) {
+            if (statusReporter != null) statusReporter.updateStatus(resolution.blockedMessage());
+            return;
+        }
 
-        if (isSecret) {
-            com.cryptocarver.model.SecretVisibilityProfile vis = AppSettings.getInstance().getSecretVisibilityProfile();
-            if (vis != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        ShelfMaterial material = resolution.material();
+        if (material.privateMaterial()) {
+            if (AppSettings.getInstance().getSecretVisibilityProfile()
+                    != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 if (statusReporter != null) {
-                    statusReporter.showError("Security Policy", "Cannot copy SECRET material to Shelf while environment is " + vis);
+                    statusReporter.updateStatus("Action blocked: private key material requires FULL_LAB.");
                 }
                 return;
             }
+            try {
+                ClipboardEntry sessionEntry = ClipboardShelfManager.getInstance().addSessionOnlyPrivateKey(
+                        material.text(), "Key & Certificate Format Workbench", material.algorithm());
+                if (sessionEntry == null) {
+                    if (statusReporter != null) {
+                        statusReporter.updateStatus("Action blocked: private key material requires FULL_LAB.");
+                    }
+                    return;
+                }
+                revealShelfEntry(sessionEntry);
+                if (statusReporter != null) {
+                    statusReporter.updateStatus("Added private key to Clipboard Shelf (session only).");
+                }
+            } catch (Exception e) {
+                if (statusReporter != null) {
+                    statusReporter.updateStatus("Action blocked: unable to add private key to Clipboard Shelf.");
+                }
+            }
+            return;
         }
 
         try {
             ClipboardEntry entry = new ClipboardEntry(
-                "Workbench Output",
-                text,
-                ClipboardEntry.Format.TEXT,
-                classification,
-                "Key & Certificate Format Workbench"
-            );
+                    "Workbench Public Key Material",
+                    material.text(),
+                    ClipboardEntry.Format.inferFormat(material.text()),
+                    OperationDetail.Classification.PUBLIC,
+                    "Key & Certificate Format Workbench",
+                    material.algorithm());
             ClipboardShelfManager.getInstance().addEntry(entry);
+            revealShelfEntry(entry);
             if (statusReporter != null) {
-                statusReporter.updateStatus("Sent to Clipboard Shelf");
+                statusReporter.updateStatus("Added public key material to Clipboard Shelf.");
             }
         } catch (Exception e) {
             if (statusReporter != null) {
-                statusReporter.showError("Clipboard Shelf Error", e.getMessage());
+                statusReporter.updateStatus("Action blocked: unable to add public key material to Clipboard Shelf.");
             }
         }
+    }
+
+    /** True only when the Workbench pane containing the detected material is visible. */
+    boolean isShelfMaterialViewVisible() {
+        if (workbenchInputArea == null) return false;
+        for (javafx.scene.Node node = workbenchInputArea; node != null; node = node.getParent()) {
+            if (!node.isVisible()) return false;
+            if (node instanceof javafx.scene.control.TitledPane pane && !pane.isExpanded()) return false;
+        }
+        return true;
+    }
+
+    private ShelfResolution resolveShelfMaterial() {
+        String currentInput = workbenchInputArea == null ? "" : workbenchInputArea.getText().trim();
+        String currentOutput = workbenchOutputArea == null ? "" : workbenchOutputArea.getText().trim();
+
+        if (shelfOutputState == ShelfOutputState.VALIDATION) {
+            return ShelfResolution.blocked("Action blocked: validation results cannot be sent to Clipboard Shelf.");
+        }
+        if (shelfOutputState == ShelfOutputState.ERROR) {
+            return ShelfResolution.blocked("Action blocked: conversion errors cannot be sent to Clipboard Shelf.");
+        }
+        if (shelfOutputState == ShelfOutputState.SUMMARY) {
+            return ShelfResolution.blocked("Action blocked: summaries and keystore containers must be explicitly converted before sending to Clipboard Shelf.");
+        }
+
+        if (shelfOutputState == ShelfOutputState.CONVERTED_MATERIAL && !currentOutput.isEmpty()) {
+            if (!matchesLastParsedInput(currentInput)) {
+                return ShelfResolution.blocked("Action blocked: re-run Detect & Parse before sending the current material to Clipboard Shelf.");
+            }
+            ShelfMaterial converted = detectShelfMaterial(currentOutput);
+            if (converted != null) return ShelfResolution.accepted(converted);
+            return ShelfResolution.blocked("Action blocked: conversion did not produce complete key material.");
+        }
+
+        if (lastParsedResult == null || !matchesLastParsedInput(currentInput)) {
+            return ShelfResolution.blocked("Action blocked: detect and parse valid key material before sending to Clipboard Shelf.");
+        }
+        if (isKeystoreResult(lastParsedResult)) {
+            return ShelfResolution.blocked("Action blocked: keystore containers must be explicitly converted before sending to Clipboard Shelf.");
+        }
+        if (lastParsedResult.validationError != null || !isSupportedDirectResult(lastParsedResult)) {
+            return ShelfResolution.blocked("Action blocked: no valid complete key material was detected.");
+        }
+
+        ShelfMaterial inputMaterial = detectShelfMaterial(currentInput, lastParsedResult);
+        if (inputMaterial == null) {
+            return ShelfResolution.blocked("Action blocked: material is incomplete or was not detected as a standalone key or certificate.");
+        }
+        return ShelfResolution.accepted(inputMaterial);
+    }
+
+    private boolean matchesLastParsedInput(String currentInput) {
+        return currentInput != null && !currentInput.isEmpty()
+                && lastParsedInput != null && lastParsedInput.equals(currentInput);
+    }
+
+    private boolean isKeystoreResult(DetectionResult result) {
+        return result != null
+                && (result.keystoreEntries != null
+                || result.type == KeyCertificateFormatService.FormatType.JKS
+                || result.type == KeyCertificateFormatService.FormatType.PKCS12
+                || result.type == KeyCertificateFormatService.FormatType.BKS);
+    }
+
+    private boolean isSupportedDirectResult(DetectionResult result) {
+        if (result == null || result.parsedObject == null || result.isEncrypted || isKeystoreResult(result)) {
+            return false;
+        }
+        return isPrivateType(result.type) || isPublicType(result.type);
+    }
+
+    private ShelfMaterial detectShelfMaterial(String text) {
+        try {
+            DetectionResult detected = formatService.detect(getRawBytes(text.trim()), null);
+            return detectShelfMaterial(text, detected);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private ShelfMaterial detectShelfMaterial(String text, DetectionResult detected) {
+        if (text == null || text.isBlank() || isPrivateMaterialPlaceholder(text)
+                || detected == null || detected.validationError != null
+                || detected.parsedObject == null || isKeystoreResult(detected)) {
+            return null;
+        }
+        if (isPrivateType(detected.type)) {
+            if (!detected.hasPrivateKey || detected.isEncrypted) return null;
+            if (detected.type == KeyCertificateFormatService.FormatType.PEM_PRIVATE_KEY
+                    && !isCompletePrivateKeyMaterial(text)) return null;
+            return new ShelfMaterial(text.trim(), true, detected.algorithm);
+        }
+        if (isPublicType(detected.type)) {
+            return new ShelfMaterial(text.trim(), false, detected.algorithm);
+        }
+        return null;
+    }
+
+    private boolean isShelfMaterialOutput(String text) {
+        return detectShelfMaterial(text) != null;
+    }
+
+    private boolean isPrivateType(KeyCertificateFormatService.FormatType type) {
+        return type == KeyCertificateFormatService.FormatType.PEM_PRIVATE_KEY
+                || type == KeyCertificateFormatService.FormatType.DER_PRIVATE_KEY
+                || type == KeyCertificateFormatService.FormatType.JWK_PRIVATE;
+    }
+
+    private boolean isPublicType(KeyCertificateFormatService.FormatType type) {
+        return type == KeyCertificateFormatService.FormatType.PEM_CERTIFICATE
+                || type == KeyCertificateFormatService.FormatType.DER_CERTIFICATE
+                || type == KeyCertificateFormatService.FormatType.PEM_PUBLIC_KEY
+                || type == KeyCertificateFormatService.FormatType.DER_PUBLIC_KEY
+                || type == KeyCertificateFormatService.FormatType.JWK_PUBLIC
+                || type == KeyCertificateFormatService.FormatType.OPENSSH_PUBLIC_KEY;
+    }
+
+    private void revealShelfEntry(ClipboardEntry entry) {
+        if (entry != null && statusReporter instanceof ModernMainController modern) {
+            modern.revealShelfEntry(entry);
+        }
+    }
+
+    private boolean isPrivateMaterialPlaceholder(String text) {
+        if (text == null) return false;
+        String normalized = text.toUpperCase(java.util.Locale.ROOT);
+        return normalized.contains("PRIVATE KEY MATERIAL") && normalized.contains("NOT RECORDED");
+    }
+
+    private boolean isCompletePrivateKeyMaterial(String text) {
+        if (text == null || isPrivateMaterialPlaceholder(text)) return false;
+        String normalized = text.toUpperCase(java.util.Locale.ROOT);
+        return normalized.contains("-----BEGIN ")
+                && normalized.contains("PRIVATE KEY-----")
+                && normalized.contains("-----END ")
+                && normalized.contains("PRIVATE KEY-----");
     }
 
     private void publishResult(String operationSuffix, String output) {
         if (statusReporter != null) {
             String inputStr = workbenchInputArea.getText().trim();
-            // Don't leak private inputs if REDACTED or MASKED
+            // Private-key material is never sent to history, inspector or
+            // reports. FULL_LAB authorizes on-screen lab use, not recording.
             if (lastParsedResult != null && lastParsedResult.hasPrivateKey) {
-                if (AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.REDACTED) {
-                    inputStr = "*** REDACTED ***";
-                    if (!operationSuffix.contains("Summary") && !operationSuffix.contains("Validate")) {
-                        output = "*** REDACTED ***";
-                    }
-                } else if (AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.MASKED) {
-                    inputStr = "*** MASKED ***";
-                    if (!operationSuffix.contains("Summary") && !operationSuffix.contains("Validate")) {
-                        output = "*** MASKED ***";
-                    }
+                inputStr = "*** PRIVATE KEY INPUT — NOT RECORDED ***";
+                if (currentOutputClassification == OperationDetail.Classification.SECRET
+                        || (!operationSuffix.contains("Summary") && !operationSuffix.contains("Validate"))) {
+                    output = "*** PRIVATE KEY MATERIAL — NOT RECORDED ***";
                 }
             }
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orden id="ORD-2026-00042" xmlns="urn:cryptocarver:ejemplo">
+  <emisor>ACME Servicios, S.A.</emisor>
+  <importe moneda="EUR">100.00</importe>
+  <concepto>Validación de firma XML</concepto>
+</orden>

@@ -323,6 +323,26 @@ public final class Pkcs11Session implements AutoCloseable {
         }
     }
 
+    public byte[] signPadesBaselineLT(String alias, byte[] pdf, String tsaUrl,
+            java.util.List<java.io.File> localRevocationFiles, boolean onlineRevocation,
+            com.cryptocarver.crypto.PadesOperations.VisibleSignatureOptions visibleSignature) throws Exception {
+        ensureOpen();
+        try (AbstractKeyStoreTokenConnection token = createDssTokenConnection()) {
+            return com.cryptocarver.crypto.PadesOperations.signBaselineLTWithTokenConnection(
+                    pdf, token, alias, tsaUrl, localRevocationFiles, onlineRevocation, visibleSignature);
+        }
+    }
+
+    public byte[] signPadesBaselineLTA(String alias, byte[] pdf, String tsaUrl,
+            java.util.List<java.io.File> localRevocationFiles, boolean onlineRevocation,
+            com.cryptocarver.crypto.PadesOperations.VisibleSignatureOptions visibleSignature) throws Exception {
+        ensureOpen();
+        try (AbstractKeyStoreTokenConnection token = createDssTokenConnection()) {
+            return com.cryptocarver.crypto.PadesOperations.signBaselineLTAWithTokenConnection(
+                    pdf, token, alias, tsaUrl, localRevocationFiles, onlineRevocation, visibleSignature);
+        }
+    }
+
     /** Builds a DSS adapter while keeping the backing token keystore private. */
     private AbstractKeyStoreTokenConnection createDssTokenConnection() {
         return new AbstractKeyStoreTokenConnection() {
@@ -545,6 +565,111 @@ public final class Pkcs11Session implements AutoCloseable {
         } catch (java.security.KeyStoreException error) {
             throw new GeneralSecurityException("Unable to resolve PKCS#11 public key: " + alias, error);
         }
+    }
+
+    /**
+     * Wraps a token-resident key ({@code keyToWrapAlias}) under another token key's public part
+     * ({@code wrappingKeyAlias}), via JCA {@link Cipher#WRAP_MODE}. The key being wrapped is never
+     * extracted to the JVM in the clear — only the resulting ciphertext crosses into Java, same
+     * boundary discipline as {@link #encrypt} and {@link #sign}.
+     */
+    public byte[] wrapKey(String wrappingKeyAlias, String keyToWrapAlias, String transformation)
+            throws GeneralSecurityException {
+        return wrapKey(wrappingKeyAlias, requireKey(keyToWrapAlias, Key.class), transformation);
+    }
+
+    /**
+     * Same as {@link #wrapKey(String, String, String)}, but for a key that is not a keystore
+     * alias — e.g. one freshly generated in this JVM to be handed off wrapped, or one just
+     * returned by {@link #unwrapKey}.
+     *
+     * <p><b>Two constraints confirmed empirically against a real SoftHSM token</b> (see
+     * {@code Pkcs11WrapUnwrapIntegrationTest}), neither obvious from the JCA API alone:</p>
+     * <ul>
+     *   <li>SunPKCS11's RSA cipher only wraps {@link javax.crypto.SecretKey} material — wrapping a
+     *       {@code PrivateKey} handle fails with {@code InvalidKeyException: Key must be a SecretKey},
+     *       even though the underlying PKCS#11 mechanism itself is not restricted that way.</li>
+     *   <li>The key being wrapped must have the PKCS#11 {@code CKA_EXTRACTABLE} attribute set to
+     *       true, or the token refuses with {@code CKR_KEY_UNEXTRACTABLE}. Neither
+     *       {@link #generateSecretKey} nor keys created by {@code keytool} set this — SunPKCS11
+     *       defaults new keys to non-extractable. There is no portable JCA
+     *       {@link java.security.spec.AlgorithmParameterSpec} to request it either; today the only
+     *       way to get an extractable key onto the token is an external tool (e.g. OpenSC's
+     *       {@code pkcs11-tool --extractable}). This is a real, security-meaningful boundary, not a
+     *       bug: a token operator who never marks anything extractable has correctly made wrapping
+     *       impossible for everything else.</li>
+     * </ul>
+     */
+    public byte[] wrapKey(String wrappingKeyAlias, Key keyToWrap, String transformation)
+            throws GeneralSecurityException {
+        ensureOpen();
+        if (keyToWrap == null) {
+            throw new IllegalArgumentException("A key to wrap is required");
+        }
+        PublicKey wrappingKey = getPublicKey(wrappingKeyAlias);
+        Cipher cipher = Cipher.getInstance(requireText(transformation, "Wrap transformation"), provider);
+        cipher.init(Cipher.WRAP_MODE, wrappingKey);
+        return cipher.wrap(keyToWrap);
+    }
+
+    /**
+     * Unwraps {@code wrapped} through the token's private key ({@code unwrappingKeyAlias}), via
+     * JCA {@link Cipher#UNWRAP_MODE}. {@code wrappedKeyType} is one of {@link Cipher#SECRET_KEY},
+     * {@link Cipher#PRIVATE_KEY} or {@link Cipher#PUBLIC_KEY}.
+     *
+     * <p><b>Verified empirically against a real SoftHSM token while building this method</b> (see
+     * {@code Pkcs11WrapUnwrapIntegrationTest}), because JCA does not document this and it is
+     * provider-specific: for a {@code SECRET_KEY} target, SunPKCS11 returned a plain
+     * {@link javax.crypto.spec.SecretKeySpec} — i.e. the recovered key material is fully exposed
+     * in JVM memory immediately, not a hardware-protected handle. Unwrapping does <em>not</em>
+     * preserve "key material never leaves the token" the way {@link #sign}/{@link #encrypt} do for
+     * keys that were already token-resident; it is closer to a decrypt operation whose output
+     * happens to be interpreted as a key. Treat the result with the same care as any other secret
+     * this app puts in memory (classify it, do not log it, etc.) — do not assume it inherits the
+     * source token's protection.</p>
+     */
+    public Key unwrapKey(String unwrappingKeyAlias, byte[] wrapped, String transformation,
+            String wrappedKeyAlgorithm, int wrappedKeyType) throws GeneralSecurityException {
+        ensureOpen();
+        PrivateKey unwrappingKey = requireKey(unwrappingKeyAlias, PrivateKey.class);
+        Cipher cipher = Cipher.getInstance(requireText(transformation, "Unwrap transformation"), provider);
+        cipher.init(Cipher.UNWRAP_MODE, unwrappingKey);
+        return cipher.unwrap(nonNullBytes(wrapped, "Wrapped key"),
+                requireText(wrappedKeyAlgorithm, "Wrapped key algorithm"), wrappedKeyType);
+    }
+
+    /**
+     * Generates a fresh secret key using the token's own key-generation mechanism — the key
+     * material never exists outside the token while it stays this way. The returned handle is
+     * session-scoped (not persisted under any keystore alias); use it in place via {@link Cipher}
+     * (initialized with this session's provider) or {@link #signWithKey}.
+     *
+     * <p>Not wrappable via {@link #wrapKey(String, Key, String)}: confirmed empirically that
+     * SunPKCS11 generates it non-extractable by default and there is no portable JCA way to ask
+     * for extractable here — see {@link #wrapKey(String, Key, String)}'s javadoc.</p>
+     */
+    public SecretKey generateSecretKey(String algorithm, int keySizeBits) throws GeneralSecurityException {
+        ensureOpen();
+        javax.crypto.KeyGenerator keyGenerator = javax.crypto.KeyGenerator.getInstance(
+                requireText(algorithm, "Key algorithm"), provider);
+        keyGenerator.init(keySizeBits);
+        return keyGenerator.generateKey();
+    }
+
+    /**
+     * Signs with an already-resolved key handle — typically one just returned by
+     * {@link #unwrapKey}, which is not tied to a keystore alias and so cannot be reached through
+     * {@link #sign(String, byte[], String)} — using this session's provider.
+     */
+    public byte[] signWithKey(PrivateKey key, byte[] data, String algorithm) throws GeneralSecurityException {
+        ensureOpen();
+        if (key == null) {
+            throw new IllegalArgumentException("A private key handle is required");
+        }
+        Signature signature = Signature.getInstance(requireText(algorithm, "Signature algorithm"), provider);
+        signature.initSign(key);
+        signature.update(nonNullBytes(data, "Data"));
+        return signature.sign();
     }
 
     /**

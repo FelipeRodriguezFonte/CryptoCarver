@@ -1,5 +1,6 @@
 package com.cryptocarver.ui;
 
+import com.cryptocarver.service.I18nService;
 import javafx.geometry.Pos;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -28,6 +29,7 @@ public class NavigationRail extends VBox {
         XML_SECURITY("📝", "XML Security"),
         CERTIFICATES("📜", "Certificates"),
         JOSE("🌐", "JOSE"),
+        COSE("📦", "COSE"),
         PAYMENTS("💳", "Payments"),
         ASN1("{}", "ASN.1"),
         HISTORY("⏱", "History");
@@ -75,7 +77,10 @@ public class NavigationRail extends VBox {
         button.getStyleClass().add("rail-button");
         button.setMinSize(40, 40);
         button.setMaxSize(40, 40);
-        button.setTooltip(new Tooltip(section.getLabel()));
+        button.setTooltip(new Tooltip(localizedLabel(section)));
+        button.setAccessibleText(localizedLabel(section));
+        button.setAccessibleHelp(localizedLabel(section));
+        button.setFocusTraversable(true);
 
         // Selection handler
         button.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
@@ -88,6 +93,26 @@ public class NavigationRail extends VBox {
         getChildren().add(button);
     }
 
+    private String localizedLabel(Section section) {
+        return I18nService.getInstance().text("nav." + switch (section) {
+            case POST_QUANTUM -> "postQuantum";
+            case XML_SECURITY -> "xmlSecurity";
+            default -> section.name().toLowerCase(java.util.Locale.ROOT);
+        });
+    }
+
+    /** Reapplies only user-visible rail labels; section identity and routes remain unchanged. */
+    public void refreshLocalizedText() {
+        for (var node : getChildren()) {
+            if (node instanceof ToggleButton button && button.getUserData() instanceof Section section) {
+                String label = localizedLabel(section);
+                button.setTooltip(new Tooltip(label));
+                button.setAccessibleText(label);
+                button.setAccessibleHelp(label);
+            }
+        }
+    }
+
     private void handleSectionSelected(Section section) {
         System.out.println("Rail section selected: " + section.getLabel());
 
@@ -96,6 +121,10 @@ public class NavigationRail extends VBox {
             sidePanel.setVisible(true);
             sidePanel.setManaged(true);
             sidePanel.updateContent(section);
+            // Without this, switching sections only refreshed the tree: the content pane,
+            // breadcrumb and toolbar kept showing whatever operation was active before the
+            // click, out of sync with the newly selected section.
+            sidePanel.selectFirstOperation();
         }
     }
 

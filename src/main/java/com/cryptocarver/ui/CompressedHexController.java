@@ -52,6 +52,7 @@ public final class CompressedHexController {
                 reporter.publish(OperationResult.forOperation(operation)
                         .input(input.getBytes(StandardCharsets.US_ASCII))
                         .output(output.getBytes(StandardCharsets.US_ASCII))
+                        .enrichedOutput(output)
                         .status(operation + " completed").build());
             }
         } catch (IllegalArgumentException exception) {

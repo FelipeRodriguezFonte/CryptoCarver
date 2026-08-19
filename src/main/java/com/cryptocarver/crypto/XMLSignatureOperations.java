@@ -10,8 +10,7 @@ import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.model.SignatureValue;
 import eu.europa.esig.dss.model.ToBeSigned;
 import eu.europa.esig.dss.model.x509.CertificateToken;
-import eu.europa.esig.dss.service.crl.OnlineCRLSource;
-import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource;
+import com.cryptocarver.service.RevocationValidationService;
 import eu.europa.esig.dss.token.AbstractKeyStoreTokenConnection;
 import eu.europa.esig.dss.token.JKSSignatureToken;
 import eu.europa.esig.dss.token.KSPrivateKeyEntry;
@@ -347,9 +346,8 @@ public class XMLSignatureOperations {
         boolean trustConfigured = trustStorePath != null && !trustStorePath.isBlank();
         if (trustConfigured) {
             verifier.setTrustedCertSources(loadTrustedCertificates(trustStorePath, trustStorePassword));
-            verifier.setCrlSource(new OnlineCRLSource());
-            verifier.setOcspSource(new OnlineOCSPSource());
-            verifier.setCheckRevocationForUntrustedChains(true);
+            RevocationValidationService.configure(verifier,
+                    new RevocationValidationService.Configuration(true, java.util.List.of()));
         }
 
         SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(signedDocument);

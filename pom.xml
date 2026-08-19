@@ -72,6 +72,14 @@
             <version>1.17.1</version>
         </dependency>
 
+        <!-- Local PKCS#11 ABI bridge. JNA loads only the user-selected native
+             module; it does not provide networking or token persistence. -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>5.13.0</version>
+        </dependency>
+
         <!-- Gson para JSON serialization -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -84,6 +92,13 @@
             <groupId>com.nimbusds</groupId>
             <artifactId>nimbus-jose-jwt</artifactId>
             <version>9.37.3</version>
+        </dependency>
+
+        <!-- COSE (RFC 9052/9053) -->
+        <dependency>
+            <groupId>com.augustcellars.cose</groupId>
+            <artifactId>cose-java</artifactId>
+            <version>1.1.0</version>
         </dependency>
 
         <!-- Runtime logger for DSS and other SLF4J-based dependencies -->
@@ -169,6 +184,17 @@
         </dependency>
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-crl-parser</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <!-- DSS CRL parser implementation used by the shared offline CRL policy. -->
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-crl-parser-x509crl</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-policy-jaxb</artifactId>
             <version>${dss.version}</version>
         </dependency>
@@ -214,6 +240,18 @@
                 </configuration>
             </plugin>
 
+            <!-- Keep the default quality gate deterministic and headless. UI,
+                 network/integration and benchmark suites are explicit opt-ins. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <excludedGroups>ui,integration,benchmark</excludedGroups>
+                    <useSystemClassLoader>true</useSystemClassLoader>
+                </configuration>
+            </plugin>
+
             <!-- JavaFX Plugin -->
             <plugin>
                 <groupId>org.openjfx</groupId>
@@ -222,8 +260,9 @@
                 <configuration>
                     <mainClass>com.cryptocarver.CryptoCalculatorModern</mainClass>
                     <options>
-                        <option>-Xdock:name="CryptoCarver"</option>
-                        <option>-Xdock:icon="${project.basedir}/src/main/resources/icons/app-icon.png"</option>
+                        <option>-Xdock:name=CryptoCarver</option>
+                        <option>-Xdock:icon=${project.basedir}/src/main/resources/icons/app-icon.png</option>
+                        <option>-Dapple.awt.application.name=CryptoCarver</option>
                     </options>
                 </configuration>
             </plugin>
@@ -301,6 +340,63 @@
             <properties>
                 <release.channel>experimental</release.channel>
             </properties>
+        </profile>
+        <profile>
+            <id>ui-tests</id>
+            <activation>
+                <property>
+                    <name>runUiTests</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <!-- JUnit 5 uses tags; the base configuration's
+                                 excludedGroups otherwise leaves the opt-in
+                                 profile with zero discovered UI tests. -->
+                            <groups>ui</groups>
+                            <excludedGroups>none</excludedGroups>
+                            <systemPropertyVariables>
+                                <runUiTests>true</runUiTests>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <groups>integration</groups>
+                            <excludedGroups>none</excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>benchmark-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <groups>benchmark</groups>
+                            <excludedGroups></excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

@@ -27,6 +27,7 @@ public class KeyboardShortcutRegistry {
             new KeyboardShortcutEntry("Epoch Converter", "Shortcut+T", "Open Unix timestamp epoch conversion tool", "Tools"),
             new KeyboardShortcutEntry("JSON Formatter", "Shortcut+J", "Open JSON formatter and validator tool", "Tools"),
             new KeyboardShortcutEntry("Quick Start", "Shortcut+Shift+H", "Navigate to Laboratory Quick Start dashboard", "View"),
+            new KeyboardShortcutEntry("Clipboard Shelf", "Shortcut+Shift+V", "Open and refresh the integrated Clipboard Shelf", "View"),
             new KeyboardShortcutEntry("Toggle Favorite", "Shortcut+Shift+F", "Toggle favorite star for current operation", "Navigation")
     );
 

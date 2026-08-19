@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** Captures and restores serializable JavaFX state across nested FXML controllers. */
-final class UiStateSnapshot {
+public final class UiStateSnapshot {
 
     /**
      * Read-only controls that contain reusable key material rather than a derived report.
@@ -41,11 +41,24 @@ final class UiStateSnapshot {
             "KeysController.eddsaPrivateKeyArea"
     );
 
+    private static final Set<String> HISTORY_SENSITIVE_TOKENS = Set.of(
+            "kbpk", "cvk", "pvk", "pin", "pan", "cvv",
+            "key", "password", "secret", "private", "certificate", "cert",
+            "iv", "nonce", "aad", "salt", "token", "mac", "signature",
+            // Existing input controls whose contents are secret material in
+            // the crypto/payment modules, even when their id is generic.
+            "input", "payload", "info", "verify", "tag"
+    );
+
     private UiStateSnapshot() {
     }
 
-    static Map<String, Object> capture(Object rootController) {
+    public static Map<String, Object> capture(Object rootController) {
         return capture(rootController, CaptureMode.FULL);
+    }
+
+    public static Map<String, Object> capture(Object rootController, CaptureMode mode) {
+        return capture(rootController, mode, null, null);
     }
 
     /** Captures only selectors and toggles, suitable for automatic history records. */
@@ -53,13 +66,29 @@ final class UiStateSnapshot {
         return capture(rootController, CaptureMode.NON_TEXT);
     }
 
-    static Map<String, Object> capturePortableConfiguration(Object rootController) {
+    public static Map<String, Object> capturePortableConfiguration(Object rootController) {
         return capture(rootController, CaptureMode.EDITABLE_INPUTS);
     }
 
     /** Captures editable inputs and selectors, redacting secret fields for safe history storage. */
-    static Map<String, Object> captureHistoryRecipe(Object rootController) {
+    public static Map<String, Object> captureHistoryRecipe(Object rootController) {
         return capture(rootController, CaptureMode.HISTORY_RECIPE);
+    }
+
+    /**
+     * Restores a History recipe without rehydrating result panes or retaining
+     * secrets that may have been left in the live screen.  History is a safe
+     * configuration hand-off; it is not a result/session snapshot.
+     */
+    static List<Node> restoreHistoryRecipe(Object rootController, Map<String, Object> state) {
+        clearHistorySensitiveControls(rootController);
+        if (state == null || state.isEmpty()) return List.of();
+        Map<String, Object> safe = new LinkedHashMap<>();
+        state.forEach((key, value) -> {
+            String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);
+            if (!isHistorySensitiveField(field) && !isResultField(field)) safe.put(key, value);
+        });
+        return restore(rootController, safe);
     }
 
     /** Captures the controls belonging to one visible operation pane. */
@@ -73,10 +102,6 @@ final class UiStateSnapshot {
         return capture(rootController, CaptureMode.EDITABLE_INPUTS, sectionRoot, screenRoot);
     }
 
-    private static Map<String, Object> capture(Object rootController, CaptureMode mode) {
-        return capture(rootController, mode, null, null);
-    }
-
     private static Map<String, Object> capture(
             Object rootController, CaptureMode mode, Node scopeRoot, Parent screenRoot) {
         Map<String, Object> state = new LinkedHashMap<>();
@@ -84,14 +109,18 @@ final class UiStateSnapshot {
             if (scopeRoot != null && value instanceof Node node
                     && !isDescendantOf(node, scopeRoot) && !isSharedScreenControl(node, screenRoot)) return;
             if (mode == CaptureMode.NON_TEXT && value instanceof TextInputControl) return;
+            // Result/report/read-only panes are execution output, never a
+            // reusable History configuration. This also prevents a PEM, XML,
+            // JWT or TR-31 block from being copied into a later reopen.
+            if (mode == CaptureMode.HISTORY_RECIPE
+                    && (isResultField(field.getName())
+                    || (value instanceof TextInputControl && !((TextInputControl) value).isEditable()))) return;
             if (mode == CaptureMode.EDITABLE_INPUTS && value instanceof TextInputControl text
                     && !text.isEditable() && !PORTABLE_READ_ONLY_ARTIFACTS.contains(key(owner, field))) return;
 
-            // Do not capture secret fields in history or configuration by default unless specifically allowed
-            // (Wait, actually we should just capture redacted values for secrets)
             Object captured = readControlValue(value);
             if (captured != null) {
-                if (mode == CaptureMode.HISTORY_RECIPE && isSecretField(field.getName(), value)) {
+                if (mode == CaptureMode.HISTORY_RECIPE && isHistorySensitiveField(field.getName(), value)) {
                     state.put(key(owner, field), "[REDACTED_SECRET]");
                 } else {
                     state.put(key(owner, field), captured);
@@ -101,16 +130,55 @@ final class UiStateSnapshot {
         return state;
     }
 
-    private static boolean isSecretField(String fieldName, Object control) {
-        if (control instanceof javafx.scene.control.ComboBox || control instanceof javafx.scene.control.ChoiceBox || control instanceof javafx.scene.control.CheckBox) {
+    /** Single History policy shared by capture, restore filtering and clearing. */
+    static boolean isHistorySensitiveField(String fieldName) {
+        return isHistorySensitiveField(fieldName, null);
+    }
+
+    private static boolean isHistorySensitiveField(String fieldName, Object control) {
+        if (isSafeHistorySelector(fieldName, control)) return false;
+        String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
+        // The certificate subject is public metadata, unlike certificate PEM
+        // inputs and issuance key material.
+        if ("certcnfield".equals(lower)) return false;
+        return HISTORY_SENSITIVE_TOKENS.stream().anyMatch(lower::contains);
+    }
+
+    private static boolean isSafeHistorySelector(String fieldName, Object control) {
+        String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
+        boolean selectorControl = control instanceof ComboBox<?> || control instanceof ChoiceBox<?> || control instanceof CheckBox;
+        boolean selectorName = lower.endsWith("combo") || lower.endsWith("choice") || lower.endsWith("check");
+        if (!selectorControl && !selectorName) return false;
+        return lower.contains("algorithm") || lower.contains("algo")
+                || lower.contains("format") || lower.contains("mode")
+                || lower.contains("size") || lower.contains("usage")
+                || lower.contains("keytype") || lower.contains("keyalgorithm")
+                || lower.contains("keyusage");
+    }
+
+    private static boolean isResultField(String fieldName) {
+        String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
+        // These are input settings despite containing "output" in their FXML
+        // id. They are needed to reproduce a history recipe and contain no
+        // derived data or secret material.
+        if (lower.contains("outputlength") || lower.contains("outputpath")
+                || lower.contains("outputcolumn") || lower.contains("outputformat")
+                || lower.contains("outputfile")) {
             return false;
         }
-        String lower = fieldName.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("password") || lower.contains("key")
-            || lower.contains("pin") || lower.contains("secret")
-            || lower.contains("iv") || lower.contains("nonce")
-            || lower.contains("aad") || lower.contains("payload")
-            || lower.contains("token");
+        return lower.contains("output") || lower.contains("result") || lower.contains("report")
+                || lower.contains("diagnostic") || lower.contains("fingerprint")
+                || lower.contains("kcv") || lower.contains("summary");
+    }
+
+    private static void clearHistorySensitiveControls(Object rootController) {
+        if (rootController == null) return;
+        visitControllers(rootController, (owner, field, value) -> {
+            if (value instanceof TextInputControl input
+                    && (isHistorySensitiveField(field.getName(), value) || isResultField(field.getName()))) {
+                input.clear();
+            }
+        });
     }
 
     private static boolean isSharedScreenControl(Node node, Parent screenRoot) {
@@ -320,7 +388,7 @@ final class UiStateSnapshot {
         void accept(Object owner, Field field, Object value);
     }
 
-    private enum CaptureMode {
+    public enum CaptureMode {
         FULL,
         NON_TEXT,
         EDITABLE_INPUTS,

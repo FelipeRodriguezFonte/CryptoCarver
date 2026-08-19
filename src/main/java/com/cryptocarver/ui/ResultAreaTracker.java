@@ -38,8 +38,34 @@ final class ResultAreaTracker {
     }
 
     TextArea preferred(Node root, boolean publishedPayloadIsAuthoritative) {
+        if (publishedPayloadIsAuthoritative) {
+            return isKeyPairResultArea(focused) && isEffectivelyVisible(focused) ? focused : null;
+        }
         if (focused != null && isEffectivelyVisible(focused)) return focused;
-        return publishedPayloadIsAuthoritative ? null : findVisible(root);
+        return findVisible(root);
+    }
+
+    /**
+     * Finds the area that Add to Shelf is allowed to capture. This deliberately
+     * does not share the published-payload preference used by Copy/Expanded
+     * Result: an area updated by the active operation remains authoritative for
+     * Shelf even when the global snapshot also contains an output.
+     */
+    TextArea shelfCaptureArea(Node root) {
+        if (isValidShelfCaptureArea(updated)) return updated;
+        if (isValidShelfCaptureArea(focused)) return focused;
+        TextArea visible = findVisible(root);
+        return isValidShelfCaptureArea(visible) ? visible : null;
+    }
+
+    boolean isValidShelfCaptureArea(TextArea area) {
+        return area != null
+                && isRegistered(area)
+                && isLikelyResultArea(area)
+                && !area.isEditable()
+                && isEffectivelyVisible(area)
+                && area.getText() != null
+                && !area.getText().isBlank();
     }
 
     TextArea findVisible(Node root) {
@@ -71,6 +97,10 @@ final class ResultAreaTracker {
     }
 
     boolean isCurrentSelection(TextArea area, boolean hasPublishedSnapshot) {
+        return isKeyPairResultArea(area) || (hasPublishedSnapshot && area != null && area == updated);
+    }
+
+    boolean isCurrentResultArea(TextArea area, boolean hasPublishedSnapshot) {
         return isKeyPairResultArea(area) || (hasPublishedSnapshot && area != null && area == updated);
     }
 

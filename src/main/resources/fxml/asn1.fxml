@@ -44,20 +44,20 @@
                                         <Label styleClass="section-label" text="ASN.1 Data (Hex, Base64, or PEM)" />
                                         <TextArea fx:id="asn1InputArea" prefHeight="100.0" promptText="Paste ASN.1 data here..." wrapText="true" style="-fx-font-family: 'Monospaced';"/>
 
-                                        <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                        <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
                                             <children>
                                                 <Button mnemonicParsing="false" onAction="#handleParseASN1" styleClass="action-button" text="Parse ASN.1" />
                                                 <Button mnemonicParsing="false" onAction="#handleClearASN1" text="Clear" />
+                                                <Button mnemonicParsing="false" onAction="#resetModule" text="Reset Defaults" styleClass="secondary-button"/>
                                                 <Button mnemonicParsing="false" onAction="#handleExportASN1Tree" text="Export Tree" />
                                                 <Button mnemonicParsing="false" onAction="#handleExportASN1Json" text="Export JSON" />
                                                 <Button mnemonicParsing="false" onAction="#handleExportASN1Markdown" text="Export Markdown" />
                                                 <Button mnemonicParsing="false" onAction="#handleLoadASN1OidRegistry" text="Load OID Registry" />
                                                 <Button mnemonicParsing="false" onAction="#handleCanonicalizeASN1Der" text="Canonicalize DER" />
                                                 <CheckBox fx:id="asn1StrictDerCheck" text="Strict DER Mode" />
-                                                <Region HBox.hgrow="ALWAYS" />
                                                 <Label fx:id="asn1StatusLabel" text="Ready" />
                                             </children>
-                                        </HBox>
+                                        </FlowPane>
 
                                         <SplitPane dividerPositions="0.6" orientation="VERTICAL" VBox.vgrow="ALWAYS">
                                             <items>

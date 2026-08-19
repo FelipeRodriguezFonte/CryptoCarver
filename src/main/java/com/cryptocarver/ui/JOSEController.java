@@ -11,6 +11,7 @@ import java.util.Map;
 
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
+import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.SignerConfig;
 import com.cryptocarver.model.OperationResult;
 
@@ -41,9 +42,6 @@ import java.util.Set;
 import java.util.Collections;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.crypto.spec.OAEPParameterSpec;
-import javax.crypto.spec.PSource;
-import java.security.spec.MGF1ParameterSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
@@ -56,9 +54,20 @@ import java.util.ResourceBundle;
 public class JOSEController implements Initializable {
 
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return com.cryptocarver.service.I18nService.getInstance().text(key, args);
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        moduleI18n = ModuleI18n.bind(joseContainer, ModuleTextCatalog.jose());
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+            updateJwkInputPresentation();
+            if (detachedStatusLabel != null && detachedStatusLabel.getText() != null
+                    && detachedStatusLabel.getText().isBlank()) detachedStatusLabel.setText("");
+        });
         // Initialize Combo
             if (jwtAlgoCombo != null && jwtAlgoCombo.getItems().isEmpty()) {
                 jwtAlgoCombo.getItems().addAll(
@@ -109,25 +118,7 @@ public class JOSEController implements Initializable {
                 jwkKeyTypeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
                     if (newV == null)
                         return;
-                    if (newV.equals("OCT")) {
-                        if (jwkInputLabel != null)
-                            jwkInputLabel.setText("Input (Hex / Base64 Secret):");
-                        if (jwkInputArea != null)
-                            jwkInputArea.setPromptText("Paste Hex or Base64 Secret (e.g. 313233... or MTIz...)");
-                        if (pemToJwkBtn != null)
-                            pemToJwkBtn.setText("Secret -> JWK");
-                        if (jwkToPemBtn != null)
-                            jwkToPemBtn.setText("JWK -> Secret");
-                    } else {
-                        if (jwkInputLabel != null)
-                            jwkInputLabel.setText("Input (PEM):");
-                        if (jwkInputArea != null)
-                            jwkInputArea.setPromptText("Paste PEM Key (e.g. -----BEGIN...)");
-                        if (pemToJwkBtn != null)
-                            pemToJwkBtn.setText("PEM -> JWK");
-                        if (jwkToPemBtn != null)
-                            jwkToPemBtn.setText("JWK -> PEM");
-                    }
+                    updateJwkInputPresentation();
                 });
                 jwkKeyTypeCombo.getSelectionModel().selectFirst();
             }
@@ -179,6 +170,14 @@ public class JOSEController implements Initializable {
                     }
                 });
             }
+    }
+
+    private void updateJwkInputPresentation() {
+        boolean secret = jwkKeyTypeCombo != null && "OCT".equals(jwkKeyTypeCombo.getValue());
+        if (jwkInputLabel != null) jwkInputLabel.setText(t(secret ? "module.jose.inputSecret" : "module.jose.inputPem"));
+        if (jwkInputArea != null) jwkInputArea.setPromptText(t(secret ? "module.jose.inputSecretPrompt" : "module.jose.inputPemPrompt"));
+        if (pemToJwkBtn != null) pemToJwkBtn.setText(t(secret ? "module.jose.secretToJwk" : "module.jose.pemToJwk"));
+        if (jwkToPemBtn != null) jwkToPemBtn.setText(t(secret ? "module.jose.jwkToSecret" : "module.jose.jwkToPem"));
     }
 
     @FXML
@@ -296,6 +295,32 @@ public class JOSEController implements Initializable {
             }
         }
 
+    }
+
+    @FXML
+    public void handleReset() {
+        ModuleResetPolicy.apply(joseContainer, ModuleResetPolicy.Action.RESET_DEFAULTS,
+                this::clearModuleData, this::restoreSafeDefaults);
+        updateStatus(t("module.jose.resetStatus"));
+    }
+
+    @FXML
+    public void handleClear() {
+        ModuleResetPolicy.apply(joseContainer, ModuleResetPolicy.Action.CLEAR,
+                this::clearModuleData, null);
+        updateStatus(t("module.jose.clearStatus"));
+    }
+
+    private void clearModuleData() {
+        ModuleResetPolicy.clearTextInputs(joseContainer);
+        if (inspectorOutputFlow != null) inspectorOutputFlow.getChildren().clear();
+    }
+
+    private void restoreSafeDefaults() {
+        if (jwtAlgoCombo != null && !jwtAlgoCombo.getItems().isEmpty()) jwtAlgoCombo.getSelectionModel().selectFirst();
+        if (jwsSerializationCombo != null) jwsSerializationCombo.setValue("Compact");
+        if (jwsUnencodedPayloadCheck != null) jwsUnencodedPayloadCheck.setSelected(false);
+        showSection("JWT (Signed)");
     }
 
     public void fillJwtPayload(String value) {
@@ -461,12 +486,17 @@ public class JOSEController implements Initializable {
             try {
                 nestedEncryptionKeyArea.setText(Files.readString(file.toPath()));
             } catch (Exception e) {
-                showError("Error", e.getMessage());
+                showError("Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
     @FXML
     public void handlePemToJwk() {
+
+            if (isBlank(jwkInputArea)) {
+                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
+                return;
+            }
 
             this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
                     jwkOutputArea);
@@ -489,11 +519,11 @@ public class JOSEController implements Initializable {
             try {
                 String content = java.nio.file.Files.readString(file.toPath());
                 jwksArea.setText(content);
-                updateStatus("JWKS loaded.");
+                updateStatus(t("module.jose.feedback.jwksLoaded"));
                 // History
 
             } catch (Exception e) {
-                showError("Load Error", e.getMessage());
+                showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
@@ -516,14 +546,27 @@ public class JOSEController implements Initializable {
                         now + (expHours * 3600));
                 jwtPayloadArea.setText(json);
             } catch (Exception e) {
-                showError("Claims Error", e.getMessage());
+                showError("Claims Error", t("module.jose.error", e.getMessage()));
             }
         }
     }
     @FXML
-    private void handleVerifyDetachedJWS() { this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel); }
+    private void handleVerifyDetachedJWS() {
+        if (isBlank(detachedTokenArea)) { showValidation(t("module.jose.feedback.detachedTokenRequired"), "detachedTokenArea"); return; }
+        if (isBlank(detachedPayloadArea)) { showValidation(t("module.jose.feedback.detachedPayloadRequired"), "detachedPayloadArea"); return; }
+        if (isBlank(detachedVerificationKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "detachedVerificationKeyArea"); return; }
+        if (detachedAlgoCombo == null || detachedAlgoCombo.getValue() == null) {
+            showValidation(t("module.jose.feedback.algorithmRequired"), "detachedAlgoCombo", "preflight.remedy.algorithm");
+            return;
+        }
+        this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel);
+    }
     @FXML
     private void handleVerifyNestedJWT() {
+
+            if (isBlank(nestedOutputArea)) { showValidation(t("module.jose.feedback.nestedTokenRequired"), "nestedOutputArea"); return; }
+            if (isBlank(nestedEncryptionKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedEncryptionKeyArea"); return; }
+            if (isBlank(nestedSigningKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedSigningKeyArea"); return; }
 
             String nestedToken = nestedOutputArea.getText();
             String decryptionKey = nestedEncryptionKeyArea.getText();
@@ -539,13 +582,20 @@ public class JOSEController implements Initializable {
             javafx.scene.input.ClipboardContent cc = new javafx.scene.input.ClipboardContent();
             cc.putString(report);
             clipboard.setContent(cc);
-            updateStatus("Copied Inspector report to clipboard!");
+            updateStatus(t("module.jose.feedback.copied"));
         } else {
-            showError("Copy Error", "Nothing to copy.");
+            showValidation(t("module.jose.feedback.copyEmpty"), "inspectorInputArea");
         }
     }
     @FXML
     private void handleGenerateDetachedJWS() {
+
+            if (isBlank(detachedPayloadArea)) { showValidation(t("module.jose.feedback.detachedPayloadRequired"), "detachedPayloadArea"); return; }
+            if (isBlank(detachedSigningKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "detachedSigningKeyArea"); return; }
+            if (detachedAlgoCombo == null || detachedAlgoCombo.getValue() == null) {
+                showValidation(t("module.jose.feedback.algorithmRequired"), "detachedAlgoCombo", "preflight.remedy.algorithm");
+                return;
+            }
 
             String serialization = detachedSerializationCombo != null ? detachedSerializationCombo.getValue() : "Compact";
             boolean unencoded = detachedUnencodedCheck != null && detachedUnencodedCheck.isSelected();
@@ -554,6 +604,10 @@ public class JOSEController implements Initializable {
 
     @FXML
     private void handleGenerateNestedJWT() {
+
+            if (isBlank(nestedPayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "nestedPayloadArea"); return; }
+            if (isBlank(nestedSigningKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedSigningKeyArea"); return; }
+            if (isBlank(nestedEncryptionKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "nestedEncryptionKeyArea"); return; }
 
             this.generateNestedJWT(
                     nestedPayloadArea.getText(),
@@ -579,13 +633,18 @@ public class JOSEController implements Initializable {
             try {
                 nestedSigningKeyArea.setText(Files.readString(file.toPath()));
             } catch (Exception e) {
-                showError("Error", e.getMessage());
+                showError("Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
     @FXML
     public void handleCalculateThumbprint() {
         showSection("JWT");
+
+            if (isBlank(jwkInputArea)) {
+                showValidation(t("module.jose.feedback.thumbprintInput"), "jwkInputArea");
+                return;
+            }
 
             this.calculateThumbprint(jwkInputArea.getText(), jwkOutputArea);
             // History
@@ -599,7 +658,7 @@ public class JOSEController implements Initializable {
             try {
                 jwePrivateKeyArea.setText(Files.readString(file.toPath()));
             } catch (Exception e) {
-                showError("Error", "Could not load file: " + e.getMessage());
+                showError("Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
@@ -610,7 +669,7 @@ public class JOSEController implements Initializable {
             try {
                 jwePublicKeyArea.setText(Files.readString(file.toPath()));
             } catch (Exception e) {
-                showError("Error", "Could not load file: " + e.getMessage());
+                showError("Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
@@ -634,6 +693,13 @@ public class JOSEController implements Initializable {
     }
     @FXML
     private void handleGenerateSignedJWT() {
+
+            if (isBlank(jwtPayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwtPayloadArea"); return; }
+            if (isBlank(jwtKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtKeyArea"); return; }
+            if (jwtAlgoCombo == null || jwtAlgoCombo.getValue() == null) {
+                showValidation(t("module.jose.feedback.algorithmRequired"), "jwtAlgoCombo", "preflight.remedy.algorithm");
+                return;
+            }
 
             String algo = jwtAlgoCombo.getSelectionModel().getSelectedItem();
             String key = jwtKeyArea.getText();
@@ -668,6 +734,9 @@ public class JOSEController implements Initializable {
     @FXML
     private void handleValidateJWT() {
 
+            if (isBlank(jwtValidateTokenArea)) { showValidation(t("module.jose.feedback.tokenRequired"), "jwtValidateTokenArea"); return; }
+            if (isBlank(jwtValidateKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtValidateKeyArea"); return; }
+
             String iss = jwtExpectedIssField.getText();
             String aud = jwtExpectedAudField.getText();
             String skewStr = jwtClockSkewField.getText();
@@ -700,7 +769,7 @@ public class JOSEController implements Initializable {
         try {
             String alg = jwksRotateAlgoCombo.getValue();
             if (alg == null) {
-                showError("Rotate Error", "Select an algorithm first.");
+                showValidation(t("module.jose.feedback.algorithmRequired"), "jwksRotateAlgoCombo", "preflight.remedy.algorithm");
                 return;
             }
             // Security Warning for Symmetric Keys in JWKS
@@ -724,7 +793,7 @@ public class JOSEController implements Initializable {
                 currentJson = "{\"keys\":[]}";
             String newJson = this.addToJWKSet(currentJson, newKey);
             jwksArea.setText(newJson);
-            updateStatus("Added new " + alg + " key to JWKS.");
+            updateStatus(t("module.jose.feedback.keyAdded", alg));
             // History
             java.util.Map<String, String> details = new java.util.HashMap<>();
             details.put("Algorithm", alg);
@@ -735,6 +804,9 @@ public class JOSEController implements Initializable {
     }
     @FXML
     private void handleGenerateJWE() {
+
+            if (isBlank(jwePayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwePayloadArea"); return; }
+            if (isBlank(jwePublicKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePublicKeyArea"); return; }
 
             this.generateJWE(
                     jwePayloadArea.getText(),
@@ -751,6 +823,9 @@ public class JOSEController implements Initializable {
 
     @FXML
     private void handleDecryptJWE() {
+
+            if (isBlank(jweInputArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jweInputArea"); return; }
+            if (isBlank(jwePrivateKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePrivateKeyArea"); return; }
 
             this.decryptJWE(
                     jweInputArea.getText(),
@@ -770,6 +845,10 @@ public class JOSEController implements Initializable {
     @FXML
     private void handleInspectToken() {
         if (inspectorInputArea != null && inspectorOutputFlow != null) {
+            if (isBlank(inspectorInputArea)) {
+                showValidation(t("module.jose.feedback.inputRequired"), "inspectorInputArea");
+                return;
+            }
             this.inspectToken(inspectorInputArea.getText(), inspectorOutputFlow);
             // History
             java.util.Map<String, String> details = new java.util.HashMap<>();
@@ -787,7 +866,7 @@ public class JOSEController implements Initializable {
                 String content = Files.readString(file.toPath());
                 jwtKeyArea.setText(content);
             } catch (Exception e) {
-                showError("Load Error", "Could not read key file: " + e.getMessage());
+                showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
@@ -814,6 +893,11 @@ public class JOSEController implements Initializable {
     @FXML
     public void handleJwkToPem() {
 
+            if (isBlank(jwkInputArea)) {
+                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
+                return;
+            }
+
             this.convertJwkToPem(jwkInputArea.getText(), jwkOutputArea);
             // History
 
@@ -827,7 +911,7 @@ public class JOSEController implements Initializable {
                 String content = Files.readString(file.toPath());
                 jwtValidateKeyArea.setText(content);
             } catch (Exception e) {
-                showError("Load Error", "Could not read key file: " + e.getMessage());
+                showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
             }
         }
     }
@@ -853,14 +937,14 @@ public class JOSEController implements Initializable {
             boolean isJwk = content.contains("{") && content.contains("\"kty\"");
             boolean isPem = content.contains("BEGIN PRIVATE KEY") || content.contains("BEGIN PUBLIC KEY");
             if (!isJwk && !isPem) {
-                showError("Import Error", "Unknown key format. Choose a PEM or JSON JWK file.");
+                showError("Import Error", t("module.jose.feedback.keyFormat"));
                 return;
             }
             showSection("JWK (Keys)");
             jwkInputArea.setText(content);
-            updateStatus(isJwk ? "Imported JSON JWK." : "Imported PEM key.");
+            updateStatus(t(isJwk ? "module.jose.feedback.importedJwk" : "module.jose.feedback.importedPem"));
         } catch (Exception exception) {
-            showError("Import Error", "Could not read key file: " + exception.getMessage());
+            showError("Import Error", t("module.jose.feedback.fileRead", exception.getMessage()));
         }
     }
 
@@ -868,6 +952,19 @@ public class JOSEController implements Initializable {
         if (statusReporter != null) {
             statusReporter.showError(title, content);
         }
+    }
+
+    private static boolean isBlank(TextInputControl control) {
+        return control == null || control.getText() == null || control.getText().isBlank();
+    }
+
+    private void showValidation(String detail, String fieldKey) {
+        showValidation(detail, fieldKey, "preflight.remedy.input");
+    }
+
+    private void showValidation(String detail, String fieldKey, String remedyKey) {
+        InlineValidationSupport.show(statusReporter, t("preflight.title"), detail,
+                t(remedyKey), fieldKey, null);
     }
 
     private void showInfo(String title, String content) {
@@ -922,8 +1019,8 @@ public class JOSEController implements Initializable {
                     .detail("Algorithm", algorithm)
                     .detail("Serialization", serializationType != null ? serializationType : "Compact")
                     .detail("Unencoded", Boolean.toString(unencodedPayload))
-                    .status("Detached JWS generated").build());
-        } catch (Exception e) { statusReporter.showError("Detached JWS", e.getMessage()); }
+                    .status(t("module.jose.feedback.statusDetachedGenerated")).build());
+        } catch (Exception e) { statusReporter.showError("Detached JWS", t("module.jose.error", e.getMessage())); }
     }
 
     public void verifyDetachedJWS(String detached, String payload, String algorithm, String key, Label status) {
@@ -934,8 +1031,8 @@ public class JOSEController implements Initializable {
             statusReporter.publish(OperationResult.forOperation("Detached JWS Verification")
                     .input(detached.getBytes(StandardCharsets.US_ASCII)).detail("Algorithm", algorithm)
                     .detail("Result", valid ? "VALID" : "INVALID")
-                    .status("Detached JWS verification: " + (valid ? "valid" : "invalid")).build());
-        } catch (Exception e) { status.setText("ERROR: " + e.getMessage()); status.setStyle("-fx-text-fill: red;"); }
+                    .status(t("module.jose.feedback.statusDetachedVerification", valid ? "valid" : "invalid")).build());
+        } catch (Exception e) { status.setText(t("module.jose.error", e.getMessage())); status.setStyle("-fx-text-fill: red;"); }
     }
 
 
@@ -966,7 +1063,7 @@ public class JOSEController implements Initializable {
                     .detail("Algorithms", signers.stream().map(SignerConfig::getAlgorithm).reduce((a,b) -> a + ", " + b).orElse(""))
                     .detail("Serialization", serializationType != null ? serializationType : "Compact")
                     .detail("Unencoded", Boolean.toString(unencodedPayload))
-                    .status("Signed JWT generated successfully (" + primaryAlgo + ")").build());
+                    .status(t("module.jose.feedback.statusJwtGenerated", primaryAlgo)).build());
 
         } catch (Exception e) {
             statusReporter.showError("JWT Generation Error", e.getMessage());
@@ -996,27 +1093,27 @@ public class JOSEController implements Initializable {
             } else if (JWSAlgorithm.Family.EC.contains(algo)) {
                 verifier = new ECDSAVerifier(requireEcPublicKey(algo, keyString));
             } else {
-                statusLabel.setText("Unsupported Algo for Verification");
+                statusLabel.setText(t("module.jose.unsupportedVerification"));
                 statusLabel.setStyle("-fx-text-fill: orange;");
                 return;
             }
 
             boolean verified = signedJWT.verify(verifier);
             if (verified) {
-                statusLabel.setText("VALID SIGNATURE");
+                statusLabel.setText(t("module.jose.validSignature"));
                 statusLabel.setStyle("-fx-text-fill: green;");
             } else {
-                statusLabel.setText("INVALID SIGNATURE");
+                statusLabel.setText(t("module.jose.invalidSignature"));
                 statusLabel.setStyle("-fx-text-fill: red;");
             }
             statusReporter.publish(OperationResult.forOperation("JWT Validation")
                     .input(tokenString.getBytes(StandardCharsets.US_ASCII))
                     .detail("Algorithm", algo.getName()).detail("Result", verified ? "VALID" : "INVALID")
                     .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyString))
-                    .status("JWT validation: " + (verified ? "valid" : "invalid")).build());
+                    .status(t("module.jose.feedback.statusJwtValidation", verified ? "valid" : "invalid")).build());
 
         } catch (Exception e) {
-            statusLabel.setText("ERROR: " + e.getMessage());
+            statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
             headerOut.setText("");
             payloadOut.setText("");
@@ -1054,16 +1151,16 @@ public class JOSEController implements Initializable {
         try {
             String payload = JOSEService.verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM);
             payloadOut.setText(payload);
-            statusLabel.setText("SUCCESS: Decrypted & Verified");
+            statusLabel.setText(t("module.jose.decryptedVerified"));
             statusLabel.setStyle("-fx-text-fill: green;");
 
             statusReporter.publish(OperationResult.forOperation("Nested JWT Verification")
                 .input(nestedToken.getBytes(StandardCharsets.US_ASCII))
                 .output(payloadOut.getText().getBytes(StandardCharsets.UTF_8))
-                .status("Nested JWT decrypted and signature verified successfully").build());
+                .status(t("module.jose.feedback.statusNested")).build());
 
         } catch (Exception e) {
-            statusLabel.setText("ERROR: " + e.getMessage());
+            statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
             statusReporter.showError("Nested JWT Verification Error", e.getMessage());
             LOG.error("Nested JWT verification failed", e);
@@ -1093,13 +1190,13 @@ public class JOSEController implements Initializable {
                 // Pad or truncate to required length for the algorithm if needed, or assume user provides correct length
                 encrypter = new com.nimbusds.jose.crypto.AESEncrypter(keyBytes);
             } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                PublicKey ecPublicKey = requireEcPublicKey(new JWSAlgorithm(alg.getName()), publicKeyPEM);
+                PublicKey ecPublicKey = requireJweEcPublicKey(publicKeyPEM);
                 encrypter = new com.nimbusds.jose.crypto.ECDHEncrypter((java.security.interfaces.ECPublicKey) ecPublicKey);
             } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
                 if (publicKeyPEM.startsWith("-----BEGIN")) {
                     throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
                 }
-                encrypter = new com.nimbusds.jose.crypto.PasswordBasedEncrypter(publicKeyPEM.getBytes(StandardCharsets.UTF_8), 2048, 16);
+                encrypter = new com.nimbusds.jose.crypto.PasswordBasedEncrypter(publicKeyPEM.getBytes(StandardCharsets.UTF_8), 16, 2048);
             } else {
                 throw new IllegalArgumentException("Unsupported JWE Algorithm: " + alg.getName());
             }
@@ -1141,34 +1238,71 @@ public class JOSEController implements Initializable {
             TextArea jweHeaderArea, TextArea jweEncryptedKeyArea, TextArea jweDecryptedKeyArea,
             TextArea jweIVArea, TextArea jweCiphertextArea, TextArea jweAuthTagArea,
             Label statusLabel) {
+        String algorithmName = "(unknown)";
         try {
-            // 1. Parse
-            JWEObject jweObject = JWEObject.parse(jweString);
-
-            // 2. Key & Decrypter
-            JWEDecrypter decrypter;
-            JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
-            PrivateKey rsaPrivateKey = null; // Save for CEK display later if RSA
-
-            if (JWEAlgorithm.Family.RSA.contains(alg)) {
-                rsaPrivateKey = parseRSAPrivateKey(privateKeyPEM);
-                decrypter = new RSADecrypter(rsaPrivateKey);
-            } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
-                byte[] keyBytes = privateKeyPEM.getBytes(StandardCharsets.UTF_8);
-                if (privateKeyPEM.startsWith("-----BEGIN")) throw new IllegalArgumentException("AES Key Wrap requires a symmetric key (secret), not a PEM certificate/key.");
-                decrypter = new com.nimbusds.jose.crypto.AESDecrypter(keyBytes);
-            } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                PrivateKey ecPrivateKey = requireEcPrivateKey(new JWSAlgorithm(alg.getName()), privateKeyPEM);
-                decrypter = new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) ecPrivateKey);
-            } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
-                if (privateKeyPEM.startsWith("-----BEGIN")) throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
-                decrypter = new com.nimbusds.jose.crypto.PasswordBasedDecrypter(privateKeyPEM.getBytes(StandardCharsets.UTF_8));
-            } else {
-                throw new IllegalArgumentException("Unsupported JWE Algorithm: " + alg.getName());
+            if (jweString == null || jweString.isBlank()) {
+                throw new IllegalArgumentException("A JWE compact serialization is required.");
+            }
+            if (privateKeyPEM == null || privateKeyPEM.isBlank()) {
+                throw new IllegalArgumentException("Key material is required to decrypt the JWE.");
             }
 
-            // 3. Decryp
-            jweObject.decrypt(decrypter);
+            final JWEObject jweObject;
+            try {
+                jweObject = JWEObject.parse(jweString);
+            } catch (java.text.ParseException e) {
+                throw new IllegalArgumentException("The JWE is corrupt or has an invalid compact serialization.", e);
+            }
+
+            JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
+            algorithmName = alg == null ? "(missing)" : alg.getName();
+            if (!JWEManualCekRecovery.isSupported(alg)) {
+                throw new IllegalArgumentException("Unsupported JWE key-management algorithm for this application: " + algorithmName + ".");
+            }
+
+            JWEDecrypter decrypter;
+            PrivateKey privateKey = null;
+            byte[] secret = null;
+            String keyMaterial = privateKeyPEM.trim();
+
+            try {
+                if (JWEAlgorithm.Family.RSA.contains(alg)) {
+                    privateKey = parseRSAPrivateKey(keyMaterial);
+                    decrypter = new RSADecrypter(privateKey);
+                } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
+                    if (keyMaterial.startsWith("-----BEGIN")) {
+                        throw new IllegalArgumentException("AES-KW requires a symmetric key, not a PEM certificate/key.");
+                    }
+                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
+                    decrypter = new com.nimbusds.jose.crypto.AESDecrypter(secret);
+                } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
+                    privateKey = requireJweEcPrivateKey(keyMaterial);
+                    decrypter = new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) privateKey);
+                } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
+                    if (keyMaterial.startsWith("-----BEGIN")) {
+                        throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
+                    }
+                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
+                    decrypter = new com.nimbusds.jose.crypto.PasswordBasedDecrypter(secret);
+                } else if (JWEAlgorithm.DIR.equals(alg)) {
+                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
+                    decrypter = new com.nimbusds.jose.crypto.DirectDecrypter(secret);
+                } else {
+                    throw new IllegalArgumentException("Unsupported JWE key-management algorithm: " + algorithmName + ".");
+                }
+            } catch (IllegalArgumentException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Key material is missing or incompatible with JWE algorithm " + algorithmName + ".", e);
+            }
+
+            try {
+                jweObject.decrypt(decrypter);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        "JWE authentication failed for " + algorithmName
+                                + ": the supplied key may be incorrect/incompatible or the JWE header/ciphertext may be corrupt.", e);
+            }
 
             // 4. Display Parts
             headerOut.setText(jweObject.getHeader().toString());
@@ -1180,49 +1314,18 @@ public class JOSEController implements Initializable {
             Base64URL encryptedKey = jweObject.getEncryptedKey();
             jweEncryptedKeyArea.setText(encryptedKey != null ? encryptedKey.toString() : "");
 
-            if (encryptedKey != null) {
-                try {
-                    // Manual Decryption to show the CEK
-
-                    javax.crypto.Cipher cipher = null;
-                    if (rsaPrivateKey != null) {
-                        if (JWEAlgorithm.RSA_OAEP_256.equals(alg)) {
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/OAEPPadding");
-                            OAEPParameterSpec spec = new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256,
-                                    PSource.PSpecified.DEFAULT);
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey, spec);
-                        } else if (JWEAlgorithm.RSA_OAEP.equals(alg)) {
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/OAEPPadding");
-                            OAEPParameterSpec spec = new OAEPParameterSpec("SHA-1", "MGF1", MGF1ParameterSpec.SHA1,
-                                    PSource.PSpecified.DEFAULT);
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey, spec);
-                        } else if (JWEAlgorithm.RSA1_5.equals(alg)) {
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/PKCS1Padding");
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey);
-                        } else {
-                            // Fallback attemp
-                            cipher = javax.crypto.Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, rsaPrivateKey);
-                        }
-
-                        byte[] decryptedKeyBytes = cipher.doFinal(encryptedKey.decode());
-
-                        StringBuilder hexString = new StringBuilder();
-                        for (byte b : decryptedKeyBytes) {
-                            String hex = Integer.toHexString(0xff & b);
-                            if (hex.length() == 1)
-                                hexString.append('0');
-                            hexString.append(hex);
-                        }
-                        jweDecryptedKeyArea.setText(hexString.toString().toUpperCase());
-                    } else {
-                        jweDecryptedKeyArea.setText("Manual CEK preview not supported for " + alg.getName());
-                    }
-                } catch (Exception ex) {
-                    jweDecryptedKeyArea.setText("Decryption Error: " + ex.getMessage());
-                }
+            if (JWEAlgorithm.DIR.equals(alg)) {
+                // The direct key is the CEK. Keep it out of automatic preview,
+                // OperationResult, history, reports, clipboard and logs.
+                jweDecryptedKeyArea.setText(directCekPreviewMessage());
             } else {
-                jweDecryptedKeyArea.setText("Direct Encryption (No Key)");
+                try {
+                    byte[] cek = JWEManualCekRecovery.recover(jweObject, privateKey, secret);
+                    jweDecryptedKeyArea.setText(DataConverter.bytesToHex(cek));
+                    java.util.Arrays.fill(cek, (byte) 0);
+                } catch (JWEManualCekRecovery.ManualCekRecoveryException ex) {
+                    jweDecryptedKeyArea.setText("Manual CEK preview error: " + ex.getMessage());
+                }
             }
 
             jweIVArea.setText(jweObject.getIV() != null
@@ -1239,24 +1342,37 @@ public class JOSEController implements Initializable {
                                             + "]"
                                     : "");
 
-            statusLabel.setText("DECRYPTION SUCCESSFUL");
+            statusLabel.setText(t("module.jose.decryptionSuccessful"));
             statusLabel.setStyle("-fx-text-fill: green;");
 
             String payload = jweObject.getPayload().toString();
-            statusReporter.publish(OperationResult.forOperation("JWE Decryption")
-                    .input(jweString.getBytes(StandardCharsets.US_ASCII))
-                    .output(payload.getBytes(StandardCharsets.UTF_8))
-                    .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
-                    .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
-                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", privateKeyPEM))
-                    .status("JWE decrypted").build());
+            statusReporter.publish(buildJweDecryptionResult(jweString, payload, jweObject));
 
         } catch (Exception e) {
-            statusLabel.setText("DECRYPTION FAILED");
+            statusLabel.setText(t("module.jose.decryptionFailed"));
             statusLabel.setStyle("-fx-text-fill: red;");
-            statusReporter.showError("JWE Decryption Error", e.getMessage());
-            LOG.error("JWE decryption failed", e);
+            String message = e.getMessage();
+            if (message == null || message.isBlank()) {
+                message = "JWE decryption failed for " + algorithmName + ".";
+            }
+            statusReporter.showError("JWE Decryption Error", message);
+            // Do not attach the exception: CEKs and other secret material must
+            // never reach application logs through a provider exception.
+            LOG.error("JWE decryption failed for key-management algorithm {}", algorithmName);
         }
+    }
+
+    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject) {
+        return OperationResult.forOperation("JWE Decryption")
+                .input(jweString.getBytes(StandardCharsets.US_ASCII))
+                .output(payload.getBytes(StandardCharsets.UTF_8))
+                .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
+                .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
+                .status(t("module.jose.feedback.statusJweDecrypted")).build();
+    }
+
+    static String directCekPreviewMessage() {
+        return "Direct encryption: the CEK is the supplied direct key and is not displayed automatically.";
     }
 
     // --- JWK ---
@@ -1267,7 +1383,7 @@ public class JOSEController implements Initializable {
                     .generate();
 
             outputArea.setText(rsaJWK.toJSONString());
-            statusReporter.updateStatus("RSA JWK generated");
+            statusReporter.updateStatus(t("module.jose.feedback.statusJwkGenerated"));
         } catch (Exception e) {
             statusReporter.showError("JWK Error", e.getMessage());
         }
@@ -1334,6 +1450,26 @@ public class JOSEController implements Initializable {
     private java.security.interfaces.ECPublicKey requireEcPublicKey(JWSAlgorithm algorithm, String pem) throws Exception {
         java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
         validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
+        return key;
+    }
+
+    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
+    private java.security.interfaces.ECPublicKey requireJweEcPublicKey(String pem) throws Exception {
+        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
+        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
+        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
+            throw new IllegalArgumentException("The supplied EC public key curve is not supported by Nimbus ECDH-ES.");
+        }
+        return key;
+    }
+
+    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
+    private java.security.interfaces.ECPrivateKey requireJweEcPrivateKey(String pem) throws Exception {
+        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
+        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
+        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
+            throw new IllegalArgumentException("The supplied EC private key curve is not supported by Nimbus ECDH-ES.");
+        }
         return key;
     }
 

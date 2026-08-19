@@ -1,12 +1,19 @@
 package com.cryptocarver.crypto;
 
+import com.cryptocarver.service.RevocationValidationService;
 import com.cryptocarver.crypto.CmsInspectionReport.*;
+import eu.europa.esig.dss.model.DSSDocument;
+import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.validation.SignedDocumentValidator;
+import eu.europa.esig.dss.validation.reports.Reports;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.cms.AttributeTable;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
 import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.X509CRLHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cms.*;
 import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
@@ -26,6 +33,12 @@ public class CmsInspector {
     }
 
     public CmsInspectionReport inspect(byte[] inputBytes, byte[] detachedContent, KeyStore trustStore) throws Exception {
+        return inspect(inputBytes, detachedContent, trustStore, false, List.of());
+    }
+
+    /** CMS/CAdES validation with explicit opt-in online revocation and local CRL evidence. */
+    public CmsInspectionReport inspect(byte[] inputBytes, byte[] detachedContent, KeyStore trustStore,
+                                       boolean onlineRevocation, List<DSSDocument> localCrls) throws Exception {
         if (inputBytes == null || inputBytes.length == 0) {
             throw new IllegalArgumentException("CMS input is empty");
         }
@@ -45,7 +58,7 @@ public class CmsInspector {
             ASN1ObjectIdentifier contentType = info.getContentType();
 
             if (CMSObjectIdentifiers.signedData.equals(contentType)) {
-                return inspectSignedData(derBytes, detachedContent, trustStore);
+                return inspectSignedData(derBytes, detachedContent, trustStore, onlineRevocation, localCrls);
             } else if (CMSObjectIdentifiers.envelopedData.equals(contentType)) {
                 return inspectEnvelopedData(derBytes);
             } else if (CMSObjectIdentifiers.authenticatedData.equals(contentType)) {
@@ -82,7 +95,8 @@ public class CmsInspector {
                 Collections.singletonList("CMS type " + oid + " is not fully supported for inspection."));
     }
 
-    private CmsInspectionReport inspectSignedData(byte[] derBytes, byte[] detachedContent, KeyStore trustStore) throws Exception {
+    private CmsInspectionReport inspectSignedData(byte[] derBytes, byte[] detachedContent, KeyStore trustStore,
+                                                  boolean onlineRevocation, List<DSSDocument> suppliedLocalCrls) throws Exception {
         CMSSignedData signedData;
         ContentState contentState = ContentState.UNKNOWN;
         List<String> warnings = new ArrayList<>();
@@ -291,11 +305,78 @@ public class CmsInspector {
             validationSteps.add(new ValidationStep("Trust Chain", ValidationState.NOT_EVALUATED, "No truststore provided"));
         }
 
+        List<DSSDocument> localCrls = suppliedLocalCrls == null || suppliedLocalCrls.isEmpty()
+                ? embeddedCrlEvidence(signedData) : List.copyOf(suppliedLocalCrls);
+        RevocationValidationService.Result revocation = validateRevocation(
+                derBytes, detachedContent, trustStore, onlineRevocation, localCrls);
+        validationSteps.add(new ValidationStep("Revocation",
+                revocationStepState(revocation.status()),
+                "Status: " + revocation.status() + "; Evidence: " + revocation.evidence()
+                        + (revocation.errors().isEmpty() ? "" : "; Reason: " + String.join("; ", revocation.errors()))));
+
         String contentOidStr = signedData.getSignedContentTypeOID();
 
         return new CmsInspectionReport(CmsContentType.SIGNED_DATA, contentOidStr, "SignedData",
                 contentState, contentSize, null, signerSummaries, Collections.emptyList(),
-                certificates, validationSteps, warnings);
+                certificates, validationSteps, warnings, revocation);
+    }
+
+    private RevocationValidationService.Result validateRevocation(byte[] derBytes, byte[] detachedContent,
+                                                                  KeyStore trustStore, boolean online,
+                                                                  List<DSSDocument> localCrls) {
+        if (!online && (localCrls == null || localCrls.isEmpty())) {
+            return RevocationValidationService.Result.disabled(false);
+        }
+        List<String> endpoints = Collections.synchronizedList(new ArrayList<>());
+        try {
+            CommonCertificateVerifier verifier = new CommonCertificateVerifier();
+            if (trustStore != null) {
+                eu.europa.esig.dss.spi.x509.CommonTrustedCertificateSource trusted =
+                        new eu.europa.esig.dss.spi.x509.CommonTrustedCertificateSource();
+                Enumeration<String> aliases = trustStore.aliases();
+                while (aliases.hasMoreElements()) {
+                    java.security.cert.Certificate certificate = trustStore.getCertificate(aliases.nextElement());
+                    if (certificate instanceof X509Certificate x509) trusted.addCertificate(
+                            new eu.europa.esig.dss.model.x509.CertificateToken(x509));
+                }
+                verifier.setTrustedCertSources(trusted);
+            }
+            RevocationValidationService.configure(verifier,
+                    new RevocationValidationService.Configuration(online, localCrls, endpoints::add));
+            SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(
+                    new InMemoryDocument(derBytes, "cms.p7s"));
+            validator.setCertificateVerifier(verifier);
+            if (detachedContent != null) validator.setDetachedContents(
+                    List.of(new InMemoryDocument(detachedContent, "content")));
+            Reports reports = validator.validateDocument();
+            return RevocationValidationService.classifyDssReport(online, !localCrls.isEmpty(),
+                    reports.getXmlDetailedReport(), endpoints, List.of());
+        } catch (Exception | LinkageError failure) {
+            RevocationValidationService.Status status = online
+                    ? RevocationValidationService.Status.INDETERMINATE
+                    : RevocationValidationService.Status.UNKNOWN;
+            return new RevocationValidationService.Result(status,
+                    localCrls == null || localCrls.isEmpty()
+                            ? RevocationValidationService.Evidence.NONE : RevocationValidationService.Evidence.LOCAL,
+                    endpoints, List.of(failure.getMessage() == null ? "Revocation validation did not complete" : failure.getMessage()));
+        }
+    }
+
+    private ValidationState revocationStepState(RevocationValidationService.Status status) {
+        return switch (status) {
+            case GOOD -> ValidationState.VALID;
+            case REVOKED -> ValidationState.INVALID;
+            case UNKNOWN, INDETERMINATE -> ValidationState.WARNING;
+            case DISABLED -> ValidationState.NOT_EVALUATED;
+        };
+    }
+
+    private List<DSSDocument> embeddedCrlEvidence(CMSSignedData signedData) throws Exception {
+        List<DSSDocument> result = new ArrayList<>();
+        for (X509CRLHolder holder : signedData.getCRLs().getMatches(null)) {
+            result.add(new InMemoryDocument(holder.getEncoded(), "embedded-crl.der"));
+        }
+        return List.copyOf(result);
     }
 
     private CmsInspectionReport inspectEnvelopedData(byte[] derBytes) throws Exception {

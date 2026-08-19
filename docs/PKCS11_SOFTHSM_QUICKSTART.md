@@ -56,6 +56,35 @@ keytool -list -storetype PKCS11 -storepass 123456 \
   -providerClass sun.security.pkcs11.SunPKCS11 -providerArg "$PKCS11_CFG"
 ```
 
+### Para probar Wrap/Unwrap por PKCS#11 (Fase C)
+
+`keytool` y la generación de claves de `Pkcs11Session` crean objetos con
+`CKA_EXTRACTABLE=false` por defecto (comprobado empíricamente contra este
+mismo token): son perfectamente firmables/cifrables, pero el propio token
+rechaza envolverlos (`CKR_KEY_UNEXTRACTABLE`) — es un límite de seguridad
+correcto, no un error. Para tener una clave que sí se pueda envolver, créala
+explícitamente como extraíble con `pkcs11-tool` (requiere `brew install opensc`):
+
+```bash
+pkcs11-tool --module "$MODULE" --login --pin 123456 \
+  --keygen --key-type AES:16 --label cryptocarver-aes-extractable --extractable
+```
+
+También hace falta un segundo par RSA además de `cryptocarver-rsa` si quieres
+probar por separado el flujo de "clave envolvente ≠ clave de prueba":
+
+```bash
+keytool -genkeypair -alias cryptocarver-rsa-target -keyalg RSA -keysize 2048 \
+  -dname 'CN=CryptoCarver SoftHSM Target, O=CryptoCarver, C=ES' \
+  -validity 365 -storetype PKCS11 -storepass 123456 \
+  -providerClass sun.security.pkcs11.SunPKCS11 -providerArg "$PKCS11_CFG"
+```
+
+`src/test/java/com/cryptocarver/crypto/hsm/Pkcs11WrapUnwrapIntegrationTest.java`
+recoge la clave AES extraíble por la variable `CRYPTOCARVER_SOFTHSM_EXTRACTABLE_AES_ALIAS`
+(por defecto `cryptocarver-aes-extractable`); sin ella, solo corren los casos
+de error (transformación no soportada, clave no extraíble, datos corruptos).
+
 ## Windows
 
 1. Instala SoftHSM2 de una distribución confiable y, para generar la clave desde consola, instala también OpenSC (`pkcs11-tool`). Ambas instalaciones deben ser de la misma arquitectura que tu Java, normalmente x64.

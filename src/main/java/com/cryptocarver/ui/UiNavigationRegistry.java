@@ -15,6 +15,7 @@ public final class UiNavigationRegistry {
 
     public enum Module {
         JOSE,
+        COSE,
         EPOCH_CONVERTER,
         JSON_FORMATTER,
         KEYS_SYMMETRIC,
@@ -53,7 +54,42 @@ public final class UiNavigationRegistry {
 
     public static Optional<Route> resolve(String operation) {
         if (operation == null || operation.isBlank()) return Optional.empty();
-        return Optional.ofNullable(ROUTES.get(operation.trim()));
+        String candidate = operation.trim();
+        Route route = ROUTES.get(candidate);
+        return Optional.ofNullable(route != null ? route : resolveLegacyExecution(candidate));
+    }
+
+    /**
+     * Routes result labels created by older releases, which stored a detailed
+     * execution name instead of the workspace that produced it. New records
+     * persist their workspace separately in {@code HistoryCommand}.
+     */
+    private static Route resolveLegacyExecution(String operation) {
+        if (operation.startsWith("Derive - ") || operation.equals("KDF Derivation")) {
+            return new Route(Module.KEYS_SYMMETRIC, "Key Derivation");
+        }
+        if (operation.startsWith("Validate - ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "Validation & KCV");
+        }
+        if (operation.startsWith("Split - ") || operation.startsWith("Combine - ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "Key Sharing");
+        }
+        if (operation.startsWith("AES Key ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "AES Key Wrap");
+        }
+        if (operation.startsWith("Wrap Key - ") || operation.startsWith("Unwrap Key - ")) {
+            return new Route(Module.KEYS_SYMMETRIC, "TR-31 Key Blocks");
+        }
+        if (operation.startsWith("Generate ECDSA F(p) - ")) {
+            return new Route(Module.KEYS_ASYMMETRIC, "ECDSA Key Generation");
+        }
+        if (operation.startsWith("Generate Certificate - ")) {
+            return new Route(Module.CERTIFICATES, "Generate Certificate");
+        }
+        if (operation.startsWith("Format Workbench: ")) {
+            return new Route(Module.GENERIC, "Key & Certificate Format Workbench");
+        }
+        return null;
     }
 
     static Map<String, Route> routes() {
@@ -69,6 +105,9 @@ public final class UiNavigationRegistry {
                 "Generate Nested JWT", "Token Inspector", "PEM to JWK", "JWK to PEM",
                 "JWK Thumbprint", "JWKS Rotate Key", "Load JWKS File",
                 "Import Key (PEM)", "Import Key (JSON)");
+        add(routes, new Route(Module.COSE, null),
+                "COSE Sign1", "COSE Verify1", "COSE MAC0", "COSE Verify MAC0",
+                "COSE Encrypt0", "COSE Decrypt0");
         add(routes, new Route(Module.EPOCH_CONVERTER, null), "Epoch Converter");
         add(routes, new Route(Module.JSON_FORMATTER, null), "JSON Formatter");
 
@@ -80,6 +119,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Material Inspector"), "Key Material Inspector");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "KeyStore Inspector"), "KeyStore Inspector");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "PKCS#11 Token"), "PKCS#11 Token");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "PKCS#11 Profiles"), "PKCS#11 Profiles");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Compare Public / Private Key"),
                 "Compare Public / Private Key");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Sharing"),
@@ -89,6 +129,8 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.KEYS_SYMMETRIC, "AES Key Wrap"), "AES Key Wrap");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-31 Key Blocks"),
                 "TR-31 Key Blocks", "TR-31 Export", "TR-31 Import", "TR-31 Parse");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "RSA Key Exchange"), "RSA Key Exchange");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-34 Key Distribution"), "TR-34 Key Distribution");
 
         add(routes, new Route(Module.KEYS_ASYMMETRIC, "RSA Key Generation"),
                 "RSA Key Generation", "Generate RSA Key");
@@ -118,6 +160,7 @@ public final class UiNavigationRegistry {
                 "ASN.1 Decoder", "Decode ASN.1", "ASN.1 Parse");
         add(routes, new Route(Module.CERTIFICATES, "ASN.1 Decoder", Variant.ASN1_ENCODE),
                 "Encode ASN.1", "ASN.1 Encode");
+        add(routes, new Route(Module.CERTIFICATES, "ASN.1 Decoder"), "ASN.1");
 
         add(routes, new Route(Module.GENERIC, "Hashing"), "Hashing");
         add(routes, new Route(Module.GENERIC, "File Conversion"), "Encoding/Conversion", "File Conversion");
@@ -133,6 +176,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.GENERIC, "Modular Arithmetic"), "Modular Arithmetic");
         add(routes, new Route(Module.GENERIC, "Key & Certificate Format Workbench"),
                 "Key & Certificate Format Workbench");
+        add(routes, new Route(Module.GENERIC, "Crypto Envelope Inspector"), "Crypto Envelope Inspector");
 
         add(routes, new Route(Module.POST_QUANTUM, "Key Generation"),
                 "Post-Quantum Cryptography", "PQC Key Generation", "PQC Key Import",
@@ -147,6 +191,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.XML_SECURITY, "Inspect Signed XML"), "Inspect Signed XML");
         add(routes, new Route(Module.XML_SECURITY, "RFC 3161 Timestamp"), "RFC 3161 Timestamp");
         add(routes, new Route(Module.WSS_SECURITY, "Sign SOAP"), "Sign SOAP (WSS)");
+        add(routes, new Route(Module.WSS_SECURITY, "Sign SOAP"), "WSS Security");
         add(routes, new Route(Module.WSS_SECURITY, "Add UsernameToken"), "Add UsernameToken (WSS)");
         add(routes, new Route(Module.WSS_SECURITY, "Encrypt SOAP Body"), "Encrypt SOAP Body (WSS)");
         add(routes, new Route(Module.WSS_SECURITY, "Decrypt SOAP Body"), "Decrypt SOAP Body (WSS)");
@@ -183,6 +228,7 @@ public final class UiNavigationRegistry {
                 "Clear PIN Blocks", "Encode PIN Block", "Decode PIN Block",
                 "PIN Block Operations", "PIN Block Encoding", "PIN Block Decoding",
                 "PIN Block Encoded", "PIN Block Decoded");
+        add(routes, new Route(Module.PAYMENTS, "Clear PIN Blocks"), "Payments");
         add(routes, new Route(Module.PAYMENTS, "Encrypted PIN Blocks"),
                 "Encrypted PIN Blocks", "ISO PIN Blocks", "ISO 0", "ISO 2");
         add(routes, new Route(Module.PAYMENTS, "PIN Generation"),

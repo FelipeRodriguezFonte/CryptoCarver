@@ -20,6 +20,8 @@ public class HistoryCommand implements Serializable {
     private String id;
     private String timestamp;
     private String operation;
+    /** Navigation target captured when the operation ran. Kept separate from the descriptive result label. */
+    private String navigationOperation;
     private String details;
     private List<OperationDetail> structuredDetails;
 
@@ -41,9 +43,17 @@ public class HistoryCommand implements Serializable {
     public HistoryCommand(String operation, String details, Map<String, Object> parameters,
                           Reproducibility reproducibility, String reproducibilityReason,
                           String inputFormat, String outputFormat) {
+        this(operation, details, parameters, reproducibility, reproducibilityReason,
+                inputFormat, outputFormat, null);
+    }
+
+    public HistoryCommand(String operation, String details, Map<String, Object> parameters,
+                          Reproducibility reproducibility, String reproducibilityReason,
+                          String inputFormat, String outputFormat, String navigationOperation) {
         this.id = UUID.randomUUID().toString();
         this.timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         this.operation = operation;
+        this.navigationOperation = navigationOperation;
         this.details = details;
         this.parameters = parameters != null ? parameters : java.util.Collections.emptyMap();
         this.reproducibility = reproducibility;
@@ -64,6 +74,10 @@ public class HistoryCommand implements Serializable {
     public String getId() { return id; }
     public String getTimestamp() { return timestamp; }
     public String getOperation() { return operation; }
+    /** Returns the originating workspace, or the result label for legacy history records. */
+    public String getNavigationOperation() {
+        return navigationOperation == null || navigationOperation.isBlank() ? operation : navigationOperation;
+    }
     public String getDetails() { return details; }
 
     // Kept for backward compatibility mapping in other classes for now

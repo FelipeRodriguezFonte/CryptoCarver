@@ -17,6 +17,9 @@ public final class BatchInputCodec {
     public static final int MAX_ROWS = 10_000;
     private static final int MAX_CELL_CHARS = 100_000;
     public static final long MAX_TOTAL_CHARS = 100_000_000L; // ~100MB input limit
+    private static final java.util.regex.Pattern SECRET_FIELD = java.util.regex.Pattern.compile(
+            "(^|[^a-z])(key|kbpk|password|passwd|pwd|pin|pan|cvv|iv|nonce|aad|salt|secret|private|certificate|cert|token|signature|mac)([^a-z]|$)",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
 
     private BatchInputCodec() { }
 
@@ -102,6 +105,7 @@ public final class BatchInputCodec {
                 for (Map.Entry<String, Object> entry : raw.entrySet()) {
                     String key = entry.getKey() == null ? "" : entry.getKey().trim();
                     if (key.isEmpty()) throw new IllegalArgumentException("JSONL line " + lineNumber + " contains an empty field name");
+                    validateSafeFieldName(key, "JSONL line " + lineNumber);
                     if (entry.getValue() instanceof Map || entry.getValue() instanceof List) throw new IllegalArgumentException("JSONL line " + lineNumber + " field " + key + " must be scalar");
                     row.put(key, validateCell(entry.getValue() == null ? "" : String.valueOf(entry.getValue())));
                 }
@@ -119,6 +123,15 @@ public final class BatchInputCodec {
         for (String name : header) {
             if (name == null || name.isBlank()) throw new IllegalArgumentException("CSV header contains an empty field name");
             if (!seen.add(name)) throw new IllegalArgumentException("CSV header contains duplicate field: " + name);
+            validateSafeFieldName(name, "CSV header");
+        }
+    }
+
+    /** Batch files are data-only: secret material belongs in a dedicated crypto operation, never in a reusable lot. */
+    public static void validateSafeFieldName(String name, String context) {
+        if (name != null && SECRET_FIELD.matcher(name.trim()).find()) {
+            throw new IllegalArgumentException((context == null ? "Batch" : context)
+                    + " cannot contain secret/key field '" + name + "'. Use a non-secret data column.");
         }
     }
 

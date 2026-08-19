@@ -1,6 +1,8 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.ClipboardEntry;
+import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.HistoryCommand;
 import com.cryptocarver.model.HistoryManager;
 import com.cryptocarver.model.OperationDetail;
@@ -9,6 +11,7 @@ import com.cryptocarver.model.OperationRecipe;
 import com.cryptocarver.model.RecipeVariables;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.utils.HistoryComparator;
+import com.cryptocarver.service.I18nService;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -46,6 +49,7 @@ public class HistoryController {
     @FXML private Button exportRecipeBtn;
     @FXML private Button openHistoryDetailBtn;
     @FXML private Button copyHistoryDetailBtn;
+    @FXML private Button addHistoryToShelfBtn;
     @FXML private Button exportJsonRecordBtn;
     @FXML private Button exportVisibleJsonBtn;
     @FXML private TableView<HistoryCommand> historyTable;
@@ -56,6 +60,11 @@ public class HistoryController {
     @FXML private TableColumn<OperationDetail, String> nameCol;
     @FXML private TableColumn<OperationDetail, String> valCol;
     @FXML private TableColumn<OperationDetail, String> classCol;
+    private ModuleI18n.Binding moduleI18n;
+
+    private String t(String key, Object... args) {
+        return I18nService.getInstance().text(key, args);
+    }
 
     private OperationNavigator navigator;
     private HistoryManager historyManager;
@@ -64,6 +73,11 @@ public class HistoryController {
 
     @FXML
     public void initialize() {
+        moduleI18n = ModuleI18n.bind(mainHistoryContainer, ModuleTextCatalog.history());
+        I18nService.getInstance().addLocaleChangeListener(locale -> {
+            refresh();
+            historyTable.refresh();
+        });
         historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         detailsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -72,13 +86,14 @@ public class HistoryController {
         opCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getOperation()));
 
         actionCol.setCellFactory(col -> new TableCell<>() {
-            private final Button btn = new Button("Reopen");
+            private final Button btn = new Button(t("module.history.reopen"));
             {
-                btn.setStyle("-fx-background-color: #0288d1; -fx-text-fill: white; -fx-font-size: 10px; -fx-padding: 3 8; -fx-cursor: hand;");
+                btn.getStyleClass().add("history-card-action");
+                btn.setStyle("");
                 btn.setOnAction(event -> {
                     HistoryCommand item = getTableView().getItems().get(getIndex());
                     if (navigator != null) {
-                        navigator.restoreOperationState(item.getParameters(), item.getOperation());
+                        navigator.reopenHistoryOperation(item);
                     }
                 });
             }
@@ -150,6 +165,11 @@ public class HistoryController {
 
         openHistoryDetailBtn.disableProperty().bind(Bindings.isNull(detailsTable.getSelectionModel().selectedItemProperty()));
         copyHistoryDetailBtn.disableProperty().bind(Bindings.isNull(detailsTable.getSelectionModel().selectedItemProperty()));
+
+        addHistoryToShelfBtn.disableProperty().bind(Bindings.createBooleanBinding(
+            () -> historyTable.getSelectionModel().getSelectedItems().size() != 1,
+            historyTable.getSelectionModel().getSelectedItems()
+        ));
 
         // Combo Box
         visibilityCombo.getItems().setAll(SecretVisibilityProfile.values());
@@ -224,8 +244,23 @@ public class HistoryController {
             if (historySummaryLabel != null) {
                 int total = historyManager.getHistoryItems().size();
                 historySummaryLabel.setText(filtered.size() == total
-                        ? total + (total == 1 ? " operation" : " operations")
-                        : filtered.size() + " of " + total + " operations");
+                        ? t(total == 1 ? "module.history.oneOperation" : "module.history.operations", total)
+                        : t("module.history.filteredOperations", filtered.size(), total));
+            }
+        }
+    }
+
+    /** Selects and reveals the exact execution chosen in the global side panel. */
+    public void selectHistoryCommand(HistoryCommand command) {
+        if (command == null || historyTable == null) return;
+        refresh();
+        for (int index = 0; index < historyTable.getItems().size(); index++) {
+            HistoryCommand candidate = historyTable.getItems().get(index);
+            if (java.util.Objects.equals(candidate.getId(), command.getId())) {
+                historyTable.getSelectionModel().clearAndSelect(index);
+                historyTable.scrollTo(index);
+                historyTable.requestFocus();
+                return;
             }
         }
     }
@@ -270,7 +305,7 @@ public class HistoryController {
         if (item == null) {
             return "Other";
         }
-        return OperationRegistry.getInstance().resolveNavigation(item.getOperation())
+        return OperationRegistry.getInstance().resolveNavigation(item.getNavigationOperation())
                 .map(com.cryptocarver.model.OperationDescriptor::getCategory)
                 .orElse("Other");
     }
@@ -456,16 +491,27 @@ public class HistoryController {
 
     @FXML
     private void handleClearHistory(ActionEvent event) {
-        if (historyManager != null) {
+        if (historyManager != null && confirmClearHistory()) {
             historyManager.clearHistory();
             refresh();
             if (detailsTable != null) {
                 detailsTable.getItems().clear();
             }
             if (navigator != null) {
+                navigator.refreshHistoryNavigation();
                 navigator.updateStatus("History cleared");
             }
         }
+    }
+
+    private boolean confirmClearHistory() {
+        if (historyManager == null || historyManager.getHistoryItems().isEmpty()) return true;
+        if (Boolean.getBoolean("test.mode")) return true;
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                t("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
+        confirmation.setTitle(t("module.history.clearTitle"));
+        confirmation.setHeaderText(t("module.history.clearHeader"));
+        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     @FXML
@@ -546,6 +592,74 @@ public class HistoryController {
         content.putString(report);
         Clipboard.getSystemClipboard().setContent(content);
         if (navigator != null) navigator.updateStatus("Operation report copied to clipboard");
+    }
+
+    @FXML
+    private void handleAddSelectedHistoryToShelf(ActionEvent event) {
+        HistoryCommand selected = historyTable == null ? null : historyTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        OperationDetail output = selected.getStructuredDetails() == null ? null
+                : selected.getStructuredDetails().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .filter(detail -> detail.name() != null && detail.name().startsWith("Output"))
+                    .findFirst().orElse(null);
+        if (output == null || output.value() == null || output.value().isBlank()) {
+            showError("Clipboard Shelf", "The selected operation has no published output to save.");
+            return;
+        }
+
+        SecretVisibilityProfile visibility = selectedVisibility();
+        if (output.classification() == OperationDetail.Classification.SECRET) {
+            showError("Clipboard Shelf", "SECRET material is never stored in Clipboard Shelf.");
+            return;
+        }
+        boolean sensitive = output.classification() == OperationDetail.Classification.SECRET
+                || output.classification() == OperationDetail.Classification.SENSITIVE;
+        if (sensitive && visibility != SecretVisibilityProfile.FULL_LAB) {
+            showError("Clipboard Shelf", "The selected output is hidden by the active visibility profile.");
+            return;
+        }
+        if (output.value().contains("[REDACTED]") || output.value().contains("***MASKED***")) {
+            showError("Clipboard Shelf", "The selected output is not available under the active visibility profile.");
+            return;
+        }
+
+        ClipboardEntry.Format format = formatFromHistory(output.format(), output.value());
+        String algorithm = selected.getStructuredDetails().stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(detail -> "Algorithm".equalsIgnoreCase(detail.name()) || "Type".equalsIgnoreCase(detail.name()))
+                .map(OperationDetail::value)
+                .filter(java.util.Objects::nonNull)
+                .findFirst().orElse(null);
+        ClipboardShelfManager shelf = ClipboardShelfManager.getInstance();
+        if (shelf.findDuplicate(output.value(), selected.getOperation()).isPresent()) {
+            if (navigator != null) navigator.updateStatus("The selected output is already in Clipboard Shelf.");
+            return;
+        }
+        shelf.addEntry(new ClipboardEntry(
+                "Output from " + selected.getOperation(), output.value(), format,
+                output.classification(), selected.getOperation(), algorithm));
+        if (navigator != null) navigator.updateStatus("Published output added to Clipboard Shelf.");
+    }
+
+    private ClipboardEntry.Format formatFromHistory(String format, String value) {
+        if (format != null) {
+            try {
+                return switch (format.trim().toUpperCase(java.util.Locale.ROOT)) {
+                    case "UTF-8", "TEXT" -> ClipboardEntry.Format.TEXT;
+                    case "HEX" -> ClipboardEntry.Format.HEX;
+                    case "BASE64" -> ClipboardEntry.Format.BASE64;
+                    case "BASE64URL" -> ClipboardEntry.Format.BASE64URL;
+                    case "PEM" -> ClipboardEntry.Format.PEM;
+                    case "JSON" -> ClipboardEntry.Format.JSON;
+                    default -> ClipboardEntry.Format.inferFormat(value);
+                };
+            } catch (RuntimeException ignored) {
+                // Fall through to the same conservative inference used elsewhere.
+            }
+        }
+        return ClipboardEntry.Format.inferFormat(value);
     }
 
     @FXML

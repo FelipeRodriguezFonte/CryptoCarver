@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import javafx.beans.value.ChangeListener;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -8,6 +9,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 
 import java.util.ArrayList;
@@ -33,6 +36,8 @@ public class InlineErrorPresenter {
     private final Button errorBannerCloseBtn;
 
     private UserFacingError currentError;
+    private Node focusBeforeError;
+    private Node currentErrorTarget;
     private final List<Node> highlightedNodes = new ArrayList<>();
     private final List<ListenerUnregisterer> activeUnregisterers = new ArrayList<>();
 
@@ -50,27 +55,62 @@ public class InlineErrorPresenter {
         this.errorBannerGoToFieldBtn = errorBannerGoToFieldBtn;
         this.errorBannerCopyDetailsBtn = errorBannerCopyDetailsBtn;
         this.errorBannerCloseBtn = errorBannerCloseBtn;
+        installKeyboardActivation(errorBannerGoToFieldBtn);
+        installKeyboardActivation(errorBannerCopyDetailsBtn);
+        installKeyboardActivation(errorBannerCloseBtn);
         hideBanner();
+    }
+
+    private static void installKeyboardActivation(Button button) {
+        if (button == null) return;
+        button.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+                event.consume();
+            }
+        });
+        button.addEventFilter(KeyEvent.KEY_RELEASED, event -> {
+            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+                button.fire();
+                event.consume();
+            }
+        });
     }
 
     public void showError(UserFacingError error, Node activeSceneRoot) {
         clearFieldErrors();
+        Node previousFocus = activeSceneRoot != null && activeSceneRoot.getScene() != null
+                ? activeSceneRoot.getScene().getFocusOwner() : null;
+        if (previousFocus != null && !isDescendantOf(errorBanner, previousFocus)) {
+            focusBeforeError = previousFocus;
+        }
         this.currentError = error;
 
         if (errorBanner == null) {
-            System.err.println("SHOW_ERROR: " + error.title() + " - " + error.remedy());
+            System.err.println("SHOW_ERROR: " + safeAccessibleText(error.title()) + " - "
+                    + safeAccessibleText(error.remedy()));
             return;
         }
 
+        String safeTitle = safeAccessibleText(error.title() == null ? "Operation Error" : error.title());
         if (errorBannerTitle != null) {
-            errorBannerTitle.setText(error.title() == null ? "Operation Error" : error.title());
+            errorBannerTitle.setText(safeTitle);
+            errorBannerTitle.setAccessibleText(safeTitle);
+            errorBannerTitle.setAccessibleHelp(com.cryptocarver.service.I18nService.getInstance().text("a11y.errorTitle"));
         }
 
+        String detailText = error.detail() == null ? "" : error.detail().trim();
+        String remedy = error.remedy() == null ? "" : error.remedy().trim();
+        // The banner must expose the specific, localized validation reason as
+        // well as the remedy. Showing only a generic remedy hides the useful
+        // controller feedback from users and assistive technology.
+        String remedyText = detailText.isBlank() ? remedy
+                : remedy.isBlank() || detailText.equals(remedy) ? detailText
+                : detailText + " " + remedy;
+        String safeRemedy = safeAccessibleText(remedyText);
         if (errorBannerRemedy != null) {
-            String remedyText = (error.remedy() != null && !error.remedy().isBlank())
-                    ? error.remedy()
-                    : (error.detail() != null ? error.detail() : "");
-            errorBannerRemedy.setText(remedyText);
+            errorBannerRemedy.setText(safeRemedy);
+            errorBannerRemedy.setAccessibleText(safeRemedy);
+            errorBannerRemedy.setAccessibleHelp(com.cryptocarver.service.I18nService.getInstance().text("a11y.errorRemedy"));
         }
 
         String fieldKey = error.fieldKey();
@@ -83,19 +123,40 @@ public class InlineErrorPresenter {
 
         if (hasField && activeSceneRoot != null) {
             Node fieldNode = findNodeByFieldKey(activeSceneRoot, fieldKey);
-            if (fieldNode != null) {
+            if (isFocusableTarget(fieldNode)) {
+                currentErrorTarget = fieldNode;
                 highlightNode(fieldNode);
+            } else {
+                currentErrorTarget = null;
             }
+        } else {
+            currentErrorTarget = null;
         }
 
         errorBanner.setManaged(true);
         errorBanner.setVisible(true);
+
+        // The banner is actionable but must not steal focus from a valid target.
+        // ModernMainController also calls goToField for controller-level errors;
+        // doing this here keeps the presenter safe for direct use and tests.
+        if (isFocusableTarget(currentErrorTarget)) {
+            currentErrorTarget.requestFocus();
+            // A newly expanded TitledPane can claim focus during its layout
+            // pulse. Reassert the target afterwards so the advertised
+            // automatic focus is reliable in real JavaFX scenes.
+            Platform.runLater(() -> Platform.runLater(() -> {
+                if (isFocusableTarget(currentErrorTarget)) {
+                    currentErrorTarget.requestFocus();
+                }
+            }));
+        }
     }
 
     public void goToField(Node activeSceneRoot) {
         if (currentError == null || currentError.fieldKey() == null || activeSceneRoot == null) return;
         Node target = findNodeByFieldKey(activeSceneRoot, currentError.fieldKey());
-        if (target != null) {
+        if (isFocusableTarget(target)) {
+            currentErrorTarget = target;
             target.requestFocus();
         }
     }
@@ -109,17 +170,23 @@ public class InlineErrorPresenter {
         Clipboard.getSystemClipboard().setContent(content);
 
         if (reporter != null) {
-            reporter.updateStatus("Technical error details copied to clipboard (secrets redacted).");
+            reporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("error.detailsCopied"));
         }
     }
 
     public void hideBanner() {
+        Node focusToRestore = isFocusableTarget(currentErrorTarget) ? currentErrorTarget : focusBeforeError;
         clearFieldErrors();
         currentError = null;
+        currentErrorTarget = null;
+        focusBeforeError = null;
 
         if (errorBanner != null) {
             errorBanner.setVisible(false);
             errorBanner.setManaged(false);
+        }
+        if (isFocusableTarget(focusToRestore)) {
+            focusToRestore.requestFocus();
         }
     }
 
@@ -129,6 +196,25 @@ public class InlineErrorPresenter {
 
     public UserFacingError getCurrentError() {
         return currentError;
+    }
+
+    /** Shared redaction boundary for visible and accessible error text. */
+    static String safeAccessibleText(String text) {
+        return redactSecrets(text);
+    }
+
+    private static boolean isFocusableTarget(Node node) {
+        return node != null && node.isVisible() && !node.isDisabled() && node.isFocusTraversable();
+    }
+
+    private static boolean isDescendantOf(Node ancestor, Node candidate) {
+        if (ancestor == null || candidate == null) return false;
+        Node current = candidate;
+        while (current != null) {
+            if (current == ancestor) return true;
+            current = current.getParent();
+        }
+        return false;
     }
 
     private void highlightNode(Node node) {
@@ -174,20 +260,25 @@ public class InlineErrorPresenter {
         if (root == null || fieldKey == null || fieldKey.isBlank()) return null;
         String cleanKey = fieldKey.trim().toLowerCase();
 
-        // 1. Direct match by fx:id
-        if (Objects.equals(root.getId(), fieldKey)) return root;
+        // Complete the exact fx:id search before considering semantic aliases.
+        // A recursive alias fallback can otherwise select an earlier "input" field
+        // and prevent a later exact match from being reached.
+        Node exact = findNodeByExactId(root, fieldKey);
+        if (exact != null) return exact;
 
-        // 2. Search recursively in children
+        // Fallback semantic alias search across scene graph.
+        return findNodeByAlias(root, cleanKey);
+    }
+
+    private static Node findNodeByExactId(Node root, String fieldKey) {
+        if (Objects.equals(root.getId(), fieldKey)) return root;
         if (root instanceof javafx.scene.Parent parent) {
             for (Node child : parent.getChildrenUnmodifiable()) {
-                if (Objects.equals(child.getId(), fieldKey)) return child;
-                Node found = findNodeByFieldKey(child, fieldKey);
+                Node found = findNodeByExactId(child, fieldKey);
                 if (found != null) return found;
             }
         }
-
-        // 3. Fallback semantic alias search across scene graph
-        return findNodeByAlias(root, cleanKey);
+        return null;
     }
 
     private static Node findNodeByAlias(Node root, String alias) {

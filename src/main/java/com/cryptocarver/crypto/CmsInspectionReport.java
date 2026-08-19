@@ -1,5 +1,6 @@
 package com.cryptocarver.crypto;
 
+import com.cryptocarver.service.RevocationValidationService;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
@@ -126,12 +127,23 @@ public class CmsInspectionReport {
     private final List<CertificateSummary> certificates;
     private final List<ValidationStep> validationSteps;
     private final List<String> warnings;
+    private final RevocationValidationService.Result revocation;
 
     public CmsInspectionReport(CmsContentType type, String contentOid, String contentName,
                              ContentState contentState, Long contentSize, String contentEncryptionAlgorithm,
                              List<SignerInfoSummary> signers, List<RecipientSummary> recipients,
                              List<CertificateSummary> certificates, List<ValidationStep> validationSteps,
                              List<String> warnings) {
+        this(type, contentOid, contentName, contentState, contentSize, contentEncryptionAlgorithm,
+                signers, recipients, certificates, validationSteps, warnings,
+                RevocationValidationService.Result.disabled(false));
+    }
+
+    public CmsInspectionReport(CmsContentType type, String contentOid, String contentName,
+                             ContentState contentState, Long contentSize, String contentEncryptionAlgorithm,
+                             List<SignerInfoSummary> signers, List<RecipientSummary> recipients,
+                             List<CertificateSummary> certificates, List<ValidationStep> validationSteps,
+                             List<String> warnings, RevocationValidationService.Result revocation) {
         this.type = type;
         this.contentOid = contentOid;
         this.contentName = contentName;
@@ -143,6 +155,7 @@ public class CmsInspectionReport {
         this.certificates = certificates == null ? List.of() : List.copyOf(certificates);
         this.validationSteps = validationSteps == null ? List.of() : List.copyOf(validationSteps);
         this.warnings = warnings == null ? List.of() : List.copyOf(warnings);
+        this.revocation = revocation == null ? RevocationValidationService.Result.disabled(false) : revocation;
     }
 
     public String getContentEncryptionAlgorithm() { return contentEncryptionAlgorithm; }
@@ -157,4 +170,5 @@ public class CmsInspectionReport {
     public List<CertificateSummary> getCertificates() { return certificates; }
     public List<ValidationStep> getValidationSteps() { return validationSteps; }
     public List<String> getWarnings() { return warnings; }
+    public RevocationValidationService.Result getRevocation() { return revocation; }
 }

@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.net.URL;
 import java.lang.reflect.Field;
@@ -17,6 +18,7 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Tag("ui")
+@EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class XMLSignatureControllerUITest {
 
     private static Parent root;

@@ -129,6 +129,11 @@ public final class ClipboardShelfWindow {
         if (entry == null) {
             return false;
         }
+        if (entry.isSessionOnlyPrivateKey()) {
+            // The detached window is a copy/export surface. Session-only
+            // private keys are never copied or exported from any visibility.
+            return false;
+        }
         return entry.getClassification() == OperationDetail.Classification.PUBLIC
                 || isLaboratoryGeneratedKey(entry)
                 || visibility == SecretVisibilityProfile.FULL_LAB;
@@ -145,8 +150,8 @@ public final class ClipboardShelfWindow {
 
     private static String policyText(SecretVisibilityProfile visibility) {
         return visibility == SecretVisibilityProfile.FULL_LAB
-                ? "⚠ Unsafe lab: sensitive values may be copied."
-                : "Sensitive and secret values are locked. Switch to Unsafe lab to copy them.";
+                ? "⚠ Unsafe lab: sensitive values may be copied; session-only private keys remain blocked."
+                : "Sensitive and secret values are locked. Session-only private keys are never copied or exported.";
     }
 
     private static void copyToSystemClipboard(String content) {

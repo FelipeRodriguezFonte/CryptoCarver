@@ -132,9 +132,9 @@ final class OperationInspectorPresenter {
             if (detail == null) continue;
             HBox row = new HBox(10);
             Label key = new Label(detail.name() + ":");
-            key.getStyleClass().add("inspector-detail-key");
+            key.getStyleClass().addAll("inspector-detail-key", "inspector-label");
             Label value = new Label(detail.value() == null ? "" : detail.value());
-            value.getStyleClass().add("inspector-detail-value");
+            value.getStyleClass().addAll("inspector-detail-value", "inspector-value");
             value.setWrapText(true);
             if (!value.getText().isBlank()) value.setTooltip(new Tooltip(value.getText()));
             row.getChildren().addAll(key, value);

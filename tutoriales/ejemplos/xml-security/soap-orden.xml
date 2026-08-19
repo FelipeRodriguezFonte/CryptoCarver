@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:m="urn:cryptocarver:ejemplo">
+  <soap:Header/>
+  <soap:Body>
+    <m:Orden id="ORD-2026-00042">
+      <m:Importe moneda="EUR">100.00</m:Importe>
+      <m:Concepto>Pago de prueba reproducible</m:Concepto>
+    </m:Orden>
+  </soap:Body>
+</soap:Envelope>

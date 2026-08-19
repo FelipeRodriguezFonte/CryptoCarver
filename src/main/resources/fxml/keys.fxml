@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<VBox fx:id="keysRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.KeysController" spacing="14" styleClass="content-container-vbox,keys-module">
     <VBox fx:id="symmetricKeysContainer" managed="true" visible="true">
         <Accordion styleClass="module-accordion">
@@ -105,11 +105,11 @@
                                         </VBox>
                                     </GridPane>
                                     <Separator style="-fx-padding: 8 0;"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                                         <Button text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
                                         <Button fx:id="keyLabArchiveBtn" text="Archive" onAction="#handleKeyLabArchive" styleClass="secondary-button"/>
                                         <Button text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>
-                                    </HBox>
+                                    </FlowPane>
                                 </VBox>
                             </ScrollPane>
                         </SplitPane>
@@ -133,12 +133,12 @@
                                   selected="true" GridPane.rowIndex="0" GridPane.columnIndex="2" style="-fx-font-size: 10px;"/>
                     </GridPane>
 
-                    <HBox spacing="10" alignment="CENTER_LEFT">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Generate Key" onAction="#handleGenerateKey"
                                 styleClass="action-button,primary-action"/>
                         <Button fx:id="saveGeneratedKeyButton" text="Save to Simulated HSM / Key Lab…" onAction="#handleSaveGeneratedKeyToLab"
                                 disable="true" styleClass="action-button,secondary-action"/>
-                    </HBox>
+                    </FlowPane>
 
                     <VBox fx:id="generatedKeySummaryCard" visible="false" managed="false" spacing="8" styleClass="summary-card,info-card" style="-fx-padding: 10; -fx-background-color: rgba(59, 130, 246, 0.08); -fx-background-radius: 6; -fx-border-color: rgba(59, 130, 246, 0.3); -fx-border-radius: 6; -fx-border-width: 1;">
                         <HBox alignment="CENTER_LEFT" spacing="10">
@@ -257,11 +257,11 @@
                         <TextField fx:id="pkcs11LibraryField" promptText="Native PKCS#11 library (.dylib, .so or .dll)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
                         <Button text="Browse…" onAction="#handleChoosePkcs11Library" styleClass="secondary-button"/>
                     </HBox>
-                    <HBox spacing="5" alignment="CENTER_LEFT">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11ProfileCombo" promptText="Saved Profiles" prefWidth="200"/>
                         <Button text="Save Profile" onAction="#handleSavePkcs11Profile" styleClass="secondary-button"/>
-                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="secondary-button"/>
-                    </HBox>
+                        <Button text="Delete" onAction="#handleDeletePkcs11Profile" styleClass="btn-danger"/>
+                    </FlowPane>
                     <HBox spacing="6">
                         <Button text="Connect &amp; Inspect" onAction="#handleConnectPkcs11" styleClass="action-button"/>
                         <Button text="Disconnect" onAction="#handleDisconnectPkcs11" styleClass="secondary-button"/>
@@ -284,11 +284,11 @@
                     <TextArea fx:id="pkcs11SignatureArea" prefHeight="55" promptText="Signature (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                     <Separator/>
                     <Label text="Public certificate chain" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                    <HBox spacing="6">
+                    <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <ComboBox fx:id="pkcs11CertificateAliasCombo" promptText="Certificate alias" HBox.hgrow="ALWAYS"/>
                         <Button text="Show PEM Chain" onAction="#handleShowPkcs11Certificate" styleClass="secondary-button"/>
-                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button"/>
-                    </HBox>
+                        <Button text="Update Chain" onAction="#handleUpdatePkcs11CertificateChain" styleClass="action-button-primary"/>
+                    </FlowPane>
                     <TextArea fx:id="pkcs11CertificateArea" prefHeight="90" editable="true" promptText="Paste PEM chain here to update, or use Show PEM Chain to view." wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                     <Separator/>
                     <Label text="JWT / JWS using token key" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
@@ -304,6 +304,27 @@
                     <CheckBox fx:id="pkcs11CmsDetachedCheck" text="Detached CMS (do not embed content)" style="-fx-font-size: 10px;"/>
                     <Button text="Create CMS SignedData" onAction="#handleGeneratePkcs11Cms" styleClass="action-button"/>
                     <TextArea fx:id="pkcs11CmsOutputArea" prefHeight="75" editable="false" promptText="Base64 CMS/PKCS#7 will appear here" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <Separator/>
+                    <Label text="Wrap / Unwrap key objects (native token operation)" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label text="Wraps a token key object under another token key's public part without ever exposing raw key bytes to the JVM. Only tokens whose CKA_EXTRACTABLE attribute is true for the target key allow this — a rejection here is the token correctly enforcing that boundary, not an error." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+                    <HBox spacing="6">
+                        <ComboBox fx:id="pkcs11WrappingKeyCombo" promptText="Wrapping key alias (public part)" HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="pkcs11WrapKeyCombo" promptText="Key to wrap alias" HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="pkcs11WrapTransformationCombo" prefWidth="230"/>
+                    </HBox>
+                    <Button text="Wrap Key" onAction="#handlePkcs11Wrap" styleClass="action-button"/>
+                    <TextArea fx:id="pkcs11WrapResultArea" prefHeight="65" editable="false" promptText="Wrapped key (hexadecimal) will appear here" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <HBox spacing="6">
+                        <ComboBox fx:id="pkcs11UnwrappingKeyCombo" promptText="Unwrapping key alias (private part)" HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="pkcs11UnwrapTransformationCombo" prefWidth="230"/>
+                    </HBox>
+                    <TextArea fx:id="pkcs11UnwrapDataArea" prefHeight="55" promptText="Wrapped key (hexadecimal)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
+                    <HBox spacing="6">
+                        <TextField fx:id="pkcs11UnwrapAlgorithmField" promptText="Recovered key algorithm, e.g. AES" prefWidth="220"/>
+                        <ComboBox fx:id="pkcs11UnwrapTypeCombo" prefWidth="150"/>
+                    </HBox>
+                    <Button text="Unwrap Key" onAction="#handlePkcs11Unwrap" styleClass="action-button"/>
+                    <TextArea fx:id="pkcs11UnwrapResultArea" prefHeight="65" editable="false" promptText="Unwrap result summary will appear here (key material itself is never displayed)" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 10px;"/>
                 </VBox>
             </TitledPane>
 
@@ -402,11 +423,11 @@
                         <ComboBox fx:id="kdfAlgorithmCombo" GridPane.rowIndex="0" GridPane.columnIndex="1"
                                  GridPane.columnSpan="3" prefWidth="180" style="-fx-font-size: 11px;"/>
 
-                        <Label text="Input Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                        <Label text="Input key material format:" GridPane.rowIndex="1" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
                         <ComboBox fx:id="kdfInputFormatCombo" GridPane.rowIndex="1" GridPane.columnIndex="1"
                                  prefWidth="90" style="-fx-font-size: 11px;"/>
 
-                        <Label text="Iterations:" GridPane.rowIndex="1" GridPane.columnIndex="2" style="-fx-font-size: 11px;"/>
+                        <Label fx:id="kdfIterationsLabel" text="Iterations:" GridPane.rowIndex="1" GridPane.columnIndex="2" style="-fx-font-size: 11px;"/>
                         <TextField fx:id="kdfIterationsField" text="10000" GridPane.rowIndex="1" GridPane.columnIndex="3"
                                   prefWidth="60" style="-fx-font-size: 11px;"/>
 
@@ -417,29 +438,40 @@
                         </HBox>
                     </GridPane>
 
-                    <TextField fx:id="kdfInputField" promptText="Input key material..."
-                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                    <Label fx:id="kdfInputHelpLabel" text="Input key material — encoded using Input key material format above."
+                           styleClass="helper-text"/>
+                    <VBox spacing="2">
+                        <TextField fx:id="kdfInputField" promptText="Input key material (UTF-8)..."
+                                   accessibleText="Input key material. Its encoding is selected in Input key material format above."
+                                   style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                        <Label fx:id="kdfInputBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                    </VBox>
 
                     <HBox spacing="4">
-                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <VBox fx:id="kdfSaltBox" spacing="2" HBox.hgrow="ALWAYS">
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label text="Salt:" style="-fx-font-size: 10px;"/>
                                 <ComboBox fx:id="kdfSaltFormatCombo" prefWidth="70" style="-fx-font-size: 10px;"/>
+                                <Button text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 2 5;"/>
                             </HBox>
                             <TextField fx:id="kdfSaltField" promptText="Optional" style="-fx-font-size: 10px;"/>
+                            <Label fx:id="kdfSaltBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                         </VBox>
 
-                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <VBox fx:id="kdfInfoBox" spacing="2" HBox.hgrow="ALWAYS">
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label text="Info:" style="-fx-font-size: 10px;"/>
                                 <ComboBox fx:id="kdfInfoFormatCombo" prefWidth="70" style="-fx-font-size: 10px;"/>
                             </HBox>
                             <TextField fx:id="kdfInfoField" promptText="HKDF only" style="-fx-font-size: 10px;"/>
+                            <Label fx:id="kdfInfoBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
                         </VBox>
                     </HBox>
 
                     <Button text="Derive Key" onAction="#handleDeriveKey"
                             styleClass="action-button" maxWidth="150" style="-fx-font-size: 11px;"/>
+                    <Label fx:id="kdfValidationLabel" visible="false" managed="false" wrapText="true"
+                           styleClass="helper-text,field-error"/>
 
                     <TextArea fx:id="kdfResultArea" prefHeight="250" editable="false" wrapText="true"
                               style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
@@ -513,6 +545,10 @@
 
                                 <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
                                         styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <Button text="Clear" onAction="#handleTR31Clear" styleClass="secondary-button"/>
+                                    <Button text="Reset Defaults" onAction="#handleTR31Reset" styleClass="secondary-button"/>
+                                </HBox>
 
                                 <TextArea fx:id="tr31ExportResultArea" prefHeight="120" editable="false" wrapText="true"
                                           style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
@@ -553,8 +589,146 @@
                     </TabPane>
                 </VBox>
             </TitledPane>
+
+            <!-- RSA KEY EXCHANGE -->
+            <TitledPane text="🔁 RSA Key Exchange">
+                <VBox spacing="6" style="-fx-padding: 8;">
+                    <TabPane tabClosingPolicy="UNAVAILABLE">
+                        <Tab text="Export (Wrap)">
+                            <VBox spacing="6" style="-fx-padding: 8;">
+                                <Label text="Recipient Public Key or Certificate (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="rsaKexRecipientPemArea" prefHeight="80" wrapText="true"
+                                          promptText="-----BEGIN PUBLIC KEY----- or -----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Key to Wrap (hex):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="rsaKexKeyToWrapField" promptText="Symmetric key in hex"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <GridPane hgap="8" vgap="4">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="80" prefWidth="80"/>
+                                        <ColumnConstraints hgrow="ALWAYS"/>
+                                    </columnConstraints>
+                                    <Label text="Profile:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                                    <ComboBox fx:id="rsaKexExportProfileCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200" style="-fx-font-size: 11px;"/>
+                                </GridPane>
+                                <CheckBox fx:id="rsaKexIncludeEnvelopeCheck" text="Wrap result as Crypto Envelope (adds algorithm/kid/kcv/timestamp header)" onAction="#handleRsaKexEnvelopeToggle" style="-fx-font-size: 11px;"/>
+                                <HBox fx:id="rsaKexEnvelopeFieldsBox" spacing="8" managed="false" visible="false">
+                                    <TextField fx:id="rsaKexKidField" promptText="Key ID (optional)" style="-fx-font-size: 11px;"/>
+                                    <TextField fx:id="rsaKexKeyVersionField" promptText="Key Version (optional)" prefWidth="140" style="-fx-font-size: 11px;"/>
+                                </HBox>
+                                <Button text="Wrap Key (Export)" onAction="#handleRsaKexExport" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <Button text="Clear" onAction="#handleRsaKexClear" styleClass="secondary-button"/>
+                                    <Button text="Reset Defaults" onAction="#handleRsaKexReset" styleClass="secondary-button"/>
+                                </HBox>
+                                <TextArea fx:id="rsaKexExportResultArea" prefHeight="120" editable="false" wrapText="true"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                          promptText="Export results will appear here..."/>
+                            </VBox>
+                        </Tab>
+                        <Tab text="Import (Unwrap)">
+                            <VBox spacing="6" style="-fx-padding: 8;">
+                                <Label text="Recipient Private Key (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="rsaKexPrivateKeyArea" prefHeight="80" wrapText="true"
+                                          promptText="-----BEGIN PRIVATE KEY-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Wrapped Data (Crypto Envelope, or raw per selected profile):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="rsaKexWrappedDataArea" prefHeight="80" wrapText="true"
+                                          promptText="Paste the wrapped key or a CCE1./JSON envelope..."
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <GridPane hgap="8" vgap="4">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="80" prefWidth="80"/>
+                                        <ColumnConstraints hgrow="ALWAYS"/>
+                                    </columnConstraints>
+                                    <Label text="Profile:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-size: 11px;"/>
+                                    <ComboBox fx:id="rsaKexImportProfileCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200" style="-fx-font-size: 11px;"/>
+                                </GridPane>
+                                <Label text="Ignored when the pasted data is already a Crypto Envelope — its own header is used instead." wrapText="true" styleClass="helper-text" style="-fx-font-size: 10px;"/>
+                                <Button text="Unwrap Key" onAction="#handleRsaKexImport" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="rsaKexImportResultArea" prefHeight="120" editable="false" wrapText="true"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                          promptText="Import results will appear here..."/>
+                            </VBox>
+                        </Tab>
+                    </TabPane>
+                </VBox>
+            </TitledPane>
+
+            <!-- TR-34 KEY DISTRIBUTION -->
+            <TitledPane text="🔀 TR-34 Key Distribution">
+                <VBox spacing="6" style="-fx-padding: 8;">
+                    <Label text="TR-34-inspired laboratory key distribution" styleClass="helper-text"/>
+                    <Label text="Signs then envelopes the key with CMS (RSA), the same mechanism TR-34 uses conceptually — including an optional two-pass binding nonce for replay protection. Not a byte-for-byte ANSI X9 TR-34-2019 implementation (no standards-exact ASN.1/PDU profile) and not verified against real KDH/KRD interop — do not use to load a production HSM."
+                           wrapText="true" styleClass="helper-text" style="-fx-text-fill: #9a3412;"/>
+                    <TabPane tabClosingPolicy="UNAVAILABLE">
+                        <Tab text="Distribute (Sender)">
+                            <VBox spacing="6" style="-fx-padding: 8;">
+                                <Label text="Sender Private Key (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34SenderPrivateKeyArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN PRIVATE KEY-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Sender Certificate (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34SenderCertArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Receiver Certificate (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ReceiverCertArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Key to Distribute (hex):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="tr34KeyToDistributeField" promptText="Symmetric key in hex"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Key ID (optional, authenticated):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="tr34KeyIdField" promptText="e.g. kek-2026-01"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Binding Nonce (optional, from receiver's challenge — two-pass):" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="tr34BindingNonceField" promptText="Hex nonce from the Receive tab's Generate Challenge — leave blank for one-pass"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <CheckBox fx:id="tr34IncludeEnvelopeCheck" text="Wrap key as Crypto Envelope before distributing" style="-fx-font-size: 11px;"/>
+                                <Button text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <Button text="Clear" onAction="#handleTr34Clear" styleClass="secondary-button"/>
+                                    <Button text="Reset Defaults" onAction="#handleTr34Reset" styleClass="secondary-button"/>
+                                </HBox>
+                                <TextArea fx:id="tr34DistributeResultArea" prefHeight="120" editable="false" wrapText="true"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                          promptText="Distribution results will appear here..."/>
+                            </VBox>
+                        </Tab>
+                        <Tab text="Receive (Receiver)">
+                            <VBox spacing="6" style="-fx-padding: 8;">
+                                <Label text="Receiver Private Key (PEM):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ReceiverPrivateKeyArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN PRIVATE KEY-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Expected Sender Certificate (PEM, for verification):" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ExpectedSenderCertArea" prefHeight="70" wrapText="true"
+                                          promptText="-----BEGIN CERTIFICATE-----"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Distributed Data:" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34DistributedDataArea" prefHeight="80" wrapText="true"
+                                          promptText="Paste the distributed data (or a Crypto Envelope) here..."
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                <Label text="Challenge Nonce (optional, two-pass — generate before Distribute):" style="-fx-font-size: 11px;"/>
+                                <HBox spacing="6">
+                                    <TextField fx:id="tr34ChallengeNonceField" HBox.hgrow="ALWAYS"
+                                              promptText="Hex nonce — generate here, copy into the Distribute tab's Binding Nonce, leave blank for one-pass"
+                                              style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+                                    <Button text="Generate Challenge" onAction="#handleTr34GenerateChallenge" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                                </HBox>
+                                <Button text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button" maxWidth="180" style="-fx-font-size: 11px;"/>
+                                <TextArea fx:id="tr34ReceiveResultArea" prefHeight="120" editable="false" wrapText="true"
+                                          style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"
+                                          promptText="Receive results will appear here..."/>
+                            </VBox>
+                        </Tab>
+                    </TabPane>
+                </VBox>
+            </TitledPane>
             </panes>
         </Accordion>
+        <fx:include fx:id="pkcs11Profiles" source="pkcs11_profiles.fxml"/>
     </VBox>
 
     <!-- Asymmetric Keys Accordion -->
@@ -610,11 +784,11 @@
                         </VBox>
 
                         <!-- Key Material PEM Displays -->
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
-                            <Tab text="Public Key (PEM)">
+                        <TabPane fx:id="rsaKeyMaterialTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)" userData="PUBLIC">
                                 <TextArea fx:id="rsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key (PEM)">
+                            <Tab text="Private Key (PEM)" userData="PRIVATE">
                                 <TextArea fx:id="rsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
@@ -627,6 +801,7 @@
                             <Button fx:id="rsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportRsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="rsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportRsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="rsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendRsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="rsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendRsaPrivateToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="rsaUseCipherBtn" text="Use in RSA Cipher" onAction="#handleUseRsaInCipher" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="rsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseRsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="rsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseRsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
@@ -682,11 +857,11 @@
                             </GridPane>
                         </VBox>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
-                            <Tab text="Public Key (PEM)">
+                        <TabPane fx:id="ecdsaKeyMaterialTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)" userData="PUBLIC">
                                 <TextArea fx:id="ecdsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key (PEM)">
+                            <Tab text="Private Key (PEM)" userData="PRIVATE">
                                 <TextArea fx:id="ecdsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
@@ -699,6 +874,7 @@
                             <Button fx:id="ecdsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEcdsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="ecdsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEcdsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="ecdsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEcdsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="ecdsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendEcdsaPrivateToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="ecdsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="ecdsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEcdsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="ecdsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEcdsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
@@ -754,11 +930,11 @@
                             </GridPane>
                         </VBox>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
-                            <Tab text="Public Key (PEM)">
+                        <TabPane fx:id="dsaKeyMaterialTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)" userData="PUBLIC">
                                 <TextArea fx:id="dsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key (PEM)">
+                            <Tab text="Private Key (PEM)" userData="PRIVATE">
                                 <TextArea fx:id="dsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
@@ -771,6 +947,7 @@
                             <Button fx:id="dsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportDsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="dsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportDsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="dsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendDsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="dsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendDsaPrivateToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="dsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="dsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseDsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="dsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseDsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
@@ -826,11 +1003,11 @@
                             </GridPane>
                         </VBox>
 
-                        <TabPane tabClosingPolicy="UNAVAILABLE" prefHeight="240">
-                            <Tab text="Public Key (PEM)">
+                        <TabPane fx:id="eddsaKeyMaterialTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="240">
+                            <Tab text="Public Key (PEM)" userData="PUBLIC">
                                 <TextArea fx:id="eddsaPublicKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Public key will appear here..."/>
                             </Tab>
-                            <Tab text="Private Key (PEM)">
+                            <Tab text="Private Key (PEM)" userData="PRIVATE">
                                 <TextArea fx:id="eddsaPrivateKeyArea" wrapText="true" editable="false" styleClass="result-area,monospace-field" promptText="Private key will appear here..."/>
                             </Tab>
                         </TabPane>
@@ -843,6 +1020,7 @@
                             <Button fx:id="eddsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEddsaPublicPem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="eddsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEddsaPrivatePem" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="eddsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEddsaPublicToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                            <Button fx:id="eddsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendEddsaPrivateToShelf" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="eddsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="eddsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEddsaInSignatures" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                             <Button fx:id="eddsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEddsaInCertificates" styleClass="secondary-button" style="-fx-font-size: 11px;"/>

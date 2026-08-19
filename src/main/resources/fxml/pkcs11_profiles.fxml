@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<TitledPane fx:id="pkcs11ProfilesPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cryptocarver.ui.Pkcs11ProfilesController"
+            text="🔐 PKCS#11 Profiles &amp; Public Inventory" expanded="false">
+    <VBox fx:id="pkcs11ProfilesRoot" spacing="10" styleClass="module-pane-content">
+        <Label text="Manage non-secret profiles and inspect public slots, tokens and mechanisms. No credentials or token objects are requested."
+               wrapText="true" styleClass="helper-text"/>
+        <TableView fx:id="pkcs11ProfilesTable" prefHeight="150" VBox.vgrow="NEVER">
+            <columns>
+                <TableColumn fx:id="pkcs11ProfileNameColumn" text="Profile name" prefWidth="180"/>
+                <TableColumn fx:id="pkcs11LibraryColumn" text="Library path" prefWidth="420"/>
+                <TableColumn fx:id="pkcs11SlotColumn" text="slotListIndex" prefWidth="100"/>
+            </columns>
+            <placeholder><Label text="No PKCS#11 profiles saved."/></placeholder>
+        </TableView>
+        <GridPane hgap="8" vgap="7">
+            <columnConstraints>
+                <ColumnConstraints minWidth="125" prefWidth="140"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <Label text="Profile name:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <TextField fx:id="pkcs11ProfileNameField" promptText="Public profile name" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            <Label text="Library path:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <TextField fx:id="pkcs11LibraryPathField" promptText="Absolute native library path" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            <Label text="slotListIndex:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <TextField fx:id="pkcs11SlotListIndexField" promptText="Non-negative integer" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+        </GridPane>
+        <FlowPane hgap="7" vgap="7" styleClass="responsive-action-bar">
+            <Button fx:id="pkcs11NewProfileButton" text="New profile" onAction="#handleNewProfile" styleClass="secondary-button"/>
+            <Button fx:id="pkcs11SaveProfileButton" text="Save profile" onAction="#handleSaveProfile" styleClass="action-button-primary"/>
+            <Button fx:id="pkcs11DeleteProfileButton" text="Delete profile" onAction="#handleDeleteProfile" styleClass="btn-danger"/>
+            <Separator orientation="VERTICAL"/>
+            <Button fx:id="pkcs11DiagnoseButton" text="Diagnose" onAction="#handleDiagnose" styleClass="secondary-button"/>
+            <Button fx:id="pkcs11InventoryButton" text="Inventory" onAction="#handleInventory" styleClass="action-button-primary"/>
+            <Button fx:id="pkcs11CancelButton" text="Cancel" onAction="#handleCancel" styleClass="secondary-button"/>
+        </FlowPane>
+        <Label fx:id="pkcs11FeedbackLabel" text="Ready" wrapText="true" styleClass="pkcs11-feedback-ok"/>
+        <TextArea fx:id="pkcs11InventoryArea" editable="false" wrapText="true" prefRowCount="12"
+                  promptText="Public inventory results will appear here."
+                  styleClass="result-area,monospace-field"/>
+    </VBox>
+</TitledPane>

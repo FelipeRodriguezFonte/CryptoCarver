@@ -94,14 +94,15 @@
                 </VBox>
                 <TextArea fx:id="batchInputArea" prefRowCount="5" wrapText="false" styleClass="monospace-field" promptText="CSV: input&#10;hello&#10;or JSON Lines (.jsonl): {&quot;input&quot;:&quot;hello&quot;}&#10;{&quot;input&quot;:&quot;world&quot;}"/>
                 <Label text="JSON Lines (.jsonl) uses one JSON object per line; it is not a single JSON array/document." wrapText="true" styleClass="helper-text"/>
-                <HBox spacing="8">
+                <FlowPane prefWrapLength="900" styleClass="responsive-action-bar" hgap="8" vgap="8">
                     <Button text="Load CSV / JSON Lines…" onAction="#handleBrowseBatchInput" styleClass="secondary-button"/>
                     <Button text="Run Batch" onAction="#handleRunBatch" styleClass="action-button,primary-action"/>
+                    <Button text="Dry Run" onAction="#handleDryRunBatch" styleClass="secondary-button"/>
                     <Button text="Cancel" onAction="#handleCancelBatch" styleClass="secondary-button"/>
-                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="Reset" onAction="#handleResetBatch" styleClass="secondary-button"/>
                     <ComboBox fx:id="batchExportFormatCombo" prefWidth="80" styleClass="form-field"/>
                     <Button text="Export Results…" onAction="#handleExportBatchResults" styleClass="secondary-button"/>
-                </HBox>
+                </FlowPane>
                 <ProgressBar fx:id="batchProgressBar" prefWidth="420" maxWidth="1.7976931348623157E308"/>
                 <Label fx:id="batchStatusLabel" text="Ready" wrapText="true" styleClass="form-label"/>
                 <TextArea fx:id="batchResultArea" prefRowCount="5" editable="false" wrapText="false" styleClass="result-area,monospace-field"/>
@@ -146,7 +147,7 @@
                               GridPane.columnIndex="1" GridPane.rowIndex="4" styleClass="form-field"/>
                 </GridPane>
 
-                <HBox spacing="8">
+                <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                     <Button text="Convert File" onAction="#handleConvertFile"
                             maxWidth="180" styleClass="action-button,primary-action"/>
                     <Button text="Compare Files (streaming)" onAction="#handleCompareFiles"
@@ -155,7 +156,7 @@
                             maxWidth="200" styleClass="secondary-button"/>
                     <Button text="Preview First 4 KiB" onAction="#handlePreviewFileStreaming"
                             maxWidth="180" styleClass="secondary-button"/>
-                </HBox>
+                </FlowPane>
 
                 <TextArea fx:id="fileResultArea" prefRowCount="2" editable="false"
                           wrapText="true" styleClass="result-area,monospace-field"/>
@@ -198,14 +199,14 @@
                      <ComboBox fx:id="manualOutputFormatCombo" prefWidth="150" styleClass="form-field"/>
                  </HBox>
 
-                 <HBox spacing="8">
+                 <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                      <Button text="Convert Data" onAction="#handleManualConvert"
                              maxWidth="180" styleClass="action-button,primary-action"/>
                      <Button text="UTF-8 → Base64URL" onAction="#handleEncodeBase64Url" styleClass="secondary-button"/>
                      <Button text="Base64URL → UTF-8" onAction="#handleDecodeBase64Url" styleClass="secondary-button"/>
                      <Button text="UTF-8 → Base32" onAction="#handleEncodeBase32" styleClass="secondary-button"/>
                      <Button text="Base32 → UTF-8" onAction="#handleDecodeBase32" styleClass="secondary-button"/>
-                 </HBox>
+                 </FlowPane>
                  <HBox spacing="8" alignment="CENTER_LEFT">
                      <Label text="Endian word:" styleClass="form-label"/>
                      <ComboBox fx:id="endianWordSizeCombo" prefWidth="150" styleClass="form-field"/>
@@ -221,12 +222,12 @@
                      <Button text="Compress" onAction="#handleCompressData" styleClass="secondary-button"/>
                      <Button text="Decompress" onAction="#handleDecompressData" styleClass="secondary-button"/>
                  </HBox>
-                 <HBox spacing="8">
+                 <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                      <Button text="Decimal → BCD" onAction="#handleEncodeBcd" styleClass="secondary-button"/>
                      <Button text="BCD → Decimal" onAction="#handleDecodeBcd" styleClass="secondary-button"/>
                      <Button text="Decimal → COMP-3" onAction="#handleEncodeComp3" styleClass="secondary-button"/>
                      <Button text="COMP-3 → Decimal" onAction="#handleDecodeComp3" styleClass="secondary-button"/>
-                 </HBox>
+                 </FlowPane>
 
                  <TextArea fx:id="manualOutputArea" prefRowCount="3" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
             </VBox>
@@ -327,5 +328,7 @@
                           wrapText="true" styleClass="result-area,monospace-field"/>
             </VBox>
         </TitledPane>
+
+        <fx:include fx:id="cryptoEnvelopeInspector" source="crypto_envelope_inspector.fxml" />
     </panes>
 </Accordion>

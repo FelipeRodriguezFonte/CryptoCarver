@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<TitledPane fx:id="cryptoEnvelopeInspectorRoot" text="🔎 Crypto Envelope Inspector" expanded="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.CryptoEnvelopeInspectorController">
+    <content>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <Label text="Envelope (compact CCE1.… or JSON):" style="-fx-font-weight: bold;"/>
+            <TextArea fx:id="envelopeInputArea" promptText="Paste a Crypto Envelope here..." prefHeight="100" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+
+            <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
+                <Button text="Inspect" onAction="#handleInspect" styleClass="action-button-primary"/>
+                <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+                <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+            </FlowPane>
+
+            <Label text="Header:" style="-fx-font-weight: bold;"/>
+            <TextArea fx:id="envelopeReportArea" editable="false" prefHeight="180" style="-fx-font-family: 'Monospaced';"/>
+
+            <Separator/>
+
+            <Label text="Unwrap (needs the recipient's private key):" style="-fx-font-weight: bold;"/>
+            <GridPane hgap="8" vgap="4">
+                <columnConstraints>
+                    <ColumnConstraints minWidth="90" prefWidth="90"/>
+                    <ColumnConstraints hgrow="ALWAYS"/>
+                </columnConstraints>
+                <Label text="Profile:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="envelopeUnwrapProfileCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
+            </GridPane>
+            <TextArea fx:id="envelopePrivateKeyArea" promptText="-----BEGIN PRIVATE KEY----- ..." prefHeight="80" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+            <Button text="Unwrap" onAction="#handleUnwrap" styleClass="action-button" maxWidth="150"/>
+            <Label text="Recovered key (hex):" style="-fx-font-weight: bold;"/>
+            <TextArea fx:id="envelopeUnwrappedKeyArea" editable="false" prefHeight="60" wrapText="true" style="-fx-font-family: 'Courier New', monospace;"/>
+        </VBox>
+    </content>
+</TitledPane>
