@@ -3,6 +3,7 @@ package com.cryptocarver.ui;
 import com.cryptocarver.model.process.DryRunSummary;
 import com.cryptocarver.model.process.ProcessDefinition;
 import com.cryptocarver.model.process.ProcessValidator;
+import com.cryptocarver.service.I18nService;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -181,8 +182,9 @@ class ProcessDesignerUX12UITest {
                 assertEquals(def.nodes.get(0).id, row.getNodeId(), "Execution table must contain only step 1 ID");
 
                 // Verification 4: Status label & progress bar confirm safe cancellation after step 1
-                assertTrue(controller.processStatusLabel.getText().startsWith("Cancelled after step 1"),
-                        "Status label must report 'Cancelled after step 1' but was: " + controller.processStatusLabel.getText());
+                String expectedCancellation = I18nService.getInstance().text("module.process.cancelled", 1);
+                assertEquals(expectedCancellation, controller.processStatusLabel.getText(),
+                        "Status label must report the localized cancellation state");
                 assertTrue(controller.processProgressBar.getProgress() < 1.0,
                         "Progress bar must be strictly capped below 1.0 upon cancellation");
 

@@ -17,7 +17,10 @@ fi
 
 export LIBGL_ALWAYS_SOFTWARE=1
 XVFB_SERVER_ARGS="${XVFB_SERVER_ARGS:--screen 0 1920x1080x24}"
-MAVEN_ARGS=(-q -DrunUiTests=true -Dprism.order=sw test)
+# UI tests must not open modal JavaFX dialogs: they block the FX thread and
+# make the suite depend on manual interaction. Controllers expose test.mode
+# specifically to emit non-modal diagnostics instead.
+MAVEN_ARGS=(-q -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw test)
 if (($# > 0)); then
   MAVEN_ARGS+=("$@")
 fi

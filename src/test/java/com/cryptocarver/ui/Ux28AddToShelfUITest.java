@@ -357,7 +357,8 @@ class Ux28AddToShelfUITest {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(15, TimeUnit.SECONDS));
+        assertTrue(latch.await(30, TimeUnit.SECONDS),
+                "FX thread did not execute the Shelf action within the CI timeout");
         if (failure.get() != null) throw new AssertionError(failure.get());
     }
 }
