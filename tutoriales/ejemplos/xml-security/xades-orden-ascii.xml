@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<order id="ORD-2026-00043" xmlns="urn:cryptocarver:example">
+  <issuer>ACME Services, S.A.</issuer>
+  <amount currency="EUR">100.00</amount>
+  <purpose>XML signature validation</purpose>
+</order>

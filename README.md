@@ -1,6 +1,6 @@
 # CryptoCarver 🔐
 
-**Calculadora Criptográfica Avanzada con Interfaz Gráfica**
+**Laboratorio criptográfico avanzado con interfaz gráfica, CLI y automatización local**
 
 ![Java](https://img.shields.io/badge/Java-17-orange.svg)
 ![JavaFX](https://img.shields.io/badge/JavaFX-21.0.5-blue.svg)
@@ -10,7 +10,10 @@
 
 ## 📖 Sobre el Proyecto
 
-CryptoCarver es una aplicación que llevaba años queriendo desarrollar. Gracias a la ayuda de **Gemini** y **Claude AI**, finalmente he podido llevarla a cabo en tiempo récord.
+CryptoCarver es una aplicación para explorar, comprobar y documentar operaciones
+criptográficas de forma visual y reproducible. Su desarrollo ha contado con la
+participación de **Claude**, **Codex** y **Antigravity**, junto con la dirección y
+validación de Felipe Rodríguez Fonte.
 
 ### ¿Por qué CryptoCarver?
 
@@ -26,6 +29,9 @@ El objetivo principal es **facilitar cálculos criptográficos** a todos aquello
 ### 🎯 Filosofía
 
 La idea es ir **evolucionando las capacidades** de la herramienta según las necesidades de la comunidad y los estándares que vayan surgiendo. Este es un proyecto vivo que seguirá creciendo.
+
+> CryptoCarver es un laboratorio educativo y de pruebas; no es un HSM ni un
+> servicio de custodia para producción.
 
 ---
 
@@ -126,6 +132,19 @@ java -jar target/cryptocarver-<version>.jar
 
 Consulta la [guía operativa](docs/GUIA_OPERATIVA_CRYPTOCARVER.md) para EBCDIC, XAdES/TSA, histórico, diagnóstico y logs.
 
+### Tutoriales guiados
+
+El repositorio incluye una colección de **24 tutoriales prácticos**, con capturas,
+datos de laboratorio y versiones PDF. Empieza por el
+[índice de tutoriales](tutoriales/README.md) o descarga el
+[índice en PDF](tutoriales/pdfs/00-indice.pdf). Cubre búsquedas, operaciones
+genéricas, cifrado, autenticación, claves, PQC, XML, certificados, JOSE, COSE,
+pagos, ASN.1, historial y recorridos avanzados de AES-KW, TR-31, TR-34, PKCS#11,
+CMS, PAdES, XAdES y WS-Security.
+
+Todos los ejemplos usan material de laboratorio. No copies claves, PIN,
+certificados ni datos de producción en la aplicación ni en los tutoriales.
+
 ### CLI local
 
 La CLI usa las mismas operaciones locales y deterministas que el Batch Runner. No inicia
@@ -172,6 +191,34 @@ con `run_simple.bat`, o generar una aplicación autocontenida mediante
 
 ---
 
+## 🆕 Evolución desde la primera versión
+
+La primera versión, publicada como **CryptoForge**, se centraba en una calculadora
+gráfica con operaciones criptográficas y de pagos esenciales. Desde entonces el
+proyecto se ha renombrado a **CryptoCarver** y ha evolucionado hasta la versión
+**2.3.0**, con mejoras destacadas en los siguientes ámbitos:
+
+- **Cobertura funcional:** se añadieron PQC (ML-KEM, ML-DSA y SLH-DSA), XAdES,
+  TSA, WS-Security, COSE, CMS/PKCS#7, PAdES, ASiC, AES Key Wrap, DUKPT AES,
+  TR-34, análisis de archivos cifrados e inspección avanzada de ASN.1.
+- **Pagos y claves:** TR-31 amplía el soporte de bloques de clave y sus bloques
+  opcionales; EMV incorpora inspector BER-TLV, CDOL/DDOL y comprobación ARQC;
+  los flujos de PIN, CVV, PVV y DUKPT tienen laboratorios y vectores de prueba.
+- **Automatización reproducible:** se incorporaron Batch Runner, recetas
+  encadenadas, CLI, API local limitada a `127.0.0.1`, catálogo de operaciones y
+  perfiles de laboratorio.
+- **Seguridad y trazabilidad:** el histórico diferencia datos públicos,
+  sensibles y secretos; hay una caché HSM simulada de sesión, límites de entrada,
+  cancelación, diagnóstico, SBOM CycloneDX, manifiestos y checksums de release.
+- **Documentación:** se añadieron guía rápida, guía de operación, límites entre
+  laboratorio y producción, formatos/charsets y 24 tutoriales reproducibles con
+  capturas, material de apoyo y PDF.
+
+Consulta el [CHANGELOG](CHANGELOG.md) para el detalle por versión y los cambios
+pendientes de publicación posteriores a 2.3.0.
+
+---
+
 ## ⚠️ Notas Importantes
 
 ### Verificación de Funcionalidades
@@ -199,8 +246,9 @@ Tu feedback es valioso para mejorar la herramienta.
 Este proyecto no habría sido posible sin:
 
 ### Inteligencia Artificial
-- **Google Gemini** - Por la asistencia en desarrollo y resolución de problemas
-- **Claude AI (Anthropic)** - Por la ayuda en arquitectura y documentación
+- **Claude (Anthropic)** - Asistencia en arquitectura, desarrollo y documentación
+- **Codex (OpenAI)** - Asistencia en desarrollo, validación y documentación
+- **Antigravity** - Asistencia en desarrollo y evolución del proyecto
 
 ### Proyectos Open Source
 - **[pyemv](https://github.com/russss/python-emv)** - Referencia invaluable para implementaciones EMV
@@ -215,8 +263,12 @@ Este proyecto no habría sido posible sin:
 ## 📚 Documentación
 
 ### Guías Técnicas Completas
-- [Guía de Usuario en Español](docs/user_guide_es.md) - Documentación técnica extendida
-- [User Guide in English](docs/user_guide_en.md) - Extended technical documentation
+- [Guía de Usuario en Español](docs/guide_es_extended.md) - Documentación técnica extendida
+- [User Guide in English](docs/guide_en_extended.md) - Extended technical documentation
+- [Guía de inicio rápido](docs/QUICKSTART.md) - Recorridos reproducibles de las funciones principales
+- [Guía operativa](docs/GUIA_OPERATIVA_CRYPTOCARVER.md) - Operación, diagnóstico e histórico
+- [Tutoriales prácticos](tutoriales/README.md) - 24 laboratorios guiados, con capturas y PDF
+- [Cambios por versión](CHANGELOG.md) - Evolución funcional y de compatibilidad
 
 ### Estructura del Proyecto
 ```
@@ -233,7 +285,8 @@ CryptoCarver/
 │   │       ├── css/         # Estilos
 │   │       └── images/      # Iconos
 │   └── test/                # Tests unitarios
-├── docs/                    # Documentación
+├── docs/                    # Guías técnicas, operación y release
+├── tutoriales/              # 24 tutoriales, material de laboratorio y PDF
 └── pom.xml                  # Configuración Maven
 ```
 
@@ -279,7 +332,7 @@ CryptoCarver/
 
 ### En evolución
 
-- [ ] Manuales reproducibles por módulo y capturas verificadas por plataforma.
+- [x] Manuales reproducibles por módulo, capturas y PDF.
 - [ ] Changelog por versión con migraciones y compatibilidades.
 - [~] Integración PKCS#11/HSM real de laboratorio mediante SunPKCS11 y SoftHSM; faltan perfiles de proveedor, mecanismos/slots e integración XAdES.
 

@@ -1,0 +1,4 @@
+pedido=CC-2026-042
+importe=125.00
+moneda=EUR
+destino=almacen-7

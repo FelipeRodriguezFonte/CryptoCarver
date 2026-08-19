@@ -1,0 +1,47 @@
+{
+  "label": "SEQUENCE",
+  "tag": "SEQUENCE",
+  "tagNumber": 16,
+  "constructed": true,
+  "length": 294,
+  "decodedValue": "(2 elements)",
+  "children": [
+    {
+      "label": "SEQUENCE",
+      "tag": "SEQUENCE",
+      "tagNumber": 16,
+      "constructed": true,
+      "length": 15,
+      "decodedValue": "(2 elements)",
+      "children": [
+        {
+          "label": "OID",
+          "tag": "OBJECT IDENTIFIER",
+          "tagNumber": 6,
+          "constructed": false,
+          "length": 11,
+          "decodedValue": "1.2.840.113549.1.1.1 (rsaEncryption)",
+          "children": []
+        },
+        {
+          "label": "NULL",
+          "tag": "NULL",
+          "tagNumber": 5,
+          "constructed": false,
+          "length": 2,
+          "decodedValue": "NULL",
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "BIT STRING (2160 bit)",
+      "tag": "BIT STRING",
+      "tagNumber": 3,
+      "constructed": false,
+      "length": 275,
+      "decodedValue": "30 82 01 0A 02 82 01 01 00 86 9C 6F 90 2A A4 3F 07 BC 65 12 71 21 3E FD 04 19 73 28 87 B2 45 9E 8B DE 29 63 09 65 43 E3 F5 8E 08 BE D5 97 66 EF 2C A7 8D 47 6C CA 56 57 31 85 97 25 3B 52 91 8F 1E 08 38 1B 4C E0 56 82 48 7C 52 5E 7A 4E AF DF 8D 2A F5 A8 1C 5D 9A 38 F3 7A B6 08 6F 2D EB 7B 42 9C 66 37 E1 4D 59 70 00 E6 E7 6C A5 11 CA 20 F5 47 45 DE 05 85 4F FD 0A 38 6E 3A B6 1B FA 49 05 4B C1 EB D6 D4 56 40 D2 05 28 BF BB 87 69 C1 3E 45 CD 56 59 D3 E6 93 8B 3C 68 B7 1C B4 81 11 32 4D 8C 60 9C 82 D8 14 54 70 5D A5 09 90 21 B9 F8 FC B3 73 EA 65 6B 8E A6 83 99 1C AD BA 0D 2A 78 94 39 F4 74 BE F6 33 81 3B 34 5A 58 D7 F4 55 41 8F A4 28 55 C8 7A EE E0 66 51 E5 5C 4B E4 9B BB DF 3B C7 9E EA 23 3F 8A 45 2C 41 FD A1 6C E6 A3 CC B4 30 8A 5F C4 B6 05 0E CF 21 0B FE 95 82 68 41 5E 54 E3 09 98 02 81 02 03 01 00 01",
+      "children": []
+    }
+  ]
+}
