@@ -86,7 +86,7 @@
             <!-- Toolbar -->
             <FlowPane styleClass="main-toolbar">
                 <HBox alignment="CENTER_LEFT" spacing="10">
-                    <Button fx:id="toolbarSearchButton" text="Search operations (⌘K)" onAction="#handleOpenCommandPalette" styleClass="secondary-button"/>
+                    <Button fx:id="toolbarSearchButton" text="Search operations" onAction="#handleOpenCommandPalette" styleClass="secondary-button"/>
                     <Button fx:id="toolbarSaveSessionButton" text="Save Session" onAction="#handleSaveSession" styleClass="link-button"/>
                     <Button fx:id="toolbarClearButton" text="Clear" onAction="#handleClearInput" styleClass="link-button"/>
                 </HBox>

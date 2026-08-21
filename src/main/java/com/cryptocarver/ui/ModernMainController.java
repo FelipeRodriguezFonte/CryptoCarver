@@ -31,6 +31,11 @@ import com.cryptocarver.service.I18nService;
 public class ModernMainController implements StatusReporter, OperationNavigator {
 
     private static final double COMPACT_LAYOUT_WIDTH = 1_100;
+    /** Rendered per platform so Windows and Linux do not show macOS glyphs as empty boxes. */
+    private static final String COMMAND_PALETTE_SHORTCUT =
+            com.cryptocarver.model.PlatformShortcuts.display("Shortcut+K");
+    private static final String FAVORITE_SHORTCUT =
+            com.cryptocarver.model.PlatformShortcuts.display("Shortcut+Shift+F");
 
     static void writeDiagnosticsReport(java.nio.file.Path report, String content) throws Exception {
         java.nio.file.Files.writeString(report, content);
@@ -608,7 +613,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
         if (languageEnMenuItem != null) languageEnMenuItem.setSelected(selected == LanguagePreference.EN);
 
-        setText(toolbarSearchButton, "toolbar.search");
+        if (toolbarSearchButton != null) {
+            toolbarSearchButton.setText(i18n.text("toolbar.search", COMMAND_PALETTE_SHORTCUT));
+        }
         setText(toolbarSaveSessionButton, "menu.saveSession");
         setText(toolbarClearButton, "toolbar.clear");
         setText(toolbarExpandButton, "toolbar.expand");
@@ -641,7 +648,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         if (favoriteToggleBtn != null) {
             favoriteToggleBtn.setAccessibleText(i18n.text("a11y.favorite"));
-            favoriteToggleBtn.setAccessibleHelp(i18n.text("favorite.tooltip"));
+            favoriteToggleBtn.setAccessibleHelp(i18n.text("favorite.tooltip", FAVORITE_SHORTCUT));
         }
         if (inputFormatLabel != null) inputFormatLabel.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
         if (inputFormatCombo != null) inputFormatCombo.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
@@ -1352,12 +1359,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 favoriteToggleBtn.getStyleClass().add("active");
             }
             favoriteToggleBtn.setAccessibleText(i18n.text("favorite.remove", operationName));
-            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.active")));
+            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.active", FAVORITE_SHORTCUT)));
         } else {
             favoriteToggleBtn.setText("☆");
             favoriteToggleBtn.getStyleClass().remove("active");
             favoriteToggleBtn.setAccessibleText(i18n.text("favorite.add", operationName));
-            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.tooltip")));
+            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.tooltip", FAVORITE_SHORTCUT)));
         }
     }
 
@@ -2970,9 +2977,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         alert.showAndWait();
     }
 
+    /**
+     * JavaFX reports the work area in logical units, so a 1920x1080 panel at 150% scaling
+     * shows up as 1280x720 here. That is the number the window sizing has to respect, and
+     * the one that explains a clipped layout on a machine the maintainer cannot see.
+     */
+    private static String describePrimaryDisplay() {
+        javafx.stage.Screen primary = javafx.stage.Screen.getPrimary();
+        javafx.geometry.Rectangle2D work = primary.getVisualBounds();
+        javafx.geometry.Rectangle2D full = primary.getBounds();
+        return String.format(java.util.Locale.ROOT,
+                "%.0fx%.0f logical (work area %.0fx%.0f) at %.2fx output scale",
+                full.getWidth(), full.getHeight(), work.getWidth(), work.getHeight(),
+                primary.getOutputScaleX());
+    }
+
     @FXML
     private void handleDiagnostics() {
-        String diagnosticText = AppDiagnostics.report();
+        String diagnosticText = AppDiagnostics.report(describePrimaryDisplay());
         TextArea report = new TextArea(diagnosticText);
         report.setEditable(false);
         report.setWrapText(false);

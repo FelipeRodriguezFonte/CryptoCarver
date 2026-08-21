@@ -10,6 +10,16 @@ public final class AppDiagnostics {
     private AppDiagnostics() { }
 
     public static String report() {
+        return report(null);
+    }
+
+    /**
+     * @param displaySummary work area and output scale of the active display, or {@code null}
+     *     when no windowing system is available. Layout complaints coming from another desktop
+     *     are almost always a work-area or scaling mismatch, so the numbers belong in the report;
+     *     resolving them here would drag the JavaFX toolkit into headless callers.
+     */
+    public static String report(String displaySummary) {
         StringBuilder report = new StringBuilder();
         report.append("CryptoCarver diagnostics\n");
         report.append("Generated: ").append(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ZonedDateTime.now())).append('\n');
@@ -22,6 +32,7 @@ public final class AppDiagnostics {
         append(report, "JavaFX", System.getProperty("javafx.runtime.version", "Not reported"));
         append(report, "Operating system", System.getProperty("os.name") + " " + System.getProperty("os.version"));
         append(report, "Architecture", System.getProperty("os.arch"));
+        append(report, "Display", displaySummary);
         append(report, "Locale", java.util.Locale.getDefault().toLanguageTag());
         append(report, "Default charset", java.nio.charset.Charset.defaultCharset().name());
         append(report, "Bouncy Castle", providerVersion("BC"));

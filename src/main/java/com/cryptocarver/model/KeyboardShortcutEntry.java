@@ -34,11 +34,6 @@ public class KeyboardShortcutEntry {
     }
 
     public String getDisplayCombination() {
-        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
-        String modifier = isMac ? "⌘" : "Ctrl+";
-        String shiftSymbol = isMac ? "⇧" : "Shift+";
-        return keyCombination
-                .replace("Shortcut+", modifier)
-                .replace("Shift+", shiftSymbol);
+        return PlatformShortcuts.display(keyCombination);
     }
 }
