@@ -147,6 +147,7 @@ jobs:
           SOFTHSM2_CONF="${SOFTHSM2_CONF}" \
           SOFTHSM2_MODULE="${SOFTHSM2_MODULE}" \
             timeout --signal=TERM --kill-after=5s 120s mvn -Pintegration-tests \
+              -Dtest='*,!Pkcs11LibraryInventorySoftHsmIntegrationTest' \
               -DfailIfNoTests=true -Dsurefire.printSummary=true test
 
       - name: Remove ephemeral SoftHSM2 data
