@@ -404,13 +404,22 @@ class ModernMainControllerUITest {
         assertEquals("module payload", stateRef.get().get("CipherController.cipherInputArea"));
 
         AtomicReference<java.util.Map<String, Object>> historyStateRef = new AtomicReference<>();
-        runAndWait(() -> {
-            try {
-                historyStateRef.set((java.util.Map<String, Object>) captureHistory.invoke(controller));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+        // Redaction follows the Security menu profile; the default keeps secrets, so the
+        // profile under test has to be selected rather than assumed.
+        com.cryptocarver.model.AppSettings.getInstance()
+                .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+        try {
+            runAndWait(() -> {
+                try {
+                    historyStateRef.set((java.util.Map<String, Object>) captureHistory.invoke(controller));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } finally {
+            com.cryptocarver.model.AppSettings.getInstance()
+                    .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        }
         assertEquals("[REDACTED_SECRET]", historyStateRef.get().get("CipherController.cipherInputArea"));
         assertEquals("[REDACTED_SECRET]", historyStateRef.get().get("CipherController.symmetricKeyField"));
         assertEquals(true, historyStateRef.get().get("CipherController.fileCipherCompactCbcCheck"));
@@ -2492,7 +2501,7 @@ class ModernMainControllerUITest {
     }
 
     @Test
-    void testTemplateSecretsExclusion() throws Exception {
+    void testHistoryRecipeSecretsExclusion() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
@@ -2514,8 +2523,17 @@ class ModernMainControllerUITest {
             ivField.setText("0102030405060708090A0B0C");
         });
 
-        // Capture recipe using UiStateSnapshot
-        java.util.Map<String, Object> recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+        // Capture recipe using UiStateSnapshot. The profile is pinned because redaction now
+        // follows the Security menu, and the default (FULL_LAB) deliberately keeps secrets.
+        com.cryptocarver.model.AppSettings.getInstance()
+                .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+        java.util.Map<String, Object> recipe;
+        try {
+            recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+        } finally {
+            com.cryptocarver.model.AppSettings.getInstance()
+                    .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        }
         for (java.util.Map.Entry<String, Object> entry : recipe.entrySet()) {
             if (entry.getKey().contains("symmetricKeyField") || entry.getKey().contains("ivField")) {
                 assertEquals("[REDACTED_SECRET]", entry.getValue(), "Secret field " + entry.getKey() + " must be redacted");

@@ -96,8 +96,18 @@ class UiStateSnapshotTest {
         }
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void restoreDefaultVisibility() {
+        com.cryptocarver.model.AppSettings.getInstance()
+                .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+    }
+
     @Test
-    void captureHistoryRecipeRedactsSecrets() {
+    void captureHistoryRecipeRedactsSecretsOutsideFullLab() {
+        // Pinned rather than left to the default: the default profile is FULL_LAB, which
+        // deliberately keeps secrets, so relying on it would assert the opposite behaviour.
+        com.cryptocarver.model.AppSettings.getInstance()
+                .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
         DummyController controller = new DummyController();
 
         Map<String, Object> state = UiStateSnapshot.captureHistoryRecipe(controller);
@@ -126,6 +136,40 @@ class UiStateSnapshotTest {
         assertEquals("Base64URL", state.get("DummyController.encodingFormatChoice"));
         assertEquals(true, state.get("DummyController.myCheck"));
         assertEquals(true, state.get("DummyController.algorithmModeCheck"));
+    }
+
+    @Test
+    void captureHistoryRecipeKeepsSecretsUnderFullLab() {
+        com.cryptocarver.model.AppSettings.getInstance()
+                .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        DummyController controller = new DummyController();
+
+        Map<String, Object> state = UiStateSnapshot.captureHistoryRecipe(controller);
+
+        // Reopening a history entry has to rebuild the operation as it ran; under the
+        // laboratory profile that includes the secret inputs themselves.
+        assertEquals("my-super-secret-key", state.get("DummyController.keyField"));
+        assertEquals("hunter2", state.get("DummyController.passwordInput"));
+        assertFalse(state.containsValue("[REDACTED_SECRET]"),
+                "FULL_LAB must not replace any field with the redaction placeholder");
+
+        // Result panes stay out either way: history is a recipe, not an output snapshot.
+        assertEquals(null, state.get("DummyController.technicalResultArea"));
+        // Non-secret settings keep behaving identically across profiles.
+        assertEquals("hello world", state.get("DummyController.dataField"));
+        assertEquals("AES", state.get("DummyController.algoCombo"));
+    }
+
+    @Test
+    void redactedProfileAlsoRedactsHistory() {
+        com.cryptocarver.model.AppSettings.getInstance()
+                .setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+        DummyController controller = new DummyController();
+
+        Map<String, Object> state = UiStateSnapshot.captureHistoryRecipe(controller);
+
+        assertEquals("[REDACTED_SECRET]", state.get("DummyController.keyField"));
+        assertEquals("[REDACTED_SECRET]", state.get("DummyController.passwordInput"));
     }
 
     @Test

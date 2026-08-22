@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.service.I18nService;
 
 /** Captures and restores serializable JavaFX state across nested FXML controllers. */
@@ -73,9 +75,25 @@ public final class UiStateSnapshot {
         return capture(rootController, CaptureMode.EDITABLE_INPUTS);
     }
 
-    /** Captures editable inputs and selectors, redacting secret fields for safe history storage. */
+    /**
+     * Captures editable inputs and selectors for history storage.
+     *
+     * <p>Whether secret fields are kept in the clear follows the Security menu's
+     * {@link SecretVisibilityProfile}, the same switch that governs whether the rest of the
+     * application shows secrets on screen. Under FULL_LAB, the profile a laboratory user
+     * selects deliberately, a reopened history entry rebuilds the operation exactly as it
+     * ran; MASKED and REDACTED keep replacing secrets with a placeholder.</p>
+     *
+     * <p>History is written to {@code ~/.cryptocarver/history.json} as plain text (owner-only
+     * permissions, no encryption), so FULL_LAB does put that material on disk.</p>
+     */
     public static Map<String, Object> captureHistoryRecipe(Object rootController) {
         return capture(rootController, CaptureMode.HISTORY_RECIPE);
+    }
+
+    /** True unless the user has selected the FULL_LAB profile in the Security menu. */
+    private static boolean redactsHistorySecrets() {
+        return AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB;
     }
 
     /**
@@ -108,6 +126,8 @@ public final class UiStateSnapshot {
     private static Map<String, Object> capture(
             Object rootController, CaptureMode mode, Node scopeRoot, Parent screenRoot) {
         Map<String, Object> state = new LinkedHashMap<>();
+        // Resolved once so a single capture cannot straddle a profile change mid-traversal.
+        boolean redactSecrets = mode == CaptureMode.HISTORY_RECIPE && redactsHistorySecrets();
         visitControllers(rootController, (owner, field, value) -> {
             if (scopeRoot != null && value instanceof Node node
                     && !isDescendantOf(node, scopeRoot) && !isSharedScreenControl(node, screenRoot)) return;
@@ -123,7 +143,7 @@ public final class UiStateSnapshot {
 
             Object captured = readControlValue(value);
             if (captured != null) {
-                if (mode == CaptureMode.HISTORY_RECIPE && isHistorySensitiveField(field.getName(), value)) {
+                if (redactSecrets && isHistorySensitiveField(field.getName(), value)) {
                     state.put(key(owner, field), "[REDACTED_SECRET]");
                 } else {
                     state.put(key(owner, field), captured);
