@@ -47,12 +47,16 @@ run.bat
 Es equivalente a ejecutar:
 
 ```bat
-mvn javafx:run
+mvn package -DskipTests
+run_simple.bat
 ```
+
+La compilación es incremental (sin `clean`), y deja el JAR ejecutable en `target\`,
+de modo que después puedes arrancar la aplicación con `run_simple.bat` sin Maven.
 
 ## Ejecutar un JAR compilado
 
-Compila primero:
+Necesita un JAR ya construido, por `run.bat` o por Maven:
 
 ```bat
 mvn clean package -DskipTests

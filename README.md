@@ -186,7 +186,8 @@ La aplicación funciona en:
 - ✅ **Linux** (Ubuntu, Debian, Fedora, etc.)
 
 En Windows puedes ejecutarla desde fuentes con `run.bat`, desde un JAR ya compilado
-con `run_simple.bat`, o generar una aplicación autocontenida mediante
+con `run_simple.bat` (que reutiliza el JAR dejado por `run.bat` o por
+`mvn package`), o generar una aplicación autocontenida mediante
 `package_windows.bat`. Consulta [docs/WINDOWS.md](docs/WINDOWS.md) para los pasos exactos.
 
 ---

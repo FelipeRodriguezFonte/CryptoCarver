@@ -15,9 +15,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo Starting CryptoCarver...
-echo.
-
 cd /d "%~dp0"
 where mvn.cmd >nul 2>&1
 if %errorlevel% neq 0 (
@@ -26,11 +23,20 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
-mvn javafx:run
 
+REM Package instead of javafx:run, so the executable JAR is left in target\ and
+REM run_simple.bat can start the app afterwards without a Maven build. No clean
+REM here: the build is incremental, only what changed is recompiled and shaded.
+echo Building CryptoCarver...
+echo.
+call mvn package -DskipTests
 if %errorlevel% neq 0 (
     echo.
-    echo ERROR: Failed to start application
-    echo Make sure Maven is installed and try: mvn clean install
+    echo ERROR: Maven build failed
+    echo Try a clean build with: mvn clean package -DskipTests
     pause
+    exit /b 1
 )
+
+REM run_simple.bat resolves the JAR name from the Maven artifact and launches it.
+call "%~dp0run_simple.bat"
