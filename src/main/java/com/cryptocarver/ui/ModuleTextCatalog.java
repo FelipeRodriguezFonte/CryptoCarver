@@ -1,11 +1,27 @@
 package com.cryptocarver.ui;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /** English source-text to bundle-key maps for the progressively localized module slices. */
 public final class ModuleTextCatalog {
     private ModuleTextCatalog() { }
+
+    /**
+     * Every module slice, for lookups that cannot know which module owns a title.
+     *
+     * <p>Returned as a list rather than one merged map on purpose: the same English
+     * source text appears in several slices under different bundle keys, and a merge
+     * would silently drop all but one of the translations a caller has to recognize.</p>
+     */
+    public static List<Map<String, String>> allModules() {
+        return List.of(
+                cipher(), authentication(), keys(), pkcs11Profiles(), certificates(),
+                generic(), processDesigner(), history(), clipboardShelf(), compareResults(),
+                pqc(), xmlSecurity(), asn1(), wssSecurity(), cose(), jose(), payments(),
+                emv(), cmsInspector(), openPgp(), pades(), asic(), cryptoEnvelopeInspector());
+    }
 
     private static Map<String, String> common() {
         Map<String, String> map = new LinkedHashMap<>();

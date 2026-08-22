@@ -3496,7 +3496,10 @@ class ModernMainControllerUITest {
 
             // Verify focus state
             secondary.requestFocus();
-            assertTrue(secondary.isFocused() || secondary.getPseudoClassStates().stream().anyMatch(pc -> "focused".equals(pc.getPseudoClassName())));
+            // Focus ownership inside the scene, not Node.isFocused(): the latter also requires the
+            // OS to have activated the window, which it will not do when another application is in
+            // the foreground. Where focus went is the application behaviour under test.
+            assertEquals(secondary, scene.getFocusOwner(), "Secondary button must own scene focus");
 
             // Verify computed background styles are populated by JavaFX CSS engine
             assertNotNull(primary.getBackground(), "Primary button computed background must not be null");
@@ -3737,11 +3740,24 @@ class ModernMainControllerUITest {
             root.applyCss();
             root.layout();
 
-            javafx.scene.layout.Border focusedBorder = enabledReopen.getBorder();
-            assertTrue(enabledReopen.isFocused(), "Enabled button must receive real keyboard focus");
+            // See the note on scene focus ownership above: Node.isFocused() additionally depends on
+            // the window being activated by the OS, which makes it flaky outside a headless runner.
+            assertEquals(enabledReopen, scene.getFocusOwner(),
+                    "Enabled button must receive keyboard focus");
             assertNotNull(enabledReopen.getBackground(), "Enabled button must have computed background");
+
+            // The :focused border is what the stylesheet is being checked for, but the pseudo-class
+            // is only raised once the OS activates the window. Driving it directly keeps the
+            // assertion about styles.css rather than about which application is in the foreground.
+            enabledReopen.pseudoClassStateChanged(
+                    javafx.css.PseudoClass.getPseudoClass("focused"), true);
+            root.applyCss();
+            root.layout();
+            javafx.scene.layout.Border focusedBorder = enabledReopen.getBorder();
             assertNotNull(focusedBorder, "Enabled button must have computed focus border");
             assertNotEquals(unfocusedBorder, focusedBorder, "Focused border must differ from unfocused border");
+            enabledReopen.pseudoClassStateChanged(
+                    javafx.css.PseudoClass.getPseudoClass("focused"), false);
 
             // 5. Disabled button must not receive hover/focused pseudo-classes
             assertFalse(disabledReopen.getPseudoClassStates().stream().anyMatch(pc -> "focused".equals(pc.getPseudoClassName())),

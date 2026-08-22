@@ -17,9 +17,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import com.cryptocarver.service.I18nService;
 
 /** Captures and restores serializable JavaFX state across nested FXML controllers. */
 public final class UiStateSnapshot {
@@ -206,35 +209,70 @@ public final class UiStateSnapshot {
     }
 
     private static Node findSectionRoot(Parent root, String section) {
+        return findSectionRoot(root, acceptedSectionTexts(section));
+    }
+
+    private static Node findSectionRoot(Parent root, Set<String> accepted) {
         if (root == null) return null;
-        String wanted = normalizeSection(section);
-        if (root instanceof TitledPane pane && sectionMatches(normalizeSection(pane.getText()), wanted)) {
+        if (root instanceof TitledPane pane && sectionMatches(normalizeSection(pane.getText()), accepted)) {
             return pane.getContent();
         }
         if (root instanceof Accordion accordion) {
             for (TitledPane pane : accordion.getPanes()) {
-                if (sectionMatches(normalizeSection(pane.getText()), wanted)) return pane.getContent();
+                if (sectionMatches(normalizeSection(pane.getText()), accepted)) return pane.getContent();
                 if (pane.getContent() instanceof Parent content) {
-                    Node nested = findSectionRoot(content, section);
+                    Node nested = findSectionRoot(content, accepted);
                     if (nested != null) return nested;
                 }
             }
         }
         for (Node child : root.getChildrenUnmodifiable()) {
             if (child instanceof TitledPane pane
-                    && sectionMatches(normalizeSection(pane.getText()), wanted)) {
+                    && sectionMatches(normalizeSection(pane.getText()), accepted)) {
                 return pane.getContent();
             }
             if (child instanceof Parent parent) {
-                Node match = findSectionRoot(parent, section);
+                Node match = findSectionRoot(parent, accepted);
                 if (match != null) return match;
             }
         }
         return null;
     }
 
-    private static boolean sectionMatches(String pane, String wanted) {
-        return pane.equals(wanted) || pane.contains(wanted) || wanted.contains(pane);
+    /**
+     * Routes address a section by its canonical English name, but the pane on screen shows
+     * whatever the active language renders. Matching the canonical name alone therefore finds
+     * nothing on a translated UI, which surfaced as "Unable to locate configuration section"
+     * for every section that actually has a translation.
+     */
+    private static Set<String> acceptedSectionTexts(String section) {
+        Set<String> accepted = new LinkedHashSet<>();
+        String canonical = normalizeSection(section);
+        if (canonical.isEmpty()) return accepted;
+        accepted.add(canonical);
+        for (Map<String, String> module : ModuleTextCatalog.allModules()) {
+            module.forEach((source, bundleKey) -> {
+                // Containment one way only: a pane title may carry more than the section
+                // name ("Key Sharing" lives in "Key Sharing (XOR Split/Combine)"), but the
+                // reverse would let a short generic entry such as "Inspect" drag in the
+                // translation of an unrelated control.
+                if (normalizeSection(source).contains(canonical)) {
+                    accepted.add(normalizeSection(I18nService.getInstance().text(bundleKey)));
+                }
+            });
+        }
+        accepted.remove("");
+        return accepted;
+    }
+
+    private static boolean sectionMatches(String pane, Set<String> accepted) {
+        // An untitled pane normalizes to "", which every candidate trivially contains;
+        // without this guard the first such pane would swallow the lookup.
+        if (pane.isEmpty()) return false;
+        for (String wanted : accepted) {
+            if (pane.equals(wanted) || pane.contains(wanted) || wanted.contains(pane)) return true;
+        }
+        return false;
     }
 
     private static String normalizeSection(String value) {
