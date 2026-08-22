@@ -1965,7 +1965,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
 
             for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty() && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.payments())) {
+                if (!targetPane.isEmpty()
+                        && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.cipher())) {
                     accordion.setExpandedPane(pane);
                     revealExpandedPane(pane);
                     break;
@@ -2082,13 +2083,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private void expandCertificatesAccordionPane(String paneName) {
         if (certificatesContainerController != null) certificatesContainerController.expandPane(paneName);
-    }
-
-    // Helper to strip emojis
-    private String stripEmoji(String text) {
-        // Remove emoji characters
-        return text.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "").trim();
-
     }
 
     @Override
@@ -3303,36 +3297,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
 
         for (TitledPane pane : genericContainer.getPanes()) {
-            if (matchesGenericAccordionPane(pane, paneName)) {
+            if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.generic())) {
                 genericContainer.setExpandedPane(pane);
                 revealExpandedPane(pane);
                 break;
             }
         }
-    }
-
-    /**
-     * Routes are intentionally stored in English canonical names, while UX-15
-     * may translate the visible titled-pane text. Compare against both forms so
-     * selecting a sidebar operation keeps working after a live language change.
-     */
-    private boolean matchesGenericAccordionPane(TitledPane pane, String canonicalPaneName) {
-        String visibleText = pane.getText() == null ? "" : pane.getText();
-        if (visibleText.contains(canonicalPaneName)
-                || canonicalPaneName.contains(stripEmoji(visibleText))) {
-            return true;
-        }
-
-        for (java.util.Map.Entry<String, String> entry : ModuleTextCatalog.generic().entrySet()) {
-            String sourceText = entry.getKey();
-            boolean isRequestedPane = sourceText.contains(canonicalPaneName)
-                    || canonicalPaneName.contains(stripEmoji(sourceText));
-            if (isRequestedPane
-                    && visibleText.equals(com.cryptocarver.service.I18nService.getInstance().text(entry.getValue()))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     // Helper methods

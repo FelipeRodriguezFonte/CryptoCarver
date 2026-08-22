@@ -110,6 +110,10 @@ class LocalizedSectionResolutionUITest {
         cases.put("Sign", "authentication");
         cases.put("Encode PIN Block", "payments");
         cases.put("CMS Inspector", "certificates");
+        cases.put("Process Designer", "generic");
+        cases.put("Crypto Envelope Inspector", "generic");
+        cases.put("Manual Conversion", "generic");
+        cases.put("File Cipher (Streaming)", "cipher");
 
         Map<String, Integer> english = new LinkedHashMap<>();
         runAndWait(() -> {
@@ -162,6 +166,8 @@ class LocalizedSectionResolutionUITest {
             case "authentication" -> field(controller, "authenticationContainer");
             case "payments" -> field(controller, "paymentsContainer");
             case "certificates" -> field(controller, "certificatesContainer");
+            case "generic" -> field(controller, "genericContainer");
+            case "cipher" -> field(controller, "cipherContainer");
             default -> throw new IllegalArgumentException("Unknown accordion owner: " + owner);
         };
         javafx.scene.control.Accordion accordion = accordionIn(container);
