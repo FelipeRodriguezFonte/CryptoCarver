@@ -2001,7 +2001,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
 
             for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty() && pane.getText().contains(targetPane)) {
+                if (!targetPane.isEmpty()
+                        && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.authentication())) {
                     accordion.setExpandedPane(pane);
                     revealExpandedPane(pane);
                     break;
@@ -2046,7 +2047,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
 
             for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty() && pane.getText().contains(targetPane)) {
+                if (!targetPane.isEmpty()
+                        && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.payments())) {
                     accordion.setExpandedPane(pane);
                     revealExpandedPane(pane);
                     break;

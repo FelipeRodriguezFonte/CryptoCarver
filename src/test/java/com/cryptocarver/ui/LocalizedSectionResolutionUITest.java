@@ -91,6 +91,106 @@ class LocalizedSectionResolutionUITest {
                 "Every portable section must resolve with the UI in Spanish");
     }
 
+    /**
+     * Navigating in Spanish must open the pane English opens.
+     *
+     * <p>Comparing the accordion of the module that owns each route, not the whole screen: the
+     * modules share one window and sequencing leaves unrelated accordions in states that have
+     * nothing to do with the route under test.</p>
+     */
+    @Test
+    void navigationExpandsTheSamePaneInSpanishAsInEnglish() throws Exception {
+        // operation -> the accordion that route belongs to
+        Map<String, String> cases = new LinkedHashMap<>();
+        cases.put("Key Generation", "symmetric");
+        cases.put("Key Derivation (KDF)", "symmetric");
+        cases.put("Combine Components", "symmetric");
+        cases.put("RSA Key Generation", "asymmetric");
+        cases.put("Dilithium (ML-DSA)", "pqc");
+        cases.put("Sign", "authentication");
+        cases.put("Encode PIN Block", "payments");
+        cases.put("CMS Inspector", "certificates");
+
+        Map<String, Integer> english = new LinkedHashMap<>();
+        runAndWait(() -> {
+            I18nService.getInstance().setPreference(LanguagePreference.EN);
+            ModernMainController controller = load();
+            cases.forEach((operation, owner) -> {
+                controller.navigateTo(operation);
+                english.put(operation, expandedIndex(controller, owner));
+            });
+        });
+
+        // Guards against the whole test passing because nothing expands in either language.
+        english.forEach((operation, index) -> assertTrue(index >= 0,
+                "Baseline is broken: English does not expand a pane for " + operation));
+
+        List<String> mismatches = new ArrayList<>();
+        runAndWait(() -> {
+            I18nService.getInstance().setPreference(LanguagePreference.ES);
+            ModernMainController controller = load();
+            cases.forEach((operation, owner) -> {
+                controller.navigateTo(operation);
+                int spanish = expandedIndex(controller, owner);
+                if (spanish != english.get(operation)) {
+                    mismatches.add(operation + " (English " + english.get(operation)
+                            + ", Spanish " + spanish + ")");
+                }
+            });
+        });
+
+        assertEquals(List.of(), mismatches, "Spanish navigation must open the same pane English does");
+    }
+
+    private ModernMainController load() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+            loader.setResources(I18nService.getInstance().getBundle());
+            loader.load();
+            return loader.getController();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** Index of the open pane in the named module's accordion; -1 when none is open. */
+    private static int expandedIndex(ModernMainController controller, String owner) {
+        javafx.scene.Node container = switch (owner) {
+            case "symmetric" -> field(field(controller, "keysContainerController"), "symmetricKeysContainer");
+            case "asymmetric" -> field(field(controller, "keysContainerController"), "asymmetricKeysContainer");
+            case "pqc" -> field(field(controller, "postQuantumContainerController"), "pqcAccordion");
+            case "authentication" -> field(controller, "authenticationContainer");
+            case "payments" -> field(controller, "paymentsContainer");
+            case "certificates" -> field(controller, "certificatesContainer");
+            default -> throw new IllegalArgumentException("Unknown accordion owner: " + owner);
+        };
+        javafx.scene.control.Accordion accordion = accordionIn(container);
+        if (accordion == null) return -1;
+        return accordion.getPanes().indexOf(accordion.getExpandedPane());
+    }
+
+    private static javafx.scene.control.Accordion accordionIn(javafx.scene.Node node) {
+        if (node instanceof javafx.scene.control.Accordion accordion) return accordion;
+        if (node instanceof javafx.scene.Parent parent) {
+            for (javafx.scene.Node child : parent.getChildrenUnmodifiable()) {
+                javafx.scene.control.Accordion found = accordionIn(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T field(Object owner, String name) {
+        try {
+            java.lang.reflect.Field f = owner.getClass().getDeclaredField(name);
+            f.setAccessible(true);
+            return (T) f.get(owner);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Cannot read " + name + " from " + owner.getClass().getSimpleName(), e);
+        }
+    }
+
     private static final java.util.Set<UiNavigationRegistry.Module> PORTABLE_MODULES =
             java.util.EnumSet.of(
                     UiNavigationRegistry.Module.JOSE,

@@ -142,7 +142,7 @@ public class PostQuantumController {
     public void expandAccordionPane(String itemName) {
         if (pqcAccordion == null) return;
         for (TitledPane pane : pqcAccordion.getPanes()) {
-            if (pane.getText().contains(itemName)) {
+            if (ModulePaneMatcher.matches(pane, itemName, ModuleTextCatalog.pqc())) {
                 pqcAccordion.setExpandedPane(pane);
                 break;
             }

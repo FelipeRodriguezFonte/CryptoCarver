@@ -630,14 +630,14 @@ public class KeysController {
 
     private void expandPane(VBox section, String paneName) {
         if (section == null || paneName == null || paneName.isBlank()) return;
+        // Comparing the canonical name against the pane's visible text only works while the two
+        // are the same string, which stops being true the moment the title is translated:
+        // "Key Generation" never matches "Generación de claves", so nothing expanded and the
+        // navigation silently did nothing. ModulePaneMatcher knows the translations.
         section.getChildren().stream().filter(Accordion.class::isInstance).map(Accordion.class::cast)
                 .findFirst().ifPresent(accordion -> accordion.getPanes().stream()
-                        .filter(pane -> pane.getText().contains(paneName) || paneName.contains(stripEmoji(pane.getText())))
+                        .filter(pane -> ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.keys()))
                         .findFirst().ifPresent(accordion::setExpandedPane));
-    }
-
-    private String stripEmoji(String text) {
-        return text.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "").trim();
     }
 
     @FXML private void handleChooseKeyStore() { chooseKeyStore(); }
