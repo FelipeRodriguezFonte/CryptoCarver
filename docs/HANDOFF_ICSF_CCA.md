@@ -1,8 +1,10 @@
 # Key tokens ICSF / CCA — arquitectura y decisiones
 
 Análisis de los *key tokens* nativos del coprocesador criptográfico de host de
-IBM z/OS (ICSF / CCA), portado desde la herramienta en Python
-`icsf_tokens.py` + `icsf_batch.py`.
+IBM z/OS (ICSF / CCA), y reproducción en claro de los verbos nativos con los que
+el host entrega y recibe claves. Portado desde la herramienta en Python
+(`icsf_tokens.py` + `icsf_batch.py` para el análisis, `icsf_keywrap.py` para la
+envoltura).
 
 Fuente de contraste: *z/OS ICSF Application Programmer's Guide*
 (`csfb400_icsf_apg_hcr77e0`), apéndices B y C. Las referencias de página que
@@ -16,18 +18,23 @@ es +54).
 | Capa | Ubicación |
 |---|---|
 | Núcleo | `com.cryptocarver.crypto.icsf` (sin dependencias de interfaz) |
-| Interfaz | `IcsfTokenController` + `IcsfBatchController` en `com.cryptocarver.ui` |
-| Vistas | `src/main/resources/fxml/icsf_token.fxml`, `icsf_batch.fxml` |
+| Núcleo de envoltura | `com.cryptocarver.crypto.icsf.keywrap` |
+| Interfaz | `IcsfTokenController`, `IcsfBatchController` e `IcsfKeyWrapController` en `com.cryptocarver.ui` |
+| Vistas | `src/main/resources/fxml/icsf_token.fxml`, `icsf_batch.fxml`, `icsf_keywrap.fxml` |
 | Textos | `icsf.*` en los tres bundles; slice `ModuleTextCatalog.icsf()` |
-| CLI | `icsf-token`, `icsf-batch` en `CryptoCarverCli` |
+| CLI | `icsf-token`, `icsf-batch` en `CryptoCarverCli` (la envoltura es solo de escritorio) |
 | Tests | `src/test/java/com/cryptocarver/crypto/icsf/` y `.../ui/Icsf*` |
 
-**No es un módulo de navegación propio.** Los dos paneles son `fx:include`
+**No es un módulo de navegación propio.** Los tres paneles son `fx:include`
 autocontenidos dentro de `keys.fxml`, siguiendo el patrón de
 `pkcs11_profiles.fxml`: FXML propio, `fx:controller` propio, slice de textos
-propio y espacio de nombres i18n propio. `KeysController` solo aporta cuatro
-campos `@FXML`, el reenvío del `StatusReporter` y una rama en
+propio y espacio de nombres i18n propio. `KeysController` solo aporta los
+campos `@FXML`, el reenvío del `StatusReporter` y sendas ramas en
 `expandSymmetricPane`; **no contiene lógica ICSF**.
+
+Ojo con el orden de esas ramas: `ICSF / CCA Key Export / Import` también contiene
+la palabra `ICSF`, así que se comprueba **antes** que la rama genérica, que si no
+se lo lleva el analizador de tokens. `IcsfNavigationUITest` lo fija.
 
 En el árbol de operaciones aparecen bajo **Keys → Tools**, junto a Key Material
 Inspector y KeyStore Inspector, que son la misma clase de herramienta.
@@ -100,14 +107,24 @@ individual solo (salvo `DUPLICADO`, que es propiedad del lote, no del token).
 
 ### 3.2 El aviso de seguridad
 
-El análisis **no descifra nada**: el material de clave protegido solo es
-recuperable dentro del coprocesador, bajo su master key. Pero las salidas llevan
-los tokens enteros en hexadecimal.
+Hay **dos posturas distintas** dentro del módulo, y conviene no confundirlas.
 
-El aviso aparece en: los dos paneles (etiqueta permanente, no descartable), la
-portada del informe de lote, el pie del informe individual, el JSON
-(`securityNotice`), el `--help` de la CLI, el README y este documento. Los
-mensajes de guardado dicen qué contiene el fichero, no solo que se ha escrito.
+**Los dos analizadores no descifran nada**: el material de clave protegido solo
+es recuperable dentro del coprocesador, bajo su master key. Pero sus salidas
+llevan los tokens enteros en hexadecimal.
+
+**La envoltura sí maneja material en claro**, y no es un descuido: reproducir la
+aritmética del host exige que se le den la clave y el KEK en claro. Sigue sin
+descifrar nada que el coprocesador proteja —no puede—, pero recibe y escribe
+claves completas. Por eso su operación se registra con `SecretRisk.HIGH` frente
+al `LOW` de los analizadores, y su aviso es propio y distinto: dice que las
+claves van en claro y que se usen claves de prueba.
+
+El aviso aparece en: los tres paneles (etiqueta permanente, no descartable), la
+portada del informe de lote, el pie del informe individual y el del informe de
+envoltura, el JSON (`securityNotice`), el `--help` de la CLI, el README y este
+documento. Los mensajes de guardado dicen qué contiene el fichero, no solo que se
+ha escrito.
 
 ---
 
@@ -199,6 +216,7 @@ sobrevive en los dos idiomas.
 ## 7. Alcance de la traducción
 
 **Todo el informe está en español e inglés**, incluido el detalle campo a campo.
+Vale igual para la envoltura, bajo el espacio de nombres `icsf.keywrap.*`.
 
 El mecanismo es que el núcleo **no guarda texto, guarda significado**:
 `IcsfText` lleva una clave de bundle y sus argumentos, y las palabras se eligen
@@ -256,25 +274,90 @@ marcadores `{0}` sin sustituir, y que la sangría sobreviva.
 | `IncludedPaneI18nUITest` | Que un pane incluido traduce su título **y** su contenido |
 | `IcsfModuleI18nTest` | Que todo código reportable tiene lectura en ambos idiomas |
 | `IcsfTokenControllerUITest`, `IcsfBatchControllerUITest` | Carga real en JavaFX y recorrido de las vistas |
+| `KeyWrapVectorTest` | Envoltura contra vectores fijos: toda combinación de longitud, tipo, variante y modo |
+| `KeyWrapI18nTest` | Que cada nota y cada veredicto de la envoltura resuelve en ambos idiomas |
+| `DesEngineSmokeTest` | El motor DES contra el vector clásico de FIPS 46-3 |
+| `IcsfNavigationUITest` | Que los paneles incluidos se abren **y llegan al viewport** al navegar |
 
 ```bash
-mvn test -Dtest='Icsf*'
+mvn test -Dtest='Icsf*,KeyWrap*,DesEngine*'
 mvn -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw test -Dtest='Icsf*UITest'
 ```
 
 ---
 
-## 9. Limitaciones conocidas
+## 9. Envoltura: exportar e importar con los verbos nativos
+
+`com.cryptocarver.crypto.icsf.keywrap` reproduce **en claro, byte a byte** lo que
+hace el host con `CSNBKEX`/`CSNBDKX` y `CSNBKIM`/`CSNBDKM`. No es TR-31: son los
+verbos nativos, y la razón de existir es poder comparar lo que sale del host con
+lo que espera el que recibe la clave.
+
+| Clase | Qué resuelve |
+|---|---|
+| `Des` | DES/TDES, ECB y CBC, sin cribado de claves |
+| `DesKeyCheck` | Paridad, KCV ENC-ZERO, verification pattern de `CSNBKYT` |
+| `ControlVectorDefaults` | CV por defecto de cada tipo y longitud (Tabla 676) |
+| `KeyWrapScheme` | Variante del KEK y modo; envolver y desenvolver |
+| `ExternalToken` | Construir y leer el token externo (Tabla 616) |
+| `IcsfKeyWrapService` | Las cuatro operaciones |
+| `KeyWrapResult` / `KeyWrapReport` | Resultado como significado; palabras al renderizar |
+
+**Por qué DES propio y no un proveedor.** Esto analiza material de host tal como
+llega: claves a las que nadie ajustó la paridad, claves que colapsan a DES simple
+porque K1 = K2, y las *weak keys* de DES. JCE y Bouncy Castle rechazan varias de
+ellas, y ese rechazo convertiría un **hallazgo** en una **excepción**. La
+implementación no criba nada a propósito.
+
+**Las tablas no se transcriben.** Las permutaciones de DES y la Tabla 676 se
+generaron por introspección del original, no a mano: un dígito mal en cualquiera
+de las dos es invisible en revisión y fatal en ejecución.
+
+**Dos esquemas que dan la misma clave son un hallazgo, no dos.** Un CV a ceros
+con variante y un KEK NOCV son la misma aritmética (`KEK XOR 0 = KEK`).
+`resolver` los deduplica por firma y anota el equivalente al lado; listarlos
+aparte sugeriría que la evidencia apunta a dos sitios cuando apunta a uno.
+
+**El byte 4.** La Tabla 616 dice X'01' para clave doble o triple; los hosts
+reales dejan X'00'. `ExternalToken.build` acepta las dos, porque la de los hosts
+es la que permite comparar byte a byte. La diferencia son exactamente dos bytes:
+el 4 y el primero del TVV, que lo suma. El criptograma es idéntico.
+
+**KCV y verification pattern son números distintos.** El KCV de la industria son
+3 bytes de cifrar ceros; `CSNBKYT` lo llama ENC-ZERO y da 4; y su verification
+pattern por defecto es **otro algoritmo** (p. 1720). Está dicho en una nota
+`INFO` de cada informe porque es la mitad de los descuadres cuando dos equipos
+comparan «el KCV».
+
+**Riesgo declarado.** La operación se registra con `SecretRisk.HIGH`, frente al
+`LOW` de los dos analizadores: aquellos leen bytes, esta recibe la clave y el KEK
+en claro porque reproducir la aritmética lo exige, y escribe claves enteras en
+sus informes.
+
+**Pruebas.** `KeyWrapVectorTest` contrasta contra vectores fijos en
+`src/test/resources/icsf/keywrap-vectors.json`, que cubren todas las
+combinaciones de longitud, tipo de clave, variante y modo; `KeyWrapI18nTest`
+recorre cada nota y cada rama resolviendo el texto en los dos idiomas.
+
+---
+
+## 10. Limitaciones conocidas
 
 - **PKA está en pruebas.** La decodificación está contrastada con el manual
   (Tablas 637-655) y ejercitada con tokens sintéticos, pero **no validada contra
   un token real de un PKDS**. Sus campos son provisionales y el lote levanta
   `PKA-EN-PRUEBAS` para que quede dicho en el informe. Validar contra un PKDS
   real es el siguiente paso natural.
-- **No se porta `icsf_keywrap.py`** (envoltura y desenvoltura de claves). El
-  autotest original lo usaba solo para *construir* tokens de prueba; esa tabla de
-  CVs por defecto vive ahora en `IcsfTestTokens`, en ámbito de test, porque el
-  analizador lee Control Vectors, no los acuña.
+- **La envoltura no habla con ningún coprocesador**, ni puede. Reproduce la
+  aritmética en claro a partir de la clave y el KEK que se le den, así que sirve
+  para contrastar y para diagnosticar, no para operar. Un token **interno** está
+  cifrado bajo la master key del host, que un coprocesador no entrega: lo que se
+  reproduce aquí es el token **externo** que produce Key Export.
+- **La envoltura mejorada no se puede reproducir** (WRAP-ENH, WRAPENH2,
+  WRAPENH3). Se rechaza explicándolo, en vez de devolver bytes que parecerían una
+  clave sin serlo.
+- **La envoltura es solo de escritorio.** No tiene comando de CLI, a diferencia
+  del analizador y del lote.
 - **`icsf-batch` sale con código 3** si hay entradas ilegibles, alineado con el
   comando `batch` que ya existía en esta CLI. El original en Python sale 0.
 - **`--json-out`** es la ruta del fichero JSON, no `--json`: en esta CLI `--json`
