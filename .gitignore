@@ -43,3 +43,11 @@ dependency-reduced-pom.xml
 
 # Informes locales generados por el tutorial de análisis de cifrado.
 tutoriales/datos/analysis_*/
+
+# Salidas generadas localmente. El roadmap en PDF sigue versionado por estar
+# ya trackeado: lo consume el tutorial 18 (PAdES/ASiC-S) y lo regenera
+# scripts/generate_roadmap_pdf.py.
+output/
+
+# Material de trabajo temporal (renders PNG de los PDF, pruebas sueltas).
+tmp/

@@ -26,7 +26,7 @@ from reportlab.platypus import (
 from reportlab.platypus.tableofcontents import TableOfContents
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "CRYPTOCARVER_ROADMAP_EVOLUCION.md"
 OUTPUT = ROOT / "output" / "pdf" / "CryptoCarver_Roadmap_Evolucion.pdf"
 
