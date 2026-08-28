@@ -54,7 +54,58 @@ La idea es ir **evolucionando las capacidades** de la herramienta según las nec
 - Key Check Value (KCV) - múltiples métodos
 - Key Component Splitting (XOR)
 - **TR-31 Key Blocks** (wrap/unwrap)
+- **Key tokens ICSF / CCA** (IBM z/OS) - analizador individual y análisis en lote
 - Key Derivation (PBKDF2, HKDF)
+
+### 🖥 Key tokens ICSF / CCA (IBM z/OS)
+
+Análisis de los *key tokens* nativos del coprocesador criptográfico de host.
+**No son bloques TR-31**: son formatos distintos, los manejan verbos distintos
+(`CSNBKEX` / `CSNBKIM` frente a export/import TR-31) y en la interfaz viven en
+paneles separados dentro de **Keys → Tools**.
+
+**Formatos reconocidos**
+
+| Formato | Identificador | Tabla del manual |
+|---|---|---|
+| AES *fixed-length* interno | X'01' v X'04' | 614 |
+| DES *fixed-length* interno / externo | X'01' / X'02', v X'00'/X'01' | 615 / 616 |
+| RKX DES externo | X'02' v X'10' | 617 |
+| Simétrico *variable-length* (AES/DES/HMAC) | X'00'/X'01'/X'02' v X'05' | 618-631 |
+| PKA (RSA / ECC / QSA) | X'00'/X'1E'/X'1F' | 637-659 |
+
+**Analizador individual** — ámbito, algoritmo, tipo de clave, longitud y
+**fortaleza efectiva**, estado del material, envoltura, exportabilidad,
+Control Vector, TVV, MKVP, historia de seguridad y *pedigree*.
+
+**Análisis en lote** — inventario normalizado de 18 columnas, estadísticas
+sobre 12 dimensiones, catálogo de 23 hallazgos de auditoría, e informes en
+`.txt` y `.csv`. Lee tres formas de pegar tokens, detectadas bloque a bloque:
+uno por línea, dos filas del host por token (dígito alto arriba, bajo abajo), o
+un bloque entero de hexadecimal apilado. Las tres se pueden forzar a mano.
+
+**Procedencia** — no se deduce de los bytes, así que se declara: copia cruda del
+data set, `CSNBKRR`/`CSNDKRR`, o inferir. Cambia cómo se leen un MKVP y un TVV
+ausentes: normal en un registro tal como se guarda en un CKDS no-KDSR (p. 1560),
+anómalo en un token entregado por Key Record Read.
+
+El informe completo —ficha, detalle campo a campo, avisos y notas de
+procedencia— está **en español y en inglés**. Los códigos de veredicto
+(`SYM_FIXED_DES_EXT`, `IMPORTER`, `DOUBLE`) y los datos decodificados se
+mantienen idénticos en ambos idiomas: son identificadores, no palabras.
+
+> ⚠️ **Aviso de seguridad.** El análisis **no descifra nada**: el material de
+> clave protegido solo es recuperable dentro del coprocesador criptográfico,
+> bajo su master key. Pero sus salidas **sí llevan los tokens enteros en
+> hexadecimal**, así que los ficheros que genera hay que tratarlos con el mismo
+> cuidado que el volcado del que salieron.
+
+Desde la CLI:
+
+```bash
+java -jar cryptocarver.jar icsf-token 020000000100C000... --provenance kds-crudo
+java -jar cryptocarver.jar icsf-batch tokens.txt --csv inventario.csv --txt informe.txt --no-detail
+```
 
 ### 💳 Algoritmos de Pago
 - **CVV/CVC/iCVV** Generation & Verification
@@ -270,6 +321,7 @@ Este proyecto no habría sido posible sin:
 - [Guía operativa](docs/GUIA_OPERATIVA_CRYPTOCARVER.md) - Operación, diagnóstico e histórico
 - [Tutoriales prácticos](tutoriales/README.md) - 24 laboratorios guiados, con capturas y PDF
 - [Cambios por versión](CHANGELOG.md) - Evolución funcional y de compatibilidad
+- [Key tokens ICSF / CCA](docs/HANDOFF_ICSF_CCA.md) - Arquitectura, catálogo de hallazgos y decisiones de diseño del módulo de host
 
 ### Estructura del Proyecto
 ```

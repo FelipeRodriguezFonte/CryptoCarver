@@ -358,7 +358,7 @@ public class SidePanel extends VBox {
                 op.getId().startsWith("op_keys_compare")) {
                 asymmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));
             } else if (op.getId().startsWith("op_keys_material") || op.getId().startsWith("op_keys_store")
-                    || op.getId().startsWith("op_keys_pkcs11")) {
+                    || op.getId().startsWith("op_keys_pkcs11") || op.getId().startsWith("op_keys_icsf")) {
                 tools.getChildren().add(new TreeItem<>(new OperationNode(op)));
             } else {
                 symmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));

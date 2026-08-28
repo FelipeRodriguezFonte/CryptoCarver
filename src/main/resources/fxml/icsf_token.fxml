@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<TitledPane fx:id="icsfTokenPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cryptocarver.ui.IcsfTokenController"
+            text="🖥 ICSF / CCA Key Token Analyzer" expanded="false">
+    <VBox fx:id="icsfTokenRoot" spacing="10" styleClass="module-pane-content">
+
+        <Label text="Analyses one IBM z/OS ICSF / CCA native key token: scope, algorithm, key type, length and effective strength, key material state, wrapping, exportability, Control Vector, TVV, MKVP and pedigree. These are CCA native tokens, not TR-31 key blocks."
+               wrapText="true" styleClass="helper-text"/>
+        <Label fx:id="icsfTokenSecurityLabel"
+               text="⚠ This analysis decrypts nothing: protected key material is only recoverable inside the cryptographic coprocessor, under its master key. Reports saved from here do carry the token in full in hexadecimal, so handle them with the same care as the dump they came from."
+               wrapText="true" styleClass="helper-text"/>
+
+        <GridPane hgap="8" vgap="6">
+            <columnConstraints>
+                <ColumnConstraints minWidth="90" prefWidth="130"/>
+                <ColumnConstraints minWidth="120" prefWidth="260"/>
+                <ColumnConstraints minWidth="70" prefWidth="120"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <Label text="Provenance:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <ComboBox fx:id="icsfTokenOriginCombo" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                      maxWidth="Infinity" styleClass="form-field"/>
+            <Label text="Input format:" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+            <ComboBox fx:id="icsfTokenFormatCombo" GridPane.rowIndex="0" GridPane.columnIndex="3"
+                      maxWidth="Infinity" styleClass="form-field"/>
+        </GridPane>
+        <Label fx:id="icsfTokenOriginHelpLabel"
+               text="Provenance is not derivable from the bytes, so it is declared, not detected. It changes how an absent MKVP or TVV is read: normal in a raw non-KDSR CKDS record, anomalous in one returned by Key Record Read."
+               wrapText="true" styleClass="helper-text"/>
+
+        <Label text="Key token (hexadecimal):" style="-fx-font-weight: bold;"/>
+        <TextArea fx:id="icsfTokenInputArea" prefHeight="90" wrapText="true"
+                  promptText="01 AF 02 ... — or paste the two host rows, high digits above and low digits below"
+                  styleClass="monospace-field"/>
+
+        <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
+            <Button text="Analyze token" onAction="#handleAnalyze" styleClass="action-button-primary"/>
+            <Button text="Save Report…" onAction="#handleSaveReport" styleClass="secondary-button"/>
+            <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+            <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        </FlowPane>
+
+        <Label fx:id="icsfTokenFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>
+
+        <Label text="Summary card:" style="-fx-font-weight: bold;"/>
+        <TableView fx:id="icsfTokenSummaryTable" prefHeight="230" prefWidth="400" VBox.vgrow="SOMETIMES">
+            <columns>
+                <TableColumn fx:id="icsfTokenSummaryFieldColumn" text="Field" prefWidth="190"/>
+                <TableColumn fx:id="icsfTokenSummaryValueColumn" text="Value" prefWidth="180"/>
+                <TableColumn fx:id="icsfTokenSummaryDetailColumn" text="Explanation" prefWidth="470"/>
+            </columns>
+        </TableView>
+
+        <Label text="Field-by-field detail, provenance notes and warnings:" style="-fx-font-weight: bold;"/>
+        <TextArea fx:id="icsfTokenDetailArea" editable="false" prefHeight="280" VBox.vgrow="ALWAYS"
+                  promptText="The full analysis will appear here."
+                  styleClass="result-area,monospace-field"/>
+    </VBox>
+</TitledPane>

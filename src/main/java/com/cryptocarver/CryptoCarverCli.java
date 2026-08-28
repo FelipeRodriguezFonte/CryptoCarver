@@ -21,6 +21,10 @@ public final class CryptoCarverCli {
     public static final int EXIT_OPERATION_FAILED = 3;
     public static final int EXIT_IO_ERROR = 4;
 
+    /** Flags that are switches rather than name/value pairs. */
+    private static final java.util.Set<String> VALUELESS_FLAGS =
+            java.util.Set.of("--json", "--detail", "--no-detail");
+
     private CryptoCarverCli() { }
 
     public static void main(String[] args) {
@@ -49,6 +53,8 @@ public final class CryptoCarverCli {
                 case "inspect-tlv" -> single(args, "inspect-tlv", com.cryptocarver.model.SafeTransformations.inspectTlv(requireArgument(args, 1)), json, out);
                 case "hmac-sha256" -> single(args, "hmac-sha256", hmacSha256(requireArgument(args, 1)), json, out);
                 case "batch" -> batch(args, out, json);
+                case "icsf-token" -> icsfToken(args, out, json);
+                case "icsf-batch" -> icsfBatch(args, out, json);
                 case "serve" -> serve(args, out);
                 default -> { error(err, "Unknown command: " + args[0], json); help(err, json); yield EXIT_INVALID_ARGS; }
             };
@@ -68,6 +74,11 @@ public final class CryptoCarverCli {
         java.util.Set<String> allowedFlags = new java.util.HashSet<>(List.of("--json"));
         if ("batch".equals(cmd)) allowedFlags.addAll(List.of("--format", "--output", "--column"));
         if ("serve".equals(cmd)) allowedFlags.add("--port");
+        if ("icsf-token".equals(cmd)) allowedFlags.add("--provenance");
+        if ("icsf-batch".equals(cmd)) {
+            allowedFlags.addAll(List.of("--provenance", "--format", "--txt", "--csv",
+                    "--json-out", "--sep", "--detail", "--no-detail"));
+        }
 
         int expectedArgs = switch (cmd) {
             case "batch" -> 3;
@@ -79,7 +90,7 @@ public final class CryptoCarverCli {
         for (int i = 1; i < args.length; i++) {
             if (args[i].startsWith("--")) {
                 if (!allowedFlags.contains(args[i])) throw new IllegalArgumentException("Unknown flag: " + args[i]);
-                if (!args[i].equals("--json")) {
+                if (!VALUELESS_FLAGS.contains(args[i])) {
                     if (i + 1 >= args.length || args[i+1].startsWith("--")) throw new IllegalArgumentException("Flag " + args[i] + " requires a value");
                     i++; // skip value
                 }
@@ -154,6 +165,80 @@ public final class CryptoCarverCli {
         return report.failed() == 0 ? 0 : 3;
     }
 
+    /** Analyses one ICSF / CCA key token given as hexadecimal. */
+    private static int icsfToken(String[] args, PrintWriter out, boolean json) {
+        String hex = requireArgument(args, 1);
+        com.cryptocarver.crypto.icsf.Origin origin =
+                com.cryptocarver.crypto.icsf.Origin.fromValue(option(args, "--provenance"));
+        byte[] token = com.cryptocarver.crypto.icsf.IcsfHex.clean(hex);
+        var result = com.cryptocarver.crypto.icsf.IcsfTokenParser.parse(token, origin);
+
+        if (json) {
+            out.println(new Gson().toJson(com.cryptocarver.crypto.icsf.IcsfTokenReport.toMap(result)));
+        } else {
+            out.println(com.cryptocarver.crypto.icsf.IcsfTokenReport.renderText(result, origin, token));
+        }
+        out.flush();
+        return result.isOk() ? EXIT_SUCCESS : EXIT_OPERATION_FAILED;
+    }
+
+    /**
+     * Analyses a whole file of ICSF / CCA key tokens.
+     *
+     * <p>The files this writes carry the tokens in full in hexadecimal, so they want
+     * the same handling as the dump they came from. Nothing here decrypts anything.</p>
+     */
+    private static int icsfBatch(String[] args, PrintWriter out, boolean json) throws IOException {
+        String source = requireArgument(args, 1);
+        var format = com.cryptocarver.crypto.icsf.BatchInputFormat.fromValue(option(args, "--format"));
+        var origin = com.cryptocarver.crypto.icsf.Origin.fromValue(option(args, "--provenance"));
+
+        String text = "-".equals(source)
+                ? new String(System.in.readAllBytes(), StandardCharsets.UTF_8)
+                : Files.readString(Path.of(source), StandardCharsets.UTF_8);
+
+        var report = com.cryptocarver.crypto.icsf.IcsfBatchAnalyzer.analyse(text, format, origin);
+        boolean detail = contains(args, "--detail");
+
+        if (json) {
+            out.println(new Gson().toJson(
+                    com.cryptocarver.crypto.icsf.IcsfBatchRenderer.toMap(report, detail)));
+        } else {
+            out.println(detail
+                    ? com.cryptocarver.crypto.icsf.IcsfBatchRenderer.renderFull(report, true)
+                    : com.cryptocarver.crypto.icsf.IcsfBatchRenderer.renderSummary(report));
+        }
+
+        String txtPath = option(args, "--txt");
+        if (txtPath != null) {
+            // With a large batch the per-token detail has to be skippable: the full card
+            // for an entire CKDS runs to tens of megabytes.
+            boolean withDetail = !contains(args, "--no-detail");
+            Files.writeString(Path.of(txtPath),
+                    com.cryptocarver.crypto.icsf.IcsfBatchRenderer.renderFull(report, withDetail),
+                    StandardCharsets.UTF_8);
+            out.println("Full report written to " + txtPath);
+        }
+        String csvPath = option(args, "--csv");
+        if (csvPath != null) {
+            String separator = option(args, "--sep");
+            char delimiter = (separator == null || separator.isEmpty()) ? ';' : separator.charAt(0);
+            Files.write(Path.of(csvPath),
+                    com.cryptocarver.crypto.icsf.IcsfBatchRenderer.toCsvBytes(report, delimiter));
+            out.println("CSV inventory written to " + csvPath);
+        }
+        String jsonPath = option(args, "--json-out");
+        if (jsonPath != null) {
+            Files.writeString(Path.of(jsonPath), new com.google.gson.GsonBuilder()
+                            .setPrettyPrinting().create()
+                            .toJson(com.cryptocarver.crypto.icsf.IcsfBatchRenderer.toMap(report, true)),
+                    StandardCharsets.UTF_8);
+            out.println("JSON report written to " + jsonPath);
+        }
+        out.flush();
+        return report.failed().isEmpty() ? EXIT_SUCCESS : EXIT_OPERATION_FAILED;
+    }
+
     private static int serve(String[] args, PrintWriter out) throws Exception {
         boolean json = contains(args, "--json");
         String requestedPort = option(args, "--port"); int port = requestedPort == null ? 8787 : Integer.parseInt(requestedPort);
@@ -177,13 +262,17 @@ public final class CryptoCarverCli {
     }
     private static void help(PrintWriter out, boolean json) {
         if (json) {
-            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, serve")));
+            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, icsf-token, icsf-batch, serve")));
             return;
         }
         out.println("CryptoCarver CLI (local laboratory operations)");
         out.println("  sha256|base64url-encode|base64url-decode|compress-gzip|decompress-gzip|inspect-asn1|inspect-tlv|hmac-sha256 <value> [--json]");
         out.println("  batch <operation> <file> [--format csv|jsonl] [--output csv|jsonl] [--column name]");
+        out.println("  icsf-token <hex> [--provenance kds-crudo|key-record-read|inferir] [--json]");
+        out.println("  icsf-batch <file|-> [--format auto|linea|dos-filas] [--provenance ...] [--detail]");
+        out.println("             [--txt PATH [--no-detail]] [--csv PATH [--sep ;]] [--json-out PATH]");
         out.println("  serve [--port 8787]  (loopback-only local API)");
         out.println("Note: hmac-sha256 requires CRYPTOCARVER_HMAC_KEY env var.");
+        out.println("Note: icsf-* decrypt nothing, but their output carries whole key tokens in hex.");
     }
 }

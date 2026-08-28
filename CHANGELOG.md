@@ -5,6 +5,30 @@
 
 ### Añadido
 
+- **Key tokens ICSF / CCA de IBM z/OS**, en dos paneles dentro de **Keys → Tools**,
+  separados a propósito del panel TR-31: son formatos distintos y los manejan
+  verbos distintos.
+  - *Analizador individual*: AES y DES de longitud fija, RKX, simétrico de
+    longitud variable y PKA (RSA/ECC/QSA). Determina ámbito, algoritmo, tipo de
+    clave por Control Vector (Tabla 676), longitud y **fortaleza efectiva** por
+    comparación de componentes, estado del material, envoltura, exportabilidad
+    (flag byte **y** bit 17 del CV, que es el que aplican de verdad Key_Export y
+    Data_Key_Export), TVV, MKVP, historia de seguridad y *pedigree*.
+  - *Análisis en lote*: inventario de 18 columnas, estadísticas sobre 12
+    dimensiones, catálogo de 23 hallazgos de auditoría con qué es cada uno y qué
+    hacer con él, e informes en `.txt` y `.csv` (UTF-8 con BOM). Lee tres formas
+    de pegar tokens y las detecta bloque a bloque; las tres son forzables.
+  - *Procedencia declarada* (copia cruda del data set, Key Record Read, o
+    inferir), que cambia cómo se leen un MKVP y un TVV ausentes: estado normal de
+    un registro guardado en un CKDS no-KDSR, o anomalía si el token viene de
+    `CSNBKRR`.
+  - Núcleo en `com.cryptocarver.crypto.icsf`, sin dependencias de interfaz y
+    accesible desde la CLI (`icsf-token`, `icsf-batch`).
+  - *Informe completo en español e inglés*, detalle campo a campo incluido. El
+    núcleo guarda clave de bundle y argumentos en lugar de texto, y las palabras
+    se eligen al renderizar con el `Locale` que pasa quien llama: cambiar de
+    idioma no obliga a reanalizar nada. Los identificadores técnicos y los datos
+    decodificados se pasan literales en ambos idiomas.
 - Visor de resultados ampliado con búsqueda, copia, guardado y ajuste de línea.
   El resultado abierto se vincula a la última operación publicada para impedir que
   reaparezcan valores de una operación anterior.
@@ -28,6 +52,17 @@
 - Guía rápida, guía de límites de laboratorio, checklist de release y exportación
   del informe de diagnóstico desde **Help → Diagnostics**.
 
+### Corregido
+
+- Los paneles incluidos dentro de otro módulo traducían solo la mitad de su
+  texto. `ModuleI18n` indexa desde el nodo que recibe hacia abajo, y ni el
+  contenido de un `TitledPane` ni el de una pestaña están entre sus hijos hasta
+  que se construye el *skin*, cosa que aún no ha ocurrido cuando un controlador
+  se enlaza en `initialize()`. Resultado: **Perfiles PKCS#11** conservaba su
+  título en inglés al cambiar de idioma, y el **Inspector de Crypto Envelope**
+  traducía el título pero no su contenido. Corregido en la raíz: `ModuleI18n`
+  desciende ahora por `TitledPane.getContent()` y `Tab.getContent()`.
+
 ### Cambiado
 
 - PQC usa nomenclatura NIST: ML-KEM, ML-DSA y SLH-DSA; las compatibilidades con
@@ -39,6 +74,16 @@
 
 ### Seguridad y compatibilidad
 
+- El análisis de key tokens ICSF / CCA **no descifra nada**: el material de clave
+  protegido solo es recuperable dentro del coprocesador criptográfico, bajo su
+  master key. Sus salidas sí llevan los tokens enteros en hexadecimal, así que
+  los ficheros que genera hay que tratarlos con el mismo cuidado que el volcado
+  del que salieron. El aviso aparece en los dos paneles, en la portada del
+  informe, en el JSON y en la ayuda de la CLI.
+- La decodificación de tokens **PKA está en pruebas**: contrastada con el manual
+  y ejercitada con tokens sintéticos, pero todavía no validada contra un token
+  real de un PKDS. Sus campos se reportan como provisionales y el lote levanta el
+  hallazgo `PKA-EN-PRUEBAS` para dejarlo dicho en el informe.
 - CryptoCarver sigue siendo una herramienta de **laboratorio**: el HSM es
   simulado, la visibilidad de secretos puede habilitarse y no se ofrece custodia
   de producción.

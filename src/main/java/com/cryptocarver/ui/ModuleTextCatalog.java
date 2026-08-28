@@ -20,7 +20,8 @@ public final class ModuleTextCatalog {
                 cipher(), authentication(), keys(), pkcs11Profiles(), certificates(),
                 generic(), processDesigner(), history(), clipboardShelf(), compareResults(),
                 pqc(), xmlSecurity(), asn1(), wssSecurity(), cose(), jose(), payments(),
-                emv(), cmsInspector(), openPgp(), pades(), asic(), cryptoEnvelopeInspector());
+                emv(), cmsInspector(), openPgp(), pades(), asic(), cryptoEnvelopeInspector(),
+                icsf());
     }
 
     private static Map<String, String> common() {
@@ -187,6 +188,94 @@ public final class ModuleTextCatalog {
         map.put("Cancel", "pkcs11.cancel");
         map.put("Ready", "pkcs11.ready");
         map.put("Public inventory results will appear here.", "pkcs11.resultPrompt");
+        return map;
+    }
+
+    /**
+     * ICSF / CCA native key tokens: the single-token analyzer and the batch analysis.
+     *
+     * <p>Its own slice with its own {@code icsf.*} namespace, in the manner of the
+     * PKCS#11 profiles pane. Deliberately separate from the TR-31 texts: TR-31 key
+     * blocks and CCA native key tokens are different formats and must not read as
+     * one feature in the interface.</p>
+     */
+    public static Map<String, String> icsf() {
+        Map<String, String> map = common();
+
+        // --- single-token analyzer ----------------------------------------
+        map.put("🖥 ICSF / CCA Key Token Analyzer", "icsf.token.title");
+        map.put("Analyses one IBM z/OS ICSF / CCA native key token: scope, algorithm, key type, "
+                + "length and effective strength, key material state, wrapping, exportability, "
+                + "Control Vector, TVV, MKVP and pedigree. These are CCA native tokens, not TR-31 "
+                + "key blocks.", "icsf.token.help");
+        map.put("⚠ This analysis decrypts nothing: protected key material is only recoverable "
+                + "inside the cryptographic coprocessor, under its master key. Reports saved from "
+                + "here do carry the token in full in hexadecimal, so handle them with the same "
+                + "care as the dump they came from.", "icsf.token.security");
+        map.put("Provenance:", "icsf.token.provenance");
+        map.put("Input format:", "icsf.token.inputFormat");
+        map.put("Provenance is not derivable from the bytes, so it is declared, not detected. It "
+                + "changes how an absent MKVP or TVV is read: normal in a raw non-KDSR CKDS "
+                + "record, anomalous in one returned by Key Record Read.", "icsf.token.provenanceHelp");
+        map.put("Key token (hexadecimal):", "icsf.token.input");
+        map.put("01 AF 02 ... — or paste the two host rows, high digits above and low digits below",
+                "icsf.token.inputPrompt");
+        map.put("Analyze token", "icsf.token.analyze");
+        map.put("Save Report…", "icsf.token.save");
+        map.put("Summary card:", "icsf.token.summary");
+        map.put("Field", "icsf.token.columnField");
+        map.put("Value", "icsf.token.columnValue");
+        map.put("Explanation", "icsf.token.columnDetail");
+        map.put("Field-by-field detail, provenance notes and warnings:", "icsf.token.detail");
+        map.put("The full analysis will appear here.", "icsf.token.detailPrompt");
+
+        // --- batch analysis ------------------------------------------------
+        map.put("🖥 ICSF / CCA Batch Analysis", "icsf.batch.title");
+        map.put("Analyses many ICSF / CCA key tokens at once and produces statistics, audit "
+                + "findings and a normalized inventory. It reinterprets nothing: every verdict "
+                + "comes from the single-token analyzer, so the two views cannot disagree.",
+                "icsf.batch.help");
+        map.put("⚠ This batch decrypts nothing: protected key material is only recoverable inside "
+                + "the cryptographic coprocessor, under its master key. Its outputs do carry the "
+                + "tokens in full in hexadecimal, so the files it writes must be handled with the "
+                + "same care as the dump they came from.", "icsf.batch.security");
+        map.put("Reading:", "icsf.batch.reading");
+        map.put("Automatic reading decides block by block, trying all three shapes and keeping the "
+                + "one that produces tokens which genuinely analyse. Force a shape when a block is "
+                + "being read the wrong way.", "icsf.batch.readingHelp");
+        map.put("Key tokens — one per line, two host rows per token, or one block of stacked hex. "
+                + "Blank lines separate blocks; lines starting with # are ignored; LABEL|hex is "
+                + "accepted.", "icsf.batch.inputLabel");
+        map.put("MY.KEY.01|020000000100C000... — one per line, or two host rows, or one stacked block",
+                "icsf.batch.inputPrompt");
+        map.put("Analyze batch", "icsf.batch.analyze");
+        map.put("Load File…", "icsf.batch.loadFile");
+        map.put("Save Report (.txt)…", "icsf.batch.saveText");
+        map.put("Save Inventory (.csv)…", "icsf.batch.saveCsv");
+        map.put("Include the full per-token detail in the saved .txt (turn off for large batches: "
+                + "a whole CKDS runs to tens of megabytes)", "icsf.batch.includeDetail");
+        map.put("Statistics", "icsf.batch.tabStatistics");
+        map.put("Findings", "icsf.batch.tabFindings");
+        map.put("Inventory", "icsf.batch.tabInventory");
+        map.put("Report", "icsf.batch.tabReport");
+        map.put("Dimension", "icsf.batch.statDimension");
+        map.put("Tokens", "icsf.batch.statCount");
+        map.put("Share", "icsf.batch.statPercent");
+        map.put("Severity", "icsf.batch.findingSeverity");
+        map.put("Code", "icsf.batch.findingCode");
+        map.put("What it is", "icsf.batch.findingTitle");
+        map.put("Double-click a finding to filter the inventory by it.", "icsf.batch.findingHint");
+        map.put("Select a finding to read what it is and what to do about it.",
+                "icsf.batch.findingDetailPrompt");
+        map.put("Filter:", "icsf.batch.filter");
+        map.put("label, key type, finding…", "icsf.batch.filterPrompt");
+        map.put("Clear filter", "icsf.batch.clearFilter");
+        map.put("The report, exactly as it is saved, so it can be read without leaving the "
+                + "application.", "icsf.batch.reportPrompt");
+        map.put("This is the report without the per-token detail — exactly what the .txt carries "
+                + "when the detail box above is unchecked. With it checked, the saved file adds "
+                + "the full card for every token behind this.", "icsf.batch.reportScope");
+
         return map;
     }
 

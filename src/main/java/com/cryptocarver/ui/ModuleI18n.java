@@ -13,6 +13,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -114,6 +115,12 @@ public final class ModuleI18n {
             if (node instanceof MenuButton menuButton) {
                 for (MenuItem item : menuButton.getItems()) index(item);
             }
+            if (node instanceof TitledPane titledPane) {
+                // A TitledPane's content is not among its children until the skin is
+                // built, which has not happened when a controller binds in initialize().
+                // Without this, binding a pane translates its title and nothing inside it.
+                index(titledPane.getContent());
+            }
             if (node instanceof Parent parent) {
                 for (Node child : parent.getChildrenUnmodifiable()) index(child);
             }
@@ -137,7 +144,11 @@ public final class ModuleI18n {
         }
 
         private void index(Tab tab) {
-            if (tab != null) addText(tab.getText(), tab::getText, tab::setText);
+            if (tab == null) return;
+            addText(tab.getText(), tab::getText, tab::setText);
+            // Same story as TitledPane: tab content is reachable through getContent()
+            // but not through the TabPane's children before the skin exists.
+            index(tab.getContent());
         }
 
         private void index(TableColumn<?, ?> column) {

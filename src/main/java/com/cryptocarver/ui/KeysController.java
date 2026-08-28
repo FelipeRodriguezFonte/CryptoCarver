@@ -43,6 +43,12 @@ public class KeysController {
     @FXML private VBox keysRoot;
     @FXML private TitledPane pkcs11Profiles;
     @FXML private Pkcs11ProfilesController pkcs11ProfilesController;
+    // ICSF / CCA native key tokens: an included, self-contained pane in the manner of
+    // the PKCS#11 one. No ICSF logic lives in this controller.
+    @FXML private TitledPane icsfTokenPane;
+    @FXML private IcsfTokenController icsfTokenPaneController;
+    @FXML private TitledPane icsfBatchPane;
+    @FXML private IcsfBatchController icsfBatchPaneController;
     private ModuleI18n.Binding moduleI18n;
 
     @FXML private VBox symmetricKeysContainer;
@@ -528,6 +534,12 @@ public class KeysController {
             pkcs11ProfilesController.setStatusReporter(reporter);
             pkcs11ProfilesController.setOperationExecutor(reporter.getOperationExecutor());
         }
+        if (icsfTokenPaneController != null && reporter != null) {
+            icsfTokenPaneController.setStatusReporter(reporter);
+        }
+        if (icsfBatchPaneController != null && reporter != null) {
+            icsfBatchPaneController.setStatusReporter(reporter);
+        }
     }
 
     public void showSymmetricSection() {
@@ -547,6 +559,14 @@ public class KeysController {
     public void expandSymmetricPane(String paneName) {
         if (paneName != null && paneName.contains("PKCS#11 Profiles") && pkcs11ProfilesController != null) {
             pkcs11ProfilesController.expand();
+            return;
+        }
+        if (paneName != null && paneName.contains("Batch") && icsfBatchPaneController != null) {
+            icsfBatchPaneController.expand();
+            return;
+        }
+        if (paneName != null && paneName.contains("ICSF") && icsfTokenPaneController != null) {
+            icsfTokenPaneController.expand();
             return;
         }
         expandPane(symmetricKeysContainer, paneName);

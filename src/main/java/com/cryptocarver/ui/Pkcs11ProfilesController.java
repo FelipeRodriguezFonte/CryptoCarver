@@ -53,7 +53,10 @@ public final class Pkcs11ProfilesController implements Pkcs11ProfilesPresenter.V
 
     @FXML
     private void initialize() {
-        moduleI18n = ModuleI18n.bind(pkcs11ProfilesRoot, ModuleTextCatalog.pkcs11Profiles());
+        // Bind the pane, not the inner box: binding the box left this pane's own title
+        // in English after a language change, and the title is what the user reads while
+        // the pane is collapsed.
+        moduleI18n = ModuleI18n.bind(pkcs11ProfilesPane, ModuleTextCatalog.pkcs11Profiles());
         pkcs11ProfileNameColumn.setCellValueFactory(cell ->
                 new ReadOnlyStringWrapper(cell.getValue().name()));
         pkcs11LibraryColumn.setCellValueFactory(cell ->

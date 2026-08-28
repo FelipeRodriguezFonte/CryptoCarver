@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<TitledPane fx:id="icsfBatchPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cryptocarver.ui.IcsfBatchController"
+            text="🖥 ICSF / CCA Batch Analysis" expanded="false">
+    <VBox fx:id="icsfBatchRoot" spacing="10" styleClass="module-pane-content">
+
+        <Label text="Analyses many ICSF / CCA key tokens at once and produces statistics, audit findings and a normalized inventory. It reinterprets nothing: every verdict comes from the single-token analyzer, so the two views cannot disagree."
+               wrapText="true" styleClass="helper-text"/>
+        <Label fx:id="icsfBatchSecurityLabel"
+               text="⚠ This batch decrypts nothing: protected key material is only recoverable inside the cryptographic coprocessor, under its master key. Its outputs do carry the tokens in full in hexadecimal, so the files it writes must be handled with the same care as the dump they came from."
+               wrapText="true" styleClass="helper-text"/>
+
+        <GridPane hgap="8" vgap="6">
+            <columnConstraints>
+                <ColumnConstraints minWidth="90" prefWidth="130"/>
+                <ColumnConstraints minWidth="120" prefWidth="260"/>
+                <ColumnConstraints minWidth="70" prefWidth="120"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <Label text="Provenance:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <ComboBox fx:id="icsfBatchOriginCombo" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                      maxWidth="Infinity" styleClass="form-field"/>
+            <Label text="Reading:" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+            <ComboBox fx:id="icsfBatchFormatCombo" GridPane.rowIndex="0" GridPane.columnIndex="3"
+                      maxWidth="Infinity" styleClass="form-field"/>
+        </GridPane>
+        <Label text="Automatic reading decides block by block, trying all three shapes and keeping the one that produces tokens which genuinely analyse. Force a shape when a block is being read the wrong way."
+               wrapText="true" styleClass="helper-text"/>
+
+        <Label text="Key tokens — one per line, two host rows per token, or one block of stacked hex. Blank lines separate blocks; lines starting with # are ignored; LABEL|hex is accepted."
+               wrapText="true" style="-fx-font-weight: bold;"/>
+        <TextArea fx:id="icsfBatchInputArea" prefHeight="120" wrapText="false"
+                  promptText="MY.KEY.01|020000000100C000... — one per line, or two host rows, or one stacked block"
+                  styleClass="monospace-field"/>
+
+        <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
+            <Button text="Analyze batch" onAction="#handleAnalyze" styleClass="action-button-primary"/>
+            <Button text="Load File…" onAction="#handleLoadFile" styleClass="secondary-button"/>
+            <Button text="Save Report (.txt)…" onAction="#handleSaveText" styleClass="secondary-button"/>
+            <Button text="Save Inventory (.csv)…" onAction="#handleSaveCsv" styleClass="secondary-button"/>
+            <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+            <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        </FlowPane>
+        <CheckBox fx:id="icsfBatchDetailCheck" selected="true"
+                  text="Include the full per-token detail in the saved .txt (turn off for large batches: a whole CKDS runs to tens of megabytes)"/>
+
+        <Label fx:id="icsfBatchFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>
+
+        <TabPane fx:id="icsfBatchTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="430" prefWidth="400" VBox.vgrow="ALWAYS">
+            <tabs>
+                <Tab fx:id="icsfBatchStatisticsTab" text="Statistics">
+                    <VBox spacing="6" style="-fx-padding: 8;">
+                        <TableView fx:id="icsfBatchStatisticsTable" prefWidth="400" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="icsfStatDimensionColumn" text="Dimension" prefWidth="220"/>
+                                <TableColumn fx:id="icsfStatValueColumn" text="Value" prefWidth="300"/>
+                                <TableColumn fx:id="icsfStatCountColumn" text="Tokens" prefWidth="90"/>
+                                <TableColumn fx:id="icsfStatPercentColumn" text="Share" prefWidth="90"/>
+                            </columns>
+                        </TableView>
+                    </VBox>
+                </Tab>
+
+                <Tab fx:id="icsfBatchFindingsTab" text="Findings">
+                    <VBox spacing="6" style="-fx-padding: 8;">
+                        <Label text="Double-click a finding to filter the inventory by it."
+                               wrapText="true" styleClass="helper-text"/>
+                        <TableView fx:id="icsfBatchFindingsTable" prefHeight="200" prefWidth="400" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="icsfFindingSeverityColumn" text="Severity" prefWidth="100"/>
+                                <TableColumn fx:id="icsfFindingCodeColumn" text="Code" prefWidth="220"/>
+                                <TableColumn fx:id="icsfFindingTitleColumn" text="What it is" prefWidth="360"/>
+                                <TableColumn fx:id="icsfFindingCountColumn" text="Tokens" prefWidth="80"/>
+                            </columns>
+                        </TableView>
+                        <TextArea fx:id="icsfBatchFindingDetailArea" editable="false" prefHeight="150"
+                                  wrapText="true"
+                                  promptText="Select a finding to read what it is and what to do about it."
+                                  styleClass="result-area"/>
+                    </VBox>
+                </Tab>
+
+                <Tab fx:id="icsfBatchInventoryTab" text="Inventory">
+                    <VBox spacing="6" style="-fx-padding: 8;">
+                        <HBox spacing="8">
+                            <Label text="Filter:"/>
+                            <TextField fx:id="icsfBatchFilterField" promptText="label, key type, finding…"
+                                       HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="form-field"/>
+                            <Button text="Clear filter" onAction="#handleClearFilter" styleClass="secondary-button"/>
+                        </HBox>
+                        <TableView fx:id="icsfBatchInventoryTable" prefWidth="400" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                </Tab>
+
+                <Tab fx:id="icsfBatchReportTab" text="Report">
+                    <VBox spacing="6" style="-fx-padding: 8;">
+                        <Label text="This is the report without the per-token detail — exactly what the .txt carries when the detail box above is unchecked. With it checked, the saved file adds the full card for every token behind this."
+                               wrapText="true" styleClass="helper-text"/>
+                        <TextArea fx:id="icsfBatchReportArea" editable="false" VBox.vgrow="ALWAYS"
+                                  promptText="The report, exactly as it is saved, so it can be read without leaving the application."
+                                  styleClass="result-area,monospace-field"/>
+                    </VBox>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </VBox>
+</TitledPane>
