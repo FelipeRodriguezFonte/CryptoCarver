@@ -126,6 +126,9 @@ public final class UiNavigationRegistry {
                 "ICSF / CCA Key Token Analyzer", "ICSF Key Token Analyzer", "ICSF Key Token");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "ICSF / CCA Batch Analysis"),
                 "ICSF / CCA Batch Analysis", "ICSF Batch Analysis", "ICSF Batch");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "ICSF / CCA Key Export / Import"),
+                "ICSF / CCA Key Export / Import", "ICSF Key Export", "ICSF Key Import",
+                "ICSF Export", "ICSF Import");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Compare Public / Private Key"),
                 "Compare Public / Private Key");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Key Sharing"),

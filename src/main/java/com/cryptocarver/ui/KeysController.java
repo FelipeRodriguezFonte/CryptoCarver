@@ -49,6 +49,8 @@ public class KeysController {
     @FXML private IcsfTokenController icsfTokenPaneController;
     @FXML private TitledPane icsfBatchPane;
     @FXML private IcsfBatchController icsfBatchPaneController;
+    @FXML private TitledPane icsfKeyWrapPane;
+    @FXML private IcsfKeyWrapController icsfKeyWrapPaneController;
     private ModuleI18n.Binding moduleI18n;
 
     @FXML private VBox symmetricKeysContainer;
@@ -537,6 +539,9 @@ public class KeysController {
         if (icsfTokenPaneController != null && reporter != null) {
             icsfTokenPaneController.setStatusReporter(reporter);
         }
+        if (icsfKeyWrapPaneController != null && reporter != null) {
+            icsfKeyWrapPaneController.setStatusReporter(reporter);
+        }
         if (icsfBatchPaneController != null && reporter != null) {
             icsfBatchPaneController.setStatusReporter(reporter);
         }
@@ -575,6 +580,10 @@ public class KeysController {
         if (paneName.contains("ICSF") && paneName.contains("Batch")) {
             return openIncludedPane(icsfBatchPane);
         }
+        // Before the bare "ICSF" test below, which would otherwise claim this one too.
+        if (paneName.contains("ICSF") && (paneName.contains("Export") || paneName.contains("Import"))) {
+            return openIncludedPane(icsfKeyWrapPane);
+        }
         if (paneName.contains("ICSF")) {
             return openIncludedPane(icsfTokenPane);
         }
@@ -593,6 +602,7 @@ public class KeysController {
         if (pkcs11Profiles != null) panes.add(pkcs11Profiles);
         if (icsfTokenPane != null) panes.add(icsfTokenPane);
         if (icsfBatchPane != null) panes.add(icsfBatchPane);
+        if (icsfKeyWrapPane != null) panes.add(icsfKeyWrapPane);
         return panes;
     }
 

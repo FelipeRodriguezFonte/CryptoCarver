@@ -5,6 +5,43 @@
 
 ### Añadido
 
+- **Exportación e importación de claves ICSF / CCA con los verbos nativos**, en
+  un tercer panel dentro de **Keys → Tools**. Reproduce en claro, byte a byte, lo
+  que hace el host con `CSNBKEX`/`CSNBDKX` (Key Export) y `CSNBKIM`/`CSNBDKM`
+  (Key Import) —los verbos nativos, **no** TR-31/X9.143— para comparar lo que
+  sale del host con lo que espera quien recibe la clave. No habla con ningún
+  coprocesador.
+  - *Exportar*: clave y KEK en claro, tipo de clave (Tabla 676) o Control Vector
+    explícito, y el token externo de 64 bytes con su TVV calculado. Casilla para
+    escribir el byte 4 como lo escriben los hosts reales (X'00' también en claves
+    dobles y triples), que es lo que permite comparar byte a byte; sin ella el
+    token difiere en dos bytes y el criptograma es idéntico.
+  - *Importar*: recupera la clave de un token de 64 bytes o de un criptograma
+    suelto sin token, que es lo que llega de un sistema que no produce tokens CCA.
+  - *Inspeccionar*: todo lo que el token dice de sí mismo sin necesidad del KEK.
+  - *Resolver*: prueba todas las combinaciones razonables de variante del KEK,
+    modo y Control Vector y dice cuál reproduce la clave, ordenadas por veredicto
+    y paridad. Dos esquemas que dan la misma clave se cuentan como un hallazgo con
+    sus equivalentes, no como dos: un CV a ceros con variante y un KEK NOCV son la
+    misma aritmética.
+  - *Esquemas*: variante `KEK XOR CV`, KEK tal cual (bit **NOCV**, p. 207) y
+    mitades del CV intercambiadas; modo ECB por partes (WRAP-ECB) o CBC encadenado.
+  - *Avisos de interoperabilidad*: paridad DES uniforme —que distingue una clave
+    escrita a mano de un descifrado erróneo—, claves que colapsan a DES simple,
+    KEK más corto que la clave que envuelve, y la distinción entre el KCV de la
+    industria y el verification pattern de `CSNBKYT`, que son números distintos y
+    la causa de la mitad de los descuadres.
+  - La envoltura mejorada (WRAP-ENH, WRAPENH2, WRAPENH3) se rechaza explicando
+    por qué, en vez de devolver bytes que parecerían una clave sin serlo.
+  - DES/TDES implementado en el propio módulo y no tomado de un proveedor: esto
+    analiza material de host tal cual llega, incluidas claves sin paridad ajustada
+    y weak keys que JCE y Bouncy Castle rechazan, y un rechazo convertiría un
+    hallazgo en una excepción.
+  - Informe en español e inglés, con el mismo criterio que el resto del módulo:
+    el núcleo guarda códigos y argumentos, y las palabras se eligen al renderizar.
+  - Registrada con riesgo **HIGH**, a diferencia de los dos analizadores: aquí el
+    material de clave se maneja en claro porque reproducir la aritmética lo exige.
+
 - **Key tokens ICSF / CCA de IBM z/OS**, en dos paneles dentro de **Keys → Tools**,
   separados a propósito del panel TR-31: son formatos distintos y los manejan
   verbos distintos.

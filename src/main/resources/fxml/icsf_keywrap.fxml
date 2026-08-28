@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<TitledPane fx:id="icsfKeyWrapPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cryptocarver.ui.IcsfKeyWrapController"
+            text="🖥 ICSF / CCA Key Export / Import" expanded="false">
+    <VBox fx:id="icsfKeyWrapRoot" spacing="10" styleClass="module-pane-content">
+
+        <Label text="Reproduces in the clear what the host does with the CCA native verbs: Key Export (CSNBKEX / CSNBDKX) and Key Import (CSNBKIM / CSNBDKM). These are the native verbs, not TR-31 / X9.143. Nothing here talks to a coprocessor: it exists so that what leaves the host can be compared byte for byte against what the receiving system expects."
+               wrapText="true" styleClass="helper-text"/>
+        <Label fx:id="icsfKeyWrapSecurityLabel"
+               text="⚠ Key material is handled IN THE CLEAR here, because that is what reproducing the host's arithmetic requires. Use test keys. The reports this writes carry whole keys and whole tokens in hexadecimal."
+               wrapText="true" styleClass="helper-text"/>
+
+        <TabPane fx:id="icsfKeyWrapTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="330">
+
+            <!-- ============================ EXPORT ============================ -->
+            <Tab fx:id="icsfKeyWrapExportTab" text="Export (CSNBKEX)">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <GridPane hgap="8" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="150" prefWidth="180"/>
+                            <ColumnConstraints minWidth="200" prefWidth="420"/>
+                        </columnConstraints>
+                        <Label text="Key to export (hex):" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfExportKeyField" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                                   promptText="8, 16 or 24 bytes in the clear"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="KEK / EXPORTER (hex):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfExportKekField" GridPane.rowIndex="1" GridPane.columnIndex="1"
+                                   promptText="the transport key, in the clear"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="Key type:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfExportTypeCombo" GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                        <Label text="Control Vector (hex, optional):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfExportCvField" GridPane.rowIndex="3" GridPane.columnIndex="1"
+                                   promptText="blank uses the Table 676 default for the key type"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="KEK variant:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfExportVariantCombo" GridPane.rowIndex="4" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                        <Label text="Cipher mode:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfExportModeCombo" GridPane.rowIndex="5" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                        <Label text="Random number (hex, optional):" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfExportRnField" GridPane.rowIndex="6" GridPane.columnIndex="1"
+                                   promptText="8 bytes for the CSNBKYT verification pattern; blank means zeroes"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                    </GridPane>
+                    <CheckBox fx:id="icsfExportHostVersionCheck"
+                              text="Byte 4 as real hosts write it (X'00' even for double and triple keys)"/>
+                    <CheckBox fx:id="icsfExportNocvCheck" text="Mark the token NOCV"/>
+                    <HBox spacing="8">
+                        <Button text="Export" onAction="#handleExport" styleClass="action-button"/>
+                        <Button text="Clear" onAction="#handleClearExport" styleClass="secondary-button"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+
+            <!-- ============================ IMPORT ============================ -->
+            <Tab fx:id="icsfKeyWrapImportTab" text="Import (CSNBKIM)">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <GridPane hgap="8" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="150" prefWidth="180"/>
+                            <ColumnConstraints minWidth="200" prefWidth="420"/>
+                        </columnConstraints>
+                        <Label text="Token or cryptogram (hex):" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfImportInputField" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                                   promptText="a 64-byte token, or a bare 8/16/24-byte cryptogram"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="KEK / IMPORTER (hex):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfImportKekField" GridPane.rowIndex="1" GridPane.columnIndex="1"
+                                   promptText="the transport key, in the clear"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="Key type:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfImportTypeCombo" GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                        <Label text="Control Vector (hex, optional):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfImportCvField" GridPane.rowIndex="3" GridPane.columnIndex="1"
+                                   promptText="blank reads it from the token"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="KEK variant:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfImportVariantCombo" GridPane.rowIndex="4" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                        <Label text="Cipher mode:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfImportModeCombo" GridPane.rowIndex="5" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                    </GridPane>
+                    <HBox spacing="8">
+                        <Button text="Import" onAction="#handleImport" styleClass="action-button"/>
+                        <Button text="Clear" onAction="#handleClearImport" styleClass="secondary-button"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+
+            <!-- =========================== INSPECT ============================ -->
+            <Tab fx:id="icsfKeyWrapInspectTab" text="Inspect (no KEK)">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Reads everything a token says about itself when the KEK is not to hand: scope, wrapping method, key length, Control Vector and TVV. No key comes out of an enciphered token."
+                           wrapText="true" styleClass="helper-text"/>
+                    <Label text="Token (hex):"/>
+                    <TextArea fx:id="icsfInspectInputArea" prefHeight="80" wrapText="true"
+                              promptText="paste the 64-byte token"
+                              style="-fx-font-family: 'Courier New', monospace;"/>
+                    <HBox spacing="8">
+                        <Button text="Inspect" onAction="#handleInspect" styleClass="action-button"/>
+                        <Button text="Clear" onAction="#handleClearInspect" styleClass="secondary-button"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+
+            <!-- =========================== RESOLVE ============================ -->
+            <Tab fx:id="icsfKeyWrapResolveTab" text="Resolve scheme">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <Label text="Tries every reasonable combination of KEK variant, cipher mode and Control Vector, and says which one reproduces the key. This is the diagnostic to run when the key does not match on the other side."
+                           wrapText="true" styleClass="helper-text"/>
+                    <GridPane hgap="8" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="150" prefWidth="180"/>
+                            <ColumnConstraints minWidth="200" prefWidth="420"/>
+                        </columnConstraints>
+                        <Label text="Token or cryptogram (hex):" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfResolveInputField" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="KEK (hex):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfResolveKekField" GridPane.rowIndex="1" GridPane.columnIndex="1"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="Expected key (hex, optional):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfResolveExpectedKeyField" GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                   promptText="with this the answer is conclusive"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="Expected KCV (hex, optional):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextField fx:id="icsfResolveExpectedKcvField" GridPane.rowIndex="3" GridPane.columnIndex="1"
+                                   promptText="3 or 4 bytes, if the key itself is not available"
+                                   style="-fx-font-family: 'Courier New', monospace;"/>
+                        <Label text="Key type (optional):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="icsfResolveTypeCombo" GridPane.rowIndex="4" GridPane.columnIndex="1"
+                                  maxWidth="Infinity"/>
+                    </GridPane>
+                    <HBox spacing="8">
+                        <Button text="Resolve" onAction="#handleResolve" styleClass="action-button"/>
+                        <Button text="Clear" onAction="#handleClearResolve" styleClass="secondary-button"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+        </TabPane>
+
+        <Label fx:id="icsfKeyWrapFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>
+
+        <Label text="Result:"/>
+        <TextArea fx:id="icsfKeyWrapReportArea" prefHeight="260" editable="false" wrapText="false"
+                  promptText="The report will appear here."
+                  style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11px;"/>
+
+        <HBox spacing="8">
+            <Button text="Save Report…" onAction="#handleSaveReport" styleClass="secondary-button"/>
+            <Button text="Copy Token" onAction="#handleCopyToken" styleClass="secondary-button"/>
+            <Button text="Copy Key" onAction="#handleCopyKey" styleClass="secondary-button"/>
+            <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        </HBox>
+    </VBox>
+</TitledPane>

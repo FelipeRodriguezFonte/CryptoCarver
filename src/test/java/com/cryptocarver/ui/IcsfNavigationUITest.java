@@ -208,6 +208,29 @@ class IcsfNavigationUITest {
     }
 
     @Test
+    void navigatingToTheKeyWrapPaneOpensItAndNotTheAnalyser() throws Exception {
+        // "ICSF / CCA Key Export / Import" also contains "ICSF", so a bare contains-check
+        // would hand it to the token analyser instead.
+        Fixture fixture = openKeysWithATallPaneExpanded();
+        try {
+            fixture.navigate("ICSF / CCA Key Export / Import");
+            onFxThread(() -> {
+                TitledPane keyWrap = pane(fixture.root, "icsfKeyWrapPane");
+                assertTrue(keyWrap.isExpanded(), "navigation did not expand the key wrap pane");
+                assertFalse(pane(fixture.root, "icsfTokenPane").isExpanded(),
+                        "the token analyser claimed the key wrap route");
+                assertFalse(pane(fixture.root, "icsfBatchPane").isExpanded(),
+                        "the batch pane claimed the key wrap route");
+                double visible = visibleHeight(mainScrollPane(fixture.controller), keyWrap);
+                assertTrue(visible >= MIN_VISIBLE_HEIGHT,
+                        "only " + visible + "px of the key wrap pane reached the viewport");
+            });
+        } finally {
+            fixture.close();
+        }
+    }
+
+    @Test
     void navigatingBackToAnAccordionPaneClosesTheIncludedPane() throws Exception {
         Fixture fixture = openKeysWithATallPaneExpanded();
         try {

@@ -93,6 +93,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🗝 | ECDSA Key Generation | `op_keys_ecdsa` | STABLE | HIGH | `ECDSA Key Generation` | - |
 | 🗝 | EdDSA Key Generation | `op_keys_eddsa` | STABLE | HIGH | `EdDSA Key Generation` | - |
 | 🖥 | ICSF / CCA Batch Analysis | `op_keys_icsf_batch` | EXPERIMENTAL | LOW | `ICSF / CCA Batch Analysis` | ICSF, CCA, z/OS, batch, inventory, CKDS audit |
+| 🖥 | ICSF / CCA Key Export / Import | `op_keys_icsf_keywrap` | EXPERIMENTAL | HIGH | `ICSF / CCA Key Export / Import` | ICSF, CCA, z/OS, CSNBKEX, CSNBKIM, key export, key import, EXPORTER, IMPORTER, KEK |
 | 🖥 | ICSF / CCA Key Token Analyzer | `op_keys_icsf_token` | EXPERIMENTAL | LOW | `ICSF / CCA Key Token Analyzer` | ICSF, CCA, z/OS, key token, CKDS, Control Vector |
 | 🧬 | Key Derivation (KDF) | `op_keys_kdf` | STABLE | HIGH | `Key Derivation (KDF)` | HKDF, PBKDF2 |
 | 🔑 | Key Generation | `op_keys_gen` | STABLE | HIGH | `Key Generation` | - |

@@ -731,6 +731,7 @@
         <fx:include fx:id="pkcs11Profiles" source="pkcs11_profiles.fxml"/>
         <fx:include fx:id="icsfTokenPane" source="icsf_token.fxml"/>
         <fx:include fx:id="icsfBatchPane" source="icsf_batch.fxml"/>
+        <fx:include fx:id="icsfKeyWrapPane" source="icsf_keywrap.fxml"/>
     </VBox>
 
     <!-- Asymmetric Keys Accordion -->

@@ -1,0 +1,2995 @@
+{
+ "wrap": [
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4295C94E531C2F2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4295C94E531C2F2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FD65D141545E05A6"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FD65D141545E05A6"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "E4AE6C112D2FD4E5"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "E4AE6C112D2FD4E5"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "FF3E0B17BD60FE2C"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "C362890A651D3CB7"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "C362890A651D3CB7"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00054D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "B6E1252A5E1C1E91"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "B6E1252A5E1C1E91"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0003710003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "C964BD7CB05079DD"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "C964BD7CB05079DD"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00007D0003000000",
+   "cvDer": "0000000000000000",
+   "cripto": "4D5DCEC5A1D11C72"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "911B623DB3841A1CC9AADF627AEAFE9C"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "911B623DB3841A1C31469B4BC344AC26"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "2F1D65623865FD4576074A71490DFD87"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "2F1D65623865FD459B3CC68CDEB95B02"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "38BB75739A27F7B203E8D3F44001D11A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "38BB75739A27F7B29B2448C5E4894550"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "66489837D18CE4668E9D54F5AF6130D2"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "66489837D18CE466BBD3C0D84E8A1F7A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "C7E7D0A1A949F4CDB827D0CCAD7D09DA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "C7E7D0A1A949F4CD6C6842393AED8438"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "2F34DCFB641767B3D4C8194246BF1F26"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "2F34DCFB641767B3190E239FE0269B33"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "F3F5A8ABBBF3C43E271A7ECCE2814D7E"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "F3F5A8ABBBF3C43EC1EC3428E0E88437"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "021E1DC256AA3C836046236FF37153A0"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "021E1DC256AA3C8303506D591C14CC96"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "2C0D1F42E26043DDFB0AB33AD9A7710C"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "2C0D1F42E26043DDF29C0955AC51BA00"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "9A2C8119701D2877536CC5AFA74C2BA5"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "9A2C8119701D2877E929AC574129AA46"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "776E33614A0F2601700F2E9A119939B2"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "776E33614A0F2601CF62F849B163C046"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "9DE80C892CC5EC67787978BE80F139DA"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "9DE80C892CC5EC673DACC3F82BB8BADF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "3FD76B7F01DE9AA4782C8E8DE73D2CC6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "3FD76B7F01DE9AA414180F601F378727"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "BA95C1F3A007DEA087E23A9A02AC4228"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00417D0003410000",
+   "cvDer": "00417D0003210000",
+   "cripto": "BA95C1F3A007DEA06164807703187DF7"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "F3EE944AC121567650B934CB06E384FE"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "F3EE944AC1215676113119C5B3CB2389"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "0C79220099A611DD78681A07CD6D673C"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00427D0003410000",
+   "cvDer": "00427D0003210000",
+   "cripto": "0C79220099A611DD60BD7FC05881F2B3"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "02B103D1C457C5536D14B2E6A5D34797"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "02B103D1C457C553A2767DFE6C766751"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "569CF3CF33275C8F4F7B3083BC7E270E"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0022420003410000",
+   "cvDer": "0022420003210000",
+   "cripto": "569CF3CF33275C8F03B02C6E54F4ADDF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "0282D8DC9B6CCBF4B2DDF20038CE95D5"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "0282D8DC9B6CCBF4CE4BBDCEE63FCED0"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "BBE2A0D62C5895060298E94AD087BBF5"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00054D0003410000",
+   "cvDer": "00054D0003210000",
+   "cripto": "BBE2A0D62C589506352D4F18FADFEE2C"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "FEACC53529BC8CB3DF298E0753AB871B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "FEACC53529BC8CB3739B93585A63D90D"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "34E2B7640A5C4ED56155C0A2D920DF2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0003710003410000",
+   "cvDer": "0003710003210000",
+   "cripto": "34E2B7640A5C4ED59AD462B803D2B18C"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "FFFAB8A2E60BDF3449D6104811C22CE4"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "FFFAB8A2E60BDF34E6BA6FE12BD149BC"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "373E2F1FF42DE40F141C4C4D17D943E0"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00007D0003410000",
+   "cvDer": "00007D0003210000",
+   "cripto": "373E2F1FF42DE40FBC259652A6A3D650"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "8668845387736F86BCAD5ABD450F385DEC4B6C91D39C6ADB"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BADC191DF649ED9B2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF801C4F3B9F9301D9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "8668845387736F86BCAD5ABD450F385DEC4B6C91D39C6ADB"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "B25AD1F6B0C716FDB4E8F9D1A4A85526F1349A5EA5CB2FED"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "B25AD1F6B0C716FD18CC5541F81BB00DB2D2351D0D370E1E"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BADC191DF649ED9B2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF801C4F3B9F9301D9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "B25AD1F6B0C716FDB4E8F9D1A4A85526F1349A5EA5CB2FED"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "B25AD1F6B0C716FD18CC5541F81BB00DB2D2351D0D370E1E"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "8D1D718C60D9641E689453285ED3D734C0DCE8A992237F0A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "8D1D718C60D9641EA0CA26E32BD7C1E1A808EFE8D5ACF4A1"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BADC191DF649ED9B2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF801C4F3B9F9301D9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "8D1D718C60D9641E689453285ED3D734C0DCE8A992237F0A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "8D1D718C60D9641EA0CA26E32BD7C1E1A808EFE8D5ACF4A1"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "EB53F32593AD93D0467F354F3C99170BAEB115D30182C284"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BADC191DF649ED9B2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF801C4F3B9F9301D9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "EB53F32593AD93D0467F354F3C99170BAEB115D30182C284"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "83944B5AFA979F34E16891ACA25F271AE74DA36C01A4A141"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "83944B5AFA979F34F6383CFB2ECCEF2BF947348AF9512AD2"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BADC191DF649ED9B2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF801C4F3B9F9301D9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "83944B5AFA979F34E16891ACA25F271AE74DA36C01A4A141"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "83944B5AFA979F34F6383CFB2ECCEF2BF947348AF9512AD2"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "339EFDD9C0AAE131773D3080FF64AF7A0D95B400F51757FF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "339EFDD9C0AAE1312AC816FD52D5AE49E6CD10F1347BB55F"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "FF3E0B17BD60FE2CE0C8AA582DAB10BADC191DF649ED9B2A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "FF3E0B17BD60FE2CBE1A8202702770BF801C4F3B9F9301D9"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "339EFDD9C0AAE131773D3080FF64AF7A0D95B400F51757FF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "339EFDD9C0AAE1312AC816FD52D5AE49E6CD10F1347BB55F"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "4C9BFE08B34A077E14D277907BA66CFBB1E732A4F6565EEC"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "4C9BFE08B34A077ED2BC2E9558533631F6B67FE0F576FED6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B43B88006EEC572A6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991B916D4F31DBE0175"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "4C9BFE08B34A077E14D277907BA66CFBB1E732A4F6565EEC"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "EXPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00417D0003600081",
+   "cvDer": "00417D0003600081",
+   "cripto": "4C9BFE08B34A077ED2BC2E9558533631F6B67FE0F576FED6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "36844F82B9A48B8AD1ED0DA2DE47601D71B85D18C9AB18DF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "36844F82B9A48B8A2378DDDA6595D1F4F34D2D04EB39D55F"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B43B88006EEC572A6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991B916D4F31DBE0175"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "36844F82B9A48B8AD1ED0DA2DE47601D71B85D18C9AB18DF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "IMPORTER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00427D0003600081",
+   "cvDer": "00427D0003600081",
+   "cripto": "36844F82B9A48B8A2378DDDA6595D1F4F34D2D04EB39D55F"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "0A4CD76286D8B59C5C6F7EA242E6F8E9BBAE1810AFF530B5"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "0A4CD76286D8B59CB7CB040A8A86947DE6867EFA6C532E40"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B43B88006EEC572A6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991B916D4F31DBE0175"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "0A4CD76286D8B59C5C6F7EA242E6F8E9BBAE1810AFF530B5"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "PINVER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0022420003600081",
+   "cvDer": "0022420003600081",
+   "cripto": "0A4CD76286D8B59CB7CB040A8A86947DE6867EFA6C532E40"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "6BD74B0FFF79D0F159A97319C87ED343A124CE6D56D5DA9F"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "6BD74B0FFF79D0F1FAF47B0A53E5177AD04567F0BC3ED814"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B43B88006EEC572A6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991B916D4F31DBE0175"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "6BD74B0FFF79D0F159A97319C87ED343A124CE6D56D5DA9F"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "MAC",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00054D0003600081",
+   "cvDer": "00054D0003600081",
+   "cripto": "6BD74B0FFF79D0F1FAF47B0A53E5177AD04567F0BC3ED814"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "FFE5F5658992BFE1A8ED7C8F925C009E4B19FD0D1946D00A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "FFE5F5658992BFE11BB7FE2681937BCCE16AFD74A740F449"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B43B88006EEC572A6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991B916D4F31DBE0175"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "FFE5F5658992BFE1A8ED7C8F925C009E4B19FD0D1946D00A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "CIPHER",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "0003710003600081",
+   "cvDer": "0003710003600081",
+   "cripto": "FFE5F5658992BFE11BB7FE2681937BCCE16AFD74A740F449"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "ecb",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "27EB8612E8B915FA23AA949307418BE93A081DF563873784"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv",
+   "modo": "cbc",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "27EB8612E8B915FA6146AD0E4B8AD278F6A0B4C14BC8823A"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "ecb",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "4D5DCEC5A1D11C7278ACC800A3FEAD8B43B88006EEC572A6"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "plano",
+   "modo": "cbc",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "4D5DCEC5A1D11C7272F3AE261AFC4991B916D4F31DBE0175"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "ecb",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "27EB8612E8B915FA23AA949307418BE93A081DF563873784"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F5051525354555657",
+   "tipo": "DATA",
+   "variante": "cv-invertido",
+   "modo": "cbc",
+   "cvIzq": "00007D0003600081",
+   "cvDer": "00007D0003600081",
+   "cripto": "27EB8612E8B915FA6146AD0E4B8AD278F6A0B4C14BC8823A"
+  }
+ ],
+ "cv": [
+  {
+   "tipo": "CIPHER",
+   "longitud": 8,
+   "izq": "0003710003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "CIPHER",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "CIPHER",
+   "longitud": 16,
+   "izq": "0003710003410000",
+   "der": "0003710003210000",
+   "tipoPorCv": "CIPHER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "CIPHER",
+   "longitud": 24,
+   "izq": "0003710003600081",
+   "der": "0003710003600081",
+   "tipoPorCv": "CIPHER",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "CIPHERXI",
+   "longitud": 16,
+   "izq": "000C500003C00000",
+   "der": "000C500003A00000",
+   "tipoPorCv": "CIPHERXI",
+   "keyForm": "mitad izq. de doble, partes garantizadas distintas"
+  },
+  {
+   "tipo": "CIPHERXL",
+   "longitud": 16,
+   "izq": "000C710003C00000",
+   "der": "000C710003A00000",
+   "tipoPorCv": "CIPHERXL",
+   "keyForm": "mitad izq. de doble, partes garantizadas distintas"
+  },
+  {
+   "tipo": "CIPHERXO",
+   "longitud": 16,
+   "izq": "000C600003C00000",
+   "der": "000C600003A00000",
+   "tipoPorCv": "CIPHERXO",
+   "keyForm": "mitad izq. de doble, partes garantizadas distintas"
+  },
+  {
+   "tipo": "CVARDEC",
+   "longitud": 8,
+   "izq": "003F420003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "CVARDEC",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "CVARENC",
+   "longitud": 8,
+   "izq": "003F480003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "CVARENC",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "CVARPINE",
+   "longitud": 8,
+   "izq": "003F410003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "CVARPINE",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "CVARXCVL",
+   "longitud": 8,
+   "izq": "003F440003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "CVARXCVL",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "CVARXCVR",
+   "longitud": 8,
+   "izq": "003F470003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "CVARXCVR",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "DATA",
+   "longitud": 8,
+   "izq": "00007D0003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "DATA",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "DATA",
+   "longitud": 16,
+   "izq": "00007D0003410000",
+   "der": "00007D0003210000",
+   "tipoPorCv": "DATA",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "DATA",
+   "longitud": 24,
+   "izq": "00007D0003600081",
+   "der": "00007D0003600081",
+   "tipoPorCv": "DATA",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "DATA (CV cero)",
+   "longitud": 8,
+   "izq": "0000000000000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "DATA (CV cero)",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "DATA (CV cero)",
+   "longitud": 16,
+   "izq": "0000000000000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "DATA (CV cero)",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "DATA (CV cero)",
+   "longitud": 24,
+   "izq": "0000000000000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "DATA (CV cero)",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "DATAC",
+   "longitud": 16,
+   "izq": "0000710003410000",
+   "der": "0000710003210000",
+   "tipoPorCv": "DATAC",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "DATAM",
+   "longitud": 16,
+   "izq": "00004D0003410000",
+   "der": "00004D0003210000",
+   "tipoPorCv": "DATAM",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "DATAMV",
+   "longitud": 16,
+   "izq": "0000440003410000",
+   "der": "0000440003210000",
+   "tipoPorCv": "DATAMV",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "DECIPHER",
+   "longitud": 8,
+   "izq": "0003500003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "DECIPHER",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "DECIPHER",
+   "longitud": 16,
+   "izq": "0003500003410000",
+   "der": "0003500003210000",
+   "tipoPorCv": "DECIPHER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "DECIPHER",
+   "longitud": 24,
+   "izq": "0003500003600081",
+   "der": "0003500003600081",
+   "tipoPorCv": "DECIPHER",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "DKYGENKY",
+   "longitud": 16,
+   "izq": "0071440003410000",
+   "der": "0071440003210000",
+   "tipoPorCv": "DKYGENKY",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "ENCIPHER",
+   "longitud": 8,
+   "izq": "0003600003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "ENCIPHER",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "ENCIPHER",
+   "longitud": 16,
+   "izq": "0003600003410000",
+   "der": "0003600003210000",
+   "tipoPorCv": "ENCIPHER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "ENCIPHER",
+   "longitud": 24,
+   "izq": "0003600003600081",
+   "der": "0003600003600081",
+   "tipoPorCv": "ENCIPHER",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "EXPORTER",
+   "longitud": 16,
+   "izq": "00417D0003410000",
+   "der": "00417D0003210000",
+   "tipoPorCv": "EXPORTER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "EXPORTER",
+   "longitud": 24,
+   "izq": "00417D0003600081",
+   "der": "00417D0003600081",
+   "tipoPorCv": "EXPORTER",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "IKEYXLAT",
+   "longitud": 16,
+   "izq": "0042420003410000",
+   "der": "0042420003210000",
+   "tipoPorCv": "IKEYXLAT",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "IMP-PKA",
+   "longitud": 16,
+   "izq": "0042050003410000",
+   "der": "0042050003210000",
+   "tipoPorCv": "IMP-PKA",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "IMP-PKA",
+   "longitud": 24,
+   "izq": "0042050003600081",
+   "der": "0042050003600081",
+   "tipoPorCv": "IMP-PKA",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "IMPORTER",
+   "longitud": 16,
+   "izq": "00427D0003410000",
+   "der": "00427D0003210000",
+   "tipoPorCv": "IMPORTER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "IMPORTER",
+   "longitud": 24,
+   "izq": "00427D0003600081",
+   "der": "00427D0003600081",
+   "tipoPorCv": "IMPORTER",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "IPINENC",
+   "longitud": 16,
+   "izq": "00215F0003410000",
+   "der": "00215F0003210000",
+   "tipoPorCv": "IPINENC",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "IPINENC",
+   "longitud": 24,
+   "izq": "00215F0003600000",
+   "der": "00215F0003600000",
+   "tipoPorCv": "IPINENC",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "MAC",
+   "longitud": 8,
+   "izq": "00054D0003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "MAC",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "MAC",
+   "longitud": 16,
+   "izq": "00054D0003410000",
+   "der": "00054D0003210000",
+   "tipoPorCv": "MAC",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "MAC",
+   "longitud": 24,
+   "izq": "00054D0003600081",
+   "der": "00054D0003600081",
+   "tipoPorCv": "MAC",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "MACVER",
+   "longitud": 8,
+   "izq": "0005440003000000",
+   "der": "0000000000000000",
+   "tipoPorCv": "MACVER",
+   "keyForm": "simple"
+  },
+  {
+   "tipo": "MACVER",
+   "longitud": 16,
+   "izq": "0005440003410000",
+   "der": "0005440003210000",
+   "tipoPorCv": "MACVER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "MACVER",
+   "longitud": 24,
+   "izq": "0005440003600081",
+   "der": "0005440003600081",
+   "tipoPorCv": "MACVER",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "OKEYXLAT",
+   "longitud": 16,
+   "izq": "0041420003410000",
+   "der": "0041420003210000",
+   "tipoPorCv": "OKEYXLAT",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "OPINENC",
+   "longitud": 16,
+   "izq": "0024770003410000",
+   "der": "0024770003210000",
+   "tipoPorCv": "OPINENC",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "OPINENC",
+   "longitud": 24,
+   "izq": "0024770003600081",
+   "der": "0024770003600081",
+   "tipoPorCv": "OPINENC",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "PINGEN",
+   "longitud": 16,
+   "izq": "00227E0003410000",
+   "der": "00227E0003210000",
+   "tipoPorCv": "PINGEN",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "PINGEN",
+   "longitud": 24,
+   "izq": "00227E0003600081",
+   "der": "00227E0003600081",
+   "tipoPorCv": "PINGEN",
+   "keyForm": "triple"
+  },
+  {
+   "tipo": "PINVER",
+   "longitud": 16,
+   "izq": "0022420003410000",
+   "der": "0022420003210000",
+   "tipoPorCv": "PINVER",
+   "keyForm": "mitad izquierda de doble"
+  },
+  {
+   "tipo": "PINVER",
+   "longitud": 24,
+   "izq": "0022420003600081",
+   "der": "0022420003600081",
+   "tipoPorCv": "PINVER",
+   "keyForm": "triple"
+  }
+ ],
+ "kcv": [
+  {
+   "clave": "0123456789ABCDEF",
+   "encZero3": "D5D44F",
+   "encZero4": "D5D44FF7",
+   "vpIbm": "BCB0FA7EF435EA80",
+   "componentes": "DES simple (8 bytes)",
+   "paridadUniforme": "impar",
+   "paridadAjustada": "0123456789ABCDEF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "encZero3": "08D7B4",
+   "encZero4": "08D7B4FB",
+   "vpIbm": "BA0D133880AE14EC",
+   "componentes": "TDES doble real (K1 != K2)",
+   "paridadUniforme": "impar",
+   "paridadAjustada": "0123456789ABCDEFFEDCBA9876543210"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "encZero3": "56EF4F",
+   "encZero4": "56EF4F66",
+   "vpIbm": "BA0D133880AE14EC",
+   "componentes": "TDES triple real (K1, K2 y K3 distintas)",
+   "paridadUniforme": "",
+   "paridadAjustada": "0123456789ABCDEFFEDCBA98765432100E1F2C3D4A5B6879"
+  }
+ ],
+ "token": [
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000000C00000000000000000004295C94E531C2F2C000000000000000000054D000300000000000000000000000000000000000000000000009AB8057A",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00054D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "4295C94E531C2F2C",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000000E00000000000000000004295C94E531C2F2C000000000000000000054D000300000000000000000000000000000000000000000000009AB8257A",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00054D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "4295C94E531C2F2C",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C00000000000000000004295C94E531C2F2C000000000000000000054D000300000000000000000000000000000000000000000000009AB8057A",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00054D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "4295C94E531C2F2C",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E00000000000000000004295C94E531C2F2C000000000000000000054D000300000000000000000000000000000000000000000000009AB8257A",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00054D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "4295C94E531C2F2C",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000E4AE6C112D2FD4E5000000000000000000007D0003000000000000000000000000000000000000000000000016DF7DF6",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00007D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "E4AE6C112D2FD4E5",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000E4AE6C112D2FD4E5000000000000000000007D0003000000000000000000000000000000000000000000000016DF9DF6",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00007D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "E4AE6C112D2FD4E5",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000E4AE6C112D2FD4E5000000000000000000007D0003000000000000000000000000000000000000000000000016DF7DF6",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00007D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "E4AE6C112D2FD4E5",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000E4AE6C112D2FD4E5000000000000000000007D0003000000000000000000000000000000000000000000000016DF9DF6",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00007D0003000000",
+    "cvDer": "0000000000000000",
+    "cripto": "E4AE6C112D2FD4E5",
+    "longitud": 8,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000100C0000000000000000000911B623DB3841A1CC9AADF627AEAFE9C00417D000341000000417D0003210000000000000000000000000000931B1457",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00417D0003410000",
+    "cvDer": "00417D0003210000",
+    "cripto": "911B623DB3841A1CC9AADF627AEAFE9C",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000100E0000000000000000000911B623DB3841A1CC9AADF627AEAFE9C00417D000341000000417D0003210000000000000000000000000000931B3457",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00417D0003410000",
+    "cvDer": "00417D0003210000",
+    "cripto": "911B623DB3841A1CC9AADF627AEAFE9C",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000911B623DB3841A1CC9AADF627AEAFE9C00417D000341000000417D0003210000000000000000000000000000921B1457",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00417D0003410000",
+    "cvDer": "00417D0003210000",
+    "cripto": "911B623DB3841A1CC9AADF627AEAFE9C",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000911B623DB3841A1CC9AADF627AEAFE9C00417D000341000000417D0003210000000000000000000000000000921B3457",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00417D0003410000",
+    "cvDer": "00417D0003210000",
+    "cripto": "911B623DB3841A1CC9AADF627AEAFE9C",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000100C0000000000000000000F3F5A8ABBBF3C43E271A7ECCE2814D7E00054D000341000000054D0003210000000000000000000000000000C2F29333",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00054D0003410000",
+    "cvDer": "00054D0003210000",
+    "cripto": "F3F5A8ABBBF3C43E271A7ECCE2814D7E",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000100E0000000000000000000F3F5A8ABBBF3C43E271A7ECCE2814D7E00054D000341000000054D0003210000000000000000000000000000C2F2B333",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00054D0003410000",
+    "cvDer": "00054D0003210000",
+    "cripto": "F3F5A8ABBBF3C43E271A7ECCE2814D7E",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000F3F5A8ABBBF3C43E271A7ECCE2814D7E00054D000341000000054D0003210000000000000000000000000000C1F29333",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00054D0003410000",
+    "cvDer": "00054D0003210000",
+    "cripto": "F3F5A8ABBBF3C43E271A7ECCE2814D7E",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000F3F5A8ABBBF3C43E271A7ECCE2814D7E00054D000341000000054D0003210000000000000000000000000000C1F2B333",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00054D0003410000",
+    "cvDer": "00054D0003210000",
+    "cripto": "F3F5A8ABBBF3C43E271A7ECCE2814D7E",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000100C0000000000000000000776E33614A0F2601700F2E9A119939B200007D000341000000007D00032100000000000000000000000000004C897BAE",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00007D0003410000",
+    "cvDer": "00007D0003210000",
+    "cripto": "776E33614A0F2601700F2E9A119939B2",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000100E0000000000000000000776E33614A0F2601700F2E9A119939B200007D000341000000007D00032100000000000000000000000000004C899BAE",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00007D0003410000",
+    "cvDer": "00007D0003210000",
+    "cripto": "776E33614A0F2601700F2E9A119939B2",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000776E33614A0F2601700F2E9A119939B200007D000341000000007D00032100000000000000000000000000004B897BAE",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00007D0003410000",
+    "cvDer": "00007D0003210000",
+    "cripto": "776E33614A0F2601700F2E9A119939B2",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000776E33614A0F2601700F2E9A119939B200007D000341000000007D00032100000000000000000000000000004B899BAE",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00007D0003410000",
+    "cvDer": "00007D0003210000",
+    "cripto": "776E33614A0F2601700F2E9A119939B2",
+    "longitud": 16,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000100C00000000000000000008668845387736F86C46E83873042CF0B00417D000360008100417D00036000815279F65ED1793DA40000000030C4356F",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00417D0003600081",
+    "cvDer": "00417D0003600081",
+    "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000100E00000000000000000008668845387736F86C46E83873042CF0B00417D000360008100417D00036000815279F65ED1793DA40000000030C4556F",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00417D0003600081",
+    "cvDer": "00417D0003600081",
+    "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C00000000000000000008668845387736F86C46E83873042CF0B00417D000360008100417D00036000815279F65ED1793DA4000000002FC4356F",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00417D0003600081",
+    "cvDer": "00417D0003600081",
+    "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E00000000000000000008668845387736F86C46E83873042CF0B00417D000360008100417D00036000815279F65ED1793DA4000000002FC4556F",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00417D0003600081",
+    "cvDer": "00417D0003600081",
+    "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000100C0000000000000000000EB53F32593AD93D0695D25FFAFB44CC400054D000360008100054D00036000818A5CE56D9EAF44B900000000CAEA7EE0",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00054D0003600081",
+    "cvDer": "00054D0003600081",
+    "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000100E0000000000000000000EB53F32593AD93D0695D25FFAFB44CC400054D000360008100054D00036000818A5CE56D9EAF44B900000000CAEA9EE0",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00054D0003600081",
+    "cvDer": "00054D0003600081",
+    "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000EB53F32593AD93D0695D25FFAFB44CC400054D000360008100054D00036000818A5CE56D9EAF44B900000000C9EA7EE0",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00054D0003600081",
+    "cvDer": "00054D0003600081",
+    "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000EB53F32593AD93D0695D25FFAFB44CC400054D000360008100054D00036000818A5CE56D9EAF44B900000000C9EA9EE0",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00054D0003600081",
+    "cvDer": "00054D0003600081",
+    "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": false,
+   "nocv": false,
+   "token": "020000000100C0000000000000000000339EFDD9C0AAE131773D3080FF64AF7A00007D000360008100007D00036000810D95B400F51757FF00000000775A8605",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00007D0003600081",
+    "cvDer": "00007D0003600081",
+    "cripto": "339EFDD9C0AAE131773D3080FF64AF7A0D95B400F51757FF",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": false,
+   "nocv": true,
+   "token": "020000000100E0000000000000000000339EFDD9C0AAE131773D3080FF64AF7A00007D000360008100007D00036000810D95B400F51757FF00000000775AA605",
+   "leido": {
+    "interno": false,
+    "version": 1,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00007D0003600081",
+    "cvDer": "00007D0003600081",
+    "cripto": "339EFDD9C0AAE131773D3080FF64AF7A0D95B400F51757FF",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 0
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": true,
+   "nocv": false,
+   "token": "020000000000C0000000000000000000339EFDD9C0AAE131773D3080FF64AF7A00007D000360008100007D00036000810D95B400F51757FF00000000765A8605",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": false,
+    "cvIzq": "00007D0003600081",
+    "cvDer": "00007D0003600081",
+    "cripto": "339EFDD9C0AAE131773D3080FF64AF7A0D95B400F51757FF",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "DATA",
+   "versionHost": true,
+   "nocv": true,
+   "token": "020000000000E0000000000000000000339EFDD9C0AAE131773D3080FF64AF7A00007D000360008100007D00036000810D95B400F51757FF00000000765AA605",
+   "leido": {
+    "interno": false,
+    "version": 0,
+    "metodo": 0,
+    "cifrada": true,
+    "cvPresente": true,
+    "nocv": true,
+    "cvIzq": "00007D0003600081",
+    "cvDer": "00007D0003600081",
+    "cripto": "339EFDD9C0AAE131773D3080FF64AF7A0D95B400F51757FF",
+    "longitud": 24,
+    "tvvOk": true,
+    "avisos": 1
+   }
+  }
+ ],
+ "roundtrip": [
+  {
+   "clave": "0123456789ABCDEF",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "token": "020000000000C00000000000000000004295C94E531C2F2C000000000000000000054D000300000000000000000000000000000000000000000000009AB8057A",
+   "cripto": "4295C94E531C2F2C",
+   "kcvClave": "D5D44F",
+   "kcvKek": "8BAF47",
+   "vpIbm": "BCB0FA7EF435EA80",
+   "importOk": true,
+   "claveRecuperada": "0123456789ABCDEF"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "token": "020000000000C0000000000000000000911B623DB3841A1CC9AADF627AEAFE9C00417D000341000000417D0003210000000000000000000000000000921B1457",
+   "cripto": "911B623DB3841A1CC9AADF627AEAFE9C",
+   "kcvClave": "08D7B4",
+   "kcvKek": "8BAF47",
+   "vpIbm": "BA0D133880AE14EC",
+   "importOk": true,
+   "claveRecuperada": "0123456789ABCDEFFEDCBA9876543210"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA9876543210",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "token": "020000000000C0000000000000000000F3F5A8ABBBF3C43E271A7ECCE2814D7E00054D000341000000054D0003210000000000000000000000000000C1F29333",
+   "cripto": "F3F5A8ABBBF3C43E271A7ECCE2814D7E",
+   "kcvClave": "08D7B4",
+   "kcvKek": "8BAF47",
+   "vpIbm": "BA0D133880AE14EC",
+   "importOk": true,
+   "claveRecuperada": "0123456789ABCDEFFEDCBA9876543210"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "EXPORTER",
+   "token": "020000000000C00000000000000000008668845387736F86C46E83873042CF0B00417D000360008100417D00036000815279F65ED1793DA4000000002FC4356F",
+   "cripto": "8668845387736F86C46E83873042CF0B5279F65ED1793DA4",
+   "kcvClave": "56EF4F",
+   "kcvKek": "8BAF47",
+   "vpIbm": "BA0D133880AE14EC",
+   "importOk": true,
+   "claveRecuperada": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978"
+  },
+  {
+   "clave": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978",
+   "kek": "404142434445464748494A4B4C4D4E4F",
+   "tipo": "MAC",
+   "token": "020000000000C0000000000000000000EB53F32593AD93D0695D25FFAFB44CC400054D000360008100054D00036000818A5CE56D9EAF44B900000000C9EA7EE0",
+   "cripto": "EB53F32593AD93D0695D25FFAFB44CC48A5CE56D9EAF44B9",
+   "kcvClave": "56EF4F",
+   "kcvKek": "8BAF47",
+   "vpIbm": "BA0D133880AE14EC",
+   "importOk": true,
+   "claveRecuperada": "0123456789ABCDEFFEDCBA98765432100F1E2D3C4B5A6978"
+  }
+ ]
+}

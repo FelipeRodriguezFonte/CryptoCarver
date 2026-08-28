@@ -54,12 +54,13 @@ La idea es ir **evolucionando las capacidades** de la herramienta según las nec
 - Key Check Value (KCV) - múltiples métodos
 - Key Component Splitting (XOR)
 - **TR-31 Key Blocks** (wrap/unwrap)
-- **Key tokens ICSF / CCA** (IBM z/OS) - analizador individual y análisis en lote
+- **Key tokens ICSF / CCA** (IBM z/OS) - analizador individual, análisis en lote y exportación/importación nativa
 - Key Derivation (PBKDF2, HKDF)
 
 ### 🖥 Key tokens ICSF / CCA (IBM z/OS)
 
-Análisis de los *key tokens* nativos del coprocesador criptográfico de host.
+Análisis de los *key tokens* nativos del coprocesador criptográfico de host, y
+reproducción en claro de los verbos con los que el host entrega y recibe claves.
 **No son bloques TR-31**: son formatos distintos, los manejan verbos distintos
 (`CSNBKEX` / `CSNBKIM` frente a export/import TR-31) y en la interfaz viven en
 paneles separados dentro de **Keys → Tools**.
@@ -99,6 +100,57 @@ mantienen idénticos en ambos idiomas: son identificadores, no palabras.
 > bajo su master key. Pero sus salidas **sí llevan los tokens enteros en
 > hexadecimal**, así que los ficheros que genera hay que tratarlos con el mismo
 > cuidado que el volcado del que salieron.
+
+#### Exportación e importación con los verbos nativos
+
+Reproduce **en claro, byte a byte**, lo que hace el host con los verbos nativos
+de CCA, para poder comparar lo que sale de él con lo que espera quien recibe la
+clave, sea otro CCA o un HSM de otro fabricante. No habla con ningún
+coprocesador: es un banco de pruebas.
+
+| Verbo | Operación |
+|---|---|
+| `CSNBKEX` / `CSNBDKX` | Key Export — interno → externo bajo un EXPORTER |
+| `CSNBKIM` / `CSNBDKM` | Key Import — externo → operativo bajo la master key |
+
+Cuatro operaciones en el panel **ICSF / CCA Key Export / Import**:
+
+- **Exportar** — clave y KEK en claro, tipo de clave o Control Vector explícito,
+  y el token externo con su TVV ya calculado.
+- **Importar** — recupera la clave de un token de 64 bytes o de un criptograma
+  suelto sin token, que es lo que llega de un sistema que no produce tokens CCA.
+- **Inspeccionar** — todo lo que el token dice de sí mismo cuando no se tiene el
+  KEK: ámbito, método de envoltura, longitud, Control Vector y TVV.
+- **Resolver** — prueba todas las combinaciones razonables de variante del KEK,
+  modo y Control Vector, y dice cuál reproduce la clave. Es el diagnóstico
+  cuando la clave no cuadra en el otro extremo.
+
+**Esquemas de protección.** La variante del KEK (`KEK XOR CV`, el KEK tal cual
+de un EXPORTER con el bit **NOCV**, o las mitades del CV intercambiadas) y el
+modo (ECB por partes, que es WRAP-ECB, o CBC encadenado) son elecciones
+independientes, y equivocar cualquiera produce un token que el otro lado no
+abre.
+
+**El byte 4.** La Tabla 616 dice X'01' para una clave doble o triple, pero los
+hosts reales dejan ese byte a X'00'. La casilla correspondiente reproduce lo que
+hace el host, que es lo que permite comparar byte a byte; sin ella, el token
+difiere en dos bytes —el 4 y el primero del TVV, que lo suma— y el criptograma
+es idéntico.
+
+**KCV y verification pattern son números distintos.** El KCV de la industria son
+los 3 primeros bytes de cifrar ceros con la clave; `CSNBKYT` lo llama ENC-ZERO y
+da 4. Su verification pattern por defecto es **otro** algoritmo (p. 1720). Si
+cada lado mira un número distinto, la comparación no cuadra nunca, y esa es la
+mitad de los descuadres.
+
+La envoltura mejorada (WRAP-ENH, WRAPENH2, WRAPENH3) **no se puede reproducir
+fuera del coprocesador**, y se dice en vez de devolver bytes que parecerían una
+clave sin serlo.
+
+> ⚠️ **Aviso de seguridad.** Aquí el material de clave se maneja **en claro**,
+> porque reproducir la aritmética del host lo exige: se dan la clave y el KEK en
+> claro. Usa claves de prueba. Los informes que genera llevan claves y tokens
+> enteros en hexadecimal.
 
 Desde la CLI:
 
