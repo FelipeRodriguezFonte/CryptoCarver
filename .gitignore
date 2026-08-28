@@ -51,3 +51,7 @@ output/
 
 # Material de trabajo temporal (renders PNG de los PDF, pruebas sueltas).
 tmp/
+
+# Herramientas descargadas a mano (formateadores, linters). Se resuelven por
+# Maven o se instalan en local, no se versionan.
+*-all-deps.jar
