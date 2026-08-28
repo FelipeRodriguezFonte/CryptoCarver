@@ -556,24 +556,66 @@ public class KeysController {
         return symmetricKeysContainer != null && symmetricKeysContainer.isVisible();
     }
 
-    public void expandSymmetricPane(String paneName) {
-        if (paneName != null && paneName.contains("PKCS#11 Profiles") && pkcs11ProfilesController != null) {
-            pkcs11ProfilesController.expand();
-            return;
+    /**
+     * Opens the named symmetric pane and returns it, so the caller can scroll it into view.
+     *
+     * <p>PKCS#11 Profiles and the two ICSF / CCA panes are included siblings that follow the
+     * accordion rather than members of it, so nothing collapsed the accordion when one of them
+     * opened. With a pane as tall as Key Generation expanded above them they landed below the
+     * fold and navigating there changed nothing the user could see. Opening one now closes the
+     * accordion and the other includes, which is the exclusivity the accordion panes already
+     * had among themselves.</p>
+     */
+    public TitledPane expandSymmetricPane(String paneName) {
+        if (paneName == null || paneName.isBlank()) return null;
+        if (paneName.contains("PKCS#11 Profiles")) {
+            return openIncludedPane(pkcs11Profiles);
         }
-        if (paneName != null && paneName.contains("Batch") && icsfBatchPaneController != null) {
-            icsfBatchPaneController.expand();
-            return;
+        // Both words, because "Batch" alone would also claim any later non-ICSF batch pane.
+        if (paneName.contains("ICSF") && paneName.contains("Batch")) {
+            return openIncludedPane(icsfBatchPane);
         }
-        if (paneName != null && paneName.contains("ICSF") && icsfTokenPaneController != null) {
-            icsfTokenPaneController.expand();
-            return;
+        if (paneName.contains("ICSF")) {
+            return openIncludedPane(icsfTokenPane);
         }
-        expandPane(symmetricKeysContainer, paneName);
+        TitledPane expanded = expandPane(symmetricKeysContainer, paneName);
+        if (expanded != null) collapseIncludedPanes(null);
+        return expanded;
     }
 
-    public void expandAsymmetricPane(String paneName) {
-        expandPane(asymmetricKeysContainer, paneName);
+    public TitledPane expandAsymmetricPane(String paneName) {
+        return expandPane(asymmetricKeysContainer, paneName);
+    }
+
+    /** The symmetric panes keys.fxml includes rather than owns, in layout order. */
+    private List<TitledPane> includedSymmetricPanes() {
+        List<TitledPane> panes = new ArrayList<>();
+        if (pkcs11Profiles != null) panes.add(pkcs11Profiles);
+        if (icsfTokenPane != null) panes.add(icsfTokenPane);
+        if (icsfBatchPane != null) panes.add(icsfBatchPane);
+        return panes;
+    }
+
+    private void collapseIncludedPanes(TitledPane except) {
+        for (TitledPane pane : includedSymmetricPanes()) {
+            pane.setExpanded(pane == except);
+        }
+    }
+
+    private TitledPane openIncludedPane(TitledPane pane) {
+        if (pane == null) return null;
+        Accordion accordion = accordionOf(symmetricKeysContainer);
+        if (accordion != null) accordion.setExpandedPane(null);
+        collapseIncludedPanes(pane);
+        return pane;
+    }
+
+    private Accordion accordionOf(VBox section) {
+        if (section == null) return null;
+        for (javafx.scene.Node child : section.getChildren()) {
+            if (child instanceof Accordion accordion) return accordion;
+        }
+        return null;
     }
 
     public void fillTR31KeyBlockInput(String value) {
@@ -648,16 +690,21 @@ public class KeysController {
         }
     }
 
-    private void expandPane(VBox section, String paneName) {
-        if (section == null || paneName == null || paneName.isBlank()) return;
+    private TitledPane expandPane(VBox section, String paneName) {
+        if (section == null || paneName == null || paneName.isBlank()) return null;
         // Comparing the canonical name against the pane's visible text only works while the two
         // are the same string, which stops being true the moment the title is translated:
         // "Key Generation" never matches "Generación de claves", so nothing expanded and the
         // navigation silently did nothing. ModulePaneMatcher knows the translations.
-        section.getChildren().stream().filter(Accordion.class::isInstance).map(Accordion.class::cast)
-                .findFirst().ifPresent(accordion -> accordion.getPanes().stream()
-                        .filter(pane -> ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.keys()))
-                        .findFirst().ifPresent(accordion::setExpandedPane));
+        Accordion accordion = accordionOf(section);
+        if (accordion == null) return null;
+        for (TitledPane pane : accordion.getPanes()) {
+            if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.keys())) {
+                accordion.setExpandedPane(pane);
+                return pane;
+            }
+        }
+        return null;
     }
 
     @FXML private void handleChooseKeyStore() { chooseKeyStore(); }

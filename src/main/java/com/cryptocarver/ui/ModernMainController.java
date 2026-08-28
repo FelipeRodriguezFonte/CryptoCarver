@@ -2074,11 +2074,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandAccordionPane(String paneName) {
-        if (keysController != null) keysController.expandSymmetricPane(paneName);
+        if (keysController == null) return;
+        // Keys was the one module that expanded a pane without scrolling to it. That went
+        // unnoticed while every destination lived in the accordion, which lifts the pane it
+        // opens near the top by collapsing the previous one; the included panes below it have
+        // no such effect and stayed off-screen.
+        revealExpandedPane(keysController.expandSymmetricPane(paneName));
     }
 
     private void expandAsymmetricAccordionPane(String paneName) {
-        if (keysController != null) keysController.expandAsymmetricPane(paneName);
+        if (keysController == null) return;
+        revealExpandedPane(keysController.expandAsymmetricPane(paneName));
     }
 
     private void expandCertificatesAccordionPane(String paneName) {
