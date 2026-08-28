@@ -41,6 +41,10 @@
     el núcleo guarda códigos y argumentos, y las palabras se eligen al renderizar.
   - Registrada con riesgo **HIGH**, a diferencia de los dos analizadores: aquí el
     material de clave se maneja en claro porque reproducir la aritmética lo exige.
+  - Accesible también desde la CLI con `icsf-export`, `icsf-import`,
+    `icsf-inspect` e `icsf-resolve`. Toda la entrada va por flags con nombre, y con
+    `--json` los veredictos salen como códigos (`MATCHES_KEY`, `POSSIBLE_EVEN`)
+    junto al texto, para poder ramificar en un script sin depender del idioma.
 
 - **Key tokens ICSF / CCA de IBM z/OS**, en dos paneles dentro de **Keys → Tools**,
   separados a propósito del panel TR-31: son formatos distintos y los manejan

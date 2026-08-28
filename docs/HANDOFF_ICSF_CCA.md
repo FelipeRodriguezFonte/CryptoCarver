@@ -22,7 +22,7 @@ es +54).
 | Interfaz | `IcsfTokenController`, `IcsfBatchController` e `IcsfKeyWrapController` en `com.cryptocarver.ui` |
 | Vistas | `src/main/resources/fxml/icsf_token.fxml`, `icsf_batch.fxml`, `icsf_keywrap.fxml` |
 | Textos | `icsf.*` en los tres bundles; slice `ModuleTextCatalog.icsf()` |
-| CLI | `icsf-token`, `icsf-batch` en `CryptoCarverCli` (la envoltura es solo de escritorio) |
+| CLI | `icsf-token`, `icsf-batch`, `icsf-export`, `icsf-import`, `icsf-inspect`, `icsf-resolve` |
 | Tests | `src/test/java/com/cryptocarver/crypto/icsf/` y `.../ui/Icsf*` |
 
 **No es un módulo de navegación propio.** Los tres paneles son `fx:include`
@@ -277,6 +277,7 @@ marcadores `{0}` sin sustituir, y que la sangría sobreviva.
 | `KeyWrapVectorTest` | Envoltura contra vectores fijos: toda combinación de longitud, tipo, variante y modo |
 | `KeyWrapI18nTest` | Que cada nota y cada veredicto de la envoltura resuelve en ambos idiomas |
 | `DesEngineSmokeTest` | El motor DES contra el vector clásico de FIPS 46-3 |
+| `IcsfKeyWrapCliTest` | Los cuatro comandos: códigos de salida, JSON, ida y vuelta entre invocaciones |
 | `IcsfNavigationUITest` | Que los paneles incluidos se abren **y llegan al viewport** al navegar |
 
 ```bash
@@ -334,10 +335,21 @@ comparan «el KCV».
 en claro porque reproducir la aritmética lo exige, y escribe claves enteras en
 sus informes.
 
+**En la CLI.** `icsf-export`, `icsf-import`, `icsf-inspect` e `icsf-resolve`, con
+toda la entrada por flags con nombre: entre una clave, un KEK y un token, el
+hexadecimal posicional sería ilegible y fácil de transponer. El byte 4 sale por
+defecto como lo escriben los hosts reales, y es la Tabla 616 la que hay que pedir
+con `--table616-version`, porque comparar contra un token del host es la razón de
+ejecutar esto. Con `--json` los veredictos viajan como códigos junto a las
+palabras, para poder ramificar sin depender del idioma.
+
 **Pruebas.** `KeyWrapVectorTest` contrasta contra vectores fijos en
 `src/test/resources/icsf/keywrap-vectors.json`, que cubren todas las
 combinaciones de longitud, tipo de clave, variante y modo; `KeyWrapI18nTest`
-recorre cada nota y cada rama resolviendo el texto en los dos idiomas.
+recorre cada nota y cada rama resolviendo el texto en los dos idiomas; y
+`IcsfKeyWrapCliTest` comprueba lo que un script necesita: códigos de salida,
+veredictos como código, y un token que sobrevive el viaje de ida y vuelta entre
+**dos invocaciones separadas**.
 
 ---
 
@@ -356,8 +368,9 @@ recorre cada nota y cada rama resolviendo el texto en los dos idiomas.
 - **La envoltura mejorada no se puede reproducir** (WRAP-ENH, WRAPENH2,
   WRAPENH3). Se rechaza explicándolo, en vez de devolver bytes que parecerían una
   clave sin serlo.
-- **La envoltura es solo de escritorio.** No tiene comando de CLI, a diferencia
-  del analizador y del lote.
+- **La envoltura no tiene modo lote.** Los cuatro comandos de CLI operan sobre
+  una clave o un token cada uno; para una tanda hay que iterar desde el script
+  que los llame.
 - **`icsf-batch` sale con código 3** si hay entradas ilegibles, alineado con el
   comando `batch` que ya existía en esta CLI. El original en Python sale 0.
 - **`--json-out`** es la ruta del fichero JSON, no `--json`: en esta CLI `--json`

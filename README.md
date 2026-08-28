@@ -152,6 +152,29 @@ clave sin serlo.
 > claro. Usa claves de prueba. Los informes que genera llevan claves y tokens
 > enteros en hexadecimal.
 
+Desde la CLI, con los mismos cuatro verbos:
+
+```bash
+java -jar cryptocarver.jar icsf-export --key 0123456789ABCDEFFEDCBA9876543210 --kek 404142434445464748494A4B4C4D4E4F --type EXPORTER
+java -jar cryptocarver.jar icsf-import --token 020000000000C000... --kek 404142434445464748494A4B4C4D4E4F
+java -jar cryptocarver.jar icsf-inspect --token 020000000000C000...
+java -jar cryptocarver.jar icsf-resolve --token 020000000000C000... --kek 4041... --expected-key 0123...
+```
+
+| Opción | Para qué |
+|---|---|
+| `--key`, `--kek`, `--token` | Material de entrada, en hexadecimal |
+| `--type`, `--cv` | Tipo de clave (Tabla 676) o Control Vector explícito |
+| `--variant` | `cv` (por defecto), `nocv`, `cv-swapped` |
+| `--mode` | `ecb` (por defecto) o `cbc` |
+| `--table616-version` | Byte 4 a X'01' según la Tabla 616; por defecto se escribe X'00', como los hosts reales |
+| `--nocv` | Marca el token con el bit NOCV |
+| `--expected-key`, `--expected-kcv` | Referencia para que `icsf-resolve` sea concluyente |
+| `--json`, `--lang`, `--out` | Salida legible por máquina, idioma del informe, y guardarlo |
+
+Con `--json` los veredictos salen como **códigos** (`MATCHES_KEY`, `POSSIBLE_EVEN`)
+además de como texto, para poder ramificar en un script sin depender del idioma.
+
 Desde la CLI:
 
 ```bash

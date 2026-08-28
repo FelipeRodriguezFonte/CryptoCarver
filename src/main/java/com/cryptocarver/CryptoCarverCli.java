@@ -23,7 +23,8 @@ public final class CryptoCarverCli {
 
     /** Flags that are switches rather than name/value pairs. */
     private static final java.util.Set<String> VALUELESS_FLAGS =
-            java.util.Set.of("--json", "--detail", "--no-detail");
+            java.util.Set.of("--json", "--detail", "--no-detail",
+                    "--host-version", "--table616-version", "--nocv");
 
     private CryptoCarverCli() { }
 
@@ -55,6 +56,10 @@ public final class CryptoCarverCli {
                 case "batch" -> batch(args, out, json);
                 case "icsf-token" -> icsfToken(args, out, json);
                 case "icsf-batch" -> icsfBatch(args, out, json);
+                case "icsf-export" -> icsfKeyWrap(args, out, json, KeyWrapCommand.EXPORT);
+                case "icsf-import" -> icsfKeyWrap(args, out, json, KeyWrapCommand.IMPORT);
+                case "icsf-inspect" -> icsfKeyWrap(args, out, json, KeyWrapCommand.INSPECT);
+                case "icsf-resolve" -> icsfKeyWrap(args, out, json, KeyWrapCommand.RESOLVE);
                 case "serve" -> serve(args, out);
                 default -> { error(err, "Unknown command: " + args[0], json); help(err, json); yield EXIT_INVALID_ARGS; }
             };
@@ -69,6 +74,9 @@ public final class CryptoCarverCli {
         return com.cryptocarver.model.SafeTransformations.hmacSha256(value, key);
     }
 
+    /** Which key wrapping verb a command line asked for. */
+    private enum KeyWrapCommand { EXPORT, IMPORT, INSPECT, RESOLVE }
+
     private static void validateNoExtraFlags(String[] args) {
         String cmd = args[0];
         java.util.Set<String> allowedFlags = new java.util.HashSet<>(List.of("--json"));
@@ -79,10 +87,18 @@ public final class CryptoCarverCli {
             allowedFlags.addAll(List.of("--provenance", "--format", "--txt", "--csv",
                     "--json-out", "--sep", "--detail", "--no-detail"));
         }
+        if (cmd.startsWith("icsf-export") || cmd.startsWith("icsf-import")
+                || cmd.startsWith("icsf-inspect") || cmd.startsWith("icsf-resolve")) {
+            allowedFlags.addAll(List.of("--key", "--kek", "--token", "--type", "--cv",
+                    "--variant", "--mode", "--rn", "--expected-key", "--expected-kcv",
+                    "--host-version", "--table616-version", "--nocv", "--lang", "--out"));
+        }
 
         int expectedArgs = switch (cmd) {
             case "batch" -> 3;
-            case "serve" -> 1;
+            // Every input is a named flag: with a key, a KEK and a token in play, positional
+            // hex would be unreadable and easy to transpose.
+            case "serve", "icsf-export", "icsf-import", "icsf-inspect", "icsf-resolve" -> 1;
             case "help", "--help", "--version" -> 1;
             default -> 2; // single operations take 1 arg
         };
@@ -239,6 +255,86 @@ public final class CryptoCarverCli {
         return report.failed().isEmpty() ? EXIT_SUCCESS : EXIT_OPERATION_FAILED;
     }
 
+    /**
+     * Reproduces the CCA native key export and import verbs in the clear.
+     *
+     * <p>Unlike the two analysers, this one is handed key material in the clear, because
+     * reproducing the host's arithmetic is what it is for. Its output carries whole keys,
+     * so it wants the same handling as the key material it came from.</p>
+     */
+    private static int icsfKeyWrap(String[] args, PrintWriter out, boolean json,
+                                   KeyWrapCommand command) throws IOException {
+        java.util.Locale locale = localeOf(option(args, "--lang"));
+        var variant = keyWrapVariant(option(args, "--variant"));
+        var mode = keyWrapMode(option(args, "--mode"));
+        String type = option(args, "--type");
+        String kek = option(args, "--kek");
+        String token = option(args, "--token");
+
+        com.cryptocarver.crypto.icsf.keywrap.KeyWrapResult result = switch (command) {
+            case EXPORT -> com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.export(
+                    new com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.ExportRequest(
+                            option(args, "--key"), kek, type == null ? "EXPORTER" : type,
+                            option(args, "--cv"), variant, mode,
+                            contains(args, "--nocv"),
+                            // Table 616 says X'01' for a double-length key; real hosts write
+                            // X'00'. The host form is the default because comparing against a
+                            // host token is the reason to run this at all.
+                            !contains(args, "--table616-version"),
+                            option(args, "--rn")));
+            case IMPORT -> com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.importKey(
+                    new com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.ImportRequest(
+                            token, kek, option(args, "--cv"), type, variant, mode,
+                            option(args, "--rn")));
+            case INSPECT -> com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.inspect(token);
+            case RESOLVE -> com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.resolve(
+                    new com.cryptocarver.crypto.icsf.keywrap.IcsfKeyWrapService.ResolveRequest(
+                            token, kek, option(args, "--expected-key"),
+                            option(args, "--expected-kcv"), option(args, "--cv"), type));
+        };
+
+        String rendered = json
+                ? new Gson().toJson(com.cryptocarver.crypto.icsf.keywrap.KeyWrapReport.toMap(result, locale))
+                : com.cryptocarver.crypto.icsf.keywrap.KeyWrapReport.render(result, locale);
+        out.println(rendered);
+        out.flush();
+
+        String destination = option(args, "--out");
+        if (destination != null) {
+            Files.writeString(Path.of(destination), rendered, StandardCharsets.UTF_8);
+        }
+        return result.ok() ? EXIT_SUCCESS : EXIT_OPERATION_FAILED;
+    }
+
+    private static java.util.Locale localeOf(String tag) {
+        if (tag == null || tag.isBlank()) return java.util.Locale.getDefault();
+        return java.util.Locale.forLanguageTag(tag);
+    }
+
+    private static com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Variant keyWrapVariant(String value) {
+        if (value == null || value.isBlank()) {
+            return com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Variant.CV;
+        }
+        return switch (value.toLowerCase(java.util.Locale.ROOT)) {
+            case "cv" -> com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Variant.CV;
+            case "nocv", "plain" -> com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Variant.PLAIN;
+            case "cv-swapped", "swapped" -> com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Variant.CV_SWAPPED;
+            default -> throw new IllegalArgumentException(
+                    "Unknown --variant: " + value + " (use cv, nocv or cv-swapped)");
+        };
+    }
+
+    private static com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Mode keyWrapMode(String value) {
+        if (value == null || value.isBlank()) {
+            return com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Mode.ECB;
+        }
+        return switch (value.toLowerCase(java.util.Locale.ROOT)) {
+            case "ecb" -> com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Mode.ECB;
+            case "cbc" -> com.cryptocarver.crypto.icsf.keywrap.KeyWrapScheme.Mode.CBC;
+            default -> throw new IllegalArgumentException("Unknown --mode: " + value + " (use ecb or cbc)");
+        };
+    }
+
     private static int serve(String[] args, PrintWriter out) throws Exception {
         boolean json = contains(args, "--json");
         String requestedPort = option(args, "--port"); int port = requestedPort == null ? 8787 : Integer.parseInt(requestedPort);
@@ -262,7 +358,7 @@ public final class CryptoCarverCli {
     }
     private static void help(PrintWriter out, boolean json) {
         if (json) {
-            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, icsf-token, icsf-batch, serve")));
+            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, serve")));
             return;
         }
         out.println("CryptoCarver CLI (local laboratory operations)");

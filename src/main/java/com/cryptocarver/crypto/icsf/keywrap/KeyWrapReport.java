@@ -131,4 +131,61 @@ public final class KeyWrapReport {
     public static List<String> outputNames(KeyWrapResult result) {
         return List.copyOf(result.outputs().keySet());
     }
+
+    /**
+     * The result as plain data, for {@code --json}.
+     *
+     * <p>Codes travel beside the words: a caller piping this into something else needs
+     * {@code MATCHES_KEY}, not a sentence that changes with the locale.</p>
+     */
+    public static java.util.Map<String, Object> toMap(KeyWrapResult result, Locale locale) {
+        java.util.Map<String, Object> root = new java.util.LinkedHashMap<>();
+        root.put("ok", result.ok());
+        root.put("operation", result.operation().name());
+        if (!result.ok()) {
+            root.put("error", t(result.error(), locale));
+            return root;
+        }
+        List<java.util.Map<String, Object>> summary = new java.util.ArrayList<>();
+        for (KeyWrapResult.Row row : result.summary()) {
+            summary.add(java.util.Map.of("label", t(row.label(), locale), "value", t(row.value(), locale)));
+        }
+        root.put("summary", summary);
+
+        List<java.util.Map<String, Object>> steps = new java.util.ArrayList<>();
+        for (KeyWrapResult.Step step : result.steps()) {
+            steps.add(java.util.Map.of("title", t(step.title(), locale),
+                    "value", step.hexValue(), "detail", t(step.detail(), locale)));
+        }
+        root.put("steps", steps);
+
+        List<java.util.Map<String, Object>> notes = new java.util.ArrayList<>();
+        for (KeyWrapResult.Note note : result.notes()) {
+            notes.add(java.util.Map.of("level", note.level().name(), "code", note.code(),
+                    "title", t(note.title(), locale), "text", t(note.text(), locale)));
+        }
+        root.put("notes", notes);
+
+        if (!result.candidates().isEmpty()) {
+            List<java.util.Map<String, Object>> candidates = new java.util.ArrayList<>();
+            for (KeyWrapResult.Candidate candidate : result.candidates()) {
+                List<String> equivalents = new java.util.ArrayList<>();
+                for (IcsfText equivalent : candidate.equivalentSchemes()) {
+                    equivalents.add(t(equivalent, locale));
+                }
+                candidates.add(java.util.Map.of(
+                        "schemeCode", candidate.schemeCode(),
+                        "scheme", t(candidate.scheme(), locale),
+                        "key", candidate.keyHex(),
+                        "kcv", candidate.kcvHex(),
+                        "parity", candidate.parity().name(),
+                        "verdict", candidate.verdict().name(),
+                        "equivalentSchemes", equivalents));
+            }
+            root.put("candidates", candidates);
+        }
+        root.put("outputs", result.outputs());
+        root.put("securityNotice", t(IcsfText.of("icsf.keywrap.report.securityNotice"), locale));
+        return root;
+    }
 }
