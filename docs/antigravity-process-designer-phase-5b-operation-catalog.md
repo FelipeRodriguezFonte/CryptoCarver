@@ -100,24 +100,32 @@ convierte en una prueba ejecutable, que es como vamos a validar las olas siguien
 
 ## 3. Ola 5B.2 — Claves y pagos
 
-### 3.1 Claves
+Esta ola suma 41 tipos, casi el doble que la 5B.1, y es la que introduce PAN, PIN, pistas
+de banda magnética y criptogramas. **Se entrega y se audita en dos bloques separados:**
+
+- **5B.2a — Claves** (§3.1, 20 tipos). Va primero: los nodos de pagos consumen material de
+  clave, KCV y paridad que produce este bloque.
+- **5B.2b — Pagos** (§3.2, 21 tipos). Bloque propio, para que el material sensible reciba
+  una ronda de auditoría entera y no se revise en la cola de un diff de 41 nodos.
+
+### 3.1 Claves — bloque 5B.2a
 
 | Tipo | Fachada |
 |---|---|
-| `KCV` (`VISA`, `IBM`, `ATALLA`, `ATALLA_R`, `FUTUREX`, `CMAC`, `AES`, `SHA256`, bloque cero completo) | `KeyOperations.calculateKCV_*`, `calculateFullZeroBlockKCV` |
-| `KEY_SPLIT_XOR` / `KEY_COMBINE_XOR` | `KeyOperations.splitKey`, `combineKeyComponents` |
-| `PARITY_ADJUST` / `PARITY_CHECK` | `KeyOperations.applyOddParity`, `detectParity` |
-| `KDF_HKDF`, `KDF_SP800_108`, `KDF_X963`, `KDF_SCRYPT`, `KDF_ARGON2` | `KeyDerivation` |
-| `AES_KEYWRAP_3394` / `_UNWRAP_3394`, `AES_KEYWRAP_5649` / `_UNWRAP_5649` | `KeyWrapOperations` |
-| `TR31_WRAP` / `TR31_UNWRAP` / `TR31_PARSE_HEADER` | `TR31Operations` |
-| `ICSF_TOKEN_PARSE` (sólo lectura) | `crypto/icsf` |
+| `KCV` (`VISA`, `IBM`, `ATALLA`, `ATALLA_R`, `FUTUREX`, `CMAC`, `AES`, `SHA256`, bloque cero completo) | `KeyOperations.calculateKCV_VISA/_IBM/_ATALLA/_ATALLA_R/_FUTUREX/_CMAC/_AES/_SHA256(byte[])` y `calculateFullZeroBlockKCV(byte[], String)` |
+| `KEY_SPLIT_XOR` / `KEY_COMBINE_XOR` | `KeyOperations.splitKey(byte[], int)`, `combineKeyComponents(byte[][])` |
+| `PARITY_ADJUST` / `PARITY_CHECK` | `KeyOperations.applyOddParity(byte[])` (muta en sitio), `detectParity(byte[])` → `ParityType` |
+| `KDF_HKDF`, `KDF_SP800_108`, `KDF_X963`, `KDF_SCRYPT`, `KDF_ARGON2` | `KeyDerivation.hkdf`, `sp800108Counter`, `x963`, `scrypt`, `argon2` |
+| `AES_KEYWRAP_3394` / `_UNWRAP_3394`, `AES_KEYWRAP_5649` / `_UNWRAP_5649` | `KeyWrapOperations.wrapRfc3394` / `unwrapRfc3394` / `wrapRfc5649` / `unwrapRfc5649`, todas `(byte[] kek, byte[])` |
+| `TR31_WRAP` / `TR31_UNWRAP` / `TR31_PARSE_HEADER` | `TR31Operations.wrapKey(String,String,String,char,char,char,char)`, `unwrapKey(String,String)`, `parseHeader(String)` |
+| `ICSF_TOKEN_PARSE` (sólo lectura) | `crypto.icsf.IcsfTokenParser` → `IcsfTokenReport` |
 | `KEYPAIR_GENERATE` (RSA, DSA, ECDSA, EdDSA) — generaliza el actual `RSA_KEYPAIR_GENERATE` | `AsymmetricKeyOperations` |
-| `KEY_MATERIAL_INSPECT` | `KeyMaterialInspector.describeKey` |
+| `KEY_MATERIAL_INSPECT` | `KeyMaterialInspector.describeKey(java.security.Key)` |
 
 `RSA_KEYPAIR_GENERATE` se conserva como alias del nuevo `KEYPAIR_GENERATE` para no romper
 procesos guardados.
 
-### 3.2 Pagos
+### 3.2 Pagos — bloque 5B.2b
 
 | Tipo | Fachada |
 |---|---|
