@@ -69,24 +69,27 @@ desgestionado, texto accesible en los controles nuevos.
 Sin estos nodos, muchas de las operaciones de las olas siguientes no se pueden encadenar.
 Es la ola de menor riesgo y mayor efecto, y va primero.
 
-| Tipo | Puertos de entrada | Salida | Fachada |
+| Tipo | Puertos de entrada | Salida | Fachada existente |
 |---|---|---|---|
-| `CONCAT` | `a`, `b` (extensible) | BINARY | — |
-| `SLICE` | `input` | BINARY | config `offset`, `length` |
-| `PAD` / `UNPAD` | `input` | BINARY | esquemas PKCS#7, ISO 7816-4, ceros; `blockSize` |
-| `XOR` | `a`, `b` | BINARY | `KeyOperations.xor` |
-| `ASSERT_EQUALS` | `actual`, `expected` | reemite `actual` | `MACOperations.constantTimeEquals` |
-| `BASE32_ENCODE` / `_DECODE` | `input` | TEXT / BINARY | `codec.impl.Base32Codec` |
-| `BASE58_ENCODE` / `_DECODE` | `input` | TEXT / BINARY | `codec.impl.Base58Codec` |
-| `BASE58CHECK_ENCODE` / `_DECODE` | `input` | TEXT / BINARY | `codec.impl.Base58CheckCodec` |
-| `EBCDIC_ENCODE` / `_DECODE` | `input` | BINARY / TEXT | `EBCDICConverter` (`codePage` desde `supportedCodePages()`) |
-| `COMPRESS` / `DECOMPRESS` | `input` | BINARY | `CompressionCodec` |
+| `CONCAT` | `a`, `b` (extensible) | BINARY | fontanería, sin criptografía |
+| `SLICE` | `input` | BINARY | fontanería; config `offset`, `length` |
+| `PAD` / `UNPAD` | `input` | BINARY | `utils.PaddingUtil.addPadding` / `removePadding`, con `PaddingUtil.PaddingType` (PKCS5, PKCS7, ISO_9797_M1, ISO_9797_M2, ISO_7816_4, ZERO) y `blockSize` |
+| `XOR` | `a`, `b` | BINARY | `KeyOperations.xor(byte[], byte[])` |
+| `ASSERT_EQUALS` | `actual`, `expected` | reemite `actual` | `MACOperations.constantTimeEquals(byte[], byte[])` |
+| `BASE32_ENCODE` / `_DECODE` | `input` | TEXT / BINARY | `codec.CodecRegistry.getInstance()` con `ByteFormat.BASE32` |
+| `BASE58_ENCODE` / `_DECODE` | `input` | TEXT / BINARY | `CodecRegistry` con `ByteFormat.BASE58` |
+| `BASE58CHECK_ENCODE` / `_DECODE` | `input` | TEXT / BINARY | `CodecRegistry` con `ByteFormat.BASE58_CHECK` |
+| `EBCDIC_ENCODE` / `_DECODE` | `input` | BINARY / TEXT | `EBCDICConverter.encode(String, String)` / `decode(byte[], String)`; `codePage` desde `supportedCodePages()` |
+| `COMPRESS` / `DECOMPRESS` | `input` | BINARY | `CompressionCodec.compress(byte[], String)` / `decompress`; formatos `gzip`, `zlib`, `deflate` |
 | `CHARSET_CONVERT` | `input` | TEXT_UTF8 | juego de origen y destino |
-| `ASN1_DECODE` | `input` | TEXT_UTF8 | `asn1.ASN1Parser` + `ASN1TreeExporter` |
-| `CHECK_DIGIT_CALC` / `_VERIFY` | `input` | TEXT_UTF8 | `CheckDigitCalculator` (Luhn, Verhoeff, Damm) |
+| `ASN1_DECODE` | `input` | TEXT_UTF8 | `asn1.ASN1Parser.parse` + `asn1.ASN1TreeExporter.toJson` / `toMarkdown` |
+| `CHECK_DIGIT_CALC` / `_VERIFY` | `input` | TEXT_UTF8 | `CheckDigitCalculator.calculateCheckDigit` / `validateCheckDigit`; algoritmos exactos de `SUPPORTED_ALGORITHMS`: `Luhn (Mod 10)`, `Verhoeff`, `Damm` |
 | `MODULAR_ARITHMETIC` | `a`, `b` (opcional) | TEXT_UTF8 | `ModularArithmetic` |
-| `UUID_GENERATE` | — | TEXT_UTF8 | `UUIDGenerator` |
-| `BYTE_STATISTICS` | `input` | TEXT_UTF8 | `ByteStatistics.analyze` |
+| `UUID_GENERATE` | — | TEXT_UTF8 | `UUIDGenerator.generateUUID()` / `generateUUIDWithoutHyphens()` |
+| `BYTE_STATISTICS` | `input` | TEXT_UTF8 | `ByteStatistics.analyze(byte[])` |
+
+Todas las fachadas de esta ola existen ya y están probadas. `CONCAT` y `SLICE` son las dos
+únicas piezas sin fachada, y no contienen criptografía.
 
 **`ASSERT_EQUALS` es obligatorio y no negociable.** Compara en tiempo constante; si
 difiere, emite `ERROR`, detiene el proceso y **no revela el valor esperado ni el
