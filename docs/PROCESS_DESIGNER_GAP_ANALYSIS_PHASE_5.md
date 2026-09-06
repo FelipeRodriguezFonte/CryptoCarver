@@ -17,7 +17,7 @@ No es una especificación: es el material de partida que justifica lo que se pid
 | Lienzo | `process_designer.fxml:102` | `Pane` fijo `minWidth=760 prefWidth=760 prefHeight=310` |
 | Contenedor del lienzo | `process_designer.fxml:101` | `ScrollPane fitToWidth="true" fitToHeight="false"` |
 | Inspector | `process_designer.fxml:104-260` | `VBox` con **27** grupos de campos codificados a mano |
-| Controlador | `src/main/java/com/cryptocarver/ui/ProcessDesignerController.java` | 1 803 líneas, **146** campos `@FXML` |
+| Controlador | `src/main/java/com/cryptocarver/ui/ProcessDesignerController.java` | 1 803 líneas, **96** campos `@FXML` |
 | Motor | `src/main/java/com/cryptocarver/model/process/ProcessEngine.java` | 8 handlers registrados (`ProcessEngine.java:19-27`) |
 | Tipos de nodo | handlers en `model/process/handlers/` | **30** tipos |
 | Operaciones del producto | `src/main/java/com/cryptocarver/model/OperationRegistry.java` | **80** operaciones registradas |
@@ -120,7 +120,7 @@ Añadir **un** tipo de nodo hoy obliga a tocar, como mínimo, seis lugares:
 
 El coste está concentrado en el punto 3. Medido sobre el código actual:
 
-- `select(ProcessDefinition.Node)` ocupa **371 líneas** (`:1207-1578`) y es una cadena de
+- `select(ProcessDefinition.Node)` ocupa **281 líneas** (`:1207-1487`) y es una cadena de
   `boolean tipo = "X".equals(node.type)` seguida de pares
   `setVisible()` / `setManaged()` por cada uno de los 27 grupos.
 - `saveSelectedNodeSettings()` (`:564-657`) repite exactamente la misma cadena de
