@@ -21,6 +21,7 @@ public class NavigationRail extends VBox {
     // Navigation sections
     public enum Section {
         SEARCH("🔍", "Search"),
+        PROCESS_DESIGNER("🧩", "Process Designer"),
         GENERIC("◈", "Generic"),
         CIPHER("🔒", "Cipher"),
         AUTHENTICATION("🛡", "Authentication"),
@@ -97,6 +98,7 @@ public class NavigationRail extends VBox {
         return I18nService.getInstance().text("nav." + switch (section) {
             case POST_QUANTUM -> "postQuantum";
             case XML_SECURITY -> "xmlSecurity";
+            case PROCESS_DESIGNER -> "processDesigner";
             default -> section.name().toLowerCase(java.util.Locale.ROOT);
         });
     }

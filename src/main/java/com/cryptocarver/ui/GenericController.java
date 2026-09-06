@@ -610,6 +610,13 @@ public class GenericController {
     @FXML public void handleDecodeBcd() { convertPackedDecimal(manualInputArea.getText(), false, false, manualOutputArea); }
     @FXML public void handleEncodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, true, manualOutputArea); }
     @FXML public void handleDecodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
+    @FXML public void handleLaunchProcessDesigner() {
+        if (statusReporter instanceof ModernMainController modern) {
+            modern.navigateTo("Process Designer");
+        } else {
+            ProcessDesignerWindow.open();
+        }
+    }
 
     @FXML public void initialize() {
         javafx.scene.Node[] excluded = genericContainer == null ? new javafx.scene.Node[0]

@@ -21,6 +21,23 @@ public class RandomBytesNodeHandler implements ProcessNodeHandler {
     }
 
     @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "RANDOM_BYTES",
+                "Generators",
+                "module.process.type.randomBytes",
+                "module.process.desc.randomBytes",
+                "🎲",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("length", "module.process.param.length",
+                        com.cryptocarver.model.process.ParameterKind.NUMBER, "16")
+                )
+            )
+        );
+    }
+
+    @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         return List.of();
     }

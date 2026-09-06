@@ -21,10 +21,14 @@ public final class ProcessEngine {
         new FileNodeHandler(),
         new HashNodeHandler(),
         new CodecNodeHandler(),
+        new KeyOperationsNodeHandler(),
         new KeyMaterialNodeHandler(),
         new AdvancedCryptoNodeHandler(),
         new WssNodeHandler(),
-        new RandomBytesNodeHandler()
+        new RandomBytesNodeHandler(),
+        new PlumbingNodeHandler(),
+        new EncodingFormatNodeHandler(),
+        new UtilityInspectionNodeHandler()
     ));
 
     public static void registerHandler(ProcessNodeHandler handler) {
@@ -33,6 +37,10 @@ public final class ProcessEngine {
 
     public static void unregisterHandler(ProcessNodeHandler handler) {
         HANDLERS.remove(handler);
+    }
+
+    public static List<ProcessNodeHandler> handlers() {
+        return List.copyOf(HANDLERS);
     }
 
     public static Map<String, Representation> validate(ProcessDefinition definition) {
@@ -48,6 +56,17 @@ public final class ProcessEngine {
             node.configuration.remove("keyFromFlow");
             node.configuration.remove("ivFromFlow");
             node.configuration.remove("aadFromFlow");
+            node.configuration.remove("ikmFromFlow");
+            node.configuration.remove("sharedSecretFromFlow");
+            node.configuration.remove("passwordFromFlow");
+            node.configuration.remove("saltFromFlow");
+            node.configuration.remove("kekFromFlow");
+            node.configuration.remove("keyDataFromFlow");
+            node.configuration.remove("componentsFromFlow");
+            node.configuration.remove("kbpkFromFlow");
+            node.configuration.remove("wrappedFromFlow");
+            node.configuration.remove("keyBlockFromFlow");
+            node.configuration.remove("tokenFromFlow");
             nodeMap.put(node.id, node);
 
             getHandlerFor(node.type);
@@ -108,6 +127,9 @@ public final class ProcessEngine {
             }
             portBindings.get(conn.to).put(assignedPort, conn.from);
             if ("key".equals(assignedPort)) targetNode.configuration.put("keyFromFlow", "true");
+            if (Set.of("ikm", "sharedSecret", "password", "salt", "kek", "keyData", "components", "kbpk", "wrapped", "keyBlock", "token").contains(assignedPort)) {
+                targetNode.configuration.put(assignedPort + "FromFlow", "true");
+            }
             if ("iv".equals(assignedPort)) targetNode.configuration.put("ivFromFlow", "true");
             if ("aad".equals(assignedPort)) targetNode.configuration.put("aadFromFlow", "true");
 

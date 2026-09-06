@@ -56,6 +56,8 @@ La idea es ir **evolucionando las capacidades** de la herramienta según las nec
 - **TR-31 Key Blocks** (wrap/unwrap)
 - **Key tokens ICSF / CCA** (IBM z/OS) - analizador individual, análisis en lote y exportación/importación nativa
 - Key Derivation (PBKDF2, HKDF)
+- Process Designer key nodes (KCV, parity, XOR sharing, KDFs, AES RFC 3394/5649,
+  TR-31, read-only ICSF parsing and key-pair inspection/generation)
 
 ### 🖥 Key tokens ICSF / CCA (IBM z/OS)
 
@@ -222,6 +224,14 @@ java -jar cryptocarver.jar icsf-batch tokens.txt --csv inventario.csv --txt info
 - Generación y validación de JWT
 - Algoritmos: HS256/384/512, RS256/384/512, PS256/384/512, ES256/384/512, Ed25519
 - Formatos: PEM, JWK (RSA, EC, oct)
+
+### 🔄 Diseñador de Procesos (Process Designer)
+- **Modelado visual de flujos**: encadenamiento de operaciones criptográficas, conversión de formatos, hashing y firmas en un lienzo gráfico.
+- **Catálogo ampliado (Fase 5B.1)**: 23 nuevos tipos de nodos agrupados en *Fontanería* (concatenación, rebanado, padding, XOR, autoverificación con `ASSERT_EQUALS`), *Conversiones* (Base32, Base58, Base58Check, EBCDIC, compresión GZIP/Deflate/Zlib, conversión de charset) y *Utilidades* (árbol ASN.1, dígitos de control Luhn/Verhoeff/Damm/ISO7064, aritmética modular, UUID v4/v5/v7, estadísticas y entropía de bytes).
+- **Lienzo escalable infinito**: zoom (25%–400%), ajuste dinámico a contenidos, navegación y curvas de conexión bezier interactivas entre puertos.
+- **Catálogo e inspector dinámicos**: paleta con búsqueda instantánea y formulario reactivo dirigido por esquemas declarativos (`NodeDescriptor`).
+- **Seguridad en secretos**: protección estricta en memoria volátil (`transientSecrets`) sin persistencia en ficheros de proceso (`.cfprocess.json`), con perfiles de visibilidad de trazas (`FULL_LAB`, `MASKED`, `REDACTED`).
+- **Ventana independiente**: capacidad de desacoplar el diseñador a una ventana dedicada conservando el estado completo.
 
 ---
 

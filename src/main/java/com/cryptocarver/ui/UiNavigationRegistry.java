@@ -31,7 +31,8 @@ public final class UiNavigationRegistry {
         SAVED_SESSIONS,
         CIPHER,
         AUTHENTICATION,
-        PAYMENTS
+        PAYMENTS,
+        PROCESS_DESIGNER
     }
 
     public enum Variant {
@@ -177,7 +178,7 @@ public final class UiNavigationRegistry {
                 "Manual Conversion", "Decode EBCDIC", "Encode EBCDIC");
         add(routes, new Route(Module.GENERIC, "Compressed Hex"), "Compressed Hex (2-row)");
         add(routes, new Route(Module.GENERIC, "Batch Runner"), "Batch Runner");
-        add(routes, new Route(Module.GENERIC, "Process Designer"), "Process Designer");
+        add(routes, new Route(Module.PROCESS_DESIGNER, "Process Designer"), "Process Designer");
         add(routes, new Route(Module.GENERIC, "Random Generator"),
                 "Random Number Generator", "Random Generation");
         add(routes, new Route(Module.GENERIC, "UUID Generator"), "Generate UUID");

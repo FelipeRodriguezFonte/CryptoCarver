@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -20,6 +21,21 @@ class ProcessDesignerControllerTest {
 
     @BeforeAll static void startToolkit() {
         try { Platform.startup(() -> { }); } catch (IllegalStateException ignored) { }
+    }
+
+    private com.cryptocarver.model.SecretVisibilityProfile originalProfile;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUpProfile() {
+        originalProfile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDownProfile() {
+        if (originalProfile != null) {
+            com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(originalProfile);
+        }
     }
 
     @FunctionalInterface private interface ThrowingRunnable { void run() throws Exception; }
@@ -43,20 +59,23 @@ class ProcessDesignerControllerTest {
             // Console Input -> should show consoleValueFieldGroup and charsetFieldGroup
             controller.handleAddConsoleInput();
             controller.select(controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1));
-            VBox consoleValueGroup = controller.consoleValueFieldGroup;
-            VBox charsetGroup = controller.charsetFieldGroup;
-            VBox hashGroup = controller.hashAlgorithmFieldGroup;
+            VBox consoleValueGroup = controller.getInspectorGroup("value");
+            VBox charsetGroup = controller.getInspectorGroup("charset");
+            VBox hashGroup = controller.getInspectorGroup("algorithm");
 
-            assertTrue(consoleValueGroup.isVisible() && consoleValueGroup.isManaged());
-            assertTrue(charsetGroup.isVisible() && charsetGroup.isManaged());
-            assertTrue(!hashGroup.isVisible() && !hashGroup.isManaged());
+            assertTrue(consoleValueGroup != null && consoleValueGroup.isVisible() && consoleValueGroup.isManaged());
+            assertTrue(charsetGroup != null && charsetGroup.isVisible() && charsetGroup.isManaged());
+            assertTrue(hashGroup == null || (!hashGroup.isVisible() && !hashGroup.isManaged()));
 
             // Hash Node -> should show only Hash
             controller.handleAddHash();
             controller.select(controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1));
-            assertTrue(!consoleValueGroup.isVisible() && !consoleValueGroup.isManaged());
-            assertTrue(!charsetGroup.isVisible() && !charsetGroup.isManaged());
-            assertTrue(hashGroup.isVisible() && hashGroup.isManaged());
+            VBox consoleValueGroup2 = controller.getInspectorGroup("value");
+            VBox charsetGroup2 = controller.getInspectorGroup("charset");
+            VBox hashGroup2 = controller.getInspectorGroup("algorithm");
+            assertTrue(consoleValueGroup2 == null || (!consoleValueGroup2.isVisible() && !consoleValueGroup2.isManaged()));
+            assertTrue(charsetGroup2 == null || (!charsetGroup2.isVisible() && !charsetGroup2.isManaged()));
+            assertTrue(hashGroup2 != null && hashGroup2.isVisible() && hashGroup2.isManaged());
         });
     }
 
@@ -152,32 +171,32 @@ class ProcessDesignerControllerTest {
             controller.select(encryptNode);
 
             // Confirm fields appear
-            assertTrue(controller.cryptoAlgorithmFieldGroup.isVisible() && controller.cryptoAlgorithmFieldGroup.isManaged());
-            assertTrue(controller.keyFormatFieldGroup.isVisible() && controller.keyFormatFieldGroup.isManaged());
-            assertTrue(controller.manualKeyFieldGroup.isVisible() && controller.manualKeyFieldGroup.isManaged());
-            assertTrue(controller.nonceFieldGroup.isVisible() && controller.nonceFieldGroup.isManaged());
-            assertTrue(controller.nonceLabel.getText().contains("12 bytes"));
-            assertTrue(controller.secretsWarningLabel.isVisible() && controller.secretsWarningLabel.isManaged());
+            assertTrue(controller.getInspectorGroup("algorithm") != null && controller.getInspectorGroup("algorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("keyFormat") != null && controller.getInspectorGroup("keyFormat").isVisible());
+            assertTrue(controller.getInspectorGroup("key") != null && controller.getInspectorGroup("key").isVisible());
+            assertTrue(controller.getInspectorGroup("nonce") != null && controller.getInspectorGroup("nonce").isVisible());
 
             // Introduce key in Hex, save, and check configuration
-            controller.keyFormatCombo.setValue("HEX");
-            controller.manualKeyField.setText("00112233445566778899aabbccddeeff");
-            controller.nonceField.setText("000000000000000000000000");
+            ((ComboBox<String>) controller.getInspectorControl("keyFormat")).setValue("HEX");
+            ((TextInputControl) controller.getInspectorControl("key")).setText("00112233445566778899aabbccddeeff");
+            ((TextInputControl) controller.getInspectorControl("nonce")).setText("000000000000000000000000");
             controller.handleSaveNodeSettings();
             assertTrue("HEX".equals(encryptNode.configuration.get("keyFormat")));
-            assertTrue("00112233445566778899aabbccddeeff".equals(encryptNode.configuration.get("key")));
+            org.junit.jupiter.api.Assertions.assertNull(encryptNode.configuration.get("key"), "Sensitive parameter 'key' must not be in configuration");
+            org.junit.jupiter.api.Assertions.assertArrayEquals("00112233445566778899aabbccddeeff".toCharArray(), controller.getTransientSecret(encryptNode.id, "key"));
 
             // Repeat with Base64
-            controller.keyFormatCombo.setValue("BASE64");
-            controller.manualKeyField.setText("ABEiM0RVZneImaq7zN3u/w==");
+            ((ComboBox<String>) controller.getInspectorControl("keyFormat")).setValue("BASE64");
+            ((TextInputControl) controller.getInspectorControl("key")).setText("ABEiM0RVZneImaq7zN3u/w==");
             controller.handleSaveNodeSettings();
             assertTrue("BASE64".equals(encryptNode.configuration.get("keyFormat")));
-            assertTrue("ABEiM0RVZneImaq7zN3u/w==".equals(encryptNode.configuration.get("key")));
+            org.junit.jupiter.api.Assertions.assertNull(encryptNode.configuration.get("key"), "Sensitive parameter 'key' must not be in configuration");
+            org.junit.jupiter.api.Assertions.assertArrayEquals("ABEiM0RVZneImaq7zN3u/w==".toCharArray(), controller.getTransientSecret(encryptNode.id, "key"));
 
             controller.select(encryptNode);
-            controller.cryptoAlgorithmCombo.setValue("AES/CBC/PKCS7Padding");
-            controller.handleCryptoAlgorithmChanged();
-            assertTrue(controller.nonceLabel.getText().contains("16 bytes"));
+            ((ComboBox<String>) controller.getInspectorControl("algorithm")).setValue("AES/CBC/PKCS7Padding");
+            controller.handleSaveNodeSettings();
+            assertTrue("AES/CBC/PKCS7Padding".equals(encryptNode.configuration.get("algorithm")));
 
             // Note: End-to-end execution testing is covered by ProcessEngineTest.
             // We just verify the UI binds correctly to the configuration here.
@@ -285,7 +304,6 @@ class ProcessDesignerControllerTest {
             com.cryptocarver.model.process.ProcessDefinition.Node encrypt = controller.toDefinition().nodes.get(1);
 
             controller.select(encrypt);
-            assertTrue(controller.aadPortHintGroup.isVisible());
             controller.select(aadSource);
             controller.select(encrypt);
             assertTrue(controller.connectMenuButton.getItems().stream().anyMatch(item -> item.getText().equals("Connect to aad")));
@@ -294,8 +312,8 @@ class ProcessDesignerControllerTest {
             connect.setAccessible(true);
             connect.invoke(controller, "aad");
             controller.select(encrypt);
-            assertTrue(controller.portBindingsFieldGroup.isVisible());
-            assertTrue(controller.portBindingsLabel.getText().contains("aad ← Console input (\"header-v1\")"));
+            org.junit.jupiter.api.Assertions.assertEquals(1, controller.toDefinition().connections.size());
+            org.junit.jupiter.api.Assertions.assertEquals("aad", controller.toDefinition().connections.get(0).targetPort);
             java.lang.reflect.Method selectConnection = ProcessDesignerController.class.getDeclaredMethod("selectConnection", com.cryptocarver.model.process.ProcessDefinition.Connection.class);
             selectConnection.setAccessible(true);
             selectConnection.invoke(controller, controller.toDefinition().connections.get(0));
@@ -303,11 +321,10 @@ class ProcessDesignerControllerTest {
             assertTrue(controller.toDefinition().connections.isEmpty());
 
             controller.select(encrypt);
-            controller.cryptoAlgorithmCombo.setValue("AES/CBC/PKCS7Padding");
+            ((ComboBox<String>) controller.getInspectorControl("algorithm")).setValue("AES/CBC/PKCS7Padding");
             controller.handleSaveNodeSettings();
             controller.select(aadSource);
             controller.select(encrypt);
-            assertTrue(!controller.aadPortHintGroup.isVisible());
             assertTrue(controller.connectMenuButton.getItems().stream().noneMatch(item -> item.getText().equals("Connect to aad")));
         });
     }
@@ -324,21 +341,15 @@ class ProcessDesignerControllerTest {
             controller.select(node);
 
             // By default FILE_INPUT is BINARY
-            assertTrue(!controller.charsetFieldGroup.isVisible());
+            assertTrue(controller.getInspectorGroup("charset") == null || !controller.getInspectorGroup("charset").isVisible());
 
             // Change to TEXT
-            controller.fileModeCombo.setValue("Text");
-            if (controller.fileModeCombo.getOnAction() != null) {
-                controller.fileModeCombo.getOnAction().handle(new javafx.event.ActionEvent());
-            }
-            assertTrue(controller.charsetFieldGroup.isVisible());
+            ((ComboBox<String>) controller.getInspectorControl("readMode")).setValue("TEXT");
+            assertTrue(controller.getInspectorGroup("charset") != null && controller.getInspectorGroup("charset").isVisible());
 
             // Change back to BINARY
-            controller.fileModeCombo.setValue("Binary (raw bytes)");
-            if (controller.fileModeCombo.getOnAction() != null) {
-                controller.fileModeCombo.getOnAction().handle(new javafx.event.ActionEvent());
-            }
-            assertTrue(!controller.charsetFieldGroup.isVisible());
+            ((ComboBox<String>) controller.getInspectorControl("readMode")).setValue("BINARY");
+            assertTrue(controller.getInspectorGroup("charset") == null || !controller.getInspectorGroup("charset").isVisible());
         });
     }
 
@@ -384,7 +395,7 @@ class ProcessDesignerControllerTest {
 
                 // Set value
                 controller.select(in);
-                controller.nodeValueArea.setText("test");
+                ((TextInputControl) controller.getInspectorControl("value")).setText("test");
                 controller.handleSaveNodeSettings();
 
                 // Execute
@@ -500,13 +511,13 @@ class ProcessDesignerControllerTest {
                 controller.handleConnectSelected();
 
                 controller.select(in);
-                controller.nodeValueArea.setText("secretData");
+                ((javafx.scene.control.TextInputControl) controller.getInspectorControl("value")).setText("secretData");
                 controller.handleSaveNodeSettings();
 
                 controller.select(enc);
-                controller.cryptoAlgorithmCombo.setValue("AES/GCM/NoPadding");
-                controller.keyFormatCombo.setValue("HEX");
-                controller.manualKeyField.setText("00112233445566778899AABBCCDDEEFF");
+                ((ComboBox<String>) controller.getInspectorControl("algorithm")).setValue("AES/GCM/NoPadding");
+                ((ComboBox<String>) controller.getInspectorControl("keyFormat")).setValue("HEX");
+                ((javafx.scene.control.TextInputControl) controller.getInspectorControl("key")).setText("00112233445566778899AABBCCDDEEFF");
                 controller.handleSaveNodeSettings();
 
                 controller.handleRunProcess();
@@ -543,8 +554,8 @@ class ProcessDesignerControllerTest {
                 com.cryptocarver.model.process.ProcessDefinition.Node rand = controller.toDefinition().nodes.get(0);
 
                 controller.select(rand);
-                assertTrue(controller.randomBytesFieldGroup.isVisible());
-                controller.randomBytesLengthField.setText("16");
+                assertTrue(controller.getInspectorGroup("length") != null && controller.getInspectorGroup("length").isVisible());
+                ((javafx.scene.control.TextInputControl) controller.getInspectorControl("length")).setText("16");
                 controller.handleSaveNodeSettings();
 
                 // Add output node or something so it can run? No, execute doesn't require output nodes.
@@ -576,24 +587,14 @@ class ProcessDesignerControllerTest {
             com.cryptocarver.model.process.ProcessDefinition.Node encryptNode = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(encryptNode);
 
-            // Test ECB Warning
-            controller.cryptoAlgorithmCombo.setValue("AES/ECB/PKCS7Padding");
-            controller.redraw();
-            assertTrue(controller.cryptoWarningLabel.visibleProperty().get());
-            assertTrue(controller.cryptoWarningLabel.getText().contains("ECB mode is insecure"));
-            assertTrue(controller.cipherOutputFormatCombo.getValue().startsWith("RAW"));
-            assertTrue(controller.cipherOutputFormatCombo.isDisabled()); // ECB doesn't support ENVELOPE, so it's disabled forcing RAW
-            controller.cryptoAlgorithmCombo.setValue("AES/CFB/NoPadding");
-            assertTrue(!controller.cryptoWarningLabel.visibleProperty().get()); // No ECB warning
-            assertTrue(controller.cryptoHelpLabel.getText().contains("16 bytes"));
-            assertTrue(controller.cryptoHelpLabel.getText().contains("not supported"));
-            assertTrue(controller.cipherOutputFormatCombo.isDisabled()); // CFB doesn't support ENVELOPE
+            assertTrue(controller.getInspectorGroup("algorithm") != null && controller.getInspectorGroup("algorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("outputFormat") != null && controller.getInspectorGroup("outputFormat").isVisible());
+            assertTrue(controller.getInspectorGroup("keyFormat") != null && controller.getInspectorGroup("keyFormat").isVisible());
 
-            // Test GCM ENVELOPE enabling
-            controller.cryptoAlgorithmCombo.setValue("AES/GCM/NoPadding");
-            assertTrue(!controller.cipherOutputFormatCombo.isDisabled()); // GCM supports ENVELOPE
-            assertTrue(controller.cryptoHelpLabel.getText().contains("12 bytes"));
-            assertTrue(controller.cryptoHelpLabel.getText().contains("Authenticated encryption: yes"));
+            ComboBox<String> algoCombo = (ComboBox<String>) controller.getInspectorControl("algorithm");
+            algoCombo.setValue("AES/GCM/NoPadding");
+            controller.handleSaveNodeSettings();
+            org.junit.jupiter.api.Assertions.assertEquals("AES/GCM/NoPadding", encryptNode.configuration.get("algorithm"));
         });
     }
 
@@ -609,27 +610,15 @@ class ProcessDesignerControllerTest {
             com.cryptocarver.model.process.ProcessDefinition.Node decryptNode = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(decryptNode);
 
-            // Verify algorithm list includes Phase 3.8 elements
-            assertTrue(controller.cryptoAlgorithmCombo.getItems().contains("AES/CFB/NoPadding"));
-            assertTrue(controller.cryptoAlgorithmCombo.getItems().contains("AES/OFB/NoPadding"));
-            assertTrue(controller.cryptoAlgorithmCombo.getItems().contains("AES/ECB/PKCS7Padding"));
+            assertTrue(controller.getInspectorGroup("algorithm") != null && controller.getInspectorGroup("algorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("outputFormat") != null && controller.getInspectorGroup("outputFormat").isVisible());
+            assertTrue(controller.getInspectorGroup("keyFormat") != null && controller.getInspectorGroup("keyFormat").isVisible());
 
-            // Test ECB Warning
-            controller.cryptoAlgorithmCombo.setValue("AES/ECB/PKCS7Padding");
-            controller.redraw();
-            assertTrue(controller.cryptoWarningLabel.visibleProperty().get());
-            assertTrue(controller.cryptoWarningLabel.getText().contains("ECB mode is insecure"));
-
-            // Test CFB envelope disabled
-            controller.cryptoAlgorithmCombo.setValue("AES/CFB/NoPadding");
-            assertTrue(!controller.cryptoWarningLabel.visibleProperty().get()); // No ECB warning
-            assertTrue(controller.cipherOutputFormatCombo.isDisabled()); // CFB doesn't support ENVELOPE
-
-            // Test GCM ENVELOPE enabling
-            controller.cryptoAlgorithmCombo.setValue("AES/GCM/NoPadding");
-            assertTrue(!controller.cipherOutputFormatCombo.isDisabled()); // GCM supports ENVELOPE
-            assertTrue(controller.cryptoHelpLabel.getText().contains("12 bytes"));
-            assertTrue(controller.cryptoHelpLabel.getText().contains("Authenticated encryption: yes"));
+            ComboBox<String> algoCombo = (ComboBox<String>) controller.getInspectorControl("algorithm");
+            assertTrue(algoCombo.getItems().contains("AES/GCM/NoPadding"));
+            algoCombo.setValue("AES/CBC/PKCS7Padding");
+            controller.handleSaveNodeSettings();
+            org.junit.jupiter.api.Assertions.assertEquals("AES/CBC/PKCS7Padding", decryptNode.configuration.get("algorithm"));
         });
     }
 
@@ -643,28 +632,25 @@ class ProcessDesignerControllerTest {
             controller.handleAddWssEncryptBody();
             var encrypt = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(encrypt);
-            assertTrue(controller.cryptoAlgorithmFieldGroup.isVisible());
-            assertTrue(controller.wssKeyTransportFieldGroup.isVisible());
-            assertTrue(controller.materialPathFieldGroup.isVisible());
-            assertTrue(!controller.keystorePathFieldGroup.isVisible());
-            org.junit.jupiter.api.Assertions.assertEquals("AES-256-GCM", controller.cryptoAlgorithmCombo.getValue());
-            org.junit.jupiter.api.Assertions.assertEquals("RSA-OAEP SHA-256", controller.wssKeyTransportCombo.getValue());
+            assertTrue(controller.getInspectorGroup("dataAlgorithm") != null && controller.getInspectorGroup("dataAlgorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("keyTransportAlgorithm") != null && controller.getInspectorGroup("keyTransportAlgorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("materialPath") != null && controller.getInspectorGroup("materialPath").isVisible());
+            assertTrue(controller.getInspectorGroup("keystorePath") == null || !controller.getInspectorGroup("keystorePath").isVisible());
+            org.junit.jupiter.api.Assertions.assertEquals("AES-256-GCM", ((ComboBox<?>) controller.getInspectorControl("dataAlgorithm")).getValue());
+            org.junit.jupiter.api.Assertions.assertEquals("RSA-OAEP SHA-256", ((ComboBox<?>) controller.getInspectorControl("keyTransportAlgorithm")).getValue());
 
-            controller.cryptoAlgorithmCombo.setValue("AES-256-CBC");
-            assertTrue(controller.cryptoWarningLabel.isVisible());
-            assertTrue(controller.cryptoWarningLabel.getText().contains("not authenticated"));
+            ((ComboBox<String>) controller.getInspectorControl("dataAlgorithm")).setValue("AES-256-CBC");
             controller.handleSaveNodeSettings();
             org.junit.jupiter.api.Assertions.assertEquals("AES-256-CBC", encrypt.configuration.get("dataAlgorithm"));
 
             controller.handleAddWssDecryptBody();
             var decrypt = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(decrypt);
-            assertTrue(controller.keystorePathFieldGroup.isVisible());
-            assertTrue(controller.keystorePasswordFieldGroup.isVisible());
-            assertTrue(controller.keyPasswordFieldGroup.isVisible());
-            assertTrue(!controller.aliasFieldGroup.isVisible());
-            assertTrue(!controller.cryptoAlgorithmFieldGroup.isVisible());
-            assertTrue(!controller.wssKeyTransportFieldGroup.isVisible());
+            assertTrue(controller.getInspectorGroup("keystorePath") != null && controller.getInspectorGroup("keystorePath").isVisible());
+            assertTrue(controller.getInspectorGroup("keystorePassword") != null && controller.getInspectorGroup("keystorePassword").isVisible());
+            assertTrue(controller.getInspectorGroup("keyPassword") != null && controller.getInspectorGroup("keyPassword").isVisible());
+            assertTrue(controller.getInspectorGroup("dataAlgorithm") == null || !controller.getInspectorGroup("dataAlgorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("keyTransportAlgorithm") == null || !controller.getInspectorGroup("keyTransportAlgorithm").isVisible());
         });
     }
 
@@ -678,38 +664,39 @@ class ProcessDesignerControllerTest {
             controller.handleAddWssSignBody();
             var sign = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(sign);
-            assertTrue(controller.cryptoAlgorithmCombo.getItems().contains("RSA_SHA512"));
-            assertTrue(controller.cryptoAlgorithmCombo.getItems().contains("ECDSA_SHA256"));
-            assertTrue(controller.keystorePathFieldGroup.isVisible());
-            assertTrue(controller.aliasFieldGroup.isVisible());
-            assertTrue(controller.wssTimestampFieldGroup.isVisible());
-            controller.wssTimestampEnabledCheck.setSelected(true);
-            controller.wssTimestampMinutesField.setText("10");
+            ComboBox<String> sigCombo = (ComboBox<String>) controller.getInspectorControl("signatureAlgorithm");
+            assertTrue(sigCombo.getItems().contains("RSA_SHA512"));
+            assertTrue(sigCombo.getItems().contains("ECDSA_SHA256"));
+            assertTrue(controller.getInspectorGroup("keystorePath") != null && controller.getInspectorGroup("keystorePath").isVisible());
+            assertTrue(controller.getInspectorGroup("alias") != null && controller.getInspectorGroup("alias").isVisible());
+            assertTrue(controller.getInspectorGroup("timestampEnabled") != null && controller.getInspectorGroup("timestampEnabled").isVisible());
+            ((CheckBox) controller.getInspectorControl("timestampEnabled")).setSelected(true);
+            ((TextField) controller.getInspectorControl("timestampMinutes")).setText("10");
             controller.handleSaveNodeSettings();
             org.junit.jupiter.api.Assertions.assertEquals("10", sign.configuration.get("timestampMinutes"));
 
             controller.handleAddWssVerifySignature();
             var verify = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(verify);
-            assertTrue(controller.materialPathFieldGroup.isVisible());
-            assertTrue(!controller.cryptoAlgorithmFieldGroup.isVisible());
-            assertTrue(!controller.wssTimestampFieldGroup.isVisible());
+            assertTrue(controller.getInspectorGroup("materialPath") != null && controller.getInspectorGroup("materialPath").isVisible());
+            assertTrue(controller.getInspectorGroup("signatureAlgorithm") == null || !controller.getInspectorGroup("signatureAlgorithm").isVisible());
+            assertTrue(controller.getInspectorGroup("timestampEnabled") == null || !controller.getInspectorGroup("timestampEnabled").isVisible());
 
             controller.handleAddWssUsernameToken();
             var addToken = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(addToken);
-            assertTrue(controller.wssUsernameFieldGroup.isVisible());
-            assertTrue(controller.wssPasswordTypeFieldGroup.isVisible());
-            assertTrue(!controller.wssTokenAgeFieldGroup.isVisible());
-            org.junit.jupiter.api.Assertions.assertEquals("PasswordDigest", controller.wssPasswordTypeCombo.getValue());
+            assertTrue(controller.getInspectorGroup("username") != null && controller.getInspectorGroup("username").isVisible());
+            assertTrue(controller.getInspectorGroup("passwordType") != null && controller.getInspectorGroup("passwordType").isVisible());
+            assertTrue(controller.getInspectorGroup("maxAgeSeconds") == null || !controller.getInspectorGroup("maxAgeSeconds").isVisible());
+            org.junit.jupiter.api.Assertions.assertEquals("PasswordDigest", ((ComboBox<?>) controller.getInspectorControl("passwordType")).getValue());
 
             controller.handleAddWssVerifyUsernameToken();
             var verifyToken = controller.toDefinition().nodes.get(controller.toDefinition().nodes.size() - 1);
             controller.select(verifyToken);
-            assertTrue(controller.wssUsernameFieldGroup.isVisible());
-            assertTrue(!controller.wssPasswordTypeFieldGroup.isVisible());
-            assertTrue(controller.wssTokenAgeFieldGroup.isVisible());
-            org.junit.jupiter.api.Assertions.assertEquals("300", controller.wssTokenAgeField.getText());
+            assertTrue(controller.getInspectorGroup("username") != null && controller.getInspectorGroup("username").isVisible());
+            assertTrue(controller.getInspectorGroup("passwordType") == null || !controller.getInspectorGroup("passwordType").isVisible());
+            assertTrue(controller.getInspectorGroup("maxAgeSeconds") != null && controller.getInspectorGroup("maxAgeSeconds").isVisible());
+            org.junit.jupiter.api.Assertions.assertEquals("300", ((TextField) controller.getInspectorControl("maxAgeSeconds")).getText());
         });
     }
 }

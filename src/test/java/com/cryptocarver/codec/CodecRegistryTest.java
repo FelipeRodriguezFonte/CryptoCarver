@@ -88,10 +88,16 @@ class CodecRegistryTest {
         byte[] input = { 1, 2, 3 };
         String enc = registry.encode(input, ByteFormat.BASE58_CHECK);
         assertArrayEquals(input, registry.decode(enc, ByteFormat.BASE58_CHECK));
+    }
 
-        // Invalid checksum: mutate one char
-        char mutated = enc.charAt(0) == '1' ? '2' : '1';
-        String badEnc = mutated + enc.substring(1);
+    @Test
+    void testBase58CheckRejectsCorruptedChecksum() {
+        String enc = registry.encode("checksum".getBytes(StandardCharsets.UTF_8), ByteFormat.BASE58_CHECK);
+        char last = enc.charAt(enc.length() - 1);
+        char mutated = last == '1' ? '2' : '1';
+        String badEnc = enc.substring(0, enc.length() - 1) + mutated;
+
+        // A syntactically valid Base58Check value with a corrupted checksum must fail.
         assertThrowsCodecException(() -> registry.decode(badEnc, ByteFormat.BASE58_CHECK), ByteFormat.BASE58_CHECK);
     }
 

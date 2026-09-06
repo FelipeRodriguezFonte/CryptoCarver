@@ -346,6 +346,9 @@
                     <!-- WSS Security Container -->
                     <fx:include source="wss_security.fxml" fx:id="wssSecurityContainer" />
 
+                    <!-- Process Designer Container -->
+                    <fx:include source="process_designer.fxml" fx:id="processDesignerContainer" />
+
                     </VBox>
                 </ScrollPane>
             </VBox>

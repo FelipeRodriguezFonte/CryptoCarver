@@ -4,7 +4,15 @@
 
 <Accordion xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.GenericController" fx:id="genericContainer" managed="false" visible="false" styleClass="module-accordion">
     <panes>
-        <fx:include source="process_designer.fxml" />
+        <!-- PROCESS DESIGNER LAUNCHER -->
+        <TitledPane text="🧩 Process Designer" expanded="false">
+            <VBox spacing="12" styleClass="module-pane-content">
+                <Label text="Compose and execute safe data workflows visually by connecting processing nodes." wrapText="true" styleClass="helper-text"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Button text="Open Process Designer" onAction="#handleLaunchProcessDesigner" styleClass="action-button-primary"/>
+                </HBox>
+            </VBox>
+        </TitledPane>
         <!-- KEY & CERTIFICATE FORMAT WORKBENCH -->
         <TitledPane text="🛠 Key &amp; Certificate Format Workbench">
             <VBox spacing="12" styleClass="module-pane-content">

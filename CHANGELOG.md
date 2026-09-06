@@ -1,9 +1,37 @@
 # Pendiente de publicación — evolución posterior a 2.3.0
 
+### Process Designer — Fase 5B.2a (Claves)
+
+- Añadidos los 20 tipos declarativos de operaciones de claves: KCV, paridad,
+  XOR split/combine, cinco KDF, wrapping AES RFC 3394/5649, TR-31, análisis
+  ICSF de sólo lectura, generación de pares y análisis de material.
+- Las fachadas criptográficas existentes son la única implementación; los
+  parámetros sensibles se mantienen en `transientSecrets` y las salidas de
+  material se redaccionan según el perfil de visibilidad.
+- Incorporados procesos `.cfprocess.json` autoverificados y puertas de catálogo,
+  paridad de fachada y rechazo preflight.
+
 **Fecha de corte:** 17 de julio de 2026
 **Canal:** laboratorio / experimental hasta completar el checklist de release
 
 ### Añadido
+
+- **Process Designer — Fase 5B.1 (Fontanería y Representación)**:
+  - **23 nuevos tipos de nodo declarativos** registrados en `NodeCatalog` mediante `NodeDescriptor`, sin ramificación condicional en el controlador de la UI.
+  - **Familia Fontanería (Plumbing)**: `CONCAT`, `SLICE`, `PAD`, `UNPAD`, `XOR` y `ASSERT_EQUALS` (comparación en tiempo constante para autoverificación de flujos).
+  - **Familia Conversiones**: `BASE32_ENCODE`, `BASE32_DECODE`, `BASE58_ENCODE`, `BASE58_DECODE`, `BASE58CHECK_ENCODE`, `BASE58CHECK_DECODE`, `EBCDIC_ENCODE`, `EBCDIC_DECODE`, `COMPRESS`, `DECOMPRESS`, `CHARSET_CONVERT`.
+  - **Familia Utilidades e Inspección**: `ASN1_DECODE`, `CHECK_DIGIT_CALC`, `CHECK_DIGIT_VERIFY`, `MODULAR_ARITHMETIC`, `UUID_GENERATE`, `BYTE_STATISTICS`.
+  - **Reutilización pura de fachadas**: Envoltura directa sin duplicación criptográfica sobre `PaddingUtil`, `KeyOperations`, `MACOperations`, `CodecRegistry`, `EBCDICConverter`, `CompressionCodec`, `ASN1Parser`, `CheckDigitCalculator`, `ModularArithmetic`, `UUIDGenerator` y `ByteStatistics`.
+  - **Resolución de deudas técnicas 5A**: Internacionalización completa de literales de conexión en `ProcessDesignerController` y redacción rigurosa de trazas y telemetría de ejecución respetando `SecretVisibilityProfile` (`FULL_LAB`, `MASKED`, `REDACTED`).
+
+- **Process Designer — Fase 5A (Workbench & Canvas)**:
+  - **Lienzo escalable infinito**: zoom continuo (25%–400%), ajuste al contenido, restablecimiento (100%), navegación por arrastre de fondo y expansión dinámica de límites según coordenadas de nodos.
+  - **Paleta de nodos buscable y categorizada**: panel lateral con filtrado instantáneo por texto, categoría y descripción, alimentada dinámicamente por `NodeCatalog`. Doble clic para añadir nodos directamente en el lienzo.
+  - **Inspector dinámico dirigido por esquemas**: migración completa de los 8 handlers de nodos a `NodeDescriptor` y `NodeParameter`. Eliminación de los 27 grupos FXML estáticos manuales en favor de renderizado JavaFX dinámico (`NodeInspectorRenderer`) con visibilidad condicional reactiva.
+  - **Protección estricta de secretos**: campos marcados como sensibles o `PASSWORD` se ocultan con `PasswordField`, residen exclusivamente en memoria volátil de sesión (`transientSecrets`) y son filtrados tanto al serializar como al deserializar procesos `.cfprocess.json`.
+  - **Ventana independiente (Detached Stage)**: posibilidad de desacoplar el diseñador a una ventana externa independiente (`ProcessDesignerWindow`) sin duplicación de estado y con re-acoplamiento seguro.
+  - **Curvas de conexión interactivas**: curvas bezier suaves arrastrables entre puertos de nodos, con validación de tipos y retroalimentación de incompatibilidad sin ejecuciones ni validaciones espurias durante el arrastre.
+  - **Deshacer / Rehacer estructural**: pila de comandos de hasta 60 estados con aislamiento mediante instantáneas profundas (`snapshot`).
 
 - **Exportación e importación de claves ICSF / CCA con los verbos nativos**, en
   un tercer panel dentro de **Keys → Tools**. Reproduce en claro, byte a byte, lo

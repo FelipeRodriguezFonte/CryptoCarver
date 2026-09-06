@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,7 +80,7 @@ public final class GnuPgInterop {
         Availability availability = probe();
         if (!availability.available()) throw new IllegalStateException(availability.message());
 
-        Path home = Files.createTempDirectory("cryptocarver-gpg-");
+        Path home = createGpgHomeDirectory();
         try {
             Path publicKey = home.resolve("public.asc");
             Path content = home.resolve("content.bin");
@@ -125,7 +127,7 @@ public final class GnuPgInterop {
         Availability availability = probe();
         if (!availability.available()) throw new IllegalStateException(availability.message());
         String fingerprint = OpenPgpOperations.inspectKey(publicKeyArmored).fingerprint();
-        Path home = Files.createTempDirectory("cryptocarver-gpg-interop-");
+        Path home = createGpgHomeDirectory();
         try {
             Path publicKey = home.resolve("public.asc");
             Path secretKey = home.resolve("secret.asc");
@@ -281,7 +283,48 @@ public final class GnuPgInterop {
         return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
     }
 
-    private static void deleteRecursively(Path root) throws IOException {
+    /**
+     * Creates an isolated temporary directory to serve as GNUPGHOME.
+     *
+     * <p>AF_UNIX domain socket paths on macOS and BSD systems are limited to 104 characters
+     * (sizeof(sockaddr_un.sun_path) == 104). On macOS, Java's default {@code java.io.tmpdir}
+     * resolves to {@code /var/folders/...} which easily exceeds 70-80 chars; combined with GnuPG
+     * daemon socket filenames (e.g., {@code S.gpg-agent}), GnuPG fails with 'File name too long'.</p>
+     *
+     * <p>To mitigate this while maintaining defense-in-depth on multi-user systems:
+     * <ul>
+     *   <li>Relocation to {@code /tmp} is strictly scoped to macOS or cases where the default tmp path exceeds 60 characters.</li>
+     *   <li>Directories are created with owner-only POSIX permissions ({@code rwx------} / 0700).</li>
+     *   <li>Cleaned up recursively in {@code finally} blocks even if GnuPG operations fail.</li>
+     * </ul>
+     * </p>
+     */
+    static Path createGpgHomeDirectory() throws IOException {
+        String defaultTmp = System.getProperty("java.io.tmpdir", "/tmp");
+        boolean isMac = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("mac");
+        Path basePath;
+        if ((isMac || defaultTmp.length() > 60) && Files.isDirectory(Path.of("/tmp")) && Files.isWritable(Path.of("/tmp"))) {
+            basePath = Path.of("/tmp");
+        } else {
+            basePath = Path.of(defaultTmp);
+        }
+
+        java.util.Set<PosixFilePermission> ownerOnly = PosixFilePermissions.fromString("rwx------");
+        Path home;
+        try {
+            home = Files.createTempDirectory(basePath, "cc-gpg-", PosixFilePermissions.asFileAttribute(ownerOnly));
+        } catch (UnsupportedOperationException e) {
+            home = Files.createTempDirectory(basePath, "cc-gpg-");
+        }
+        try {
+            Files.setPosixFilePermissions(home, ownerOnly);
+        } catch (UnsupportedOperationException | IOException ignored) {
+            // Non-POSIX fallback (e.g. Windows)
+        }
+        return home;
+    }
+
+    static void deleteRecursively(Path root) throws IOException {
         if (root == null || !Files.exists(root)) return;
         try (var paths = Files.walk(root)) {
             paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {

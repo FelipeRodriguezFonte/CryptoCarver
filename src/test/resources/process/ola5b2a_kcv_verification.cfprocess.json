@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "name": "Ola 5B.2a KCV verification",
+  "nodes": [
+    {"id":"keyText","type":"CONSOLE_INPUT","label":"Known key hex","x":20,"y":80,"configuration":{"value":"00112233445566778899AABBCCDDEEFF"}},
+    {"id":"keyDecode","type":"HEX_DECODE","label":"Decode key","x":160,"y":80,"configuration":{}},
+    {"id":"keyHex","type":"HEX_ENCODE","label":"Key HEX port","x":300,"y":80,"configuration":{}},
+    {"id":"kcv","type":"KCV","label":"VISA KCV","x":460,"y":80,"configuration":{"method":"VISA"}},
+    {"id":"expected","type":"CONSOLE_INPUT","label":"Known KCV","x":460,"y":220,"configuration":{"value":"FB0975"}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify KCV","x":640,"y":140,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"keyText","to":"keyDecode","targetPort":"input"},
+    {"from":"keyDecode","to":"keyHex","targetPort":"input"},
+    {"from":"keyHex","to":"kcv","targetPort":"key"},
+    {"from":"kcv","to":"assert","targetPort":"actual"},
+    {"from":"expected","to":"assert","targetPort":"expected"}
+  ]
+}

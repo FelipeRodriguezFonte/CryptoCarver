@@ -37,6 +37,96 @@ public final class WssNodeHandler implements ProcessNodeHandler {
     }
 
     @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        List<String> ksTypes = List.of("PKCS12", "JKS", "BCFKS");
+        List<String> dataAlgos = List.of("AES-256-GCM", "AES-128-GCM", "AES-256-CBC", "AES-128-CBC", "TripleDES-CBC");
+        List<String> keyTransportAlgos = List.of("RSA-OAEP SHA-256", "RSA-OAEP SHA-1", "RSA-v1.5");
+        List<String> sigAlgos = List.of("RSA_SHA256", "RSA_SHA384", "RSA_SHA512", "ECDSA_SHA256", "ECDSA_SHA384", "ECDSA_SHA512");
+        List<String> passwordTypes = List.of("PasswordDigest", "PasswordText");
+
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor(
+                ENCRYPT_BODY,
+                "WS-Security",
+                "module.process.type.wssEncrypt",
+                "module.process.desc.wssEncrypt",
+                "🛡",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("materialPath", "module.process.param.materialPath", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, ""),
+                    new com.cryptocarver.model.process.NodeParameter("dataAlgorithm", "module.process.param.dataAlgorithm", com.cryptocarver.model.process.ParameterKind.COMBO, dataAlgos, "AES-256-GCM"),
+                    new com.cryptocarver.model.process.NodeParameter("keyTransportAlgorithm", "module.process.param.keyTransportAlgorithm", com.cryptocarver.model.process.ParameterKind.COMBO, keyTransportAlgos, "RSA-OAEP SHA-256")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                DECRYPT_BODY,
+                "WS-Security",
+                "module.process.type.wssDecrypt",
+                "module.process.desc.wssDecrypt",
+                "🔓",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("keystorePath", "module.process.param.keystorePath", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, ""),
+                    new com.cryptocarver.model.process.NodeParameter("keystoreType", "module.process.param.keystoreType", com.cryptocarver.model.process.ParameterKind.COMBO, ksTypes, "PKCS12"),
+                    new com.cryptocarver.model.process.NodeParameter("alias", "module.process.param.alias", com.cryptocarver.model.process.ParameterKind.TEXT, ""),
+                    new com.cryptocarver.model.process.NodeParameter("keystorePassword", "module.process.param.keystorePassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+                    new com.cryptocarver.model.process.NodeParameter("keyPassword", "module.process.param.keyPassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null)
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                SIGN_BODY,
+                "WS-Security",
+                "module.process.type.wssSign",
+                "module.process.desc.wssSign",
+                "✍",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("keystorePath", "module.process.param.keystorePath", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, ""),
+                    new com.cryptocarver.model.process.NodeParameter("keystoreType", "module.process.param.keystoreType", com.cryptocarver.model.process.ParameterKind.COMBO, ksTypes, "PKCS12"),
+                    new com.cryptocarver.model.process.NodeParameter("alias", "module.process.param.alias", com.cryptocarver.model.process.ParameterKind.TEXT, ""),
+                    new com.cryptocarver.model.process.NodeParameter("keystorePassword", "module.process.param.keystorePassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+                    new com.cryptocarver.model.process.NodeParameter("keyPassword", "module.process.param.keyPassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+                    new com.cryptocarver.model.process.NodeParameter("signatureAlgorithm", "module.process.param.signatureAlgorithm", com.cryptocarver.model.process.ParameterKind.COMBO, sigAlgos, "RSA_SHA256"),
+                    new com.cryptocarver.model.process.NodeParameter("timestampEnabled", "module.process.param.timestampEnabled", com.cryptocarver.model.process.ParameterKind.CHECKBOX, "false"),
+                    new com.cryptocarver.model.process.NodeParameter("timestampMinutes", "module.process.param.timestampMinutes", com.cryptocarver.model.process.ParameterKind.NUMBER, "5", false, null, "timestampEnabled=true"),
+                    new com.cryptocarver.model.process.NodeParameter("timestampSigned", "module.process.param.timestampSigned", com.cryptocarver.model.process.ParameterKind.CHECKBOX, "true", false, null, "timestampEnabled=true")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                VERIFY_SIGNATURE,
+                "WS-Security",
+                "module.process.type.wssVerify",
+                "module.process.desc.wssVerify",
+                "🔍",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("materialPath", "module.process.param.materialPath", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, "")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                ADD_USERNAME_TOKEN,
+                "WS-Security",
+                "module.process.type.wssUsernameAdd",
+                "module.process.desc.wssUsernameAdd",
+                "👤",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("username", "module.process.param.username", com.cryptocarver.model.process.ParameterKind.TEXT, ""),
+                    new com.cryptocarver.model.process.NodeParameter("wssPassword", "module.process.param.wssPassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+                    new com.cryptocarver.model.process.NodeParameter("passwordType", "module.process.param.passwordType", com.cryptocarver.model.process.ParameterKind.COMBO, passwordTypes, "PasswordDigest")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                VERIFY_USERNAME_TOKEN,
+                "WS-Security",
+                "module.process.type.wssUsernameVerify",
+                "module.process.desc.wssUsernameVerify",
+                "🛡",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("username", "module.process.param.username", com.cryptocarver.model.process.ParameterKind.TEXT, ""),
+                    new com.cryptocarver.model.process.NodeParameter("wssPassword", "module.process.param.wssPassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+                    new com.cryptocarver.model.process.NodeParameter("maxAgeSeconds", "module.process.param.maxAgeSeconds", com.cryptocarver.model.process.ParameterKind.NUMBER, "300")
+                )
+            )
+        );
+    }
+
+    @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         return List.of(new PortDefinition("payload", Set.of(Representation.TEXT_UTF8), true));
     }

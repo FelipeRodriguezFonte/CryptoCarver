@@ -1,0 +1,121 @@
+{
+  "version": 3,
+  "name": "AES-GCM encrypt and decrypt",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "CONSOLE_INPUT",
+      "label": "Plaintext",
+      "x": 40.0,
+      "y": 140.0,
+      "configuration": {
+        "value": "Hello, CryptoForge"
+      }
+    },
+    {
+      "id": "key",
+      "type": "AES_KEY_GENERATE",
+      "label": "Generate AES key",
+      "x": 220.0,
+      "y": 300.0,
+      "configuration": {
+        "keySize": "256",
+        "keyAlgorithm": "AES"
+      }
+    },
+    {
+      "id": "iv",
+      "type": "RANDOM_BYTES",
+      "label": "Random 12-byte IV",
+      "x": 220.0,
+      "y": 40.0,
+      "configuration": {
+        "length": "12"
+      }
+    },
+    {
+      "id": "encrypt",
+      "type": "ENCRYPT",
+      "label": "Encrypt AES-GCM",
+      "x": 410.0,
+      "y": 140.0,
+      "configuration": {
+        "algorithm": "AES/GCM/NoPadding",
+        "keyFormat": "HEX",
+        "generateNonce": "false",
+        "outputFormat": "RAW"
+      }
+    },
+    {
+      "id": "decrypt",
+      "type": "DECRYPT",
+      "label": "Decrypt AES-GCM",
+      "x": 620.0,
+      "y": 140.0,
+      "configuration": {
+        "algorithm": "AES/GCM/NoPadding",
+        "keyFormat": "HEX",
+        "generateNonce": "false",
+        "outputFormat": "RAW"
+      }
+    },
+    {
+      "id": "decode",
+      "type": "UTF8_DECODE",
+      "label": "Decode UTF-8",
+      "x": 820.0,
+      "y": 140.0,
+      "configuration": {}
+    },
+    {
+      "id": "output",
+      "type": "CONSOLE_OUTPUT",
+      "label": "Recovered text",
+      "x": 1000.0,
+      "y": 140.0,
+      "configuration": {}
+    }
+  ],
+  "connections": [
+    {
+      "from": "input",
+      "to": "encrypt",
+      "targetPort": "payload"
+    },
+    {
+      "from": "key",
+      "to": "encrypt",
+      "targetPort": "key"
+    },
+    {
+      "from": "key",
+      "to": "decrypt",
+      "targetPort": "key"
+    },
+    {
+      "from": "iv",
+      "to": "encrypt",
+      "targetPort": "iv"
+    },
+    {
+      "from": "iv",
+      "to": "decrypt",
+      "targetPort": "iv"
+    },
+    {
+      "from": "encrypt",
+      "to": "decrypt",
+      "targetPort": "payload"
+    },
+    {
+      "from": "decrypt",
+      "to": "decode",
+      "targetPort": "input"
+    },
+    {
+      "from": "decode",
+      "to": "output",
+      "targetPort": "input"
+    }
+  ]
+}

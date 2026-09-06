@@ -142,3 +142,20 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔎 | Verify UsernameToken (WSS) | `op_wss_username_verify` | EXPERIMENTAL | HIGH | `Verify UsernameToken (WSS)` | WSS, SOAP, UsernameToken |
 | ✅ | Verify XML (XAdES) | `op_xml_verify` | STABLE | LOW | `Verify XML (XAdES)` | - |
 
+## Process Designer — Phase 5B.2a (Key nodes)
+
+The following declarative node types are available in Process Designer. They
+delegate to tested crypto facades; secret parameters are transient and are
+never persisted in `.cfprocess.json`.
+
+| Family | Node types |
+|---|---|
+| Key checks and XOR sharing | `KCV`, `KEY_SPLIT_XOR`, `KEY_COMBINE_XOR`, `PARITY_ADJUST`, `PARITY_CHECK` |
+| Key derivation | `KDF_HKDF`, `KDF_SP800_108`, `KDF_X963`, `KDF_SCRYPT`, `KDF_ARGON2` |
+| AES key wrap | `AES_KEYWRAP_3394`, `AES_UNWRAP_3394`, `AES_KEYWRAP_5649`, `AES_UNWRAP_5649` |
+| TR-31 and ICSF | `TR31_WRAP`, `TR31_UNWRAP`, `TR31_PARSE_HEADER`, `ICSF_TOKEN_PARSE` |
+| Asymmetric material | `KEYPAIR_GENERATE`, `RSA_KEYPAIR_GENERATE` (compatibility alias), `KEY_MATERIAL_INSPECT` |
+
+`ICSF_TOKEN_PARSE` is read-only. The current Process Designer transports XOR
+shares as one lossless HEX bundle (`share:share:share`) because the 5B SPI
+exposes one `FlowValue` output per node; `KEY_COMBINE_XOR` consumes that bundle.

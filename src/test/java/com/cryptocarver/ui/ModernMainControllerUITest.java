@@ -1024,7 +1024,8 @@ class ModernMainControllerUITest {
                         getField(controller, "postQuantumContainer"),
                         getField(controller, "xmlSecurityContainer"),
                         getField(controller, "wssSecurityContainer"),
-                        getField(controller, "savedSessionsContainer"));
+                        getField(controller, "savedSessionsContainer"),
+                        getField(controller, "processDesignerContainer"));
                 for (com.cryptocarver.model.OperationDescriptor operation
                         : com.cryptocarver.model.OperationRegistry.getInstance().getAll()) {
                     route.invoke(controller, operation.getNavigationPath());

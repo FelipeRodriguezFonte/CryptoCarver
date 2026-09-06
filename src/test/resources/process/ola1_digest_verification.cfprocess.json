@@ -1,0 +1,74 @@
+{
+  "version": 3,
+  "name": "Ola 1 Digest Verification",
+  "nodes": [
+    {
+      "id": "input_text",
+      "type": "CONSOLE_INPUT",
+      "label": "Input Text",
+      "x": 40.0,
+      "y": 100.0,
+      "configuration": {
+        "value": "Hello World"
+      }
+    },
+    {
+      "id": "sha256_hash",
+      "type": "HASH",
+      "label": "SHA-256 Digest",
+      "x": 220.0,
+      "y": 100.0,
+      "configuration": {
+        "algorithm": "SHA-256"
+      }
+    },
+    {
+      "id": "hex_encode",
+      "type": "HEX_ENCODE",
+      "label": "Hex Encode",
+      "x": 420.0,
+      "y": 100.0,
+      "configuration": {}
+    },
+    {
+      "id": "expected_hex",
+      "type": "CONSOLE_INPUT",
+      "label": "Expected Digest",
+      "x": 420.0,
+      "y": 240.0,
+      "configuration": {
+        "value": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+      }
+    },
+    {
+      "id": "assert_match",
+      "type": "ASSERT_EQUALS",
+      "label": "Verify Digest Match",
+      "x": 640.0,
+      "y": 160.0,
+      "configuration": {}
+    }
+  ],
+  "connections": [
+    {
+      "from": "input_text",
+      "to": "sha256_hash",
+      "targetPort": "input"
+    },
+    {
+      "from": "sha256_hash",
+      "to": "hex_encode",
+      "targetPort": "input"
+    },
+    {
+      "from": "hex_encode",
+      "to": "assert_match",
+      "targetPort": "actual"
+    },
+    {
+      "from": "expected_hex",
+      "to": "assert_match",
+      "targetPort": "expected"
+    }
+  ]
+}

@@ -134,7 +134,7 @@ class ProcessDesignerUX12UITest {
 
                 controller.handleClearCanvas();
                 controller.handleAddConsoleInput();
-                controller.nodeValueArea.setText("Payload to cancel");
+                ((javafx.scene.control.TextInputControl) controller.getInspectorControl("value")).setText("Payload to cancel");
                 controller.handleSaveNodeSettings();
                 controller.handleAddHash();
 

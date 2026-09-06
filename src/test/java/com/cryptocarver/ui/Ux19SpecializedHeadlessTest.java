@@ -24,7 +24,7 @@ class Ux19SpecializedHeadlessTest {
                 UiNavigationRegistry.resolve("WSS Security").orElseThrow().module());
         assertEquals(UiNavigationRegistry.Module.PAYMENTS,
                 UiNavigationRegistry.resolve("Payments").orElseThrow().module());
-        assertEquals(UiNavigationRegistry.Module.GENERIC,
+        assertEquals(UiNavigationRegistry.Module.PROCESS_DESIGNER,
                 UiNavigationRegistry.resolve("Process Designer").orElseThrow().module());
     }
 

@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "name": "Ola 1 PKCS7 verification",
+  "nodes": [
+    {"id":"input","type":"CONSOLE_INPUT","label":"Original text","x":20,"y":80,"configuration":{"value":"PKCS7 process fixture"}},
+    {"id":"pad","type":"PAD","label":"PKCS7","x":180,"y":80,"configuration":{"paddingType":"PKCS7","blockSize":"16"}},
+    {"id":"unpad","type":"UNPAD","label":"Unpad","x":340,"y":80,"configuration":{"paddingType":"PKCS7"}},
+    {"id":"expected","type":"CONSOLE_INPUT","label":"Expected original","x":340,"y":220,"configuration":{"value":"PKCS7 process fixture"}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify round trip","x":520,"y":140,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"input","to":"pad","targetPort":"input"},
+    {"from":"pad","to":"unpad","targetPort":"input"},
+    {"from":"unpad","to":"assert","targetPort":"actual"},
+    {"from":"expected","to":"assert","targetPort":"expected"}
+  ]
+}

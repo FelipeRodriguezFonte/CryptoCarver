@@ -42,4 +42,28 @@ class GnuPgInteropTest {
             Arrays.fill(passphrase, '\0');
         }
     }
+
+    @Test
+    void createGpgHomeDirectoryEnforcesPermissionsAndCleansUpOnFailure() throws Exception {
+        java.nio.file.Path home = GnuPgInterop.createGpgHomeDirectory();
+        try {
+            assertTrue(java.nio.file.Files.exists(home), "Created home directory must exist");
+            try {
+                java.util.Set<java.nio.file.attribute.PosixFilePermission> perms = java.nio.file.Files.getPosixFilePermissions(home);
+                String permString = java.nio.file.attribute.PosixFilePermissions.toString(perms);
+                assertTrue(permString.equals("rwx------"), "Temporary GNUPGHOME must have 0700 (rwx------) permissions, was: " + permString);
+            } catch (UnsupportedOperationException ignored) {
+                // Non-POSIX system
+            }
+
+            // Write a dummy file inside
+            java.nio.file.Path dummyFile = home.resolve("dummy.txt");
+            java.nio.file.Files.writeString(dummyFile, "test data");
+            assertTrue(java.nio.file.Files.exists(dummyFile));
+        } finally {
+            // Confirm deletion in finally
+            GnuPgInterop.deleteRecursively(home);
+            assertFalse(java.nio.file.Files.exists(home), "Home directory must be deleted after cleanup");
+        }
+    }
 }

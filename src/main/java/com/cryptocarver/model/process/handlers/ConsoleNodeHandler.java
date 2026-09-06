@@ -18,9 +18,35 @@ public class ConsoleNodeHandler implements ProcessNodeHandler {
     }
 
     @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "CONSOLE_INPUT",
+                "Inputs",
+                "module.process.type.consoleInput",
+                "module.process.desc.consoleInput",
+                "⌨",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("value", "module.process.param.value", com.cryptocarver.model.process.ParameterKind.MULTILINE, ""),
+                    new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO,
+                        List.of("UTF-8", "ISO-8859-1", "US-ASCII", "UTF-16"), "UTF-8")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "CONSOLE_OUTPUT",
+                "Outputs",
+                "module.process.type.consoleOutput",
+                "module.process.desc.consoleOutput",
+                "📺",
+                List.of()
+            )
+        );
+    }
+
+    @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         if ("CONSOLE_INPUT".equals(node.type)) return List.of();
-        return List.of(new PortDefinition("input", Set.of(Representation.values()), true));
+        return List.of(new PortDefinition("input", Representation.standardValues(), true));
     }
 
     @Override

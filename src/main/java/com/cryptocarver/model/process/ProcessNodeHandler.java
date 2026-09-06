@@ -17,5 +17,9 @@ public interface ProcessNodeHandler {
         // default no-op
     }
 
+    default List<NodeDescriptor> descriptors() {
+        return List.of();
+    }
+
     public record PortDefinition(String name, Set<Representation> acceptedRepresentations, boolean required) {}
 }

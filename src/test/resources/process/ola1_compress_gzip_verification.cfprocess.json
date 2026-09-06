@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "name": "Ola 1 gzip verification",
+  "nodes": [
+    {"id":"input","type":"CONSOLE_INPUT","label":"Original text","x":20,"y":80,"configuration":{"value":"CryptoCarver process fixture"}},
+    {"id":"compress","type":"COMPRESS","label":"gzip","x":180,"y":80,"configuration":{"format":"gzip"}},
+    {"id":"decompress","type":"DECOMPRESS","label":"ungzip","x":340,"y":80,"configuration":{"format":"gzip"}},
+    {"id":"expected","type":"CONSOLE_INPUT","label":"Expected original","x":340,"y":220,"configuration":{"value":"CryptoCarver process fixture"}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify round trip","x":520,"y":140,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"input","to":"compress","targetPort":"input"},
+    {"from":"compress","to":"decompress","targetPort":"input"},
+    {"from":"decompress","to":"assert","targetPort":"actual"},
+    {"from":"expected","to":"assert","targetPort":"expected"}
+  ]
+}

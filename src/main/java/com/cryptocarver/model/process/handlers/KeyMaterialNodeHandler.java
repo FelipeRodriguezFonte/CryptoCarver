@@ -20,13 +20,58 @@ import javax.crypto.spec.PBEKeySpec;
 public class KeyMaterialNodeHandler implements ProcessNodeHandler {
     @Override
     public Set<String> supportedTypes() {
-        return Set.of("AES_KEY_GENERATE", "KDF_PBKDF2", "RSA_KEYPAIR_GENERATE");
+        return Set.of("AES_KEY_GENERATE", "KDF_PBKDF2");
+    }
+
+    @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "AES_KEY_GENERATE",
+                "Key Material",
+                "module.process.type.aesKeyGenerate",
+                "module.process.desc.aesKeyGenerate",
+                "🔑",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("keyAlgorithm", "module.process.param.keyAlgorithm",
+                        com.cryptocarver.model.process.ParameterKind.COMBO, List.of("AES", "3DES"), "AES"),
+                    new com.cryptocarver.model.process.NodeParameter("keySize", "module.process.param.keySize",
+                        com.cryptocarver.model.process.ParameterKind.COMBO, List.of("128", "192", "256"), "256")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "KDF_PBKDF2",
+                "Key Material",
+                "module.process.type.pbkdf2",
+                "module.process.desc.pbkdf2",
+                "🧬",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("keySize", "module.process.param.keySize",
+                        com.cryptocarver.model.process.ParameterKind.COMBO, List.of("128", "192", "256"), "256"),
+                    new com.cryptocarver.model.process.NodeParameter("iterations", "module.process.param.iterations",
+                        com.cryptocarver.model.process.ParameterKind.NUMBER, "210000"),
+                    new com.cryptocarver.model.process.NodeParameter("salt", "module.process.param.salt",
+                        com.cryptocarver.model.process.ParameterKind.TEXT, "")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "RSA_KEYPAIR_GENERATE",
+                "Key Material",
+                "module.process.type.rsaKeypairGenerate",
+                "module.process.desc.rsaKeypairGenerate",
+                "🗝",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("keySize", "module.process.param.keySize",
+                        com.cryptocarver.model.process.ParameterKind.COMBO, List.of("2048", "3072", "4096"), "2048")
+                )
+            )
+        );
     }
 
     @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         if ("KDF_PBKDF2".equals(node.type)) {
-            return List.of(new PortDefinition("input", Set.of(Representation.values()), true));
+            return List.of(new PortDefinition("input", Representation.standardValues(), true));
         }
         return List.of();
     }

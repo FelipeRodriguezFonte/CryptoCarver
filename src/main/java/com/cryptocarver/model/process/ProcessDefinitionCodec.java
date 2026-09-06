@@ -12,14 +12,14 @@ public final class ProcessDefinitionCodec {
         safeCopy.version = process.version;
         safeCopy.name = process.name;
         safeCopy.nodes = new java.util.ArrayList<>();
+        java.util.Set<String> sensitiveKeys = NodeCatalog.allSensitiveKeys();
         for (ProcessDefinition.Node n : process.nodes) {
             ProcessDefinition.Node safeNode = new ProcessDefinition.Node(n.id, n.type, n.label, n.x, n.y);
             if (n.configuration != null) {
                 java.util.Map<String, String> safeConfig = new java.util.LinkedHashMap<>(n.configuration);
-                safeConfig.remove("key");
-                safeConfig.remove("keystorePassword");
-                safeConfig.remove("keyPassword");
-                safeConfig.remove("wssPassword");
+                for (String sensitiveKey : sensitiveKeys) {
+                    safeConfig.remove(sensitiveKey);
+                }
                 safeNode.configuration.putAll(safeConfig);
             }
             safeCopy.nodes.add(safeNode);
@@ -33,6 +33,16 @@ public final class ProcessDefinitionCodec {
     public static ProcessDefinition deserialize(String json) {
         ProcessDefinition process = GSON.fromJson(json, ProcessDefinition.class);
         if (process == null || (process.version != 1 && process.version != 2 && process.version != 3)) throw new IllegalArgumentException("Unsupported workflow file version: " + (process != null ? process.version : "null"));
+        java.util.Set<String> sensitiveKeys = NodeCatalog.allSensitiveKeys();
+        if (process.nodes != null) {
+            for (ProcessDefinition.Node n : process.nodes) {
+                if (n.configuration != null) {
+                    for (String sensitiveKey : sensitiveKeys) {
+                        n.configuration.remove(sensitiveKey);
+                    }
+                }
+            }
+        }
         return process;
     }
 }

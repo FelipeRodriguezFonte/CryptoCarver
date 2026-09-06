@@ -26,6 +26,97 @@ public class CodecNodeHandler implements ProcessNodeHandler {
     }
 
     @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        List<String> charsets = List.of("UTF-8", "ISO-8859-1", "US-ASCII", "UTF-16");
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "BASE64",
+                "Conversions",
+                "module.process.type.base64",
+                "module.process.desc.base64",
+                "🔄",
+                List.of()
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "BASE64_ENCODE",
+                "Conversions",
+                "module.process.type.base64Encode",
+                "module.process.desc.base64Encode",
+                "🔄",
+                List.of()
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "BASE64_DECODE",
+                "Conversions",
+                "module.process.type.base64Decode",
+                "module.process.desc.base64Decode",
+                "🔄",
+                List.of(new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO, charsets, "UTF-8"))
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "BASE64URL_ENCODE",
+                "Conversions",
+                "module.process.type.base64UrlEncode",
+                "module.process.desc.base64UrlEncode",
+                "🔄",
+                List.of()
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "BASE64URL_DECODE",
+                "Conversions",
+                "module.process.type.base64UrlDecode",
+                "module.process.desc.base64UrlDecode",
+                "🔄",
+                List.of(new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO, charsets, "UTF-8"))
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "HEX_ENCODE",
+                "Conversions",
+                "module.process.type.hexEncode",
+                "module.process.desc.hexEncode",
+                "🔄",
+                List.of()
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "HEX_DECODE",
+                "Conversions",
+                "module.process.type.hexDecode",
+                "module.process.desc.hexDecode",
+                "🔄",
+                List.of(new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO, charsets, "UTF-8"))
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "UTF8_ENCODE",
+                "Conversions",
+                "module.process.type.utf8Encode",
+                "module.process.desc.utf8Encode",
+                "🔄",
+                List.of(new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO, charsets, "UTF-8"))
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "UTF8_DECODE",
+                "Conversions",
+                "module.process.type.utf8Decode",
+                "module.process.desc.utf8Decode",
+                "🔄",
+                List.of(new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO, charsets, "UTF-8"))
+            )
+        );
+    }
+
+    @Override
+    public void validateConfiguration(ProcessDefinition.Node node) throws IllegalArgumentException {
+        String cs = node.configuration != null ? node.configuration.get("charset") : null;
+        if (cs != null && !cs.isBlank()) {
+            try {
+                java.nio.charset.Charset.forName(cs);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid charset: " + cs);
+            }
+        }
+    }
+
+    @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         if ("HEX_DECODE".equals(node.type)) {
             return List.of(new PortDefinition("input", Set.of(Representation.HEX, Representation.TEXT_UTF8), true));
@@ -38,7 +129,7 @@ public class CodecNodeHandler implements ProcessNodeHandler {
         } else if ("UTF8_DECODE".equals(node.type)) {
             return List.of(new PortDefinition("input", Set.of(Representation.BINARY), true));
         }
-        return List.of(new PortDefinition("input", Set.of(Representation.values()), true));
+        return List.of(new PortDefinition("input", Representation.standardValues(), true));
     }
 
     @Override

@@ -110,7 +110,6 @@ class LocalizedSectionResolutionUITest {
         cases.put("Sign", "authentication");
         cases.put("Encode PIN Block", "payments");
         cases.put("CMS Inspector", "certificates");
-        cases.put("Process Designer", "generic");
         cases.put("Crypto Envelope Inspector", "generic");
         cases.put("Manual Conversion", "generic");
         cases.put("File Cipher (Streaming)", "cipher");

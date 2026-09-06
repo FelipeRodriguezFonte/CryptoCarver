@@ -226,6 +226,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private ComboBox<String> xmlSignPackagingCombo;
     // New Controllers
     @FXML private XMLSignatureController xmlSecurityContainerController;
+    @FXML private TitledPane processDesignerContainer;
+    @FXML private ProcessDesignerController processDesignerContainerController;
 
     // Generic Utilities
     // Hashing
@@ -1109,6 +1111,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 showPayments();
                 expandPaymentsAccordionPane(route.section());
             }
+            case PROCESS_DESIGNER -> showProcessDesigner();
         }
         return true;
     }
@@ -1197,6 +1200,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case HISTORY -> i18n.text("bread.history");
                 case CLIPBOARD_SHELF -> i18n.text("bread.clipboardShelf");
                 case SAVED_SESSIONS -> i18n.text("bread.savedSessions");
+                case PROCESS_DESIGNER -> i18n.text("nav.processDesigner");
                 default -> i18n.text("bread.section");
             };
 
@@ -1253,6 +1257,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case XML_SECURITY, WSS_SECURITY -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
                 case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
                 case HISTORY -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
+                case PROCESS_DESIGNER -> navigationRail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
                 default -> showQuickStart();
             }
             return;
@@ -1271,6 +1276,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case "Post-Quantum PQC" -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
             case "XML Security", "WSS Security" -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
             case "EMV & Smartcards", "Payment Cryptography" -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
+            case "Process Designer", "Diseñador de procesos" -> navigationRail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
             case "History" -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
             default -> showQuickStart();
         }
@@ -1595,6 +1601,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case CIPHER -> new ConfigurationTarget(cipherContainerController, cipherContainer);
             case AUTHENTICATION -> new ConfigurationTarget(authenticationContainerController, authenticationContainer);
             case PAYMENTS -> new ConfigurationTarget(paymentsContainerController, paymentsContainer);
+            case PROCESS_DESIGNER -> new ConfigurationTarget(processDesignerContainerController, processDesignerContainer);
             default -> null;
         };
     }
@@ -2128,6 +2135,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             else keysController.handleClearAsymmetric();
         } else if (isContainerVisible(genericContainer) && genericContainerController != null) {
             genericContainerController.handleClear();
+        } else if (isContainerVisible(processDesignerContainer) && processDesignerContainerController != null) {
+            processDesignerContainerController.handleClearCanvas();
         } else if (isContainerVisible(certificatesContainer)) {
             // Certificate clearing not fully implemented via global toolbar ye
         }
@@ -3264,6 +3273,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             savedSessionsContainer.setVisible(false);
             savedSessionsContainer.setManaged(false);
         }
+        if (processDesignerContainer != null) {
+            processDesignerContainer.setVisible(false);
+            processDesignerContainer.setManaged(false);
+        }
+    }
+
+    public void showProcessDesigner() {
+        hideAllContainers();
+        if (processDesignerContainer != null) {
+            processDesignerContainer.setManaged(true);
+            processDesignerContainer.setVisible(true);
+            processDesignerContainer.setExpanded(true);
+            updateContentHeader("Process Designer");
+            updateContentSubtitle("Visual workflow builder and execution engine");
+        }
+    }
+
+    public TitledPane getProcessDesignerContainer() {
+        return processDesignerContainer;
+    }
+
+    public ProcessDesignerController getProcessDesignerContainerController() {
+        return processDesignerContainerController;
     }
 
     private void showGeneric() {

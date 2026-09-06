@@ -423,6 +423,26 @@ public final class ModuleTextCatalog {
         map.put("Duration", "module.process.duration");
         map.put("Execution results", "module.process.executionResults");
         map.put("Execution results and validation messages appear here.", "module.process.executionPrompt");
+        map.put("Open in window", "module.process.openWindow");
+        map.put("Focus mode", "module.process.focusMode");
+        map.put("Exit focus mode", "module.process.exitFocusMode");
+        map.put("Tidy layout", "module.process.tidy");
+        map.put("Zoom in", "module.process.zoomIn");
+        map.put("Zoom out", "module.process.zoomOut");
+        map.put("Reset zoom", "module.process.zoomReset");
+        map.put("Fit to content", "module.process.zoomFit");
+        map.put("Grid", "module.process.grid");
+        map.put("Snap to grid", "module.process.snapToGrid");
+        map.put("Undo", "module.process.undo");
+        map.put("Redo", "module.process.redo");
+        map.put("Duplicate", "module.process.duplicate");
+        map.put("Open in Workbench", "module.process.launchWorkbench");
+        map.put("Search palette…", "module.process.searchPalette");
+        map.put("Palette", "module.process.palette");
+        map.put("Plumbing", "module.process.category.plumbing");
+        map.put("Utilities", "module.process.category.utilities");
+        map.put("Connect to port: {0}", "module.process.connectToPort");
+        map.put("Target node has multiple candidate ports ({0}). Drop connection onto a specific port handle.", "module.process.feedback.ambiguousPorts");
         return map;
     }
 

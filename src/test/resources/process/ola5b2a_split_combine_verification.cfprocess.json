@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "name": "Ola 5B.2a XOR split verification",
+  "nodes": [
+    {"id":"keyText","type":"CONSOLE_INPUT","label":"Known key hex","x":20,"y":80,"configuration":{"value":"00112233445566778899AABBCCDDEEFF"}},
+    {"id":"keyDecode","type":"HEX_DECODE","label":"Decode key","x":160,"y":80,"configuration":{}},
+    {"id":"keyHex","type":"HEX_ENCODE","label":"Key HEX port","x":300,"y":80,"configuration":{}},
+    {"id":"split","type":"KEY_SPLIT_XOR","label":"Split into three","x":460,"y":80,"configuration":{"componentCount":"3"}},
+    {"id":"combine","type":"KEY_COMBINE_XOR","label":"Combine components","x":640,"y":80,"configuration":{}},
+    {"id":"expected","type":"CONSOLE_INPUT","label":"Expected key","x":640,"y":220,"configuration":{"value":"00112233445566778899AABBCCDDEEFF"}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify key round trip","x":820,"y":140,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"keyText","to":"keyDecode","targetPort":"input"},
+    {"from":"keyDecode","to":"keyHex","targetPort":"input"},
+    {"from":"keyHex","to":"split","targetPort":"key"},
+    {"from":"split","to":"combine","targetPort":"components"},
+    {"from":"combine","to":"assert","targetPort":"actual"},
+    {"from":"expected","to":"assert","targetPort":"expected"}
+  ]
+}

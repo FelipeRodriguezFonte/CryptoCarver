@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "name": "Ola 5B.2a AES RFC3394 round trip",
+  "nodes": [
+    {"id":"kekText","type":"CONSOLE_INPUT","label":"KEK hex","x":20,"y":20,"configuration":{"value":"000102030405060708090A0B0C0D0E0F"}},
+    {"id":"kekDecode","type":"HEX_DECODE","label":"Decode KEK","x":160,"y":20,"configuration":{}},
+    {"id":"kekHex","type":"HEX_ENCODE","label":"KEK HEX port","x":300,"y":20,"configuration":{}},
+    {"id":"keyText","type":"CONSOLE_INPUT","label":"Key hex","x":20,"y":180,"configuration":{"value":"00112233445566778899AABBCCDDEEFF"}},
+    {"id":"keyDecode","type":"HEX_DECODE","label":"Decode key","x":160,"y":180,"configuration":{}},
+    {"id":"keyHex","type":"HEX_ENCODE","label":"Key HEX port","x":300,"y":180,"configuration":{}},
+    {"id":"wrap","type":"AES_KEYWRAP_3394","label":"Wrap RFC3394","x":460,"y":100,"configuration":{}},
+    {"id":"unwrap","type":"AES_UNWRAP_3394","label":"Unwrap RFC3394","x":640,"y":100,"configuration":{}},
+    {"id":"expected","type":"CONSOLE_INPUT","label":"Expected key","x":640,"y":260,"configuration":{"value":"00112233445566778899AABBCCDDEEFF"}},
+    {"id":"expectedDecode","type":"HEX_DECODE","label":"Decode expected key","x":760,"y":260,"configuration":{}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify round trip","x":940,"y":180,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"kekText","to":"kekDecode","targetPort":"input"},
+    {"from":"kekDecode","to":"kekHex","targetPort":"input"},
+    {"from":"keyText","to":"keyDecode","targetPort":"input"},
+    {"from":"keyDecode","to":"keyHex","targetPort":"input"},
+    {"from":"kekHex","to":"wrap","targetPort":"kek"},
+    {"from":"keyHex","to":"wrap","targetPort":"keyData"},
+    {"from":"kekHex","to":"unwrap","targetPort":"kek"},
+    {"from":"wrap","to":"unwrap","targetPort":"wrapped"},
+    {"from":"unwrap","to":"assert","targetPort":"actual"},
+    {"from":"expected","to":"expectedDecode","targetPort":"input"},
+    {"from":"expectedDecode","to":"assert","targetPort":"expected"}
+  ]
+}

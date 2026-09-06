@@ -17,6 +17,10 @@ public record FlowValue(byte[] bytes, Representation representation, Charset cha
         return new FlowValue(bytes, Representation.HEX, null);
     }
 
+    public static FlowValue hexComponents(byte[] bytes) {
+        return new FlowValue(bytes, Representation.HEX_COMPONENTS, null);
+    }
+
     public static FlowValue base64(byte[] bytes) {
         return new FlowValue(bytes, Representation.BASE64, null);
     }
@@ -28,7 +32,7 @@ public record FlowValue(byte[] bytes, Representation representation, Charset cha
     public String render() {
         if (representation == Representation.TEXT_UTF8) {
             return new String(bytes, charset != null ? charset : StandardCharsets.UTF_8);
-        } else if (representation == Representation.HEX) {
+        } else if (representation == Representation.HEX || representation == Representation.HEX_COMPONENTS) {
             return new String(bytes, StandardCharsets.UTF_8); // Hex encoded text
         } else if (representation == Representation.BASE64 || representation == Representation.BASE64URL) {
             return new String(bytes, StandardCharsets.UTF_8); // Base64 encoded text

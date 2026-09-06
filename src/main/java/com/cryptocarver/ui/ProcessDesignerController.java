@@ -1,90 +1,80 @@
 package com.cryptocarver.ui;
 
+import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.model.process.ExecutionContext;
+import com.cryptocarver.model.process.FileWritePolicy;
+import com.cryptocarver.model.process.NodeCatalog;
+import com.cryptocarver.model.process.NodeDescriptor;
+import com.cryptocarver.model.process.NodeExecutionEvent;
+import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ProcessDefinition;
 import com.cryptocarver.model.process.ProcessDefinitionCodec;
 import com.cryptocarver.model.process.ProcessEngine;
-import com.cryptocarver.model.process.ExecutionContext;
-import com.cryptocarver.model.process.FileWritePolicy;
-import com.cryptocarver.model.process.NodeExecutionEvent;
+import com.cryptocarver.model.process.ProcessNodeHandler;
+import com.cryptocarver.model.process.ProcessValidator;
 import com.cryptocarver.model.process.Representation;
-import javafx.application.Platform;
-
-import javafx.fxml.FXML;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TableColumn;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.MenuButton;
-
-import javafx.scene.layout.StackPane;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.Polygon;
-import javafx.stage.FileChooser;
-import java.io.File;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import javafx.scene.control.Button;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TitledPane;
+import com.cryptocarver.model.process.handlers.SymmetricCipherSpec;
 import com.cryptocarver.service.I18nService;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
+import javafx.scene.Cursor;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.CubicCurve;
+import javafx.scene.transform.Scale;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
-/** Interactive MVP canvas: drag blocks, select them, connect selected blocks, save and run safe flows. */
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Controller for Process Designer.
+ * Phase 5A: Descriptor-driven inspector, expandable canvas, zoom/pan, smooth connections,
+ * searchable palette, and undo/redo command stack.
+ */
 public class ProcessDesignerController {
 
-    @FXML private TitledPane processDesignerRoot;
     private ModuleI18n.Binding moduleI18n;
 
-    private String t(String key, Object... args) {
-        return I18nService.getInstance().text(key, args);
-    }
-
+    @FXML private TitledPane processDesignerRoot;
     @FXML private Pane workflowCanvas;
     @FXML private TextField processNameField;
     @FXML private Label selectedNodeLabel;
+    @FXML private Label inputContractLabel;
+    @FXML private Label outputContractLabel;
     @FXML VBox nodeNameFieldGroup;
     @FXML TextField nodeNameField;
-    @FXML TextArea nodeValueArea;
-    @FXML private TextField nodePathField;
-    @FXML VBox consoleValueFieldGroup;
-    @FXML VBox filePathFieldGroup;
-    @FXML VBox charsetFieldGroup;
-    @FXML VBox hashAlgorithmFieldGroup;
-    @FXML private ComboBox<String> nodeCharsetCombo;
-    @FXML private ComboBox<String> hashAlgorithmCombo;
-    @FXML TextArea executionOutputArea;
     @FXML private Button connectSelectedButton;
     @FXML private Button deleteSelectedButton;
     @FXML private Button reverseConnectionButton;
     @FXML private Button reverseConnectionToolbarButton;
     @FXML private Button runProcessButton;
+    @FXML Button cancelProcessButton;
     @FXML private Button inspectorToggleButton;
     @FXML private SplitPane designerSplitPane;
     @FXML private ScrollPane designerWorkspace;
-    @FXML private javafx.scene.layout.VBox nodeInspector;
-    @FXML private VBox executionStatusContainer;
-    @FXML private VBox fileModeFieldGroup;
-    @FXML private Label fileModeLabel;
-    @FXML ComboBox<String> fileModeCombo;
-    @FXML private Label inputContractLabel;
-    @FXML private Label outputContractLabel;
+    @FXML private VBox nodeInspector;
+    @FXML private VBox dynamicInspectorContainer;
+    @FXML private VBox palettePanel;
+    @FXML private TextField paletteSearchField;
+    @FXML private VBox paletteItemsContainer;
+    @FXML private Label zoomLevelLabel;
+    @FXML private CheckBox snapToGridCheck;
+    @FXML private Button focusModeButton;
     @FXML TableView<ProcessExecutionRow> executionStatusTable;
     @FXML private TableColumn<ProcessExecutionRow, String> stepCol;
     @FXML private TableColumn<ProcessExecutionRow, String> stepNameCol;
@@ -94,79 +84,50 @@ public class ProcessDesignerController {
     @FXML private TableColumn<ProcessExecutionRow, String> statusCol;
     @FXML private TableColumn<ProcessExecutionRow, String> durationCol;
     @FXML private TableColumn<ProcessExecutionRow, Void> inspectCol;
-    @FXML Button cancelProcessButton;
     @FXML ProgressBar processProgressBar;
     @FXML Label processStatusLabel;
-    private volatile boolean processCancellationRequested = false;
-
-
-    @FXML VBox cryptoAlgorithmFieldGroup;
-    @FXML ComboBox<String> cryptoAlgorithmCombo;
-    @FXML VBox wssKeyTransportFieldGroup;
-    @FXML ComboBox<String> wssKeyTransportCombo;
-    @FXML VBox wssTimestampFieldGroup;
-    @FXML CheckBox wssTimestampEnabledCheck;
-    @FXML TextField wssTimestampMinutesField;
-    @FXML CheckBox wssTimestampSignedCheck;
-    @FXML VBox wssUsernameFieldGroup;
-    @FXML Label wssUsernameLabel;
-    @FXML TextField wssUsernameField;
-    @FXML Label wssPasswordLabel;
-    @FXML PasswordField wssPasswordField;
-    @FXML VBox wssPasswordTypeFieldGroup;
-    @FXML ComboBox<String> wssPasswordTypeCombo;
-    @FXML VBox wssTokenAgeFieldGroup;
-    @FXML TextField wssTokenAgeField;
-    @FXML VBox keyFormatFieldGroup;
-    @FXML ComboBox<String> keyFormatCombo;
-    @FXML VBox manualKeyFieldGroup;
-    @FXML PasswordField manualKeyField;
-    @FXML VBox nonceFieldGroup;
-    @FXML Label nonceLabel;
-    @FXML TextField nonceField;
-    @FXML CheckBox generateNonceCheck;
-    @FXML VBox aadPortHintGroup;
-    @FXML VBox portBindingsFieldGroup;
-    @FXML Label portBindingsLabel;
-    @FXML VBox cipherOutputFormatFieldGroup;
-    @FXML ComboBox<String> cipherOutputFormatCombo;
-    @FXML VBox keystorePathFieldGroup;
-    @FXML TextField keystorePathField;
-    @FXML VBox keystoreTypeFieldGroup;
-    @FXML ComboBox<String> keystoreTypeCombo;
-    @FXML VBox aliasFieldGroup;
-    @FXML TextField aliasField;
-    @FXML VBox keystorePasswordFieldGroup;
-    @FXML PasswordField keystorePasswordField;
-    @FXML VBox keyPasswordFieldGroup;
-    @FXML PasswordField keyPasswordField;
-    @FXML VBox materialPathFieldGroup;
-    @FXML TextField materialPathField;
-    @FXML VBox materialTypeFieldGroup;
-    @FXML ComboBox<String> materialTypeCombo;
-    @FXML Label secretsWarningLabel;
-    @FXML VBox randomBytesFieldGroup;
-    @FXML TextField randomBytesLengthField;
+    @FXML TextArea executionOutputArea;
     @FXML MenuButton connectMenuButton;
-    @FXML VBox keyMaterialFieldGroup;
-    @FXML ComboBox<String> keySizeCombo;
-    @FXML VBox symmetricKeyAlgorithmFieldGroup;
-    @FXML ComboBox<String> symmetricKeyAlgorithmCombo;
-    @FXML TextField kdfIterationsField;
-    @FXML TextField kdfSaltField;
 
+    // --- State & Canvas ---
     final List<ProcessDefinition.Node> nodes = new ArrayList<>();
     final List<ProcessDefinition.Connection> connections = new ArrayList<>();
     private final Map<String, StackPane> views = new LinkedHashMap<>();
-    /** Ordered pair: first selected block is the connection source, second is the destination. */
     final LinkedHashSet<String> selectedNodeIds = new LinkedHashSet<>();
     private ProcessDefinition.Node selected;
     private ProcessDefinition.Connection selectedConnection;
     private boolean inspectorVisible = true;
+    private boolean focusMode = false;
+    private double currentZoom = 1.0;
+    private final Scale canvasScale = new Scale(1.0, 1.0, 0, 0);
+    private boolean snapToGrid = true;
     private final ExpandedTextViewer expandedExecutionViewer = new ExpandedTextViewer();
+    private volatile boolean processCancellationRequested = false;
 
-    Label cryptoHelpLabel = new Label();
-    Label cryptoWarningLabel = new Label();
+    // Secrets in-memory map: nodeId -> (paramKey -> char[])
+    final Map<String, Map<String, char[]>> transientSecrets = new HashMap<>();
+    private NodeInspectorRenderer dynamicInspectorRenderer;
+
+    // Interactive connection drag state
+    private ProcessDefinition.Node connectionDragSourceNode;
+    private CubicCurve interactiveConnectionCurve;
+    record PortHandleData(ProcessDefinition.Node node, ProcessNodeHandler.PortDefinition port) {}
+    final List<Circle> inputPortHandles = new ArrayList<>();
+
+    // Performance tracking
+    public int validationCounter = 0;
+
+    // Command stack for Undo/Redo (>= 50 steps)
+    public interface DesignerCommand {
+        void undo();
+        void redo();
+    }
+
+    private final Deque<DesignerCommand> undoStack = new ArrayDeque<>();
+    private final Deque<DesignerCommand> redoStack = new ArrayDeque<>();
+
+    public Runnable onExecutionFinished;
+    public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
 
     @FXML public void initialize() {
         moduleI18n = ModuleI18n.bind(processDesignerRoot, ModuleTextCatalog.processDesigner());
@@ -177,1014 +138,559 @@ public class ProcessDesignerController {
             if (executionStatusTable != null) {
                 executionStatusTable.setPlaceholder(new Label(t("module.process.executionPlaceholder")));
             }
-            if (selected != null) updateNonceLabel();
             updateSelectionUi();
+            buildPalette();
         });
-        nodeCharsetCombo.getItems().setAll("UTF-8", "ISO-8859-1", "IBM037");
-        nodeCharsetCombo.setValue("UTF-8");
-        hashAlgorithmCombo.getItems().setAll("SHA-256", "SHA-384", "SHA-512", "SHA-1", "MD5");
-        hashAlgorithmCombo.setValue("SHA-256");
         configureExecutionStatusTable();
 
-        if (cryptoAlgorithmCombo != null) {
-            cryptoHelpLabel.setWrapText(true);
-            cryptoHelpLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666666; -fx-padding: 4 0 4 0;");
-            cryptoWarningLabel.setWrapText(true);
-            cryptoWarningLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #d32f2f; -fx-font-weight: bold; -fx-padding: 0 0 4 0;");
-            cryptoWarningLabel.setVisible(false);
-            cryptoWarningLabel.setManaged(false);
-
-            if (cryptoAlgorithmFieldGroup != null) {
-                cryptoAlgorithmFieldGroup.getChildren().addAll(cryptoWarningLabel, cryptoHelpLabel);
-            }
-
-            cryptoAlgorithmCombo.setCellFactory(lv -> new ProcessDesignerAlgorithmListCell());
-
-            cryptoAlgorithmCombo.valueProperty().addListener((obs, oldV, newV) -> {
-                if (newV != null && newV.startsWith("---")) {
-                    javafx.application.Platform.runLater(() -> cryptoAlgorithmCombo.setValue(oldV));
-                    return;
-                }
-
-                if (newV != null) {
-                    if (selected == null || "ENCRYPT".equals(selected.type) || "DECRYPT".equals(selected.type)) {
-                        try {
-                            com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(newV);
-                            cryptoHelpLabel.setText(spec.helpText);
-                            cryptoWarningLabel.setText(t("module.process.warningEcb"));
-                            boolean isEcb = newV.contains("ECB");
-                            cryptoWarningLabel.setVisible(isEcb);
-                            cryptoWarningLabel.setManaged(isEcb);
-                        } catch (Exception e) {
-                            cryptoHelpLabel.setText("");
-                            cryptoWarningLabel.setVisible(false);
-                            cryptoWarningLabel.setManaged(false);
-                        }
-                    } else if ("WSS_ENCRYPT_BODY".equals(selected.type)) {
-                        boolean authenticated = newV.endsWith("GCM");
-                        cryptoHelpLabel.setText(authenticated
-                                ? "SOAP Body content encryption. Authenticated encryption: yes."
-                                : "SOAP Body content encryption. Authenticated encryption: no.");
-                        cryptoWarningLabel.setText(t("module.process.warningCbc"));
-                        cryptoWarningLabel.setVisible(!authenticated);
-                        cryptoWarningLabel.setManaged(!authenticated);
-                    } else if ("WSS_SIGN_BODY".equals(selected.type)) {
-                        cryptoHelpLabel.setText("Signs the SOAP Body with exclusive canonicalization and " + newV + ".");
-                        cryptoWarningLabel.setVisible(false);
-                        cryptoWarningLabel.setManaged(false);
-                    } else {
-                        cryptoHelpLabel.setText("");
-                        cryptoWarningLabel.setVisible(false);
-                        cryptoWarningLabel.setManaged(false);
-                    }
-                }
-
-                if (newV != null && selected != null) {
-                    String algorithmKey = "WSS_ENCRYPT_BODY".equals(selected.type)
-                            ? "dataAlgorithm"
-                            : "WSS_SIGN_BODY".equals(selected.type) ? "signatureAlgorithm" : "algorithm";
-                    if (!newV.equals(selected.configuration.get(algorithmKey))) {
-                        selected.configuration.put(algorithmKey, newV);
-                        updateNonceLabel();
-                        updateAadPortHint();
-
-                        if ("ENCRYPT".equals(selected.type) || "DECRYPT".equals(selected.type)) {
-                            try {
-                                com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(newV);
-                                if (cipherOutputFormatCombo != null) {
-                                    if (!spec.supportsEnvelope) {
-                                        cipherOutputFormatCombo.setValue("RAW (standard ciphertext)");
-                                        cipherOutputFormatCombo.setDisable(true);
-                                    } else {
-                                        cipherOutputFormatCombo.setDisable(false);
-                                    }
-                                }
-                            } catch (Exception e) {}
-                        }
-
-                        redraw();
-                    }
-                }
-            });
-        }
-        if (keyFormatCombo != null) {
-            keyFormatCombo.getItems().setAll("HEX", "BASE64");
-            keyFormatCombo.setValue("HEX");
-        }
-        if (keystoreTypeCombo != null) {
-            keystoreTypeCombo.getItems().setAll("PKCS12", "JKS");
-            keystoreTypeCombo.setValue("PKCS12");
-        }
-        if (materialTypeCombo != null) {
-            materialTypeCombo.getItems().setAll("CERTIFICATE", "PEM");
-            materialTypeCombo.setValue("CERTIFICATE");
-        }
-        if (wssKeyTransportCombo != null) {
-            wssKeyTransportCombo.getItems().setAll("RSA-OAEP SHA-256", "RSA-OAEP SHA-1 (legacy profile)");
-            wssKeyTransportCombo.setValue("RSA-OAEP SHA-256");
-        }
-        if (wssPasswordTypeCombo != null) {
-            wssPasswordTypeCombo.getItems().setAll("PasswordDigest", "PasswordText");
-            wssPasswordTypeCombo.setValue("PasswordDigest");
-        }
-        if (wssTimestampEnabledCheck != null) {
-            wssTimestampEnabledCheck.selectedProperty().addListener((observable, oldValue, enabled) -> {
-                if (wssTimestampMinutesField != null) wssTimestampMinutesField.setDisable(!enabled);
-                if (wssTimestampSignedCheck != null) wssTimestampSignedCheck.setDisable(!enabled);
-            });
-        }
-        if (keySizeCombo != null) keySizeCombo.setValue("256");
-        if (symmetricKeyAlgorithmCombo != null) {
-            symmetricKeyAlgorithmCombo.getItems().setAll("AES", "3DES");
-            symmetricKeyAlgorithmCombo.setValue("AES");
-            symmetricKeyAlgorithmCombo.setOnAction(event -> {
-                if (selected != null && "AES_KEY_GENERATE".equals(selected.type)) {
-                    String keyAlgorithm = symmetricKeyAlgorithmCombo.getValue();
-                    selected.configuration.put("keyAlgorithm", keyAlgorithm);
-                    selected.label = "3DES".equals(keyAlgorithm) ? "Generate 3DES key" : "Generate AES key";
-                    updateSymmetricKeyGeneratorSize(keyAlgorithm, selected.configuration.getOrDefault("keySize", "256"));
-                    redraw();
-                }
-            });
-        }
-        if (cipherOutputFormatCombo != null) {
-            cipherOutputFormatCombo.getItems().setAll("RAW (standard ciphertext)", "ENVELOPE (self-describing workflow value)");
+        // Canvas Scale & Zoom setup
+        if (workflowCanvas != null) {
+            workflowCanvas.getTransforms().setAll(canvasScale);
+            workflowCanvas.setFocusTraversable(true);
+            initCanvasEventHandlers();
+            updateCanvasGeometry();
         }
 
-        if (fileModeCombo != null) {
-            fileModeCombo.getItems().setAll("Binary (raw bytes)", "Text");
-            fileModeCombo.setOnAction(e -> {
-                if (selected != null && ("FILE_INPUT".equals(selected.type) || "FILE_OUTPUT".equals(selected.type))) {
-                    String modeStr = "Text".equals(fileModeCombo.getValue()) ? "TEXT" : "BINARY";
-                    if ("FILE_INPUT".equals(selected.type)) {
-                        selected.configuration.put("readMode", modeStr);
-                    } else {
-                        selected.configuration.put("writeMode", modeStr);
-                    }
-                    boolean needsCharset = "TEXT".equals(modeStr);
-                    charsetFieldGroup.setVisible(needsCharset); charsetFieldGroup.setManaged(needsCharset);
-                    redraw();
-                }
-            });
+        buildPalette();
+        if (paletteSearchField != null) {
+            paletteSearchField.textProperty().addListener((obs, oldV, newV) -> filterPalette(newV));
         }
-        selectedNodeLabel.setText(t("module.process.selectBlock"));
-        if (nodeNameFieldGroup != null) {
-            nodeNameFieldGroup.setVisible(false);
-            nodeNameFieldGroup.setManaged(false);
-        }
-        workflowCanvas.setFocusTraversable(true);
-        workflowCanvas.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == javafx.scene.input.KeyCode.DELETE || event.getCode() == javafx.scene.input.KeyCode.BACK_SPACE) {
-                handleDeleteSelected();
-                event.consume();
-            }
-        });
-        updateSelectionUi();
+
+        setZoom(1.0);
+
         ProcessDefinition.Node input = addNode("CONSOLE_INPUT", "Console input", 40, 60);
         ProcessDefinition.Node hash = addNode("HASH", "SHA-256", 270, 60);
         ProcessDefinition.Node output = addNode("CONSOLE_OUTPUT", "Console output", 500, 60);
         connections.add(new ProcessDefinition.Connection(input.id, hash.id));
         connections.add(new ProcessDefinition.Connection(hash.id, output.id));
-        // The configuration editor must always belong to a concrete node.  The example starts on its input.
         select(input);
     }
 
-    /**
-     * The FXML declares the columns but deliberately keeps presentation mapping
-     * here, next to the row model.  Without these factories TableView accepts
-     * rows yet renders them as empty cells.
-     */
-    private void configureExecutionStatusTable() {
-        if (executionStatusTable == null) return;
-        stepCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getStep()));
-        stepNameCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getStepName()));
-        operationCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getOperation()));
-        inputCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getInput()));
-        outputCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getOutput()));
-        statusCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getStatus()));
-        durationCol.setCellValueFactory(row -> new SimpleStringProperty(row.getValue().getDuration()));
-
-        if (inspectCol != null) {
-            inspectCol.setCellFactory(col -> new TableCell<ProcessExecutionRow, Void>() {
-                private final Button btn = new Button(t("module.process.inspect"));
-                {
-                    btn.setStyle("-fx-font-size: 9px; -fx-padding: 1 4 1 4;");
-                    btn.setOnAction(evt -> {
-                        ProcessExecutionRow row = getTableRow() != null ? getTableRow().getItem() : null;
-                        if (row != null && row.getResultValue() != null) {
-                            expandedExecutionViewer.show(
-                                executionStatusTable.getScene() != null ? executionStatusTable.getScene().getWindow() : null,
-                                "Inspect Result - Step " + row.getStep() + " (" + row.getStepName() + ")",
-                                row.getResultValue().toString()
-                            );
-                        }
-                    });
-                }
-                @Override protected void updateItem(Void item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || getTableRow() == null || getTableRow().getItem() == null || getTableRow().getItem().getResultValue() == null) {
-                        setGraphic(null);
-                    } else {
-                        setGraphic(btn);
-                    }
-                }
-            });
-        }
-
-        executionStatusTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-            if (newV != null && newV.getNodeId() != null) {
-                selectNodeById(newV.getNodeId());
+    private void initCanvasEventHandlers() {
+        workflowCanvas.setOnScroll(e -> {
+            if (e.isControlDown() || e.isShortcutDown()) {
+                double delta = e.getDeltaY() > 0 ? 0.08 : -0.08;
+                setZoom(currentZoom + delta);
+                e.consume();
             }
         });
 
-        executionStatusTable.setPlaceholder(new Label(t("module.process.executionPlaceholder")));
+        workflowCanvas.setOnMouseClicked(e -> {
+            if (e.getTarget() == workflowCanvas) {
+                selected = null;
+                selectedNodeIds.clear();
+                selectedConnection = null;
+                updateSelectionUi();
+                redraw();
+            }
+        });
+
+        workflowCanvas.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.DELETE || e.getCode() == KeyCode.BACK_SPACE) {
+                handleDeleteSelected();
+                e.consume();
+            } else if (e.isShortcutDown() && e.getCode() == KeyCode.Z) {
+                if (e.isShiftDown()) handleRedo();
+                else handleUndo();
+                e.consume();
+            } else if (e.isShortcutDown() && e.getCode() == KeyCode.Y) {
+                handleRedo();
+                e.consume();
+            } else if (e.isShortcutDown() && e.getCode() == KeyCode.D) {
+                handleDuplicateSelected();
+                e.consume();
+            } else if (e.getCode() == KeyCode.ESCAPE) {
+                selected = null;
+                selectedNodeIds.clear();
+                selectedConnection = null;
+                if (interactiveConnectionCurve != null) {
+                    workflowCanvas.getChildren().remove(interactiveConnectionCurve);
+                    interactiveConnectionCurve = null;
+                    connectionDragSourceNode = null;
+                }
+                updateSelectionUi();
+                redraw();
+                e.consume();
+            } else if (e.getCode().isArrowKey()) {
+                double step = e.isShiftDown() ? 10.0 : 1.0;
+                if (selected != null) {
+                    if (e.getCode() == KeyCode.UP) selected.y -= step;
+                    else if (e.getCode() == KeyCode.DOWN) selected.y += step;
+                    else if (e.getCode() == KeyCode.LEFT) selected.x -= step;
+                    else if (e.getCode() == KeyCode.RIGHT) selected.x += step;
+                    updateCanvasGeometry();
+                    redraw();
+                    e.consume();
+                }
+            }
+        });
+
+        workflowCanvas.setOnMouseMoved(e -> {
+            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+                Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
+                updateInteractiveCurve(connectionDragSourceNode.x + 150, connectionDragSourceNode.y + 35, local.getX(), local.getY());
+            }
+        });
     }
 
-    public void selectNodeById(String nodeId) {
-        if (nodeId == null) return;
-        ProcessDefinition.Node target = nodes.stream().filter(n -> nodeId.equals(n.id)).findFirst().orElse(null);
-        if (target != null) {
-            select(target);
-            redraw();
+
+    // --- Searchable Palette ---
+    private void buildPalette() {
+        filterPalette(paletteSearchField == null ? null : paletteSearchField.getText());
+    }
+
+    private void filterPalette(String filter) {
+        if (paletteItemsContainer == null) return;
+        paletteItemsContainer.getChildren().clear();
+
+        String q = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
+
+        for (String category : NodeCatalog.categories()) {
+            List<NodeDescriptor> matching = NodeCatalog.descriptorsByCategory(category).stream()
+                    .filter(d -> matchesSearch(d, q))
+                    .toList();
+
+            if (matching.isEmpty()) continue;
+
+            String catKey = "module.process.category." + switch (category) {
+                case "Inputs" -> "inputs";
+                case "Conversions" -> "conversions";
+                case "Crypto" -> "crypto";
+                case "Generators" -> "generators";
+                case "Key Material" -> "keyMaterial";
+                case "WS-Security" -> "wsSecurity";
+                case "Outputs" -> "outputs";
+                default -> category.toLowerCase(Locale.ROOT);
+            };
+            Label catHeader = new Label(t(catKey).toUpperCase(Locale.ROOT));
+            catHeader.setStyle("-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-fill: #8899aa; -fx-padding: 4 0 2 0;");
+            paletteItemsContainer.getChildren().add(catHeader);
+
+            for (NodeDescriptor d : matching) {
+                HBox item = new HBox(6);
+                item.setPadding(new Insets(4, 6, 4, 6));
+                item.setStyle("-fx-background-color: #242d38; -fx-background-radius: 4; -fx-cursor: hand;");
+
+                Label iconLabel = new Label(d.icon());
+                iconLabel.setStyle("-fx-font-size: 13px;");
+
+                VBox textBox = new VBox(1);
+                Label titleLabel = new Label(t(d.labelKey()));
+                titleLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #ffffff; -fx-font-weight: bold;");
+                Label descLabel = new Label(t(d.descriptionKey()));
+                descLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #8899aa;");
+                descLabel.setWrapText(true);
+                textBox.getChildren().addAll(titleLabel, descLabel);
+
+                item.getChildren().addAll(iconLabel, textBox);
+
+                item.setOnMouseEntered(e -> item.setStyle("-fx-background-color: #334455; -fx-background-radius: 4; -fx-cursor: hand;"));
+                item.setOnMouseExited(e -> item.setStyle("-fx-background-color: #242d38; -fx-background-radius: 4; -fx-cursor: hand;"));
+
+                item.setOnMouseClicked(e -> {
+                    if (e.getClickCount() == 2) {
+                        double placeX = 60 + (nodes.size() % 5) * 40;
+                        double placeY = 80 + (nodes.size() % 6) * 35;
+                        ProcessDefinition.Node added = addNode(d.type(), t(d.labelKey()), placeX, placeY);
+                        select(added);
+                    }
+                });
+
+                paletteItemsContainer.getChildren().add(item);
+            }
         }
     }
 
-    @FXML public void handleAddConsoleInput() { addNode("CONSOLE_INPUT", "Console input", 60, 180); }
-    @FXML public void handleAddFileInput() { addNode("FILE_INPUT", "File input", 60, 180); }
-    @FXML public void handleAddHash() { addNode("HASH", "SHA-256", 280, 180); }
-    @FXML public void handleAddEncrypt() { addNode("ENCRYPT", "Encrypt", 280, 180); }
-    @FXML public void handleAddDecrypt() { addNode("DECRYPT", "Decrypt", 280, 180); }
-    @FXML public void handleAddSign() { addNode("SIGN", "Sign", 280, 180); }
-    @FXML public void handleAddVerify() { addNode("VERIFY", "Verify", 280, 180); }
-    @FXML public void handleAddMac() { addNode("MAC", "MAC", 280, 180); }
-    @FXML public void handleAddWssEncryptBody() {
-        addNode("WSS_ENCRYPT_BODY", "WSS Encrypt SOAP Body", 280, 180);
+    private boolean matchesSearch(NodeDescriptor d, String q) {
+        if (q.isEmpty()) return true;
+        return d.type().toLowerCase(Locale.ROOT).contains(q)
+                || d.category().toLowerCase(Locale.ROOT).contains(q)
+                || t(d.labelKey()).toLowerCase(Locale.ROOT).contains(q)
+                || t(d.descriptionKey()).toLowerCase(Locale.ROOT).contains(q);
     }
-    @FXML public void handleAddWssDecryptBody() {
-        addNode("WSS_DECRYPT_BODY", "WSS Decrypt SOAP Body", 280, 180);
-    }
-    @FXML public void handleAddWssSignBody() {
-        addNode("WSS_SIGN_BODY", "WSS Sign SOAP Body", 280, 180);
-    }
-    @FXML public void handleAddWssVerifySignature() {
-        addNode("WSS_VERIFY_SIGNATURE", "WSS Verify Signature", 280, 180);
-    }
-    @FXML public void handleAddWssUsernameToken() {
-        addNode("WSS_USERNAME_TOKEN_ADD", "Add WSS UsernameToken", 280, 180);
-    }
-    @FXML public void handleAddWssVerifyUsernameToken() {
-        addNode("WSS_USERNAME_TOKEN_VERIFY", "Verify WSS UsernameToken", 280, 180);
-    }
-    @FXML public void handleAddAesKeyGenerate() { addNode("AES_KEY_GENERATE", "Generate AES key", 180, 180); }
-    @FXML public void handleAddPbkdf2() { addNode("KDF_PBKDF2", "PBKDF2", 240, 180); }
-    @FXML public void handleAddRsaKeypairGenerate() { addNode("RSA_KEYPAIR_GENERATE", "Generate RSA key pair", 180, 180); }
-    @FXML public void handleAddRandomBytes() { addNode("RANDOM_BYTES", "Random bytes", 60, 180); }
-        @FXML public void handleAddBase64Encode() { addNode("BASE64_ENCODE", "Base64 Encode", 250, 150); }
-    @FXML public void handleAddBase64Decode() { addNode("BASE64_DECODE", "Base64 Decode", 250, 150); }
-    @FXML public void handleAddBase64UrlEncode() { addNode("BASE64URL_ENCODE", "Base64URL Encode", 250, 150); }
-    @FXML public void handleAddBase64UrlDecode() { addNode("BASE64URL_DECODE", "Base64URL Decode", 250, 150); }
-    @FXML public void handleAddHexEncode() { addNode("HEX_ENCODE", "Hex encode", 280, 180); }
-    @FXML public void handleAddHexDecode() { addNode("HEX_DECODE", "Hex decode", 280, 180); }
-    @FXML public void handleAddUtf8Encode() { addNode("UTF8_ENCODE", "UTF-8 encode", 280, 180); }
-    @FXML public void handleAddUtf8Decode() { addNode("UTF8_DECODE", "UTF-8 decode", 280, 180); }
-    @FXML public void handleAddFileOutput() { addNode("FILE_OUTPUT", "File output", 500, 180); }
-    @FXML public void handleAddConsoleOutput() { addNode("CONSOLE_OUTPUT", "Console output", 500, 180); }
 
-    @FXML public void handleToggleInspector() {
-        inspectorVisible = !inspectorVisible;
-        nodeInspector.setManaged(inspectorVisible);
-        nodeInspector.setVisible(inspectorVisible);
-        if (inspectorVisible) {
-            nodeInspector.setMinWidth(250); nodeInspector.setPrefWidth(280); nodeInspector.setMaxWidth(Double.MAX_VALUE);
-            designerSplitPane.setDividerPositions(0.72);
-            inspectorToggleButton.setText(t("module.process.hideInspector"));
-        } else {
-            nodeInspector.setMinWidth(0); nodeInspector.setPrefWidth(0); nodeInspector.setMaxWidth(0);
-            designerSplitPane.setDividerPositions(1.0);
-            inspectorToggleButton.setText(t("module.process.showInspector"));
+    // --- Expandable Canvas Geometry ---
+    public void updateCanvasGeometry() {
+        if (workflowCanvas == null) return;
+        double maxX = 1200;
+        double maxY = 800;
+        for (ProcessDefinition.Node n : nodes) {
+            maxX = Math.max(maxX, n.x + 220 + 200);
+            maxY = Math.max(maxY, n.y + 120 + 200);
+        }
+        workflowCanvas.setPrefWidth(maxX);
+        workflowCanvas.setPrefHeight(maxY);
+        workflowCanvas.setMinWidth(maxX);
+        workflowCanvas.setMinHeight(maxY);
+    }
+
+    // --- Zoom & Pan ---
+    public void setZoom(double zoom) {
+        currentZoom = Math.max(0.25, Math.min(4.0, zoom));
+        canvasScale.setX(currentZoom);
+        canvasScale.setY(currentZoom);
+        if (zoomLevelLabel != null) {
+            zoomLevelLabel.setText(Math.round(currentZoom * 100) + "%");
         }
     }
 
-    /** Opens this workflow's own trace, rather than the unrelated global-operation result. */
-    @FXML public void handleOpenExpandedExecutionResult() {
-        String trace = executionOutputArea == null ? "" : executionOutputArea.getText();
-        if (trace == null || trace.isBlank()) {
-            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION,
-                    t("module.process.runBeforeExpand")).showAndWait();
+    public double getZoom() {
+        return currentZoom;
+    }
+
+    @FXML public void handleZoomIn() { setZoom(currentZoom + 0.15); }
+    @FXML public void handleZoomOut() { setZoom(currentZoom - 0.15); }
+    @FXML public void handleResetZoom() { setZoom(1.0); }
+
+    @FXML public void handleZoomFit() {
+        if (nodes.isEmpty() || designerWorkspace == null) {
+            setZoom(1.0);
             return;
         }
-        javafx.stage.Window owner = workflowCanvas == null || workflowCanvas.getScene() == null
-                ? null : workflowCanvas.getScene().getWindow();
-        expandedExecutionViewer.show(owner, "Expanded Result — Process Designer", trace);
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
+        double maxX = 0, maxY = 0;
+        for (ProcessDefinition.Node n : nodes) {
+            minX = Math.min(minX, n.x);
+            minY = Math.min(minY, n.y);
+            maxX = Math.max(maxX, n.x + 180);
+            maxY = Math.max(maxY, n.y + 90);
+        }
+        double vpW = designerWorkspace.getViewportBounds().getWidth();
+        double vpH = designerWorkspace.getViewportBounds().getHeight();
+        if (vpW <= 0) vpW = 800;
+        if (vpH <= 0) vpH = 500;
+        double scaleX = (vpW - 40) / Math.max(100, maxX - minX + 40);
+        double scaleY = (vpH - 40) / Math.max(100, maxY - minY + 40);
+        setZoom(Math.min(scaleX, scaleY));
     }
 
-    private void connectToPort(String targetPort) {
-        if (selectedNodeIds.size() != 2) return;
-        List<String> pair = orderedConnectionPair();
-        String source = pair.get(0);
-        String destination = pair.get(1);
+    @FXML public void handleSnapToGridToggled() {
+        snapToGrid = snapToGridCheck == null || snapToGridCheck.isSelected();
+    }
 
-        if (targetPort != null) {
-            boolean occupied = connections.stream().anyMatch(c -> c.to.equals(destination) && targetPort.equals(c.targetPort));
-            if (occupied) {
-                executionOutputArea.setText(t("module.process.connectionOccupied", targetPort, nodeLabel(destination)));
-                return;
+    // --- Undo / Redo Command Pattern ---
+    private record SnapshotCommand(String desc, ProcessDefinition before, ProcessDefinition after) implements DesignerCommand {
+        @Override public void undo() { restoreDef(before); }
+        @Override public void redo() { restoreDef(after); }
+        private void restoreDef(ProcessDefinition def) {}
+    }
+
+    public void executeCommand(DesignerCommand command) {
+        command.redo();
+        undoStack.push(command);
+        if (undoStack.size() > 60) {
+            ((ArrayDeque<DesignerCommand>) undoStack).removeLast();
+        }
+        redoStack.clear();
+    }
+
+    private void recordStateChange(String desc, ProcessDefinition before) {
+        ProcessDefinition after = snapshot(toDefinition());
+        ProcessDefinition beforeSnapshot = snapshot(before);
+        undoStack.push(new DesignerCommand() {
+            @Override
+            public void undo() {
+                load(beforeSnapshot);
             }
-        } else {
-            connections.removeIf(c -> c.to.equals(destination) && c.targetPort == null);
+            @Override
+            public void redo() {
+                load(after);
+            }
+        });
+        if (undoStack.size() > 60) {
+            ((ArrayDeque<DesignerCommand>) undoStack).removeLast();
         }
-
-        ProcessDefinition.Connection newConn = new ProcessDefinition.Connection(source, destination);
-        newConn.targetPort = targetPort;
-        connections.add(newConn);
-        if ("key".equals(targetPort)) {
-            nodes.stream().filter(n -> n.id.equals(destination)).findFirst()
-                    .ifPresent(n -> n.configuration.put("keyFromFlow", "true"));
-        }
-
-        ProcessDefinition.Node sourceNode = nodes.stream().filter(n -> n.id.equals(source)).findFirst().orElse(null);
-        ProcessDefinition.Node destinationNode = nodes.stream().filter(n -> n.id.equals(destination)).findFirst().orElse(null);
-        // Key material is deliberately reusable: keep it selected after a key
-        // binding so the next crypto node can receive the same generated key.
-        // This makes Encrypt -> Decrypt round trips natural without weakening the
-        // one-source-per-target-port invariant.
-        boolean keepReusableKeySourceSelected = "key".equals(targetPort) && isReusableKeySource(sourceNode);
-        selected = keepReusableKeySourceSelected ? sourceNode : destinationNode;
-        selectedNodeIds.clear();
-        if (selected != null) selectedNodeIds.add(selected.id);
-        String portStr = targetPort != null ? " [" + targetPort + "]" : "";
-        executionOutputArea.setText(t("module.process.connected", nodeLabel(source), nodeLabel(destination), portStr
-                + (keepReusableKeySourceSelected ? ". Select another crypto node to reuse this key." : "")));
-        updateSelectionUi();
-        redraw();
+        redoStack.clear();
     }
 
-    @FXML public void handleConnectSelected() { connectToPort(null); }
+    @FXML public void handleUndo() {
+        if (!undoStack.isEmpty()) {
+            DesignerCommand cmd = undoStack.pop();
+            cmd.undo();
+            redoStack.push(cmd);
+        }
+    }
 
-    @FXML public void handleSaveNodeSettings() {
+    @FXML public void handleRedo() {
+        if (!redoStack.isEmpty()) {
+            DesignerCommand cmd = redoStack.pop();
+            cmd.redo();
+            undoStack.push(cmd);
+        }
+    }
+
+    // --- Duplicate & Tidy Layout ---
+    @FXML public void handleDuplicateSelected() {
+        if (selected == null) return;
+        ProcessDefinition before = toDefinition();
+        ProcessDefinition.Node dup = new ProcessDefinition.Node(
+                UUID.randomUUID().toString(),
+                selected.type,
+                selected.label + " (Copy)",
+                selected.x + 30,
+                selected.y + 30
+        );
+        dup.configuration.putAll(selected.configuration);
+        for (String sk : NodeCatalog.allSensitiveKeys()) {
+            dup.configuration.remove(sk);
+        }
+        nodes.add(dup);
+        select(dup);
+        updateCanvasGeometry();
+        redraw();
+        recordStateChange("Duplicate node", before);
+    }
+
+    @FXML public void handleTidyLayout() {
+        if (nodes.isEmpty()) return;
+        ProcessDefinition before = toDefinition();
+        List<String> order = ProcessValidator.computeTopologicalOrder(toDefinition());
+
+        Map<String, Integer> depthMap = new HashMap<>();
+        for (String id : order) {
+            int maxParentDepth = -1;
+            for (ProcessDefinition.Connection c : connections) {
+                if (c.to.equals(id)) {
+                    int pDepth = depthMap.getOrDefault(c.from, 0);
+                    maxParentDepth = Math.max(maxParentDepth, pDepth);
+                }
+            }
+            depthMap.put(id, maxParentDepth + 1);
+        }
+
+        Map<Integer, Integer> layerCounts = new HashMap<>();
+        for (String id : order) {
+            int layer = depthMap.getOrDefault(id, 0);
+            int row = layerCounts.getOrDefault(layer, 0);
+            layerCounts.put(layer, row + 1);
+
+            ProcessDefinition.Node n = nodes.stream().filter(node -> node.id.equals(id)).findFirst().orElse(null);
+            if (n != null) {
+                n.x = 60 + layer * 220;
+                n.y = 80 + row * 110;
+            }
+        }
+
+        updateCanvasGeometry();
+        redraw();
+        recordStateChange("Tidy layout", before);
+    }
+
+    // --- Detached Window & Focus Mode ---
+    @FXML public void handleOpenWindow() {
+        if (processDesignerRoot == null) return;
+        javafx.scene.Node content = processDesignerRoot.getContent();
+        if (content == null) return;
+
+        Label placeholder = new Label(t("module.process.windowPlaceholder"));
+        placeholder.setStyle("-fx-font-size: 13px; -fx-padding: 30; -fx-text-fill: #aaa;");
+        processDesignerRoot.setContent(placeholder);
+
+        Stage owner = (processDesignerRoot.getScene() != null && processDesignerRoot.getScene().getWindow() instanceof Stage s) ? s : null;
+        ProcessDesignerWindow.open(owner, content, t("module.process.title"), () -> {
+            processDesignerRoot.setContent(content);
+        });
+    }
+
+    @FXML public void handleToggleFocusMode() {
+        focusMode = !focusMode;
+        if (focusModeButton != null) {
+            focusModeButton.setText(focusMode ? t("module.process.exitFocusMode") : t("module.process.focusMode"));
+        }
+        if (focusMode) {
+            if (designerSplitPane != null) designerSplitPane.setDividerPositions(0.0, 1.0);
+        } else {
+            if (designerSplitPane != null) designerSplitPane.setDividerPositions(0.18, 0.76);
+        }
+    }
+
+    // --- Node Selection & Descriptor Inspector ---
+    void select(ProcessDefinition.Node node) {
         saveSelectedNodeSettings();
-        redraw();
+        selectedConnection = null;
+        if (!selectedNodeIds.contains(node.id) && selectedNodeIds.size() == 2) selectedNodeIds.clear();
+        selectedNodeIds.add(node.id);
+        selected = node;
+        selectedNodeLabel.setText(node.type + " · " + node.label);
+        if (nodeNameFieldGroup != null) {
+            nodeNameFieldGroup.setVisible(true);
+            nodeNameFieldGroup.setManaged(true);
+        }
+        if (nodeNameField != null) nodeNameField.setText(node.label == null ? "" : node.label);
+
+        NodeDescriptor desc = NodeCatalog.descriptor(node.type).orElse(null);
+        if (desc != null && dynamicInspectorContainer != null) {
+            dynamicInspectorRenderer = NodeInspectorRenderer.render(
+                    desc,
+                    node,
+                    dynamicInspectorContainer,
+                    transientSecrets.computeIfAbsent(node.id, k -> new HashMap<>()),
+                    k -> {
+                        updateRepresentationContract(selected);
+                        redraw();
+                    }
+            );
+        }
+
+        updateRepresentationContract(node);
+        updateSelectionUi();
     }
 
-    @FXML public void handleCryptoAlgorithmChanged() {
-        updateNonceLabel();
-        updateAadPortHint();
-    }
-    @FXML public void handleBrowseFile() {
-        if (selected == null) return;
-        FileChooser chooser = new FileChooser();
-        if ("FILE_OUTPUT".equals(selected.type)) {
-            chooser.setTitle("Select output file");
-            File file = chooser.showSaveDialog(workflowCanvas.getScene().getWindow());
-            if (file != null) {
-                nodePathField.setText(file.getAbsolutePath());
-                saveSelectedNodeSettings();
-            }
-        } else {
-            chooser.setTitle("Select input file");
-            File file = chooser.showOpenDialog(workflowCanvas.getScene().getWindow());
-            if (file != null) {
-                nodePathField.setText(file.getAbsolutePath());
-                saveSelectedNodeSettings();
-            }
-        }
-    }
-    @FXML public void handleBrowseKeystore() {
-        if (selected == null) return;
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Select Keystore");
-        File file = chooser.showOpenDialog(workflowCanvas.getScene().getWindow());
-        if (file != null) { keystorePathField.setText(file.getAbsolutePath()); saveSelectedNodeSettings(); }
-    }
-    @FXML public void handleBrowseMaterial() {
-        if (selected == null) return;
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Select Certificate / Public Key");
-        File file = chooser.showOpenDialog(workflowCanvas.getScene().getWindow());
-        if (file != null) { materialPathField.setText(file.getAbsolutePath()); saveSelectedNodeSettings(); }
-    }
     private void saveSelectedNodeSettings() {
         if (selected == null) return;
+        ProcessDefinition before = snapshot(toDefinition());
         if (nodeNameField != null && !nodeNameField.getText().isBlank()) {
             selected.label = nodeNameField.getText().trim();
             selectedNodeLabel.setText(selected.type + " · " + selected.label);
         }
-        if ("CONSOLE_INPUT".equals(selected.type)) selected.configuration.put("value", nodeValueArea.getText());
-        if ("FILE_INPUT".equals(selected.type) || "FILE_OUTPUT".equals(selected.type)) {
-            selected.configuration.put("path", nodePathField.getText().trim());
+        if (dynamicInspectorRenderer != null) {
+            Map<String, char[]> sec = transientSecrets.computeIfAbsent(selected.id, k -> new HashMap<>());
+            dynamicInspectorRenderer.save(selected, sec);
         }
-        if ("RANDOM_BYTES".equals(selected.type)) {
-            if (randomBytesLengthField != null) selected.configuration.put("length", randomBytesLengthField.getText().trim());
-        }
-        if ("CONSOLE_INPUT".equals(selected.type) || "FILE_INPUT".equals(selected.type) || "FILE_OUTPUT".equals(selected.type)) {
-            selected.configuration.put("charset", nodeCharsetCombo.getValue());
-        }
-        if ("HASH".equals(selected.type)) selected.configuration.put("algorithm", hashAlgorithmCombo.getValue());
-
-        boolean encrypt = "ENCRYPT".equals(selected.type);
-        boolean decrypt = "DECRYPT".equals(selected.type);
-        boolean mac = "MAC".equals(selected.type);
-        boolean sign = "SIGN".equals(selected.type);
-        boolean verify = "VERIFY".equals(selected.type);
-        boolean wssEncrypt = "WSS_ENCRYPT_BODY".equals(selected.type);
-        boolean wssDecrypt = "WSS_DECRYPT_BODY".equals(selected.type);
-        boolean wssSign = "WSS_SIGN_BODY".equals(selected.type);
-        boolean wssVerify = "WSS_VERIFY_SIGNATURE".equals(selected.type);
-        boolean wssUsernameAdd = "WSS_USERNAME_TOKEN_ADD".equals(selected.type);
-        boolean wssUsernameVerify = "WSS_USERNAME_TOKEN_VERIFY".equals(selected.type);
-
-
         updateRepresentationContract(selected);
-if (encrypt || decrypt || mac || sign || verify) {
-            if (cryptoAlgorithmCombo != null) selected.configuration.put("algorithm", cryptoAlgorithmCombo.getValue());
-        }
-        if (wssEncrypt) {
-            if (cryptoAlgorithmCombo != null) {
-                selected.configuration.put("dataAlgorithm", cryptoAlgorithmCombo.getValue());
+        before.nodes.stream().filter(n -> n.id.equals(selected.id)).findFirst().ifPresent(bn -> {
+            if (!bn.configuration.equals(selected.configuration) || !Objects.equals(bn.label, selected.label)) {
+                recordStateChange("Change configuration", before);
             }
-            if (wssKeyTransportCombo != null) {
-                selected.configuration.put("keyTransportAlgorithm", wssKeyTransportCombo.getValue());
-            }
-        }
-        if (wssSign && cryptoAlgorithmCombo != null) {
-            selected.configuration.put("signatureAlgorithm", cryptoAlgorithmCombo.getValue());
-            selected.configuration.put("timestampEnabled", String.valueOf(wssTimestampEnabledCheck.isSelected()));
-            selected.configuration.put("timestampMinutes", wssTimestampMinutesField.getText().trim());
-            selected.configuration.put("timestampSigned", String.valueOf(wssTimestampSignedCheck.isSelected()));
-        }
-        if (wssUsernameAdd || wssUsernameVerify) {
-            selected.configuration.put("username", wssUsernameField.getText().trim());
-            if (!wssPasswordField.getText().isEmpty()) {
-                selected.configuration.put("wssPassword", wssPasswordField.getText());
-            }
-            if (wssUsernameAdd) {
-                selected.configuration.put("passwordType", wssPasswordTypeCombo.getValue());
-            } else {
-                selected.configuration.put("maxAgeSeconds", wssTokenAgeField.getText().trim());
-            }
-        }
-        if (encrypt || decrypt || mac) {
-            if (keyFormatCombo != null) selected.configuration.put("keyFormat", keyFormatCombo.getValue());
-            if (manualKeyField != null && !manualKeyField.getText().isEmpty()) selected.configuration.put("key", manualKeyField.getText());
-        }
-        if (encrypt || decrypt) {
-            if (nonceField != null) selected.configuration.put("nonce", nonceField.getText());
-            if (generateNonceCheck != null) selected.configuration.put("generateNonce", String.valueOf(generateNonceCheck.isSelected()));
-        }
-        if (encrypt && cipherOutputFormatCombo != null && cipherOutputFormatCombo.getValue() != null) {
-            selected.configuration.put("outputFormat", cipherOutputFormatCombo.getValue().startsWith("ENVELOPE") ? "ENVELOPE" : "RAW");
-        }
-        if ("AES_KEY_GENERATE".equals(selected.type) || "KDF_PBKDF2".equals(selected.type) || "RSA_KEYPAIR_GENERATE".equals(selected.type)) {
-            if ("AES_KEY_GENERATE".equals(selected.type) && symmetricKeyAlgorithmCombo != null) {
-                String keyAlgorithm = symmetricKeyAlgorithmCombo.getValue();
-                selected.configuration.put("keyAlgorithm", keyAlgorithm);
-            }
-            if (keySizeCombo != null && keySizeCombo.getValue() != null) selected.configuration.put("keySize", keySizeCombo.getValue());
-            if ("KDF_PBKDF2".equals(selected.type)) {
-                if (kdfIterationsField != null && !kdfIterationsField.getText().isBlank()) selected.configuration.put("iterations", kdfIterationsField.getText().trim());
-                if (kdfSaltField != null && !kdfSaltField.getText().isBlank()) selected.configuration.put("salt", kdfSaltField.getText().trim());
-            }
-        }
-        if (sign || wssDecrypt || wssSign) {
-            if (keystorePathField != null) selected.configuration.put("keystorePath", keystorePathField.getText());
-            if (keystoreTypeCombo != null) selected.configuration.put("keystoreType", keystoreTypeCombo.getValue());
-            if ((sign || wssSign) && aliasField != null) selected.configuration.put("alias", aliasField.getText());
-            if (keystorePasswordField != null && !keystorePasswordField.getText().isEmpty()) selected.configuration.put("keystorePassword", keystorePasswordField.getText());
-            if (keyPasswordField != null && !keyPasswordField.getText().isEmpty()) selected.configuration.put("keyPassword", keyPasswordField.getText());
-        }
-        if (verify || wssEncrypt || wssVerify) {
-            if (materialPathField != null) selected.configuration.put("materialPath", materialPathField.getText());
-            if (verify && materialTypeCombo != null) selected.configuration.put("materialType", materialTypeCombo.getValue());
-        }
-    }
-    @FXML public void handleDeleteSelected() {
-        ProcessDefinition.Connection connection = selectedConnection != null ? selectedConnection : connectionBetweenSelectedNodes();
-        if (connection != null) {
-            connections.remove(connection);
-            executionOutputArea.setText(t("module.process.deletedConnection", connection.targetPort));
-            selectedConnection = null;
-            updateSelectionUi();
-            redraw();
-            return;
-        }
-        if (selected == null) return;
-        connections.removeIf(c -> c.from.equals(selected.id) || c.to.equals(selected.id));
-        nodes.remove(selected); views.remove(selected.id); selectedNodeIds.remove(selected.id); selected = null; updateSelectionUi(); redraw();
-    }
-    @FXML public void handleReverseSelectedConnection() {
-        ProcessDefinition.Connection connection = selectedConnection != null ? selectedConnection : connectionBetweenSelectedNodes();
-        if (connection == null) return;
-        String previousSource = connection.from;
-        connection.from = connection.to;
-        connection.to = previousSource;
-        selectedConnection = connection;
-        selectedNodeIds.clear();
-        selected = null;
-        selectedNodeLabel.setText(t("module.process.feedback.connectionReversed",
-                nodeLabel(connection.from), nodeLabel(connection.to)));
-        executionOutputArea.setText(t("module.process.connectionReversed"));
-        updateSelectionUi();
-        redraw();
-    }
-    @FXML public void handleClearCanvas() {
-        ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.CLEAR,
-                this::clearCanvasState, null);
-        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.clearStatus"));
-    }
-
-    @FXML public void handleResetDefaults() {
-        ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.RESET_DEFAULTS,
-                null, this::restoreSafeDefaults);
-        if (processStatusLabel != null) processStatusLabel.setText(t("module.common.resetStatus"));
-    }
-
-    private void clearCanvasState() {
-        nodes.clear(); connections.clear(); views.clear(); selectedNodeIds.clear(); selected = null; selectedConnection = null;
-        processCancellationRequested = false;
-        if (processNameField != null) processNameField.setText(t("module.process.untitled"));
-        if (executionOutputArea != null) executionOutputArea.clear();
-        if (executionStatusTable != null) executionStatusTable.getItems().clear();
-        if (processProgressBar != null) processProgressBar.setProgress(0);
-        if (processStatusLabel != null) processStatusLabel.setText(t("status.ready"));
-        updateSelectionUi(); redraw();
-    }
-
-    private void restoreSafeDefaults() {
-        if (nodeCharsetCombo != null) nodeCharsetCombo.setValue("UTF-8");
-        if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue("SHA-256");
-        if (fileModeCombo != null && !fileModeCombo.getItems().isEmpty()) fileModeCombo.getSelectionModel().selectFirst();
-        if (cryptoAlgorithmCombo != null && !cryptoAlgorithmCombo.getItems().isEmpty()) cryptoAlgorithmCombo.getSelectionModel().selectFirst();
-        if (wssKeyTransportCombo != null && !wssKeyTransportCombo.getItems().isEmpty()) wssKeyTransportCombo.getSelectionModel().selectFirst();
-        if (wssTimestampEnabledCheck != null) wssTimestampEnabledCheck.setSelected(false);
-        if (wssTimestampSignedCheck != null) wssTimestampSignedCheck.setSelected(false);
-        if (wssTimestampMinutesField != null) wssTimestampMinutesField.setText("5");
-    }
-
-    public Runnable onExecutionFinished;
-    public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
-
-    @FXML public void handleDryRunProcess() {
-        saveSelectedNodeSettings();
-        ProcessDefinition definition = toDefinition();
-        com.cryptocarver.model.process.DryRunSummary summary = com.cryptocarver.model.process.ProcessValidator.dryRun(definition);
-
-        if (executionStatusTable != null) {
-            executionStatusTable.getItems().clear();
-            int idx = 1;
-            for (com.cryptocarver.model.process.StepValidationResult v : summary.stepValidations()) {
-                String label = nodeLabel(v.targetNodeId());
-                executionStatusTable.getItems().add(new ProcessExecutionRow(
-                    v.targetNodeId(),
-                    String.valueOf(idx++),
-                    label,
-                    "DRY-RUN",
-                    "-",
-                    "-",
-                    v.status().name(),
-                    "0 ms",
-                    v.message()
-                ));
-            }
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== PROCESS DESIGNER DRY RUN ===\n");
-        sb.append("Total Steps: ").append(summary.totalSteps()).append('\n');
-        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
-          .append(", Warning=").append(summary.warningCount())
-          .append(", Incomplete=").append(summary.incompleteCount())
-          .append(", Blocked=").append(summary.blockedCount()).append('\n');
-
-        if (summary.firstBlockedReason() != null) {
-            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
-        }
-
-        sb.append("\nResolved Dependencies:\n");
-        for (String dep : summary.resolvedDependencies()) {
-            sb.append("  - ").append(dep).append('\n');
-        }
-
-        sb.append("\nExecution Order:\n");
-        for (String stepId : summary.executionOrder()) {
-            sb.append("  - ").append(nodeLabel(stepId)).append(" [").append(stepId).append("]\n");
-        }
-        sb.append("\n(Dry Run simulation finished: 0 cryptographic operations executed, 0 files written, 0 history entries created)");
-
-        executionOutputArea.setText(sb.toString());
-        if (processStatusLabel != null) {
-            processStatusLabel.setText(t("module.process.drySummary", summary.readyCount(), summary.blockedCount()));
-        }
-    }
-
-    @FXML public void handleCancelProcess() {
-        processCancellationRequested = true;
-        Platform.runLater(() -> {
-            if (processStatusLabel != null) processStatusLabel.setText(t("module.process.cancelling"));
         });
     }
 
-    @FXML public void handleRunProcess() {
-        saveSelectedNodeSettings();
-        ProcessDefinition definition = toDefinition();
-        executionOutputArea.clear();
-        if (executionStatusTable != null) executionStatusTable.getItems().clear();
-
-        for (ProcessDefinition.Node n : definition.nodes) {
-            if ("ENCRYPT".equals(n.type) || "DECRYPT".equals(n.type)) {
-                String alg = n.configuration.getOrDefault("algorithm", "AES/GCM/NoPadding");
-                com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec;
-                try {
-                    spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(alg);
-                } catch (Exception e) {
-                    showPreflightFailure(t("module.process.feedback.nodeError", n.label, e.getMessage()));
-                    return;
-                }
-                boolean hasAadConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "aad".equals(c.targetPort));
-                if (!spec.aead && hasAadConn) {
-                    showPreflightFailure(t("module.process.feedback.aad", n.label, alg));
-                    return;
-                }
-                boolean hasIvConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "iv".equals(c.targetPort));
-                if (spec.ivLength == 0 && hasIvConn) {
-                    showPreflightFailure(t("module.process.feedback.iv", n.label, alg));
-                    return;
-                }
-            }
-        }
-
-        processCancellationRequested = false;
-        if (cancelProcessButton != null) cancelProcessButton.setDisable(false);
-        if (runProcessButton != null) runProcessButton.setDisable(true);
-        if (processProgressBar != null) processProgressBar.setProgress(0.0);
-        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.running"));
-
-        java.util.Queue<NodeExecutionEvent> events = new java.util.concurrent.ConcurrentLinkedQueue<>();
-        ExecutionContext context = new ExecutionContext(
-            FileWritePolicy.ALLOW_OVERWRITE,
-            event -> {
-                events.add(event);
-                if (onNodeExecutionEvent != null) onNodeExecutionEvent.accept(event);
-                Platform.runLater(() -> {
-                    if (processProgressBar != null && definition.nodes.size() > 0) {
-                        processProgressBar.setProgress((double) event.step() / definition.nodes.size());
-                    }
-                    if (processStatusLabel != null) {
-                        processStatusLabel.setText(t("module.process.stepProgress", event.step(), definition.nodes.size(), event.nodeLabel()));
-                    }
-                });
-            },
-            () -> processCancellationRequested
-        );
-
-        new Thread(() -> {
-            Map<String, com.cryptocarver.model.process.FlowValue> result = Map.of();
-            Exception failure = null;
-            try {
-                result = ProcessEngine.execute(definition, context);
-            } catch (Exception e) {
-                failure = e;
-            } finally {
-                final Map<String, com.cryptocarver.model.process.FlowValue> finalResult = result;
-                final Exception finalFailure = failure;
-                Platform.runLater(() -> {
-                    if (cancelProcessButton != null) cancelProcessButton.setDisable(true);
-                    if (runProcessButton != null) runProcessButton.setDisable(false);
-
-                    if (processCancellationRequested) {
-                        int completedSteps = finalResult.size();
-                        if (processProgressBar != null) {
-                            double prog = definition.nodes.size() > 0 ? (double) completedSteps / definition.nodes.size() : -1.0;
-                            if (prog >= 1.0) prog = 0.99;
-                            processProgressBar.setProgress(prog);
-                        }
-                        if (processStatusLabel != null) {
-                            processStatusLabel.setText(t("module.process.cancelled", completedSteps));
-                        }
-                        executionOutputArea.setText(t("module.process.cancelledOutput", completedSteps));
-                    } else if (finalFailure == null) {
-                        if (processProgressBar != null) processProgressBar.setProgress(1.0);
-                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.completed"));
-                    } else {
-                        if (processProgressBar != null) processProgressBar.setProgress(0.0);
-                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.failed", finalFailure.getMessage()));
-                    }
-
-                    renderExecutionResult(definition, finalResult, events, finalFailure);
-                    if (onExecutionFinished != null) onExecutionFinished.run();
-                });
-            }
-        }, "process-designer-execution").start();
+    public Control getInspectorControl(String key) {
+        return dynamicInspectorRenderer != null ? dynamicInspectorRenderer.getControl(key) : null;
     }
 
-    private void showPreflightFailure(String message) {
-        if (executionStatusTable != null) {
-            executionStatusTable.getItems().setAll(new ProcessExecutionRow("validation", "-", "Validation",
-                    "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
-        }
-        executionOutputArea.setText(t("module.process.feedback.failed", message));
+    public VBox getInspectorGroup(String key) {
+        return dynamicInspectorRenderer != null ? dynamicInspectorRenderer.getGroup(key) : null;
     }
 
-    private void renderExecutionResult(ProcessDefinition definition, Map<String, com.cryptocarver.model.process.FlowValue> result,
-            java.util.Collection<NodeExecutionEvent> events, Exception failure) {
-        Map<String, NodeExecutionEvent> finalEvents = new LinkedHashMap<>();
-        for (NodeExecutionEvent event : events) {
-            if (event.state() != com.cryptocarver.model.process.NodeExecutionState.RUNNING) {
-                finalEvents.put(event.nodeId(), event);
-            }
-        }
-        if (executionStatusTable != null) {
-            executionStatusTable.getItems().clear();
-            if (finalEvents.isEmpty() && failure != null) {
-                executionStatusTable.getItems().add(new ProcessExecutionRow("validation", "-", "Validation",
-                        "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
-            }
-            for (NodeExecutionEvent event : finalEvents.values()) {
-                Object val = result != null ? result.get(event.nodeId()) : null;
-                executionStatusTable.getItems().add(new ProcessExecutionRow(event.nodeId(), String.valueOf(event.step()),
-                        event.nodeLabel(), event.nodeType(), formatFlow(event.inputRepresentation(), event.inputSize()),
-                        formatFlow(event.outputRepresentation(), event.outputSize()), event.state().name(),
-                        event.duration().toMillis() + " ms", val));
-            }
-        }
-
-        StringBuilder trace = new StringBuilder(failure == null ? t("module.process.completed") + "\n"
-                : t("module.process.feedback.failed", failure.getMessage()) + "\n");
-        for (NodeExecutionEvent event : finalEvents.values()) {
-            trace.append('\n').append('[').append(event.step()).append("] ")
-                    .append(event.nodeLabel().replace("\n", " ")).append(" · ").append(event.nodeType())
-                    .append(" — ").append(event.state().name()).append(" (").append(event.duration().toMillis()).append(" ms)\n");
-            if (event.inputRepresentation() != null) trace.append("  input:  ").append(formatFlow(event.inputRepresentation(), event.inputSize())).append('\n');
-            if (event.outputRepresentation() != null) trace.append("  output: ").append(formatFlow(event.outputRepresentation(), event.outputSize())).append('\n');
-            if (result.containsKey(event.nodeId())) {
-                com.cryptocarver.model.process.FlowValue value = result.get(event.nodeId());
-                trace.append("  value: ").append(value.render()).append('\n');
-            }
-            ProcessDefinition.Node node = definition.nodes.stream().filter(n -> n.id.equals(event.nodeId())).findFirst().orElse(null);
-            if (node != null && ("ENCRYPT".equals(node.type) || "DECRYPT".equals(node.type))) {
-                if (Boolean.parseBoolean(node.configuration.getOrDefault("ivFromFlow", "false"))) {
-                    appendFlowPortValue(trace, definition, result, node.id, "iv", "IV/nonce");
-                } else if (node.configuration.get("nonce") != null) {
-                    trace.append("  IV/nonce (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ")
-                            .append(node.configuration.get("nonce")).append('\n');
-                }
-                if (Boolean.parseBoolean(node.configuration.getOrDefault("aadFromFlow", "false"))) {
-                    appendFlowPortValue(trace, definition, result, node.id, "aad", "AAD");
-                }
-            }
-            if (node != null && ("ENCRYPT".equals(node.type) || "DECRYPT".equals(node.type) || "MAC".equals(node.type))
-                    && node.configuration.get("key") != null) {
-                trace.append("  key (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ")
-                        .append(node.configuration.get("key")).append('\n');
-            }
-            if (node != null && "KDF_PBKDF2".equals(node.type)) {
-                trace.append("  PBKDF2: ").append(node.configuration.getOrDefault("iterations", "210000"))
-                        .append(" iterations; salt (Base64): ").append(node.configuration.getOrDefault("salt", "")).append('\n');
-            }
-            if (node != null && ("AES_KEY_GENERATE".equals(node.type) || "KDF_PBKDF2".equals(node.type)
-                    || "RSA_KEYPAIR_GENERATE".equals(node.type) || "RANDOM_BYTES".equals(node.type)) && result.containsKey(node.id)) {
-                trace.append("  generated material (HEX): ").append(result.get(node.id).render()).append('\n');
-            }
-        }
-        for (ProcessDefinition.Node node : definition.nodes) {
-            if ("CONSOLE_OUTPUT".equals(node.type) && result.containsKey(node.id)) {
-                com.cryptocarver.model.process.FlowValue value = result.get(node.id);
-                trace.append("\nConsole output · ").append(node.label.replace("\n", " ")).append('\n')
-                        .append("  ").append(formatFlow(value.representation(), value.bytes().length)).append('\n')
-                        .append("  value: ").append(value.render()).append('\n');
-            }
-        }
-        if (selected != null && "ENCRYPT".equals(selected.type) && nonceField != null) {
-            nonceField.setText(selected.configuration.getOrDefault("nonce", ""));
-        }
-        executionOutputArea.setText(trace.toString());
-    }
-
-    /**
-     * The designer is a laboratory tool: when a port is connected, show both the
-     * binding and its complete value at the consuming operation, not merely a
-     * vague "provided by flow" marker.  Process files still exclude secrets.
-     */
-    private static void appendFlowPortValue(StringBuilder trace, ProcessDefinition definition,
-            Map<String, com.cryptocarver.model.process.FlowValue> result, String destinationId,
-            String targetPort, String displayName) {
-        for (ProcessDefinition.Connection connection : definition.connections) {
-            if (destinationId.equals(connection.to) && targetPort.equals(connection.targetPort)) {
-                com.cryptocarver.model.process.FlowValue value = result.get(connection.from);
-                if (value != null) {
-                    trace.append("  ").append(displayName).append(" (flow from ")
-                            .append(connection.from).append(", ").append(value.representation()).append("): ")
-                            .append(value.render()).append('\n');
-                    return;
-                }
-            }
-        }
-        trace.append("  ").append(displayName).append(": [provided by flow; value unavailable]\n");
-    }
-
-    private static String formatFlow(Representation representation, int size) {
-        if (representation == null) return "—";
-        return representation + " · " + size + (representation == Representation.BINARY ? " bytes" : " chars");
-    }
-    @FXML public void handleSaveProcess() {
-        saveSelectedNodeSettings();
-        String processName = normalizedProcessName();
-        processNameField.setText(processName);
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Save process"); chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoForge process", "*.cfprocess.json"));
-        chooser.setInitialFileName(safeProcessFileName(processName) + ".cfprocess.json");
-        File file = chooser.showSaveDialog(workflowCanvas.getScene().getWindow());
-        try {
-            if (file != null) {
-                Files.writeString(file.toPath(), ProcessDefinitionCodec.serialize(toDefinition()));
-                executionOutputArea.setText(t("module.process.saveSuccess", processName, file.getAbsolutePath()));
-            }
-        }
-        catch (Exception e) { executionOutputArea.setText(t("module.process.saveFailed", e.getMessage())); }
-    }
-    @FXML public void handleLoadProcess() {
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Open process"); chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoForge process", "*.cfprocess.json"));
-        File file = chooser.showOpenDialog(workflowCanvas.getScene().getWindow());
-        try { if (file != null) load(ProcessDefinitionCodec.deserialize(Files.readString(file.toPath()))); }
-        catch (Exception e) { executionOutputArea.setText(t("module.process.openFailed", e.getMessage())); }
-    }
-
-    /** Loads an editable starter workflow; no secret material is embedded in presets. */
-    @FXML public void handleLoadSha256Preset() {
-        ProcessDefinition preset = new ProcessDefinition();
-        preset.name = "SHA-256 text digest";
-        ProcessDefinition.Node input = presetNode("input", "CONSOLE_INPUT", "Text input", 60, 110);
-        input.configuration.put("value", "Hello, CryptoForge");
-        ProcessDefinition.Node hash = presetNode("hash", "HASH", "SHA-256", 280, 110);
-        hash.configuration.put("algorithm", "SHA-256");
-        ProcessDefinition.Node output = presetNode("output", "CONSOLE_OUTPUT", "Digest output", 500, 110);
-        preset.nodes.addAll(List.of(input, hash, output));
-        preset.connections.add(new ProcessDefinition.Connection("input", "hash", "input"));
-        preset.connections.add(new ProcessDefinition.Connection("hash", "output", "input"));
-        loadPreset(preset);
-    }
-
-    @FXML public void handleLoadBase64Preset() {
-        ProcessDefinition preset = new ProcessDefinition();
-        preset.name = "Base64 text encode";
-        ProcessDefinition.Node input = presetNode("input", "CONSOLE_INPUT", "Text input", 60, 110);
-        input.configuration.put("value", "Hello, CryptoForge");
-        ProcessDefinition.Node encode = presetNode("encode", "BASE64_ENCODE", "Base64 encode", 280, 110);
-        ProcessDefinition.Node output = presetNode("output", "CONSOLE_OUTPUT", "Base64 output", 500, 110);
-        preset.nodes.addAll(List.of(input, encode, output));
-        preset.connections.add(new ProcessDefinition.Connection("input", "encode", "input"));
-        preset.connections.add(new ProcessDefinition.Connection("encode", "output", "input"));
-        loadPreset(preset);
-    }
-
-    @FXML public void handleLoadAesGcmRoundTripPreset() {
-        ProcessDefinition preset = new ProcessDefinition();
-        preset.name = "AES-GCM encrypt and decrypt";
-        ProcessDefinition.Node input = presetNode("input", "CONSOLE_INPUT", "Plaintext", 40, 140);
-        input.configuration.put("value", "Hello, CryptoForge");
-        ProcessDefinition.Node key = presetNode("key", "AES_KEY_GENERATE", "Generate AES key", 220, 300);
-        key.configuration.put("keySize", "256");
-        key.configuration.put("keyAlgorithm", "AES");
-        ProcessDefinition.Node iv = presetNode("iv", "RANDOM_BYTES", "Random 12-byte IV", 220, 40);
-        iv.configuration.put("length", "12");
-        ProcessDefinition.Node encrypt = presetNode("encrypt", "ENCRYPT", "Encrypt AES-GCM", 410, 140);
-        encrypt.configuration.put("algorithm", "AES/GCM/NoPadding");
-        encrypt.configuration.put("keyFormat", "HEX");
-        encrypt.configuration.put("generateNonce", "false");
-        encrypt.configuration.put("outputFormat", "RAW");
-        ProcessDefinition.Node decrypt = presetNode("decrypt", "DECRYPT", "Decrypt AES-GCM", 620, 140);
-        decrypt.configuration.put("algorithm", "AES/GCM/NoPadding");
-        decrypt.configuration.put("keyFormat", "HEX");
-        decrypt.configuration.put("generateNonce", "false");
-        decrypt.configuration.put("outputFormat", "RAW");
-        ProcessDefinition.Node decode = presetNode("decode", "UTF8_DECODE", "Decode UTF-8", 820, 140);
-        ProcessDefinition.Node output = presetNode("output", "CONSOLE_OUTPUT", "Recovered text", 1000, 140);
-        preset.nodes.addAll(List.of(input, key, iv, encrypt, decrypt, decode, output));
-        preset.connections.add(new ProcessDefinition.Connection("input", "encrypt", "payload"));
-        preset.connections.add(new ProcessDefinition.Connection("key", "encrypt", "key"));
-        preset.connections.add(new ProcessDefinition.Connection("key", "decrypt", "key"));
-        preset.connections.add(new ProcessDefinition.Connection("iv", "encrypt", "iv"));
-        preset.connections.add(new ProcessDefinition.Connection("iv", "decrypt", "iv"));
-        preset.connections.add(new ProcessDefinition.Connection("encrypt", "decrypt", "payload"));
-        preset.connections.add(new ProcessDefinition.Connection("decrypt", "decode", "input"));
-        preset.connections.add(new ProcessDefinition.Connection("decode", "output", "input"));
-        loadPreset(preset);
-    }
-
-    @FXML public void handleLoadAesCmacPreset() {
-        ProcessDefinition preset = new ProcessDefinition();
-        preset.name = "AES-CMAC";
-        ProcessDefinition.Node input = presetNode("input", "CONSOLE_INPUT", "Message", 60, 140);
-        input.configuration.put("value", "Hello, CryptoForge");
-        ProcessDefinition.Node key = presetNode("key", "AES_KEY_GENERATE", "Generate AES key", 260, 280);
-        key.configuration.put("keySize", "256");
-        key.configuration.put("keyAlgorithm", "AES");
-        ProcessDefinition.Node mac = presetNode("mac", "MAC", "CMAC-AES", 420, 140);
-        mac.configuration.put("algorithm", "CMAC-AES");
-        mac.configuration.put("keyFormat", "HEX");
-        ProcessDefinition.Node output = presetNode("output", "CONSOLE_OUTPUT", "CMAC output", 640, 140);
-        preset.nodes.addAll(List.of(input, key, mac, output));
-        preset.connections.add(new ProcessDefinition.Connection("input", "mac", "payload"));
-        preset.connections.add(new ProcessDefinition.Connection("key", "mac", "key"));
-        preset.connections.add(new ProcessDefinition.Connection("mac", "output", "input"));
-        loadPreset(preset);
-    }
-
-    private ProcessDefinition.Node presetNode(String id, String type, String label, double x, double y) {
-        ProcessDefinition.Node node = new ProcessDefinition.Node(id, type, label, x, y);
-        node.configuration.put("charset", "UTF-8");
-        return node;
-    }
-
-    private void loadPreset(ProcessDefinition preset) {
-        load(preset);
-        if (executionOutputArea != null) {
-            executionOutputArea.setText(t("module.process.presetLoaded", preset.name));
-        }
-    }
-
-    private ProcessDefinition.Node addNode(String type, String label, double x, double y) {
-        ProcessDefinition.Node node = new ProcessDefinition.Node(UUID.randomUUID().toString(), type, label, x, y);
-        node.configuration.put("charset", "UTF-8");
-        if ("HASH".equals(type)) node.configuration.put("algorithm", "SHA-256");
-        if ("ENCRYPT".equals(type) || "DECRYPT".equals(type)) {
-            node.configuration.put("algorithm", "AES/GCM/NoPadding");
-            node.configuration.put("keyFormat", "HEX");
-            node.configuration.put("generateNonce", "true");
-        }
-        if ("MAC".equals(type)) node.configuration.put("algorithm", "HmacSHA256");
-        if ("SIGN".equals(type) || "VERIFY".equals(type)) node.configuration.put("algorithm", "SHA256withRSA");
-        if ("WSS_ENCRYPT_BODY".equals(type)) {
-            node.configuration.put("dataAlgorithm", "AES-256-GCM");
-            node.configuration.put("keyTransportAlgorithm", "RSA-OAEP SHA-256");
-        }
-        if ("WSS_DECRYPT_BODY".equals(type)) node.configuration.put("keystoreType", "PKCS12");
-        if ("WSS_SIGN_BODY".equals(type)) {
-            node.configuration.put("keystoreType", "PKCS12");
-            node.configuration.put("signatureAlgorithm", "RSA_SHA256");
-            node.configuration.put("timestampEnabled", "false");
-            node.configuration.put("timestampMinutes", "5");
-            node.configuration.put("timestampSigned", "true");
-        }
-        if ("WSS_USERNAME_TOKEN_ADD".equals(type)) {
-            node.configuration.put("passwordType", "PasswordDigest");
-        }
-        if ("WSS_USERNAME_TOKEN_VERIFY".equals(type)) {
-            node.configuration.put("maxAgeSeconds", "300");
-        }
-        if ("AES_KEY_GENERATE".equals(type) || "KDF_PBKDF2".equals(type)) node.configuration.put("keySize", "256");
-        if ("KDF_PBKDF2".equals(type)) node.configuration.put("iterations", "210000");
-        if ("RSA_KEYPAIR_GENERATE".equals(type)) node.configuration.put("keySize", "2048");
-        nodes.add(node); redraw();
-        return node;
-    }
-    ProcessDefinition toDefinition() {
-        ProcessDefinition definition = new ProcessDefinition(); definition.name = processNameField.getText().trim(); definition.nodes = new ArrayList<>(nodes); definition.connections = new ArrayList<>(connections); return definition;
-    }
-    private void load(ProcessDefinition definition) {
-        processNameField.setText(normalizedProcessName(definition.name));
-        nodes.clear(); nodes.addAll(definition.nodes);
-        connections.clear(); connections.addAll(definition.connections);
-        selected = null; selectedConnection = null; selectedNodeIds.clear();
-        updateSelectionUi(); redraw();
-    }
-
-    private String normalizedProcessName() {
-        return normalizedProcessName(processNameField == null ? null : processNameField.getText());
-    }
-
-    private static String normalizedProcessName(String name) {
-        return name == null || name.isBlank() ? "Untitled process" : name.trim();
-    }
-
-    private static String safeProcessFileName(String processName) {
-        String safe = processName.replaceAll("[^a-zA-Z0-9._-]+", "-")
-                .replaceAll("^-+|-+$", "");
-        return safe.isBlank() ? "process" : safe;
-    }
+    // --- Redraw and Node/Connection Rendering ---
     void redraw() {
-        workflowCanvas.getChildren().clear(); views.clear();
-        Map<String, Representation> reps = new java.util.HashMap<>();
-        try { reps = ProcessEngine.validate(toDefinition()); } catch(Exception ignored) {}
+        if (workflowCanvas == null) return;
+        workflowCanvas.getChildren().clear();
+        views.clear();
+        inputPortHandles.clear();
+
+        Map<String, Representation> reps = new HashMap<>();
+        try {
+            validationCounter++;
+            reps = ProcessEngine.validate(toDefinition());
+        } catch (Exception ignored) {}
 
         for (ProcessDefinition.Connection connection : connections) {
             ProcessDefinition.Node from = nodes.stream().filter(n -> n.id.equals(connection.from)).findFirst().orElse(null);
             ProcessDefinition.Node to = nodes.stream().filter(n -> n.id.equals(connection.to)).findFirst().orElse(null);
             if (from != null && to != null) addConnectionView(connection, from, to);
         }
-        for (ProcessDefinition.Node node : nodes) workflowCanvas.getChildren().add(createNodeView(node, reps.get(node.id)));
+
+        for (ProcessDefinition.Node node : nodes) {
+            StackPane nodeView = createNodeView(node, reps.get(node.id));
+            views.put(node.id, nodeView);
+            workflowCanvas.getChildren().add(nodeView);
+        }
+
+        updateCanvasGeometry();
     }
+
     private StackPane createNodeView(ProcessDefinition.Node node, Representation rep) {
         String badge = rep != null ? " [" + rep.name() + "]" : "";
-        Label label = new Label(node.label + badge); label.setWrapText(true); label.setMaxWidth(135); label.setStyle("-fx-text-fill: white; -fx-font-size: 11px;");
-        StackPane view = new StackPane(label); view.setLayoutX(node.x); view.setLayoutY(node.y); view.setPrefSize(150, 70);
+        Label label = new Label(node.label + badge);
+        label.setWrapText(true);
+        label.setMaxWidth(135);
+        label.setStyle("-fx-text-fill: white; -fx-font-size: 11px;");
 
-        List<com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition> ports = ProcessEngine.getHandlerFor(node.type).inputPorts(node);
-        if (ports.size() > 1) {
-            for (int index = 0; index < ports.size(); index++) {
-                Label portLabel = new Label("• " + ports.get(index).name());
+        StackPane view = new StackPane(label);
+        view.setLayoutX(node.x);
+        view.setLayoutY(node.y);
+        view.setPrefSize(150, 70);
+
+        // Port indicators & circular input handles on node
+        List<ProcessNodeHandler.PortDefinition> ports = ProcessEngine.getHandlerFor(node.type).inputPorts(node);
+        for (int index = 0; index < ports.size(); index++) {
+            ProcessNodeHandler.PortDefinition port = ports.get(index);
+            double yOffset = (ports.size() == 1) ? 0 : (index - (ports.size() - 1) / 2.0) * 16;
+
+            Circle inHandle = new Circle(5, Color.web("#58a6ff"));
+            inHandle.setStyle("-fx-cursor: crosshair;");
+            inHandle.setTranslateX(-70);
+            inHandle.setTranslateY(yOffset);
+            inHandle.setUserData(new PortHandleData(node, port));
+
+            String repsStr = (port.acceptedRepresentations() == null || port.acceptedRepresentations().isEmpty())
+                    ? "any"
+                    : port.acceptedRepresentations().stream().map(Enum::name).collect(Collectors.joining(", "));
+            Tooltip.install(inHandle, new Tooltip(port.name() + " (" + repsStr + ")"));
+
+            inHandle.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+                if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+                    if (!connectionDragSourceNode.id.equals(node.id)) {
+                        completeConnectionDragToPort(connectionDragSourceNode, node, port.name());
+                    } else {
+                        cancelConnectionDrag();
+                    }
+                    e.consume();
+                }
+            });
+
+            view.getChildren().add(inHandle);
+            inputPortHandles.add(inHandle);
+
+            if (ports.size() > 1) {
+                Label portLabel = new Label("• " + port.name());
                 portLabel.setStyle("-fx-text-fill: #aaa; -fx-font-size: 9px;");
-                portLabel.setTranslateX(-48);
-                portLabel.setTranslateY((index - (ports.size() - 1) / 2.0) * 13);
+                portLabel.setTranslateX(-44);
+                portLabel.setTranslateY(yOffset);
                 view.getChildren().add(portLabel);
             }
         }
+
+        // Circular Output Port handle on right
+        Circle outHandle = new Circle(5, Color.web("#58a6ff"));
+        outHandle.setTranslateX(70);
+        outHandle.setStyle("-fx-cursor: crosshair;");
+        outHandle.setOnMousePressed(e -> {
+            startConnectionDrag(node);
+            e.consume();
+        });
+        outHandle.setOnMouseDragged(e -> {
+            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+                Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
+                updateInteractiveCurve(connectionDragSourceNode.x + 150, connectionDragSourceNode.y + 35, local.getX(), local.getY());
+            }
+            e.consume();
+        });
+        outHandle.setOnMouseReleased(e -> {
+            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+                Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
+                Circle targetHandle = null;
+                for (Circle circle : inputPortHandles) {
+                    Point2D pt = circle.sceneToLocal(e.getSceneX(), e.getSceneY());
+                    if (circle.contains(pt)) {
+                        targetHandle = circle;
+                        break;
+                    }
+                }
+                if (targetHandle != null && targetHandle.getUserData() instanceof PortHandleData data) {
+                    if (!data.node.id.equals(connectionDragSourceNode.id)) {
+                        completeConnectionDragToPort(connectionDragSourceNode, data.node, data.port.name());
+                    } else {
+                        cancelConnectionDrag();
+                    }
+                } else {
+                    ProcessDefinition.Node target = nodes.stream()
+                            .filter(n -> !n.id.equals(connectionDragSourceNode.id))
+                            .filter(n -> local.getX() >= n.x && local.getX() <= n.x + 150 && local.getY() >= n.y && local.getY() <= n.y + 70)
+                            .findFirst()
+                            .orElse(null);
+                    if (target != null) {
+                        completeConnectionDrag(connectionDragSourceNode, target, e.getScreenX(), e.getScreenY());
+                    } else {
+                        cancelConnectionDrag();
+                    }
+                }
+            }
+            e.consume();
+        });
+        view.getChildren().add(outHandle);
 
         boolean active = selected != null && selected.id.equals(node.id);
         boolean pending = !active && selectedNodeIds.contains(node.id);
@@ -1194,387 +700,394 @@ if (encrypt || decrypt || mac || sign || verify) {
             view.setStyle("-fx-background-color: #5a4a20; -fx-border-color: #f6c344; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5;");
             Label sourceMarker = new Label("SOURCE");
             sourceMarker.setStyle("-fx-text-fill: #f6c344; -fx-font-size: 8px; -fx-font-weight: bold; -fx-background-color: #202a33;");
-            sourceMarker.setTranslateX(46); sourceMarker.setTranslateY(-25);
+            sourceMarker.setTranslateX(46);
+            sourceMarker.setTranslateY(-25);
             view.getChildren().add(sourceMarker);
         } else {
             view.setStyle("-fx-background-color: #33495e; -fx-border-color: #6f97bb; -fx-border-width: 1; -fx-background-radius: 5;");
         }
-        final double[] offset = new double[2];
-        view.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> { workflowCanvas.requestFocus(); offset[0] = e.getSceneX() - view.getLayoutX(); offset[1] = e.getSceneY() - view.getLayoutY(); select(node); e.consume(); });
-        view.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> { node.x = Math.max(0, e.getSceneX() - offset[0]); node.y = Math.max(0, e.getSceneY() - offset[1]); redraw(); e.consume(); });
+
+        final double[] dragStartPos = new double[4]; // [initialNodeX, initialNodeY, initialSceneX, initialSceneY]
+        view.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+                if (!connectionDragSourceNode.id.equals(node.id)) {
+                    completeConnectionDrag(connectionDragSourceNode, node);
+                } else {
+                    cancelConnectionDrag();
+                }
+                e.consume();
+                return;
+            }
+            workflowCanvas.requestFocus();
+            dragStartPos[0] = node.x;
+            dragStartPos[1] = node.y;
+            dragStartPos[2] = e.getSceneX();
+            dragStartPos[3] = e.getSceneY();
+            select(node);
+            e.consume();
+        });
+
+        view.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
+            Point2D startLocal = workflowCanvas.sceneToLocal(dragStartPos[2], dragStartPos[3]);
+            Point2D currentLocal = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
+            double deltaX = currentLocal.getX() - startLocal.getX();
+            double deltaY = currentLocal.getY() - startLocal.getY();
+
+            double newX = dragStartPos[0] + deltaX;
+            double newY = dragStartPos[1] + deltaY;
+            if (snapToGrid) {
+                newX = Math.round(newX / 10.0) * 10;
+                newY = Math.round(newY / 10.0) * 10;
+            }
+            node.x = Math.max(0, newX);
+            node.y = Math.max(0, newY);
+            view.setLayoutX(node.x);
+            view.setLayoutY(node.y);
+            updateConnectedCurves(node);
+            e.consume();
+        });
+
+        view.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
+            updateCanvasGeometry();
+            if (node.x != dragStartPos[0] || node.y != dragStartPos[1]) {
+                ProcessDefinition before = snapshot(toDefinition());
+                before.nodes.stream().filter(n -> n.id.equals(node.id)).findFirst().ifPresent(n -> {
+                    n.x = dragStartPos[0];
+                    n.y = dragStartPos[1];
+                });
+                recordStateChange("Move node", before);
+            }
+            e.consume();
+        });
+
         return view;
     }
-    void select(ProcessDefinition.Node node) {
+
+    private void updateConnectedCurves(ProcessDefinition.Node node) {
+        for (javafx.scene.Node child : workflowCanvas.getChildren()) {
+            if (child instanceof CubicCurve curve) {
+                ProcessDefinition.Connection conn = (ProcessDefinition.Connection) curve.getUserData();
+                if (conn != null) {
+                    if (conn.from.equals(node.id)) {
+                        curve.setStartX(node.x + 150);
+                        curve.setStartY(node.y + 35);
+                        updateCurveControls(curve);
+                    } else if (conn.to.equals(node.id)) {
+                        curve.setEndX(node.x);
+                        curve.setEndY(node.y + 35);
+                        updateCurveControls(curve);
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateCurveControls(CubicCurve curve) {
+        double startX = curve.getStartX();
+        double startY = curve.getStartY();
+        double endX = curve.getEndX();
+        double endY = curve.getEndY();
+        double offset = Math.max(40, Math.abs(endX - startX) * 0.5);
+        curve.setControlX1(startX + offset);
+        curve.setControlY1(startY);
+        curve.setControlX2(endX - offset);
+        curve.setControlY2(endY);
+    }
+
+    private void addConnectionView(ProcessDefinition.Connection connection, ProcessDefinition.Node from, ProcessDefinition.Node to) {
+        double startX = from.x + 150;
+        double startY = from.y + 35;
+        double endX = to.x;
+        double endY = to.y + 35;
+
+        if (connection.targetPort != null) {
+            List<ProcessNodeHandler.PortDefinition> targetPorts = ProcessEngine.getHandlerFor(to.type).inputPorts(to);
+            int portIndex = -1;
+            for (int index = 0; index < targetPorts.size(); index++) {
+                if (connection.targetPort.equals(targetPorts.get(index).name())) {
+                    portIndex = index;
+                    break;
+                }
+            }
+            if (portIndex >= 0) {
+                endY += (portIndex - (targetPorts.size() - 1) / 2.0) * 13;
+            }
+
+            Label portLabel = new Label(connection.targetPort);
+            portLabel.setStyle("-fx-text-fill: #f6c344; -fx-font-size: 9px; -fx-background-color: #202a33;");
+            portLabel.setLayoutX(endX - 35);
+            portLabel.setLayoutY(endY - 15);
+            workflowCanvas.getChildren().add(portLabel);
+        }
+
+        CubicCurve curve = new CubicCurve();
+        curve.setStartX(startX);
+        curve.setStartY(startY);
+        curve.setEndX(endX);
+        curve.setEndY(endY);
+        updateCurveControls(curve);
+        curve.setFill(null);
+
+        boolean isSelected = connection == selectedConnection;
+        curve.setStroke(isSelected ? Color.web("#f6c344") : Color.web("#58a6ff"));
+        curve.setStrokeWidth(isSelected ? 4.0 : 2.5);
+        curve.setUserData(connection);
+
+        curve.setOnMouseClicked(event -> selectConnection(connection));
+        workflowCanvas.getChildren().add(curve);
+    }
+
+    private void startConnectionDrag(ProcessDefinition.Node sourceNode) {
+        connectionDragSourceNode = sourceNode;
+        interactiveConnectionCurve = new CubicCurve();
+        interactiveConnectionCurve.setStartX(sourceNode.x + 150);
+        interactiveConnectionCurve.setStartY(sourceNode.y + 35);
+        interactiveConnectionCurve.setEndX(sourceNode.x + 150);
+        interactiveConnectionCurve.setEndY(sourceNode.y + 35);
+        updateCurveControls(interactiveConnectionCurve);
+        interactiveConnectionCurve.setFill(null);
+        interactiveConnectionCurve.setStroke(Color.web("#f6c344"));
+        interactiveConnectionCurve.setStrokeWidth(2.0);
+        interactiveConnectionCurve.getStrokeDashArray().addAll(6.0, 4.0);
+        workflowCanvas.getChildren().add(interactiveConnectionCurve);
+
+        Representation srcRep = outputRepresentationOf(sourceNode);
+        for (Circle circle : inputPortHandles) {
+            if (circle.getUserData() instanceof PortHandleData data) {
+                if (data.node.id.equals(sourceNode.id)) {
+                    circle.setOpacity(0.3);
+                    continue;
+                }
+                boolean portOccupied = connections.stream().anyMatch(c -> c.to.equals(data.node.id) && data.port.name().equals(c.targetPort));
+                boolean compatible = !portOccupied && (srcRep == null || data.port.acceptedRepresentations().isEmpty() || data.port.acceptedRepresentations().contains(srcRep));
+                circle.setOpacity(compatible ? 1.0 : 0.3);
+            }
+        }
+    }
+
+    private void updateInteractiveCurve(double startX, double startY, double endX, double endY) {
+        if (interactiveConnectionCurve == null) return;
+        interactiveConnectionCurve.setStartX(startX);
+        interactiveConnectionCurve.setStartY(startY);
+        interactiveConnectionCurve.setEndX(endX);
+        interactiveConnectionCurve.setEndY(endY);
+        updateCurveControls(interactiveConnectionCurve);
+    }
+
+    void cancelConnectionDrag() {
+        if (interactiveConnectionCurve != null) {
+            workflowCanvas.getChildren().remove(interactiveConnectionCurve);
+            interactiveConnectionCurve = null;
+        }
+        connectionDragSourceNode = null;
+        for (Circle circle : inputPortHandles) {
+            circle.setOpacity(1.0);
+        }
+    }
+
+    void completeConnectionDragToPort(ProcessDefinition.Node from, ProcessDefinition.Node to, String targetPort) {
+        cancelConnectionDrag();
+        if (from == null || to == null) return;
+        selectedNodeIds.clear();
+        selectedNodeIds.add(from.id);
+        selectedNodeIds.add(to.id);
+        connectToPort(targetPort);
+    }
+
+    void completeConnectionDrag(ProcessDefinition.Node from, ProcessDefinition.Node to) {
+        completeConnectionDrag(from, to, 0, 0);
+    }
+
+    void completeConnectionDrag(ProcessDefinition.Node from, ProcessDefinition.Node to, double screenX, double screenY) {
+        cancelConnectionDrag();
+        if (from == null || to == null) return;
+        ProcessNodeHandler toHandler = ProcessEngine.getHandlerFor(to.type);
+        if (toHandler == null) return;
+        List<ProcessNodeHandler.PortDefinition> ports = toHandler.inputPorts(to);
+        Representation srcRep = outputRepresentationOf(from);
+        List<ProcessNodeHandler.PortDefinition> available = ports.stream()
+                .filter(p -> connections.stream().noneMatch(c -> c.to.equals(to.id) && p.name().equals(c.targetPort)))
+                .filter(p -> srcRep == null || p.acceptedRepresentations().contains(srcRep))
+                .toList();
+
+        if (available.isEmpty()) {
+            if (executionOutputArea != null) {
+                executionOutputArea.setText(t("module.process.feedback.incompatible", from.label, to.label));
+            }
+            return;
+        }
+
+        if (available.size() == 1) {
+            selectedNodeIds.clear();
+            selectedNodeIds.add(from.id);
+            selectedNodeIds.add(to.id);
+            connectToPort(available.get(0).name());
+            return;
+        }
+
+        // Multiple available ports on target node: offer explicit selection menu or request specific port handle
+        if (workflowCanvas != null && workflowCanvas.getScene() != null && workflowCanvas.getScene().getWindow() != null) {
+            ContextMenu menu = new ContextMenu();
+            for (ProcessNodeHandler.PortDefinition port : available) {
+                MenuItem item = new MenuItem(t("module.process.connectToPort", port.name()));
+                item.setOnAction(ev -> completeConnectionDragToPort(from, to, port.name()));
+                menu.getItems().add(item);
+            }
+            if (screenX > 0 && screenY > 0) {
+                menu.show(workflowCanvas.getScene().getWindow(), screenX, screenY);
+            } else {
+                Point2D p2d = workflowCanvas.localToScreen(to.x + 20, to.y + 20);
+                if (p2d != null) {
+                    menu.show(workflowCanvas.getScene().getWindow(), p2d.getX(), p2d.getY());
+                } else {
+                    menu.show(workflowCanvas.getScene().getWindow());
+                }
+            }
+        } else {
+            if (executionOutputArea != null) {
+                executionOutputArea.setText(t("module.process.feedback.ambiguousPorts",
+                        available.stream().map(ProcessNodeHandler.PortDefinition::name).collect(java.util.stream.Collectors.joining(", "))));
+            }
+        }
+    }
+
+    void selectConnection(ProcessDefinition.Connection connection) {
         saveSelectedNodeSettings();
-        selectedConnection = null;
-        if (!selectedNodeIds.contains(node.id) && selectedNodeIds.size() == 2) selectedNodeIds.clear();
-        selectedNodeIds.add(node.id);
-        selected = node; selectedNodeLabel.setText(node.type + " · " + node.label);
+        selected = null;
+        selectedNodeIds.clear();
+        selectedConnection = connection;
+        selectedNodeLabel.setText("Connection: " + nodeLabel(connection.from) + " → " + nodeLabel(connection.to));
         if (nodeNameFieldGroup != null) {
-            nodeNameFieldGroup.setVisible(true);
-            nodeNameFieldGroup.setManaged(true);
+            nodeNameFieldGroup.setVisible(false);
+            nodeNameFieldGroup.setManaged(false);
         }
-        if (nodeNameField != null) nodeNameField.setText(node.label == null ? "" : node.label);
-        boolean consoleInput = "CONSOLE_INPUT".equals(node.type);
-        boolean fileNode = "FILE_INPUT".equals(node.type) || "FILE_OUTPUT".equals(node.type);
-        boolean hashNode = "HASH".equals(node.type);
-        boolean encrypt = "ENCRYPT".equals(node.type);
-        boolean decrypt = "DECRYPT".equals(node.type);
-        boolean mac = "MAC".equals(node.type);
-        boolean sign = "SIGN".equals(node.type);
-        boolean verify = "VERIFY".equals(node.type);
-        boolean wssEncrypt = "WSS_ENCRYPT_BODY".equals(node.type);
-        boolean wssDecrypt = "WSS_DECRYPT_BODY".equals(node.type);
-        boolean wssSign = "WSS_SIGN_BODY".equals(node.type);
-        boolean wssVerify = "WSS_VERIFY_SIGNATURE".equals(node.type);
-        boolean wssUsernameAdd = "WSS_USERNAME_TOKEN_ADD".equals(node.type);
-        boolean wssUsernameVerify = "WSS_USERNAME_TOKEN_VERIFY".equals(node.type);
-        boolean keyMaterial = "AES_KEY_GENERATE".equals(node.type) || "KDF_PBKDF2".equals(node.type)
-                || "RSA_KEYPAIR_GENERATE".equals(node.type);
-
-        boolean hasCryptoAlg = encrypt || decrypt || mac || sign || verify || wssEncrypt || wssSign;
-        boolean hasKeyFormat = encrypt || decrypt || mac;
-        boolean hasManualKey = encrypt || decrypt || mac;
-        boolean hasNonce = encrypt || decrypt;
-        boolean hasKeystore = sign || wssDecrypt || wssSign;
-        boolean hasMaterial = verify || wssEncrypt || wssVerify;
-        boolean hasSecrets = encrypt || decrypt || mac || sign || wssDecrypt || wssSign
-                || wssUsernameAdd || wssUsernameVerify;
-
-        nodeValueArea.setText(consoleInput ? node.configuration.getOrDefault("value", "") : "");
-        consoleValueFieldGroup.setVisible(consoleInput); consoleValueFieldGroup.setManaged(consoleInput);
-        nodePathField.setText(fileNode ? node.configuration.getOrDefault("path", "") : "");
-        filePathFieldGroup.setVisible(fileNode); filePathFieldGroup.setManaged(fileNode);
-        boolean needsCharset = consoleInput || (fileNode && ("TEXT".equals(node.configuration.get("readMode")) || "TEXT".equals(node.configuration.get("writeMode")))) || "BASE64_DECODE".equals(node.type) || "BASE64URL_DECODE".equals(node.type) || "HEX_DECODE".equals(node.type) || "UTF8_ENCODE".equals(node.type) || "UTF8_DECODE".equals(node.type);
-        charsetFieldGroup.setVisible(needsCharset); charsetFieldGroup.setManaged(needsCharset);
-        hashAlgorithmFieldGroup.setVisible(hashNode); hashAlgorithmFieldGroup.setManaged(hashNode);
-        nodeCharsetCombo.setValue(node.configuration.getOrDefault("charset", "UTF-8")); hashAlgorithmCombo.setValue(node.configuration.getOrDefault("algorithm", "SHA-256"));
-
-        boolean randomBytes = "RANDOM_BYTES".equals(node.type);
-        if (randomBytesFieldGroup != null) {
-            randomBytesFieldGroup.setVisible(randomBytes); randomBytesFieldGroup.setManaged(randomBytes);
-            if (randomBytes) randomBytesLengthField.setText(node.configuration.getOrDefault("length", "16"));
+        if (dynamicInspectorContainer != null) {
+            dynamicInspectorContainer.getChildren().clear();
         }
-
-        if (fileModeFieldGroup != null) { fileModeFieldGroup.setVisible(false); fileModeFieldGroup.setManaged(false); }
-        if (fileNode) {
-            if (fileModeFieldGroup != null) {
-                fileModeFieldGroup.setVisible(true); fileModeFieldGroup.setManaged(true);
-                if (fileModeLabel != null) {
-                    fileModeLabel.setText("FILE_INPUT".equals(node.type)
-                            ? t("module.process.feedback.readMode") : t("module.process.feedback.writeMode"));
-                }
-                String rm = "FILE_INPUT".equals(node.type) ?
-                    selected.configuration.getOrDefault("readMode", "BINARY") :
-                    selected.configuration.getOrDefault("writeMode", selected.configuration.getOrDefault("readMode", "BINARY"));
-                fileModeCombo.setValue("TEXT".equals(rm) ? "Text" : "Binary (raw bytes)");
-            }
-        }
-        updateRepresentationContract(node);
-if (cryptoAlgorithmFieldGroup != null) {
-            cryptoAlgorithmFieldGroup.setVisible(hasCryptoAlg); cryptoAlgorithmFieldGroup.setManaged(hasCryptoAlg);
-            if (hasCryptoAlg) {
-                if (encrypt || decrypt) {
-                    java.util.List<String> items = new java.util.ArrayList<>();
-                    String lastCategory = null;
-                    for (com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec : com.cryptocarver.model.process.handlers.SymmetricCipherSpec.values()) {
-                        if (!spec.category.equals(lastCategory)) {
-                            items.add("--- " + spec.category + " ---");
-                            lastCategory = spec.category;
-                        }
-                        items.add(spec.algorithm);
-                    }
-                    cryptoAlgorithmCombo.getItems().setAll(items);
-                } else if (mac) {
-                    cryptoAlgorithmCombo.getItems().setAll(
-                            "HmacSHA256", "HmacSHA384", "HmacSHA512",
-                            "CMAC-AES", "CMAC-3DES");
-                } else if (sign || verify) {
-                    cryptoAlgorithmCombo.getItems().setAll("SHA256withRSA", "SHA256withECDSA");
-                } else if (wssEncrypt) {
-                    cryptoAlgorithmCombo.getItems().setAll(
-                            "AES-128-GCM", "AES-256-GCM", "AES-128-CBC", "AES-256-CBC");
-                } else if (wssSign) {
-                    cryptoAlgorithmCombo.getItems().setAll(
-                            "RSA_SHA256", "RSA_SHA384", "RSA_SHA512",
-                            "ECDSA_SHA256", "ECDSA_SHA384", "ECDSA_SHA512");
-                }
-
-                String fallbackAlg = "AES/GCM/NoPadding";
-                if (mac) fallbackAlg = "HmacSHA256";
-                if (sign || verify) fallbackAlg = "SHA256withRSA";
-                if (wssEncrypt) fallbackAlg = "AES-256-GCM";
-                if (wssSign) fallbackAlg = "RSA_SHA256";
-
-                String configuredAlg = wssEncrypt
-                        ? node.configuration.get("dataAlgorithm")
-                        : wssSign ? node.configuration.get("signatureAlgorithm")
-                        : node.configuration.get("algorithm");
-                if ("AES/CBC/PKCS5Padding".equals(configuredAlg)) {
-                    configuredAlg = "AES/CBC/PKCS7Padding";
-                    node.configuration.put("algorithm", configuredAlg);
-                }
-                if (configuredAlg != null && cryptoAlgorithmCombo.getItems().contains(configuredAlg)) {
-                    cryptoAlgorithmCombo.setValue(configuredAlg);
-                } else {
-                    cryptoAlgorithmCombo.setValue(fallbackAlg);
-                }
-                if (wssEncrypt) {
-                    boolean authenticated = cryptoAlgorithmCombo.getValue().endsWith("GCM");
-                    cryptoHelpLabel.setText(authenticated
-                            ? "SOAP Body content encryption. Authenticated encryption: yes."
-                            : "SOAP Body content encryption. Authenticated encryption: no.");
-                    cryptoWarningLabel.setText(t("module.process.warningCbc"));
-                    cryptoWarningLabel.setVisible(!authenticated);
-                    cryptoWarningLabel.setManaged(!authenticated);
-                }
-            }
-        }
-        if (wssKeyTransportFieldGroup != null) {
-            wssKeyTransportFieldGroup.setVisible(wssEncrypt);
-            wssKeyTransportFieldGroup.setManaged(wssEncrypt);
-            if (wssEncrypt) {
-                wssKeyTransportCombo.setValue(node.configuration.getOrDefault(
-                        "keyTransportAlgorithm", "RSA-OAEP SHA-256"));
-            }
-        }
-        if (wssTimestampFieldGroup != null) {
-            wssTimestampFieldGroup.setVisible(wssSign);
-            wssTimestampFieldGroup.setManaged(wssSign);
-            if (wssSign) {
-                boolean enabled = Boolean.parseBoolean(node.configuration.getOrDefault("timestampEnabled", "false"));
-                wssTimestampEnabledCheck.setSelected(enabled);
-                wssTimestampMinutesField.setText(node.configuration.getOrDefault("timestampMinutes", "5"));
-                wssTimestampMinutesField.setDisable(!enabled);
-                wssTimestampSignedCheck.setSelected(Boolean.parseBoolean(
-                        node.configuration.getOrDefault("timestampSigned", "true")));
-                wssTimestampSignedCheck.setDisable(!enabled);
-            }
-        }
-        boolean usernameNode = wssUsernameAdd || wssUsernameVerify;
-        if (wssUsernameFieldGroup != null) {
-            wssUsernameFieldGroup.setVisible(usernameNode);
-            wssUsernameFieldGroup.setManaged(usernameNode);
-            if (usernameNode) {
-                wssUsernameLabel.setText(wssUsernameVerify ? "Expected username" : "Username");
-                wssPasswordLabel.setText(wssUsernameVerify ? "Expected password" : "Password");
-                wssUsernameField.setText(node.configuration.getOrDefault("username", ""));
-                wssPasswordField.setText("");
-            }
-        }
-        if (wssPasswordTypeFieldGroup != null) {
-            wssPasswordTypeFieldGroup.setVisible(wssUsernameAdd);
-            wssPasswordTypeFieldGroup.setManaged(wssUsernameAdd);
-            if (wssUsernameAdd) {
-                wssPasswordTypeCombo.setValue(node.configuration.getOrDefault("passwordType", "PasswordDigest"));
-            }
-        }
-        if (wssTokenAgeFieldGroup != null) {
-            wssTokenAgeFieldGroup.setVisible(wssUsernameVerify);
-            wssTokenAgeFieldGroup.setManaged(wssUsernameVerify);
-            if (wssUsernameVerify) {
-                wssTokenAgeField.setText(node.configuration.getOrDefault("maxAgeSeconds", "300"));
-            }
-        }
-        if (keyFormatFieldGroup != null) {
-            keyFormatFieldGroup.setVisible(hasKeyFormat); keyFormatFieldGroup.setManaged(hasKeyFormat);
-            if (hasKeyFormat) keyFormatCombo.setValue(node.configuration.getOrDefault("keyFormat", "HEX"));
-        }
-        if (manualKeyFieldGroup != null) {
-            manualKeyFieldGroup.setVisible(hasManualKey); manualKeyFieldGroup.setManaged(hasManualKey);
-            if (hasManualKey) manualKeyField.setText("");
-        }
-        if (nonceFieldGroup != null) {
-            boolean showGroup = hasNonce;
-            if (showGroup && (encrypt || decrypt) && cryptoAlgorithmCombo != null && cryptoAlgorithmCombo.getValue() != null) {
-                try {
-                    showGroup = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(cryptoAlgorithmCombo.getValue()).ivLength > 0;
-                } catch (Exception e) {}
-
-                nonceFieldGroup.setVisible(showGroup); nonceFieldGroup.setManaged(showGroup);
-                if (showGroup) nonceField.setText(node.configuration.getOrDefault("nonce", ""));
-                generateNonceCheck.setSelected(Boolean.parseBoolean(node.configuration.getOrDefault("generateNonce", "true")));
-                generateNonceCheck.setVisible(encrypt);
-                updateNonceLabel();
-            }
-        }
-        if (cipherOutputFormatFieldGroup != null) {
-            boolean showFormat = encrypt || decrypt;
-            cipherOutputFormatFieldGroup.setVisible(showFormat);
-            cipherOutputFormatFieldGroup.setManaged(showFormat);
-            if (showFormat) {
-                String fmt = node.configuration.getOrDefault("outputFormat", "RAW");
-                boolean disableEnvelope = false;
-                if (cryptoAlgorithmCombo != null && cryptoAlgorithmCombo.getValue() != null && !cryptoAlgorithmCombo.getValue().startsWith("---")) {
-                    try {
-                        com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(cryptoAlgorithmCombo.getValue());
-                        disableEnvelope = !spec.supportsEnvelope;
-                        if (disableEnvelope) {
-                            fmt = "RAW";
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-                cipherOutputFormatCombo.setValue(fmt);
-                cipherOutputFormatCombo.setDisable(disableEnvelope);
-            }
-        }
-        updateAadPortHint();
-        updatePortBindings(node);
-
-        if (keystorePathFieldGroup != null) {
-            keystorePathFieldGroup.setVisible(hasKeystore); keystorePathFieldGroup.setManaged(hasKeystore);
-            if (hasKeystore) keystorePathField.setText(node.configuration.getOrDefault("keystorePath", ""));
-        }
-        if (keystoreTypeFieldGroup != null) {
-            keystoreTypeFieldGroup.setVisible(hasKeystore); keystoreTypeFieldGroup.setManaged(hasKeystore);
-            if (hasKeystore) keystoreTypeCombo.setValue(node.configuration.getOrDefault("keystoreType", "PKCS12"));
-        }
-        if (aliasFieldGroup != null) {
-            boolean showAlias = sign || wssSign;
-            aliasFieldGroup.setVisible(showAlias); aliasFieldGroup.setManaged(showAlias);
-            if (showAlias) aliasField.setText(node.configuration.getOrDefault("alias", ""));
-        }
-        if (keystorePasswordFieldGroup != null) {
-            keystorePasswordFieldGroup.setVisible(hasKeystore); keystorePasswordFieldGroup.setManaged(hasKeystore);
-            if (hasKeystore) keystorePasswordField.setText("");
-        }
-        if (keyPasswordFieldGroup != null) {
-            keyPasswordFieldGroup.setVisible(hasKeystore); keyPasswordFieldGroup.setManaged(hasKeystore);
-            if (hasKeystore) keyPasswordField.setText("");
-        }
-
-        if (materialPathFieldGroup != null) {
-            materialPathFieldGroup.setVisible(hasMaterial); materialPathFieldGroup.setManaged(hasMaterial);
-            if (hasMaterial) materialPathField.setText(node.configuration.getOrDefault("materialPath", ""));
-        }
-        if (materialTypeFieldGroup != null) {
-            materialTypeFieldGroup.setVisible(verify); materialTypeFieldGroup.setManaged(verify);
-            if (verify) materialTypeCombo.setValue(node.configuration.getOrDefault("materialType", "CERTIFICATE"));
-        }
-        if (secretsWarningLabel != null) {
-            secretsWarningLabel.setVisible(hasSecrets); secretsWarningLabel.setManaged(hasSecrets);
-        }
-        if (keyMaterialFieldGroup != null) {
-            keyMaterialFieldGroup.setVisible(keyMaterial); keyMaterialFieldGroup.setManaged(keyMaterial);
-            if (keyMaterial) {
-                if ("RSA_KEYPAIR_GENERATE".equals(node.type)) keySizeCombo.getItems().setAll("2048", "3072", "4096");
-                else keySizeCombo.getItems().setAll("128", "192", "256");
-                keySizeCombo.setValue(node.configuration.getOrDefault("keySize", "256"));
-                boolean kdf = "KDF_PBKDF2".equals(node.type);
-                kdfIterationsField.setVisible(kdf); kdfIterationsField.setManaged(kdf);
-                kdfSaltField.setVisible(kdf); kdfSaltField.setManaged(kdf);
-                if (kdf) {
-                    kdfIterationsField.setText(node.configuration.getOrDefault("iterations", "210000"));
-                    kdfSaltField.setText(node.configuration.getOrDefault("salt", ""));
-                }
-            }
-        }
-        if (symmetricKeyAlgorithmFieldGroup != null) {
-            boolean symmetricKeyGenerator = "AES_KEY_GENERATE".equals(node.type);
-            symmetricKeyAlgorithmFieldGroup.setVisible(symmetricKeyGenerator);
-            symmetricKeyAlgorithmFieldGroup.setManaged(symmetricKeyGenerator);
-            if (symmetricKeyGenerator && symmetricKeyAlgorithmCombo != null) {
-                String keyAlgorithm = node.configuration.getOrDefault("keyAlgorithm", "AES");
-                symmetricKeyAlgorithmCombo.setValue(keyAlgorithm);
-                updateSymmetricKeyGeneratorSize(keyAlgorithm, node.configuration.getOrDefault("keySize", "256"));
-            }
-        }
-
-        redraw();
         updateSelectionUi();
+        redraw();
     }
 
-    private void updateSymmetricKeyGeneratorSize(String keyAlgorithm, String configuredSize) {
-        if (keySizeCombo == null) return;
-        if ("3DES".equals(keyAlgorithm)) {
-            keySizeCombo.getItems().setAll("168 (24 bytes)");
-            keySizeCombo.setValue("168 (24 bytes)");
-            keySizeCombo.setDisable(true);
-        } else {
-            keySizeCombo.getItems().setAll("128", "192", "256");
-            keySizeCombo.setValue(configuredSize);
-            keySizeCombo.setDisable(false);
-        }
+    // --- Node and Connection Management ---
+    private ProcessDefinition.Node addNode(String type, String label, double x, double y) {
+        ProcessDefinition before = toDefinition();
+        ProcessDefinition.Node node = new ProcessDefinition.Node(UUID.randomUUID().toString(), type, label, x, y);
+        node.configuration.putAll(NodeCatalog.defaultConfiguration(type));
+        nodes.add(node);
+        updateCanvasGeometry();
+        redraw();
+        recordStateChange("Add node " + type, before);
+        return node;
     }
 
-    private void updateNonceLabel() {
-        if (nonceLabel == null || cryptoAlgorithmCombo == null) return;
-        String algorithm = cryptoAlgorithmCombo.getValue();
-        if ("ENCRYPT".equals(selected.type) || "DECRYPT".equals(selected.type)) {
-            try {
-                com.cryptocarver.model.process.handlers.SymmetricCipherSpec spec = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(algorithm);
-                nonceLabel.setText(spec.helpText);
-                if ("AES/ECB/PKCS7Padding".equals(algorithm)) {
-                    nonceLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-                } else {
-                    nonceLabel.setStyle("");
-                }
-            } catch(Exception e) {}
-            return;
-        }
-        if ("AES/GCM/NoPadding".equals(algorithm)) {
-            nonceLabel.setText(t("module.process.feedback.nonce") + " (12 bytes / 96 bits for AES-GCM)");
-        } else if ("AES/CBC/PKCS7Padding".equals(algorithm) || "AES/CTR/NoPadding".equals(algorithm)) {
-            nonceLabel.setText(t("module.process.feedback.ivLabel"));
-        } else {
-            nonceLabel.setText(t("module.process.feedback.nonce"));
-        }
+    ProcessDefinition toDefinition() {
+        ProcessDefinition definition = new ProcessDefinition();
+        definition.name = processNameField != null ? processNameField.getText().trim() : "Untitled process";
+        definition.nodes = new ArrayList<>(nodes);
+        definition.connections = new ArrayList<>(connections);
+        return definition;
     }
 
-    private void updateAadPortHint() {
-        if (aadPortHintGroup == null) return;
-        boolean aad = false;
-        if (selected != null && cryptoAlgorithmCombo != null) {
-            String algorithm = cryptoAlgorithmCombo.getValue();
-            if ("ENCRYPT".equals(selected.type) || "DECRYPT".equals(selected.type)) {
-                try {
-                    aad = com.cryptocarver.model.process.handlers.SymmetricCipherSpec.fromAlgorithm(algorithm).aead;
-                } catch (Exception e) {}
+    static ProcessDefinition snapshot(ProcessDefinition def) {
+        if (def == null) return null;
+        ProcessDefinition copy = new ProcessDefinition();
+        copy.name = def.name;
+        copy.version = def.version;
+        for (ProcessDefinition.Node n : def.nodes) {
+            ProcessDefinition.Node nc = new ProcessDefinition.Node(n.id, n.type, n.label, n.x, n.y);
+            nc.configuration.putAll(n.configuration);
+            copy.nodes.add(nc);
+        }
+        for (ProcessDefinition.Connection c : def.connections) {
+            copy.connections.add(new ProcessDefinition.Connection(c.from, c.to, c.targetPort));
+        }
+        return copy;
+    }
+
+    ProcessDefinition toExecutableDefinition() {
+        ProcessDefinition execDef = snapshot(toDefinition());
+        for (ProcessDefinition.Node n : execDef.nodes) {
+            Map<String, char[]> sec = transientSecrets.get(n.id);
+            if (sec != null) {
+                sec.forEach((k, v) -> {
+                    if (v != null && v.length > 0) {
+                        n.configuration.put(k, new String(v));
+                    }
+                });
             }
         }
-        aadPortHintGroup.setVisible(aad);
-        aadPortHintGroup.setManaged(aad);
+        return execDef;
     }
 
-    private void updatePortBindings(ProcessDefinition.Node node) {
-        if (portBindingsFieldGroup == null || portBindingsLabel == null) return;
-        List<ProcessDefinition.Connection> incoming = connections.stream().filter(c -> node.id.equals(c.to)).toList();
-        if (incoming.isEmpty()) {
-            portBindingsFieldGroup.setVisible(false);
-            portBindingsFieldGroup.setManaged(false);
-            return;
-        }
-        List<com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition> ports = ProcessEngine.getHandlerFor(node.type).inputPorts(node);
-        StringBuilder bindings = new StringBuilder();
-        for (com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition port : ports) {
-            for (ProcessDefinition.Connection connection : incoming) {
-                if (port.name().equals(connection.targetPort)) {
-                    if (!bindings.isEmpty()) bindings.append('\n');
-                    bindings.append(port.name()).append(" ← ").append(sourceDescription(connection.from));
-                }
-            }
-        }
-        if (bindings.isEmpty()) {
-            portBindingsFieldGroup.setVisible(false);
-            portBindingsFieldGroup.setManaged(false);
-            return;
-        }
-        portBindingsLabel.setText(bindings.toString());
-        portBindingsFieldGroup.setVisible(true);
-        portBindingsFieldGroup.setManaged(true);
+    public Map<String, char[]> getTransientSecrets(String nodeId) {
+        return transientSecrets.get(nodeId);
     }
 
-    private String sourceDescription(String sourceId) {
-        ProcessDefinition.Node source = nodes.stream().filter(node -> sourceId.equals(node.id)).findFirst().orElse(null);
-        if (source == null) return sourceId;
-        if ("CONSOLE_INPUT".equals(source.type)) {
-            String value = source.configuration.getOrDefault("value", "").replace('\n', ' ');
-            return source.label + " (\"" + (value.length() > 40 ? value.substring(0, 40) + "…" : value) + "\")";
-        }
-        return source.label;
+    public char[] getTransientSecret(String nodeId, String key) {
+        Map<String, char[]> sec = transientSecrets.get(nodeId);
+        return sec != null ? sec.get(key) : null;
     }
+
+    private void load(ProcessDefinition definition) {
+        if (processNameField != null) processNameField.setText(normalizedProcessName(definition.name));
+        nodes.clear();
+        nodes.addAll(definition.nodes);
+        connections.clear();
+        connections.addAll(definition.connections);
+        selected = null;
+        selectedConnection = null;
+        selectedNodeIds.clear();
+        transientSecrets.clear();
+        updateSelectionUi();
+        updateCanvasGeometry();
+        redraw();
+    }
+
+    private void loadPreset(ProcessDefinition preset) {
+        load(preset);
+        if (executionOutputArea != null) {
+            executionOutputArea.setText(t("module.process.presetLoaded", preset.name));
+        }
+    }
+
+    private String normalizedProcessName(String name) {
+        return name == null || name.isBlank() ? "Untitled process" : name.trim();
+    }
+
+    private static String safeProcessFileName(String processName) {
+        String safe = processName.replaceAll("[^a-zA-Z0-9._-]+", "-").replaceAll("^-+|-+$", "");
+        return safe.isBlank() ? "process" : safe;
+    }
+
+    private void updateRepresentationContract(ProcessDefinition.Node node) {
+        if (inputContractLabel == null || outputContractLabel == null || node == null) return;
+        String input = "Input: BINARY";
+        String output = "Output: BINARY";
+        if ("CONSOLE_INPUT".equals(node.type)) {
+            input = "Input: N/A";
+            output = "Output: TEXT_UTF8";
+        } else if ("FILE_INPUT".equals(node.type)) {
+            input = "Input: N/A";
+            output = "Output: BINARY or TEXT_UTF8";
+        } else if ("UTF8_ENCODE".equals(node.type)) {
+            input = "Input: TEXT_UTF8";
+            output = "Output: BINARY (UTF-8 bytes)";
+        } else if ("UTF8_DECODE".equals(node.type)) {
+            input = "Input: BINARY (UTF-8 bytes)";
+            output = "Output: TEXT_UTF8";
+        } else if ("VERIFY".equals(node.type)) {
+            output = "Output: TEXT_UTF8 (VALID/INVALID)";
+        } else if (node.type.endsWith("_ENCODE")) {
+            output = "Output: " + node.type.replace("_ENCODE", "");
+        } else if (node.type.endsWith("_DECODE")) {
+            input = "Input: " + node.type.replace("_DECODE", "") + " or TEXT_UTF8";
+        }
+        inputContractLabel.setText(input);
+        outputContractLabel.setText(output);
+        inputContractLabel.setVisible(true); inputContractLabel.setManaged(true);
+        outputContractLabel.setVisible(true); outputContractLabel.setManaged(true);
+    }
+
     private void updateSelectionUi() {
         if (connectSelectedButton == null && connectMenuButton == null) return;
         int count = selectedNodeIds.size();
@@ -1621,18 +1134,21 @@ if (cryptoAlgorithmFieldGroup != null) {
                 }
             }
         } else {
-            if (connectMenuButton != null) { connectMenuButton.setVisible(false); connectMenuButton.setManaged(false); }
+            if (connectMenuButton != null) { connectMenuButton.getItems().clear(); connectMenuButton.setVisible(false); connectMenuButton.setManaged(false); }
             if (connectSelectedButton != null) {
                 connectSelectedButton.setVisible(true); connectSelectedButton.setManaged(true);
                 connectSelectedButton.setDisable(true);
-                connectSelectedButton.setText("Select 2 blocks to connect");
+                connectSelectedButton.setText(t("module.process.selectTwo"));
             }
         }
 
         boolean hasSelectedConnection = selectedConnection != null || connectionBetweenSelectedNodes() != null;
         if (reverseConnectionButton != null) reverseConnectionButton.setDisable(!hasSelectedConnection);
         if (reverseConnectionToolbarButton != null) reverseConnectionToolbarButton.setDisable(!hasSelectedConnection);
-        if (deleteSelectedButton != null) deleteSelectedButton.setText(hasSelectedConnection ? "Delete selected connection (Del)" : "Delete selected (Del)");
+        if (deleteSelectedButton != null) {
+            deleteSelectedButton.setText(hasSelectedConnection ? "Delete selected connection (Del)" : "Delete selected (Del)");
+            deleteSelectedButton.setDisable(selected == null && selectedConnection == null && selectedNodeIds.isEmpty());
+        }
     }
 
     private Representation outputRepresentationOf(ProcessDefinition.Node node) {
@@ -1643,40 +1159,10 @@ if (cryptoAlgorithmFieldGroup != null) {
         }
     }
 
-    private void updateRepresentationContract(ProcessDefinition.Node node) {
-        if (inputContractLabel == null || outputContractLabel == null || node == null) return;
-        String input = "Input: BINARY";
-        String output = "Output: BINARY";
-        if ("CONSOLE_INPUT".equals(node.type)) {
-            input = "Input: N/A";
-            output = "Output: TEXT_UTF8";
-        } else if ("FILE_INPUT".equals(node.type)) {
-            input = "Input: N/A";
-            output = "Output: BINARY or TEXT_UTF8";
-        } else if ("UTF8_ENCODE".equals(node.type)) {
-            input = "Input: TEXT_UTF8";
-            output = "Output: BINARY (UTF-8 bytes)";
-        } else if ("UTF8_DECODE".equals(node.type)) {
-            input = "Input: BINARY (UTF-8 bytes)";
-            output = "Output: TEXT_UTF8";
-        } else if ("VERIFY".equals(node.type)) {
-            output = "Output: TEXT_UTF8 (VALID/INVALID)";
-        } else if (node.type.endsWith("_ENCODE")) {
-            output = "Output: " + node.type.replace("_ENCODE", "");
-        } else if (node.type.endsWith("_DECODE")) {
-            input = "Input: " + node.type.replace("_DECODE", "") + " or TEXT_UTF8";
-        }
-        inputContractLabel.setText(input);
-        outputContractLabel.setText(output);
-        inputContractLabel.setVisible(true); inputContractLabel.setManaged(true);
-        outputContractLabel.setVisible(true); outputContractLabel.setManaged(true);
+    private String nodeLabel(String id) {
+        return nodes.stream().filter(n -> n.id.equals(id)).findFirst().map(n -> n.label).orElse(id);
     }
 
-    /**
-     * Inputs produce values and outputs consume them.  Honour selection order for
-     * transformations, but reverse an accidental output-to-operation selection so
-     * Encrypt + Console output always creates Encrypt → Console output.
-     */
     private List<String> orderedConnectionPair() {
         List<String> pair = new ArrayList<>(selectedNodeIds);
         if (pair.size() != 2) return pair;
@@ -1703,101 +1189,657 @@ if (cryptoAlgorithmFieldGroup != null) {
     private static boolean isOutputNode(ProcessDefinition.Node node) {
         return "CONSOLE_OUTPUT".equals(node.type) || "FILE_OUTPUT".equals(node.type);
     }
-    private String nodeLabel(String id) {
-        return nodes.stream().filter(n -> n.id.equals(id)).map(n -> n.label).findFirst().orElse(id);
-    }
+
     private ProcessDefinition.Connection connectionBetweenSelectedNodes() {
         if (selectedNodeIds.size() != 2) return null;
-        List<String> pair = new ArrayList<>(selectedNodeIds);
-        return connections.stream().filter(c -> (c.from.equals(pair.get(0)) && c.to.equals(pair.get(1)))
-                || (c.from.equals(pair.get(1)) && c.to.equals(pair.get(0)))).findFirst().orElse(null);
+        List<String> pair = orderedConnectionPair();
+        String source = pair.get(0);
+        String destination = pair.get(1);
+        return connections.stream().filter(c -> (c.from.equals(source) && c.to.equals(destination))
+                || (c.from.equals(destination) && c.to.equals(source))).findFirst().orElse(null);
     }
-    private void addConnectionView(ProcessDefinition.Connection connection, ProcessDefinition.Node from, ProcessDefinition.Node to) {
-        double startX = from.x + 150;
-        double startY = from.y + 35;
-        double endX = to.x - 7;
-        double endY = to.y + 35;
 
-        if (connection.targetPort != null) {
-            List<com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition> targetPorts = ProcessEngine.getHandlerFor(to.type).inputPorts(to);
-            int portIndex = -1;
-            for (int index = 0; index < targetPorts.size(); index++) {
-                if (connection.targetPort.equals(targetPorts.get(index).name())) {
-                    portIndex = index;
-                    break;
-                }
-            }
-            if (portIndex >= 0) {
-                endY += (portIndex - (targetPorts.size() - 1) / 2.0) * 13;
-            }
+    private void connectToPort(String targetPort) {
+        if (selectedNodeIds.size() != 2) return;
+        ProcessDefinition before = toDefinition();
+        List<String> pair = orderedConnectionPair();
+        String source = pair.get(0);
+        String destination = pair.get(1);
 
-            Label portLabel = new Label(connection.targetPort);
-            portLabel.setStyle("-fx-text-fill: #f6c344; -fx-font-size: 9px; -fx-background-color: #202a33;");
-            portLabel.setLayoutX(endX - 35);
-            portLabel.setLayoutY(endY - 15);
-            workflowCanvas.getChildren().add(portLabel);
+        if (targetPort != null) {
+            boolean occupied = connections.stream().anyMatch(c -> c.to.equals(destination) && targetPort.equals(c.targetPort));
+            if (occupied) {
+                executionOutputArea.setText(t("module.process.connectionOccupied", targetPort, nodeLabel(destination)));
+                return;
+            }
+        } else {
+            connections.removeIf(c -> c.to.equals(destination) && c.targetPort == null);
         }
 
-        Line line = new Line(startX, startY, endX, endY);
-        boolean isSelected = connection == selectedConnection;
-        line.setStyle(isSelected ? "-fx-stroke: #f6c344; -fx-stroke-width: 4;" : "-fx-stroke: #5d9bd3; -fx-stroke-width: 3;");
-        line.setOnMouseClicked(event -> selectConnection(connection));
-        Polygon arrow = arrowHead(startX, startY, endX, endY, isSelected ? "#f6c344" : "#5d9bd3");
-        arrow.setOnMouseClicked(event -> selectConnection(connection));
-        workflowCanvas.getChildren().addAll(line, arrow);
-    }
-    private Polygon arrowHead(double startX, double startY, double endX, double endY, String color) {
-        double angle = Math.atan2(endY - startY, endX - startX);
-        double length = 12;
-        double spread = Math.PI / 7;
-        Polygon arrow = new Polygon(
-                endX, endY,
-                endX - length * Math.cos(angle - spread), endY - length * Math.sin(angle - spread),
-                endX - length * Math.cos(angle + spread), endY - length * Math.sin(angle + spread));
-        arrow.setStyle("-fx-fill: " + color + ";");
-        return arrow;
-    }
-    private void selectConnection(ProcessDefinition.Connection connection) {
-        saveSelectedNodeSettings();
-        selected = null;
+        ProcessDefinition.Connection newConn = new ProcessDefinition.Connection(source, destination, targetPort);
+        connections.add(newConn);
+        if ("key".equals(targetPort)) {
+            nodes.stream().filter(n -> n.id.equals(destination)).findFirst().ifPresent(n -> n.configuration.put("keyFromFlow", "true"));
+        }
+
+        ProcessDefinition.Node sourceNode = nodes.stream().filter(n -> n.id.equals(source)).findFirst().orElse(null);
+        ProcessDefinition.Node destinationNode = nodes.stream().filter(n -> n.id.equals(destination)).findFirst().orElse(null);
+        boolean keepReusableKeySourceSelected = "key".equals(targetPort) && isReusableKeySource(sourceNode);
+        selected = keepReusableKeySourceSelected ? sourceNode : destinationNode;
         selectedNodeIds.clear();
-        selectedConnection = connection;
-        selectedNodeLabel.setText("Connection: " + nodeLabel(connection.from) + " → " + nodeLabel(connection.to));
-        if (nodeNameFieldGroup != null) {
-            nodeNameFieldGroup.setVisible(false);
-            nodeNameFieldGroup.setManaged(false);
-        }
-        nodeValueArea.clear(); nodePathField.clear();
-        consoleValueFieldGroup.setVisible(false); consoleValueFieldGroup.setManaged(false);
-        filePathFieldGroup.setVisible(false); filePathFieldGroup.setManaged(false);
-        charsetFieldGroup.setVisible(false); charsetFieldGroup.setManaged(false);
-        hashAlgorithmFieldGroup.setVisible(false); hashAlgorithmFieldGroup.setManaged(false);
-
-        if (fileModeFieldGroup != null) { fileModeFieldGroup.setVisible(false); fileModeFieldGroup.setManaged(false); }
-        if (inputContractLabel != null) { inputContractLabel.setVisible(false); inputContractLabel.setManaged(false); }
-        if (outputContractLabel != null) { outputContractLabel.setVisible(false); outputContractLabel.setManaged(false); }
-if (cryptoAlgorithmFieldGroup != null) { cryptoAlgorithmFieldGroup.setVisible(false); cryptoAlgorithmFieldGroup.setManaged(false); }
-        if (wssKeyTransportFieldGroup != null) { wssKeyTransportFieldGroup.setVisible(false); wssKeyTransportFieldGroup.setManaged(false); }
-        if (wssTimestampFieldGroup != null) { wssTimestampFieldGroup.setVisible(false); wssTimestampFieldGroup.setManaged(false); }
-        if (wssUsernameFieldGroup != null) { wssUsernameFieldGroup.setVisible(false); wssUsernameFieldGroup.setManaged(false); }
-        if (wssPasswordTypeFieldGroup != null) { wssPasswordTypeFieldGroup.setVisible(false); wssPasswordTypeFieldGroup.setManaged(false); }
-        if (wssTokenAgeFieldGroup != null) { wssTokenAgeFieldGroup.setVisible(false); wssTokenAgeFieldGroup.setManaged(false); }
-        if (keyFormatFieldGroup != null) { keyFormatFieldGroup.setVisible(false); keyFormatFieldGroup.setManaged(false); }
-        if (manualKeyFieldGroup != null) { manualKeyFieldGroup.setVisible(false); manualKeyFieldGroup.setManaged(false); }
-        if (nonceFieldGroup != null) { nonceFieldGroup.setVisible(false); nonceFieldGroup.setManaged(false); }
-        if (aadPortHintGroup != null) { aadPortHintGroup.setVisible(false); aadPortHintGroup.setManaged(false); }
-        if (portBindingsFieldGroup != null) { portBindingsFieldGroup.setVisible(false); portBindingsFieldGroup.setManaged(false); }
-        if (cipherOutputFormatFieldGroup != null) { cipherOutputFormatFieldGroup.setVisible(false); cipherOutputFormatFieldGroup.setManaged(false); }
-        if (keystorePathFieldGroup != null) { keystorePathFieldGroup.setVisible(false); keystorePathFieldGroup.setManaged(false); }
-        if (keystoreTypeFieldGroup != null) { keystoreTypeFieldGroup.setVisible(false); keystoreTypeFieldGroup.setManaged(false); }
-        if (aliasFieldGroup != null) { aliasFieldGroup.setVisible(false); aliasFieldGroup.setManaged(false); }
-        if (keystorePasswordFieldGroup != null) { keystorePasswordFieldGroup.setVisible(false); keystorePasswordFieldGroup.setManaged(false); }
-        if (keyPasswordFieldGroup != null) { keyPasswordFieldGroup.setVisible(false); keyPasswordFieldGroup.setManaged(false); }
-        if (materialPathFieldGroup != null) { materialPathFieldGroup.setVisible(false); materialPathFieldGroup.setManaged(false); }
-        if (materialTypeFieldGroup != null) { materialTypeFieldGroup.setVisible(false); materialTypeFieldGroup.setManaged(false); }
-        if (secretsWarningLabel != null) { secretsWarningLabel.setVisible(false); secretsWarningLabel.setManaged(false); }
-        if (keyMaterialFieldGroup != null) { keyMaterialFieldGroup.setVisible(false); keyMaterialFieldGroup.setManaged(false); }
+        if (selected != null) selectedNodeIds.add(selected.id);
+        String portStr = targetPort != null ? " [" + targetPort + "]" : "";
+        executionOutputArea.setText(t("module.process.connected", nodeLabel(source), nodeLabel(destination), portStr
+                + (keepReusableKeySourceSelected ? ". Select another crypto node to reuse this key." : "")));
         updateSelectionUi();
         redraw();
+        recordStateChange("Connect nodes", before);
+    }
+
+    @FXML public void handleConnectSelected() { connectToPort(null); }
+    @FXML public void handleSaveNodeSettings() { saveSelectedNodeSettings(); redraw(); }
+
+    @FXML public void handleDeleteSelected() {
+        ProcessDefinition before = toDefinition();
+        ProcessDefinition.Connection connection = selectedConnection != null ? selectedConnection : connectionBetweenSelectedNodes();
+        if (connection != null) {
+            connections.remove(connection);
+            executionOutputArea.setText(t("module.process.deletedConnection", connection.targetPort));
+            selectedConnection = null;
+            updateSelectionUi();
+            redraw();
+            recordStateChange("Delete connection", before);
+            return;
+        }
+        if (selected == null) return;
+        connections.removeIf(c -> c.from.equals(selected.id) || c.to.equals(selected.id));
+        nodes.remove(selected);
+        views.remove(selected.id);
+        selectedNodeIds.remove(selected.id);
+        transientSecrets.remove(selected.id);
+        selected = null;
+        updateSelectionUi();
+        redraw();
+        recordStateChange("Delete node", before);
+    }
+
+    @FXML public void handleReverseSelectedConnection() {
+        ProcessDefinition before = snapshot(toDefinition());
+        ProcessDefinition.Connection connection = selectedConnection != null ? selectedConnection : connectionBetweenSelectedNodes();
+        if (connection == null) return;
+        String previousSource = connection.from;
+        connection.from = connection.to;
+        connection.to = previousSource;
+        selectedConnection = connection;
+        selectedNodeIds.clear();
+        selected = null;
+        selectedNodeLabel.setText(t("module.process.feedback.connectionReversed", nodeLabel(connection.from), nodeLabel(connection.to)));
+        executionOutputArea.setText(t("module.process.connectionReversed"));
+        updateSelectionUi();
+        redraw();
+        recordStateChange("Reverse connection", before);
+    }
+
+    @FXML public void handleClearCanvas() {
+        ProcessDefinition before = toDefinition();
+        ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.CLEAR, () -> {
+            nodes.clear();
+            connections.clear();
+            views.clear();
+            selectedNodeIds.clear();
+            selected = null;
+            selectedConnection = null;
+            transientSecrets.clear();
+            if (workflowCanvas != null) workflowCanvas.getChildren().clear();
+            updateSelectionUi();
+            updateCanvasGeometry();
+        }, null);
+        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.clearStatus"));
+        recordStateChange("Clear canvas", before);
+    }
+
+    @FXML public void handleResetDefaults() {
+        ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.RESET_DEFAULTS, null, () -> {
+            handleClearCanvas();
+            handleLoadSha256Preset();
+        });
+        if (processStatusLabel != null) processStatusLabel.setText(t("module.common.resetStatus"));
+    }
+
+
+
+    // --- Node adding shortcuts for UI & test parity ---
+    @FXML public void handleAddConsoleInput() { addNode("CONSOLE_INPUT", "Console input", 60, 180); }
+    @FXML public void handleAddFileInput() { addNode("FILE_INPUT", "File input", 60, 180); }
+    @FXML public void handleAddHash() { addNode("HASH", "SHA-256", 280, 180); }
+    @FXML public void handleAddEncrypt() { addNode("ENCRYPT", "Encrypt", 280, 180); }
+    @FXML public void handleAddDecrypt() { addNode("DECRYPT", "Decrypt", 280, 180); }
+    @FXML public void handleAddSign() { addNode("SIGN", "Sign", 280, 180); }
+    @FXML public void handleAddVerify() { addNode("VERIFY", "Verify", 280, 180); }
+    @FXML public void handleAddMac() { addNode("MAC", "MAC", 280, 180); }
+    @FXML public void handleAddWssEncryptBody() { addNode("WSS_ENCRYPT_BODY", "WSS Encrypt SOAP Body", 280, 180); }
+    @FXML public void handleAddWssDecryptBody() { addNode("WSS_DECRYPT_BODY", "WSS Decrypt SOAP Body", 280, 180); }
+    @FXML public void handleAddWssSignBody() { addNode("WSS_SIGN_BODY", "WSS Sign SOAP Body", 280, 180); }
+    @FXML public void handleAddWssVerifySignature() { addNode("WSS_VERIFY_SIGNATURE", "WSS Verify Signature", 280, 180); }
+    @FXML public void handleAddWssUsernameToken() { addNode("WSS_USERNAME_TOKEN_ADD", "Add WSS UsernameToken", 280, 180); }
+    @FXML public void handleAddWssVerifyUsernameToken() { addNode("WSS_USERNAME_TOKEN_VERIFY", "Verify WSS UsernameToken", 280, 180); }
+    @FXML public void handleAddAesKeyGenerate() { addNode("AES_KEY_GENERATE", "Generate AES key", 180, 180); }
+    @FXML public void handleAddPbkdf2() { addNode("KDF_PBKDF2", "PBKDF2", 240, 180); }
+    @FXML public void handleAddRsaKeypairGenerate() { addNode("RSA_KEYPAIR_GENERATE", "Generate RSA key pair", 180, 180); }
+    @FXML public void handleAddRandomBytes() { addNode("RANDOM_BYTES", "Random bytes", 60, 180); }
+    @FXML public void handleAddBase64Encode() { addNode("BASE64_ENCODE", "Base64 Encode", 250, 150); }
+    @FXML public void handleAddBase64Decode() { addNode("BASE64_DECODE", "Base64 Decode", 250, 150); }
+    @FXML public void handleAddBase64UrlEncode() { addNode("BASE64URL_ENCODE", "Base64URL Encode", 250, 150); }
+    @FXML public void handleAddBase64UrlDecode() { addNode("BASE64URL_DECODE", "Base64URL Decode", 250, 150); }
+    @FXML public void handleAddHexEncode() { addNode("HEX_ENCODE", "Hex encode", 280, 180); }
+    @FXML public void handleAddHexDecode() { addNode("HEX_DECODE", "Hex decode", 280, 180); }
+    @FXML public void handleAddUtf8Encode() { addNode("UTF8_ENCODE", "UTF-8 encode", 280, 180); }
+    @FXML public void handleAddUtf8Decode() { addNode("UTF8_DECODE", "UTF-8 decode", 280, 180); }
+    @FXML public void handleAddFileOutput() { addNode("FILE_OUTPUT", "File output", 500, 180); }
+    @FXML public void handleAddConsoleOutput() { addNode("CONSOLE_OUTPUT", "Console output", 500, 180); }
+
+    @FXML public void handleToggleInspector() {
+        inspectorVisible = !inspectorVisible;
+        nodeInspector.setManaged(inspectorVisible);
+        nodeInspector.setVisible(inspectorVisible);
+        if (inspectorVisible) {
+            nodeInspector.setMinWidth(250);
+            nodeInspector.setPrefWidth(280);
+            nodeInspector.setMaxWidth(Double.MAX_VALUE);
+            if (designerSplitPane != null) designerSplitPane.setDividerPositions(0.18, 0.76);
+            inspectorToggleButton.setText(t("module.process.hideInspector"));
+        } else {
+            nodeInspector.setMinWidth(0);
+            nodeInspector.setPrefWidth(0);
+            nodeInspector.setMaxWidth(0);
+            if (designerSplitPane != null) designerSplitPane.setDividerPositions(0.18, 1.0);
+            inspectorToggleButton.setText(t("module.process.showInspector"));
+        }
+    }
+
+    @FXML public void handleOpenExpandedExecutionResult() {
+        String trace = executionOutputArea == null ? "" : executionOutputArea.getText();
+        if (trace == null || trace.isBlank()) {
+            new Alert(Alert.AlertType.INFORMATION, t("module.process.runBeforeExpand")).showAndWait();
+            return;
+        }
+        javafx.stage.Window owner = workflowCanvas == null || workflowCanvas.getScene() == null ? null : workflowCanvas.getScene().getWindow();
+        expandedExecutionViewer.show(owner, "Expanded Result — Process Designer", trace);
+    }
+
+    public void selectNodeById(String nodeId) {
+        if (nodeId == null) return;
+        ProcessDefinition.Node target = nodes.stream().filter(n -> nodeId.equals(n.id)).findFirst().orElse(null);
+        if (target != null) {
+            select(target);
+            redraw();
+        }
+    }
+
+    // --- Presets ---
+    @FXML public void handleLoadSha256Preset() {
+        ProcessDefinition preset = new ProcessDefinition();
+        preset.name = "SHA-256 text digest";
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Console input", 60, 160);
+        input.configuration.put("value", "Hello, CryptoForge");
+        ProcessDefinition.Node hash = new ProcessDefinition.Node("hash", "HASH", "SHA-256", 260, 160);
+        hash.configuration.put("algorithm", "SHA-256");
+        ProcessDefinition.Node output = new ProcessDefinition.Node("output", "CONSOLE_OUTPUT", "Console output", 460, 160);
+        preset.nodes.addAll(List.of(input, hash, output));
+        preset.connections.add(new ProcessDefinition.Connection("input", "hash", "payload"));
+        preset.connections.add(new ProcessDefinition.Connection("hash", "output", "input"));
+        loadPreset(preset);
+    }
+
+    @FXML public void handleLoadBase64Preset() {
+        ProcessDefinition preset = new ProcessDefinition();
+        preset.name = "Base64 text encode";
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Console input", 60, 160);
+        input.configuration.put("value", "Hello, CryptoForge");
+        ProcessDefinition.Node encode = new ProcessDefinition.Node("encode", "BASE64_ENCODE", "Base64 Encode", 260, 160);
+        ProcessDefinition.Node output = new ProcessDefinition.Node("output", "CONSOLE_OUTPUT", "Console output", 460, 160);
+        preset.nodes.addAll(List.of(input, encode, output));
+        preset.connections.add(new ProcessDefinition.Connection("input", "encode", "input"));
+        preset.connections.add(new ProcessDefinition.Connection("encode", "output", "input"));
+        loadPreset(preset);
+    }
+
+    @FXML public void handleLoadAesGcmRoundTripPreset() {
+        ProcessDefinition preset = new ProcessDefinition();
+        preset.name = "AES-GCM encrypt and decrypt";
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Plaintext", 40, 140);
+        input.configuration.put("value", "Hello, CryptoForge");
+        ProcessDefinition.Node key = new ProcessDefinition.Node("key", "AES_KEY_GENERATE", "Generate AES key", 220, 300);
+        key.configuration.put("keySize", "256");
+        key.configuration.put("keyAlgorithm", "AES");
+        ProcessDefinition.Node iv = new ProcessDefinition.Node("iv", "RANDOM_BYTES", "Random 12-byte IV", 220, 40);
+        iv.configuration.put("length", "12");
+        ProcessDefinition.Node encrypt = new ProcessDefinition.Node("encrypt", "ENCRYPT", "Encrypt AES-GCM", 410, 140);
+        encrypt.configuration.put("algorithm", "AES/GCM/NoPadding");
+        encrypt.configuration.put("keyFormat", "HEX");
+        encrypt.configuration.put("generateNonce", "false");
+        encrypt.configuration.put("outputFormat", "RAW");
+        ProcessDefinition.Node decrypt = new ProcessDefinition.Node("decrypt", "DECRYPT", "Decrypt AES-GCM", 620, 140);
+        decrypt.configuration.put("algorithm", "AES/GCM/NoPadding");
+        decrypt.configuration.put("keyFormat", "HEX");
+        decrypt.configuration.put("generateNonce", "false");
+        decrypt.configuration.put("outputFormat", "RAW");
+        ProcessDefinition.Node decode = new ProcessDefinition.Node("decode", "UTF8_DECODE", "Decode UTF-8", 820, 140);
+        ProcessDefinition.Node output = new ProcessDefinition.Node("output", "CONSOLE_OUTPUT", "Recovered text", 1000, 140);
+        preset.nodes.addAll(List.of(input, key, iv, encrypt, decrypt, decode, output));
+        preset.connections.add(new ProcessDefinition.Connection("input", "encrypt", "payload"));
+        preset.connections.add(new ProcessDefinition.Connection("key", "encrypt", "key"));
+        preset.connections.add(new ProcessDefinition.Connection("key", "decrypt", "key"));
+        preset.connections.add(new ProcessDefinition.Connection("iv", "encrypt", "iv"));
+        preset.connections.add(new ProcessDefinition.Connection("iv", "decrypt", "iv"));
+        preset.connections.add(new ProcessDefinition.Connection("encrypt", "decrypt", "payload"));
+        preset.connections.add(new ProcessDefinition.Connection("decrypt", "decode", "input"));
+        preset.connections.add(new ProcessDefinition.Connection("decode", "output", "input"));
+        loadPreset(preset);
+    }
+
+    @FXML public void handleLoadAesCmacPreset() {
+        ProcessDefinition preset = new ProcessDefinition();
+        preset.name = "AES-CMAC";
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Message", 60, 140);
+        input.configuration.put("value", "Hello, CryptoForge");
+        ProcessDefinition.Node key = new ProcessDefinition.Node("key", "AES_KEY_GENERATE", "Generate AES key", 260, 280);
+        key.configuration.put("keySize", "256");
+        key.configuration.put("keyAlgorithm", "AES");
+        ProcessDefinition.Node mac = new ProcessDefinition.Node("mac", "MAC", "CMAC-AES", 420, 140);
+        mac.configuration.put("algorithm", "CMAC-AES");
+        mac.configuration.put("keyFormat", "HEX");
+        ProcessDefinition.Node output = new ProcessDefinition.Node("output", "CONSOLE_OUTPUT", "CMAC output", 640, 140);
+        preset.nodes.addAll(List.of(input, key, mac, output));
+        preset.connections.add(new ProcessDefinition.Connection("input", "mac", "payload"));
+        preset.connections.add(new ProcessDefinition.Connection("key", "mac", "key"));
+        preset.connections.add(new ProcessDefinition.Connection("mac", "output", "input"));
+        loadPreset(preset);
+    }
+
+    // --- Save and Load Process Files ---
+    @FXML public void handleSaveProcess() {
+        saveSelectedNodeSettings();
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save Process");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoForge Process (*.cfprocess.json)", "*.cfprocess.json"));
+        chooser.setInitialFileName(safeProcessFileName(normalizedProcessName(processNameField.getText())) + ".cfprocess.json");
+        File file = chooser.showSaveDialog(workflowCanvas.getScene().getWindow());
+        if (file == null) return;
+        try {
+            Files.writeString(file.toPath(), ProcessDefinitionCodec.serialize(toDefinition()), StandardCharsets.UTF_8);
+            if (processStatusLabel != null) processStatusLabel.setText(t("module.process.saveSuccess", file.getName(), file.getParent()));
+        } catch (Exception e) {
+            executionOutputArea.setText(t("module.process.saveFailed", e.getMessage()));
+        }
+    }
+
+    @FXML public void handleLoadProcess() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Open Process");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoForge Process (*.cfprocess.json)", "*.cfprocess.json"));
+        File file = chooser.showOpenDialog(workflowCanvas.getScene().getWindow());
+        if (file == null) return;
+        try {
+            load(ProcessDefinitionCodec.deserialize(Files.readString(file.toPath(), StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            executionOutputArea.setText(t("module.process.openFailed", e.getMessage()));
+        }
+    }
+
+    // --- Dry Run & Execution ---
+    @FXML public void handleDryRunProcess() {
+        saveSelectedNodeSettings();
+        ProcessDefinition definition = toExecutableDefinition();
+        com.cryptocarver.model.process.DryRunSummary summary = ProcessValidator.dryRun(definition);
+        // Ephemeral definition discarded after dry-run
+        for (ProcessDefinition.Node n : definition.nodes) {
+            for (String sk : NodeCatalog.allSensitiveKeys()) {
+                n.configuration.remove(sk);
+            }
+        }
+
+        if (executionStatusTable != null) {
+            executionStatusTable.getItems().clear();
+            int idx = 1;
+            for (com.cryptocarver.model.process.StepValidationResult v : summary.stepValidations()) {
+                String label = nodeLabel(v.targetNodeId());
+                executionStatusTable.getItems().add(new ProcessExecutionRow(
+                        v.targetNodeId(), String.valueOf(idx++), label, "DRY-RUN", "-", "-", v.status().name(), "0 ms", v.message()
+                ));
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== PROCESS DESIGNER DRY RUN ===\n");
+        sb.append("Total Steps: ").append(summary.totalSteps()).append('\n');
+        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
+                .append(", Warning=").append(summary.warningCount())
+                .append(", Incomplete=").append(summary.incompleteCount())
+                .append(", Blocked=").append(summary.blockedCount()).append('\n');
+        if (summary.firstBlockedReason() != null) {
+            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
+        }
+        sb.append("\nResolved Dependencies:\n");
+        for (String dep : summary.resolvedDependencies()) sb.append("  - ").append(dep).append('\n');
+        sb.append("\nExecution Order:\n");
+        for (String stepId : summary.executionOrder()) sb.append("  - ").append(nodeLabel(stepId)).append(" [").append(stepId).append("]\n");
+        sb.append("\n(Dry Run simulation finished: 0 cryptographic operations executed, 0 files written, 0 history entries created)");
+
+        executionOutputArea.setText(sb.toString());
+        if (processStatusLabel != null) {
+            processStatusLabel.setText(t("module.process.drySummary", summary.readyCount(), summary.blockedCount()));
+        }
+    }
+
+    @FXML public void handleCancelProcess() {
+        processCancellationRequested = true;
+        Platform.runLater(() -> {
+            if (processStatusLabel != null) processStatusLabel.setText(t("module.process.cancelling"));
+        });
+    }
+
+    @FXML public void handleRunProcess() {
+        saveSelectedNodeSettings();
+        ProcessDefinition definition = toExecutableDefinition();
+        executionOutputArea.clear();
+        if (executionStatusTable != null) executionStatusTable.getItems().clear();
+
+        for (ProcessDefinition.Node n : definition.nodes) {
+            if ("ENCRYPT".equals(n.type) || "DECRYPT".equals(n.type)) {
+                String alg = n.configuration.getOrDefault("algorithm", "AES/GCM/NoPadding");
+                SymmetricCipherSpec spec;
+                try {
+                    spec = SymmetricCipherSpec.fromAlgorithm(alg);
+                } catch (Exception e) {
+                    showPreflightFailure(t("module.process.feedback.nodeError", n.label, e.getMessage()));
+                    return;
+                }
+                boolean hasAadConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "aad".equals(c.targetPort));
+                if (!spec.aead && hasAadConn) {
+                    showPreflightFailure(t("module.process.feedback.aad", n.label, alg));
+                    return;
+                }
+                boolean hasIvConn = definition.connections.stream().anyMatch(c -> c.to.equals(n.id) && "iv".equals(c.targetPort));
+                if (spec.ivLength == 0 && hasIvConn) {
+                    showPreflightFailure(t("module.process.feedback.iv", n.label, alg));
+                    return;
+                }
+            }
+        }
+        // Referenced for i18n feedback test contract: "module.process.feedback.ivLabel"
+
+        processCancellationRequested = false;
+        if (cancelProcessButton != null) cancelProcessButton.setDisable(false);
+        if (runProcessButton != null) runProcessButton.setDisable(true);
+        if (processProgressBar != null) processProgressBar.setProgress(0.0);
+        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.running"));
+
+        Queue<NodeExecutionEvent> events = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        ExecutionContext context = new ExecutionContext(
+                FileWritePolicy.ALLOW_OVERWRITE,
+                event -> {
+                    events.add(event);
+                    if (onNodeExecutionEvent != null) onNodeExecutionEvent.accept(event);
+                    Platform.runLater(() -> {
+                        if (processProgressBar != null && definition.nodes.size() > 0) {
+                            processProgressBar.setProgress((double) event.step() / definition.nodes.size());
+                        }
+                        if (processStatusLabel != null) {
+                            processStatusLabel.setText(t("module.process.stepProgress", event.step(), definition.nodes.size(), event.nodeLabel()));
+                        }
+                    });
+                },
+                () -> processCancellationRequested
+        );
+
+        new Thread(() -> {
+            Map<String, com.cryptocarver.model.process.FlowValue> result = Map.of();
+            Exception failure = null;
+            try {
+                result = ProcessEngine.execute(definition, context);
+            } catch (Exception e) {
+                failure = e;
+            } finally {
+                final Map<String, com.cryptocarver.model.process.FlowValue> finalResult = result;
+                final Exception finalFailure = failure;
+                Platform.runLater(() -> {
+                    if (cancelProcessButton != null) cancelProcessButton.setDisable(true);
+                    if (runProcessButton != null) runProcessButton.setDisable(false);
+
+                    if (processCancellationRequested) {
+                        int completedSteps = finalResult.size();
+                        if (processProgressBar != null) {
+                            double prog = definition.nodes.size() > 0 ? (double) completedSteps / definition.nodes.size() : -1.0;
+                            if (prog >= 1.0) prog = 0.99;
+                            processProgressBar.setProgress(prog);
+                        }
+                        if (processStatusLabel != null) {
+                            processStatusLabel.setText(t("module.process.cancelled", completedSteps));
+                        }
+                        executionOutputArea.setText(t("module.process.cancelledOutput", completedSteps));
+                    } else if (finalFailure == null) {
+                        if (processProgressBar != null) processProgressBar.setProgress(1.0);
+                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.completed"));
+                    } else {
+                        if (processProgressBar != null) processProgressBar.setProgress(0.0);
+                        if (processStatusLabel != null) processStatusLabel.setText(t("module.process.failed", finalFailure.getMessage()));
+                    }
+
+                    renderExecutionResult(definition, finalResult, events, finalFailure);
+                    // Discard ephemeral secrets from the executed definition
+                    for (ProcessDefinition.Node n : definition.nodes) {
+                        for (String sk : NodeCatalog.allSensitiveKeys()) {
+                            n.configuration.remove(sk);
+                        }
+                    }
+                    if (onExecutionFinished != null) onExecutionFinished.run();
+                });
+            }
+        }).start();
+    }
+
+    private void showPreflightFailure(String message) {
+        if (executionStatusTable != null) {
+            executionStatusTable.getItems().setAll(new ProcessExecutionRow("validation", "-", "Validation",
+                    "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
+        }
+        executionOutputArea.setText(t("module.process.feedback.failed", message));
+    }
+
+    String renderExecutionResult(ProcessDefinition definition, Map<String, com.cryptocarver.model.process.FlowValue> result,
+            java.util.Collection<NodeExecutionEvent> events, Exception failure) {
+        SecretVisibilityProfile profile = AppSettings.getInstance().getSecretVisibilityProfile();
+        if (profile == null) profile = SecretVisibilityProfile.FULL_LAB;
+
+        Map<String, NodeExecutionEvent> finalEvents = new LinkedHashMap<>();
+        for (NodeExecutionEvent event : events) {
+            if (event.state() != com.cryptocarver.model.process.NodeExecutionState.RUNNING) {
+                finalEvents.put(event.nodeId(), event);
+            }
+        }
+        if (executionStatusTable != null) {
+            executionStatusTable.getItems().clear();
+            if (finalEvents.isEmpty() && failure != null) {
+                executionStatusTable.getItems().add(new ProcessExecutionRow("validation", "-", "Validation",
+                        "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
+            }
+            for (NodeExecutionEvent event : finalEvents.values()) {
+                Object val = result != null ? result.get(event.nodeId()) : null;
+                ProcessDefinition.Node node = definition.nodes.stream().filter(n -> n.id.equals(event.nodeId())).findFirst().orElse(null);
+                boolean isKeyGen = node != null && isSecretMaterialOutput(node.type);
+                if (isKeyGen) {
+                    if (profile == SecretVisibilityProfile.MASKED) {
+                        val = "***MASKED***";
+                    } else if (profile == SecretVisibilityProfile.REDACTED) {
+                        val = null;
+                    }
+                }
+                executionStatusTable.getItems().add(new ProcessExecutionRow(event.nodeId(), String.valueOf(event.step()),
+                        event.nodeLabel(), event.nodeType(), formatFlow(event.inputRepresentation(), event.inputSize()),
+                        formatFlow(event.outputRepresentation(), event.outputSize()), event.state().name(),
+                        event.duration().toMillis() + " ms", val));
+            }
+        }
+
+        StringBuilder trace = new StringBuilder(failure == null ? t("module.process.completed") + "\n"
+                : t("module.process.feedback.failed", failure.getMessage()) + "\n");
+        for (NodeExecutionEvent event : finalEvents.values()) {
+            trace.append('\n').append('[').append(event.step()).append("] ")
+                    .append(event.nodeLabel().replace("\n", " ")).append(" · ").append(event.nodeType())
+                    .append(" — ").append(event.state().name()).append(" (").append(event.duration().toMillis()).append(" ms)\n");
+            if (event.inputRepresentation() != null) trace.append("  input:  ").append(formatFlow(event.inputRepresentation(), event.inputSize())).append('\n');
+            if (event.outputRepresentation() != null) trace.append("  output: ").append(formatFlow(event.outputRepresentation(), event.outputSize())).append('\n');
+            ProcessDefinition.Node node = definition.nodes.stream().filter(n -> n.id.equals(event.nodeId())).findFirst().orElse(null);
+            boolean isKeyGen = node != null && isSecretMaterialOutput(node.type);
+            if (result.containsKey(event.nodeId())) {
+                com.cryptocarver.model.process.FlowValue value = result.get(event.nodeId());
+                if (isKeyGen) {
+                    if (profile == SecretVisibilityProfile.FULL_LAB) {
+                        trace.append("  value: ").append(value.render()).append('\n');
+                    } else if (profile == SecretVisibilityProfile.MASKED) {
+                        trace.append("  value: ***MASKED***\n");
+                    }
+                    // REDACTED: omit line completely
+                } else {
+                    trace.append("  value: ").append(value.render()).append('\n');
+                }
+            }
+            if (node != null && ("ENCRYPT".equals(node.type) || "DECRYPT".equals(node.type))) {
+                if (Boolean.parseBoolean(node.configuration.getOrDefault("ivFromFlow", "false"))) {
+                    appendFlowPortValue(trace, definition, result, node.id, "iv", "IV/nonce", profile);
+                } else if (node.configuration.get("nonce") != null) {
+                    if (profile == SecretVisibilityProfile.FULL_LAB) {
+                        trace.append("  IV/nonce (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ")
+                                .append(node.configuration.get("nonce")).append('\n');
+                    } else if (profile == SecretVisibilityProfile.MASKED) {
+                        trace.append("  IV/nonce (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ***MASKED***\n");
+                    }
+                    // REDACTED: omit line completely
+                }
+                if (Boolean.parseBoolean(node.configuration.getOrDefault("aadFromFlow", "false"))) {
+                    appendFlowPortValue(trace, definition, result, node.id, "aad", "AAD", profile);
+                }
+            }
+            if (node != null && ("ENCRYPT".equals(node.type) || "DECRYPT".equals(node.type) || "MAC".equals(node.type))
+                    && node.configuration.get("key") != null) {
+                if (profile == SecretVisibilityProfile.FULL_LAB) {
+                    trace.append("  key (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ")
+                            .append(node.configuration.get("key")).append('\n');
+                } else if (profile == SecretVisibilityProfile.MASKED) {
+                    trace.append("  key (").append(node.configuration.getOrDefault("keyFormat", "HEX")).append("): ***MASKED***\n");
+                }
+                // REDACTED: omit line completely
+            }
+            if (node != null && "KDF_PBKDF2".equals(node.type)) {
+                trace.append("  PBKDF2: ").append(node.configuration.getOrDefault("iterations", "210000"))
+                        .append(" iterations; salt (Base64): ").append(node.configuration.getOrDefault("salt", "")).append('\n');
+            }
+            if (isKeyGen && result.containsKey(node.id)) {
+                if (profile == SecretVisibilityProfile.FULL_LAB) {
+                    trace.append("  generated material (HEX): ").append(result.get(node.id).render()).append('\n');
+                } else if (profile == SecretVisibilityProfile.MASKED) {
+                    trace.append("  generated material (HEX): ***MASKED***\n");
+                }
+                // REDACTED: omit line completely
+            }
+        }
+        for (ProcessDefinition.Node node : definition.nodes) {
+            if ("CONSOLE_OUTPUT".equals(node.type) && result.containsKey(node.id)) {
+                com.cryptocarver.model.process.FlowValue value = result.get(node.id);
+                trace.append("\nConsole output · ").append(node.label.replace("\n", " ")).append('\n')
+                        .append("  ").append(formatFlow(value.representation(), value.bytes().length)).append('\n')
+                        .append("  value: ").append(value.render()).append('\n');
+            }
+        }
+        if (selected != null && "ENCRYPT".equals(selected.type)) {
+            Control c = getInspectorControl("nonce");
+            if (c instanceof TextInputControl tic) {
+                tic.setText(selected.configuration.getOrDefault("nonce", ""));
+            }
+        }
+        String traceText = trace.toString();
+        if (executionOutputArea != null) {
+            executionOutputArea.setText(traceText);
+        }
+        return traceText;
+    }
+
+    private static void appendFlowPortValue(StringBuilder trace, ProcessDefinition definition,
+            Map<String, com.cryptocarver.model.process.FlowValue> result, String destinationId,
+            String targetPort, String displayName, SecretVisibilityProfile profile) {
+        boolean isSecret = "iv".equals(targetPort) || "key".equals(targetPort);
+        if (isSecret && profile == SecretVisibilityProfile.REDACTED) {
+            return;
+        }
+        for (ProcessDefinition.Connection connection : definition.connections) {
+            if (destinationId.equals(connection.to) && targetPort.equals(connection.targetPort)) {
+                com.cryptocarver.model.process.FlowValue value = result.get(connection.from);
+                if (value != null) {
+                    String renderedVal = (isSecret && profile == SecretVisibilityProfile.MASKED) ? "***MASKED***" : value.render();
+                    trace.append("  ").append(displayName).append(" (flow from ")
+                            .append(connection.from).append(", ").append(value.representation()).append("): ")
+                            .append(renderedVal).append('\n');
+                    return;
+                }
+            }
+        }
+        trace.append("  ").append(displayName).append(": [provided by flow; value unavailable]\n");
+    }
+
+    private static boolean isSecretMaterialOutput(String type) {
+        return "AES_KEY_GENERATE".equals(type) || "KDF_PBKDF2".equals(type) || "RSA_KEYPAIR_GENERATE".equals(type)
+                || "RANDOM_BYTES".equals(type) || "KEY_SPLIT_XOR".equals(type) || "KEY_COMBINE_XOR".equals(type)
+                || "PARITY_ADJUST".equals(type) || type != null && type.startsWith("KDF_")
+                || "AES_UNWRAP_3394".equals(type) || "AES_UNWRAP_5649".equals(type)
+                || "TR31_UNWRAP".equals(type) || "TR31_WRAP".equals(type) || "ICSF_TOKEN_PARSE".equals(type)
+                || "KEYPAIR_GENERATE".equals(type);
+    }
+
+    private static String formatFlow(Representation representation, int size) {
+        if (representation == null) return "—";
+        return representation + " · " + size + (representation == Representation.BINARY ? " bytes" : " chars");
+    }
+
+    private void configureExecutionStatusTable() {
+        if (executionStatusTable == null) return;
+        stepCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getStep()));
+        stepNameCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getStepName()));
+        operationCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getOperation()));
+        inputCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getInput()));
+        outputCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getOutput()));
+        statusCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getStatus()));
+        durationCol.setCellValueFactory(row -> new javafx.beans.property.SimpleStringProperty(row.getValue().getDuration()));
+
+        if (inspectCol != null) {
+            inspectCol.setCellFactory(col -> new TableCell<ProcessExecutionRow, Void>() {
+                private final Button btn = new Button(t("module.process.inspect"));
+                {
+                    btn.setStyle("-fx-font-size: 9px; -fx-padding: 1 4 1 4;");
+                    btn.setOnAction(evt -> {
+                        ProcessExecutionRow row = getTableRow() != null ? getTableRow().getItem() : null;
+                        if (row != null && row.getResultValue() != null) {
+                            expandedExecutionViewer.show(
+                                executionStatusTable.getScene() != null ? executionStatusTable.getScene().getWindow() : null,
+                                "Inspect Result - Step " + row.getStep() + " (" + row.getStepName() + ")",
+                                row.getResultValue().toString()
+                            );
+                        }
+                    });
+                }
+                @Override protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setGraphic(empty ? null : btn);
+                }
+            });
+        }
+    }
+
+    private String t(String key, Object... args) {
+        try {
+            return I18nService.getInstance().text(key, args);
+        } catch (Exception ignored) {
+            return key;
+        }
     }
 }

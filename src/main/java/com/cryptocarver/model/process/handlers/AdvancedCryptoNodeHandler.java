@@ -148,11 +148,70 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
     }
 
     @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        List<String> cipherAlgos = List.of("AES/GCM/NoPadding", "AES/CBC/PKCS7Padding", "AES/CTR/NoPadding", "DESede/CBC/PKCS7Padding", "ChaCha20-Poly1305");
+        List<String> keyFormats = List.of("HEX", "BASE64", "UTF-8");
+        List<String> outputFormats = List.of("RAW", "ENVELOPE");
+        List<String> macAlgos = List.of("HmacSHA256", "HmacSHA512", "HmacSHA1", "HmacMD5", "AES-CMAC");
+        List<String> signAlgos = List.of("SHA256withRSA", "SHA512withRSA", "SHA1withRSA", "SHA256withECDSA", "SHA512withECDSA", "Ed25519");
+        List<String> ksTypes = List.of("PKCS12", "JKS", "BCFKS");
+        List<String> matTypes = List.of("CERTIFICATE", "PUBLIC_KEY");
+
+        List<com.cryptocarver.model.process.NodeParameter> encryptParams = List.of(
+            new com.cryptocarver.model.process.NodeParameter("algorithm", "module.process.param.algorithm", com.cryptocarver.model.process.ParameterKind.COMBO, cipherAlgos, "AES/GCM/NoPadding"),
+            new com.cryptocarver.model.process.NodeParameter("keyFormat", "module.process.param.keyFormat", com.cryptocarver.model.process.ParameterKind.COMBO, keyFormats, "HEX"),
+            new com.cryptocarver.model.process.NodeParameter("key", "module.process.param.manualKey", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+            new com.cryptocarver.model.process.NodeParameter("nonce", "module.process.param.nonce", com.cryptocarver.model.process.ParameterKind.HEX, ""),
+            new com.cryptocarver.model.process.NodeParameter("generateNonce", "module.process.param.generateNonce", com.cryptocarver.model.process.ParameterKind.CHECKBOX, "true"),
+            new com.cryptocarver.model.process.NodeParameter("outputFormat", "module.process.param.outputFormat", com.cryptocarver.model.process.ParameterKind.COMBO, outputFormats, "RAW")
+        );
+
+        List<com.cryptocarver.model.process.NodeParameter> decryptParams = List.of(
+            new com.cryptocarver.model.process.NodeParameter("algorithm", "module.process.param.algorithm", com.cryptocarver.model.process.ParameterKind.COMBO, cipherAlgos, "AES/GCM/NoPadding"),
+            new com.cryptocarver.model.process.NodeParameter("keyFormat", "module.process.param.keyFormat", com.cryptocarver.model.process.ParameterKind.COMBO, keyFormats, "HEX"),
+            new com.cryptocarver.model.process.NodeParameter("key", "module.process.param.manualKey", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+            new com.cryptocarver.model.process.NodeParameter("nonce", "module.process.param.nonce", com.cryptocarver.model.process.ParameterKind.HEX, ""),
+            new com.cryptocarver.model.process.NodeParameter("outputFormat", "module.process.param.outputFormat", com.cryptocarver.model.process.ParameterKind.COMBO, outputFormats, "RAW")
+        );
+
+        List<com.cryptocarver.model.process.NodeParameter> macParams = List.of(
+            new com.cryptocarver.model.process.NodeParameter("algorithm", "module.process.param.algorithm", com.cryptocarver.model.process.ParameterKind.COMBO, macAlgos, "HmacSHA256"),
+            new com.cryptocarver.model.process.NodeParameter("keyFormat", "module.process.param.keyFormat", com.cryptocarver.model.process.ParameterKind.COMBO, keyFormats, "HEX"),
+            new com.cryptocarver.model.process.NodeParameter("key", "module.process.param.manualKey", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null)
+        );
+
+        List<com.cryptocarver.model.process.NodeParameter> signParams = List.of(
+            new com.cryptocarver.model.process.NodeParameter("algorithm", "module.process.param.algorithm", com.cryptocarver.model.process.ParameterKind.COMBO, signAlgos, "SHA256withRSA"),
+            new com.cryptocarver.model.process.NodeParameter("keystorePath", "module.process.param.keystorePath", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, ""),
+            new com.cryptocarver.model.process.NodeParameter("keystoreType", "module.process.param.keystoreType", com.cryptocarver.model.process.ParameterKind.COMBO, ksTypes, "PKCS12"),
+            new com.cryptocarver.model.process.NodeParameter("alias", "module.process.param.alias", com.cryptocarver.model.process.ParameterKind.TEXT, ""),
+            new com.cryptocarver.model.process.NodeParameter("keystorePassword", "module.process.param.keystorePassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null),
+            new com.cryptocarver.model.process.NodeParameter("keyPassword", "module.process.param.keyPassword", com.cryptocarver.model.process.ParameterKind.PASSWORD, List.of(), "", true, null, null)
+        );
+
+        List<com.cryptocarver.model.process.NodeParameter> verifyParams = List.of(
+            new com.cryptocarver.model.process.NodeParameter("algorithm", "module.process.param.algorithm", com.cryptocarver.model.process.ParameterKind.COMBO, signAlgos, "SHA256withRSA"),
+            new com.cryptocarver.model.process.NodeParameter("materialPath", "module.process.param.materialPath", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, ""),
+            new com.cryptocarver.model.process.NodeParameter("materialType", "module.process.param.materialType", com.cryptocarver.model.process.ParameterKind.COMBO, matTypes, "CERTIFICATE")
+        );
+
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor("ENCRYPT", "Crypto", "module.process.type.encrypt", "module.process.desc.encrypt", "🔒", encryptParams),
+            new com.cryptocarver.model.process.NodeDescriptor("DECRYPT", "Crypto", "module.process.type.decrypt", "module.process.desc.decrypt", "🔓", decryptParams),
+            new com.cryptocarver.model.process.NodeDescriptor("MAC", "Crypto", "module.process.type.mac", "module.process.desc.mac", "🏷", macParams),
+            new com.cryptocarver.model.process.NodeDescriptor("SIGN", "Crypto", "module.process.type.sign", "module.process.desc.sign", "✍", signParams),
+            new com.cryptocarver.model.process.NodeDescriptor("VERIFY", "Crypto", "module.process.type.verify", "module.process.desc.verify", "🔍", verifyParams),
+            new com.cryptocarver.model.process.NodeDescriptor("CRYPTO", "Crypto", "module.process.type.encrypt", "module.process.desc.encrypt", "🔒", encryptParams),
+            new com.cryptocarver.model.process.NodeDescriptor("ADVANCED_CRYPTO", "Crypto", "module.process.type.encrypt", "module.process.desc.encrypt", "🔒", encryptParams)
+        );
+    }
+
+    @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         switch (node.type) {
             case "VERIFY":
                 return List.of(
-                    new PortDefinition("payload", Set.of(Representation.values()), true),
+                    new PortDefinition("payload", Representation.standardValues(), true),
                     new PortDefinition("signature", Set.of(Representation.BINARY), true)
                 );
             case "DECRYPT":
@@ -160,9 +219,9 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
             case "ENCRYPT":
             case "MAC":
             case "SIGN":
-                return getCryptoPorts(node, Set.of(Representation.values()));
+                return getCryptoPorts(node, Representation.standardValues());
             default:
-                return List.of(new PortDefinition("payload", Set.of(Representation.values()), true));
+                return List.of(new PortDefinition("payload", Representation.standardValues(), true));
         }
     }
 
@@ -178,7 +237,7 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
                 ports.add(new PortDefinition("iv", Set.of(Representation.BINARY), false));
             }
             if (spec.aead) {
-                ports.add(new PortDefinition("aad", Set.of(Representation.values()), false));
+                ports.add(new PortDefinition("aad", Representation.standardValues(), false));
             }
         }
 

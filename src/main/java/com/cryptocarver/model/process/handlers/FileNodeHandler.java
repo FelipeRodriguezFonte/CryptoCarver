@@ -22,9 +22,43 @@ public class FileNodeHandler implements ProcessNodeHandler {
     }
 
     @Override
+    public List<com.cryptocarver.model.process.NodeDescriptor> descriptors() {
+        return List.of(
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "FILE_INPUT",
+                "Inputs",
+                "module.process.type.fileInput",
+                "module.process.desc.fileInput",
+                "📁",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("path", "module.process.param.path", com.cryptocarver.model.process.ParameterKind.FILE_OPEN, ""),
+                    new com.cryptocarver.model.process.NodeParameter("readMode", "module.process.param.mode", com.cryptocarver.model.process.ParameterKind.COMBO,
+                        List.of("BINARY", "TEXT"), "BINARY"),
+                    new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO,
+                        List.of("UTF-8", "ISO-8859-1", "US-ASCII", "UTF-16"), "UTF-8", false, null, "readMode=TEXT")
+                )
+            ),
+            new com.cryptocarver.model.process.NodeDescriptor(
+                "FILE_OUTPUT",
+                "Outputs",
+                "module.process.type.fileOutput",
+                "module.process.desc.fileOutput",
+                "💾",
+                List.of(
+                    new com.cryptocarver.model.process.NodeParameter("path", "module.process.param.path", com.cryptocarver.model.process.ParameterKind.FILE_SAVE, ""),
+                    new com.cryptocarver.model.process.NodeParameter("writeMode", "module.process.param.mode", com.cryptocarver.model.process.ParameterKind.COMBO,
+                        List.of("BINARY", "TEXT"), "BINARY"),
+                    new com.cryptocarver.model.process.NodeParameter("charset", "module.process.param.charset", com.cryptocarver.model.process.ParameterKind.COMBO,
+                        List.of("UTF-8", "ISO-8859-1", "US-ASCII", "UTF-16"), "UTF-8", false, null, "writeMode=TEXT")
+                )
+            )
+        );
+    }
+
+    @Override
     public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
         if ("FILE_INPUT".equals(node.type)) return List.of();
-        return List.of(new PortDefinition("input", Set.of(Representation.values()), true));
+        return List.of(new PortDefinition("input", Representation.standardValues(), true));
     }
 
     @Override

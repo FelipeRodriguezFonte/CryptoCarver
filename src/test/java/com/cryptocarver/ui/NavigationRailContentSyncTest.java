@@ -82,6 +82,22 @@ class NavigationRailContentSyncTest {
         });
     }
 
+    @Test
+    void clickingProcessDesignerRailIconNavigatesToProcessDesigner() throws Exception {
+        AtomicReference<String> lastNavigated = new AtomicReference<>();
+        runOnFxThread(() -> {
+            NavigationRail rail = new NavigationRail();
+            SidePanel panel = new SidePanel();
+            panel.setOnItemSelected(lastNavigated::set);
+            rail.setSidePanel(panel);
+
+            rail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
+
+            org.junit.jupiter.api.Assertions.assertEquals("Process Designer", lastNavigated.get(),
+                    "Selecting PROCESS_DESIGNER rail section must navigate to 'Process Designer'");
+        });
+    }
+
     private static void runOnFxThread(ThrowingRunnable runnable) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<Throwable> failure = new AtomicReference<>();

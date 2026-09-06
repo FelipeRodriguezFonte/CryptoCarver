@@ -210,6 +210,21 @@ public class OperationRegistry {
             }
             sb.append("\n");
         }
+
+        sb.append("## Process Designer — Phase 5B.2a (Key nodes)\n\n");
+        sb.append("The following declarative node types are available in Process Designer. They\n");
+        sb.append("delegate to tested crypto facades; secret parameters are transient and are\n");
+        sb.append("never persisted in `.cfprocess.json`.\n\n");
+        sb.append("| Family | Node types |\n");
+        sb.append("|---|---|\n");
+        sb.append("| Key checks and XOR sharing | `KCV`, `KEY_SPLIT_XOR`, `KEY_COMBINE_XOR`, `PARITY_ADJUST`, `PARITY_CHECK` |\n");
+        sb.append("| Key derivation | `KDF_HKDF`, `KDF_SP800_108`, `KDF_X963`, `KDF_SCRYPT`, `KDF_ARGON2` |\n");
+        sb.append("| AES key wrap | `AES_KEYWRAP_3394`, `AES_UNWRAP_3394`, `AES_KEYWRAP_5649`, `AES_UNWRAP_5649` |\n");
+        sb.append("| TR-31 and ICSF | `TR31_WRAP`, `TR31_UNWRAP`, `TR31_PARSE_HEADER`, `ICSF_TOKEN_PARSE` |\n");
+        sb.append("| Asymmetric material | `KEYPAIR_GENERATE`, `RSA_KEYPAIR_GENERATE` (compatibility alias), `KEY_MATERIAL_INSPECT` |\n\n");
+        sb.append("`ICSF_TOKEN_PARSE` is read-only. The current Process Designer transports XOR\n");
+        sb.append("shares as one lossless HEX bundle (`share:share:share`) because the 5B SPI\n");
+        sb.append("exposes one `FlowValue` output per node; `KEY_COMBINE_XOR` consumes that bundle.\n");
         return sb.toString();
     }
 }

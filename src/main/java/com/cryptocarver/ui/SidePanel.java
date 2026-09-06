@@ -205,6 +205,9 @@ public class SidePanel extends VBox {
         rootItem = new TreeItem<>(new OperationNode(localizedSection(section)));
 
         switch (section) {
+            case PROCESS_DESIGNER:
+                buildProcessDesignerTree();
+                break;
             case CIPHER:
                 buildCategoryTree("Cipher");
                 break;
@@ -334,6 +337,15 @@ public class SidePanel extends VBox {
         }
     }
 
+    private void buildProcessDesignerTree() {
+        OperationDescriptor desc = OperationRegistry.getInstance().resolveNavigation("Process Designer").orElse(null);
+        if (desc != null) {
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode(desc)));
+        } else {
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode("Process Designer")));
+        }
+    }
+
     private void buildCategoryTree(String category) {
         List<OperationDescriptor> ops = OperationRegistry.getInstance().getAll().stream()
                 .filter(o -> category.equals(o.getCategory()))
@@ -425,6 +437,7 @@ public class SidePanel extends VBox {
         String key = switch (section) {
             case POST_QUANTUM -> "postQuantum";
             case XML_SECURITY -> "xmlSecurity";
+            case PROCESS_DESIGNER -> "processDesigner";
             default -> section.name().toLowerCase(java.util.Locale.ROOT);
         };
         return I18nService.getInstance().text("nav." + key);
