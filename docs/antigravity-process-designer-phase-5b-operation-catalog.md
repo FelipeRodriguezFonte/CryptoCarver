@@ -125,6 +125,21 @@ de banda magnética y criptogramas. **Se entrega y se audita en dos bloques sepa
 `RSA_KEYPAIR_GENERATE` se conserva como alias del nuevo `KEYPAIR_GENERATE` para no romper
 procesos guardados.
 
+### 3.1.1 Deuda abierta de 5B.2a: los componentes no salen del nodo
+
+`KEY_SPLIT_XOR` emite un bundle `HEX_COMPONENTS` que **sólo** acepta el puerto `components`
+de `KEY_COMBINE_XOR`. Es lo correcto para el contrato de representaciones, pero deja el
+nodo en circuito cerrado: partir una clave y volver a unirla es la única cadena legal, y
+no hay forma de llevar cada componente a un fichero ni de verlo en consola.
+
+Una clave se parte en componentes precisamente para entregar cada uno a un custodio
+distinto, así que el nodo todavía no sirve para su caso de uso real.
+
+**Añadir en el bloque 5B.2b:** un nodo `COMPONENT_SELECT` con parámetro `index` (1..N) que
+acepte `HEX_COMPONENTS` y produzca `HEX` con el componente elegido. Mantiene la seguridad
+de tipos, respeta `SecretVisibilityProfile` como cualquier otra salida sensible, y
+convierte `KEY_SPLIT_XOR` en un nodo utilizable. Cuenta como tipo adicional del bloque.
+
 ### 3.2 Pagos — bloque 5B.2b
 
 | Tipo | Fachada |
