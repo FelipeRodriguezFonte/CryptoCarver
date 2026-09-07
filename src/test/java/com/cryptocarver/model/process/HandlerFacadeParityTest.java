@@ -18,12 +18,16 @@ import com.cryptocarver.crypto.icsf.IcsfTokenParser;
 import com.cryptocarver.crypto.icsf.IcsfTokenReport;
 import com.cryptocarver.crypto.icsf.Origin;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
+import com.cryptocarver.crypto.COSEOperations;
+import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.crypto.ModularArithmetic;
 import com.cryptocarver.model.process.handlers.EncodingFormatNodeHandler;
 import com.cryptocarver.model.process.handlers.PlumbingNodeHandler;
 import com.cryptocarver.model.process.handlers.UtilityInspectionNodeHandler;
 import com.cryptocarver.model.process.handlers.KeyOperationsNodeHandler;
+import com.cryptocarver.model.process.handlers.JoseCoseNodeHandler;
+import com.cryptocarver.model.process.handlers.EnvelopeSignatureNodeHandler;
 import com.cryptocarver.utils.PaddingUtil;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +36,9 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.ECGenParameterSpec;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +46,7 @@ import java.util.HexFormat;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,6 +60,7 @@ class HandlerFacadeParityTest {
     private final EncodingFormatNodeHandler encoding = new EncodingFormatNodeHandler();
     private final UtilityInspectionNodeHandler utility = new UtilityInspectionNodeHandler();
     private final KeyOperationsNodeHandler keys = new KeyOperationsNodeHandler();
+    private final JoseCoseNodeHandler joseCose = new JoseCoseNodeHandler();
 
     private static FlowValue hex(String value) {
         return FlowValue.hex(value.getBytes(StandardCharsets.UTF_8));
@@ -196,6 +205,70 @@ class HandlerFacadeParityTest {
 
     private static String normalizeReport(String report) {
         return report.replaceAll("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}", "<timestamp>");
+    }
+
+    @Test
+    void phase5b3aHandlerMatchesJoseAndCoseFacadesForEveryType() throws Exception {
+        String secret = "0123456789abcdef0123456789abcdef";
+        FlowValue payload = FlowValue.text("facade parity payload", StandardCharsets.UTF_8);
+        ProcessDefinition.Node jwsSign = configured("JWS_SIGN", "algorithm", "HS256", "key", secret);
+        String jws = joseCose.execute(jwsSign, Map.of("payload", payload), null).render();
+        assertEquals(JOSEService.signJws(payload.render(), "HS256", secret), jws);
+        assertEquals(JOSEService.verifyJws(jws, "HS256", secret), joseCose.execute(configured("JWS_VERIFY", "algorithm", "HS256", "key", secret), Map.of("message", FlowValue.text(jws, StandardCharsets.UTF_8)), null).render());
+
+        ProcessDefinition.Node detachedSign = configured("JWS_DETACHED_SIGN", "algorithm", "HS256", "key", secret, "unencodedPayload", "false");
+        String detached = joseCose.execute(detachedSign, Map.of("payload", payload), null).render();
+        assertTrue(JOSEService.verifyDetachedJWS(detached, payload.render(), "HS256", secret));
+        assertEquals(payload.render(), joseCose.execute(configured("JWS_DETACHED_VERIFY", "algorithm", "HS256", "key", secret), Map.of("message", FlowValue.text(detached, StandardCharsets.UTF_8), "payload", payload), null).render());
+
+        ProcessDefinition.Node jweEncrypt = configured("JWE_ENCRYPT", "keyAlgorithm", "dir", "contentAlgorithm", "A256GCM", "cek", secret);
+        String jwe = joseCose.execute(jweEncrypt, Map.of("payload", payload), null).render();
+        assertEquals(JOSEService.decryptJwe(jwe, secret), joseCose.execute(configured("JWE_DECRYPT", "cek", secret), Map.of("message", FlowValue.text(jwe, StandardCharsets.UTF_8)), null).render());
+        assertEquals(JOSEService.inspectJwt(jws), joseCose.execute(configured("JWT_INSPECT"), Map.of("message", FlowValue.text(jws, StandardCharsets.UTF_8)), null).render());
+
+        byte[] key = secret.getBytes(StandardCharsets.UTF_8);
+        byte[] mac = joseCose.execute(configured("COSE_MAC0", "algorithm", "HS256", "key", secret), Map.of("payload", payload), null).bytes();
+        assertArrayEquals(COSEOperations.mac0(payload.bytes(), key, COSEOperations.MacAlgorithm.HS256), mac);
+        assertArrayEquals(COSEOperations.verifyMac0(mac, key).getPayload(), joseCose.execute(configured("COSE_VERIFY_MAC0", "key", secret), Map.of("message", FlowValue.binary(mac)), null).bytes());
+        byte[] encrypted = joseCose.execute(configured("COSE_ENCRYPT0", "algorithm", "A256GCM", "cek", secret), Map.of("payload", payload), null).bytes();
+        assertArrayEquals(COSEOperations.decrypt0(encrypted, key), joseCose.execute(configured("COSE_DECRYPT0", "cek", secret), Map.of("message", FlowValue.binary(encrypted)), null).bytes());
+
+        java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC");
+        generator.initialize(new ECGenParameterSpec("secp256r1"));
+        KeyPair pair = generator.generateKeyPair();
+        String privateKey = java.util.Base64.getEncoder().encodeToString(pair.getPrivate().getEncoded());
+        String publicKey = java.util.Base64.getEncoder().encodeToString(pair.getPublic().getEncoded());
+        byte[] sign1 = joseCose.execute(configured("COSE_SIGN1", "algorithm", "ES256", "privateKey", privateKey, "publicKey", publicKey), Map.of("payload", payload), null).bytes();
+        assertTrue(COSEOperations.verify1(sign1, pair.getPublic()).isVerified());
+        assertArrayEquals(COSEOperations.verify1(sign1, pair.getPublic()).getPayload(), joseCose.execute(configured("COSE_VERIFY1", "algorithm", "ES256", "publicKey", publicKey), Map.of("message", FlowValue.binary(sign1)), null).bytes());
+    }
+
+    @Test
+    void phase5b3bFacadeMapCoversEveryHandlerTypeWithoutParallelCrypto() throws Exception {
+        Map<String, String> facadeCalls = Map.ofEntries(
+                Map.entry("CMS_SIGN", "CMSOperations.generateSignedData"), Map.entry("CMS_VERIFY", "CMSOperations.verifySignedData"),
+                Map.entry("CMS_ENVELOPE", "CMSOperations.generateEnvelopedData"), Map.entry("CMS_DEVELOPE", "CMSOperations.decryptEnvelopedData"),
+                Map.entry("CADES_BES_SIGN", "CMSOperations.generateCadesBes"), Map.entry("XMLDSIG_SIGN", "XMLSignatureOperations.signXAdES"),
+                Map.entry("XMLDSIG_VERIFY", "XMLSignatureOperations.verifyXAdESPayload"), Map.entry("PADES_SIGN", "PadesOperations.signBaselineB"),
+                Map.entry("PADES_VERIFY", "PadesOperations.validate"), Map.entry("OPENPGP_ENCRYPT", "OpenPgpOperations.encrypt"),
+                Map.entry("OPENPGP_DECRYPT", "OpenPgpOperations.decrypt"), Map.entry("OPENPGP_SIGN", "OpenPgpOperations.signAttached"),
+                Map.entry("OPENPGP_VERIFY", "OpenPgpOperations.verifyAttached"), Map.entry("PQC_KEYPAIR_GENERATE", "PostQuantumOperations.generateKeyPair"),
+                Map.entry("PQC_SIGN", "PostQuantumOperations.sign"), Map.entry("PQC_VERIFY", "PostQuantumOperations.verify"),
+                Map.entry("PQC_KEM_ENCAPSULATE", "PostQuantumOperations.encapsulate"), Map.entry("PQC_KEM_DECAPSULATE", "PostQuantumOperations.decapsulate"),
+                Map.entry("CERT_PARSE", "KeyMaterialInspector.describeCertificate"), Map.entry("CERT_SELF_SIGNED_GENERATE", "CertificateGenerator.generateSelfSignedCertificate"),
+                Map.entry("CERT_VALIDATE", "CertificateGenerator.validateAgainstTrustStore"));
+        assertEquals(EnvelopeSignatureNodeHandler.TYPES, facadeCalls.keySet());
+        String source = Files.readString(Path.of("src/main/java/com/cryptocarver/model/process/handlers/EnvelopeSignatureNodeHandler.java"));
+        facadeCalls.forEach((type, call) -> assertTrue(source.contains("case \"" + type + "\"") && source.contains(call), type + " must delegate to " + call));
+        assertFalse(source.contains("Cipher.getInstance"));
+        assertFalse(source.contains("Signature.getInstance"));
+        assertFalse(source.contains("MessageDigest.getInstance"));
+    }
+
+    private static ProcessDefinition.Node configured(String type, String... entries) {
+        ProcessDefinition.Node node = new ProcessDefinition.Node(type, type, type, 0, 0);
+        for (int i = 0; i < entries.length; i += 2) node.configuration.put(entries[i], entries[i + 1]);
+        return node;
     }
 
     @Test

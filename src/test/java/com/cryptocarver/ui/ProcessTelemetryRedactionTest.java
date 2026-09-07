@@ -164,4 +164,42 @@ class ProcessTelemetryRedactionTest {
             else assertFalse(trace.contains(block), "PIN block must be hidden: " + profile);
         }
     }
+
+    @Test
+    void pqcPrivateAndSharedSecretOutputsAreRedactedOutsideFullLab() {
+        byte[] secret = "PQC_PRIVATE_OR_SHARED_SECRET".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        for (String type : List.of("PQC_KEYPAIR_GENERATE", "PQC_KEM_DECAPSULATE")) {
+            ProcessDefinition def = new ProcessDefinition();
+            def.nodes.add(new ProcessDefinition.Node("pqc", type, "PQC", 0, 0));
+            Map<String, FlowValue> results = Map.of("pqc", FlowValue.binary(secret));
+            List<NodeExecutionEvent> events = List.of(new NodeExecutionEvent("pqc", 1, "PQC", type,
+                    com.cryptocarver.model.process.NodeExecutionState.SUCCESS, java.time.Duration.ZERO,
+                    null, 0, Representation.BINARY, secret.length, "Success"));
+            for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+                AppSettings.getInstance().setSecretVisibilityProfile(profile);
+                String trace = new ProcessDesignerController().renderExecutionResult(def, results, events, null);
+                if (profile == SecretVisibilityProfile.FULL_LAB) assertTrue(trace.contains("5051435F505249564154455F4F525F5348415245445F534543524554"));
+                else assertFalse(trace.contains("5051435F505249564154455F4F525F5348415245445F534543524554"));
+            }
+        }
+    }
+
+    @Test
+    void jweAndCmsTelemetryNeverExposeContentEncryptionKeys() {
+        String cek = "0123456789abcdef0123456789abcdef";
+        for (String type : List.of("JWE_ENCRYPT", "CMS_ENVELOPE")) {
+            ProcessDefinition def = new ProcessDefinition();
+            ProcessDefinition.Node node = new ProcessDefinition.Node("envelope", type, "Envelope", 0, 0);
+            node.configuration.put("cek", cek);
+            def.nodes.add(node);
+            Map<String, FlowValue> result = Map.of("envelope", FlowValue.binary(new byte[] {1, 2, 3}));
+            List<NodeExecutionEvent> events = List.of(new NodeExecutionEvent("envelope", 1, "Envelope", type,
+                    com.cryptocarver.model.process.NodeExecutionState.SUCCESS, java.time.Duration.ZERO,
+                    Representation.TEXT_UTF8, 7, Representation.BINARY, 3, "Success"));
+            for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+                AppSettings.getInstance().setSecretVisibilityProfile(profile);
+                assertFalse(new ProcessDesignerController().renderExecutionResult(def, result, events, null).contains(cek));
+            }
+        }
+    }
 }

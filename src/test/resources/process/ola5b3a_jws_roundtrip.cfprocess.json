@@ -1,0 +1,6 @@
+{"version":3,"name":"Ola 5B.3a JWS round trip","nodes":[
+ {"id":"payload","type":"CONSOLE_INPUT","label":"Payload","x":20,"y":40,"configuration":{"value":"authenticated payload"}},
+ {"id":"sign","type":"JWS_SIGN","label":"JWS sign","x":220,"y":40,"configuration":{"algorithm":"HS256"}},
+ {"id":"verify","type":"JWS_VERIFY","label":"JWS verify","x":420,"y":40,"configuration":{"algorithm":"HS256"}},
+ {"id":"assert","type":"ASSERT_EQUALS","label":"Assert payload","x":620,"y":100,"configuration":{}}],
+ "connections":[{"from":"payload","to":"sign","targetPort":"payload"},{"from":"sign","to":"verify","targetPort":"message"},{"from":"verify","to":"assert","targetPort":"actual"},{"from":"payload","to":"assert","targetPort":"expected"}]}

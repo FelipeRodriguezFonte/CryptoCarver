@@ -236,6 +236,15 @@ public class OperationRegistry {
         sb.append("| Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |\n\n");
         sb.append("`KEY_SPLIT_XOR` emits `HEX_COMPONENTS`, limited to equal-length components and at most five;\n");
         sb.append("only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.\n");
+        sb.append("\n## Process Designer — Phase 5B.3\n\n");
+        sb.append("| Family | Node types |\n|---|---|\n");
+        sb.append("| JOSE | `JWS_SIGN`, `JWS_VERIFY`, `JWS_DETACHED_SIGN`, `JWS_DETACHED_VERIFY`, `JWE_ENCRYPT`, `JWE_DECRYPT`, `JWT_INSPECT` |\n");
+        sb.append("| COSE | `COSE_SIGN1`, `COSE_VERIFY1`, `COSE_MAC0`, `COSE_VERIFY_MAC0`, `COSE_ENCRYPT0`, `COSE_DECRYPT0` |\n");
+        sb.append("| CMS, XML and PDF | `CMS_SIGN`, `CMS_VERIFY`, `CMS_ENVELOPE`, `CMS_DEVELOPE`, `CADES_BES_SIGN`, `XMLDSIG_SIGN`, `XMLDSIG_VERIFY`, `PADES_SIGN`, `PADES_VERIFY` |\n");
+        sb.append("| OpenPGP | `OPENPGP_ENCRYPT`, `OPENPGP_DECRYPT`, `OPENPGP_SIGN`, `OPENPGP_VERIFY` |\n");
+        sb.append("| PQC | `PQC_KEYPAIR_GENERATE`, `PQC_SIGN`, `PQC_VERIFY`, `PQC_KEM_ENCAPSULATE`, `PQC_KEM_DECAPSULATE` |\n");
+        sb.append("| X.509 | `CERT_PARSE`, `CERT_SELF_SIGNED_GENERATE`, `CERT_VALIDATE` |\n\n");
+        sb.append("These nodes are local-only. Timestamped CAdES and PAdES T/LT/LTA remain excluded until a local timestamp-token input exists.\n");
         return sb.toString();
     }
 }

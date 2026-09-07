@@ -206,6 +206,7 @@ public class XMLSignatureOperations {
 
     public static String signXAdES(String xmlContent, String p12Path, String password, int keyIndex,
                                    String level, String tsaUrl, String packaging, com.cryptocarver.model.TsaAuthCredentials auth) throws Exception {
+        requireSafeXml(xmlContent);
         // 1. Prepare Document
         DSSDocument toSignDocument = new InMemoryDocument(xmlContent.getBytes("UTF-8"));
 
@@ -324,6 +325,39 @@ public class XMLSignatureOperations {
     }
 
     public record VerificationResult(String summary, String xmlSimpleReport, String xmlDetailedReport, String xmlEtsiReport) {}
+    public record VerifiedXmlResult(boolean verified, String payload, VerificationResult report) {}
+
+    /** Verifies XAdES and returns the authenticated XML payload with enveloped signatures removed. */
+    public static VerifiedXmlResult verifyXAdESPayload(String xmlContent, String trustStorePath,
+                                                       String trustStorePassword, boolean structuralOnly) throws Exception {
+        if (!structuralOnly && (trustStorePath == null || trustStorePath.isBlank())) {
+            throw new IllegalArgumentException("A local truststore is required unless STRUCTURAL_ONLY is selected");
+        }
+        VerificationResult report = verifyXAdES(xmlContent, trustStorePath, trustStorePassword);
+        String upper = report.summary().toUpperCase(java.util.Locale.ROOT);
+        boolean passed = upper.contains("INDICATION: PASSED") || upper.contains("INDICATION: TOTAL_PASSED");
+        boolean integrityOnlyPassed = structuralOnly && upper.contains("NO_CERTIFICATE_CHAIN_FOUND")
+                && !upper.contains("HASH_FAILURE") && !upper.contains("SIG_CRYPTO_FAILURE");
+        if (!passed && !integrityOnlyPassed) return new VerifiedXmlResult(false, null, report);
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        disableExternalEntities(factory);
+        Document document = factory.newDocumentBuilder().parse(new org.xml.sax.InputSource(new java.io.StringReader(xmlContent)));
+        NodeList signatures = document.getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#", "Signature");
+        while (signatures.getLength() > 0) {
+            Node signature = signatures.item(0);
+            signature.getParentNode().removeChild(signature);
+        }
+        javax.xml.transform.TransformerFactory transformerFactory = javax.xml.transform.TransformerFactory.newInstance();
+        transformerFactory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        transformerFactory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        transformerFactory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+        javax.xml.transform.Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION, "yes");
+        java.io.StringWriter writer = new java.io.StringWriter();
+        transformer.transform(new javax.xml.transform.dom.DOMSource(document), new javax.xml.transform.stream.StreamResult(writer));
+        return new VerifiedXmlResult(true, writer.toString(), report);
+    }
 
     /**
      * Verifies an XML document signature.
@@ -339,6 +373,7 @@ public class XMLSignatureOperations {
      * integrity/format result only, not as a trusted signature decision.
      */
     public static VerificationResult verifyXAdES(String xmlContent, String trustStorePath, String trustStorePassword) throws Exception {
+        requireSafeXml(xmlContent);
         DSSDocument signedDocument = new InMemoryDocument(xmlContent.getBytes("UTF-8"));
 
         // Configure Validator
@@ -347,7 +382,7 @@ public class XMLSignatureOperations {
         if (trustConfigured) {
             verifier.setTrustedCertSources(loadTrustedCertificates(trustStorePath, trustStorePassword));
             RevocationValidationService.configure(verifier,
-                    new RevocationValidationService.Configuration(true, java.util.List.of()));
+                    RevocationValidationService.Configuration.offline(java.util.List.of()));
         }
 
         SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(signedDocument);
@@ -443,6 +478,15 @@ public class XMLSignatureOperations {
         }
         try { factory.setXIncludeAware(false); } catch (Exception ignored) { }
         factory.setExpandEntityReferences(false);
+    }
+
+    /** Parses with the shared XXE/DOCTYPE hardening before any signing or verification work. */
+    public static void requireSafeXml(String xmlContent) throws Exception {
+        if (xmlContent == null || xmlContent.isBlank()) throw new IllegalArgumentException("XML input is required");
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        disableExternalEntities(factory);
+        factory.newDocumentBuilder().parse(new org.xml.sax.InputSource(new java.io.StringReader(xmlContent)));
     }
 
     private static void appendCertificates(StringBuilder report, Element signature) {

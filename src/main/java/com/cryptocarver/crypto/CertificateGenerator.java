@@ -36,6 +36,75 @@ import java.util.*;
  */
 public class CertificateGenerator {
 
+    public record TrustValidationResult(boolean valid, String message, List<CertificateLinter.Finding> findings) { }
+
+    /** Generates the key pair and certificate as one facade operation for workflow callers. */
+    public static X509Certificate generateSelfSignedCertificate(String keyAlgorithm, int keySize,
+                                                                 CertificateConfig config) throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance(keyAlgorithm);
+        if ("EC".equalsIgnoreCase(keyAlgorithm)) generator.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        else generator.initialize(keySize);
+        return generateSelfSignedCertificate(generator.generateKeyPair(), config);
+    }
+
+    /** Parses PEM or DER certificate bytes without requiring handlers to own format logic. */
+    public static X509Certificate parseCertificate(byte[] encoded) throws Exception {
+        if (encoded == null || encoded.length == 0) throw new IllegalArgumentException("Certificate input is required");
+        return (X509Certificate) java.security.cert.CertificateFactory.getInstance("X.509")
+                .generateCertificate(new java.io.ByteArrayInputStream(encoded));
+    }
+
+    /** Offline PKIX validation against an explicitly supplied local truststore. */
+    public static TrustValidationResult validateAgainstTrustStore(X509Certificate certificate, java.io.File trustStore,
+                                                                  char[] password) throws Exception {
+        if (certificate == null) throw new IllegalArgumentException("Certificate is required");
+        if (trustStore == null || !trustStore.isFile()) throw new IllegalArgumentException("A local truststore is required");
+        List<CertificateLinter.Finding> findings = CertificateLinter.lint(certificate);
+        if (findings.stream().anyMatch(f -> "ERROR".equals(f.severity()))) {
+            return new TrustValidationResult(false, "Certificate policy lint failed", findings);
+        }
+        KeyStore store = null;
+        Exception failure = null;
+        for (String type : List.of("PKCS12", "JKS", "BCFKS")) {
+            try (java.io.InputStream input = new java.io.FileInputStream(trustStore)) {
+                store = KeyStore.getInstance(type);
+                store.load(input, password == null ? new char[0] : password);
+                break;
+            } catch (Exception e) { failure = e; store = null; }
+        }
+        if (store == null) throw new IOException("Unable to load local truststore", failure);
+        Set<java.security.cert.TrustAnchor> anchors = new HashSet<>();
+        Enumeration<String> aliases = store.aliases();
+        while (aliases.hasMoreElements()) {
+            Certificate candidate = store.getCertificate(aliases.nextElement());
+            if (candidate instanceof X509Certificate trusted) anchors.add(new java.security.cert.TrustAnchor(trusted, null));
+        }
+        if (anchors.isEmpty()) return new TrustValidationResult(false, "Local truststore has no X.509 trust anchors", findings);
+        certificate.checkValidity();
+        if (anchors.stream().map(java.security.cert.TrustAnchor::getTrustedCert).filter(Objects::nonNull)
+                .anyMatch(trusted -> sameCertificate(trusted, certificate))) {
+            certificate.verify(certificate.getPublicKey());
+            return new TrustValidationResult(true, "Certificate is a trusted local anchor", findings);
+        }
+        java.security.cert.X509CertSelector selector = new java.security.cert.X509CertSelector();
+        selector.setCertificate(certificate);
+        java.security.cert.PKIXBuilderParameters parameters = new java.security.cert.PKIXBuilderParameters(anchors, selector);
+        parameters.setRevocationEnabled(false);
+        parameters.addCertStore(java.security.cert.CertStore.getInstance("Collection",
+                new java.security.cert.CollectionCertStoreParameters(List.of(certificate))));
+        try {
+            java.security.cert.CertPathBuilder.getInstance("PKIX").build(parameters);
+            return new TrustValidationResult(true, "Certificate chains to the local truststore", findings);
+        } catch (java.security.GeneralSecurityException untrusted) {
+            return new TrustValidationResult(false, "Certificate is not trusted by the local truststore", findings);
+        }
+    }
+
+    private static boolean sameCertificate(X509Certificate left, X509Certificate right) {
+        try { return Arrays.equals(left.getEncoded(), right.getEncoded()); }
+        catch (java.security.cert.CertificateEncodingException e) { return false; }
+    }
+
     static {
         if (Security.getProvider("BC") == null) {
             Security.addProvider(new BouncyCastleProvider());

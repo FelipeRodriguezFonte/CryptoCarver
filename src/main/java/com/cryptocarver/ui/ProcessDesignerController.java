@@ -1795,6 +1795,7 @@ public class ProcessDesignerController {
                 || "AES_UNWRAP_3394".equals(type) || "AES_UNWRAP_5649".equals(type)
                 || "TR31_UNWRAP".equals(type) || "TR31_WRAP".equals(type) || "ICSF_TOKEN_PARSE".equals(type)
                 || "KEYPAIR_GENERATE".equals(type)
+                || "PQC_KEYPAIR_GENERATE".equals(type) || "PQC_KEM_DECAPSULATE".equals(type)
                 || "PIN_BLOCK_ENCODE".equals(type) || "PIN_BLOCK_DECODE".equals(type) || "PIN_BLOCK_TRANSLATE".equals(type)
                 || "CVV_GENERATE".equals(type) || "DCVV_GENERATE".equals(type) || "PVV_GENERATE".equals(type)
                 || "IBM3624_OFFSET".equals(type) || "DUKPT_TDES_DERIVE".equals(type) || "DUKPT_AES_DERIVE".equals(type)

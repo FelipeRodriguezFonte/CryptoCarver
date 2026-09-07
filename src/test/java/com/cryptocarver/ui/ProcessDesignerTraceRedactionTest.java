@@ -167,4 +167,18 @@ class ProcessDesignerTraceRedactionTest {
             else assertFalse(trace.contains(block), "PIN block must be hidden: " + profile);
         }
     }
+
+    @Test
+    void envelopeSecretOutputClassificationIncludesPqcMaterial() throws Exception {
+        byte[] secret = HexFormat.of().parseHex("00112233445566778899AABBCCDDEEFF");
+        ProcessDefinition def = new ProcessDefinition();
+        def.nodes.add(new ProcessDefinition.Node("pqc", "PQC_KEYPAIR_GENERATE", "PQC", 0, 0));
+        Map<String, FlowValue> result = Map.of("pqc", FlowValue.binary(secret));
+        List<NodeExecutionEvent> events = List.of(new NodeExecutionEvent("pqc", 1, "PQC", "PQC_KEYPAIR_GENERATE",
+                NodeExecutionState.SUCCESS, Duration.ZERO, null, 0, Representation.BINARY, secret.length, "OK"));
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
+        assertFalse(controller.renderExecutionResult(def, result, events, null).contains("00112233445566778899AABBCCDDEEFF"));
+        AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
+        assertFalse(controller.renderExecutionResult(def, result, events, null).contains("00112233445566778899AABBCCDDEEFF"));
+    }
 }

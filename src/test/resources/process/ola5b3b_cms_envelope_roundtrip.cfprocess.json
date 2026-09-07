@@ -1,0 +1,6 @@
+{"version":3,"name":"Ola 5B.3b CMS envelope round trip","nodes":[
+ {"id":"payload","type":"CONSOLE_INPUT","label":"Payload","x":20,"y":40,"configuration":{"value":"CMS envelope payload"}},
+ {"id":"envelope","type":"CMS_ENVELOPE","label":"CMS envelope","x":220,"y":40,"configuration":{"certificatePath":"src/test/resources/testcert.pem"}},
+ {"id":"develope","type":"CMS_DEVELOPE","label":"CMS de-envelope","x":420,"y":40,"configuration":{"keystorePath":"src/test/resources/testks.p12"}},
+ {"id":"assert","type":"ASSERT_EQUALS","label":"Assert payload","x":620,"y":100,"configuration":{}}],
+ "connections":[{"from":"payload","to":"envelope","targetPort":"payload"},{"from":"envelope","to":"develope","targetPort":"message"},{"from":"develope","to":"assert","targetPort":"actual"},{"from":"payload","to":"assert","targetPort":"expected"}]}

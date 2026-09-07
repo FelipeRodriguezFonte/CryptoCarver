@@ -168,4 +168,17 @@ public class LunaSecretLeakReproTest {
             }
         }
     }
+
+    @Test
+    void envelopePrivateKeysPasswordsPassphrasesAndCeksAreSensitive() {
+        java.util.Set<String> secretNames = java.util.Set.of("key", "cek", "privateKey", "passphrase",
+                "keystorePassword", "keyPassword", "trustStorePassword");
+        java.util.Set<String> types = new java.util.HashSet<>(com.cryptocarver.model.process.handlers.JoseCoseNodeHandler.TYPES);
+        types.addAll(com.cryptocarver.model.process.handlers.EnvelopeSignatureNodeHandler.TYPES);
+        for (String type : types) {
+            for (NodeParameter parameter : NodeCatalog.descriptor(type).orElseThrow().parameters()) {
+                if (secretNames.contains(parameter.key())) assertTrue(parameter.sensitive(), type + ":" + parameter.key());
+            }
+        }
+    }
 }

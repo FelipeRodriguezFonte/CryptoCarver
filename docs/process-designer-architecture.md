@@ -111,3 +111,7 @@ Phase 5B.1 incorporates three fundamental families into the Process Designer cat
    cryptograms, EMV TLV summaries, and Track 2. PAN/PIN fields use text ports so
    their decimal contract is explicit; configured PANs are checked with the
    existing Luhn facade and sensitive material remains transient.
+
+6. **Envelopes and Signatures (`JoseCoseNodeHandler` and `EnvelopeSignatureNodeHandler`, Phase 5B.3)**:
+   JOSE, COSE, CMS/CAdES, XMLDSig/XAdES, PAdES Baseline B, OpenPGP, PQC and X.509 operations. Verification emits
+   authenticated payloads; trust-backed nodes default to a local truststore, and revocation/XML processing is offline.

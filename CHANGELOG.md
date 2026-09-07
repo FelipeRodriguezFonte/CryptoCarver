@@ -1,5 +1,12 @@
 # Pendiente de publicación — evolución posterior a 2.3.0
 
+### Process Designer — Fase 5B.3 (Sobres y firmas)
+
+- Añadidos 34 nodos declarativos para JOSE, COSE, CMS/CAdES, XMLDSig/XAdES, PAdES B, OpenPGP, PQC y X.509.
+- Los verificadores devuelven la carga autenticada y fallan ante manipulación; la confianza exige almacén local por defecto.
+- Añadidos rechazo XXE/DOCTYPE, rechazo RSA-OAEP SHA-1, secretos transitorios y procesos autoverificados.
+- PAdES T/LT/LTA y CAdES con sello quedan fuera porque la fachada sólo ofrece TSA remota.
+
 ### Process Designer — Fase 5B.2b (Pagos)
 
 - Añadidos 21 tipos declarativos de pagos para bloques PIN, CVV/dCVV, PVV,

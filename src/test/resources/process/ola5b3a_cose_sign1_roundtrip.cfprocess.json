@@ -1,0 +1,6 @@
+{"version":3,"name":"Ola 5B.3a COSE Sign1 round trip","nodes":[
+ {"id":"payload","type":"CONSOLE_INPUT","label":"Payload","x":20,"y":40,"configuration":{"value":"authenticated COSE payload"}},
+ {"id":"sign","type":"COSE_SIGN1","label":"COSE sign","x":220,"y":40,"configuration":{"algorithm":"ES256"}},
+ {"id":"verify","type":"COSE_VERIFY1","label":"COSE verify","x":420,"y":40,"configuration":{"algorithm":"ES256"}},
+ {"id":"assert","type":"ASSERT_EQUALS","label":"Assert payload","x":620,"y":100,"configuration":{}}],
+ "connections":[{"from":"payload","to":"sign","targetPort":"payload"},{"from":"sign","to":"verify","targetPort":"message"},{"from":"verify","to":"assert","targetPort":"actual"},{"from":"payload","to":"assert","targetPort":"expected"}]}

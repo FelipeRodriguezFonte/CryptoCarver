@@ -21,6 +21,8 @@ public final class ProcessEngine {
         new FileNodeHandler(),
         new HashNodeHandler(),
         new CodecNodeHandler(),
+        new JoseCoseNodeHandler(),
+        new EnvelopeSignatureNodeHandler(),
         new PaymentOperationsNodeHandler(),
         new KeyOperationsNodeHandler(),
         new KeyMaterialNodeHandler(),
@@ -54,25 +56,7 @@ public final class ProcessEngine {
             // These flags are derived from the current graph.  Clear all of them
             // before rebuilding port bindings so deleting a connection cannot leave
             // a node believing that its key, IV, or AAD still comes from the flow.
-            node.configuration.remove("keyFromFlow");
-            node.configuration.remove("ivFromFlow");
-            node.configuration.remove("aadFromFlow");
-            node.configuration.remove("ikmFromFlow");
-            node.configuration.remove("sharedSecretFromFlow");
-            node.configuration.remove("passwordFromFlow");
-            node.configuration.remove("saltFromFlow");
-            node.configuration.remove("kekFromFlow");
-            node.configuration.remove("keyDataFromFlow");
-            node.configuration.remove("componentsFromFlow");
-            node.configuration.remove("kbpkFromFlow");
-            node.configuration.remove("wrappedFromFlow");
-            node.configuration.remove("keyBlockFromFlow");
-            node.configuration.remove("tokenFromFlow");
-            for (String paymentPort : List.of("pin", "pan", "pinBlock", "cvkA", "cvkB", "inputCvv", "panSeq", "expiry",
-                    "serviceCode", "atc", "pvki", "pvk", "pvv", "decTable", "ipek", "bdk", "imk", "mkac", "un",
-                    "sk", "arqc", "arc", "csu", "transactionData", "input", "discretionary", "track2")) {
-                node.configuration.remove(paymentPort + "FromFlow");
-            }
+            node.configuration.keySet().removeIf(key -> key.endsWith("FromFlow"));
             nodeMap.put(node.id, node);
 
             getHandlerFor(node.type);
@@ -132,17 +116,7 @@ public final class ProcessEngine {
                 throw new IllegalArgumentException("Multiple connections to the same port '" + assignedPort + "' on node: " + conn.to);
             }
             portBindings.get(conn.to).put(assignedPort, conn.from);
-            if ("key".equals(assignedPort)) targetNode.configuration.put("keyFromFlow", "true");
-            if (Set.of("ikm", "sharedSecret", "password", "salt", "kek", "keyData", "components", "kbpk", "wrapped", "keyBlock", "token").contains(assignedPort)) {
-                targetNode.configuration.put(assignedPort + "FromFlow", "true");
-            }
-            if (Set.of("pin", "pan", "pinBlock", "cvkA", "cvkB", "inputCvv", "panSeq", "expiry", "serviceCode", "atc",
-                    "pvki", "pvk", "pvv", "decTable", "ipek", "bdk", "imk", "mkac", "un", "sk", "arqc", "arc", "csu",
-                    "transactionData", "input", "discretionary", "track2").contains(assignedPort)) {
-                targetNode.configuration.put(assignedPort + "FromFlow", "true");
-            }
-            if ("iv".equals(assignedPort)) targetNode.configuration.put("ivFromFlow", "true");
-            if ("aad".equals(assignedPort)) targetNode.configuration.put("aadFromFlow", "true");
+            targetNode.configuration.put(assignedPort + "FromFlow", "true");
 
             adj.get(conn.from).add(conn.to);
             inDegree.put(conn.to, inDegree.get(conn.to) + 1);

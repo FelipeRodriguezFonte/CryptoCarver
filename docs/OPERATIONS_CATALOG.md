@@ -175,3 +175,16 @@ Sensitive payment material is transient and never persisted in `.cfprocess.json`
 
 `KEY_SPLIT_XOR` emits `HEX_COMPONENTS`, limited to equal-length components and at most five;
 only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.
+
+## Process Designer — Phase 5B.3
+
+| Family | Node types |
+|---|---|
+| JOSE | `JWS_SIGN`, `JWS_VERIFY`, `JWS_DETACHED_SIGN`, `JWS_DETACHED_VERIFY`, `JWE_ENCRYPT`, `JWE_DECRYPT`, `JWT_INSPECT` |
+| COSE | `COSE_SIGN1`, `COSE_VERIFY1`, `COSE_MAC0`, `COSE_VERIFY_MAC0`, `COSE_ENCRYPT0`, `COSE_DECRYPT0` |
+| CMS, XML and PDF | `CMS_SIGN`, `CMS_VERIFY`, `CMS_ENVELOPE`, `CMS_DEVELOPE`, `CADES_BES_SIGN`, `XMLDSIG_SIGN`, `XMLDSIG_VERIFY`, `PADES_SIGN`, `PADES_VERIFY` |
+| OpenPGP | `OPENPGP_ENCRYPT`, `OPENPGP_DECRYPT`, `OPENPGP_SIGN`, `OPENPGP_VERIFY` |
+| PQC | `PQC_KEYPAIR_GENERATE`, `PQC_SIGN`, `PQC_VERIFY`, `PQC_KEM_ENCAPSULATE`, `PQC_KEM_DECAPSULATE` |
+| X.509 | `CERT_PARSE`, `CERT_SELF_SIGNED_GENERATE`, `CERT_VALIDATE` |
+
+These nodes are local-only. Timestamped CAdES and PAdES T/LT/LTA remain excluded until a local timestamp-token input exists.

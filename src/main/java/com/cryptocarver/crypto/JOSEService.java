@@ -23,6 +23,54 @@ import com.cryptocarver.crypto.hsm.Pkcs11Session;
 
 public class JOSEService {
 
+    /** Signs an arbitrary payload as compact JWS (unlike generateSignedJWT, no claims parsing). */
+    public static String signJws(String payload, String algorithm, String key) throws Exception {
+        JWSAlgorithm selected = JWSAlgorithm.parse(algorithm);
+        JWSObject object = new JWSObject(new JWSHeader(selected), new Payload(payload));
+        object.sign(createSigner(selected, key));
+        return object.serialize();
+    }
+
+    /** Verifies compact JWS and returns its authenticated payload. */
+    public static String verifyJws(String token, String algorithm, String key) throws Exception {
+        JWSObject object = JWSObject.parse(token);
+        JWSAlgorithm selected = JWSAlgorithm.parse(algorithm);
+        if (!selected.equals(object.getHeader().getAlgorithm())) {
+            throw new IllegalArgumentException("Header algorithm does not match selection");
+        }
+        JWSVerifier verifier = createVerifier(selected, key);
+        if (!object.verify(verifier)) throw new JOSEException("JWS signature verification failed");
+        return object.getPayload().toString();
+    }
+
+    /** Encrypts an arbitrary payload as compact JWE. */
+    public static String encryptJwe(String payload, String keyAlgorithm, String contentAlgorithm,
+                                    String key) throws Exception {
+        JWEAlgorithm alg = requireStrongJweAlgorithm(keyAlgorithm);
+        EncryptionMethod enc = EncryptionMethod.parse(contentAlgorithm);
+        JWEObject object = new JWEObject(new JWEHeader(alg, enc), new Payload(payload));
+        object.encrypt(createEncrypter(alg, key));
+        return object.serialize();
+    }
+
+    /** Decrypts compact JWE and returns the authenticated plaintext. */
+    public static String decryptJwe(String token, String key) throws Exception {
+        JWEObject object = JWEObject.parse(token);
+        JWEAlgorithm alg = requireStrongJweAlgorithm(object.getHeader().getAlgorithm().getName());
+        object.decrypt(createDecrypter(alg, key));
+        return object.getPayload().toString();
+    }
+
+    /** Parses JWT/JWS structure without making a verification claim. */
+    public static String inspectJwt(String token) throws Exception {
+        JWSObject object = JWSObject.parse(token);
+        Map<String, Object> report = new java.util.LinkedHashMap<>();
+        report.put("verified", false);
+        report.put("header", object.getHeader().toJSONObject());
+        report.put("payload", object.getPayload().toString());
+        return new com.google.gson.Gson().toJson(report);
+    }
+
     /** Generates a compact JWS with a token-resident private key. */
     public static String generateSignedJwtWithPkcs11(String payloadJson, String algorithm,
             Pkcs11Session session, String keyAlias) throws Exception {
@@ -337,6 +385,31 @@ public class JOSEService {
         } else {
             throw new IllegalArgumentException("Unsupported JWE algorithm for Nested JWT in JOSEService: " + jweAlgo.getName());
         }
+    }
+
+    private static JWEAlgorithm requireStrongJweAlgorithm(String name) {
+        JWEAlgorithm algorithm = JWEAlgorithm.parse(name);
+        if (JWEAlgorithm.RSA_OAEP.equals(algorithm)) {
+            throw new IllegalArgumentException("RSA-OAEP with SHA-1 is disabled; use RSA-OAEP-256");
+        }
+        if (!JWEAlgorithm.RSA_OAEP_256.equals(algorithm) && !JWEAlgorithm.DIR.equals(algorithm)) {
+            throw new IllegalArgumentException("Unsupported JWE key algorithm: " + name);
+        }
+        return algorithm;
+    }
+
+    private static JWEDecrypter createDecrypter(JWEAlgorithm algorithm, String key) throws Exception {
+        if (JWEAlgorithm.RSA_OAEP_256.equals(algorithm)) {
+            return new RSADecrypter(parseRSAPrivateKey(key));
+        }
+        return new DirectDecrypter(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static JWSVerifier createVerifier(JWSAlgorithm algorithm, String key) throws Exception {
+        if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) return new PromiscuousMACVerifier(key, algorithm);
+        if (JWSAlgorithm.Family.RSA.contains(algorithm)) return new RSASSAVerifier((RSAPublicKey) parseRSAPublicKey(key));
+        if (JWSAlgorithm.Family.EC.contains(algorithm)) return new ECDSAVerifier(requireEcPublicKey(algorithm, key));
+        throw new IllegalArgumentException("Unsupported JWS algorithm: " + algorithm);
     }
 
     public static PrivateKey parseRSAPrivateKey(String pem) throws Exception {

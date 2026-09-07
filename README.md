@@ -498,6 +498,10 @@ Las contribuciones son bienvenidas. Si deseas contribuir:
 
 Este proyecto se proporciona tal cual para fines educativos y de desarrollo.
 
+El Process Designer integra sobres y firmas JOSE, COSE, CMS/CAdES, XMLDSig/XAdES, PAdES Baseline B, OpenPGP,
+criptografía poscuántica y validación X.509 local. No usa red y mantiene claves, contraseñas, frases de paso y CEK
+fuera de los procesos guardados.
+
 ---
 
 ## 📞 Contacto

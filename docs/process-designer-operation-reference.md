@@ -276,3 +276,51 @@ five components. It emits one `HEX_COMPONENTS` value containing the
 colon-delimited bundle; only `KEY_COMBINE_XOR.components` and
 `COMPONENT_SELECT.components` accept that representation. A plain `HEX` port
 must reject the bundle during `validate()`, before execution.
+
+## 7. Envelopes and signatures — Phase 5B.3
+
+All key, password, passphrase and CEK parameters are transient (`sensitive=true`). Verification nodes emit the
+authenticated payload and fail on a bad signature, MAC, AEAD tag or trust decision. `STRUCTURAL_ONLY` is an explicit
+opt-in without trust and carries a visible warning; `REQUIRE_TRUST` is the default and requires a local truststore.
+
+| Type | Input ports (`*` required) | Output | Parameters (`!` transient) | Delegated facade |
+|---|---|---|---|---|
+| `JWS_SIGN` | `payload*`, `key` | `TEXT_UTF8` | algorithm (HS/RS/PS/ES 256-512), `key!` | `JOSEService.signJws` |
+| `JWS_VERIFY` | `message*`, `key` | `TEXT_UTF8` (payload) | algorithm, `key!` | `JOSEService.verifyJws` |
+| `JWS_DETACHED_SIGN` | `payload*`, `key` | `TEXT_UTF8` | algorithm, `key!`, unencoded payload | `JOSEService.generateDetachedJWS` |
+| `JWS_DETACHED_VERIFY` | `message*`, `payload*`, `key` | `TEXT_UTF8` (payload) | algorithm, `key!` | `JOSEService.verifyDetachedJWS` |
+| `JWE_ENCRYPT` | `payload*`, `cek` | `TEXT_UTF8` | key alg (`dir`, RSA-OAEP-256), content alg (A128/192/256GCM), `cek!` | `JOSEService.encryptJwe` |
+| `JWE_DECRYPT` | `message*`, `cek` | `TEXT_UTF8` (plaintext) | `cek!` | `JOSEService.decryptJwe` |
+| `JWT_INSPECT` | `message*` | `TEXT_UTF8` (report) | none — never verifies | `JOSEService.inspectJwt` |
+| `COSE_SIGN1` | `payload*`, `privateKey`, `publicKey` | `BINARY` | algorithm (ES/PS 256-512, EdDSA), `privateKey!`, public key | `COSEOperations.sign1` |
+| `COSE_VERIFY1` | `message*`, `publicKey` | `BINARY` (payload) | algorithm, public key | `COSEOperations.verify1` |
+| `COSE_MAC0` | `payload*`, `key` | `BINARY` | algorithm (HS256-512), `key!` | `COSEOperations.mac0` |
+| `COSE_VERIFY_MAC0` | `message*`, `key` | `BINARY` (payload) | `key!` | `COSEOperations.verifyMac0` |
+| `COSE_ENCRYPT0` | `payload*`, `cek` | `BINARY` | algorithm (A128/192/256GCM), `cek!` | `COSEOperations.encrypt0` |
+| `COSE_DECRYPT0` | `message*`, `cek` | `BINARY` (plaintext) | `cek!` | `COSEOperations.decrypt0` |
+| `CMS_SIGN` | `payload*` | `BINARY` | keystore path/alias, `keystorePassword!`, `keyPassword!`, detached | `CMSOperations.generateSignedData` |
+| `CMS_VERIFY` | `message*`, `payload` | `BINARY` (payload) | verification mode, truststore path, `trustStorePassword!` | `CMSOperations.verifySignedData` |
+| `CMS_ENVELOPE` | `payload*` | `BINARY` | recipient certificate path | `CMSOperations.generateEnvelopedData` |
+| `CMS_DEVELOPE` | `message*` | `BINARY` (plaintext) | keystore path/alias, `keystorePassword!`, `keyPassword!` | `CMSOperations` enveloped recovery |
+| `CADES_BES_SIGN` | `payload*` | `BINARY` | keystore path/alias, `keystorePassword!`, `keyPassword!` | `CMSOperations.generateCadesBes` |
+| `XMLDSIG_SIGN` | `payload*` (XML) | `TEXT_UTF8` | keystore path/alias, passwords`!`, packaging (enveloped/enveloping/detached) | `XMLSignatureOperations.signXAdES` |
+| `XMLDSIG_VERIFY` | `message*` (XML) | `TEXT_UTF8` (authenticated XML) | verification mode, truststore, `trustStorePassword!` | `XMLSignatureOperations.verifyXAdESPayload` |
+| `PADES_SIGN` | `payload*` (PDF) | `BINARY` | keystore path/alias, passwords`!`, profile **B only** | `PadesOperations.signBaselineB` |
+| `PADES_VERIFY` | `message*` (PDF) | `BINARY` (verified PDF) | verification mode, truststore, `trustStorePassword!` | `PadesOperations` verification |
+| `OPENPGP_ENCRYPT` | `payload*` | `TEXT_UTF8` (armored) | recipient public key | `OpenPgpOperations.encrypt` |
+| `OPENPGP_DECRYPT` | `message*` | `BINARY` (plaintext) | `privateKey!`, `passphrase!` | `OpenPgpOperations.decrypt` |
+| `OPENPGP_SIGN` | `payload*` | `TEXT_UTF8` (armored) | `privateKey!`, `passphrase!` | `OpenPgpOperations` signing |
+| `OPENPGP_VERIFY` | `message*`, `publicKey` | `BINARY` (payload) | signer public key | `OpenPgpOperations` verification |
+| `PQC_KEYPAIR_GENERATE` | none | `BINARY` (PKCS#8) | ML-DSA 44/65/87, SLH-DSA 128f/192f/256f, ML-KEM 512/768/1024 | `PostQuantumOperations.generateKeyPair` |
+| `PQC_SIGN` | `payload*`, `privateKey` | `BINARY` | ML-DSA / SLH-DSA parameter set, `privateKey!` | `PostQuantumOperations.sign` |
+| `PQC_VERIFY` | `payload*`, `signature*`, `publicKey` | `BINARY` (payload) | parameter set, public key | `PostQuantumOperations.verify` |
+| `PQC_KEM_ENCAPSULATE` | `publicKey` | `BINARY` | ML-KEM 512/768/1024, public key | `PostQuantumOperations.encapsulate` |
+| `PQC_KEM_DECAPSULATE` | `encapsulation*`, `privateKey` | `BINARY` (shared secret) | ML-KEM parameter set, `privateKey!` | `PostQuantumOperations.decapsulate` |
+| `CERT_PARSE` | `certificate*` | `TEXT_UTF8` (description) | none | `KeyMaterialInspector.describeCertificate` |
+| `CERT_SELF_SIGNED_GENERATE` | none | `BINARY` (DER) | common name, RSA/EC, size, validity days | `CertificateGenerator.generateSelfSignedCertificate` |
+| `CERT_VALIDATE` | `certificate*` | `TEXT_UTF8` (verdict) | verification mode, truststore, `trustStorePassword!` | `CertificateGenerator.validateAgainstTrustStore` |
+
+PAdES T/LT/LTA and timestamped CAdES are excluded because the available signing APIs require a remote TSA URL;
+there is no local timestamp-token input. Online OCSP/CRL, downloads and external XML resources are disabled. XML
+rejects DOCTYPE and external entities before crypto. SHA-1 signatures are not offered, and RSA-OAEP SHA-1 is rejected
+in favour of RSA-OAEP-256. CMS EnvelopedData never emits its generated CEK.

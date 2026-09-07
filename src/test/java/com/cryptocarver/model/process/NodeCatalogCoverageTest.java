@@ -52,6 +52,18 @@ class NodeCatalogCoverageTest {
             "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARQC_VERIFY", "EMV_ARPC",
             "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE", "COMPONENT_SELECT");
 
+    private static final Set<String> OLA_5B3A_TYPES = Set.of(
+            "JWS_SIGN", "JWS_VERIFY", "JWS_DETACHED_SIGN", "JWS_DETACHED_VERIFY",
+            "JWE_ENCRYPT", "JWE_DECRYPT", "JWT_INSPECT", "COSE_SIGN1", "COSE_VERIFY1",
+            "COSE_MAC0", "COSE_VERIFY_MAC0", "COSE_ENCRYPT0", "COSE_DECRYPT0");
+
+    private static final Set<String> OLA_5B3B_TYPES = Set.of(
+            "CMS_SIGN", "CMS_VERIFY", "CMS_ENVELOPE", "CMS_DEVELOPE", "CADES_BES_SIGN",
+            "XMLDSIG_SIGN", "XMLDSIG_VERIFY", "PADES_SIGN", "PADES_VERIFY",
+            "OPENPGP_ENCRYPT", "OPENPGP_DECRYPT", "OPENPGP_SIGN", "OPENPGP_VERIFY",
+            "PQC_KEYPAIR_GENERATE", "PQC_SIGN", "PQC_VERIFY", "PQC_KEM_ENCAPSULATE", "PQC_KEM_DECAPSULATE",
+            "CERT_PARSE", "CERT_SELF_SIGNED_GENERATE", "CERT_VALIDATE");
+
     @Test
     void testAllOla5B1TypesAreDeclaredInNodeCatalog() {
         List<NodeDescriptor> allDescriptors = NodeCatalog.allDescriptors();
@@ -103,5 +115,16 @@ class NodeCatalogCoverageTest {
         long count = NodeCatalog.allDescriptors().stream()
                 .filter(d -> OLA_5B2B_TYPES.contains(d.type())).count();
         assertTrue(count == 22, "Ola 5B.2b plus COMPONENT_SELECT must deliver exactly 22 node types, found: " + count);
+    }
+
+    @Test
+    void testAllOla5B3TypesAreDeclaredAndCountedExactly() {
+        Set<String> declared = NodeCatalog.allDescriptors().stream().map(NodeDescriptor::type).collect(Collectors.toSet());
+        assertTrue(declared.containsAll(OLA_5B3A_TYPES));
+        assertTrue(declared.containsAll(OLA_5B3B_TYPES));
+        assertTrue(NodeCatalog.allDescriptors().stream().filter(d -> OLA_5B3A_TYPES.contains(d.type())).count() == 13,
+                "5B.3a must contain exactly 13 node types");
+        assertTrue(NodeCatalog.allDescriptors().stream().filter(d -> OLA_5B3B_TYPES.contains(d.type())).count() == 21,
+                "5B.3b must contain exactly 21 node types");
     }
 }
