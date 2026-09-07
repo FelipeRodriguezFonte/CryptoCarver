@@ -1,6 +1,7 @@
-# Process Designer Operation Reference (Ola 5B.1)
+# Process Designer Operation Reference (Ola 5B.1–5B.2b)
 
-This document provides reference documentation for all 23 node operations introduced in **Ola 5B.1 (Plumbing & Representation)** of the Visual Process Designer.
+This document provides reference documentation for the Process Designer node
+operations introduced in **Ola 5B.1–5B.2b**.
 
 ---
 
@@ -243,6 +244,35 @@ colon-delimited `HEX_COMPONENTS` bundle because the current one-output
 `ProcessNodeHandler` SPI has no separate output-port value. It requires between
 2 and 5 components, and every component must have the same byte length as the
 others; the dedicated representation is accepted only by `components` on
-`KEY_COMBINE_XOR`, so a plain `HEX` key port rejects the bundle during
-validation. No share is written to the result area except under `FULL_LAB`.
+`KEY_COMBINE_XOR` and `COMPONENT_SELECT`, so a plain `HEX` key port rejects the
+bundle during validation. No share is written to the result area except under
+`FULL_LAB`.
 ICSF parsing never wraps, imports or exports a token.
+
+## 6. Payment operations — Phase 5B.2b
+
+Payment handlers are thin adapters over the existing payment, DUKPT, EMV and
+TLV facades. PAN, PIN, PIN blocks, CVKs, PVKs, DUKPT material, EMV keys and
+cryptograms are sensitive inspector parameters and remain transient. PAN inputs
+are decimal, 13–19 digits, and pass Luhn validation through
+`CheckDigitCalculator`; the handler does not reimplement Luhn.
+
+| Type | Ports and output | Sensitive parameters | Delegated facade |
+|---|---|---|---|
+| `PIN_BLOCK_ENCODE` / `PIN_BLOCK_DECODE` / `PIN_BLOCK_TRANSLATE` | Text PIN/PAN and HEX block ports → HEX or text | PIN, PAN, PIN block | `PaymentOperations` PIN-block methods |
+| `CVV_GENERATE` / `CVV_VERIFY` | CVK HEX plus PAN/expiry/service text → text | CVKs, PAN, CVV | `PaymentOperations.generateCVV` / `verifyCVV` |
+| `DCVV_GENERATE` / `DCVV_VERIFY` | CVK HEX plus PAN/sequence/expiry/ATC text → text | CVKs, PAN, CVV | `PaymentOperations.generateDCVV` / `verifyDCVV` |
+| `PVV_GENERATE` / `PVV_VERIFY` | PIN/PAN text and PVK HEX → text | PIN, PAN, PVK, PVV | `PaymentOperations.generatePVV` / `verifyPVV` |
+| `IBM3624_OFFSET` | PIN/PAN text and PVK/decimalization HEX → text | PIN, PAN, PVK, decimalization table | `PaymentOperations.generateIBM3624Offset` |
+| `DUKPT_TDES_DERIVE` | IPEK/KSN HEX → HEX | IPEK, KSN | `DukptKsn.deriveWorkingKey` |
+| `DUKPT_AES_DERIVE` / `DUKPT_PIN_CRYPT` | BDK/KSN/PIN-block HEX → HEX | BDK, KSN, PIN block | `AesDukpt` |
+| `EMV_ICC_MASTER_KEY` / `EMV_SESSION_KEY` | EMV key/data ports → HEX | IMK/MKAC, PAN, session inputs | `EMVOperations` derivation methods |
+| `EMV_ARQC_GENERATE` / `EMV_ARQC_VERIFY` / `EMV_ARPC` | EMV key/cryptogram/data ports → HEX or text | session key, ARQC, transaction data, CSU | `EMVOperations` ARQC/ARPC methods |
+| `EMV_TLV_PARSE` | EMV data HEX → text summary | EMV data | `EmvTlv.analyze` / `transactionSummary` |
+| `TRACK2_ENCODE` / `TRACK2_PARSE` | PAN/track text → text | PAN, discretionary data, Track 2 | `PaymentOperations` Track 2 methods |
+
+`KEY_SPLIT_XOR` is limited to components of equal byte length and a maximum of
+five components. It emits one `HEX_COMPONENTS` value containing the
+colon-delimited bundle; only `KEY_COMBINE_XOR.components` and
+`COMPONENT_SELECT.components` accept that representation. A plain `HEX` port
+must reject the bundle during `validate()`, before execution.

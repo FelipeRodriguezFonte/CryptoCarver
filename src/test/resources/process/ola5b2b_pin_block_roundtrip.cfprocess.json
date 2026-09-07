@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "name": "Ola 5B.2b PIN block round trip",
+  "nodes": [
+    {"id":"pin","type":"CONSOLE_INPUT","label":"Test PIN","x":20,"y":80,"configuration":{"value":"1234"}},
+    {"id":"pan","type":"CONSOLE_INPUT","label":"Test PAN","x":20,"y":180,"configuration":{"value":"4761739001010010"}},
+    {"id":"encode","type":"PIN_BLOCK_ENCODE","label":"Encode ISO-0","x":300,"y":120,"configuration":{"format":"Format 0 (ISO-0)"}},
+    {"id":"decode","type":"PIN_BLOCK_DECODE","label":"Decode ISO-0","x":500,"y":120,"configuration":{"format":"Format 0 (ISO-0)"}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify PIN round trip","x":700,"y":120,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"pin","to":"encode","targetPort":"pin"},
+    {"from":"pan","to":"encode","targetPort":"pan"},
+    {"from":"encode","to":"decode","targetPort":"pinBlock"},
+    {"from":"pan","to":"decode","targetPort":"pan"},
+    {"from":"decode","to":"assert","targetPort":"actual"},
+    {"from":"pin","to":"assert","targetPort":"expected"}
+  ]
+}

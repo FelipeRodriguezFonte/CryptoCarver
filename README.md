@@ -230,6 +230,12 @@ java -jar cryptocarver.jar icsf-batch tokens.txt --csv inventario.csv --txt info
 - **Catálogo ampliado (Fase 5B.1)**: 23 nuevos tipos de nodos agrupados en *Fontanería* (concatenación, rebanado, padding, XOR, autoverificación con `ASSERT_EQUALS`), *Conversiones* (Base32, Base58, Base58Check, EBCDIC, compresión GZIP/Deflate/Zlib, conversión de charset) y *Utilidades* (árbol ASN.1, dígitos de control Luhn/Verhoeff/Damm/ISO7064, aritmética modular, UUID v4/v5/v7, estadísticas y entropía de bytes).
 - **Lienzo escalable infinito**: zoom (25%–400%), ajuste dinámico a contenidos, navegación y curvas de conexión bezier interactivas entre puertos.
 - **Catálogo e inspector dinámicos**: paleta con búsqueda instantánea y formulario reactivo dirigido por esquemas declarativos (`NodeDescriptor`).
+- **Pagos (Fase 5B.2b)**: 21 nodos declarativos para bloques PIN, CVV/dCVV, PVV,
+  IBM 3624, DUKPT, EMV, TLV y Track 2, conectados a las fachadas existentes.
+  PAN/PIN y material criptográfico sensible permanecen en memoria transitoria.
+- **Componentes XOR**: `KEY_SPLIT_XOR` emite `HEX_COMPONENTS` (componentes de
+  igual longitud, máximo 5); sólo `KEY_COMBINE_XOR.components` y
+  `COMPONENT_SELECT.components` aceptan esa representación.
 - **Seguridad en secretos**: protección estricta en memoria volátil (`transientSecrets`) sin persistencia en ficheros de proceso (`.cfprocess.json`), con perfiles de visibilidad de trazas (`FULL_LAB`, `MASKED`, `REDACTED`).
 - **Ventana independiente**: capacidad de desacoplar el diseñador a una ventana dedicada conservando el estado completo.
 

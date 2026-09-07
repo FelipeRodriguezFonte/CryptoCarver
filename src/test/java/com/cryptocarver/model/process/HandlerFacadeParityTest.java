@@ -106,6 +106,10 @@ class HandlerFacadeParityTest {
         ProcessDefinition.Node combine = new ProcessDefinition.Node("combine", "KEY_COMBINE_XOR", "Combine", 0, 0);
         assertEquals(HexFormat.of().withUpperCase().formatHex(KeyOperations.combineKeyComponents(parts)),
                 keys.execute(combine, Map.of("components", FlowValue.hexComponents(bundle.getBytes(StandardCharsets.UTF_8))), null).render());
+        ProcessDefinition.Node select = new ProcessDefinition.Node("select", "COMPONENT_SELECT", "Select", 0, 0);
+        select.configuration.put("index", "2");
+        assertEquals(HexFormat.of().withUpperCase().formatHex(parts[1]),
+                keys.execute(select, Map.of("components", FlowValue.hexComponents(bundle.getBytes(StandardCharsets.UTF_8))), null).render());
 
         byte[] ikm = HexFormat.of().parseHex("0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B");
         byte[] salt = HexFormat.of().parseHex("000102030405060708090A0B0C");

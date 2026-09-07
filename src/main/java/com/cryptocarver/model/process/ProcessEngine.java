@@ -21,6 +21,7 @@ public final class ProcessEngine {
         new FileNodeHandler(),
         new HashNodeHandler(),
         new CodecNodeHandler(),
+        new PaymentOperationsNodeHandler(),
         new KeyOperationsNodeHandler(),
         new KeyMaterialNodeHandler(),
         new AdvancedCryptoNodeHandler(),
@@ -67,6 +68,11 @@ public final class ProcessEngine {
             node.configuration.remove("wrappedFromFlow");
             node.configuration.remove("keyBlockFromFlow");
             node.configuration.remove("tokenFromFlow");
+            for (String paymentPort : List.of("pin", "pan", "pinBlock", "cvkA", "cvkB", "inputCvv", "panSeq", "expiry",
+                    "serviceCode", "atc", "pvki", "pvk", "pvv", "decTable", "ipek", "bdk", "imk", "mkac", "un",
+                    "sk", "arqc", "arc", "csu", "transactionData", "input", "discretionary", "track2")) {
+                node.configuration.remove(paymentPort + "FromFlow");
+            }
             nodeMap.put(node.id, node);
 
             getHandlerFor(node.type);
@@ -128,6 +134,11 @@ public final class ProcessEngine {
             portBindings.get(conn.to).put(assignedPort, conn.from);
             if ("key".equals(assignedPort)) targetNode.configuration.put("keyFromFlow", "true");
             if (Set.of("ikm", "sharedSecret", "password", "salt", "kek", "keyData", "components", "kbpk", "wrapped", "keyBlock", "token").contains(assignedPort)) {
+                targetNode.configuration.put(assignedPort + "FromFlow", "true");
+            }
+            if (Set.of("pin", "pan", "pinBlock", "cvkA", "cvkB", "inputCvv", "panSeq", "expiry", "serviceCode", "atc",
+                    "pvki", "pvk", "pvv", "decTable", "ipek", "bdk", "imk", "mkac", "un", "sk", "arqc", "arc", "csu",
+                    "transactionData", "input", "discretionary", "track2").contains(assignedPort)) {
                 targetNode.configuration.put(assignedPort + "FromFlow", "true");
             }
             if ("iv".equals(assignedPort)) targetNode.configuration.put("ivFromFlow", "true");

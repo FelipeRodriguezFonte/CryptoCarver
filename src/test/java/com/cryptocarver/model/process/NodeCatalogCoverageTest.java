@@ -45,6 +45,13 @@ class NodeCatalogCoverageTest {
             "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE",
             "KEYPAIR_GENERATE", "KEY_MATERIAL_INSPECT");
 
+    private static final Set<String> OLA_5B2B_TYPES = Set.of(
+            "PIN_BLOCK_ENCODE", "PIN_BLOCK_DECODE", "PIN_BLOCK_TRANSLATE",
+            "CVV_GENERATE", "CVV_VERIFY", "DCVV_GENERATE", "DCVV_VERIFY",
+            "PVV_GENERATE", "PVV_VERIFY", "IBM3624_OFFSET", "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
+            "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARQC_VERIFY", "EMV_ARPC",
+            "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE", "COMPONENT_SELECT");
+
     @Test
     void testAllOla5B1TypesAreDeclaredInNodeCatalog() {
         List<NodeDescriptor> allDescriptors = NodeCatalog.allDescriptors();
@@ -85,5 +92,16 @@ class NodeCatalogCoverageTest {
         long count = NodeCatalog.allDescriptors().stream()
                 .filter(d -> OLA_5B2A_TYPES.contains(d.type())).count();
         assertTrue(count == 20, "Ola 5B.2a must deliver exactly 20 node types, found: " + count);
+    }
+
+    @Test
+    void testAllOla5B2bTypesAreDeclaredAndCountedExactly() {
+        Set<String> declaredTypes = NodeCatalog.allDescriptors().stream()
+                .map(NodeDescriptor::type).collect(Collectors.toSet());
+        assertTrue(declaredTypes.containsAll(OLA_5B2B_TYPES),
+                "NodeCatalog must declare every 5B.2b payment type: " + OLA_5B2B_TYPES);
+        long count = NodeCatalog.allDescriptors().stream()
+                .filter(d -> OLA_5B2B_TYPES.contains(d.type())).count();
+        assertTrue(count == 22, "Ola 5B.2b plus COMPONENT_SELECT must deliver exactly 22 node types, found: " + count);
     }
 }

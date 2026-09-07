@@ -146,6 +146,26 @@ class KeyOperationsNodeHandlerTest {
         assertTrue(error.getMessage().contains("expects") || error.getMessage().contains("HEX") || error.getMessage().contains("representation"));
     }
 
+    @Test
+    void componentSelectConsumesOnlyTheBundleAndEmitsPlainHex() throws Exception {
+        String bundle = "0011223344556677:8899AABBCCDDEEFF:1020304050607080";
+        ProcessDefinition.Node select = node("COMPONENT_SELECT");
+        select.configuration.put("index", "2");
+        FlowValue selected = HANDLER.execute(select,
+                Map.of("components", FlowValue.hexComponents(bundle.getBytes(StandardCharsets.UTF_8))), null);
+        assertEquals(Representation.HEX, selected.representation());
+        assertEquals("8899AABBCCDDEEFF", selected.render());
+
+        ProcessDefinition definition = new ProcessDefinition();
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Bundle", 0, 0);
+        input.configuration.put("value", bundle);
+        ProcessDefinition.Node selectNode = node("COMPONENT_SELECT");
+        selectNode.configuration.put("index", "2");
+        definition.nodes.add(input); definition.nodes.add(selectNode);
+        definition.connections.add(new ProcessDefinition.Connection("input", "select", "components"));
+        assertThrows(IllegalArgumentException.class, () -> ProcessEngine.validate(definition));
+    }
+
     private static ProcessDefinition.Node node(String type) {
         return new ProcessDefinition.Node(type.toLowerCase(), type, type, 0, 0);
     }

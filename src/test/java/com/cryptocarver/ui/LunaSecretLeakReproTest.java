@@ -1,6 +1,8 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.process.ProcessDefinition;
+import com.cryptocarver.model.process.NodeCatalog;
+import com.cryptocarver.model.process.NodeParameter;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -120,5 +122,50 @@ public class LunaSecretLeakReproTest {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    @Test
+    void paymentPanPinAndPinBlockRemainTransientSecrets() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                TitledPane root = loader.load();
+                ProcessDesignerController controller = loader.getController();
+                Stage stage = new Stage(); stage.setScene(new Scene(root, 1200, 800)); stage.show();
+
+                ProcessDefinition.Node encode = new ProcessDefinition.Node("encode", "PIN_BLOCK_ENCODE", "PIN block", 0, 0);
+                controller.select(encode);
+                ((TextInputControl) controller.getInspectorControl("pin")).setText("1234");
+                ((TextInputControl) controller.getInspectorControl("pan")).setText("4761739001010010");
+                controller.handleSaveNodeSettings();
+                assertNull(encode.configuration.get("pin"));
+                assertNull(encode.configuration.get("pan"));
+                assertNotNull(controller.getTransientSecret("encode", "pin"));
+                assertNotNull(controller.getTransientSecret("encode", "pan"));
+
+                ProcessDefinition.Node decode = new ProcessDefinition.Node("decode", "PIN_BLOCK_DECODE", "PIN block decode", 0, 0);
+                controller.select(decode);
+                ((TextInputControl) controller.getInspectorControl("pinBlock")).setText("041223C6FFEFEFFE");
+                ((TextInputControl) controller.getInspectorControl("pan")).setText("4761739001010010");
+                controller.handleSaveNodeSettings();
+                assertNull(decode.configuration.get("pinBlock"));
+                assertNull(decode.configuration.get("pan"));
+                assertNotNull(controller.getTransientSecret("decode", "pinBlock"));
+                assertNotNull(controller.getTransientSecret("decode", "pan"));
+                stage.close();
+            } catch (Exception e) { throw new RuntimeException(e); }
+        });
+    }
+
+    @Test
+    void everyPaymentSecretParameterIsDeclaredSensitive() {
+        for (String type : com.cryptocarver.model.process.handlers.PaymentOperationsNodeHandler.TYPES) {
+            var descriptor = NodeCatalog.descriptor(type).orElseThrow();
+            for (NodeParameter parameter : descriptor.parameters()) {
+                if (java.util.Set.of("pan", "pin", "pinBlock", "cvkA", "cvkB", "pvk", "bdk", "ipek", "ksn", "sk", "arqc", "input", "track2").contains(parameter.key())) {
+                    assertTrue(parameter.sensitive(), type + ":" + parameter.key());
+                }
+            }
+        }
     }
 }

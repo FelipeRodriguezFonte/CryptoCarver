@@ -1,0 +1,31 @@
+{
+  "version": 3,
+  "name": "Ola 5B.2b CVV verification",
+  "nodes": [
+    {"id":"cvkAText","type":"CONSOLE_INPUT","label":"Test CVK A","x":20,"y":40,"configuration":{"value":"0123456789ABCDEF"}},
+    {"id":"cvkADecode","type":"HEX_DECODE","label":"Decode CVK A","x":160,"y":40,"configuration":{}},
+    {"id":"cvkA","type":"HEX_ENCODE","label":"CVK A HEX port","x":300,"y":40,"configuration":{}},
+    {"id":"cvkBText","type":"CONSOLE_INPUT","label":"Test CVK B","x":20,"y":120,"configuration":{"value":"FEDCBA9876543210"}},
+    {"id":"cvkBDecode","type":"HEX_DECODE","label":"Decode CVK B","x":160,"y":120,"configuration":{}},
+    {"id":"cvkB","type":"HEX_ENCODE","label":"CVK B HEX port","x":300,"y":120,"configuration":{}},
+    {"id":"pan","type":"CONSOLE_INPUT","label":"Test PAN","x":20,"y":200,"configuration":{"value":"4761739001010010"}},
+    {"id":"expiry","type":"CONSOLE_INPUT","label":"Expiry","x":20,"y":280,"configuration":{"value":"2512"}},
+    {"id":"service","type":"CONSOLE_INPUT","label":"Service code","x":20,"y":360,"configuration":{"value":"101"}},
+    {"id":"cvv","type":"CVV_GENERATE","label":"Generate CVV","x":480,"y":120,"configuration":{}},
+    {"id":"expected","type":"CONSOLE_INPUT","label":"Expected test CVV","x":480,"y":300,"configuration":{"value":"598"}},
+    {"id":"assert","type":"ASSERT_EQUALS","label":"Verify CVV","x":660,"y":200,"configuration":{}}
+  ],
+  "connections": [
+    {"from":"cvkAText","to":"cvkADecode","targetPort":"input"},
+    {"from":"cvkADecode","to":"cvkA","targetPort":"input"},
+    {"from":"cvkBText","to":"cvkBDecode","targetPort":"input"},
+    {"from":"cvkBDecode","to":"cvkB","targetPort":"input"},
+    {"from":"cvkA","to":"cvv","targetPort":"cvkA"},
+    {"from":"cvkB","to":"cvv","targetPort":"cvkB"},
+    {"from":"pan","to":"cvv","targetPort":"pan"},
+    {"from":"expiry","to":"cvv","targetPort":"expiry"},
+    {"from":"service","to":"cvv","targetPort":"serviceCode"},
+    {"from":"cvv","to":"assert","targetPort":"actual"},
+    {"from":"expected","to":"assert","targetPort":"expected"}
+  ]
+}

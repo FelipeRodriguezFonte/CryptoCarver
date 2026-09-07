@@ -146,4 +146,25 @@ class ProcessDesignerTraceRedactionTest {
         assertFalse(trace.contains("IV/nonce (HEX)"), "REDACTED must omit nonce line completely");
         assertFalse(trace.contains("generated material (HEX)"), "REDACTED must omit generated material line completely");
     }
+
+    @Test
+    void paymentPinBlockOutputIsRedactedUnderMaskedAndRedacted() throws Exception {
+        String pan = "4761739001010010";
+        String pin = "1234";
+        String block = com.cryptocarver.crypto.PaymentOperations.encodePinBlock(pin, pan, "Format 0 (ISO-0)");
+        ProcessDefinition def = new ProcessDefinition();
+        def.nodes.add(new ProcessDefinition.Node("payment", "PIN_BLOCK_ENCODE", "PIN block", 0, 0));
+        Map<String, FlowValue> result = Map.of("payment", FlowValue.hex(block.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        List<NodeExecutionEvent> events = List.of(new NodeExecutionEvent("payment", 1, "PIN block", "PIN_BLOCK_ENCODE",
+                NodeExecutionState.SUCCESS, Duration.ZERO, Representation.TEXT_UTF8, pin.length() + pan.length(),
+                Representation.HEX, block.length(), "OK"));
+
+        for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+            AppSettings.getInstance().setSecretVisibilityProfile(profile);
+            String trace = controller.renderExecutionResult(def, result, events, null);
+            assertFalse(trace.contains(pin) || trace.contains(pan), "PIN/PAN must not appear: " + profile);
+            if (profile == SecretVisibilityProfile.FULL_LAB) assertTrue(trace.contains(block));
+            else assertFalse(trace.contains(block), "PIN block must be hidden: " + profile);
+        }
+    }
 }

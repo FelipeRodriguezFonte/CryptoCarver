@@ -8,6 +8,7 @@ import com.cryptocarver.model.process.FlowValue;
 import com.cryptocarver.model.process.NodeExecutionEvent;
 import com.cryptocarver.model.process.ProcessDefinition;
 import com.cryptocarver.model.process.ProcessEngine;
+import com.cryptocarver.model.process.Representation;
 import com.cryptocarver.model.process.handlers.PlumbingNodeHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,6 +140,28 @@ class ProcessTelemetryRedactionTest {
             } else {
                 assertFalse(trace.contains(bundle));
             }
+        }
+    }
+
+    @Test
+    void paymentPinAndPinBlockTelemetryFollowVisibilityProfiles() throws Exception {
+        String pan = "4761739001010010";
+        String pin = "1234";
+        String block = com.cryptocarver.crypto.PaymentOperations.encodePinBlock(pin, pan, "Format 0 (ISO-0)");
+        ProcessDefinition def = new ProcessDefinition();
+        ProcessDefinition.Node node = new ProcessDefinition.Node("pinBlock", "PIN_BLOCK_ENCODE", "PIN block", 0, 0);
+        def.nodes.add(node);
+        Map<String, FlowValue> result = Map.of("pinBlock", FlowValue.hex(block.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        List<NodeExecutionEvent> events = List.of(new NodeExecutionEvent("pinBlock", 1, "PIN block", "PIN_BLOCK_ENCODE",
+                com.cryptocarver.model.process.NodeExecutionState.SUCCESS, java.time.Duration.ZERO,
+                Representation.TEXT_UTF8, pin.length() + pan.length(), Representation.HEX, block.length(), "OK"));
+
+        for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+            AppSettings.getInstance().setSecretVisibilityProfile(profile);
+            String trace = new ProcessDesignerController().renderExecutionResult(def, result, events, null);
+            assertFalse(trace.contains(pin) || trace.contains(pan), "PIN/PAN must not be printed in telemetry: " + profile);
+            if (profile == SecretVisibilityProfile.FULL_LAB) assertTrue(trace.contains(block));
+            else assertFalse(trace.contains(block), "PIN block must be hidden: " + profile);
         }
     }
 }

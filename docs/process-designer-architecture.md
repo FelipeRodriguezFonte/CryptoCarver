@@ -10,6 +10,9 @@ To guarantee that data flows correctly between nodes, the engine uses a strong r
 - **BASE64**: Base64 encoded text.
 - **BASE64URL**: Base64URL encoded text.
 - **HEX**: Hexadecimal encoded string.
+- **HEX_COMPONENTS**: Colon-delimited hexadecimal component bundle. This is a
+  private process representation accepted only by `KEY_COMBINE_XOR.components`
+  and `COMPONENT_SELECT.components`; it is not a generic HEX value.
 - **EBCDIC**: EBCDIC encoded string.
 
 Nodes negotiate their representations via the `ProcessNodeHandler` SPI.
@@ -102,3 +105,9 @@ Phase 5B.1 incorporates three fundamental families into the Process Designer cat
    3394/5649 wrapping, TR-31, read-only ICSF token parsing, asymmetric key-pair
    generation and key-material inspection. The handler delegates to the existing
    crypto facades and keeps sensitive key inputs in transient inspector state.
+
+5. **Payment Operations (`PaymentOperationsNodeHandler`, Phase 5B.2b)**: PIN
+   blocks, CVV/dCVV, PVV, IBM 3624, TDES/AES DUKPT, EMV derivation and
+   cryptograms, EMV TLV summaries, and Track 2. PAN/PIN fields use text ports so
+   their decimal contract is explicit; configured PANs are checked with the
+   existing Luhn facade and sensitive material remains transient.

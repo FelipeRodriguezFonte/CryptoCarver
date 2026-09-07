@@ -158,4 +158,20 @@ never persisted in `.cfprocess.json`.
 
 `ICSF_TOKEN_PARSE` is read-only. The current Process Designer transports XOR
 shares as one lossless HEX bundle (`share:share:share`) because the 5B SPI
-exposes one `FlowValue` output per node; `KEY_COMBINE_XOR` consumes that bundle.
+exposes one `FlowValue` output per node; `KEY_COMBINE_XOR` and `COMPONENT_SELECT` consume that bundle.
+
+## Process Designer — Phase 5B.2b (Payment nodes)
+
+Payment nodes delegate to the existing payment, DUKPT, EMV and TLV facades.
+Sensitive payment material is transient and never persisted in `.cfprocess.json`.
+
+| Family | Node types |
+|---|---|
+| PIN blocks | `PIN_BLOCK_ENCODE`, `PIN_BLOCK_DECODE`, `PIN_BLOCK_TRANSLATE` |
+| CVV/PVV | `CVV_GENERATE`, `CVV_VERIFY`, `DCVV_GENERATE`, `DCVV_VERIFY`, `PVV_GENERATE`, `PVV_VERIFY`, `IBM3624_OFFSET` |
+| DUKPT | `DUKPT_TDES_DERIVE`, `DUKPT_AES_DERIVE`, `DUKPT_PIN_CRYPT` |
+| EMV | `EMV_ICC_MASTER_KEY`, `EMV_SESSION_KEY`, `EMV_ARQC_GENERATE`, `EMV_ARQC_VERIFY`, `EMV_ARPC`, `EMV_TLV_PARSE` |
+| Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |
+
+`KEY_SPLIT_XOR` emits `HEX_COMPONENTS`, limited to equal-length components and at most five;
+only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.

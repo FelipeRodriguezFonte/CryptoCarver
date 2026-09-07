@@ -47,7 +47,7 @@ import java.util.Set;
  */
 public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
     public static final Set<String> TYPES = Set.of(
-            "KCV", "KEY_SPLIT_XOR", "KEY_COMBINE_XOR", "PARITY_ADJUST", "PARITY_CHECK",
+            "KCV", "KEY_SPLIT_XOR", "KEY_COMBINE_XOR", "COMPONENT_SELECT", "PARITY_ADJUST", "PARITY_CHECK",
             "KDF_HKDF", "KDF_SP800_108", "KDF_X963", "KDF_SCRYPT", "KDF_ARGON2",
             "AES_KEYWRAP_3394", "AES_UNWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_5649",
             "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE",
@@ -71,6 +71,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "KCV", "PARITY_ADJUST", "PARITY_CHECK" -> List.of(optionalPort("key", HEX));
             case "KEY_SPLIT_XOR" -> List.of(optionalPort("key", HEX));
             case "KEY_COMBINE_XOR" -> List.of(optionalPort("components", HEX_COMPONENTS));
+            case "COMPONENT_SELECT" -> List.of(optionalPort("components", HEX_COMPONENTS));
             case "KDF_HKDF" -> List.of(optionalPort("ikm", HEX), new PortDefinition("salt", HEX, false),
                     new PortDefinition("info", HEX, false));
             case "KDF_SP800_108" -> List.of(optionalPort("key", HEX), new PortDefinition("label", HEX, false),
@@ -95,7 +96,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
     @Override
     public Representation outputRepresentation(ProcessDefinition.Node node, Map<String, Representation> inputs) {
         return switch (node.type.toUpperCase(Locale.ROOT)) {
-            case "KCV", "KEY_COMBINE_XOR", "PARITY_ADJUST", "PARITY_CHECK" -> Representation.HEX;
+            case "KCV", "KEY_COMBINE_XOR", "COMPONENT_SELECT", "PARITY_ADJUST", "PARITY_CHECK" -> Representation.HEX;
             case "KEY_SPLIT_XOR" -> Representation.HEX_COMPONENTS;
             case "TR31_WRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT" -> Representation.TEXT_UTF8;
             case "TR31_UNWRAP" -> Representation.HEX;
@@ -116,6 +117,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "KCV" -> { oneOf(node, "method", KCV_METHODS); requireInput(node, "key"); validateConfiguredKcvLength(node); }
             case "KEY_SPLIT_XOR" -> { integer(node, "componentCount", 2, 2, 5); requireInput(node, "key"); }
             case "KEY_COMBINE_XOR" -> requireInput(node, "components");
+            case "COMPONENT_SELECT" -> { requireInput(node, "components"); integer(node, "index", 1, 1, 5); }
             case "PARITY_ADJUST", "PARITY_CHECK" -> requireInput(node, "key");
             case "KDF_HKDF" -> {
                 requireInput(node, "ikm");
@@ -179,6 +181,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 case "KCV" -> hex(kcv(node, bytes(node, inputs, "key")));
                 case "KEY_SPLIT_XOR" -> split(node, bytes(node, inputs, "key"));
                 case "KEY_COMBINE_XOR" -> hex(KeyOperations.combineKeyComponents(parseComponents(inputs, node)));
+                case "COMPONENT_SELECT" -> selectComponent(node, inputs);
                 case "PARITY_ADJUST" -> parityAdjust(bytes(node, inputs, "key"));
                 case "PARITY_CHECK" -> text(KeyOperations.detectParity(bytes(node, inputs, "key")).toString());
                 case "KDF_HKDF" -> binary(KeyDerivation.hkdf(bytes(node, inputs, "ikm"), optionalBytes(inputs, node, "salt"),
@@ -286,6 +289,12 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             if (result[i].length != length) throw new IllegalArgumentException("XOR components must have equal length");
         }
         return result;
+    }
+
+    private static FlowValue selectComponent(ProcessDefinition.Node node, Map<String, FlowValue> inputs) {
+        byte[][] components = parseComponents(inputs, node);
+        int index = integer(node, "index", 1, 1, components.length);
+        return hex(components[index - 1]);
     }
 
     private static Digest digest(ProcessDefinition.Node node, String name) { return KeyDerivation.getDigest(setting(node, name, "SHA-256")); }
@@ -455,6 +464,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 List.of(number("componentCount", "module.process.param.components", "2"), secret("key", "module.process.param.keyMaterial"))));
         result.add(new NodeDescriptor("KEY_COMBINE_XOR", "Key Operations", "module.process.type.key.combine", "module.process.desc.key.combine", "🧩",
                 List.of(secret("components", "module.process.param.componentsMaterial"))));
+        result.add(new NodeDescriptor("COMPONENT_SELECT", "Key Operations", "module.process.type.key.componentSelect", "module.process.desc.key.componentSelect", "🔎",
+                List.of(number("index", "module.process.param.componentIndex", "1"), secret("components", "module.process.param.componentsMaterial"))));
         result.add(new NodeDescriptor("PARITY_ADJUST", "Key Operations", "module.process.type.key.parityAdjust", "module.process.desc.key.parityAdjust", "⚖",
                 List.of(secret("key", "module.process.param.keyMaterial"))));
         result.add(new NodeDescriptor("PARITY_CHECK", "Key Operations", "module.process.type.key.parityCheck", "module.process.desc.key.parityCheck", "⚖",

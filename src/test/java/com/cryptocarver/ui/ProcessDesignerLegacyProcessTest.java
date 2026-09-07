@@ -100,6 +100,17 @@ class ProcessDesignerLegacyProcessTest {
         }
     }
 
+    @Test
+    void ola5b2bPaymentAndComponentProcessesSelfVerify() throws Exception {
+        for (String name : new String[]{"ola5b2b_cvv_verification.cfprocess.json",
+                "ola5b2b_pin_block_roundtrip.cfprocess.json",
+                "ola5b2b_component_select_verification.cfprocess.json"}) {
+            ProcessDefinition definition = loadProcess(name);
+            Map<String, FlowValue> results = ProcessEngine.execute(definition);
+            assertNotNull(results.get("assert"), "Fixture must finish at ASSERT_EQUALS: " + name);
+        }
+    }
+
     private ProcessDefinition loadProcess(String name) throws Exception {
         try (InputStream in = getClass().getResourceAsStream("/process/" + name)) {
             assertNotNull(in, "Process fixture must exist: " + name);

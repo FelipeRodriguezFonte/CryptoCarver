@@ -1,5 +1,15 @@
 # Pendiente de publicación — evolución posterior a 2.3.0
 
+### Process Designer — Fase 5B.2b (Pagos)
+
+- Añadidos 21 tipos declarativos de pagos para bloques PIN, CVV/dCVV, PVV,
+  IBM 3624, DUKPT TDES/AES, derivación y criptogramas EMV, TLV y Track 2.
+- Los handlers delegan exclusivamente en las fachadas existentes, validan PAN
+  decimal con Luhn y mantienen los parámetros sensibles en `transientSecrets`.
+- Añadido `COMPONENT_SELECT` y la representación exclusiva `HEX_COMPONENTS`,
+  además de recursos `.cfprocess.json`, puertas de catálogo y regresiones de
+  redacción/preflight.
+
 ### Process Designer — Fase 5B.2a (Claves)
 
 - Añadidos los 20 tipos declarativos de operaciones de claves: KCV, paridad,
