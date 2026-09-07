@@ -336,7 +336,10 @@
                         <configuration>
                             <options>
                                 <option>-Xdock:name=CryptoCarver</option>
-                                <option>-Xdock:icon=${project.basedir}/src/main/resources/icons/app-icon.png</option>
+                                <!-- Relative on purpose: javafx-maven-plugin passes options to the JVM without
+                                     quoting, so an absolute ${project.basedir} breaks on any checkout path
+                                     containing a space and the JVM reads the tail as the main class. -->
+                                <option>-Xdock:icon=src/main/resources/icons/app-icon.png</option>
                                 <option>-Dapple.awt.application.name=CryptoCarver</option>
                             </options>
                         </configuration>
