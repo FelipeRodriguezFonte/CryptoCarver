@@ -40,9 +40,9 @@ class ResultFlowsLiveI18nUITest {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
-                assertEquals("🧩 Process Designer (MVP)", root.getText());
+                assertEquals("🧩 Process Designer", root.getText());
                 service.setPreference(LanguagePreference.ES);
-                assertEquals("🧩 Diseñador de procesos (MVP)", root.getText());
+                assertEquals("🧩 Diseñador de procesos", root.getText());
             } catch (Exception e) {
                 throw new AssertionError(e);
             } finally {

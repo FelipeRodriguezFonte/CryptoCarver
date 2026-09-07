@@ -357,7 +357,7 @@ public final class ModuleTextCatalog {
 
     public static Map<String, String> processDesigner() {
         Map<String, String> map = common();
-        map.put("🧩 Process Designer (MVP)", "module.process.title");
+        map.put("🧩 Process Designer", "module.process.title");
         map.put("Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys.", "module.process.help");
         map.put("Process:", "module.process.process");
         map.put("Untitled process", "module.process.untitled");

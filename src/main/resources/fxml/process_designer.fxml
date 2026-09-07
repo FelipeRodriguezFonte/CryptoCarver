@@ -3,7 +3,7 @@
 <?import javafx.scene.layout.*?>
 
 <TitledPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-             fx:id="processDesignerRoot" text="🧩 Process Designer (MVP)" expanded="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
+             fx:id="processDesignerRoot" text="🧩 Process Designer" expanded="true" collapsible="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
     <VBox spacing="7" style="-fx-padding: 8;">
         <Label text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
         <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="10" vgap="8">
@@ -65,14 +65,15 @@
         <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 2 0 2 0;">
             <ProgressBar fx:id="processProgressBar" prefWidth="250" progress="0.0" HBox.hgrow="ALWAYS"/>
             <Label fx:id="processStatusLabel" text="Ready" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-            <Separator orientation="VERTICAL"/>
+        </HBox>
+        <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="6" vgap="6">
             <Button text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
             <Button text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
             <Button text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
             <Button text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
             <Label fx:id="zoomLevelLabel" text="100%" style="-fx-font-size: 10px; -fx-text-fill: #aaa; -fx-min-width: 40;"/>
             <CheckBox fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true" style="-fx-font-size: 10px;"/>
-        </HBox>
+        </FlowPane>
         <SplitPane fx:id="designerSplitPane" dividerPositions="0.18, 0.76" prefHeight="380">
             <items>
                 <!-- Searchable Palette -->

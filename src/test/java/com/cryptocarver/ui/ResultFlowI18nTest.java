@@ -22,7 +22,7 @@ class ResultFlowI18nTest {
     @Test
     void eachResultFlowResolvesEnglishAndSpanish() {
         I18nService service = service();
-        assertModule(service, ModuleTextCatalog.processDesigner(), "🧩 Process Designer (MVP)", "🧩 Diseñador de procesos (MVP)");
+        assertModule(service, ModuleTextCatalog.processDesigner(), "🧩 Process Designer", "🧩 Diseñador de procesos");
         assertModule(service, ModuleTextCatalog.history(), "Recent Operations", "Operaciones recientes");
         assertModule(service, ModuleTextCatalog.clipboardShelf(), "Clipboard Shelf / Laboratory Notebook", "Clipboard Shelf / Cuaderno de laboratorio");
         assertModule(service, ModuleTextCatalog.compareResults(), "Compare Laboratory Results", "Comparar resultados del laboratorio");

@@ -1558,6 +1558,23 @@
     -fx-min-height: 32px;
 }
 
+/*
+ * A MenuButton is a label next to an arrow button, and the arrow carries its own
+ * padding, so the height that comfortably fits a plain Button leaves the label
+ * without room for descenders and accents: "Edicion" and "Preajustes" rendered
+ * with their tails cut off. Give the menu buttons their own vertical breathing
+ * room instead of inheriting the plain-button metrics.
+ */
+.responsive-action-bar .menu-button {
+    -fx-min-height: 36px;
+    -fx-padding: 6 11 6 11;
+}
+
+.responsive-action-bar .menu-button > .label {
+    -fx-padding: 0;
+    -fx-content-display: LEFT;
+}
+
 /* Template selectors are controls, not a single unbreakable toolbar. */
 .template-toolbar {
     -fx-hgap: 8px;
