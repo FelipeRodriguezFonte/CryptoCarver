@@ -46,6 +46,12 @@ public final class ProcessEngine {
         return List.copyOf(HANDLERS);
     }
 
+    /** Names a node the way the canvas does, so an error the user reads is not a raw identifier. */
+    static String describe(ProcessDefinition.Node node) {
+        if (node == null) return "unknown";
+        return node.label == null || node.label.isBlank() ? node.id : node.label;
+    }
+
     public static Map<String, Representation> validate(ProcessDefinition definition) {
         Set<String> ids = new HashSet<>();
         Map<String, ProcessDefinition.Node> nodeMap = new HashMap<>();
@@ -107,13 +113,14 @@ public final class ProcessEngine {
                         assignedPort = "input";
                         conn.targetPort = assignedPort;
                     } else {
-                        throw new IllegalArgumentException("Unknown target port '" + assignedPort + "' on node: " + conn.to);
+                        throw new IllegalArgumentException("Unknown target port '" + assignedPort + "' on node: " + describe(targetNode));
                     }
                 }
             }
 
             if (portBindings.get(conn.to).containsKey(assignedPort)) {
-                throw new IllegalArgumentException("Multiple connections to the same port '" + assignedPort + "' on node: " + conn.to);
+                throw new IllegalArgumentException("Multiple connections to the same port '" + assignedPort
+                        + "' on node: " + describe(nodeMap.get(conn.to)));
             }
             portBindings.get(conn.to).put(assignedPort, conn.from);
             targetNode.configuration.put(assignedPort + "FromFlow", "true");

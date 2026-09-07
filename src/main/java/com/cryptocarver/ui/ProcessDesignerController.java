@@ -573,7 +573,11 @@ public class ProcessDesignerController {
         Map<String, Representation> reps = new HashMap<>();
         try {
             validationCounter++;
-            reps = ProcessEngine.validate(toDefinition());
+            // Validate a copy: the engine fills in a connection's target port as it goes, and a
+            // repaint must not rewrite the live graph. Losing the distinction between a link the
+            // user aimed at a port and one the engine defaulted would let the canvas stack two
+            // links on one port and only complain when the process is run.
+            reps = ProcessEngine.validate(snapshot(toDefinition()));
         } catch (Exception ignored) {}
 
         for (ProcessDefinition.Connection connection : connections) {
@@ -1201,6 +1205,26 @@ public class ProcessDesignerController {
                 || (c.from.equals(destination) && c.to.equals(source))).findFirst().orElse(null);
     }
 
+    /**
+     * The port an unnamed connection into {@code nodeId} would bind to, following the same rule
+     * {@link ProcessEngine#validate} applies. Returns null when the engine would demand an
+     * explicit port, or when the node takes no input at all.
+     */
+    private String defaultInputPort(String nodeId) {
+        ProcessDefinition.Node node = nodes.stream().filter(n -> n.id.equals(nodeId)).findFirst().orElse(null);
+        if (node == null) return null;
+        List<ProcessNodeHandler.PortDefinition> ports;
+        try {
+            ports = ProcessEngine.getHandlerFor(node.type).inputPorts(node);
+        } catch (RuntimeException unknownType) {
+            return null;
+        }
+        if (ports.size() == 1) return ports.get(0).name();
+        boolean payloadAndKey = ports.stream().anyMatch(p -> "payload".equals(p.name()))
+                && ports.stream().anyMatch(p -> "key".equals(p.name()));
+        return payloadAndKey ? "payload" : null;
+    }
+
     private void connectToPort(String targetPort) {
         if (selectedNodeIds.size() != 2) return;
         ProcessDefinition before = toDefinition();
@@ -1208,10 +1232,19 @@ public class ProcessDesignerController {
         String source = pair.get(0);
         String destination = pair.get(1);
 
-        if (targetPort != null) {
-            boolean occupied = connections.stream().anyMatch(c -> c.to.equals(destination) && targetPort.equals(c.targetPort));
+        // A connection created without an explicit port is not portless: ProcessEngine.validate
+        // later assigns it the target's default input port. Resolve that same port here, or the
+        // graph can end up with two links bound to one port and only fail once it is run.
+        String effectivePort = targetPort != null ? targetPort : defaultInputPort(destination);
+        if (effectivePort != null) {
+            // Reconnecting through the default path replaces the previous default link, which is
+            // what it has always done; it must not stack a second one on an occupied port.
+            connections.removeIf(c -> c.to.equals(destination) && c.targetPort == null
+                    && effectivePort.equals(defaultInputPort(destination)));
+            String port = effectivePort;
+            boolean occupied = connections.stream().anyMatch(c -> c.to.equals(destination) && port.equals(c.targetPort));
             if (occupied) {
-                executionOutputArea.setText(t("module.process.connectionOccupied", targetPort, nodeLabel(destination)));
+                executionOutputArea.setText(t("module.process.connectionOccupied", effectivePort, nodeLabel(destination)));
                 return;
             }
         } else {
