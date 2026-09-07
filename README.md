@@ -339,7 +339,7 @@ con `run_simple.bat` (que reutiliza el JAR dejado por `run.bat` o por
 La primera versión, publicada como **CryptoForge**, se centraba en una calculadora
 gráfica con operaciones criptográficas y de pagos esenciales. Desde entonces el
 proyecto se ha renombrado a **CryptoCarver** y ha evolucionado hasta la versión
-**2.3.0**, con mejoras destacadas en los siguientes ámbitos:
+**2.4.0**, con mejoras destacadas en los siguientes ámbitos:
 
 - **Cobertura funcional:** se añadieron PQC (ML-KEM, ML-DSA y SLH-DSA), XAdES,
   TSA, WS-Security, COSE, CMS/PKCS#7, PAdES, ASiC, AES Key Wrap, DUKPT AES,
@@ -357,8 +357,7 @@ proyecto se ha renombrado a **CryptoCarver** y ha evolucionado hasta la versión
   laboratorio y producción, formatos/charsets y 24 tutoriales reproducibles con
   capturas, material de apoyo y PDF.
 
-Consulta el [CHANGELOG](CHANGELOG.md) para el detalle por versión y los cambios
-pendientes de publicación posteriores a 2.3.0.
+Consulta el [CHANGELOG](CHANGELOG.md) para el detalle por versión.
 
 ---
 

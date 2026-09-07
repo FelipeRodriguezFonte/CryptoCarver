@@ -1,4 +1,8 @@
-# Pendiente de publicación — evolución posterior a 2.3.0
+# 2.4.0 — 2026-09-07
+
+Publica el Process Designer como banco de trabajo propio: lienzo expandible con zoom,
+inspector generado a partir de descriptores, paleta buscable y 109 tipos de nodo que
+alcanzan fontanería, claves, pagos, sobres y firmas. Los detalles por fase, abajo.
 
 ### Process Designer — Fase 5B.3 (Sobres y firmas)
 
