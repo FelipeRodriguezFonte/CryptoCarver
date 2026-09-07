@@ -197,5 +197,15 @@ VBox group = controller.getInspectorGroup("keyLength");
 - **Strict In-Memory Separation**: Sensitive parameters are **never written into `node.configuration`** within the persistent process model, live canvas node structures, or undo/redo snapshot stacks.
 - **Inspector Isolation**: When saving node settings from the inspector (`NodeInspectorRenderer.save`), sensitive values are stored exclusively in a private session secrets map (`Map<String, char[]>`) and systematically removed from `node.configuration`.
 - **Ephemeral Execution Injection**: During runtime execution (`handleRunProcess`, `handleDryRunProcess`), an ephemeral snapshot copy of the definition is constructed, secrets are temporarily injected solely for the duration of execution, and the copy is discarded/sanitized immediately upon completion.
+- **Preflight and the supplied-secret marker**: because the value is absent from
+  `node.configuration`, a handler validating the live definition cannot tell "the user has not
+  filled this in" from "the user filled this in and we deliberately do not carry it here". When the
+  inspector stores a sensitive value it also writes a boolean marker beside it,
+  `<parameterKey>FromSecrets`, and removes that marker when the field is emptied. A handler that
+  requires a sensitive parameter must accept the marker as proof that the value exists, exactly as
+  it already accepts `<parameterKey>FromFlow` for a value arriving over a port — see
+  `NodeCatalog.isSupplied(node, key)`. The marker carries one bit and never the value, and
+  `ProcessDefinitionCodec` strips it on both serialization and deserialization, so a reopened
+  process correctly asks for its secrets again.
 - **Export & Serialization Protection**: On file export or serialization (`ProcessDefinitionCodec.serialize`), all sensitive keys (collected dynamically via `NodeCatalog.allSensitiveKeys()`) are stripped, ensuring exported process definitions never contain secret key material.
 

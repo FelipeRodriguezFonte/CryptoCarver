@@ -95,6 +95,38 @@ public final class NodeCatalog {
     }
 
     /**
+     * Suffix of the marker written beside a sensitive parameter whose value the session is
+     * holding in memory.
+     *
+     * <p>Sensitive values never reach {@link ProcessDefinition.Node#configuration}, so a handler
+     * validating the live definition cannot tell "the user has not filled this in" apart from
+     * "the user filled this in and we are deliberately not carrying it here". The marker carries
+     * that one bit and nothing else: it is a boolean, never the value, and it is stripped on both
+     * ends of {@link ProcessDefinitionCodec} so a reopened process correctly reports the secret as
+     * missing again.</p>
+     *
+     * <p>This mirrors the existing {@code keyFromFlow} / {@code ivFromFlow} markers the engine
+     * derives from the graph.</p>
+     */
+    public static final String SUPPLIED_SUFFIX = "FromSecrets";
+
+    /** Configuration key of the marker that accompanies {@code parameterKey}. */
+    public static String suppliedMarker(String parameterKey) {
+        return parameterKey + SUPPLIED_SUFFIX;
+    }
+
+    /** True when {@code configurationKey} is a supplied-secret marker rather than real configuration. */
+    public static boolean isSuppliedMarker(String configurationKey) {
+        return configurationKey != null && configurationKey.endsWith(SUPPLIED_SUFFIX);
+    }
+
+    /** True when the session holds a value for {@code parameterKey} on this node. */
+    public static boolean isSupplied(ProcessDefinition.Node node, String parameterKey) {
+        return node != null && node.configuration != null
+                && "true".equalsIgnoreCase(node.configuration.get(suppliedMarker(parameterKey)));
+    }
+
+    /**
      * Returns all parameter keys that are marked sensitive across all descriptors.
      */
     public static Set<String> allSensitiveKeys() {

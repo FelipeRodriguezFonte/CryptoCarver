@@ -11,6 +11,7 @@ import com.cryptocarver.crypto.icsf.IcsfTokenReport;
 import com.cryptocarver.crypto.icsf.Origin;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
+import com.cryptocarver.model.process.NodeCatalog;
 import com.cryptocarver.model.process.NodeDescriptor;
 import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ParameterKind;
@@ -360,7 +361,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
         String configured = node.configuration.get(name);
         if ((configured == null || configured.isBlank())
                 && !"true".equalsIgnoreCase(node.configuration.get(name + "FromFlow"))
-                && !("key".equals(name) && "true".equalsIgnoreCase(node.configuration.get("keyFromFlow")))) {
+                && !("key".equals(name) && "true".equalsIgnoreCase(node.configuration.get("keyFromFlow")))
+                && !NodeCatalog.isSupplied(node, name)) {
             throw new IllegalArgumentException("Missing required key input");
         }
     }

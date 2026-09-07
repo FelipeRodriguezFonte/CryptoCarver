@@ -8,6 +8,7 @@ import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.PaymentOperations;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
+import com.cryptocarver.model.process.NodeCatalog;
 import com.cryptocarver.model.process.NodeDescriptor;
 import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ParameterKind;
@@ -221,7 +222,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
 
     private static void require(ProcessDefinition.Node node, String key) {
         if ((node.configuration.get(key) == null || node.configuration.get(key).isBlank())
-                && !"true".equalsIgnoreCase(node.configuration.get(key + "FromFlow"))) {
+                && !"true".equalsIgnoreCase(node.configuration.get(key + "FromFlow"))
+                && !NodeCatalog.isSupplied(node, key)) {
             throw new IllegalArgumentException("Missing required payment input");
         }
     }

@@ -1,5 +1,6 @@
 package com.cryptocarver.ui;
 
+import com.cryptocarver.model.process.NodeCatalog;
 import com.cryptocarver.model.process.NodeDescriptor;
 import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ParameterKind;
@@ -241,6 +242,14 @@ public final class NodeInspectorRenderer {
                         secrets.put(param.key(), val != null ? val.toCharArray() : new char[0]);
                     }
                     targetNode.configuration.remove(param.key());
+                    // The value stays out of the model; record only that the session holds one,
+                    // so preflight can tell an unfilled field from a deliberately absent secret.
+                    String marker = NodeCatalog.suppliedMarker(param.key());
+                    if (val != null && !val.isEmpty()) {
+                        targetNode.configuration.put(marker, "true");
+                    } else {
+                        targetNode.configuration.remove(marker);
+                    }
                 }
             } else {
                 String value = readControlValue(control);

@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.crypto.SignatureOperations;
 import com.cryptocarver.crypto.SymmetricCipher;
+import com.cryptocarver.model.process.NodeCatalog;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
 import com.cryptocarver.model.process.ProcessDefinition;
@@ -68,7 +69,9 @@ public class AdvancedCryptoNodeHandler implements ProcessNodeHandler {
                     }
                 }
 
-                if (!Boolean.parseBoolean(node.configuration.getOrDefault("keyFromFlow", "false"))) {
+                if (!Boolean.parseBoolean(node.configuration.getOrDefault("keyFromFlow", "false"))
+                        && !NodeCatalog.isSupplied(node, "key")
+                        && !NodeCatalog.isSupplied(node, "manualKey")) {
                     String rawKey = node.configuration.get("key");
                     if (rawKey == null) rawKey = node.configuration.get("manualKey");
                     if (rawKey != null && rawKey.contains("[METADATA_ONLY]")) {

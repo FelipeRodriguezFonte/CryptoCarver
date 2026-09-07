@@ -20,6 +20,9 @@ public final class ProcessDefinitionCodec {
                 for (String sensitiveKey : sensitiveKeys) {
                     safeConfig.remove(sensitiveKey);
                 }
+                // Supplied-secret markers describe the live session, not the process. Keeping one
+                // would make a reopened file claim a secret it cannot carry.
+                safeConfig.keySet().removeIf(NodeCatalog::isSuppliedMarker);
                 safeNode.configuration.putAll(safeConfig);
             }
             safeCopy.nodes.add(safeNode);
@@ -40,6 +43,7 @@ public final class ProcessDefinitionCodec {
                     for (String sensitiveKey : sensitiveKeys) {
                         n.configuration.remove(sensitiveKey);
                     }
+                    n.configuration.keySet().removeIf(NodeCatalog::isSuppliedMarker);
                 }
             }
         }
