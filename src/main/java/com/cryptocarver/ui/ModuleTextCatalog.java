@@ -413,6 +413,8 @@ public final class ModuleTextCatalog {
         map.put("Connect to...", "module.process.connectTo");
         map.put("Reverse selected connection", "module.process.reverseSelected");
         map.put("Delete selected", "module.process.deleteSelected");
+        map.put("Delete selected (Del)", "module.process.deleteSelectedShortcut");
+        map.put("Delete selected connection (Del)", "module.process.deleteSelectedConnectionShortcut");
         map.put("Clear canvas", "module.process.clearCanvas");
         map.put("Execution status", "module.process.executionStatus");
         map.put("Step", "module.process.step");

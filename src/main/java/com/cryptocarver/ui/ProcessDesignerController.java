@@ -1146,7 +1146,9 @@ public class ProcessDesignerController {
         if (reverseConnectionButton != null) reverseConnectionButton.setDisable(!hasSelectedConnection);
         if (reverseConnectionToolbarButton != null) reverseConnectionToolbarButton.setDisable(!hasSelectedConnection);
         if (deleteSelectedButton != null) {
-            deleteSelectedButton.setText(hasSelectedConnection ? "Delete selected connection (Del)" : "Delete selected (Del)");
+            deleteSelectedButton.setText(hasSelectedConnection
+                    ? t("module.process.deleteSelectedConnectionShortcut")
+                    : t("module.process.deleteSelectedShortcut"));
             deleteSelectedButton.setDisable(selected == null && selectedConnection == null && selectedNodeIds.isEmpty());
         }
     }

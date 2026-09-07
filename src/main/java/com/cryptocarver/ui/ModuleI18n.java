@@ -8,10 +8,14 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.ToolBar;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
@@ -56,6 +60,7 @@ public final class ModuleI18n {
         private final Map<String, String> keys;
         private final Set<Node> excludedRoots;
         private final List<TextEntry> entries = new ArrayList<>();
+        private final Set<Node> visited = new HashSet<>();
         private boolean indexed;
 
         private Binding(Node root, Map<String, String> keys, Node... excludedRoots) {
@@ -95,6 +100,9 @@ public final class ModuleI18n {
 
         private void index(Node node) {
             if (node == null) return;
+            // A container below is reachable both through its own accessor and, once the
+            // skin exists, through the children list. Index each node exactly once.
+            if (!visited.add(node)) return;
             if (node != root && excludedRoots.contains(node)) return;
             if (node instanceof Labeled labeled) {
                 addText(labeled.getText(), labeled::getText, labeled::setText);
@@ -114,6 +122,22 @@ public final class ModuleI18n {
             }
             if (node instanceof MenuButton menuButton) {
                 for (MenuItem item : menuButton.getItems()) index(item);
+            }
+            // Every container below hides its content from getChildrenUnmodifiable() until
+            // its skin is built, which has not happened when a controller binds in
+            // initialize(). Without them the walk stops at the container and everything
+            // inside it keeps the literal text declared in FXML.
+            if (node instanceof ScrollPane scrollPane) {
+                index(scrollPane.getContent());
+            }
+            if (node instanceof SplitPane splitPane) {
+                for (Node item : splitPane.getItems()) index(item);
+            }
+            if (node instanceof ToolBar toolBar) {
+                for (Node item : toolBar.getItems()) index(item);
+            }
+            if (node instanceof MenuBar menuBar) {
+                for (Menu menu : menuBar.getMenus()) index(menu);
             }
             if (node instanceof TitledPane titledPane) {
                 // A TitledPane's content is not among its children until the skin is
