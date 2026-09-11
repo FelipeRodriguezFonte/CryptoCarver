@@ -1,3 +1,35 @@
+# Pendiente de publicación — evolución posterior a 2.4.0
+
+### Añadido
+
+- **Ejemplos y ficheros binarios en los analizadores ICSF / CCA.** El analizador
+  individual carga un token desde un fichero binario (`.bin`, `.tok`, `.key`,
+  `.dat`) y trae cuatro tokens de ejemplo —AES fixed, AES CIPHER variable-length,
+  3DES `K1|K2|K1` y PKA RSA 2048—; el lote trae un **lote de ejemplo** con líneas
+  etiquetadas, comentarios y un token en dos filas del host. Son byte a byte los
+  de la herramienta en Python, fijados por un test contra su salida.
+
+### Cambiado
+
+- **El lote ICSF / CCA vuelve a separar lo que el inventario del Python
+  separaba.** Una DATA leída de su CV y una DATA con CV a ceros eran el mismo
+  `DATA`; un DES simple de origen y una triple que colapsa a simple compartían
+  categoría con *no aplica*; y *no aplica* no decía si era por ser externo, PKA
+  o variable-length. Ahora son códigos distintos (`DATA_ZERO_CV`,
+  `SINGLE_LENGTH`, `ZERO_AES_DATA`, `NOT_APPLICABLE_EXTERNAL`,
+  `NOT_APPLICABLE_PKA`…) y las estadísticas cuentan cada cohorte por su lado.
+  Los hallazgos no cambian.
+
+### Corregido
+
+- La fortaleza efectiva de un token WRAPENH3 decía «clave de longitud sencilla»,
+  cuando lo que pasa es que la longitud está ofuscada a propósito.
+- El README mandaba lanzar la CLI con `java -jar cryptocarver.jar icsf-…`, que
+  abre la interfaz gráfica: falta `--cli` delante.
+- El documento de traspaso ICSF decía que `--json-out` era la única divergencia
+  de la CLI respecto al Python. No lo es: `--nocv` existe en las dos y significa
+  cosas distintas. Ahora hay una tabla de equivalencias.
+
 # 2.4.0 — 2026-09-07
 
 Publica el Process Designer como banco de trabajo propio: lienzo expandible con zoom,

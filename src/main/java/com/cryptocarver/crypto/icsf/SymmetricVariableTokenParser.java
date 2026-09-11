@@ -242,7 +242,7 @@ final class SymmetricVariableTokenParser {
         // reading it as exportability would be inventing.
         boolean desUseCv = algorithm == 0x01;
         if (desUseCv) {
-            exportability = Exportability.NOT_APPLICABLE;
+            exportability = Exportability.NOT_APPLICABLE_DESUSECV;
             exportDetail = t("icsf.export.desusecv");
             management.add(managementOffset, managementFields.length,
                     t("icsf.field.managementReserved"), IcsfHex.hex(managementFields),
@@ -346,7 +346,7 @@ final class SymmetricVariableTokenParser {
                 .summary(SummaryKey.EFFECTIVE_STRENGTH, EffectiveStrength.NOT_APPLICABLE)
                 .summary(SummaryKey.MATERIAL_STATE, material, stateText(materialState))
                 .summary(SummaryKey.WRAPPING, wrapValue, SymmetricFixedTokenParser.wrapLabel(wrapValue))
-                .summary(SummaryKey.CONTROL_VECTOR, CvState.NOT_APPLICABLE, t("icsf.cvState.variable"))
+                .summary(SummaryKey.CONTROL_VECTOR, CvState.NOT_APPLICABLE_VARIABLE, t("icsf.cvState.variable"))
                 .summary(SummaryKey.TVV, TvvState.NOT_APPLICABLE, t("icsf.tvv.notApplicable"))
                 .summary(SummaryKey.MKVP, mkvpAbsent ? MkvpState.ABSENT : MkvpState.PRESENT)
                 .summary(SummaryKey.PROTECTION, wrapValue, t("icsf.protection.under",

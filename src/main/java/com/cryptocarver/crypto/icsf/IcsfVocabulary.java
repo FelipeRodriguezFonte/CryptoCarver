@@ -13,10 +13,21 @@ package com.cryptocarver.crypto.icsf;
  * <p>Every {@code code()} is language-invariant and is what statistics count and
  * what the CSV carries. Localized labels are resolved at the edge from
  * {@code icsf.value.*} bundle keys.</p>
+ *
+ * <p>Where a dimension does not apply for more than one reason, the reasons are kept
+ * apart ({@code NOT_APPLICABLE_PKA}, {@code NOT_APPLICABLE_EXTERNAL}...), as the Python
+ * inventory kept them apart: counting them as one would hide which cohort a token
+ * belongs to. Code that only asks whether the dimension applies uses
+ * {@link #isNotApplicable(String)}.</p>
  */
 public final class IcsfVocabulary {
 
     private IcsfVocabulary() { }
+
+    /** True for {@code NOT_APPLICABLE} and every reason-specific variant of it. */
+    public static boolean isNotApplicable(String code) {
+        return code != null && code.startsWith("NOT_APPLICABLE");
+    }
 
     /** Whether the token is operational on this system, transportable, or empty. */
     public enum Scope {
@@ -46,6 +57,8 @@ public final class IcsfVocabulary {
         ENCRYPTED,
         /** The token carries no key material. */
         NO_KEY,
+        /** A PKA token with no private section: public key material only, nothing secret. */
+        PUBLIC_KEY_ONLY,
         NOT_DETERMINABLE;
 
         public String code() { return name(); }
@@ -67,7 +80,10 @@ public final class IcsfVocabulary {
 
     /** Whether the master key verification pattern is present in the token. */
     public enum MkvpState {
-        PRESENT, ABSENT, NOT_APPLICABLE;
+        PRESENT, ABSENT,
+        /** External DES token: bytes 8-15 are reserved, there is no MKVP field (Table 616). */
+        NOT_APPLICABLE_EXTERNAL,
+        NOT_APPLICABLE;
 
         public String code() { return name(); }
     }
@@ -80,6 +96,14 @@ public final class IcsfVocabulary {
         ZERO,
         /** NOCV key (flag byte 6, bit 2): used without a control vector. Transport keys only. */
         NOCV,
+        /** AES fixed-length DATA key with the zero CV Table 614 requires: expected, not legacy. */
+        ZERO_AES_DATA,
+        /** AES fixed-length token whose CV is not zero, which Table 614 does not provide for. */
+        NON_ZERO_AES,
+        /** Variable-length token: the format carries no Control Vector. */
+        NOT_APPLICABLE_VARIABLE,
+        /** PKA token: the format carries no Control Vector. */
+        NOT_APPLICABLE_PKA,
         NOT_APPLICABLE;
 
         public String code() { return name(); }
@@ -90,6 +114,10 @@ public final class IcsfVocabulary {
         YES, NO,
         /** The bytes do not settle it; the service and access control decide. */
         NOT_DETERMINABLE,
+        /** PKA token with a public key only: no private material to protect or to export. */
+        NOT_APPLICABLE_PUBLIC_ONLY,
+        /** DESUSECV variable-length key: its management fields are reserved (Table 630). */
+        NOT_APPLICABLE_DESUSECV,
         NOT_APPLICABLE;
 
         public String code() { return name(); }
@@ -131,6 +159,8 @@ public final class IcsfVocabulary {
          * verdicts so an inventory never counts it as established fact.
          */
         UNRELIABLE_SINGLE, UNRELIABLE_DOUBLE, UNRELIABLE_TRIPLE,
+        /** Single-length DES: 56 bits by construction, with no components to compare. */
+        SINGLE_LENGTH,
         NOT_APPLICABLE;
 
         public String code() { return name(); }

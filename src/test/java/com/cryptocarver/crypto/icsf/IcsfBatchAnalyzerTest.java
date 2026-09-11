@@ -1,6 +1,11 @@
 package com.cryptocarver.crypto.icsf;
 
+import com.cryptocarver.crypto.icsf.IcsfVocabulary.CvState;
 import com.cryptocarver.crypto.icsf.IcsfVocabulary.DesKeyForm;
+import com.cryptocarver.crypto.icsf.IcsfVocabulary.EffectiveStrength;
+import com.cryptocarver.crypto.icsf.IcsfVocabulary.Exportability;
+import com.cryptocarver.crypto.icsf.IcsfVocabulary.MaterialState;
+import com.cryptocarver.crypto.icsf.IcsfVocabulary.MkvpState;
 import com.cryptocarver.crypto.icsf.IcsfVocabulary.Scope;
 import com.cryptocarver.crypto.icsf.IcsfVocabulary.TvvState;
 import org.junit.jupiter.api.Test;
@@ -65,6 +70,60 @@ class IcsfBatchAnalyzerTest {
     @Test
     void theAesTokenIsCataloguedAsADataKey() {
         assertEquals("DATA", standardBatch().rows().get(4).get(InventoryColumn.KEY_TYPE));
+    }
+
+    @Test
+    void theInventoryKeepsApartWhatThePythonInventoryKeptApart() {
+        // Every pair below used to share one code, so statistics counted two cohorts as one.
+        String text = String.join("\n",
+                IcsfTestTokens.hex(IcsfTestTokens.des("DATA", 16)),
+                IcsfTestTokens.hex(IcsfTestTokens.des(IcsfTestTokens.ZERO_CV_TYPE, 16)),
+                IcsfTestTokens.hex(IcsfTestTokens.des(IcsfTestTokens.ZERO_CV_TYPE, 8)),
+                IcsfTestTokens.hex(IcsfTestTokens.aesFixed()),
+                IcsfTestTokens.hex(IcsfTestTokens.variableLength(false, false)),
+                IcsfTestTokens.hex(IcsfTestTokens.pkaPublicRsa()),
+                "00000000000000000000000000000000");
+
+        List<InventoryRow> rows = IcsfBatchAnalyzer.analyse(text, BatchInputFormat.LINE, Origin.INFER).rows();
+        InventoryRow cvData = rows.get(0);
+        InventoryRow zeroCvData = rows.get(1);
+        InventoryRow singleDes = rows.get(2);
+        InventoryRow aesData = rows.get(3);
+        InventoryRow variable = rows.get(4);
+        InventoryRow publicPka = rows.get(5);
+        InventoryRow nullToken = rows.get(6);
+
+        assertEquals("DATA", cvData.get(InventoryColumn.KEY_TYPE));
+        assertEquals("DATA_ZERO_CV", zeroCvData.get(InventoryColumn.KEY_TYPE));
+
+        assertEquals(EffectiveStrength.SINGLE_LENGTH.name(), singleDes.get(InventoryColumn.EFFECTIVE_STRENGTH));
+        assertEquals(EffectiveStrength.NOT_APPLICABLE.name(), aesData.get(InventoryColumn.EFFECTIVE_STRENGTH));
+
+        assertEquals(CvState.ZERO.name(), singleDes.get(InventoryColumn.CONTROL_VECTOR));
+        assertEquals(CvState.ZERO_AES_DATA.name(), aesData.get(InventoryColumn.CONTROL_VECTOR));
+        assertEquals(CvState.NOT_APPLICABLE_VARIABLE.name(), variable.get(InventoryColumn.CONTROL_VECTOR));
+        assertEquals(CvState.NOT_APPLICABLE_PKA.name(), publicPka.get(InventoryColumn.CONTROL_VECTOR));
+        assertEquals(CvState.NOT_APPLICABLE.name(), nullToken.get(InventoryColumn.CONTROL_VECTOR));
+
+        assertEquals(MkvpState.NOT_APPLICABLE_EXTERNAL.name(), cvData.get(InventoryColumn.MKVP));
+        assertEquals(MkvpState.NOT_APPLICABLE.name(), nullToken.get(InventoryColumn.MKVP));
+
+        assertEquals(MaterialState.PUBLIC_KEY_ONLY.name(), publicPka.get(InventoryColumn.MATERIAL));
+        assertEquals(MaterialState.NO_KEY.name(), nullToken.get(InventoryColumn.MATERIAL));
+        assertEquals(Exportability.NOT_APPLICABLE_PUBLIC_ONLY.name(), publicPka.get(InventoryColumn.EXPORTABLE));
+        assertEquals(Exportability.NOT_APPLICABLE.name(), nullToken.get(InventoryColumn.EXPORTABLE));
+    }
+
+    @Test
+    void aDimensionThatDoesNotApplyForANamedReasonIsStillDropped() {
+        // A variable-length token has no Control Vector; saying why must not bring the
+        // column back as a statistic of one "not applicable" value.
+        IcsfBatchReport report = IcsfBatchAnalyzer.analyse(
+                IcsfTestTokens.hex(IcsfTestTokens.variableLength(false, false)),
+                BatchInputFormat.LINE, Origin.INFER);
+
+        assertTrue(report.statistics().stream()
+                .noneMatch(group -> group.dimension() == SummaryKey.CONTROL_VECTOR));
     }
 
     @Test

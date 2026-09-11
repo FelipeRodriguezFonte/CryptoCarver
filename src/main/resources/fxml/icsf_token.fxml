@@ -39,9 +39,17 @@
 
         <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
             <Button text="Analyze token" onAction="#handleAnalyze" styleClass="action-button-primary"/>
+            <Button text="Load .bin File…" onAction="#handleLoadBinary" styleClass="secondary-button"/>
             <Button text="Save Report…" onAction="#handleSaveReport" styleClass="secondary-button"/>
             <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
             <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
+        </FlowPane>
+        <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
+            <Label text="Examples:"/>
+            <Button text="AES fixed" onAction="#handleSampleAesFixed" styleClass="secondary-button"/>
+            <Button text="AES CIPHER var-length" onAction="#handleSampleVariableCipher" styleClass="secondary-button"/>
+            <Button text="3DES K1|K2|K1" onAction="#handleSampleDesTriple" styleClass="secondary-button"/>
+            <Button text="PKA RSA 2048" onAction="#handleSamplePkaRsa" styleClass="secondary-button"/>
         </FlowPane>
 
         <Label fx:id="icsfTokenFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>

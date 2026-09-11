@@ -23,6 +23,7 @@ es +54).
 | Vistas | `src/main/resources/fxml/icsf_token.fxml`, `icsf_batch.fxml`, `icsf_keywrap.fxml` |
 | Textos | `icsf.*` en los tres bundles; slice `ModuleTextCatalog.icsf()` |
 | CLI | `icsf-token`, `icsf-batch`, `icsf-export`, `icsf-import`, `icsf-inspect`, `icsf-resolve` |
+| Ejemplos | `IcsfSamples`: los tokens y el lote de ejemplo del Python, byte a byte |
 | Tests | `src/test/java/com/cryptocarver/crypto/icsf/` y `.../ui/Icsf*` |
 
 **No es un módulo de navegación propio.** Los tres paneles son `fx:include`
@@ -78,6 +79,29 @@ lee una frase**:
   original recuperaba el aviso del byte 59 con `"byte 59" in w`.
 
 `IcsfTextResolver` traduce los códigos al idioma del usuario, en el borde.
+
+### Cuántas categorías
+
+El lote cuenta **las mismas categorías que el inventario del Python**. Donde una
+dimensión no aplica por razones distintas, cada razón es un código:
+`NOT_APPLICABLE_EXTERNAL` para el MKVP de un token externo, `NOT_APPLICABLE_PKA`
+y `NOT_APPLICABLE_VARIABLE` para el CV, `NOT_APPLICABLE_PUBLIC_ONLY` y
+`NOT_APPLICABLE_DESUSECV` para la exportabilidad. Igual con `DATA` frente a
+`DATA_ZERO_CV`, `SINGLE` (una doble o triple que colapsa) frente a
+`SINGLE_LENGTH` (un DES simple de origen), y `ZERO` (DATA heredada) frente a
+`ZERO_AES_DATA` (lo que exige la Tabla 614). Juntarlas hace que dos cohortes
+cuenten como una.
+
+Quien solo necesite saber si la dimensión aplica usa
+`IcsfVocabulary.isNotApplicable(code)`. Es lo que hace la estadística para
+descartar una dimensión que ningún token del lote usa: comparar con
+`"NOT_APPLICABLE"` a secas dejaría de descartarla.
+
+Dos diferencias deliberadas con el Python. La PKA solo pública es
+`PUBLIC_KEY_ONLY` y no «no determinable»: en el original su ficha no trae estado
+del material y la normalización caía en «no determinable» por defecto, no por
+decisión. Y el MKVP de una PKA con sección privada se lee (`PRESENT`/`ABSENT`) en
+vez de dejarse en «n.a.».
 
 ---
 
@@ -277,6 +301,7 @@ marcadores `{0}` sin sustituir, y que la sangría sobreviva.
 | `KeyWrapVectorTest` | Envoltura contra vectores fijos: toda combinación de longitud, tipo, variante y modo |
 | `KeyWrapI18nTest` | Que cada nota y cada veredicto de la envoltura resuelve en ambos idiomas |
 | `DesEngineSmokeTest` | El motor DES contra el vector clásico de FIPS 46-3 |
+| `IcsfSamplesTest` | Que los ejemplos son byte a byte los del Python (`icsf/python-samples.json`, generado desde él) y que se analizan |
 | `IcsfKeyWrapCliTest` | Los cuatro comandos: códigos de salida, JSON, ida y vuelta entre invocaciones |
 | `IcsfNavigationUITest` | Que los paneles incluidos se abren **y llegan al viewport** al navegar |
 
@@ -373,6 +398,23 @@ veredictos como código, y un token que sobrevive el viaje de ida y vuelta entre
   que los llame.
 - **`icsf-batch` sale con código 3** si hay entradas ilegibles, alineado con el
   comando `batch` que ya existía en esta CLI. El original en Python sale 0.
-- **`--json-out`** es la ruta del fichero JSON, no `--json`: en esta CLI `--json`
-  ya significa «imprime JSON por stdout». Es la única divergencia de nombres
-  respecto al original.
+- **La CLI necesita `--cli` delante** cuando se lanza con `java -jar`: sin él,
+  `Launcher` arranca la interfaz gráfica.
+
+### Divergencias de la CLI respecto al original
+
+Los informes coinciden; las opciones no siempre. Quien traiga scripts del Python
+tiene que traducir estas:
+
+| Python | CryptoCarver | Por qué |
+|---|---|---|
+| `icsf_batch.py --json RUTA` | `icsf-batch --json-out RUTA` | En esta CLI `--json` ya significa «imprime JSON por stdout» |
+| `icsf_keywrap.py exportar --clave/--tipo/--modo` | `icsf-export --key/--type/--mode` | Las opciones de esta CLI van en inglés; el significado es el mismo |
+| `importar --entrada` / `resolver --entrada` | `icsf-import --token` / `icsf-resolve --token` | Ídem |
+| `exportar --nocv` (KEK **sin variante**) | `icsf-export --variant nocv` | **Trampa**: aquí `--nocv` existe y hace otra cosa |
+| `exportar --marcar-nocv` (marca el **bit** NOCV) | `icsf-export --nocv` | Ídem, en sentido contrario |
+| byte 4 por defecto X'01' (Tabla 616) | byte 4 por defecto X'00'; `--table616-version` para X'01' | Comparar contra un host es la razón de ejecutarlo |
+
+Verificado a mano con las dos herramientas: con esa traducción el token exportado
+sale idéntico byte a byte, y `icsf-import` recupera la clave de un token hecho
+por el Python.

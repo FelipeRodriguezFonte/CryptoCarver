@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.icsf.IcsfHex;
+import com.cryptocarver.crypto.icsf.IcsfSamples;
 import com.cryptocarver.model.LanguagePreference;
 import com.cryptocarver.service.I18nService;
 import javafx.application.Platform;
@@ -13,11 +14,18 @@ import javafx.scene.control.TitledPane;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -198,6 +206,74 @@ class IcsfTokenControllerUITest {
 
             assertTrue(translatedDimension, "dimension labels must follow the language");
             assertTrue(technicalKeyType, "a Table 676 key type is a technical identifier, not a word");
+        });
+    }
+
+    @Test
+    void everyExampleLoadsATokenOfTheFormatItIsAnExampleOf() throws Exception {
+        onFxThread(() -> {
+            FXMLLoader loader = load();
+            IcsfTokenController controller = loader.getController();
+            Map<String, String> families = new LinkedHashMap<>();
+            families.put("handleSampleAesFixed", "SYM_FIXED_AES");
+            families.put("handleSampleVariableCipher", "SYM_VARIABLE");
+            families.put("handleSampleDesTriple", "SYM_FIXED_DES_INT");
+            families.put("handleSamplePkaRsa", "PKA");
+
+            for (Map.Entry<String, String> sample : families.entrySet()) {
+                invoke(controller, sample.getKey());
+                // Loading replaces whatever was analysed before, so the card starts empty.
+                assertTrue(field(loader, "icsfTokenSummaryTable", TableView.class).getItems().isEmpty());
+                invoke(controller, "handleAnalyze");
+
+                Label feedback = field(loader, "icsfTokenFeedbackLabel", Label.class);
+                assertTrue(feedback.getText().contains(sample.getValue()),
+                        sample.getKey() + ": " + feedback.getText());
+            }
+        });
+    }
+
+    @Test
+    void aBinaryFileIsLoadedAsHexadecimalAndAnalyses(@TempDir Path directory) throws Exception {
+        byte[] token = IcsfSamples.pkaRsa2048();
+        Path file = Files.write(directory.resolve("rsa.bin"), token);
+
+        onFxThread(() -> {
+            FXMLLoader loader = load();
+            IcsfTokenController controller = loader.getController();
+            @SuppressWarnings("unchecked")
+            ComboBox<IcsfTokenController.InputShape> shape =
+                    field(loader, "icsfTokenFormatCombo", ComboBox.class);
+            shape.setValue(IcsfTokenController.InputShape.TWO_ROW);
+
+            controller.loadBinary(file);
+
+            assertEquals(IcsfHex.hex(token), field(loader, "icsfTokenInputArea", TextArea.class).getText());
+            // Bytes read from a file are never two host rows, whatever was selected before.
+            assertEquals(IcsfTokenController.InputShape.LINEAR, shape.getValue());
+            invoke(controller, "handleAnalyze");
+            assertTrue(field(loader, "icsfTokenFeedbackLabel", Label.class).getText().contains("PKA"));
+        });
+    }
+
+    @Test
+    void aFileThatCannotBeATokenIsRefusedInline(@TempDir Path directory) throws Exception {
+        Path empty = Files.write(directory.resolve("empty.bin"), new byte[0]);
+        Path dump = Files.write(directory.resolve("dump.bin"),
+                new byte[IcsfTokenController.MAX_TOKEN_FILE_BYTES + 1]);
+
+        onFxThread(() -> {
+            FXMLLoader loader = load();
+            IcsfTokenController controller = loader.getController();
+            Label feedback = field(loader, "icsfTokenFeedbackLabel", Label.class);
+            TextArea input = field(loader, "icsfTokenInputArea", TextArea.class);
+
+            for (Path file : List.of(empty, dump)) {
+                controller.loadBinary(file);
+                assertTrue(input.getText().isEmpty(), file.getFileName() + " must not reach the input");
+                assertTrue(feedback.getStyleClass().contains("error-text"),
+                        file.getFileName() + ": " + feedback.getText());
+            }
         });
     }
 

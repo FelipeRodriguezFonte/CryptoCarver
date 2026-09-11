@@ -100,7 +100,7 @@ final class SymmetricFixedTokenParser {
                 .summary(SummaryKey.EFFECTIVE_STRENGTH, EffectiveStrength.NOT_APPLICABLE)
                 .summary(SummaryKey.MATERIAL_STATE, material, materialDetail)
                 .summary(SummaryKey.WRAPPING, WrapMethod.NOT_APPLICABLE)
-                .summary(SummaryKey.CONTROL_VECTOR, cvZero ? CvState.ZERO : CvState.PRESENT,
+                .summary(SummaryKey.CONTROL_VECTOR, cvZero ? CvState.ZERO_AES_DATA : CvState.NON_ZERO_AES,
                         t(cvZero ? "icsf.cvState.zeroAesData" : "icsf.cvState.nonZero"))
                 .summary(SummaryKey.TVV, tvv.state(), tvv.detail())
                 .summary(SummaryKey.MKVP, mkvpZero ? MkvpState.ABSENT : MkvpState.PRESENT)
@@ -234,8 +234,23 @@ final class SymmetricFixedTokenParser {
             keyType = "NOCV";
             keyTypeDetail = t("icsf.keyType.nocv");
         } else {
-            keyType = "DATA";
+            // Kept apart from a DATA key read from its CV: this one carries no control bits at all.
+            keyType = "DATA_ZERO_CV";
             keyTypeDetail = t("icsf.keyType.zeroCv");
+        }
+
+        EffectiveStrength strength;
+        IcsfText strengthDetail;
+        if (components != null) {
+            strength = components.effective();
+            strengthDetail = DesKeyAnalysis.describe(components.effective(), components.pattern());
+        } else if (length.form() == IcsfVocabulary.DesKeyForm.SINGLE) {
+            strength = EffectiveStrength.SINGLE_LENGTH;
+            strengthDetail = t("icsf.strength.singleLengthNothingToCompare");
+        } else {
+            // WRAPENH3 hides the length on purpose: nothing to compare and no length to go on.
+            strength = EffectiveStrength.NOT_APPLICABLE;
+            strengthDetail = t("icsf.strength.notApplicable");
         }
 
         result.summary(SummaryKey.FAMILY, family, t("icsf.family.desFixed"))
@@ -253,11 +268,8 @@ final class SymmetricFixedTokenParser {
                 .summary(SummaryKey.CONTROL_VECTOR, cvState)
                 .summary(SummaryKey.TVV, tvv.state(), tvv.detail())
                 .summary(SummaryKey.MKVP, internal ? (mkvpZero ? MkvpState.ABSENT : MkvpState.PRESENT)
-                        : MkvpState.NOT_APPLICABLE)
-                .summary(SummaryKey.EFFECTIVE_STRENGTH,
-                        components == null ? EffectiveStrength.NOT_APPLICABLE : components.effective(),
-                        components == null ? t("icsf.strength.singleLengthNothingToCompare")
-                                : DesKeyAnalysis.describe(components.effective(), components.pattern()));
+                        : MkvpState.NOT_APPLICABLE_EXTERNAL)
+                .summary(SummaryKey.EFFECTIVE_STRENGTH, strength, strengthDetail);
 
         if (components != null) {
             result.summary(SummaryKey.COMPONENT_PATTERN, components.pattern(),

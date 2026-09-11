@@ -281,7 +281,7 @@ final class PkaTokenParser {
                 .summary(SummaryKey.KEY_LENGTH, keyBitsCode.isEmpty() ? "UNKNOWN" : keyBitsCode, keyBits)
                 .summary(SummaryKey.EFFECTIVE_STRENGTH, EffectiveStrength.NOT_APPLICABLE)
                 .summary(SummaryKey.WRAPPING, WrapMethod.NOT_APPLICABLE)
-                .summary(SummaryKey.CONTROL_VECTOR, CvState.NOT_APPLICABLE, t("icsf.cvState.pka"))
+                .summary(SummaryKey.CONTROL_VECTOR, CvState.NOT_APPLICABLE_PKA, t("icsf.cvState.pka"))
                 .summary(SummaryKey.TVV, TvvState.NOT_APPLICABLE, t("icsf.tvv.pkaNone"))
                 .summary(SummaryKey.MKVP, priv == null ? MkvpState.NOT_APPLICABLE
                         : (kvpAllZero ? MkvpState.ABSENT : MkvpState.PRESENT))
@@ -310,8 +310,9 @@ final class PkaTokenParser {
             }
             result.summary(SummaryKey.EXPORTABILITY, exportVerdict(priv), exportSummary(priv, internal));
         } else {
-            result.summary(SummaryKey.MATERIAL_STATE, MaterialState.NO_KEY, t("icsf.material.pkaPublicOnly"))
-                    .summary(SummaryKey.EXPORTABILITY, Exportability.NOT_APPLICABLE,
+            result.summary(SummaryKey.MATERIAL_STATE, MaterialState.PUBLIC_KEY_ONLY,
+                            t("icsf.material.pkaPublicOnly"))
+                    .summary(SummaryKey.EXPORTABILITY, Exportability.NOT_APPLICABLE_PUBLIC_ONLY,
                             t("icsf.export.pkaPublicOnly"));
         }
         if (!name.isEmpty()) result.summary(SummaryKey.KEY_NAME, "PRESENT", IcsfText.raw(name));

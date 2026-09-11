@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.icsf.IcsfBatchAnalyzer;
 import com.cryptocarver.crypto.icsf.IcsfBatchRenderer;
 import com.cryptocarver.crypto.icsf.IcsfBatchReport;
 import com.cryptocarver.crypto.icsf.IcsfMessages;
+import com.cryptocarver.crypto.icsf.IcsfSamples;
 import com.cryptocarver.crypto.icsf.IcsfText;
 import com.cryptocarver.crypto.icsf.InventoryColumn;
 import com.cryptocarver.crypto.icsf.InventoryRow;
@@ -250,6 +251,16 @@ public final class IcsfBatchController {
             feedback(t("icsf.batch.loadFailed", "Could not read the file: {0}",
                     String.valueOf(exception.getMessage())), true);
         }
+    }
+
+    @FXML
+    private void handleLoadSample() {
+        icsfBatchInputArea.setText(IcsfSamples.batch(I18nService.getInstance().getLocale()));
+        // The sample mixes labelled lines with a token in two host rows: only automatic
+        // reading takes both, so a forced shape left over from earlier would misread it.
+        icsfBatchFormatCombo.setValue(BatchInputFormat.AUTO);
+        feedback(t("icsf.batch.sampleLoaded",
+                "Example batch loaded: toy tokens, none of them a real key. Press Analyze batch."), false);
     }
 
     @FXML

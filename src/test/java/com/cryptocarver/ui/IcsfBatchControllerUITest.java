@@ -298,6 +298,24 @@ class IcsfBatchControllerUITest {
         });
     }
 
+    @Test
+    void theExampleBatchLoadsAndEveryEntryInItAnalyses() throws Exception {
+        onFxThread(() -> {
+            FXMLLoader loader = load();
+            IcsfBatchController controller = loader.getController();
+
+            invoke(controller, "handleLoadSample");
+            assertFalse(field(loader, "icsfBatchInputArea", TextArea.class).getText().isBlank());
+            invoke(controller, "handleAnalyze");
+
+            // Labelled lines and a two-row token together: only automatic reading takes both.
+            assertEquals(7, controller.items().size());
+            assertTrue(controller.items().stream().allMatch(item -> item.isOk()));
+            assertTrue(controller.report().findings().stream()
+                    .anyMatch(finding -> finding.code() == FindingCode.BYTE59_FUERA_DE_TABLA));
+        });
+    }
+
     // --- helpers ---------------------------------------------------------
     private static <T> T field(FXMLLoader loader, String id, Class<T> type) {
         Object node = loader.getNamespace().get(id);

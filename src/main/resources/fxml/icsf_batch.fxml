@@ -40,6 +40,7 @@
         <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
             <Button text="Analyze batch" onAction="#handleAnalyze" styleClass="action-button-primary"/>
             <Button text="Load File…" onAction="#handleLoadFile" styleClass="secondary-button"/>
+            <Button text="Load Example Batch" onAction="#handleLoadSample" styleClass="secondary-button"/>
             <Button text="Save Report (.txt)…" onAction="#handleSaveText" styleClass="secondary-button"/>
             <Button text="Save Inventory (.csv)…" onAction="#handleSaveCsv" styleClass="secondary-button"/>
             <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>

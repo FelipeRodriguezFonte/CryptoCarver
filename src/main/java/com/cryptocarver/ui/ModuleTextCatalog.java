@@ -222,6 +222,8 @@ public final class ModuleTextCatalog {
                 "icsf.token.inputPrompt");
         map.put("Analyze token", "icsf.token.analyze");
         map.put("Save Report…", "icsf.token.save");
+        map.put("Load .bin File…", "icsf.token.loadBinary");
+        map.put("Examples:", "icsf.token.examples");
         map.put("Summary card:", "icsf.token.summary");
         map.put("Field", "icsf.token.columnField");
         map.put("Value", "icsf.token.columnValue");
@@ -250,6 +252,7 @@ public final class ModuleTextCatalog {
                 "icsf.batch.inputPrompt");
         map.put("Analyze batch", "icsf.batch.analyze");
         map.put("Load File…", "icsf.batch.loadFile");
+        map.put("Load Example Batch", "icsf.batch.loadSample");
         map.put("Save Report (.txt)…", "icsf.batch.saveText");
         map.put("Save Inventory (.csv)…", "icsf.batch.saveCsv");
         map.put("Include the full per-token detail in the saved .txt (turn off for large batches: "

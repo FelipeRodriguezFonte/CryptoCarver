@@ -90,6 +90,24 @@ class IcsfModuleI18nTest {
     }
 
     @Test
+    void theKeyTypesTheAnalyserNamesItselfReadInBothLanguages() {
+        // Table 676 names (IMPORTER, PINVER) stay technical on purpose; these are the
+        // analyser's own words for what it found, and a bare identifier would leak through.
+        List<String> codes = List.of("DATA_ZERO_CV", "NOCV", "NONE", "UNRECOGNIZED",
+                "PRIVATE_AND_PUBLIC", "PUBLIC_ONLY", "RKX");
+        List<String> missing = new ArrayList<>();
+        for (LanguagePreference language : LANGUAGES) {
+            I18nService.getInstance().setPreference(language);
+            for (String code : codes) {
+                if (!has(SummaryKey.KEY_TYPE.valueKey(code))) {
+                    missing.add(language + " " + SummaryKey.KEY_TYPE.valueKey(code));
+                }
+            }
+        }
+        assertTrue(missing.isEmpty(), "key types with no reading: " + missing);
+    }
+
+    @Test
     void everyInventoryColumnHasAHeaderInBothLanguages() {
         List<String> missing = new ArrayList<>();
         for (LanguagePreference language : LANGUAGES) {

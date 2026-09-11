@@ -54,7 +54,7 @@ class IcsfCoverageTest {
         assertTrue(result.is(SummaryKey.MKVP, MkvpState.PRESENT));
         // This format carries no TVV and no Control Vector at all.
         assertTrue(result.is(SummaryKey.TVV, TvvState.NOT_APPLICABLE));
-        assertTrue(result.is(SummaryKey.CONTROL_VECTOR, IcsfVocabulary.CvState.NOT_APPLICABLE));
+        assertTrue(result.is(SummaryKey.CONTROL_VECTOR, IcsfVocabulary.CvState.NOT_APPLICABLE_VARIABLE));
     }
 
     @Test
@@ -124,9 +124,11 @@ class IcsfCoverageTest {
         assertEquals("PUBLIC_ONLY", result.code(SummaryKey.KEY_TYPE, ""));
         assertEquals("RSA 1024 bits", result.code(SummaryKey.KEY_LENGTH, ""));
         assertEquals("NO", result.code(SummaryKey.PRIVATE_KEY_PRESENT, ""));
-        // With no private material there is nothing to protect or to export.
-        assertTrue(result.is(SummaryKey.MATERIAL_STATE, MaterialState.NO_KEY));
-        assertTrue(result.is(SummaryKey.EXPORTABILITY, Exportability.NOT_APPLICABLE));
+        // With no private material there is nothing to protect or to export. It is still a
+        // key, though, and counting it with the null tokens would say otherwise.
+        assertTrue(result.is(SummaryKey.MATERIAL_STATE, MaterialState.PUBLIC_KEY_ONLY));
+        assertTrue(result.is(SummaryKey.EXPORTABILITY, Exportability.NOT_APPLICABLE_PUBLIC_ONLY));
+        assertTrue(result.is(SummaryKey.CONTROL_VECTOR, IcsfVocabulary.CvState.NOT_APPLICABLE_PKA));
         assertTrue(result.warnings().isEmpty(), "unexpected warnings: " + result.warnings());
     }
 
