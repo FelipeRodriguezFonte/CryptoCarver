@@ -81,26 +81,38 @@
                                         <Label text="Bits:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
                                         <Label fx:id="keyLabDetailBitsLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-                                        <Label text="KCV:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <Label fx:id="keyLabDetailKcvLabel" styleClass="monospace-field" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                                        <Label text="Usages:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <FlowPane hgap="8" vgap="4" GridPane.rowIndex="4" GridPane.columnIndex="1">
+                                            <CheckBox fx:id="keyLabUsageEncryptCheck" text="ENCRYPT"/>
+                                            <CheckBox fx:id="keyLabUsageDecryptCheck" text="DECRYPT"/>
+                                            <CheckBox fx:id="keyLabUsageMacCheck" text="MAC"/>
+                                            <CheckBox fx:id="keyLabUsageWrapCheck" text="WRAP"/>
+                                            <CheckBox fx:id="keyLabUsageUnwrapCheck" text="UNWRAP"/>
+                                        </FlowPane>
 
-                                        <Label text="Fingerprint:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <Label fx:id="keyLabDetailFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                                        <Label text="Exportability:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailExportabilityLabel" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
 
-                                        <Label text="Origin:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <Label fx:id="keyLabDetailOriginLabel" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+                                        <Label text="KCV:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailKcvLabel" styleClass="monospace-field" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
 
-                                        <Label text="Created:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <Label fx:id="keyLabDetailCreatedLabel" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+                                        <Label text="Fingerprint:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
 
-                                        <Label text="Modified:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <Label fx:id="keyLabDetailModifiedLabel" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+                                        <Label text="Origin:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailOriginLabel" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
 
-                                        <Label text="Status:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <Label fx:id="keyLabDetailStatusLabel" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+                                        <Label text="Created:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailCreatedLabel" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
 
-                                        <Label text="Key Value:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
-                                        <VBox spacing="4" GridPane.rowIndex="10" GridPane.columnIndex="1">
+                                        <Label text="Modified:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailModifiedLabel" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+
+                                        <Label text="Status:" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <Label fx:id="keyLabDetailStatusLabel" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
+
+                                        <Label text="Key Value:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
+                                        <VBox spacing="4" GridPane.rowIndex="12" GridPane.columnIndex="1">
                                             <TextField fx:id="keyLabDetailValueField" editable="false" styleClass="monospace-field"/>
                                             <HBox spacing="6">
                                                 <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
@@ -110,6 +122,12 @@
                                     </GridPane>
                                     <Separator style="-fx-padding: 8 0;"/>
                                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
+                                        <Button fx:id="keyLabUseCipherBtn" text="Use in Symmetric Cipher"
+                                                onAction="#handleUseKeyLabInCipher" disable="true"
+                                                styleClass="action-button-primary"/>
+                                        <Button fx:id="keyLabUseMacBtn" text="Use in MAC"
+                                                onAction="#handleUseKeyLabInMac" disable="true"
+                                                styleClass="action-button-primary"/>
                                         <Button text="Save Metadata" onAction="#handleKeyLabSaveMetadata" styleClass="action-button-primary"/>
                                         <Button fx:id="keyLabArchiveBtn" text="Archive" onAction="#handleKeyLabArchive" styleClass="secondary-button"/>
                                         <Button text="Delete Key" onAction="#handleKeyLabDelete" styleClass="btn-danger"/>

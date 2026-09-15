@@ -113,7 +113,7 @@
                             <Label text="Key material" styleClass="form-label"/>
                             <Region HBox.hgrow="ALWAYS"/>
                             <ComboBox fx:id="macKeySourceCombo" prefWidth="180" styleClass="form-field"/>
-                            <Button text="Save key to Lab" onAction="#handleSaveMacKeyToHsm"
+                            <Button fx:id="macSaveToLabBtn" text="Save key to Lab" onAction="#handleSaveMacKeyToHsm"
                                     styleClass="secondary-button"/>
                         </HBox>
                         <StackPane>
@@ -126,6 +126,8 @@
                         <FlowPane styleClass="responsive-action-bar">
                             <Button text="Paste MAC Key" onAction="#handlePasteMacKey" styleClass="secondary-button"/>
                             <Button text="Load MAC Key…" onAction="#handleLoadMacKey" styleClass="secondary-button"/>
+                            <Button fx:id="macInspectKeyBtn" text="Inspect in Key Lab" onAction="#handleInspectMacKey"
+                                    visible="false" managed="false" styleClass="secondary-button"/>
                             <MenuButton fx:id="macKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateMacKeyShelf"/>
                         </FlowPane>
                         <Label fx:id="authMacKeyInfoLabel" text="Key size depends on algorithm"

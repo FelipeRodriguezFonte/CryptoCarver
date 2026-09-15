@@ -128,6 +128,27 @@ class ModernMainControllerFxmlStaticTest {
     }
 
     @Test
+    void testKeyLabOffersDirectReferenceActions() throws Exception {
+        try (InputStream is = getClass().getResourceAsStream("/fxml/keys.fxml")) {
+            assertNotNull(is);
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
+            java.util.List<Element> buttons = findElementsByTagName(doc.getDocumentElement(), "Button");
+
+            Element cipherAction = buttons.stream()
+                    .filter(element -> "keyLabUseCipherBtn".equals(element.getAttribute("fx:id")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Key Lab to Symmetric Cipher action is missing"));
+            Element macAction = buttons.stream()
+                    .filter(element -> "keyLabUseMacBtn".equals(element.getAttribute("fx:id")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Key Lab to MAC action is missing"));
+
+            assertEquals("#handleUseKeyLabInCipher", cipherAction.getAttribute("onAction"));
+            assertEquals("#handleUseKeyLabInMac", macAction.getAttribute("onAction"));
+        }
+    }
+
+    @Test
     void testCertificatesFxml() throws Exception {
         verifyFxmlAgainstController("/fxml/certificates.fxml", CertificatesController.class);
     }

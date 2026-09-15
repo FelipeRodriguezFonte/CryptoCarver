@@ -2309,6 +2309,86 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testKeyLabEntryCanBeLoadedDirectlyIntoMacAndCipherByReference() throws Exception {
+        var hsm = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance();
+        java.nio.file.Path store = isolatedUserHome.resolve("direct-key-lab.json");
+        hsm.resetForTest(store);
+        var key = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
+                "direct-lab-key",
+                new javax.crypto.spec.SecretKeySpec(new byte[16], "AES"),
+                com.cryptocarver.crypto.hsm.KeyExportability.NON_EXPORTABLE,
+                java.util.Set.of(
+                        com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT,
+                        com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT,
+                        com.cryptocarver.crypto.hsm.KeyUsage.MAC));
+        key.setName("Direct Lab Key");
+        hsm.importKey(key);
+
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        KeysController keys = getField(controller, "keysContainerController");
+
+        runAndWait(() -> keys.selectKeyInKeyLab("direct-lab-key"));
+        Button useMac = getField(keys, "keyLabUseMacBtn");
+        Button useCipher = getField(keys, "keyLabUseCipherBtn");
+        assertFalse(useMac.isDisable());
+        assertFalse(useCipher.isDisable());
+
+        runAndWait(keys::handleUseKeyLabInMac);
+        assertEquals("Message Authentication Codes", getField(controller, "currentActiveOperation"));
+        AuthenticationController authentication = getField(controller, "authenticationContainerController");
+        javafx.scene.control.ComboBox<String> macSource = getField(authentication, "macKeySourceCombo");
+        javafx.scene.control.ComboBox<String> macKey = getField(authentication, "macHsmKeyCombo");
+        assertEquals("Simulated HSM", macSource.getValue());
+        assertEquals("direct-lab-key", macKey.getValue());
+
+        javafx.scene.control.TextArea macInput = getField(authentication, "authInputArea");
+        javafx.scene.control.TextArea macOutput = getField(authentication, "authOutputArea");
+        javafx.scene.control.ComboBox<String> macAlgorithm = getField(authentication, "authMacAlgorithmCombo");
+        String previousTestMode = System.getProperty("test.mode");
+        System.setProperty("test.mode", "true");
+        try {
+            runAndWait(() -> {
+                macInput.setText("Key Lab direct MAC");
+                macAlgorithm.setValue("HMAC-SHA256");
+                authentication.handleGenerateMAC();
+            });
+        } finally {
+            if (previousTestMode == null) System.clearProperty("test.mode");
+            else System.setProperty("test.mode", previousTestMode);
+        }
+        byte[] expectedMac = com.cryptocarver.crypto.MACOperations.generate(
+                "Key Lab direct MAC".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                new byte[16], "HMAC-SHA256");
+        assertEquals(com.cryptocarver.util.DataConverter.bytesToHex(expectedMac), macOutput.getText());
+
+        runAndWait(() -> {
+            controller.navigateTo("Key Lab");
+            keys.selectKeyInKeyLab("direct-lab-key");
+            keys.handleUseKeyLabInCipher();
+        });
+        assertEquals("Symmetric Ciphers", getField(controller, "currentActiveOperation"));
+        CipherController cipher = getField(controller, "cipherContainerController");
+        javafx.scene.control.ComboBox<String> cipherSource = getField(cipher, "symKeySourceCombo");
+        javafx.scene.control.ComboBox<String> cipherKey = getField(cipher, "symHsmKeyCombo");
+        javafx.scene.control.ComboBox<String> cipherAlgorithm = getField(cipher, "symmetricAlgorithmCombo");
+        assertEquals("Simulated HSM", cipherSource.getValue());
+        assertEquals("direct-lab-key", cipherKey.getValue());
+        assertEquals("AES-128", cipherAlgorithm.getValue());
+
+        hsm.clear();
+    }
+
+    @Test
     void testResultBarNavigationClearance() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {

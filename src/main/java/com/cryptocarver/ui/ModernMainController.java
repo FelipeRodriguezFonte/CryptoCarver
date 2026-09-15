@@ -896,6 +896,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return keysController;
     }
 
+    /** Opens Symmetric Cipher with the selected Key Lab entry bound by reference. */
+    public void useLabKeyInSymmetricCipher(String keyId) {
+        if (cipherController == null) {
+            throw new IllegalStateException("Symmetric Cipher workspace is not available");
+        }
+        cipherController.selectLabKey(keyId);
+        navigateTo("Symmetric Ciphers");
+    }
+
+    /** Opens MAC with the selected Key Lab entry bound by reference. */
+    public void useLabKeyInMac(String keyId) {
+        if (authenticationContainerController == null) {
+            throw new IllegalStateException("MAC workspace is not available");
+        }
+        authenticationContainerController.selectLabKey(keyId);
+        navigateTo("Message Authentication Codes");
+    }
+
     // ============================================================
     // EVENT HANDLERS - Symmetric Keys Operations
     // ============================================================

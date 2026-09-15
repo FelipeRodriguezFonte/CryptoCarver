@@ -1405,6 +1405,55 @@ public class CipherController {
         }
     }
 
+    /** Selects a usable Key Lab key for symmetric operations without revealing its bytes. */
+    public void selectLabKey(String keyId) {
+        var provider = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance();
+        var km = provider.getKeyMetadata(keyId);
+        if (km == null) throw new IllegalArgumentException("Key Lab entry was not found: " + keyId);
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) {
+            throw new IllegalArgumentException("Symmetric Cipher requires a symmetric Key Lab entry");
+        }
+        if ("ARCHIVED".equalsIgnoreCase(km.getStatus())) {
+            throw new IllegalArgumentException("Restore the archived Key Lab entry before using it");
+        }
+        if (!km.hasKeyMaterial()) {
+            throw new IllegalArgumentException("The selected Key Lab entry contains metadata only; re-import or regenerate its key material");
+        }
+        if (!km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT)
+                && !km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT)) {
+            throw new IllegalArgumentException("The selected Key Lab entry is not authorized for encryption or decryption");
+        }
+        symKeySourceCombo.setValue("Simulated HSM");
+        refreshHsmKeys();
+        if (!symHsmKeyCombo.getItems().contains(keyId)) {
+            throw new IllegalArgumentException("The selected key is not available to the Symmetric Cipher workspace");
+        }
+        symHsmKeyCombo.setValue(keyId);
+        selectAlgorithmForLabKey(km);
+        updateKeySourceVisibility();
+        updateModeAndAlgorithmVisibility();
+    }
+
+    private void selectAlgorithmForLabKey(com.cryptocarver.crypto.hsm.KeyMaterial km) {
+        if (symmetricAlgorithmCombo == null || km.getAlgorithm() == null) return;
+        String stored = km.getAlgorithm().toUpperCase(java.util.Locale.ROOT);
+        String target = null;
+        if (stored.equals("AES") || stored.startsWith("AES-")) {
+            target = "AES-" + km.getSize();
+        } else if (stored.equals("3DES") || stored.equals("DESEDE") || stored.contains("TRIPLE DES")) {
+            target = "3DES (Triple DES)";
+        } else if (stored.equals("DES")) {
+            target = "DES";
+        } else if (stored.contains("XCHACHA20")) {
+            target = "XChaCha20-Poly1305";
+        } else if (stored.contains("CHACHA20")) {
+            target = "ChaCha20";
+        }
+        if (target != null && symmetricAlgorithmCombo.getItems().contains(target)) {
+            symmetricAlgorithmCombo.setValue(target);
+        }
+    }
+
     public void saveCurrentKeyToHsm() {
         try {
             if (symmetricKeyField == null || symmetricKeyField.getText().trim().isEmpty()) {

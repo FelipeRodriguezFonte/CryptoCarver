@@ -79,6 +79,12 @@ public class KeysController {
     @FXML private TextField keyLabDetailNameField;
     @FXML private Label keyLabDetailAlgoLabel;
     @FXML private Label keyLabDetailBitsLabel;
+    @FXML private CheckBox keyLabUsageEncryptCheck;
+    @FXML private CheckBox keyLabUsageDecryptCheck;
+    @FXML private CheckBox keyLabUsageMacCheck;
+    @FXML private CheckBox keyLabUsageWrapCheck;
+    @FXML private CheckBox keyLabUsageUnwrapCheck;
+    @FXML private Label keyLabDetailExportabilityLabel;
     @FXML private Label keyLabDetailKcvLabel;
     @FXML private Label keyLabDetailFingerprintLabel;
     @FXML private Label keyLabDetailOriginLabel;
@@ -88,6 +94,8 @@ public class KeysController {
     @FXML private TextField keyLabDetailValueField;
     @FXML private Button keyLabRevealBtn;
     @FXML private Button keyLabArchiveBtn;
+    @FXML private Button keyLabUseCipherBtn;
+    @FXML private Button keyLabUseMacBtn;
 
     private StatusReporter mainController;
     private Runnable hsmRefreshCallback = () -> { };
@@ -2012,7 +2020,7 @@ public class KeysController {
         javafx.scene.layout.VBox usageBox = new javafx.scene.layout.VBox(5);
         javafx.scene.control.CheckBox chkEncrypt = new javafx.scene.control.CheckBox("ENCRYPT"); chkEncrypt.setSelected(true);
         javafx.scene.control.CheckBox chkDecrypt = new CheckBox("DECRYPT"); chkDecrypt.setSelected(true);
-        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC"); chkMac.setSelected(algoName.contains("HMAC") || algoName.contains("GMAC"));
+        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC"); chkMac.setSelected(true);
         javafx.scene.control.CheckBox chkWrap = new javafx.scene.control.CheckBox("WRAP / UNWRAP (KEY_WRAP)"); chkWrap.setSelected(true);
         usageBox.getChildren().addAll(chkEncrypt, chkDecrypt, chkMac, chkWrap);
         grid.add(usageLabel, 0, 2);
@@ -6056,6 +6064,8 @@ public class KeysController {
         keyLabDetailNameField.setText(km.getName());
         keyLabDetailAlgoLabel.setText(km.getAlgorithm());
         keyLabDetailBitsLabel.setText(km.getSize() + " bits");
+        setKeyLabUsageControls(km);
+        keyLabDetailExportabilityLabel.setText(km.getExportability().name());
         keyLabDetailKcvLabel.setText(km.getKcv());
         keyLabDetailFingerprintLabel.setText(km.getFingerprint());
         keyLabDetailOriginLabel.setText(km.getOrigin());
@@ -6076,6 +6086,51 @@ public class KeysController {
         } else {
             keyLabArchiveBtn.setText("Archive");
         }
+        updateKeyLabUseActions(km);
+    }
+
+    private void updateKeyLabUseActions(KeyMaterial km) {
+        boolean usable = km != null
+                && km.getType() == com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC
+                && km.hasKeyMaterial()
+                && !"ARCHIVED".equalsIgnoreCase(km.getStatus());
+        boolean canCipher = usable && (km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT)
+                || km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT));
+        boolean canMac = usable && km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+
+        if (keyLabUseCipherBtn != null) {
+            keyLabUseCipherBtn.setDisable(!canCipher);
+            keyLabUseCipherBtn.setTooltip(new Tooltip(keyLabActionReason(km, canCipher, "ENCRYPT or DECRYPT")));
+        }
+        if (keyLabUseMacBtn != null) {
+            keyLabUseMacBtn.setDisable(!canMac);
+            keyLabUseMacBtn.setTooltip(new Tooltip(keyLabActionReason(km, canMac, "MAC")));
+        }
+    }
+
+    private void setKeyLabUsageControls(KeyMaterial km) {
+        boolean symmetric = km != null && km.getType() == com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC;
+        setUsageControl(keyLabUsageEncryptCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT);
+        setUsageControl(keyLabUsageDecryptCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+        setUsageControl(keyLabUsageMacCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+        setUsageControl(keyLabUsageWrapCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.WRAP);
+        setUsageControl(keyLabUsageUnwrapCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP);
+    }
+
+    private void setUsageControl(CheckBox control, boolean enabled, KeyMaterial km,
+            com.cryptocarver.crypto.hsm.KeyUsage usage) {
+        if (control == null) return;
+        control.setSelected(km != null && km.getUsages().contains(usage));
+        control.setDisable(!enabled);
+    }
+
+    private String keyLabActionReason(KeyMaterial km, boolean allowed, String requiredUsage) {
+        if (allowed) return "Load this key by reference without revealing its value";
+        if (km == null) return "Select a Key Lab entry first";
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) return "This operation requires a symmetric key";
+        if ("ARCHIVED".equalsIgnoreCase(km.getStatus())) return "Restore the archived key before using it";
+        if (!km.hasKeyMaterial()) return "This entry contains metadata only; re-import or regenerate the key material";
+        return "The key is not authorized for " + requiredUsage + " usage";
     }
 
     private void clearKeyLabDetails() {
@@ -6083,6 +6138,8 @@ public class KeysController {
         keyLabDetailNameField.clear();
         keyLabDetailAlgoLabel.setText("N/A");
         keyLabDetailBitsLabel.setText("N/A");
+        setKeyLabUsageControls(null);
+        keyLabDetailExportabilityLabel.setText("N/A");
         keyLabDetailKcvLabel.setText("N/A");
         keyLabDetailFingerprintLabel.setText("N/A");
         keyLabDetailOriginLabel.setText("N/A");
@@ -6092,6 +6149,49 @@ public class KeysController {
         keyLabDetailValueField.clear();
         keyLabRevealBtn.setDisable(true);
         keyLabArchiveBtn.setText("Archive");
+        updateKeyLabUseActions(null);
+    }
+
+    @FXML
+    public void handleUseKeyLabInCipher() {
+        useSelectedKeyLabEntry(false);
+    }
+
+    @FXML
+    public void handleUseKeyLabInMac() {
+        useSelectedKeyLabEntry(true);
+    }
+
+    private void useSelectedKeyLabEntry(boolean forMac) {
+        KeyMaterial km = keyLabTable == null ? null : keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) {
+            showError("Key Lab", "Select a key first");
+            return;
+        }
+        boolean allowed = forMac
+                ? km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+                : km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT)
+                    || km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC
+                || "ARCHIVED".equalsIgnoreCase(km.getStatus()) || !km.hasKeyMaterial() || !allowed) {
+            showError("Key Lab", keyLabActionReason(km, false, forMac ? "MAC" : "ENCRYPT or DECRYPT"));
+            return;
+        }
+        if (!(mainController instanceof ModernMainController modern)) {
+            showError("Key Lab", "Direct operational loading is available in the modern workspace");
+            return;
+        }
+        try {
+            if (forMac) {
+                modern.useLabKeyInMac(km.getId());
+                updateStatus("Loaded Key Lab entry \"" + km.getName() + "\" in MAC by reference");
+            } else {
+                modern.useLabKeyInSymmetricCipher(km.getId());
+                updateStatus("Loaded Key Lab entry \"" + km.getName() + "\" in Symmetric Cipher by reference");
+            }
+        } catch (RuntimeException e) {
+            showError("Key Lab", e.getMessage());
+        }
     }
 
     @FXML
@@ -6263,7 +6363,29 @@ public class KeysController {
             return;
         }
 
-        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().updateKeyMetadata(km.getId(), newName, km.getStatus());
+        java.util.Set<com.cryptocarver.crypto.hsm.KeyUsage> usages =
+                java.util.EnumSet.noneOf(com.cryptocarver.crypto.hsm.KeyUsage.class);
+        usages.addAll(km.getUsages());
+        if (km.getType() == com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) {
+            usages.removeAll(java.util.EnumSet.of(
+                    com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT,
+                    com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT,
+                    com.cryptocarver.crypto.hsm.KeyUsage.MAC,
+                    com.cryptocarver.crypto.hsm.KeyUsage.WRAP,
+                    com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP));
+            if (keyLabUsageEncryptCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT);
+            if (keyLabUsageDecryptCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+            if (keyLabUsageMacCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+            if (keyLabUsageWrapCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.WRAP);
+            if (keyLabUsageUnwrapCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP);
+        }
+        if (usages.isEmpty()) {
+            showError("Validation Error", "Select at least one allowed key usage");
+            return;
+        }
+
+        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance()
+                .updateKeyMetadata(km.getId(), newName, km.getStatus(), usages);
         refreshKeyLabTable();
         for (KeyMaterial item : keyLabTable.getItems()) {
             if (item.getId().equals(km.getId())) {

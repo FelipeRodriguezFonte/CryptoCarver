@@ -63,6 +63,17 @@ public class SimulatedHsmProvider {
         if (km == null) {
             throw new IllegalArgumentException("Key not found in HSM: " + id);
         }
+        updateKeyMetadata(id, name, status, km.getUsages());
+    }
+
+    public synchronized void updateKeyMetadata(String id, String name, String status, Set<KeyUsage> usages) {
+        KeyMaterial km = keyStore.get(id);
+        if (km == null) {
+            throw new IllegalArgumentException("Key not found in HSM: " + id);
+        }
+        if (usages == null || usages.isEmpty()) {
+            throw new IllegalArgumentException("At least one key usage is required");
+        }
         KeyMaterial updated = new KeyMaterial(
             km.getId(),
             km.getFingerprint(),
@@ -70,7 +81,7 @@ public class SimulatedHsmProvider {
             km.getAlgorithm(),
             km.getSize(),
             km.getFormat(),
-            km.getUsages(),
+            usages,
             km.getExportability(),
             km.getKey(),
             km.getCertificate(),

@@ -9,6 +9,7 @@ import java.io.File;
 import java.nio.file.Files;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.crypto.MACOperations;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -260,5 +261,23 @@ public class KeyLabTest {
         byte[] ciphertext = SimulatedHsmProvider.getInstance().encryptSymmetric("preservation-key", plaintext, "AES", "ECB", "NoPadding", null);
         byte[] decrypted = SimulatedHsmProvider.getInstance().decryptSymmetric("preservation-key", ciphertext, "AES", "ECB", "NoPadding", null);
         assertArrayEquals(plaintext, decrypted);
+    }
+
+    @Test
+    public void testSaveMetadataCanAuthorizeMacWithoutReplacingKeyMaterial() throws Exception {
+        byte[] rawKey = new byte[16];
+        SecretKeySpec keySpec = new SecretKeySpec(rawKey, "AES");
+        KeyMaterial km = KeyMaterialFactory.fromSecretKey("usage-update-key", keySpec,
+                KeyExportability.NON_EXPORTABLE, Set.of(KeyUsage.ENCRYPT));
+        SimulatedHsmProvider.getInstance().importKey(km);
+
+        SimulatedHsmProvider.getInstance().updateKeyMetadata(
+                "usage-update-key", "MAC-enabled key", "ACTIVE", Set.of(KeyUsage.ENCRYPT, KeyUsage.MAC));
+
+        KeyMaterial updated = SimulatedHsmProvider.getInstance().getKeyMetadata("usage-update-key");
+        assertTrue(updated.getUsages().contains(KeyUsage.MAC));
+        byte[] mac = SimulatedHsmProvider.getInstance().generateMac(
+                "usage-update-key", "message".getBytes(), "HMAC-SHA256");
+        assertArrayEquals(MACOperations.generate("message".getBytes(), rawKey, "HMAC-SHA256"), mac);
     }
 }
