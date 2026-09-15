@@ -137,6 +137,7 @@ public final class ModuleTextCatalog {
         map.put("Copy Key", "module.keys.copyKey");
         map.put("Copy KCV", "module.keys.copyKcv");
         map.put("Copy Summary", "module.keys.copySummary");
+        map.put("Use 4-byte KCVs (otherwise 3 bytes)", "module.keys.useFourByteKcv");
         map.put("Validate & Calculate KCVs", "module.keys.validateKcv");
         map.put("🔎 Key Material Inspector", "module.keys.materialInspector");
         map.put("Inspect Material", "module.keys.inspectMaterial");

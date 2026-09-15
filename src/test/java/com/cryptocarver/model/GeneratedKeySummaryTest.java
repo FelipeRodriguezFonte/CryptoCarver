@@ -41,6 +41,8 @@ public class GeneratedKeySummaryTest {
         byte[] expectedFull = KeyOperations.calculateFullZeroBlockKCV(key, "AES-128");
         String expectedFullHex = DataConverter.bytesToHex(expectedFull).toUpperCase();
         assertEquals(expectedFullHex, summary.getKcvFullHex());
+        assertEquals(expectedFullHex.substring(0, 8), summary.getFormattedKcv(4));
+        assertEquals(expected3Hex, summary.getFormattedKcv(3));
 
         assertTrue(summary.getFormattedKcv().contains(expected3Hex));
         assertTrue(summary.getFormattedKcv().contains(expectedFullHex));

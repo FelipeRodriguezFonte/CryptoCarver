@@ -2,6 +2,11 @@
 
 ### Añadido
 
+- **KCV seleccionable de 3 o 4 bytes.** El módulo de claves incorpora un control
+  global, activado por defecto en 4 bytes, que se aplica a la generación, la
+  validación y el alta/importación en Key Lab; al desmarcarlo conserva el formato
+  clásico de 3 bytes.
+
 - **Ejemplos y ficheros binarios en los analizadores ICSF / CCA.** El analizador
   individual carga un token desde un fichero binario (`.bin`, `.tok`, `.key`,
   `.dat`) y trae cuatro tokens de ejemplo —AES fixed, AES CIPHER variable-length,

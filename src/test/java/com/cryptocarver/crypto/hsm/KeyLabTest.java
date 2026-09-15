@@ -46,6 +46,10 @@ public class KeyLabTest {
         SecretKeySpec zeroKeySpec = new SecretKeySpec(zeroKey, "AES");
         KeyMaterial zeroKm = KeyMaterialFactory.fromSecretKey("aes-zero-key", zeroKeySpec, KeyExportability.EXPORTABLE, Set.of(KeyUsage.ENCRYPT));
         assertEquals("DC95C0", zeroKm.getKcv());
+
+        KeyMaterial fourByteKm = KeyMaterialFactory.fromSecretKey("aes-zero-key-4", zeroKeySpec,
+                KeyExportability.EXPORTABLE, Set.of(KeyUsage.ENCRYPT), 4);
+        assertEquals("DC95C078", fourByteKm.getKcv());
     }
 
     @Test

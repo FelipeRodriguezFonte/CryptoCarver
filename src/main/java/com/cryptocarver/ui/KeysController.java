@@ -114,6 +114,7 @@ public class KeysController {
     @FXML private Label summaryOriginLabel;
     @FXML private Label summarySavedStatusLabel;
     @FXML private TitledPane validationPane;
+    @FXML private CheckBox useFourByteKcvCheck;
     @FXML private Button copyGeneratedKeyButton;
     @FXML private Button copyGeneratedKcvButton;
     @FXML private Button copyGeneratedSummaryButton;
@@ -1897,10 +1898,10 @@ public class KeysController {
                     details.add(com.cryptocarver.model.OperationDetail.secretDetail("Generated Key", keyHex));
                     try {
                         if (keyType.contains("DES") || keyType.contains("3DES")) {
-                            byte[] kcv = KeyOperations.calculateKCV_VISA(key);
+                            byte[] kcv = KeyOperations.calculateKCV_VISA(key, selectedKcvLength());
                             details.add(com.cryptocarver.model.OperationDetail.publicDetail("KCV (VISA)", DataConverter.bytesToHex(kcv)));
                         } else {
-                            byte[] kcv = KeyOperations.calculateKCV_AES(key);
+                            byte[] kcv = KeyOperations.calculateKCV_AES(key, selectedKcvLength());
                             details.add(com.cryptocarver.model.OperationDetail.publicDetail("KCV (AES)", DataConverter.bytesToHex(kcv)));
                         }
                     } catch (Exception e) {
@@ -1949,8 +1950,8 @@ public class KeysController {
         String kcvHex = "N/A";
         try {
             byte[] kcvBytes = (algoName.contains("DES") || algoName.contains("3DES"))
-                    ? KeyOperations.calculateKCV_VISA(keyBytes)
-                    : KeyOperations.calculateKCV_AES(keyBytes);
+                    ? KeyOperations.calculateKCV_VISA(keyBytes, selectedKcvLength())
+                    : KeyOperations.calculateKCV_AES(keyBytes, selectedKcvLength());
             kcvHex = DataConverter.bytesToHex(kcvBytes);
         } catch (Exception ignored) {}
 
@@ -2126,7 +2127,7 @@ public class KeysController {
         if (generatedKeySummaryCard == null || summary == null) return;
         if (summaryAlgoLabel != null) summaryAlgoLabel.setText(summary.getAlgorithm());
         if (summaryLengthLabel != null) summaryLengthLabel.setText(summary.getFormattedLength());
-        if (summaryKcvLabel != null) summaryKcvLabel.setText(summary.getFormattedKcv());
+        if (summaryKcvLabel != null) summaryKcvLabel.setText(summary.getFormattedKcv(selectedKcvLength()));
         if (summaryFingerprintLabel != null) summaryFingerprintLabel.setText(summary.getFingerprintTruncated());
         if (summaryParityLabel != null) summaryParityLabel.setText(summary.getParityStatus());
         if (summaryOriginLabel != null) summaryOriginLabel.setText(summary.getOrigin());
@@ -2159,7 +2160,7 @@ public class KeysController {
             updateStatus("No generated key summary available to copy.");
             return;
         }
-        String kcv = currentGeneratedKeySummary.getFormattedKcv();
+        String kcv = currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength());
         copyToClipboard(kcv);
         updateStatus("Copied KCV to clipboard: " + kcv);
     }
@@ -2179,7 +2180,7 @@ public class KeysController {
         sb.append("--- Generated Key Summary ---\n");
         sb.append("Algorithm: ").append(currentGeneratedKeySummary.getAlgorithm()).append("\n");
         sb.append("Length: ").append(currentGeneratedKeySummary.getFormattedLength()).append("\n");
-        sb.append("KCV: ").append(currentGeneratedKeySummary.getFormattedKcv()).append("\n");
+        sb.append("KCV: ").append(currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength())).append("\n");
         sb.append("Fingerprint: ").append(currentGeneratedKeySummary.getFingerprintTruncated()).append("\n");
         sb.append("Odd Parity: ").append(currentGeneratedKeySummary.getParityStatus()).append("\n");
         sb.append("Origin: ").append(currentGeneratedKeySummary.getOrigin()).append("\n");
@@ -2206,6 +2207,21 @@ public class KeysController {
             validationPane.setExpanded(true);
         }
         handleValidateKey();
+    }
+
+    @FXML
+    public void handleKcvLengthToggle() {
+        if (currentGeneratedKeySummary != null) {
+            updateGeneratedKeySummaryCard(currentGeneratedKeySummary);
+        }
+        if (validationResultArea != null && validationResultArea.isVisible()
+                && keyInputField != null && !keyInputField.getText().isBlank()) {
+            handleValidateKey();
+        }
+    }
+
+    private int selectedKcvLength() {
+        return useFourByteKcvCheck == null || useFourByteKcvCheck.isSelected() ? 4 : 3;
     }
 
     private void copyToClipboard(String text) {
@@ -2251,18 +2267,21 @@ public class KeysController {
 
             // Calculate all KCVs
             result.append("----------------------------------------\n");
+            int kcvLength = selectedKcvLength();
             result.append("KEY CHECK VALUES (KCV)\n");
             result.append("----------------------------------------\n\n");
+            result.append("Output Length: ").append(kcvLength).append(" bytes (")
+                    .append(kcvLength * 2).append(" hex characters)\n\n");
 
             try {
-                byte[] kcvVisa = KeyOperations.calculateKCV_VISA(key);
+                byte[] kcvVisa = KeyOperations.calculateKCV_VISA(key, kcvLength);
                 result.append("KCV (VISA):     ").append(DataConverter.bytesToHex(kcvVisa)).append("\n");
             } catch (Exception e) {
                 result.append("KCV (VISA):     Error - ").append(e.getMessage()).append("\n");
             }
 
             try {
-                byte[] kcvAtalla = KeyOperations.calculateKCV_ATALLA(key);
+                byte[] kcvAtalla = KeyOperations.calculateKCV_ATALLA(key, kcvLength);
                 result.append("KCV (ATALLA):   ").append(DataConverter.bytesToHex(kcvAtalla)).append("\n\n");
             } catch (Exception e) {
                 result.append("KCV (ATALLA):   Error - ").append(e.getMessage()).append("\n\n");
@@ -2271,14 +2290,14 @@ public class KeysController {
             result.append("--- Modern Methods ---\n\n");
 
             try {
-                byte[] kcvSha256 = KeyOperations.calculateKCV_SHA256(key);
+                byte[] kcvSha256 = KeyOperations.calculateKCV_SHA256(key, kcvLength);
                 result.append("KCV (SHA256):   ").append(DataConverter.bytesToHex(kcvSha256)).append("\n");
             } catch (Exception e) {
                 result.append("KCV (SHA256):   Error - ").append(e.getMessage()).append("\n");
             }
 
             try {
-                byte[] kcvCMAC = KeyOperations.calculateKCV_CMAC(key);
+                byte[] kcvCMAC = KeyOperations.calculateKCV_CMAC(key, kcvLength);
                 result.append("KCV (CMAC):     ").append(DataConverter.bytesToHex(kcvCMAC)).append("\n");
             } catch (Exception e) {
                 result.append("KCV (CMAC):     Error - ").append(e.getMessage()).append("\n");
@@ -2287,7 +2306,7 @@ public class KeysController {
             // Only calculate AES KCV for AES keys
             if (key.length == 16 || key.length == 24 || key.length == 32) {
                 try {
-                    byte[] kcvAES = KeyOperations.calculateKCV_AES(key);
+                    byte[] kcvAES = KeyOperations.calculateKCV_AES(key, kcvLength);
                     result.append("KCV (AES):      ").append(DataConverter.bytesToHex(kcvAES)).append("\n");
                 } catch (Exception e) {
                     result.append("KCV (AES):      Error - ").append(e.getMessage()).append("\n");
@@ -6111,7 +6130,8 @@ public class KeysController {
             String id = UUID.randomUUID().toString();
             KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
                     id, spec, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
-                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC),
+                    selectedKcvLength()
             );
             km.setName(name);
             km.setModified(System.currentTimeMillis());
@@ -6161,7 +6181,8 @@ public class KeysController {
             String id = UUID.randomUUID().toString();
             KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
                     id, spec, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
-                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC),
+                    selectedKcvLength()
             );
             km.setName(name);
             km.setModified(System.currentTimeMillis());

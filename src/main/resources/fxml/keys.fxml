@@ -6,6 +6,10 @@
 <VBox fx:id="keysRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.KeysController" spacing="14" styleClass="content-container-vbox,keys-module">
     <VBox fx:id="symmetricKeysContainer" managed="true" visible="true">
+        <HBox spacing="8" alignment="CENTER_LEFT" styleClass="module-pane-content">
+            <CheckBox fx:id="useFourByteKcvCheck" text="Use 4-byte KCVs (otherwise 3 bytes)"
+                      selected="true" onAction="#handleKcvLengthToggle"/>
+        </HBox>
         <Accordion styleClass="module-accordion">
             <panes>
                 <!-- KEY LAB -->

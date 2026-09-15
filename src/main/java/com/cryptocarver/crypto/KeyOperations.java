@@ -143,6 +143,13 @@ public class KeyOperations {
      * IMPORTANT: Applies odd parity for DES/3DES keys before calculation
      */
     public static byte[] calculateKCV_VISA(byte[] key) throws Exception {
+        return calculateKCV_VISA(key, 3);
+    }
+
+    /**
+     * Calculate a VISA KCV with a caller-selected truncation length.
+     */
+    public static byte[] calculateKCV_VISA(byte[] key, int kcvLength) throws Exception {
         // Apply odd parity for DES/3DES keys
         byte[] workingKey = key;
         if (key.length == 8 || key.length == 16 || key.length == 24) {
@@ -155,10 +162,10 @@ public class KeyOperations {
         // Only use AES for 32-byte keys (AES-256)
         // 16 and 24 byte keys are ambiguous (could be 3DES or AES), so use 3DES
         if (key.length == 32) {
-            return calculateKCV_Generic(workingKey, 3, "AES");
+            return calculateKCV_Generic(workingKey, kcvLength, "AES");
         }
         // For 8, 16, 24 byte keys, use DES/3DES
-        return calculateKCV_Generic(workingKey, 3, "DES");
+        return calculateKCV_Generic(workingKey, kcvLength, "DES");
     }
 
     /**
@@ -206,6 +213,10 @@ public class KeyOperations {
      */
     public static byte[] calculateKCV_ATALLA(byte[] key) throws Exception {
         return calculateKCV_VISA(key);
+    }
+
+    public static byte[] calculateKCV_ATALLA(byte[] key, int kcvLength) throws Exception {
+        return calculateKCV_VISA(key, kcvLength);
     }
 
     /**
@@ -265,14 +276,16 @@ public class KeyOperations {
 
     /**
      * Calculate KCV - SHA256 method
-     * SHA256 hash of the key, first 3 bytes
+     * SHA256 hash of the key, first 3 bytes by default
      */
     public static byte[] calculateKCV_SHA256(byte[] key) throws Exception {
+        return calculateKCV_SHA256(key, 3);
+    }
+
+    public static byte[] calculateKCV_SHA256(byte[] key, int kcvLength) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hash = digest.digest(key);
-        byte[] kcv = new byte[3];
-        System.arraycopy(hash, 0, kcv, 0, 3);
-        return kcv;
+        return truncateKcv(hash, kcvLength);
     }
 
     /**
@@ -281,6 +294,10 @@ public class KeyOperations {
      * This is a key discovery - most implementations use zeros, but BP-Tools uses empty buffer
      */
     public static byte[] calculateKCV_CMAC(byte[] key) throws Exception {
+        return calculateKCV_CMAC(key, 3);
+    }
+
+    public static byte[] calculateKCV_CMAC(byte[] key, int kcvLength) throws Exception {
         byte[] aesKey;
 
         if (key.length >= 16) {
@@ -302,21 +319,22 @@ public class KeyOperations {
         mac.init(keySpec);
         byte[] cmac = mac.doFinal(new byte[0]);  // Empty input - this is the key!
 
-        // Return first 3 bytes
-        byte[] kcv = new byte[3];
-        System.arraycopy(cmac, 0, kcv, 0, 3);
-        return kcv;
+        return truncateKcv(cmac, kcvLength);
     }
 
     /**
      * Calculate KCV - AES method
-     * AES encryption of 16 zero bytes, first 3 bytes
+     * AES encryption of 16 zero bytes, first 3 bytes by default
      */
     public static byte[] calculateKCV_AES(byte[] key) throws Exception {
+        return calculateKCV_AES(key, 3);
+    }
+
+    public static byte[] calculateKCV_AES(byte[] key, int kcvLength) throws Exception {
         if (key.length != 16 && key.length != 24 && key.length != 32) {
             throw new IllegalArgumentException("AES KCV requires AES key (16, 24, or 32 bytes)");
         }
-        return calculateKCV_Generic(key, 3, "AES");
+        return calculateKCV_Generic(key, kcvLength, "AES");
     }
 
     /**
@@ -345,8 +363,15 @@ public class KeyOperations {
      */
     private static byte[] calculateKCV_Generic(byte[] key, int kcvLength, String algorithm) throws Exception {
         byte[] encrypted = encryptZeroBlock(key, algorithm);
+        return truncateKcv(encrypted, kcvLength);
+    }
+
+    private static byte[] truncateKcv(byte[] source, int kcvLength) {
+        if (kcvLength < 1 || kcvLength > source.length) {
+            throw new IllegalArgumentException("KCV length must be between 1 and " + source.length + " bytes");
+        }
         byte[] kcv = new byte[kcvLength];
-        System.arraycopy(encrypted, 0, kcv, 0, kcvLength);
+        System.arraycopy(source, 0, kcv, 0, kcvLength);
         return kcv;
     }
 

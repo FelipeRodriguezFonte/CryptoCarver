@@ -113,6 +113,21 @@ class ModernMainControllerFxmlStaticTest {
     }
 
     @Test
+    void testFourByteKcvControlIsSelectedByDefault() throws Exception {
+        try (InputStream is = getClass().getResourceAsStream("/fxml/keys.fxml")) {
+            assertNotNull(is);
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
+            Element control = findElementsByTagName(doc.getDocumentElement(), "CheckBox").stream()
+                    .filter(element -> "useFourByteKcvCheck".equals(element.getAttribute("fx:id")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Four-byte KCV control is missing"));
+
+            assertEquals("true", control.getAttribute("selected"));
+            assertEquals("#handleKcvLengthToggle", control.getAttribute("onAction"));
+        }
+    }
+
+    @Test
     void testCertificatesFxml() throws Exception {
         verifyFxmlAgainstController("/fxml/certificates.fxml", CertificatesController.class);
     }
