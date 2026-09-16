@@ -2279,6 +2279,7 @@ class ModernMainControllerUITest {
         javafx.scene.control.ComboBox<String> algorithm = getField(cipher, "symmetricAlgorithmCombo");
         javafx.scene.control.ComboBox<String> mode = getField(cipher, "cipherModeCombo");
         javafx.scene.control.TextField iv = getField(cipher, "ivField");
+        javafx.scene.control.Label keyBadge = getField(cipher, "symKeyBadgeLabel");
         javafx.scene.control.Label ivBadge = getField(cipher, "ivBadgeLabel");
         javafx.scene.control.Label tagBadge = getField(cipher, "gcmTagBadgeLabel");
         javafx.scene.control.Label aadBadge = getField(cipher, "aadBadgeLabel");
@@ -2286,6 +2287,14 @@ class ModernMainControllerUITest {
         runAndWait(() -> {
             algorithm.setValue("3DES (Triple DES)");
             mode.setValue("CBC");
+        });
+
+        assertFalse(keyBadge.isVisible(), "An empty key badge must not leave a grey placeholder");
+        assertFalse(keyBadge.isManaged(), "An empty key badge must not occupy layout space");
+        assertFalse(ivBadge.isVisible(), "An empty IV badge must not leave a grey placeholder");
+        assertFalse(ivBadge.isManaged(), "An empty IV badge must not occupy layout space");
+
+        runAndWait(() -> {
             cipher.generateIV();
         });
 

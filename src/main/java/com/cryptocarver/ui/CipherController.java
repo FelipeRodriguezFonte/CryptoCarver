@@ -2785,35 +2785,42 @@ public class CipherController {
         if (symKeyBadgeLabel != null && symKeyBadge == null) {
             symKeyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Manual Key");
             symKeyBadge.attach(symmetricKeyField, "Hex");
-            symKeyBadge.textProperty().addListener((obs, oldVal, newVal) -> symKeyBadgeLabel.setText(newVal));
-            symKeyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                symKeyBadgeLabel.getStyleClass().setAll(symKeyBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(symKeyBadge, symKeyBadgeLabel);
         }
         if (ivBadgeLabel != null && ivBadge == null) {
             ivBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("IV / Nonce");
             ivBadge.attach(ivField, "Hex");
-            ivBadge.textProperty().addListener((obs, oldVal, newVal) -> ivBadgeLabel.setText(newVal));
-            ivBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                ivBadgeLabel.getStyleClass().setAll(ivBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(ivBadge, ivBadgeLabel);
         }
         if (gcmTagBadgeLabel != null && tagBadge == null) {
             tagBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("AEAD Tag");
             tagBadge.attach(gcmTagField, "Hex");
-            tagBadge.textProperty().addListener((obs, oldVal, newVal) -> gcmTagBadgeLabel.setText(newVal));
-            tagBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                gcmTagBadgeLabel.getStyleClass().setAll(tagBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(tagBadge, gcmTagBadgeLabel);
         }
         if (aadBadgeLabel != null && aadBadge == null) {
             aadBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("AAD");
             aadBadge.attach(aadField, "Hex / ASCII");
-            aadBadge.textProperty().addListener((obs, oldVal, newVal) -> aadBadgeLabel.setText(newVal));
-            aadBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                aadBadgeLabel.getStyleClass().setAll(aadBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(aadBadge, aadBadgeLabel);
         }
+    }
+
+    private static void mirrorMaterialBadge(
+            com.cryptocarver.ui.component.MaterialFieldBadge source,
+            Label target) {
+        Runnable sync = () -> {
+            target.setText(source.getText());
+            target.getStyleClass().setAll(source.getStyleClass());
+            boolean hasUsefulStatus = source.getCurrentStatus()
+                    != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY;
+            boolean show = hasUsefulStatus && source.isVisible() && source.isManaged();
+            target.setVisible(show);
+            target.setManaged(show);
+        };
+        source.textProperty().addListener((obs, oldVal, newVal) -> sync.run());
+        source.visibleProperty().addListener((obs, oldVal, newVal) -> sync.run());
+        source.managedProperty().addListener((obs, oldVal, newVal) -> sync.run());
+        source.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> sync.run());
+        sync.run();
     }
 
     private void updateMaterialBadges(String algo, String mode, boolean isStreamCipher, boolean isAEAD, boolean isXChaChaPoly, boolean isChaChaPoly, boolean isGCM) {
@@ -2861,9 +2868,14 @@ public class CipherController {
             aadBadge.updateState();
         }
 
-        setBadgeVisibility(ivBadgeLabel, expectedNonceBytes > 0);
-        setBadgeVisibility(gcmTagBadgeLabel, isAEAD);
-        setBadgeVisibility(aadBadgeLabel, isAEAD);
+        setBadgeVisibility(symKeyBadgeLabel, symKeyBadge != null
+                && symKeyBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+        setBadgeVisibility(ivBadgeLabel, expectedNonceBytes > 0 && ivBadge != null
+                && ivBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+        setBadgeVisibility(gcmTagBadgeLabel, isAEAD && tagBadge != null
+                && tagBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+        setBadgeVisibility(aadBadgeLabel, isAEAD && aadBadge != null
+                && aadBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
     }
 
     private static void setBadgeVisibility(Label badgeLabel, boolean visible) {

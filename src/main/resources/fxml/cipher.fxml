@@ -84,7 +84,7 @@
                                     <Button fx:id="inspectKeyBtn" text="Inspect" onAction="#handleInspectKey" styleClass="secondary-button" style="-fx-font-size: 11px;" visible="false" managed="false"/>
                                     <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                                 </HBox>
-                                <Label fx:id="symKeyBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                                <Label fx:id="symKeyBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
                         </GridPane>
                         <FlowPane styleClass="responsive-action-bar" style="-fx-padding: 4 0 0 142;">
@@ -109,19 +109,19 @@
                                     <TextField fx:id="ivField" promptText="Hex IV (required for CBC/CTR/GCM modes)..." HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace"/>
                                     <Button text="Generate" onAction="#generateIV" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
                                 </HBox>
-                                <Label fx:id="ivBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                                <Label fx:id="ivBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
                             <Label fx:id="gcmTagLabel" text="AEAD Auth Tag:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                             <VBox spacing="2" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                 <TextField fx:id="gcmTagField" promptText="Hex Tag (16 bytes; required for AEAD Decryption)"
                                            maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
-                                <Label fx:id="gcmTagBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                                <Label fx:id="gcmTagBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
                             <Label fx:id="aadLabel" text="AAD (Optional):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                             <VBox spacing="2" GridPane.columnIndex="1" GridPane.rowIndex="2">
                                 <TextField fx:id="aadField" promptText="Hex Additional Authenticated Data (optional)"
                                            maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
-                                <Label fx:id="aadBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
+                                <Label fx:id="aadBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
                         </GridPane>
                         <VBox fx:id="ecbWarningBox" visible="false" managed="false" style="-fx-padding: 6 0 0 0;">
