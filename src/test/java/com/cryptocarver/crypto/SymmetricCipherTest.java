@@ -50,6 +50,24 @@ class SymmetricCipherTest {
         assertTrue(error.getMessage().contains("16- or 24-byte"));
     }
 
+    @Test
+    void recommendsIvLengthFromCipherBlockSizeAndMode() {
+        org.junit.jupiter.api.Assertions.assertEquals(8,
+                SymmetricCipher.getRecommendedIvLength("3DES (Triple DES)", "CBC"));
+        org.junit.jupiter.api.Assertions.assertEquals(8,
+                SymmetricCipher.getRecommendedIvLength("DES", "CBC"));
+        org.junit.jupiter.api.Assertions.assertEquals(16,
+                SymmetricCipher.getRecommendedIvLength("AES-256", "CBC"));
+        org.junit.jupiter.api.Assertions.assertEquals(12,
+                SymmetricCipher.getRecommendedIvLength("AES-256", "GCM"));
+        org.junit.jupiter.api.Assertions.assertEquals(12,
+                SymmetricCipher.getRecommendedIvLength("ChaCha20", "CBC"));
+        org.junit.jupiter.api.Assertions.assertEquals(24,
+                SymmetricCipher.getRecommendedIvLength("XChaCha20-Poly1305", "CBC"));
+        org.junit.jupiter.api.Assertions.assertEquals(0,
+                SymmetricCipher.getRecommendedIvLength("3DES (Triple DES)", "ECB"));
+    }
+
     private static byte[] hex(String value) {
         return java.util.HexFormat.of().parseHex(value);
     }

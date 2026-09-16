@@ -2263,6 +2263,42 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void testTripleDesGeneratesEightByteIvAndHidesAeadBadges() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                controllerRef.set(loader.getController());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        CipherController cipher = getField(controllerRef.get(), "cipherContainerController");
+        javafx.scene.control.ComboBox<String> algorithm = getField(cipher, "symmetricAlgorithmCombo");
+        javafx.scene.control.ComboBox<String> mode = getField(cipher, "cipherModeCombo");
+        javafx.scene.control.TextField iv = getField(cipher, "ivField");
+        javafx.scene.control.Label ivBadge = getField(cipher, "ivBadgeLabel");
+        javafx.scene.control.Label tagBadge = getField(cipher, "gcmTagBadgeLabel");
+        javafx.scene.control.Label aadBadge = getField(cipher, "aadBadgeLabel");
+
+        runAndWait(() -> {
+            algorithm.setValue("3DES (Triple DES)");
+            mode.setValue("CBC");
+            cipher.generateIV();
+        });
+
+        assertEquals(16, iv.getText().length(), "A 3DES IV must contain 8 bytes / 16 hex characters");
+        assertTrue(ivBadge.isVisible());
+        assertTrue(ivBadge.getText().contains("Valid · 8 bytes"));
+        assertFalse(tagBadge.isVisible());
+        assertFalse(tagBadge.isManaged());
+        assertFalse(aadBadge.isVisible());
+        assertFalse(aadBadge.isManaged());
+    }
+
+    @Test
     void testMetadataOnlySelectionAndImportDisable() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {

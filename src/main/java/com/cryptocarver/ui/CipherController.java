@@ -1519,23 +1519,13 @@ public class CipherController {
      * Generate IV based on current algorithm
      */
     public void generateIV() {
-        if (ivField == null)
+        if (ivField == null || symmetricAlgorithmCombo == null || cipherModeCombo == null)
             return;
 
         String algorithm = symmetricAlgorithmCombo.getValue();
         String mode = cipherModeCombo.getValue();
-        int ivLength;
-
-        // Determine correct IV length
-        if (algorithm.equals("ChaCha20") || algorithm.equals("ChaCha20-Poly1305")) {
-            ivLength = 12; // 96 bits for ChaCha20 (RFC 7539 standard)
-        } else if (algorithm.equals("XChaCha20-Poly1305")) {
-            ivLength = 24; // 192 bits for XChaCha20
-        } else if (mode.equalsIgnoreCase("GCM")) {
-            ivLength = 12; // 96 bits recommended for GCM
-        } else {
-            ivLength = 16; // Default to 128 bits (16 bytes) for AES blocks etc.
-        }
+        int ivLength = SymmetricCipher.getRecommendedIvLength(algorithm, mode);
+        if (ivLength == 0) return;
 
         byte[] iv = new byte[ivLength];
         new java.security.SecureRandom().nextBytes(iv);
@@ -2858,9 +2848,9 @@ public class CipherController {
             symKeyBadge.updateState();
         }
 
-        int expectedNonceBytes = isXChaChaPoly ? 24 : (isGCM || isChaChaPoly ? 12 : (isStreamCipher ? 8 : 16));
+        int expectedNonceBytes = SymmetricCipher.getRecommendedIvLength(algo, mode);
         if (ivBadge != null) {
-            ivBadge.setExpectedBytes(expectedNonceBytes);
+            if (expectedNonceBytes > 0) ivBadge.setExpectedBytes(expectedNonceBytes);
             ivBadge.updateState();
         }
         if (tagBadge != null) {
@@ -2869,6 +2859,17 @@ public class CipherController {
         }
         if (aadBadge != null) {
             aadBadge.updateState();
+        }
+
+        setBadgeVisibility(ivBadgeLabel, expectedNonceBytes > 0);
+        setBadgeVisibility(gcmTagBadgeLabel, isAEAD);
+        setBadgeVisibility(aadBadgeLabel, isAEAD);
+    }
+
+    private static void setBadgeVisibility(Label badgeLabel, boolean visible) {
+        if (badgeLabel != null) {
+            badgeLabel.setVisible(visible);
+            badgeLabel.setManaged(visible);
         }
     }
 
