@@ -6,9 +6,9 @@ import com.cryptocarver.model.OperationSessionLog;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -75,10 +75,12 @@ class SessionTrailUITest {
         ModernMainController controller = controllerRef.get();
         OperationSessionLog log = field(controller, "operationSessionLog");
         Label count = field(controller, "sessionTrailCountLabel");
-        VBox cards = field(controller, "sessionTrailContainer");
+        Button add = field(controller, "inspectorAddSessionStepButton");
+        Button export = field(controller, "inspectorExportSessionTrailButton");
         assertEquals(1, log.size());
-        assertEquals("1", count.getText());
-        assertEquals(1, cards.getChildren().size());
+        assertTrue(count.getText().contains("1"));
+        assertFalse(add.isDisabled());
+        assertFalse(export.isDisabled());
 
         Path report = temporaryDirectory.resolve("trail.txt");
         runAndWait(() -> {

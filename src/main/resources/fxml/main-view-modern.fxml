@@ -365,6 +365,15 @@
                     <Button fx:id="inspectorToggleButton" text="✕" onAction="#handleToggleInspector" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-cursor: hand;" accessibleText="Close the Inspector panel"/>
                 </HBox>
 
+                <!-- Compact session actions; operation details already live in History. -->
+                <HBox spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header">
+                    <Label fx:id="inspectorSessionTrailTitle" text="Session log" styleClass="inspector-section-title"/>
+                    <Label fx:id="sessionTrailCountLabel" text="0" style="-fx-text-fill: #94a3b8; -fx-font-size: 10px;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="inspectorAddSessionStepButton" text="Add" onAction="#handleSaveCurrentResultAsSessionStep" disable="true" style="-fx-font-size: 10px; -fx-padding: 3 7;" accessibleText="Add the current operation to the session log"/>
+                    <Button fx:id="inspectorExportSessionTrailButton" text="Export" onAction="#handleExportSessionTrail" disable="true" style="-fx-font-size: 10px; -fx-padding: 3 7;" accessibleText="Export the session log as text"/>
+                </HBox>
+
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;">
                     <VBox spacing="0">
 
@@ -426,17 +435,6 @@
                         </HBox>
 
                         <VBox fx:id="historyContainer" spacing="4" style="-fx-padding: 8;"/>
-
-                        <!-- Ordered, hash-linked trail for the current saved session -->
-                        <HBox styleClass="inspector-section-header">
-                            <Label fx:id="inspectorSessionTrailTitle" text="Session Trail — UNSAFE CLEAR TEXT" styleClass="inspector-section-title" wrapText="true"/>
-                            <Label fx:id="sessionTrailCountLabel" text="0" style="-fx-text-fill: #94a3b8; -fx-font-size: 10px;"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Button fx:id="inspectorExportSessionTrailButton" text="Export TXT" onAction="#handleExportSessionTrail" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #81c784; -fx-cursor: hand;"/>
-                            <Button fx:id="inspectorClearSessionTrailButton" text="Clear" onAction="#handleClearSessionTrail" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #90caf9; -fx-cursor: hand;"/>
-                        </HBox>
-
-                        <VBox fx:id="sessionTrailContainer" spacing="4" style="-fx-padding: 8;"/>
 
                     </VBox>
                 </ScrollPane>

@@ -131,12 +131,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private VBox historyContainer;
     @FXML
-    private VBox sessionTrailContainer;
-    @FXML
     private Label sessionTrailCountLabel;
     @FXML private Label inspectorSessionTrailTitle;
+    @FXML private Button inspectorAddSessionStepButton;
     @FXML private Button inspectorExportSessionTrailButton;
-    @FXML private Button inspectorClearSessionTrailButton;
     @FXML
     private VBox historyView;
     @FXML
@@ -650,8 +648,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(resultSaveStepButton, "sessionTrail.saveStep");
         setAccessibleText(resultSaveStepButton, "a11y.sessionTrailSaveStep");
         setText(inspectorSessionTrailTitle, "sessionTrail.title");
+        setText(inspectorAddSessionStepButton, "sessionTrail.addShort");
         setText(inspectorExportSessionTrailButton, "sessionTrail.exportTxt");
-        setText(inspectorClearSessionTrailButton, "sessionTrail.clearShort");
+        setAccessibleText(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
+        if (inspectorExportSessionTrailButton != null) {
+            inspectorExportSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.exportTitle"));
+        }
         setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
         setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
         if (inputFormatCombo != null) {
@@ -2431,6 +2433,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean hasPayload = (result.getOutput() != null && result.getOutput().length > 0)
                 || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
         boolean hasInspectableResult = hasPayload || !result.getDetails().isEmpty();
+        if (inspectorAddSessionStepButton != null) {
+            inspectorAddSessionStepButton.setDisable(isFailed || !hasInspectableResult);
+        }
 
         if (resultSummaryBar != null) {
             if (isFailed || !hasInspectableResult) {
@@ -2482,6 +2487,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             resultSummaryBar.setManaged(false);
             resultSummaryBar.setVisible(false);
         }
+        if (inspectorAddSessionStepButton != null) inspectorAddSessionStepButton.setDisable(true);
     }
 
 
@@ -3685,54 +3691,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void refreshSessionTrailUI() {
         int count = operationSessionLog == null ? 0 : operationSessionLog.size();
         if (sessionTrailCountLabel != null) {
-            sessionTrailCountLabel.setText(Integer.toString(count));
+            sessionTrailCountLabel.setText(i18n.text("sessionTrail.compactCount", count));
             sessionTrailCountLabel.setAccessibleText(i18n.text("sessionTrail.count", count));
         }
-        if (sessionTrailContainer == null) return;
-
-        sessionTrailContainer.getChildren().clear();
-        if (count == 0) {
-            Label placeholder = new Label(i18n.text("sessionTrail.empty"));
-            placeholder.getStyleClass().add("muted-text");
-            placeholder.setWrapText(true);
-            placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 8;");
-            sessionTrailContainer.getChildren().add(placeholder);
-            return;
-        }
-
-        java.util.List<com.cryptocarver.model.SessionOperationStep> steps = operationSessionLog.getSteps();
-        for (int index = 0; index < steps.size(); index++) {
-            com.cryptocarver.model.SessionOperationStep step = steps.get(index);
-            HBox card = new HBox(8);
-            card.getStyleClass().add("history-card");
-            card.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-            VBox info = new VBox(2);
-            Label titleLabel = new Label((index + 1) + ". " + step.getTitle());
-            titleLabel.getStyleClass().add("history-card-title");
-            titleLabel.setWrapText(true);
-            Label operationAndTime = new Label(step.getOperation() + " • " + step.getTimestamp());
-            operationAndTime.getStyleClass().add("history-card-time");
-            operationAndTime.setWrapText(true);
-            info.getChildren().addAll(titleLabel, operationAndTime);
-            if (!step.getTags().isEmpty()) {
-                Label tagsLabel = new Label("#" + String.join("  #", step.getTags()));
-                tagsLabel.getStyleClass().add("history-card-time");
-                tagsLabel.setWrapText(true);
-                info.getChildren().add(tagsLabel);
-            }
-            HBox.setHgrow(info, Priority.ALWAYS);
-
-            Button remove = new Button("×");
-            remove.getStyleClass().add("history-card-action");
-            remove.setAccessibleText(i18n.text("sessionTrail.remove", step.getTitle()));
-            remove.setOnAction(event -> {
-                operationSessionLog.remove(step.getId());
-                refreshSessionTrailUI();
-                updateStatus(i18n.text("sessionTrail.removed", step.getTitle()));
-            });
-            card.getChildren().addAll(info, remove);
-            sessionTrailContainer.getChildren().add(card);
+        if (inspectorExportSessionTrailButton != null) {
+            inspectorExportSessionTrailButton.setDisable(count == 0);
         }
     }
 
