@@ -131,6 +131,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private VBox historyContainer;
     @FXML
+    private VBox sessionTrailContainer;
+    @FXML
+    private Label sessionTrailCountLabel;
+    @FXML private Label inspectorSessionTrailTitle;
+    @FXML private Button inspectorExportSessionTrailButton;
+    @FXML private Button inspectorClearSessionTrailButton;
+    @FXML
     private VBox historyView;
     @FXML
     private HistoryController historyViewController;
@@ -152,6 +159,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button resultExpandButton;
     @FXML private Button resultShelfButton;
     @FXML private Button resultCopyButton;
+    @FXML private Button resultSaveStepButton;
     @FXML private Button inspectorToggleButton;
 
     // Quick Start & Guided Workflows
@@ -200,6 +208,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
     private com.cryptocarver.model.SavedSessionsManager savedSessionsManager;
+    private com.cryptocarver.model.OperationSessionLog operationSessionLog =
+            new com.cryptocarver.model.OperationSessionLog();
     private String currentActiveOperation = "Dashboard"; // Defaul
     @FXML
     private ComboBox<String> outputFormatCombo;
@@ -274,6 +284,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private MenuItem exportScreenMenuItem;
     @FXML private MenuItem importScreenMenuItem;
     @FXML private MenuItem saveSessionMenuItem;
+    @FXML private MenuItem exportSessionTrailMenuItem;
     @FXML private MenuItem exportHistoryMenuItem;
     @FXML private MenuItem exitMenuItem;
     @FXML private MenuItem clearInputMenuItem;
@@ -522,6 +533,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         // Initialize History
         initializeHistory();
+        refreshSessionTrailUI();
 
         // Load symmetric keys content (default)
         loadSymmetricKeysContent();
@@ -574,6 +586,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(exportScreenMenuItem, "menu.exportScreen");
         setText(importScreenMenuItem, "menu.importScreen");
         setText(saveSessionMenuItem, "menu.saveSession");
+        setText(exportSessionTrailMenuItem, "menu.exportSessionTrail");
         setText(exportHistoryMenuItem, "menu.exportHistory");
         setText(exitMenuItem, "menu.exit");
         setText(clearInputMenuItem, "menu.clearInput");
@@ -634,6 +647,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setAccessibleText(resultExpandButton, "a11y.resultExpand");
         setAccessibleText(resultShelfButton, "a11y.resultShelf");
         setAccessibleText(resultCopyButton, "a11y.resultCopy");
+        setText(resultSaveStepButton, "sessionTrail.saveStep");
+        setAccessibleText(resultSaveStepButton, "a11y.sessionTrailSaveStep");
+        setText(inspectorSessionTrailTitle, "sessionTrail.title");
+        setText(inspectorExportSessionTrailButton, "sessionTrail.exportTxt");
+        setText(inspectorClearSessionTrailButton, "sessionTrail.clearShort");
         setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
         setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
         if (inputFormatCombo != null) {
@@ -3488,7 +3506,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             Label nameLabel = new Label(session.getName());
             nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px;");
 
-            Label detailsLabel = new Label(session.getTimestamp() + " • " + session.getOperation());
+            com.cryptocarver.model.OperationSessionLog savedLog = session.getOperationLog();
+            String stepSummary = savedLog == null ? ""
+                    : " • " + i18n.text("sessionTrail.savedCount", savedLog.size());
+            Label detailsLabel = new Label(session.getTimestamp() + " • " + session.getOperation() + stepSummary);
             detailsLabel.setStyle("-fx-text-fill: #a0aec0; -fx-font-size: 11px;");
 
             infoBox.getChildren().addAll(nameLabel, detailsLabel);
@@ -3499,6 +3520,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             loadButton.setStyle("-fx-font-size: 11px; -fx-padding: 5 10;");
             loadButton.setOnAction(e -> {
                 restoreUIState(session.getUiState());
+                com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
+                operationSessionLog = loadedLog == null
+                        ? new com.cryptocarver.model.OperationSessionLog() : loadedLog;
+                refreshSessionTrailUI();
                 // Switch to the relevant view contex
                 handleItemSelected(session.getOperation());
                 updateStatus("Loaded session: " + session.getName());
@@ -3572,6 +3597,190 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         refreshHsmKeyCombos();
     }
 
+    /** Adds the latest completed result to the current session's ordered trail. */
+    @FXML
+    public void handleSaveCurrentResultAsSessionStep() {
+        if (lastPublishedResultSnapshot == null) {
+            showWarning(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.noResult"));
+            return;
+        }
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(i18n.text("sessionTrail.dialogTitle"));
+        dialog.setHeaderText(i18n.text("sessionTrail.dialogHeader"));
+        ButtonType saveButton = new ButtonType(i18n.text("sessionTrail.saveStep"),
+                ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
+
+        TextField titleField = new TextField(lastPublishedResultSnapshot.getOperation());
+        titleField.setPromptText(i18n.text("sessionTrail.titlePrompt"));
+        TextField tagsField = new TextField();
+        tagsField.setPromptText(i18n.text("sessionTrail.tagsPrompt"));
+        Label unsafeWarning = new Label(i18n.text("sessionTrail.unsafeWarning"));
+        unsafeWarning.setWrapText(true);
+        unsafeWarning.setStyle("-fx-text-fill: #dc2626; -fx-font-weight: bold;");
+        CheckBox unsafeConfirmation = new CheckBox(i18n.text("sessionTrail.unsafeConfirm"));
+        unsafeConfirmation.setWrapText(true);
+        GridPane form = new GridPane();
+        form.setHgap(10);
+        form.setVgap(10);
+        form.add(new Label(i18n.text("sessionTrail.stepTitle")), 0, 0);
+        form.add(titleField, 1, 0);
+        form.add(new Label(i18n.text("sessionTrail.tags")), 0, 1);
+        form.add(tagsField, 1, 1);
+        form.add(unsafeWarning, 0, 2, 2, 1);
+        form.add(unsafeConfirmation, 0, 3, 2, 1);
+        GridPane.setHgrow(titleField, Priority.ALWAYS);
+        GridPane.setHgrow(tagsField, Priority.ALWAYS);
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setMinWidth(480);
+
+        Node saveNode = dialog.getDialogPane().lookupButton(saveButton);
+        saveNode.disableProperty().bind(javafx.beans.binding.Bindings.or(
+                titleField.textProperty().isEmpty(), unsafeConfirmation.selectedProperty().not()));
+        Platform.runLater(titleField::requestFocus);
+
+        Optional<ButtonType> selected = dialog.showAndWait();
+        if (selected.isPresent() && selected.get() == saveButton) {
+            saveCurrentResultAsSessionStep(titleField.getText(), tagsField.getText());
+        }
+    }
+
+    com.cryptocarver.model.SessionOperationStep saveCurrentResultAsSessionStep(String title, String commaSeparatedTags) {
+        if (lastPublishedResultSnapshot == null) {
+            throw new IllegalStateException("No completed operation result is available");
+        }
+        java.util.List<String> tags = commaSeparatedTags == null || commaSeparatedTags.isBlank()
+                ? java.util.List.of()
+                : java.util.Arrays.stream(commaSeparatedTags.split(","))
+                        .map(String::trim)
+                        .filter(value -> !value.isEmpty())
+                        .toList();
+        com.cryptocarver.model.SessionOperationStep step = operationSessionLog.add(
+                lastPublishedResultSnapshot, title, tags, captureClearTextTrailParameters());
+        refreshSessionTrailUI();
+        if (inspectorPanel != null && !inspectorPanel.isVisible()) {
+            inspectorPanel.setVisible(true);
+            inspectorPanel.setManaged(true);
+            inspectorHiddenForCompactLayout = false;
+        }
+        updateStatus(i18n.text("sessionTrail.saved", step.getTitle()));
+        return step;
+    }
+
+    /**
+     * Captures the active operation's controls without applying the History
+     * redaction policy. This is intentionally unsafe and is called only after
+     * the clear-text confirmation in the Save Step dialog.
+     */
+    private java.util.Map<String, Object> captureClearTextTrailParameters() {
+        try {
+            return new java.util.LinkedHashMap<>(captureActiveScreenConfiguration().toState());
+        } catch (RuntimeException unsupportedRoute) {
+            LOG.debug("Falling back to full UI-state capture for session trail", unsupportedRoute);
+            return new java.util.LinkedHashMap<>(captureUIState());
+        }
+    }
+
+    private void refreshSessionTrailUI() {
+        int count = operationSessionLog == null ? 0 : operationSessionLog.size();
+        if (sessionTrailCountLabel != null) {
+            sessionTrailCountLabel.setText(Integer.toString(count));
+            sessionTrailCountLabel.setAccessibleText(i18n.text("sessionTrail.count", count));
+        }
+        if (sessionTrailContainer == null) return;
+
+        sessionTrailContainer.getChildren().clear();
+        if (count == 0) {
+            Label placeholder = new Label(i18n.text("sessionTrail.empty"));
+            placeholder.getStyleClass().add("muted-text");
+            placeholder.setWrapText(true);
+            placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 8;");
+            sessionTrailContainer.getChildren().add(placeholder);
+            return;
+        }
+
+        java.util.List<com.cryptocarver.model.SessionOperationStep> steps = operationSessionLog.getSteps();
+        for (int index = 0; index < steps.size(); index++) {
+            com.cryptocarver.model.SessionOperationStep step = steps.get(index);
+            HBox card = new HBox(8);
+            card.getStyleClass().add("history-card");
+            card.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+            VBox info = new VBox(2);
+            Label titleLabel = new Label((index + 1) + ". " + step.getTitle());
+            titleLabel.getStyleClass().add("history-card-title");
+            titleLabel.setWrapText(true);
+            Label operationAndTime = new Label(step.getOperation() + " • " + step.getTimestamp());
+            operationAndTime.getStyleClass().add("history-card-time");
+            operationAndTime.setWrapText(true);
+            info.getChildren().addAll(titleLabel, operationAndTime);
+            if (!step.getTags().isEmpty()) {
+                Label tagsLabel = new Label("#" + String.join("  #", step.getTags()));
+                tagsLabel.getStyleClass().add("history-card-time");
+                tagsLabel.setWrapText(true);
+                info.getChildren().add(tagsLabel);
+            }
+            HBox.setHgrow(info, Priority.ALWAYS);
+
+            Button remove = new Button("×");
+            remove.getStyleClass().add("history-card-action");
+            remove.setAccessibleText(i18n.text("sessionTrail.remove", step.getTitle()));
+            remove.setOnAction(event -> {
+                operationSessionLog.remove(step.getId());
+                refreshSessionTrailUI();
+                updateStatus(i18n.text("sessionTrail.removed", step.getTitle()));
+            });
+            card.getChildren().addAll(info, remove);
+            sessionTrailContainer.getChildren().add(card);
+        }
+    }
+
+    @FXML
+    public void handleExportSessionTrail() {
+        if (operationSessionLog == null || operationSessionLog.isEmpty()) {
+            showWarning(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.nothingToExport"));
+            return;
+        }
+        FileChooser chooser = LocalizedDialogSupport.fileChooser(
+                "sessionTrail.exportTitle", "sessionTrail.textFiles", "Text files", "*.txt");
+        chooser.setInitialFileName("cryptocarver-session-trail-"
+                + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                + ".txt");
+        Stage owner = mainPane != null && mainPane.getScene() != null
+                && mainPane.getScene().getWindow() instanceof Stage stage ? stage : null;
+        File selected = chooser.showSaveDialog(owner);
+        if (selected == null) return;
+        try {
+            exportSessionTrail(selected.toPath());
+            updateStatus(i18n.text("sessionTrail.exported", selected.getName()));
+        } catch (IOException e) {
+            LOG.error("Could not export session trail", e);
+            showWarning(i18n.text("sessionTrail.exportTitle"), e.getMessage());
+        }
+    }
+
+    void exportSessionTrail(java.nio.file.Path target) throws IOException {
+        if (target == null) throw new IllegalArgumentException("Export target is required");
+        java.nio.file.Path parent = target.toAbsolutePath().getParent();
+        if (parent != null) Files.createDirectories(parent);
+        Files.writeString(target, operationSessionLog.toText(), StandardCharsets.UTF_8);
+    }
+
+    @FXML
+    public void handleClearSessionTrail() {
+        if (operationSessionLog == null || operationSessionLog.isEmpty()) return;
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+                i18n.text("sessionTrail.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
+        confirmation.setTitle(i18n.text("sessionTrail.title"));
+        confirmation.setHeaderText(i18n.text("sessionTrail.clear"));
+        if (confirmation.showAndWait().filter(ButtonType.OK::equals).isPresent()) {
+            operationSessionLog.clear();
+            refreshSessionTrailUI();
+            updateStatus(i18n.text("sessionTrail.cleared"));
+        }
+    }
+
     @FXML
     public void handleSaveSession() {
         // Init manager
@@ -3609,8 +3818,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 currentOperation = "Generic";
             }
 
-            com.cryptocarver.model.SavedSession session = new com.cryptocarver.model.SavedSession(name, currentOperation,
-                    state);
+            com.cryptocarver.model.SavedSession session = new com.cryptocarver.model.SavedSession(
+                    name, currentOperation, state, operationSessionLog);
             savedSessionsManager.addSession(session);
 
             updateStatus("Session saved: " + name);

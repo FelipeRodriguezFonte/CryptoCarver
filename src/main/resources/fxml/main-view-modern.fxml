@@ -23,6 +23,7 @@
                     <MenuItem fx:id="importScreenMenuItem" text="Import Screen Configuration..." onAction="#handleImportScreenConfiguration" />
                     <SeparatorMenuItem />
                     <MenuItem fx:id="saveSessionMenuItem" text="Save Session" onAction="#handleSaveSession" accelerator="Shortcut+S" />
+                    <MenuItem fx:id="exportSessionTrailMenuItem" text="Export Session Trail..." onAction="#handleExportSessionTrail" />
                     <MenuItem fx:id="exportHistoryMenuItem" text="Export History..." onAction="#handleExportHistory" />
                     <SeparatorMenuItem />
                     <MenuItem fx:id="exitMenuItem" text="Exit" onAction="#handleExit" accelerator="Shortcut+Q" />
@@ -165,6 +166,7 @@
                         <Label fx:id="resultStatusBadge" text="NEUTRAL" styleClass="result-status-neutral" accessibleText="Last operation result status: NEUTRAL"/>
                     </FlowPane>
                     <FlowPane prefWrapLength="400" hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="responsive-action-bar">
+                        <Button fx:id="resultSaveStepButton" text="Save Step" onAction="#handleSaveCurrentResultAsSessionStep" styleClass="secondary-button" accessibleText="Save the current result in the session trail"/>
                         <Button fx:id="resultExpandButton" text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" accessibleText="Expand result viewer"/>
                         <Button fx:id="resultShelfButton" text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" accessibleText="Add current output to clipboard shelf"/>
                         <Button fx:id="resultCopyButton" text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary" accessibleText="Copy output to clipboard"/>
@@ -424,6 +426,17 @@
                         </HBox>
 
                         <VBox fx:id="historyContainer" spacing="4" style="-fx-padding: 8;"/>
+
+                        <!-- Ordered, hash-linked trail for the current saved session -->
+                        <HBox styleClass="inspector-section-header">
+                            <Label fx:id="inspectorSessionTrailTitle" text="Session Trail — UNSAFE CLEAR TEXT" styleClass="inspector-section-title" wrapText="true"/>
+                            <Label fx:id="sessionTrailCountLabel" text="0" style="-fx-text-fill: #94a3b8; -fx-font-size: 10px;"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button fx:id="inspectorExportSessionTrailButton" text="Export TXT" onAction="#handleExportSessionTrail" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #81c784; -fx-cursor: hand;"/>
+                            <Button fx:id="inspectorClearSessionTrailButton" text="Clear" onAction="#handleClearSessionTrail" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #90caf9; -fx-cursor: hand;"/>
+                        </HBox>
+
+                        <VBox fx:id="sessionTrailContainer" spacing="4" style="-fx-padding: 8;"/>
 
                     </VBox>
                 </ScrollPane>
