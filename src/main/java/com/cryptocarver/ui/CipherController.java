@@ -2850,7 +2850,11 @@ public class CipherController {
                 symKeyBadge.updateStateIncomplete("Select HSM Key from Lab");
             }
         } else if (symKeyBadge != null) {
-            symKeyBadge.setExpectedBytes(expectedKeyBytes);
+            if (algoUpper.contains("3DES") || algoUpper.contains("TRIPLEDES")) {
+                symKeyBadge.setAcceptedByteLengths(16, 24);
+            } else {
+                symKeyBadge.setExpectedBytes(expectedKeyBytes);
+            }
             symKeyBadge.updateState();
         }
 
@@ -3555,7 +3559,7 @@ public class CipherController {
         for (String algorithm : SymmetricCipher.SUPPORTED_ALGORITHMS) {
             if (algorithm.equals("DES") && keyLength == 8) {
                 candidates.add(algorithm);
-            } else if (algorithm.contains("3DES") && keyLength == 24) {
+            } else if (algorithm.contains("3DES") && (keyLength == 16 || keyLength == 24)) {
                 candidates.add(algorithm);
             } else if (algorithm.equals("AES-128") && keyLength == 16) {
                 candidates.add(algorithm);

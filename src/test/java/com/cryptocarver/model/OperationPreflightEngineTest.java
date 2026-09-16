@@ -93,6 +93,20 @@ class OperationPreflightEngineTest {
     }
 
     @Test
+    @DisplayName("Symmetric Cipher: 3DES accepts double-length keys")
+    void testTripleDesAcceptsDoubleLengthKey() {
+        PreflightReport report = OperationPreflightEngine.checkSymmetricCipher(
+                "Hello World", "Plain Text", "3DES", "CBC", "PKCS5Padding",
+                "Manual Input", "0123456789ABCDEFFEDCBA9876543210",
+                null, false, "0102030405060708", null, null, true
+        );
+
+        assertTrue(report.isExecutable());
+        assertTrue(report.getChecks().stream().anyMatch(check ->
+                check.getName().equals("Symmetric Key") && check.getStatus() == PreflightStatus.READY));
+    }
+
+    @Test
     @DisplayName("Hashing: Empty payload yields INCOMPLETE")
     void testHashingEmptyPayload() {
         PreflightReport report = OperationPreflightEngine.checkHashing("", "Plain Text", "SHA-256");

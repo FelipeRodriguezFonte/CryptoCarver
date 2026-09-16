@@ -6,6 +6,27 @@
       fx:controller="com.cryptocarver.ui.CipherController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,cipher-module">
     <Label text="Data Encryption &amp; Decryption" styleClass="content-title-label"/>
+
+    <!-- Keep the payload workbench above the expandable configuration panes. -->
+    <VBox spacing="10" styleClass="cipher-io-card">
+        <GridPane hgap="12" styleClass="cipher-io-grid">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+            </columnConstraints>
+            <VBox spacing="7" styleClass="cipher-io-column" GridPane.columnIndex="0">
+                <Label text="Input data" styleClass="cipher-io-label"/>
+                <TextArea fx:id="cipherInputArea" prefHeight="160" wrapText="true"
+                          VBox.vgrow="ALWAYS" styleClass="cipher-io-area,cipher-monospace"/>
+            </VBox>
+            <VBox spacing="7" styleClass="cipher-io-column" GridPane.columnIndex="1">
+                <Label text="Output result" styleClass="cipher-io-label"/>
+                <TextArea fx:id="cipherOutputArea" prefHeight="160" editable="false" wrapText="true"
+                          VBox.vgrow="ALWAYS" styleClass="cipher-io-area,cipher-output-area,cipher-monospace"/>
+            </VBox>
+        </GridPane>
+    </VBox>
+
     <Accordion styleClass="cipher-accordion">
         <panes>
             <TitledPane text="🔒 Symmetric Cipher (AES, DES, etc.)" expanded="true">
@@ -215,11 +236,4 @@
             </TitledPane>
         </panes>
     </Accordion>
-    <VBox spacing="9" styleClass="cipher-io-card">
-        <Label text="Input data" styleClass="cipher-io-label"/>
-        <TextArea fx:id="cipherInputArea" prefHeight="130" wrapText="true" styleClass="cipher-io-area,cipher-monospace"/>
-        <Separator orientation="HORIZONTAL"/>
-        <Label text="Output result" styleClass="cipher-io-label"/>
-        <TextArea fx:id="cipherOutputArea" prefHeight="130" editable="false" wrapText="true" styleClass="cipher-io-area,cipher-monospace"/>
-    </VBox>
 </VBox>

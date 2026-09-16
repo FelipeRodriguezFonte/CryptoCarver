@@ -528,7 +528,7 @@ class ProcessEngineTest {
             input.configuration.put("value", "algorithm expansion");
             ProcessDefinition.Node encrypt = cryptoNode("encrypt", "ENCRYPT",
                     "3DES/CBC/PKCS7Padding".equals(algorithm)
-                            ? "0123456789ABCDEFFEDCBA98765432100011223344556677"
+                            ? "0123456789ABCDEFFEDCBA9876543210"
                             : "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F");
             encrypt.configuration.put("algorithm", algorithm);
             encrypt.configuration.put("outputFormat", "ENVELOPE");

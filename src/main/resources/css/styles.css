@@ -1476,23 +1476,37 @@
 }
 
 .cipher-io-card {
-    -fx-padding: 14;
-    -fx-spacing: 9;
-    -fx-background-color: #f8fafc;
-    -fx-border-color: #d6dde5;
+    -fx-padding: 12;
+    -fx-spacing: 10;
+    -fx-background-color: linear-gradient(to bottom, #f8fafc, #f3f6f9);
+    -fx-border-color: #c5d0dc;
     -fx-border-width: 1;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.08), 8, 0.12, 0, 2);
+}
+
+.cipher-io-grid {
+    -fx-min-height: 150;
+}
+
+.cipher-io-column {
+    -fx-min-width: 0;
 }
 
 .cipher-io-label {
-    -fx-font-weight: 600;
+    -fx-font-weight: 700;
     -fx-font-size: 13px;
+    -fx-text-fill: #243447;
 }
 
 .cipher-io-area {
-    -fx-min-height: 130;
-    -fx-pref-height: 130;
+    -fx-min-height: 120;
+    -fx-pref-height: 160;
+}
+
+.cipher-output-area {
+    -fx-control-inner-background: #f5f8fb;
 }
 
 /* Shared module system. New and migrated modules should use these instead of
