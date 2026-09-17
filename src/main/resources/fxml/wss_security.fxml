@@ -89,7 +89,7 @@
 
                         <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
                             <Label text="Trusted Certificate:" styleClass="form-label"/>
-                            <Label text="(Optional)" styleClass="helper-text" style="-fx-font-size: 9px;"/>
+                            <Label text="(Optional)" styleClass="helper-text ux-inline-be0503c907"/>
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="wssVerifyTrustStorePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
@@ -184,7 +184,7 @@
 
                         <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
                             <Label text="Recipient Certificate:" styleClass="form-label"/>
-                            <Label text="(PEM/DER)" styleClass="helper-text" style="-fx-font-size: 9px;"/>
+                            <Label text="(PEM/DER)" styleClass="helper-text ux-inline-be0503c907"/>
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="wssEncryptCertificatePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
@@ -226,7 +226,7 @@
 
                         <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
                             <Label text="Decryption KeyStore:" styleClass="form-label"/>
-                            <Label text="(PKCS#12/JKS)" styleClass="helper-text" style="-fx-font-size: 9px;"/>
+                            <Label text="(PKCS#12/JKS)" styleClass="helper-text ux-inline-be0503c907"/>
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="wssDecryptKeyStorePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>

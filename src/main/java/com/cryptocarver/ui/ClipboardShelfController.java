@@ -411,7 +411,8 @@ public class ClipboardShelfController {
         if (e1.isSessionOnlyPrivateKey() || e2.isSessionOnlyPrivateKey()) {
             detailsArea.setText("Comparison blocked: session-only private-key entries cannot be compared or exported.");
             warningLabel.setVisible(true);
-            warningLabel.setText("🔒 Session-only private keys are excluded from comparison and reports.");
+            warningLabel.setText("Session-only private keys are excluded from comparison and reports.");
+            warningLabel.setGraphic(IconRegistry.icon("cipher"));
             setActionAvailability(pinBtn, false, "Pin selected entry", "Select one entry to pin or unpin");
             setActionAvailability(editTagsNoteBtn, false, "Edit note and tags", "Select one entry to edit its note and tags");
             setActionAvailability(useInMenu, false, "Use selected result in an operation", "Select one entry to use its result");

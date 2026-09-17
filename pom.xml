@@ -42,6 +42,18 @@
             <version>${javafx.version}</version>
         </dependency>
 
+        <!-- Offline, bundled vector icons (Apache 2.0). -->
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-javafx</artifactId>
+            <version>12.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-materialdesign2-pack</artifactId>
+            <version>12.3.1</version>
+        </dependency>
+
         <!-- BouncyCastle para algoritmos criptográficos adicionales -->
         <dependency>
             <groupId>org.bouncycastle</groupId>

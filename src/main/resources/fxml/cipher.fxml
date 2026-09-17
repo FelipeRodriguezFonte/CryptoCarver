@@ -36,8 +36,8 @@
                     <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
                         <ComboBox fx:id="cipherTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                        <Button text="Apply" onAction="#handleApplyCipherTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                        <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                        <Button text="Apply" onAction="#handleApplyCipherTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
                             <items>
                                 <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCipherTemplate"/>
                                 <MenuItem text="Export Selected Template..." onAction="#handleExportCipherTemplate"/>
@@ -45,7 +45,7 @@
                                 <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCipherTemplate"/>
                             </items>
                         </MenuButton>
-                        <Button text="Reset Defaults" onAction="#handleResetCipherDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button text="Reset Defaults" onAction="#handleResetCipherDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
                     </FlowPane>
 
                     <!-- Group 1: Algorithm & Mode -->
@@ -81,18 +81,18 @@
                                         <TextField fx:id="symmetricKeyField" promptText="Enter key in hex (required)..." maxWidth="Infinity" styleClass="cipher-field,cipher-monospace"/>
                                         <ComboBox fx:id="symHsmKeyCombo" maxWidth="Infinity" visible="false" managed="false" styleClass="cipher-field"/>
                                     </StackPane>
-                                    <Button fx:id="inspectKeyBtn" text="Inspect" onAction="#handleInspectKey" styleClass="secondary-button" style="-fx-font-size: 11px;" visible="false" managed="false"/>
-                                    <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                                    <Button fx:id="inspectKeyBtn" text="Inspect" onAction="#handleInspectKey" styleClass="secondary-button ux-inline-ba9ea6419e" visible="false" managed="false"/>
+                                    <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button ux-inline-ba9ea6419e"/>
                                 </HBox>
                                 <Label fx:id="symKeyBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
                         </GridPane>
-                        <FlowPane styleClass="responsive-action-bar" style="-fx-padding: 4 0 0 142;">
-                            <Button text="Paste Key" onAction="#handlePasteSymKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                            <Button text="Load Key…" onAction="#handleLoadSymKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                            <MenuButton fx:id="symKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" style="-fx-font-size: 11px;" onShowing="#handlePopulateSymKeyShelf"/>
+                        <FlowPane styleClass="responsive-action-bar ux-inline-2b55dc6342">
+                            <Button text="Paste Key" onAction="#handlePasteSymKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <Button text="Load Key…" onAction="#handleLoadSymKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <MenuButton fx:id="symKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button ux-inline-ba9ea6419e" onShowing="#handlePopulateSymKeyShelf"/>
                         </FlowPane>
-                        <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text" style="-fx-padding: 4 0 0 142;"/>
+                        <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text ux-inline-2b55dc6342"/>
                     </VBox>
 
                     <!-- Group 3: IV / Nonce & AEAD Parameters -->
@@ -107,7 +107,7 @@
                             <VBox spacing="2" GridPane.columnIndex="1" GridPane.rowIndex="0">
                                 <HBox fx:id="ivContainer" spacing="8" alignment="CENTER_LEFT">
                                     <TextField fx:id="ivField" promptText="Hex IV (required for CBC/CTR/GCM modes)..." HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace"/>
-                                    <Button text="Generate" onAction="#generateIV" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
+                                    <Button text="Generate" onAction="#generateIV" styleClass="secondary-button ux-inline-ba9ea6419e"/>
                                 </HBox>
                                 <Label fx:id="ivBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
@@ -124,56 +124,54 @@
                                 <Label fx:id="aadBadgeLabel" styleClass="material-field-badge" managed="false" visible="false"/>
                             </VBox>
                         </GridPane>
-                        <VBox fx:id="ecbWarningBox" visible="false" managed="false" style="-fx-padding: 6 0 0 0;">
+                        <VBox styleClass="ux-inline-3b04901141" fx:id="ecbWarningBox" visible="false" managed="false">
                             <Label text="⚠️ ECB (Electronic Codebook) mode is insecure: identical plaintext blocks yield identical ciphertext blocks. Use CBC, CTR, or GCM instead."
-                                   styleClass="helper-text" style="-fx-text-fill: #c0392b; -fx-font-weight: bold;" wrapText="true"/>
+                                   styleClass="helper-text ux-inline-3f0c348f84" wrapText="true"/>
                         </VBox>
-                        <Label fx:id="aeadNoteLabel" text="Note: AEAD modes (GCM, ChaCha20-Poly1305, XChaCha20-Poly1305) require a nonce and produce/verify a detached auth tag." styleClass="helper-text" style="-fx-padding: 4 0 0 142;"/>
+                        <Label fx:id="aeadNoteLabel" text="Note: AEAD modes (GCM, ChaCha20-Poly1305, XChaCha20-Poly1305) require a nonce and produce/verify a detached auth tag." styleClass="helper-text ux-inline-2b55dc6342"/>
                     </VBox>
 
                     <!-- Primary actions -->
-                    <FlowPane styleClass="responsive-action-bar" style="-fx-padding: 4 0 0 142;">
-                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button-primary" style="-fx-min-width: 120;"/>
-                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="secondary-button" style="-fx-min-width: 120;"/>
+                    <FlowPane styleClass="responsive-action-bar ux-inline-2b55dc6342">
+                        <Button text="Encrypt" onAction="#handleSymmetricEncrypt" styleClass="action-button-primary ux-inline-7917b49a95"/>
+                        <Button text="Decrypt" onAction="#handleSymmetricDecrypt" styleClass="secondary-button ux-inline-7917b49a95"/>
                     </FlowPane>
                 </VBox>
             </TitledPane>
 
             <TitledPane text="📁 File Cipher (Streaming)" expanded="false">
-                <VBox spacing="6" style="-fx-padding: 8;">
-                    <Label text="Processes the file in chunks. GCM and ChaCha20-Poly1305 use a detached 16-byte tag."
-                           style="-fx-font-size: 10px; -fx-text-fill: #666;" wrapText="true"/>
-                    <ComboBox fx:id="fileCipherAlgorithmCombo" prefWidth="250" style="-fx-font-size: 11px;"/>
+                <VBox styleClass="ux-inline-1684f00703" spacing="6">
+                    <Label styleClass="ux-inline-39414733db" text="Processes the file in chunks. GCM and ChaCha20-Poly1305 use a detached 16-byte tag." wrapText="true"/>
+                    <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherAlgorithmCombo" prefWidth="250"/>
                     <HBox spacing="5">
-                        <TextField fx:id="fileCipherSourceField" promptText="Source file path" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherSourceField" promptText="Source file path" HBox.hgrow="ALWAYS"/>
                         <Button text="…" onAction="#chooseFileCipherSource" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
-                        <TextField fx:id="fileCipherDestinationField" promptText="Output file path" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherDestinationField" promptText="Output file path" HBox.hgrow="ALWAYS"/>
                         <Button text="…" onAction="#chooseFileCipherDestination" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
-                        <TextField fx:id="fileCipherTagField" promptText="Detached AEAD tag path (.tag; required for GCM / ChaCha)" HBox.hgrow="ALWAYS" style="-fx-font-size: 11px;"/>
+                        <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherTagField" promptText="Detached AEAD tag path (.tag; required for GCM / ChaCha)" HBox.hgrow="ALWAYS"/>
                         <Button text="…" onAction="#chooseFileCipherTag" styleClass="secondary-button"/>
                     </HBox>
-                    <TextField fx:id="fileCipherKeyField" promptText="Key in hexadecimal" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                    <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherKeyField" promptText="Key in hexadecimal"/>
                     <HBox spacing="5">
-                        <TextField fx:id="fileCipherNonceField" promptText="IV / nonce in hexadecimal (fresh value for AEAD encryption)"
-                                   HBox.hgrow="ALWAYS" style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
-                        <Button text="Generate" onAction="#generateFileCipherNonce" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
+                        <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherNonceField" promptText="IV / nonce in hexadecimal (fresh value for AEAD encryption)"
+                                   HBox.hgrow="ALWAYS"/>
+                        <Button text="Generate" onAction="#generateFileCipherNonce" styleClass="secondary-button ux-inline-ab4da656fa"/>
                     </HBox>
-                    <TextField fx:id="fileCipherAadField" promptText="AAD in hexadecimal (optional, AEAD only)"
-                               style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
-                    <CheckBox fx:id="fileCipherLinesCheck"
+                    <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherAadField" promptText="AAD in hexadecimal (optional, AEAD only)"/>
+                    <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="fileCipherLinesCheck"
                               text="Process each UTF-8 line independently (GCM/ChaCha: fresh nonce per line; CBC: supplied IV for all lines)"
-                              wrapText="true" style="-fx-font-size: 10px;"/>
+                              wrapText="true"/>
                     <HBox spacing="6" alignment="CENTER_LEFT">
-                        <Label text="Line output:" style="-fx-font-size: 10px;"/>
-                        <ComboBox fx:id="fileCipherLineEncodingCombo" prefWidth="120" style="-fx-font-size: 10px;"/>
-                        <Label text="Text:" style="-fx-font-size: 10px;"/>
-                        <ComboBox fx:id="fileCipherLineCharsetCombo" prefWidth="180" style="-fx-font-size: 10px;"/>
+                        <Label styleClass="ux-inline-ab4da656fa" text="Line output:"/>
+                        <ComboBox styleClass="ux-inline-ab4da656fa" fx:id="fileCipherLineEncodingCombo" prefWidth="120"/>
+                        <Label styleClass="ux-inline-ab4da656fa" text="Text:"/>
+                        <ComboBox styleClass="ux-inline-ab4da656fa" fx:id="fileCipherLineCharsetCombo" prefWidth="180"/>
                     </HBox>
-                    <CheckBox fx:id="fileCipherCompactCbcCheck" text="Write line records without header (compact format)" style="-fx-font-size: 10px;"/>
+                    <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="fileCipherCompactCbcCheck" text="Write line records without header (compact format)"/>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button fx:id="fileCipherEncryptBtn" text="Encrypt File" onAction="#handleFileCipherEncrypt" styleClass="action-button"/>
                         <Button fx:id="fileCipherDecryptBtn" text="Decrypt File" onAction="#handleFileCipherDecrypt" styleClass="action-button"/>
@@ -181,8 +179,7 @@
                         <Button text="Export Recipe..." onAction="#handleExportFileCipherRecipe" styleClass="secondary-button"/>
                         <Button text="Import Recipe..." onAction="#handleImportFileCipherRecipe" styleClass="secondary-button"/>
                     </FlowPane>
-                    <TextArea fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"
-                              style="-fx-font-family: 'Monospaced'; -fx-font-size: 10px;"/>
+                    <TextArea styleClass="ux-inline-74c2908b8c" fx:id="fileCipherResultArea" editable="false" prefHeight="100" wrapText="true"/>
                 </VBox>
             </TitledPane>
 
@@ -193,9 +190,8 @@
             </TitledPane>
 
             <TitledPane text="🔑 Asymmetric Cipher (RSA)" expanded="false">
-                <VBox spacing="10" style="-fx-padding: 10;">
-                    <Label text="RSA Operation using loaded keys (load keys from Keys tab OR enter manually below)"
-                           style="-fx-font-style: italic; -fx-text-fill: gray;"/>
+                <VBox styleClass="ux-inline-31b3bfce5a" spacing="10">
+                    <Label styleClass="ux-inline-3c07365239" text="RSA Operation using loaded keys (load keys from Keys tab OR enter manually below)"/>
                     <GridPane hgap="10" vgap="10">
                         <Label text="Padding:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <ComboBox fx:id="rsaPaddingCombo" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
@@ -205,26 +201,24 @@
                         <ComboBox fx:id="asymmetricOutputFormatCombo" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
                     </GridPane>
                     <Label fx:id="rsaPaddingHelpLabel" text="OAEP uses MGF1 masks and digest hashing to prevent chosen-ciphertext attacks." styleClass="helper-text" wrapText="true"/>
-                    <Label fx:id="rsaPaddingWarningLabel" text="⚠️ PKCS#1 v1.5 padding and NoPadding are vulnerable to padding oracle attacks. OAEP is recommended for RSA encryption." visible="false" managed="false" styleClass="helper-text" style="-fx-text-fill: #b54708; -fx-font-weight: bold;" wrapText="true"/>
+                    <Label fx:id="rsaPaddingWarningLabel" text="⚠️ PKCS#1 v1.5 padding and NoPadding are vulnerable to padding oracle attacks. OAEP is recommended for RSA encryption." visible="false" managed="false" styleClass="helper-text ux-inline-a0d56c7d79" wrapText="true"/>
                     <Separator orientation="HORIZONTAL"/>
                     <VBox spacing="5">
-                        <Label text="Public Key (PEM or Hex):" style="-fx-font-size: 11px;"/>
-                        <TextArea fx:id="publicKeyArea" prefHeight="60" wrapText="true"
-                                  style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                        <Label styleClass="ux-inline-ba9ea6419e" text="Public Key (PEM or Hex):"/>
+                        <TextArea styleClass="ux-inline-74263851ef" fx:id="publicKeyArea" prefHeight="60" wrapText="true"/>
                         <FlowPane styleClass="responsive-action-bar">
-                            <Button text="Paste Public Key" onAction="#handlePastePublicKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                            <Button text="Load from File..." onAction="#handleReadPublicKeyFile" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                            <MenuButton fx:id="cipherPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" style="-fx-font-size: 11px;" onShowing="#handlePopulateCipherPubKeyShelf"/>
+                            <Button text="Paste Public Key" onAction="#handlePastePublicKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <Button text="Load from File..." onAction="#handleReadPublicKeyFile" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <MenuButton fx:id="cipherPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPubKeyShelf"/>
                         </FlowPane>
                     </VBox>
                     <VBox spacing="5">
-                        <Label text="Private Key (PEM or Hex):" style="-fx-font-size: 11px;"/>
-                        <TextArea fx:id="privateKeyArea" prefHeight="60" wrapText="true"
-                                  style="-fx-font-family: 'Monospaced'; -fx-font-size: 11px;"/>
+                        <Label styleClass="ux-inline-ba9ea6419e" text="Private Key (PEM or Hex):"/>
+                        <TextArea styleClass="ux-inline-74263851ef" fx:id="privateKeyArea" prefHeight="60" wrapText="true"/>
                         <FlowPane styleClass="responsive-action-bar">
-                            <Button text="Paste Private Key" onAction="#handlePastePrivateKey" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                            <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" styleClass="secondary-button" style="-fx-font-size: 11px;"/>
-                            <MenuButton fx:id="cipherPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" style="-fx-font-size: 11px;" onShowing="#handlePopulateCipherPrivKeyShelf"/>
+                            <Button text="Paste Private Key" onAction="#handlePastePrivateKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <MenuButton fx:id="cipherPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPrivKeyShelf"/>
                         </FlowPane>
                     </VBox>
                     <Separator orientation="HORIZONTAL"/>

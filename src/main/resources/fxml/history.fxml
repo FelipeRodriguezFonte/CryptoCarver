@@ -23,8 +23,8 @@
     <!-- Header: split in rows so every action stays readable on ordinary window widths. -->
     <VBox spacing="7">
         <HBox alignment="CENTER_LEFT" spacing="10">
-            <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #37474f;" text="Recent Operations" />
-            <Label fx:id="historySummaryLabel" style="-fx-text-fill: #607d8b; -fx-font-size: 11px;" text="0 operations" />
+            <Label styleClass="ux-inline-c7cf31c907" text="Recent Operations" />
+            <Label styleClass="ux-inline-aaca1a5100" fx:id="historySummaryLabel" text="0 operations" />
             <Region HBox.hgrow="ALWAYS" />
             <Label text="Values:" />
             <ComboBox fx:id="visibilityCombo" prefWidth="215.0">
@@ -32,7 +32,7 @@
                     <Tooltip text="Choose Unsafe lab to reveal all values. This also controls report and recipe export." />
                 </tooltip>
             </ComboBox>
-            <Label fx:id="unsafeVisibilityWarningLabel" style="-fx-text-fill: #c0392b; -fx-font-size: 10px;" text="⚠ Unsafe lab: sensitive values are visible" />
+            <Label styleClass="ux-inline-d8d7ab2893" fx:id="unsafeVisibilityWarningLabel" text="⚠ Unsafe lab: sensitive values are visible" />
         </HBox>
 
         <FlowPane alignment="CENTER_LEFT" prefWrapLength="900.0" styleClass="responsive-action-bar">
@@ -40,46 +40,46 @@
             <TextField fx:id="historyFilterField" prefWidth="220.0" promptText="Operation, date or property" />
             <Label text="Module:" />
             <ComboBox fx:id="historyModuleFilterCombo" prefWidth="145.0" promptText="All modules" />
-            <Button minWidth="USE_PREF_SIZE" onAction="#handleClearHistoryFilter" style="-fx-font-size: 11px; -fx-padding: 4 8;" text="Clear filters" />
-            <Button fx:id="compareBtn" minWidth="USE_PREF_SIZE" onAction="#handleCompareHistory" style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Compare 2" />
-            <Button minWidth="USE_PREF_SIZE" onAction="#importOperationRecipe" style="-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Import Recipe" />
-            <Button minWidth="USE_PREF_SIZE" onAction="#handleClearHistory" style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Clear History" />
+            <Button styleClass="ux-inline-5d5d194412" minWidth="USE_PREF_SIZE" onAction="#handleClearHistoryFilter" text="Clear filters" />
+            <Button styleClass="ux-inline-b2a28a2c9c" fx:id="compareBtn" minWidth="USE_PREF_SIZE" onAction="#handleCompareHistory" text="Compare 2" />
+            <Button styleClass="ux-inline-f8ea22b522" minWidth="USE_PREF_SIZE" onAction="#importOperationRecipe" text="Import Recipe" />
+            <Button styleClass="ux-inline-6ab6128509" minWidth="USE_PREF_SIZE" onAction="#handleClearHistory" text="Clear History" />
         </FlowPane>
 
         <FlowPane prefWrapLength="900.0" styleClass="responsive-action-bar">
-            <Label style="-fx-text-fill: #607d8b; -fx-font-size: 11px;" text="The latest operation is selected automatically. Select a different row to export it." />
-            <Button fx:id="openHistoryDetailBtn" onAction="#openSelectedHistoryDetail" style="-fx-background-color: #6c5ce7; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Open Selected Value">
+            <Label styleClass="ux-inline-aaca1a5100" text="The latest operation is selected automatically. Select a different row to export it." />
+            <Button styleClass="ux-inline-c2a64d8f72" fx:id="openHistoryDetailBtn" onAction="#openSelectedHistoryDetail" text="Open Selected Value">
                 <tooltip>
                     <Tooltip text="Open the complete value of the selected detail in the expanded viewer." />
                 </tooltip>
             </Button>
-            <Button fx:id="addHistoryToShelfBtn" onAction="#handleAddSelectedHistoryToShelf" style="-fx-background-color: #00897b; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Add Output to Shelf">
+            <Button styleClass="ux-inline-282fb38d27" fx:id="addHistoryToShelfBtn" onAction="#handleAddSelectedHistoryToShelf" text="Add Output to Shelf">
                 <tooltip>
                     <Tooltip text="Save only the published output of the selected operation; never reruns it." />
                 </tooltip>
             </Button>
-            <Button fx:id="copyHistoryDetailBtn" onAction="#copySelectedHistoryDetail" style="-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Copy Selected Value" />
-            <Button fx:id="exportJsonRecordBtn" onAction="#exportSelectedHistoryRecord" style="-fx-background-color: #1565c0; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Export JSON Record">
+            <Button styleClass="ux-inline-f8ea22b522" fx:id="copyHistoryDetailBtn" onAction="#copySelectedHistoryDetail" text="Copy Selected Value" />
+            <Button styleClass="ux-inline-7624a84ff8" fx:id="exportJsonRecordBtn" onAction="#exportSelectedHistoryRecord" text="Export JSON Record">
                 <tooltip>
                     <Tooltip text="Export the selected execution, including its input/output according to the Values policy." />
                 </tooltip>
             </Button>
-            <Button fx:id="exportVisibleJsonBtn" onAction="#exportVisibleHistoryRecords" style="-fx-background-color: #0277bd; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Export Visible JSON">
+            <Button styleClass="ux-inline-525f1e68d6" fx:id="exportVisibleJsonBtn" onAction="#exportVisibleHistoryRecords" text="Export Visible JSON">
                 <tooltip>
                     <Tooltip text="Export every operation currently shown by the filters, according to the Values policy." />
                 </tooltip>
             </Button>
-            <Button fx:id="exportReportBtn" onAction="#exportSelectedHistoryReport" style="-fx-background-color: #00897b; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Export Markdown Report">
+            <Button styleClass="ux-inline-282fb38d27" fx:id="exportReportBtn" onAction="#exportSelectedHistoryReport" text="Export Markdown Report">
                 <tooltip>
                     <Tooltip text="Export the selected operation as Markdown using the selected values policy." />
                 </tooltip>
             </Button>
-            <Button fx:id="copyReportBtn" onAction="#copySelectedHistoryReport" style="-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Copy Markdown Report">
+            <Button styleClass="ux-inline-f8ea22b522" fx:id="copyReportBtn" onAction="#copySelectedHistoryReport" text="Copy Markdown Report">
                 <tooltip>
                     <Tooltip text="Copy a Markdown report using the selected values policy." />
                 </tooltip>
             </Button>
-            <Button fx:id="exportRecipeBtn" onAction="#exportSelectedHistoryRecipe" style="-fx-background-color: #0288d1; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Export JSON Recipe">
+            <Button styleClass="ux-inline-3a31050b85" fx:id="exportRecipeBtn" onAction="#exportSelectedHistoryRecipe" text="Export JSON Recipe">
                 <tooltip>
                     <Tooltip text="Export the selected operation as a reusable JSON recipe." />
                 </tooltip>
@@ -101,7 +101,7 @@
 
             <!-- Bottom/Right: Details -->
             <VBox spacing="5">
-                <Label style="-fx-font-weight: bold; -fx-text-fill: #b0bec5;" text="Operation Details" />
+                <Label styleClass="ux-inline-2ed34ee4bc" text="Operation Details" />
                 <TableView fx:id="detailsTable" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="nameCol" text="Property" />

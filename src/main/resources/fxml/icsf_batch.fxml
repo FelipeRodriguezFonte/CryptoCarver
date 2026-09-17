@@ -31,8 +31,8 @@
         <Label text="Automatic reading decides block by block, trying all three shapes and keeping the one that produces tokens which genuinely analyse. Force a shape when a block is being read the wrong way."
                wrapText="true" styleClass="helper-text"/>
 
-        <Label text="Key tokens — one per line, two host rows per token, or one block of stacked hex. Blank lines separate blocks; lines starting with # are ignored; LABEL|hex is accepted."
-               wrapText="true" style="-fx-font-weight: bold;"/>
+        <Label styleClass="ux-inline-689e8d50bc" text="Key tokens — one per line, two host rows per token, or one block of stacked hex. Blank lines separate blocks; lines starting with # are ignored; LABEL|hex is accepted."
+               wrapText="true"/>
         <TextArea fx:id="icsfBatchInputArea" prefHeight="120" wrapText="false"
                   promptText="MY.KEY.01|020000000100C000... — one per line, or two host rows, or one stacked block"
                   styleClass="monospace-field"/>
@@ -54,7 +54,7 @@
         <TabPane fx:id="icsfBatchTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="430" prefWidth="400" VBox.vgrow="ALWAYS">
             <tabs>
                 <Tab fx:id="icsfBatchStatisticsTab" text="Statistics">
-                    <VBox spacing="6" style="-fx-padding: 8;">
+                    <VBox styleClass="ux-inline-1684f00703" spacing="6">
                         <TableView fx:id="icsfBatchStatisticsTable" prefWidth="400" VBox.vgrow="ALWAYS">
                             <columns>
                                 <TableColumn fx:id="icsfStatDimensionColumn" text="Dimension" prefWidth="220"/>
@@ -67,7 +67,7 @@
                 </Tab>
 
                 <Tab fx:id="icsfBatchFindingsTab" text="Findings">
-                    <VBox spacing="6" style="-fx-padding: 8;">
+                    <VBox styleClass="ux-inline-1684f00703" spacing="6">
                         <Label text="Double-click a finding to filter the inventory by it."
                                wrapText="true" styleClass="helper-text"/>
                         <TableView fx:id="icsfBatchFindingsTable" prefHeight="200" prefWidth="400" VBox.vgrow="ALWAYS">
@@ -86,7 +86,7 @@
                 </Tab>
 
                 <Tab fx:id="icsfBatchInventoryTab" text="Inventory">
-                    <VBox spacing="6" style="-fx-padding: 8;">
+                    <VBox styleClass="ux-inline-1684f00703" spacing="6">
                         <HBox spacing="8">
                             <Label text="Filter:"/>
                             <TextField fx:id="icsfBatchFilterField" promptText="label, key type, finding…"
@@ -98,7 +98,7 @@
                 </Tab>
 
                 <Tab fx:id="icsfBatchReportTab" text="Report">
-                    <VBox spacing="6" style="-fx-padding: 8;">
+                    <VBox styleClass="ux-inline-1684f00703" spacing="6">
                         <Label text="This is the report without the per-token detail — exactly what the .txt carries when the detail box above is unchecked. With it checked, the saved file adds the full card for every token behind this."
                                wrapText="true" styleClass="helper-text"/>
                         <TextArea fx:id="icsfBatchReportArea" editable="false" VBox.vgrow="ALWAYS"

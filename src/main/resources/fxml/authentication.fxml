@@ -6,7 +6,7 @@
       fx:controller="com.cryptocarver.ui.AuthenticationController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,authentication-module">
     <VBox spacing="12" styleClass="module-pane-content">
-        <Label text="1. Data to authenticate" styleClass="form-label" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label text="1. Data to authenticate" styleClass="form-label ux-inline-5a7a75ee34"/>
         <Label text="Enter the message used to generate or verify the signature/MAC. Format is selected in the global 'Payload format' bar above."
                styleClass="helper-text"/>
         <TextArea fx:id="authInputArea" prefHeight="120" wrapText="true"
@@ -21,8 +21,8 @@
                     <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
                         <ComboBox fx:id="signatureTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                        <Button text="Apply" onAction="#handleApplySignatureTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                        <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                        <Button text="Apply" onAction="#handleApplySignatureTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
                             <items>
                                 <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveSignatureTemplate"/>
                                 <MenuItem text="Export Selected Template..." onAction="#handleExportSignatureTemplate"/>
@@ -30,7 +30,7 @@
                                 <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteSignatureTemplate"/>
                             </items>
                         </MenuButton>
-                        <Button text="Reset Defaults" onAction="#handleResetSignatureDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button text="Reset Defaults" onAction="#handleResetSignatureDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
                     </FlowPane>
 
                     <HBox spacing="8" alignment="CENTER_LEFT">
@@ -94,7 +94,7 @@
 
             <TitledPane text="🔐 Message Authentication Codes (MAC)">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="2. MAC configuration" styleClass="form-label" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                    <Label text="2. MAC configuration" styleClass="form-label ux-inline-5a7a75ee34"/>
                     <HBox spacing="12" alignment="BOTTOM_LEFT">
                         <VBox spacing="4" HBox.hgrow="ALWAYS">
                             <Label text="Algorithm" styleClass="form-label"/>
@@ -107,8 +107,8 @@
                     </HBox>
                     <Label fx:id="authMacAlgorithmInfoLabel" wrapText="true" styleClass="helper-text"/>
                     <Label fx:id="authMacWarningLabel" wrapText="true" managed="false" visible="false"
-                           styleClass="helper-text" style="-fx-text-fill: #c0392b; -fx-font-weight: bold;"/>
-                    <VBox spacing="10" styleClass="module-pane-content" style="-fx-background-color: #f7f9fb; -fx-border-color: #d7dee5; -fx-border-radius: 4;">
+                           styleClass="helper-text ux-inline-3f0c348f84"/>
+                    <VBox spacing="10" styleClass="module-pane-content ux-inline-e232d3c381">
                         <HBox spacing="10" alignment="CENTER_LEFT">
                             <Label text="Key material" styleClass="form-label"/>
                             <Region HBox.hgrow="ALWAYS"/>
@@ -170,7 +170,7 @@
     </Accordion>
 
     <VBox spacing="8" styleClass="module-pane-content">
-        <Label text="3. Result" styleClass="form-label" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label text="3. Result" styleClass="form-label ux-inline-5a7a75ee34"/>
         <TextArea fx:id="authOutputArea" prefHeight="130" editable="false" wrapText="true"
                   promptText="The generated value or verification result will appear here."
                   styleClass="result-area,monospace-field"/>

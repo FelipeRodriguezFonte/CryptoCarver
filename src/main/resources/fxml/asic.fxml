@@ -12,7 +12,7 @@
             <TitledPane text="ASiC Containers" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="ASiC-S laboratory — one payload plus detached CAdES-BES signature" styleClass="helper-text"/>
-                    <Label text="Creates a bounded ASiC-S ZIP container. Inspection checks the mimetype and detached signature; it does not establish certificate trust, revocation or LTV." wrapText="true" styleClass="helper-text" style="-fx-text-fill: #9a3412;"/>
+                    <Label text="Creates a bounded ASiC-S ZIP container. Inspection checks the mimetype and detached signature; it does not establish certificate trust, revocation or LTV." wrapText="true" styleClass="helper-text ux-inline-47dcc17db5"/>
 
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
@@ -59,7 +59,7 @@
 
                     <Separator/>
 
-                    <Label text="Experimental ASiC-E / CAdES — multiple payloads plus a SHA-256 manifest" wrapText="true" styleClass="form-label" style="-fx-text-fill: #9a3412;"/>
+                    <Label text="Experimental ASiC-E / CAdES — multiple payloads plus a SHA-256 manifest" wrapText="true" styleClass="form-label ux-inline-47dcc17db5"/>
 
                     <HBox spacing="10">
                         <TextField fx:id="asicEPayloadsField" editable="false" promptText="No ASiC-E payload files selected" HBox.hgrow="ALWAYS" styleClass="form-field"/>

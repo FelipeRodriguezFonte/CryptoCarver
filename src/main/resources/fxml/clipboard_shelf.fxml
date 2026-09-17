@@ -22,7 +22,7 @@
         <ComboBox fx:id="sourceFilterCombo" promptText="All Operations" prefWidth="150"/>
         <ComboBox fx:id="formatFilterCombo" promptText="Any Format" prefWidth="120"/>
         <ComboBox fx:id="classFilterCombo" promptText="Any Classification" prefWidth="140"/>
-        <Label fx:id="itemCountLabel" text="0 / 100 items" style="-fx-text-fill: #7f8c8d;"/>
+        <Label styleClass="ux-inline-1e140b70f7" fx:id="itemCountLabel" text="0 / 100 items"/>
         <Button text="Open Copy Window" onAction="#handleOpenClipboardWindow"/>
         <Button text="Clear Shelf" onAction="#handleClearShelf" styleClass="button, danger-button"/>
     </FlowPane>
@@ -30,7 +30,7 @@
     <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" dividerPositions="0.6">
         <TableView fx:id="shelfTable" VBox.vgrow="ALWAYS">
             <placeholder>
-                <Label text="No saved laboratory results yet" style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;"/>
+                <Label styleClass="ux-inline-0b9797af4c" text="No saved laboratory results yet"/>
             </placeholder>
             <columns>
                 <TableColumn fx:id="pinCol" text="📌" prefWidth="35"/>
@@ -53,8 +53,8 @@
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
             <FlowPane prefWrapLength="950" hgap="8" vgap="8" styleClass="responsive-action-bar">
-                <Label text="Entry Details" style="-fx-font-weight: bold;"/>
-                <Label fx:id="warningLabel" text="⚠️ Contains sensitive data" style="-fx-text-fill: #e67e22;" visible="false"/>
+                <Label styleClass="ux-inline-689e8d50bc" text="Entry Details"/>
+                <Label styleClass="ux-inline-caeb0c280b" fx:id="warningLabel" text="⚠️ Contains sensitive data" visible="false"/>
                 <Button fx:id="pinBtn" text="Pin" onAction="#handleTogglePin" disable="true"/>
                 <Button fx:id="editTagsNoteBtn" text="Edit Note &amp; Tags" onAction="#handleEditTagsNote" disable="true"/>
                 <Button fx:id="compareBtn" text="Compare..." onAction="#handleCompare" disable="true"/>
@@ -66,7 +66,7 @@
                 <Button fx:id="renameBtn" text="Rename" onAction="#handleRename" disable="true"/>
                 <Button fx:id="deleteBtn" text="Delete" onAction="#handleDelete" disable="true" styleClass="button, danger-button"/>
             </FlowPane>
-            <TextArea fx:id="detailsArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" style="-fx-font-family: monospace;"/>
+            <TextArea styleClass="ux-inline-24c41c84cd" fx:id="detailsArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"/>
         </VBox>
     </SplitPane>
 </VBox>

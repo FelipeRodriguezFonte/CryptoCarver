@@ -15,7 +15,7 @@
 
                     <Separator/>
 
-                    <Label text="Key Generation" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label text="Key Generation" styleClass="form-label ux-inline-689e8d50bc"/>
                     <HBox spacing="10">
                         <TextField fx:id="openPgpUserIdField" promptText="User ID, e.g. Alice &lt;alice@example.test&gt;" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                         <PasswordField fx:id="openPgpPassphraseField" promptText="Key passphrase" prefWidth="180" styleClass="form-field"/>
@@ -56,7 +56,7 @@
 
                     <Separator/>
 
-                    <Label text="Operations (Text / Armor)" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label text="Operations (Text / Armor)" styleClass="form-label ux-inline-689e8d50bc"/>
                     <HBox spacing="10" alignment="CENTER_LEFT">
                         <Button text="Load input…" onAction="#handleLoadInput" styleClass="secondary-button"/>
                         <Label text="Text/ASCII armor only; 16 MiB limit" styleClass="helper-text"/>
@@ -81,7 +81,7 @@
 
                     <Separator/>
 
-                    <Label text="Binary File Operations (max. 16 MiB)" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label text="Binary File Operations (max. 16 MiB)" styleClass="form-label ux-inline-689e8d50bc"/>
                     <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                         <Button text="Encrypt File…" onAction="#handleEncryptFile" styleClass="secondary-button"/>
                         <Button text="Decrypt File…" onAction="#handleDecryptFile" styleClass="secondary-button"/>

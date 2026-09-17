@@ -23,20 +23,20 @@ public class NavigationRail extends VBox {
 
     // Navigation sections
     public enum Section {
-        SEARCH("🔍", "Search"),
-        PROCESS_DESIGNER("🧩", "Process Designer"),
-        GENERIC("◈", "Generic"),
-        CIPHER("🔒", "Cipher"),
-        AUTHENTICATION("🛡", "Authentication"),
-        KEYS("🔑", "Keys"),
-        POST_QUANTUM("⚛", "Post-Quantum"),
-        XML_SECURITY("📝", "XML Security"),
-        CERTIFICATES("📜", "Certificates"),
-        JOSE("🌐", "JOSE"),
-        COSE("📦", "COSE"),
-        PAYMENTS("💳", "Payments"),
-        ASN1("{}", "ASN.1"),
-        HISTORY("⏱", "History");
+        SEARCH("search", "Search"),
+        PROCESS_DESIGNER("processDesigner", "Process Designer"),
+        GENERIC("generic", "Generic"),
+        CIPHER("cipher", "Cipher"),
+        AUTHENTICATION("authentication", "Authentication"),
+        KEYS("keys", "Keys"),
+        POST_QUANTUM("postQuantum", "Post-Quantum"),
+        XML_SECURITY("xmlSecurity", "XML Security"),
+        CERTIFICATES("certificates", "Certificates"),
+        JOSE("jose", "JOSE"),
+        COSE("cose", "COSE"),
+        PAYMENTS("payments", "Payments"),
+        ASN1("asn1", "ASN.1"),
+        HISTORY("history", "History");
 
         private final String icon;
         private final String label;
@@ -76,7 +76,8 @@ public class NavigationRail extends VBox {
     }
 
     private void addButton(Section section) {
-        ToggleButton button = new ToggleButton(section.getIcon());
+        ToggleButton button = new ToggleButton();
+        button.setGraphic(IconRegistry.icon(section.getIcon()));
         button.setToggleGroup(toggleGroup);
         button.getStyleClass().add("rail-button");
         button.setMinSize(40, 40);

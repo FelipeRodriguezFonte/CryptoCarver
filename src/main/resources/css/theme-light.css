@@ -1,0 +1,12 @@
+/* Claro: solo redefiniciones de tokens. */
+.root {
+    -cc-bg-app: #f4f4f4;
+    -cc-bg-surface: #ffffff;
+    -cc-bg-surface-raised: #ffffff;
+    -cc-bg-sunken: #f7fafc;
+    -cc-text: #2c3e50;
+    -cc-text-secondary: #4a5568;
+    -cc-accent: #3498db;
+    -cc-accent-hover: #2980b9;
+    -cc-on-accent: #ffffff;
+}

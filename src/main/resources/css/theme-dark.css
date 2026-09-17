@@ -1,0 +1,23 @@
+/* Oscuro: solo redefiniciones de tokens. */
+.root {
+    -cc-bg-app: #17212b;
+    -cc-bg-surface: #22303d;
+    -cc-bg-surface-raised: #2c3e50;
+    -cc-bg-sunken: #111a22;
+    -cc-border: #526579;
+    -cc-border-strong: #71869b;
+    -cc-text: #ecf0f1;
+    -cc-text-secondary: #cbd5e0;
+    -cc-text-disabled: #94a3b8;
+    -cc-accent: #5dade2;
+    -cc-accent-hover: #7aa7c7;
+    -cc-on-accent: #0f172a;
+    -cc-focus-ring: #7dd3fc;
+    -cc-selection: #1e3a8a;
+    -cc-success: #86efac; -cc-success-text: #def7ec;
+    -cc-warning: #fbbf24; -cc-warning-text: #fef3c7;
+    -cc-danger: #fca5a5; -cc-danger-text: #fee2e2;
+    -cc-info: #7dd3fc; -cc-info-text: #e0f2fe;
+    -cc-success-bg: #164e36; -cc-warning-bg: #5b3a08; -cc-danger-bg: #5b1f24; -cc-info-bg: #123c52;
+    -cc-secret: #fca5a5;
+}

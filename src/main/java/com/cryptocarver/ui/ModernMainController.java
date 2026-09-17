@@ -274,10 +274,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Menu helpMenu;
     @FXML private Menu laboratoryMenu;
     @FXML private Menu languageMenu;
+    @FXML private Menu appearanceMenu;
     @FXML private RadioMenuItem languageSystemMenuItem;
     @FXML private RadioMenuItem languageEsMenuItem;
     @FXML private RadioMenuItem languageEnMenuItem;
     @FXML private ToggleGroup languagePreferenceGroup;
+    @FXML private ToggleGroup themePreferenceGroup;
+    @FXML private RadioMenuItem themeSystemMenuItem;
+    @FXML private RadioMenuItem themeLightMenuItem;
+    @FXML private RadioMenuItem themeDarkMenuItem;
     @FXML private MenuItem importKeyMenuItem;
     @FXML private MenuItem exportScreenMenuItem;
     @FXML private MenuItem importScreenMenuItem;
@@ -577,6 +582,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(helpMenu, "menu.help");
         setText(laboratoryMenu, "menu.laboratory");
         setText(languageMenu, "menu.language");
+        setText(appearanceMenu, "menu.appearance");
 
         setText(importKeyMenuItem, "menu.importKey");
         setText(exportScreenMenuItem, "menu.exportScreen");
@@ -624,6 +630,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (languageSystemMenuItem != null) languageSystemMenuItem.setSelected(selected == LanguagePreference.SYSTEM);
         if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
         if (languageEnMenuItem != null) languageEnMenuItem.setSelected(selected == LanguagePreference.EN);
+        com.cryptocarver.model.ThemePreference theme = com.cryptocarver.model.AppSettings.getInstance().getThemePreference();
+        if (themeSystemMenuItem != null) themeSystemMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.SYSTEM);
+        if (themeLightMenuItem != null) themeLightMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.LIGHT);
+        if (themeDarkMenuItem != null) themeDarkMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.DARK);
 
         if (toolbarSearchButton != null) {
             toolbarSearchButton.setText(i18n.text("toolbar.search", COMMAND_PALETTE_SHORTCUT));
@@ -835,6 +845,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private void handleLanguageSystem() { i18n.setPreference(LanguagePreference.SYSTEM); }
     @FXML private void handleLanguageEs() { i18n.setPreference(LanguagePreference.ES); }
     @FXML private void handleLanguageEn() { i18n.setPreference(LanguagePreference.EN); }
+    @FXML private void handleThemeSystem() { setTheme(com.cryptocarver.model.ThemePreference.SYSTEM); }
+    @FXML private void handleThemeLight() { setTheme(com.cryptocarver.model.ThemePreference.LIGHT); }
+    @FXML private void handleThemeDark() { setTheme(com.cryptocarver.model.ThemePreference.DARK); }
+
+    private void setTheme(com.cryptocarver.model.ThemePreference theme) {
+        com.cryptocarver.model.AppSettings.getInstance().setThemePreference(theme);
+        if (mainPane == null || mainPane.getScene() == null) return;
+        String light = getClass().getResource("/css/theme-light.css").toExternalForm();
+        String dark = getClass().getResource("/css/theme-dark.css").toExternalForm();
+        mainPane.getScene().getStylesheets().removeAll(light, dark);
+        mainPane.getScene().getStylesheets().add(theme == com.cryptocarver.model.ThemePreference.DARK ? dark : light);
+    }
 
     @FXML
     private void handleOpenSecurityMenu() {
@@ -2130,8 +2152,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         String requestedOperation = title == null || title.isBlank() ? "Unknown operation" : title;
-        contentPlaceholderLabel.setText("📋 " + requestedOperation
+        contentPlaceholderLabel.setText(requestedOperation
                 + "\n\nNo view is registered for this legacy operation. Select a tool from the side panel.");
+        contentPlaceholderLabel.setGraphic(IconRegistry.icon("clipboard"));
         contentPlaceholderLabel.setManaged(true);
         contentPlaceholderLabel.setVisible(true);
         updateContentHeader(requestedOperation);

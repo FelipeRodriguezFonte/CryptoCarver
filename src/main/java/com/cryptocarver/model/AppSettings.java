@@ -77,6 +77,15 @@ public final class AppSettings {
         save();
     }
 
+    public synchronized ThemePreference getThemePreference() {
+        return data.themePreference == null ? ThemePreference.SYSTEM : data.themePreference;
+    }
+
+    public synchronized void setThemePreference(ThemePreference preference) {
+        data.themePreference = preference == null ? ThemePreference.SYSTEM : preference;
+        save();
+    }
+
     public synchronized String getCustomTsaUrl() { return data.customTsaUrl == null ? "" : data.customTsaUrl; }
 
     public synchronized void setCustomTsaUrl(String value) {
@@ -275,6 +284,7 @@ public final class AppSettings {
         private List<Pkcs11Profile> pkcs11Profiles = new ArrayList<>();
         private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
         private LanguagePreference languagePreference = LanguagePreference.SYSTEM;
+        private ThemePreference themePreference = ThemePreference.SYSTEM;
         private List<String> favorites = new ArrayList<>();
         private String lastRoute = "";
     }

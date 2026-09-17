@@ -4,11 +4,11 @@
 
 <TitledPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
              fx:id="processDesignerRoot" text="🧩 Process Designer" expanded="true" collapsible="false" fx:controller="com.cryptocarver.ui.ProcessDesignerController">
-    <VBox spacing="7" style="-fx-padding: 8;">
-        <Label text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true" style="-fx-font-size: 10px; -fx-text-fill: #666;"/>
+    <VBox styleClass="ux-inline-1684f00703" spacing="7">
+        <Label styleClass="ux-inline-39414733db" text="Compose safe workflows by dragging blocks and connecting them. Process files store configuration, never secret keys." wrapText="true"/>
         <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="10" vgap="8">
             <HBox spacing="6" alignment="CENTER_LEFT">
-                <Label text="Process:" style="-fx-font-size: 11px;"/>
+                <Label styleClass="ux-inline-ba9ea6419e" text="Process:"/>
                 <TextField fx:id="processNameField" text="Untitled process" prefWidth="170"/>
             </HBox>
             <Separator orientation="VERTICAL"/>
@@ -62,52 +62,52 @@
                 <Button text="Open in window" onAction="#handleOpenWindow" styleClass="secondary-button"/>
             </HBox>
         </FlowPane>
-        <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 2 0 2 0;">
+        <HBox styleClass="ux-inline-8a935d4e82" spacing="8" alignment="CENTER_LEFT">
             <ProgressBar fx:id="processProgressBar" prefWidth="250" progress="0.0" HBox.hgrow="ALWAYS"/>
-            <Label fx:id="processStatusLabel" text="Ready" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label styleClass="ux-inline-601a4c676b" fx:id="processStatusLabel" text="Ready"/>
         </HBox>
         <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="6" vgap="6">
-            <Button text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
-            <Button text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
-            <Button text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
-            <Button text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button" style="-fx-font-size: 10px;"/>
-            <Label fx:id="zoomLevelLabel" text="100%" style="-fx-font-size: 10px; -fx-text-fill: #aaa; -fx-min-width: 40;"/>
-            <CheckBox fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true" style="-fx-font-size: 10px;"/>
+            <Button text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button ux-inline-ab4da656fa"/>
+            <Button text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button ux-inline-ab4da656fa"/>
+            <Button text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button ux-inline-ab4da656fa"/>
+            <Button text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button ux-inline-ab4da656fa"/>
+            <Label styleClass="ux-inline-7f1f518806" fx:id="zoomLevelLabel" text="100%"/>
+            <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true"/>
         </FlowPane>
         <SplitPane fx:id="designerSplitPane" dividerPositions="0.18, 0.76" prefHeight="380">
             <items>
                 <!-- Searchable Palette -->
-                <VBox fx:id="palettePanel" minWidth="180" prefWidth="200" maxWidth="260" spacing="6" style="-fx-padding: 6; -fx-background-color: #1a222d;">
-                    <Label text="Palette" style="-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: #ccc;"/>
-                    <TextField fx:id="paletteSearchField" promptText="Search palette…" style="-fx-font-size: 10px;"/>
-                    <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;">
+                <VBox styleClass="ux-inline-a15413a06d" fx:id="palettePanel" minWidth="180" prefWidth="200" maxWidth="260" spacing="6">
+                    <Label styleClass="ux-inline-ad770fad50" text="Palette"/>
+                    <TextField styleClass="ux-inline-ab4da656fa" fx:id="paletteSearchField" promptText="Search palette…"/>
+                    <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
                         <content>
-                            <VBox fx:id="paletteItemsContainer" spacing="3" style="-fx-padding: 2;"/>
+                            <VBox styleClass="ux-inline-1193ccbe1f" fx:id="paletteItemsContainer" spacing="3"/>
                         </content>
                     </ScrollPane>
                 </VBox>
 
                 <!-- Canvas Workspace -->
-                <ScrollPane fx:id="designerWorkspace" fitToWidth="false" fitToHeight="false" pannable="true" style="-fx-background: #202a33;" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                <ScrollPane styleClass="ux-inline-74b94b8ef1" fx:id="designerWorkspace" fitToWidth="false" fitToHeight="false" pannable="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <content>
-                        <Pane fx:id="workflowCanvas" minWidth="1200" prefWidth="1200" minHeight="800" prefHeight="800" style="-fx-background-color: #202a33; -fx-background-insets: 0;"/>
+                        <Pane styleClass="ux-inline-ec0ebd6c4b" fx:id="workflowCanvas" minWidth="1200" prefWidth="1200" minHeight="800" prefHeight="800"/>
                     </content>
                 </ScrollPane>
 
                 <!-- Dynamic Descriptor Inspector -->
-                <VBox fx:id="nodeInspector" spacing="6" minWidth="250" prefWidth="280" style="-fx-padding: 6;">
-                    <Label fx:id="selectedNodeLabel" wrapText="true" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <Label fx:id="inputContractLabel" style="-fx-font-size: 9px; -fx-text-fill: #999;" managed="false" visible="false"/>
-                    <Label fx:id="outputContractLabel" style="-fx-font-size: 9px; -fx-text-fill: #999;" managed="false" visible="false"/>
+                <VBox styleClass="ux-inline-66ce195191" fx:id="nodeInspector" spacing="6" minWidth="250" prefWidth="280">
+                    <Label styleClass="ux-inline-601a4c676b" fx:id="selectedNodeLabel" wrapText="true"/>
+                    <Label styleClass="ux-inline-25e6beb3a5" fx:id="inputContractLabel" managed="false" visible="false"/>
+                    <Label styleClass="ux-inline-25e6beb3a5" fx:id="outputContractLabel" managed="false" visible="false"/>
                     <VBox fx:id="nodeNameFieldGroup" spacing="2">
-                        <Label text="Node name" style="-fx-font-size: 10px;"/>
-                        <TextField fx:id="nodeNameField" promptText="Describe this step" style="-fx-font-size: 10px;"/>
+                        <Label styleClass="ux-inline-ab4da656fa" text="Node name"/>
+                        <TextField styleClass="ux-inline-ab4da656fa" fx:id="nodeNameField" promptText="Describe this step"/>
                     </VBox>
 
                     <!-- Dynamically populated parameters -->
-                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;">
+                    <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" VBox.vgrow="ALWAYS">
                         <content>
-                            <VBox fx:id="dynamicInspectorContainer" spacing="4" style="-fx-padding: 2;"/>
+                            <VBox styleClass="ux-inline-1193ccbe1f" fx:id="dynamicInspectorContainer" spacing="4"/>
                         </content>
                     </ScrollPane>
 
@@ -125,9 +125,9 @@
         </SplitPane>
         <SplitPane orientation="VERTICAL" dividerPositions="0.45" prefHeight="240" VBox.vgrow="ALWAYS">
             <items>
-                <VBox spacing="4" style="-fx-padding: 2 0 0 0;">
-                    <Label text="Execution status" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <TableView fx:id="executionStatusTable" prefHeight="110" VBox.vgrow="ALWAYS" style="-fx-font-size: 10px;">
+                <VBox styleClass="ux-inline-c7b1eebc45" spacing="4">
+                    <Label styleClass="ux-inline-601a4c676b" text="Execution status"/>
+                    <TableView styleClass="ux-inline-ab4da656fa" fx:id="executionStatusTable" prefHeight="110" VBox.vgrow="ALWAYS">
                         <columns>
                             <TableColumn fx:id="stepCol" text="#" prefWidth="42" sortable="false"/>
                             <TableColumn fx:id="stepNameCol" text="Step" prefWidth="150" sortable="false"/>
@@ -139,9 +139,9 @@
                         </columns>
                     </TableView>
                 </VBox>
-                <VBox spacing="4" style="-fx-padding: 4 0 0 0;">
-                    <Label text="Execution results" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
-                    <TextArea fx:id="executionOutputArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" promptText="Execution results and validation messages appear here." style="-fx-font-family: monospace; -fx-font-size: 10px;"/>
+                <VBox styleClass="ux-inline-db8d9d3e8f" spacing="4">
+                    <Label styleClass="ux-inline-601a4c676b" text="Execution results"/>
+                    <TextArea styleClass="ux-inline-744623818d" fx:id="executionOutputArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS" promptText="Execution results and validation messages appear here."/>
                 </VBox>
             </items>
         </SplitPane>

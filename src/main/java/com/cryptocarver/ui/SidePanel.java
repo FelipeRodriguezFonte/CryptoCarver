@@ -67,8 +67,8 @@ public class SidePanel extends VBox {
         header.setPadding(new Insets(8));
         header.getStyleClass().add("side-panel-header");
 
-        Label searchIcon = new Label("🔍");
-        searchIcon.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px;");
+        javafx.scene.Node searchIcon = IconRegistry.icon("search");
+        searchIcon.getStyleClass().add("side-panel-search-icon");
 
         searchField = new TextField();
         searchField.setPromptText(I18nService.getInstance().text("side.search"));
@@ -115,9 +115,12 @@ public class SidePanel extends VBox {
                     if (item.descriptor != null) {
                         HBox content = new HBox(5);
                         content.setAlignment(Pos.CENTER_LEFT);
-                        Label iconLabel = new Label(item.descriptor.getIcon());
                         Label textLabel = new Label(item.historyCommand != null ? item.label : item.descriptor.getTitle());
-                        content.getChildren().addAll(iconLabel, textLabel);
+                        // Group icons provide hierarchy; leaf rows stay quiet and scannable.
+                        if (!newValIsLeaf(item)) {
+                            content.getChildren().add(IconRegistry.operation(item.descriptor.getId(), item.descriptor.getIcon()));
+                        }
+                        content.getChildren().add(textLabel);
 
                         if (item.descriptor.getStatus() == OperationDescriptor.Status.EXPERIMENTAL) {
                             Label expBadge = new Label(I18nService.getInstance().text("side.badge.experimental"));
@@ -187,6 +190,12 @@ public class SidePanel extends VBox {
 
         // Initialize with default content (Keys)
         updateContent(NavigationRail.Section.KEYS);
+    }
+
+    private boolean newValIsLeaf(OperationNode item) {
+        // OperationNode descriptors represent leaves in the registry.  Group
+        // rows have no descriptor and therefore never enter this branch.
+        return item.descriptor != null;
     }
 
     private com.cryptocarver.model.HistoryManager historyManager;

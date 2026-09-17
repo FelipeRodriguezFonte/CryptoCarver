@@ -6,9 +6,9 @@
 
 <TitledPane fx:id="cryptoEnvelopeInspectorRoot" text="🔎 Crypto Envelope Inspector" expanded="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.CryptoEnvelopeInspectorController">
     <content>
-        <VBox spacing="10" style="-fx-padding: 10;">
-            <Label text="Envelope (compact CCE1.… or JSON):" style="-fx-font-weight: bold;"/>
-            <TextArea fx:id="envelopeInputArea" promptText="Paste a Crypto Envelope here..." prefHeight="100" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+        <VBox styleClass="ux-inline-31b3bfce5a" spacing="10">
+            <Label styleClass="ux-inline-689e8d50bc" text="Envelope (compact CCE1.… or JSON):"/>
+            <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="envelopeInputArea" promptText="Paste a Crypto Envelope here..." prefHeight="100" wrapText="true"/>
 
             <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
                 <Button text="Inspect" onAction="#handleInspect" styleClass="action-button-primary"/>
@@ -16,12 +16,12 @@
                 <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
             </FlowPane>
 
-            <Label text="Header:" style="-fx-font-weight: bold;"/>
-            <TextArea fx:id="envelopeReportArea" editable="false" prefHeight="180" style="-fx-font-family: 'Monospaced';"/>
+            <Label styleClass="ux-inline-689e8d50bc" text="Header:"/>
+            <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="envelopeReportArea" editable="false" prefHeight="180"/>
 
             <Separator/>
 
-            <Label text="Unwrap (needs the recipient's private key):" style="-fx-font-weight: bold;"/>
+            <Label styleClass="ux-inline-689e8d50bc" text="Unwrap (needs the recipient's private key):"/>
             <GridPane hgap="8" vgap="4">
                 <columnConstraints>
                     <ColumnConstraints minWidth="90" prefWidth="90"/>
@@ -30,10 +30,10 @@
                 <Label text="Profile:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                 <ComboBox fx:id="envelopeUnwrapProfileCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
             </GridPane>
-            <TextArea fx:id="envelopePrivateKeyArea" promptText="-----BEGIN PRIVATE KEY----- ..." prefHeight="80" wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+            <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="envelopePrivateKeyArea" promptText="-----BEGIN PRIVATE KEY----- ..." prefHeight="80" wrapText="true"/>
             <Button text="Unwrap" onAction="#handleUnwrap" styleClass="action-button" maxWidth="150"/>
-            <Label text="Recovered key (hex):" style="-fx-font-weight: bold;"/>
-            <TextArea fx:id="envelopeUnwrappedKeyArea" editable="false" prefHeight="60" wrapText="true" style="-fx-font-family: 'Courier New', monospace;"/>
+            <Label styleClass="ux-inline-689e8d50bc" text="Recovered key (hex):"/>
+            <TextArea styleClass="ux-inline-00bdf36a65" fx:id="envelopeUnwrappedKeyArea" editable="false" prefHeight="60" wrapText="true"/>
         </VBox>
     </content>
 </TitledPane>

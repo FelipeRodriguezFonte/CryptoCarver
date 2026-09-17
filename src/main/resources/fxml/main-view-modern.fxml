@@ -67,6 +67,12 @@
                         <RadioMenuItem fx:id="languageEsMenuItem" text="Español" userData="ES" toggleGroup="$languagePreferenceGroup" onAction="#handleLanguageEs"/>
                         <RadioMenuItem fx:id="languageEnMenuItem" text="English" userData="EN" toggleGroup="$languagePreferenceGroup" onAction="#handleLanguageEn"/>
                     </Menu>
+                    <Menu fx:id="appearanceMenu" text="Appearance">
+                        <fx:define><ToggleGroup fx:id="themePreferenceGroup"/></fx:define>
+                        <RadioMenuItem fx:id="themeSystemMenuItem" text="System" toggleGroup="$themePreferenceGroup" onAction="#handleThemeSystem"/>
+                        <RadioMenuItem fx:id="themeLightMenuItem" text="Light" toggleGroup="$themePreferenceGroup" onAction="#handleThemeLight"/>
+                        <RadioMenuItem fx:id="themeDarkMenuItem" text="Dark" toggleGroup="$themePreferenceGroup" onAction="#handleThemeDark"/>
+                    </Menu>
                 </Menu>
 
                 <Menu fx:id="laboratoryMenu" text="%menu.laboratory" userData="laboratory">
