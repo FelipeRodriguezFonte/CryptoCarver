@@ -612,6 +612,11 @@
     -fx-border-radius: 4;
 }
 
+.breadcrumb-current {
+    -fx-text-fill: -color-text-primary;
+    -fx-font-weight: bold;
+}
+
 .breadcrumb-button:hover {
     -fx-text-fill: #ffffff;
     -fx-background-color: rgba(255, 255, 255, 0.1);

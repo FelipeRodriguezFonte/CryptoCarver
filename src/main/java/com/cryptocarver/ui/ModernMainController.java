@@ -1278,15 +1278,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             breadcrumbSectionBtn.setTooltip(new Tooltip(i18n.text("bread.navigateSection", sectionLabel)));
         }
 
+        String localizedModule = localizedModuleText(moduleLabel);
+        boolean showModule = resolved.isPresent()
+                && resolved.get().section() != null
+                && !resolved.get().section().isBlank()
+                && !localizedModule.equalsIgnoreCase(sectionLabel)
+                && !localizedModule.equalsIgnoreCase(operationLabel);
+        boolean showOperation = !operationLabel.equalsIgnoreCase(sectionLabel);
+
         if (breadcrumbModuleBtn != null) {
-            breadcrumbModuleBtn.setText(localizedModuleText(moduleLabel));
+            breadcrumbModuleBtn.setText(localizedModule);
             breadcrumbModuleBtn.setUserData(canonicalModulePath);
-            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel)));
-            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel))));
+            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModule));
+            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModule)));
+            breadcrumbModuleBtn.setVisible(showModule);
+            breadcrumbModuleBtn.setManaged(showModule);
         }
 
         if (breadcrumbOperationLabel != null) {
             breadcrumbOperationLabel.setText(operationLabel);
+            breadcrumbOperationLabel.setVisible(showOperation);
+            breadcrumbOperationLabel.setManaged(showOperation);
+        }
+        if (breadcrumbSep1 != null) {
+            boolean visible = showModule || showOperation;
+            breadcrumbSep1.setVisible(visible);
+            breadcrumbSep1.setManaged(visible);
+        }
+        if (breadcrumbSep2 != null) {
+            breadcrumbSep2.setVisible(showModule && showOperation);
+            breadcrumbSep2.setManaged(showModule && showOperation);
         }
     }
 
