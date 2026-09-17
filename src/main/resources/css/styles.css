@@ -489,12 +489,38 @@
 /* Status Bar */
 .status-bar {
     -fx-background-color: -color-bg-sidebar;
-    -fx-padding: 6 12;
+    -fx-padding: 0 12;
+    -fx-min-height: 26px;
+    -fx-pref-height: 26px;
+    -fx-max-height: 26px;
 }
 
 #statusLabel {
     -fx-font-size: 12px;
-    -fx-text-fill: -color-text-subtle;
+    -fx-text-fill: -color-text-light;
+    -fx-font-weight: bold;
+}
+
+#statusLabel:error {
+    -fx-text-fill: #fecaca;
+}
+
+.status-label-info {
+    -fx-font-size: 12px;
+    -fx-text-fill: #cbd5e1;
+}
+
+.status-context-button {
+    -fx-font-size: 11px;
+    -fx-text-fill: #e2e8f0;
+    -fx-background-color: #334155;
+    -fx-background-radius: 10;
+    -fx-padding: 2 8;
+    -fx-cursor: hand;
+}
+
+.status-context-button:hover, .status-context-button:focused {
+    -fx-background-color: #475569;
 }
 
 /* Separators */

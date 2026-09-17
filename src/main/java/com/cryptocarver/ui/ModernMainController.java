@@ -1,8 +1,6 @@
 package com.cryptocarver.ui;
 
 import javafx.application.Platform;
-import javafx.animation.PauseTransition;
-import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -47,7 +45,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private GenericController genericContainerController;
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
-    private final PauseTransition statusResetTimer = new PauseTransition(Duration.seconds(3));
     private final ExpandedTextViewer expandedTextViewer = new ExpandedTextViewer();
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
@@ -118,9 +115,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private Label securityTipLabel;
     @FXML
     private VBox securityTipBox;
-    @FXML
-    private Label runtimeInfoLabel;
     @FXML private Label statusLabel;
+    @FXML private Button statusVisibilityButton;
+    @FXML private Label statusLanguageLabel;
     @FXML private HBox errorBanner;
     @FXML private Label errorBannerTitle;
     @FXML private Label errorBannerRemedy;
@@ -128,6 +125,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button errorBannerCopyDetailsBtn;
     @FXML private Button errorBannerCloseBtn;
     private InlineErrorPresenter inlineErrorPresenter;
+    private StatusBarPresenter statusBarPresenter;
     @FXML
     private VBox historyContainer;
     @FXML
@@ -494,13 +492,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             });
         }
 
-        if (runtimeInfoLabel != null) {
-            String javaVer = System.getProperty("java.version");
-            String javafxVer = System.getProperty("javafx.version");
-            String javaText = (javaVer != null && !javaVer.isBlank()) ? "Java " + javaVer : "Java";
-            String javafxText = (javafxVer != null && !javafxVer.isBlank()) ? "JavaFX " + javafxVer : "JavaFX";
-            runtimeInfoLabel.setText(javaText + " | " + javafxText + " | BouncyCastle");
-        }
+        statusBarPresenter = new StatusBarPresenter(statusLabel, statusVisibilityButton, statusLanguageLabel, i18n);
 
         if (visibilityProfileGroup != null) {
             com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
@@ -733,7 +725,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         updateFavoriteToggleState(currentActiveOperation);
         if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
                 || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
-            statusLabel.setText(i18n.text("status.ready"));
+            statusBarPresenter.showStatus(i18n.text("status.ready"));
+        }
+        if (statusBarPresenter != null) {
+            statusBarPresenter.refreshContext(com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
         }
         if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
             inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
@@ -833,6 +828,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private void handleLanguageSystem() { i18n.setPreference(LanguagePreference.SYSTEM); }
     @FXML private void handleLanguageEs() { i18n.setPreference(LanguagePreference.ES); }
     @FXML private void handleLanguageEn() { i18n.setPreference(LanguagePreference.EN); }
+
+    @FXML
+    private void handleOpenSecurityMenu() {
+        if (securityMenu != null) securityMenu.show();
+    }
+
+    private void refreshStatusBarContext() {
+        if (statusBarPresenter != null) {
+            statusBarPresenter.refreshContext(com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
+        }
+    }
 
     /**
      * Keeps the working canvas usable on laptop-sized windows. The inspector
@@ -2142,11 +2148,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             Platform.runLater(() -> updateStatus(message));
             return;
         }
-        if (statusLabel == null) return;
-        statusLabel.setText(message);
-        statusResetTimer.stop();
-        statusResetTimer.setOnFinished(event -> statusLabel.setText(i18n.text("status.ready")));
-        statusResetTimer.playFromStart();
+        if (statusBarPresenter != null) statusBarPresenter.showStatus(message);
     }
 
     // Menu handlers
@@ -3564,6 +3566,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
         updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
+        refreshStatusBarContext();
         if (keysController != null) {
             keysController.updateVisibilityControls();
             keysController.refreshKeyLabTable();
@@ -3574,6 +3577,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityMasked() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
         updateStatus("Visibility set to MASKED (Classroom/Demo)");
+        refreshStatusBarContext();
         if (keysController != null) {
             keysController.updateVisibilityControls();
             keysController.refreshKeyLabTable();
@@ -3584,6 +3588,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityRedacted() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         updateStatus("Visibility set to REDACTED (Strict/Production)");
+        refreshStatusBarContext();
         if (keysController != null) {
             keysController.updateVisibilityControls();
             keysController.refreshKeyLabTable();
