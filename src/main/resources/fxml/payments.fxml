@@ -5,7 +5,11 @@
 <VBox fx:id="paymentsContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.PaymentsController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,payments-module">
-    <HBox alignment="CENTER_RIGHT">
+    <VBox spacing="4" styleClass="page-header">
+        <Label text="Payments &amp; PIN" styleClass="content-title-label,page-title"/>
+        <Label text="Generate and verify payment credentials and PIN blocks using the selected payment standard." styleClass="helper-text,page-description" wrapText="true"/>
+    </VBox>
+    <HBox spacing="8" styleClass="page-actions" alignment="CENTER_RIGHT">
         <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
         <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>

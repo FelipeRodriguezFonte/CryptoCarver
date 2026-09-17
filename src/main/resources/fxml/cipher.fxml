@@ -5,7 +5,10 @@
 <VBox fx:id="cipherRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.CipherController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,cipher-module">
-    <Label text="Data Encryption &amp; Decryption" styleClass="content-title-label"/>
+    <VBox spacing="4" styleClass="page-header">
+        <Label text="Data Encryption &amp; Decryption" styleClass="content-title-label,page-title"/>
+        <Label text="Configure an operation, review the payload, and run encryption or decryption from the active card." styleClass="helper-text,page-description" wrapText="true"/>
+    </VBox>
 
     <!-- Keep the payload workbench above the expandable configuration panes. -->
     <VBox spacing="10" styleClass="cipher-io-card">

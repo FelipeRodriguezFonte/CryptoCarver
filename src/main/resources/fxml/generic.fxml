@@ -21,7 +21,7 @@
             </VBox>
         </TitledPane>
 
-        <!-- HASHING -->
+        <!-- HASHING: the operation remains a single card so its result and primary action stay together. -->
         <TitledPane text="🔐 Hashing" expanded="true">
             <VBox spacing="12" styleClass="module-pane-content">
                 <FlowPane prefWrapLength="900" styleClass="template-toolbar">

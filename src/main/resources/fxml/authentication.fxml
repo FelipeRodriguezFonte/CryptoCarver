@@ -5,6 +5,10 @@
 <VBox fx:id="authenticationRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.AuthenticationController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,authentication-module">
+    <VBox spacing="4" styleClass="page-header">
+        <Label text="Authentication &amp; MAC" styleClass="content-title-label,page-title"/>
+        <Label text="Prepare the message and credentials, then sign, verify, generate, or validate the authentication value." styleClass="helper-text,page-description" wrapText="true"/>
+    </VBox>
     <VBox spacing="12" styleClass="module-pane-content">
         <Label text="1. Data to authenticate" styleClass="form-label ux-inline-5a7a75ee34"/>
         <Label text="Enter the message used to generate or verify the signature/MAC. Format is selected in the global 'Payload format' bar above."
