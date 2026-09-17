@@ -120,11 +120,11 @@ public class SidePanel extends VBox {
                         content.getChildren().addAll(iconLabel, textLabel);
 
                         if (item.descriptor.getStatus() == OperationDescriptor.Status.EXPERIMENTAL) {
-                            Label expBadge = new Label("EXP");
+                            Label expBadge = new Label(I18nService.getInstance().text("side.badge.experimental"));
                             expBadge.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
                             content.getChildren().add(expBadge);
                         } else if (item.descriptor.getStatus() == OperationDescriptor.Status.PLANNED) {
-                            Label planBadge = new Label("PLANNED");
+                            Label planBadge = new Label(I18nService.getInstance().text("side.badge.planned"));
                             planBadge.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
                             content.getChildren().add(planBadge);
                             textLabel.setStyle("-fx-text-fill: #7f8c8d;");
@@ -140,7 +140,7 @@ public class SidePanel extends VBox {
                             tooltipText += "\n" + I18nService.getInstance().text("side.aliases", String.join(", ", item.descriptor.getAliases()));
                         }
                         if (item.descriptor.getStatus() != OperationDescriptor.Status.STABLE) {
-                            tooltipText += " (" + item.descriptor.getStatus() + ")";
+                            tooltipText += " (" + I18nService.getInstance().text("side.status." + item.descriptor.getStatus().name()) + ")";
                         }
                         setTooltip(new Tooltip(tooltipText));
 
@@ -373,7 +373,7 @@ public class SidePanel extends VBox {
         if (desc != null) {
             rootItem.getChildren().add(new TreeItem<>(new OperationNode(desc)));
         } else {
-            rootItem.getChildren().add(new TreeItem<>(new OperationNode("Process Designer")));
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode(I18nService.getInstance().text("nav.processDesigner"))));
         }
     }
 
@@ -387,9 +387,9 @@ public class SidePanel extends VBox {
     }
 
     private void buildKeysTree() {
-        TreeItem<OperationNode> symmetric = new TreeItem<>(new OperationNode("Symmetric"));
-        TreeItem<OperationNode> asymmetric = new TreeItem<>(new OperationNode("Asymmetric"));
-        TreeItem<OperationNode> tools = new TreeItem<>(new OperationNode("Tools"));
+        TreeItem<OperationNode> symmetric = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.keys.symmetric")));
+        TreeItem<OperationNode> asymmetric = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.keys.asymmetric")));
+        TreeItem<OperationNode> tools = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.keys.tools")));
 
         List<OperationDescriptor> keysOps = OperationRegistry.getInstance().getAll().stream()
                 .filter(o -> "Keys".equals(o.getCategory()))

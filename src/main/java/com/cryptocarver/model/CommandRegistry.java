@@ -20,13 +20,14 @@ public final class CommandRegistry {
     public static List<CommandItem> buildCommands(ModernMainController controller) {
         List<CommandItem> commands = new ArrayList<>();
         if (controller == null) return commands;
+        I18nService i18n = I18nService.getInstance();
 
         // --- 1. NAVIGATION COMMANDS ---
         commands.add(new CommandItem(
                 "nav_quickstart",
-                "Quick Start",
-                "Navigation",
-                "Open Laboratory Quick Start Dashboard with guided cards",
+                i18n.text("command.quickStart.title"),
+                i18n.text("command.category.navigationRoot"),
+                i18n.text("command.quickStart.description"),
                 Arrays.asList("quickstart", "home", "start", "dashboard", "guided"),
                 null,
                 () -> true,
@@ -52,7 +53,7 @@ public final class CommandRegistry {
             commands.add(new CommandItem(
                     "nav_" + descriptor.getId(),
                     descriptor.getTitle(),
-                    "Navigation · " + descriptor.getCategory(),
+                    i18n.text("command.category.navigation", descriptor.getCategory()),
                     descriptor.getSubtitle(),
                     keywords,
                     null,
@@ -64,9 +65,9 @@ public final class CommandRegistry {
         // --- 2. TOOLS & VIEW COMMANDS ---
         commands.add(new CommandItem(
                 "view_inspector",
-                "Toggle Inspector",
-                "Tools & View",
-                "Show or hide the right Operation Inspector side panel",
+                i18n.text("command.inspector.title"),
+                i18n.text("command.category.toolsView"),
+                i18n.text("command.inspector.description"),
                 Arrays.asList("inspector", "details", "toggle", "panel"),
                 "Ctrl+I",
                 () -> true,
@@ -75,9 +76,9 @@ public final class CommandRegistry {
 
         commands.add(new CommandItem(
                 "view_side_panel",
-                "Toggle Side Panel",
-                "Tools & View",
-                "Show or hide the left Navigation Rail side panel",
+                i18n.text("command.sidePanel.title"),
+                i18n.text("command.category.toolsView"),
+                i18n.text("command.sidePanel.description"),
                 Arrays.asList("sidebar", "rail", "toggle", "panel"),
                 "Ctrl+B",
                 () -> true,
@@ -86,9 +87,9 @@ public final class CommandRegistry {
 
         commands.add(new CommandItem(
                 "view_expand_result",
-                "Expand Result",
-                "Tools & View",
-                "Open full-screen expanded viewer for current operation result",
+                i18n.text("command.expandResult.title"),
+                i18n.text("command.category.toolsView"),
+                i18n.text("command.expandResult.description"),
                 Arrays.asList("expand", "result", "viewer", "fullscreen"),
                 "Ctrl+Shift+E",
                 controller::hasCurrentResult,
@@ -97,9 +98,9 @@ public final class CommandRegistry {
 
         commands.add(new CommandItem(
                 "view_zoom_in",
-                "Zoom In (Font)",
-                "Tools & View",
-                "Increase application font scale",
+                i18n.text("command.zoomIn.title"),
+                i18n.text("command.category.toolsView"),
+                i18n.text("command.zoomIn.description"),
                 Arrays.asList("zoom", "font", "larger", "increase"),
                 "Ctrl++",
                 () -> true,
@@ -108,9 +109,9 @@ public final class CommandRegistry {
 
         commands.add(new CommandItem(
                 "view_zoom_out",
-                "Zoom Out (Font)",
-                "Tools & View",
-                "Decrease application font scale",
+                i18n.text("command.zoomOut.title"),
+                i18n.text("command.category.toolsView"),
+                i18n.text("command.zoomOut.description"),
                 Arrays.asList("zoom", "font", "smaller", "decrease"),
                 "Ctrl+-",
                 () -> true,
@@ -120,9 +121,9 @@ public final class CommandRegistry {
         // --- 3. ACTIONS COMMANDS ---
         commands.add(new CommandItem(
                 "action_copy_output",
-                "Copy Output",
-                "Actions",
-                "Copy current output result to system clipboard (subject to security policy)",
+                i18n.text("command.copyOutput.title"),
+                i18n.text("command.category.actions"),
+                i18n.text("command.copyOutput.description"),
                 Arrays.asList("copy", "output", "clipboard"),
                 KeyboardShortcutRegistry.findShortcutByAction("Copy Output")
                         .map(KeyboardShortcutEntry::getKeyCombination)
@@ -133,9 +134,9 @@ public final class CommandRegistry {
 
         commands.add(new CommandItem(
                 "action_add_shelf",
-                "Add Output to Shelf",
-                "Actions",
-                "Add current output result to Clipboard Shelf (subject to security policy)",
+                i18n.text("command.addShelf.title"),
+                i18n.text("command.category.actions"),
+                i18n.text("command.addShelf.description"),
                 Arrays.asList("shelf", "add", "output", "buffer"),
                 null,
                 controller::hasCurrentResult,
@@ -144,9 +145,9 @@ public final class CommandRegistry {
 
         commands.add(new CommandItem(
                 "action_toggle_favorite",
-                "Toggle Favorite for Current Operation",
-                "Actions",
-                "Add or remove the currently active operation from your favorites list",
+                i18n.text("command.favorite.title"),
+                i18n.text("command.category.actions"),
+                i18n.text("command.favorite.description"),
                 Arrays.asList("favorite", "star", "bookmark", "toggle", "pin"),
                 KeyboardShortcutRegistry.findShortcutByAction("Toggle Favorite")
                         .map(KeyboardShortcutEntry::getKeyCombination)

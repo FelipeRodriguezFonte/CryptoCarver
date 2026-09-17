@@ -7,6 +7,7 @@
 <?import com.cryptocarver.ui.NavigationRail?>
 <?import com.cryptocarver.ui.SidePanel?>
 <?import com.cryptocarver.ui.NativeTextEditMenuItem?>
+<?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 
 <StackPane fx:id="rootStackPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.cryptocarver.ui.ModernMainController">
@@ -30,16 +31,16 @@
                     <MenuItem fx:id="exitMenuItem" text="Exit" onAction="#handleExit" accelerator="Shortcut+Q" />
                 </Menu>
 
-                <Menu fx:id="editMenu" text="Edit">
-                    <NativeTextEditMenuItem text="Undo" operation="UNDO" />
-                    <NativeTextEditMenuItem text="Redo" operation="REDO" />
+                <Menu fx:id="editMenu" text="%menu.edit">
+                    <NativeTextEditMenuItem text="%menu.undo" operation="UNDO" />
+                    <NativeTextEditMenuItem text="%menu.redo" operation="REDO" />
                     <SeparatorMenuItem />
-                    <NativeTextEditMenuItem text="Cut" operation="CUT" />
-                    <NativeTextEditMenuItem text="Copy" operation="COPY" />
-                    <NativeTextEditMenuItem text="Paste" operation="PASTE" />
-                    <NativeTextEditMenuItem text="Select All" operation="SELECT_ALL" />
+                    <NativeTextEditMenuItem text="%menu.cut" operation="CUT" />
+                    <NativeTextEditMenuItem text="%menu.copy" operation="COPY" />
+                    <NativeTextEditMenuItem text="%menu.paste" operation="PASTE" />
+                    <NativeTextEditMenuItem text="%menu.selectAll" operation="SELECT_ALL" />
                     <SeparatorMenuItem />
-                    <MenuItem fx:id="clearInputMenuItem" text="Clear Input" onAction="#handleClearInput" accelerator="Shortcut+Shift+I" />
+                    <MenuItem fx:id="clearInputMenuItem" text="Clear Input" onAction="#handleClearInput" />
                     <MenuItem fx:id="clearOutputMenuItem" text="Clear Output" onAction="#handleClearOutput" accelerator="Shortcut+Shift+O" />
                     <MenuItem fx:id="copyOutputMenuItem" text="Copy Output" onAction="#handleCopyOutput" accelerator="Shortcut+Shift+C" />
                     <MenuItem fx:id="addToShelfMenuItem" text="Add Output to Clipboard Shelf" onAction="#handleAddCurrentOutputToShelf" />
@@ -68,8 +69,8 @@
                     </Menu>
                 </Menu>
 
-                <Menu fx:id="laboratoryMenu" text="Laboratory" userData="laboratory">
-                    <MenuItem fx:id="laboratoryQuickStartMenuItem" text="Quick Start" onAction="#handleQuickStart" />
+                <Menu fx:id="laboratoryMenu" text="%menu.laboratory" userData="laboratory">
+                    <MenuItem fx:id="laboratoryQuickStartMenuItem" text="%menu.quickStart" onAction="#handleQuickStart" />
                 </Menu>
 
                 <Menu fx:id="toolsMenu" text="Tools">
@@ -84,9 +85,15 @@
                     <fx:define>
                         <ToggleGroup fx:id="visibilityProfileGroup"/>
                     </fx:define>
-                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="Full visibility (laboratory)" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
-                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="Masked (demo/classroom)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
-                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="Redacted (strict)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
+                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="%menu.visibility.full" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab">
+                        <tooltip><Tooltip text="%menu.visibility.full.tooltip" /></tooltip>
+                    </RadioMenuItem>
+                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="%menu.visibility.masked" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked">
+                        <tooltip><Tooltip text="%menu.visibility.masked.tooltip" /></tooltip>
+                    </RadioMenuItem>
+                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="%menu.visibility.redacted" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted">
+                        <tooltip><Tooltip text="%menu.visibility.redacted.tooltip" /></tooltip>
+                    </RadioMenuItem>
                 </Menu>
 
                 <Menu fx:id="helpMenu" text="Help">

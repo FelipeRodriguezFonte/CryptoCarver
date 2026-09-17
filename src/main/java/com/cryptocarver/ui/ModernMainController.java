@@ -272,6 +272,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Menu securityMenu;
     @FXML private Menu toolsMenu;
     @FXML private Menu helpMenu;
+    @FXML private Menu laboratoryMenu;
     @FXML private Menu languageMenu;
     @FXML private RadioMenuItem languageSystemMenuItem;
     @FXML private RadioMenuItem languageEsMenuItem;
@@ -308,6 +309,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private MenuItem shortcutsMenuItem;
     @FXML private MenuItem diagnosticsMenuItem;
     @FXML private MenuItem aboutMenuItem;
+    @FXML private MenuItem laboratoryQuickStartMenuItem;
     @FXML private Button toolbarSearchButton;
     @FXML private Button toolbarSaveSessionButton;
     @FXML private Button toolbarClearButton;
@@ -573,6 +575,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(securityMenu, "menu.security");
         setText(toolsMenu, "menu.tools");
         setText(helpMenu, "menu.help");
+        setText(laboratoryMenu, "menu.laboratory");
         setText(languageMenu, "menu.language");
 
         setText(importKeyMenuItem, "menu.importKey");
@@ -606,6 +609,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(shortcutsMenuItem, "menu.shortcuts");
         setText(diagnosticsMenuItem, "menu.diagnostics");
         setText(aboutMenuItem, "menu.about");
+        setText(laboratoryQuickStartMenuItem, "menu.quickStart");
         if (mainMenuBar != null) {
             mainMenuBar.getMenus().stream()
                     .filter(menu -> "laboratory".equals(menu.getUserData()))
@@ -4279,7 +4283,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private void setupLaboratoryMenu() {
         if (mainMenuBar == null) return;
-        boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "Laboratory".equals(m.getText()));
+        boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "laboratory".equals(m.getUserData()));
         if (!hasLabMenu) {
             javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
             labMenu.setUserData("laboratory");
