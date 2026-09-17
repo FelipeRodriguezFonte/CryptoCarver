@@ -32,6 +32,7 @@ public class SidePanel extends VBox {
      *  spliced in, so a bare section switch lands on that section's own content rather than
      *  an unrelated global favorite. Null for sections with nothing selectable (e.g. Search). */
     private TreeItem<OperationNode> firstPrimaryOperation;
+    private boolean synchronizingSelection;
 
     private Consumer<com.cryptocarver.model.HistoryCommand> onHistoryItemSelected;
 
@@ -156,6 +157,7 @@ public class SidePanel extends VBox {
 
         // Item selection handler
         navigationTree.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
+            if (synchronizingSelection) return;
             if (newVal != null && newVal.isLeaf()) {
                 OperationNode selected = newVal.getValue();
 
@@ -275,6 +277,35 @@ public class SidePanel extends VBox {
             navigationTree.getSelectionModel().select(firstPrimaryOperation);
             navigationTree.scrollTo(navigationTree.getRow(firstPrimaryOperation));
         }
+    }
+
+    /** Selects and reveals the leaf for an externally initiated operation without re-entering navigation. */
+    public boolean selectOperation(String navigationPath) {
+        TreeItem<OperationNode> item = findOperation(rootItem, navigationPath);
+        if (item == null) return false;
+        synchronizingSelection = true;
+        try {
+            navigationTree.getSelectionModel().select(item);
+            navigationTree.scrollTo(navigationTree.getRow(item));
+            return true;
+        } finally {
+            synchronizingSelection = false;
+        }
+    }
+
+    private TreeItem<OperationNode> findOperation(TreeItem<OperationNode> node, String navigationPath) {
+        if (node == null) return null;
+        OperationNode value = node.getValue();
+        if (value != null && value.descriptor != null
+                && (value.descriptor.getNavigationPath().equalsIgnoreCase(navigationPath)
+                || value.descriptor.getTitle().equalsIgnoreCase(navigationPath))) {
+            return node;
+        }
+        for (TreeItem<OperationNode> child : node.getChildren()) {
+            TreeItem<OperationNode> found = findOperation(child, navigationPath);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private TreeItem<OperationNode> findFirstSelectableLeaf(TreeItem<OperationNode> node) {

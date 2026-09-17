@@ -69,6 +69,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private NavigationRail navigationRail;
     @FXML
     private SidePanel sidePanel;
+    private NavigationController navigationController;
     @FXML
     private VBox mainContentArea;
     @FXML
@@ -511,6 +512,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         // Handle item selection from SidePanel
         sidePanel.setOnItemSelected(this::handleItemSelected);
+        navigationController = new NavigationController(navigationRail, sidePanel, this::handleItemSelected);
+        navigationController.install();
 
         i18n.refreshFromSettings();
         i18nListener = locale -> {
@@ -1053,6 +1056,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         this.currentActiveOperation = itemName;
+        if (navigationController != null) navigationController.navigate(itemName);
 
         // Navigation alone is not a result. Clear the previous published
         // snapshot so Expand Result cannot accidentally expose data from the
@@ -1302,28 +1306,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
                 case HISTORY -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
                 case PROCESS_DESIGNER -> navigationRail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
-                default -> showQuickStart();
+                case GENERIC, EPOCH_CONVERTER, JSON_FORMATTER, CLIPBOARD_SHELF ->
+                        navigationRail.selectSection(NavigationRail.Section.GENERIC);
+                case SAVED_SESSIONS -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
             }
             return;
         }
-        String sectionText = breadcrumbSectionBtn.getText();
-        if (navigationRail == null) {
-            showQuickStart();
-            return;
-        }
-        switch (sectionText) {
-            case "Symmetric Keys", "Asymmetric Keys" -> navigationRail.selectSection(NavigationRail.Section.KEYS);
-            case "Ciphers" -> navigationRail.selectSection(NavigationRail.Section.CIPHER);
-            case "Signatures & MAC" -> navigationRail.selectSection(NavigationRail.Section.AUTHENTICATION);
-            case "Certificates & CMS" -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
-            case "JOSE / JWT" -> navigationRail.selectSection(NavigationRail.Section.JOSE);
-            case "Post-Quantum PQC" -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
-            case "XML Security", "WSS Security" -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
-            case "EMV & Smartcards", "Payment Cryptography" -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
-            case "Process Designer", "Diseñador de procesos" -> navigationRail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
-            case "History" -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
-            default -> showQuickStart();
-        }
+        if (navigationController != null) navigationController.navigate(currentActiveOperation);
     }
 
     @FXML

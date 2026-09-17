@@ -3,6 +3,7 @@ package com.cryptocarver.ui;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -96,6 +97,38 @@ class NavigationRailContentSyncTest {
             org.junit.jupiter.api.Assertions.assertEquals("Process Designer", lastNavigated.get(),
                     "Selecting PROCESS_DESIGNER rail section must navigate to 'Process Designer'");
         });
+    }
+
+    @Test
+    void operationNavigationSynchronizesRailAndTreeWithoutSelectingAnotherOperation() throws Exception {
+        runOnFxThread(() -> {
+            NavigationRail rail = new NavigationRail();
+            SidePanel panel = new SidePanel();
+            NavigationController navigation = new NavigationController(rail, panel, ignored -> { });
+            navigation.install();
+
+            navigation.navigate("Clear PIN Blocks");
+
+            assertEquals(NavigationRail.Section.PAYMENTS, panel.getCurrentSection());
+            assertTrue(isSelected(rail, NavigationRail.Section.PAYMENTS));
+            assertNotNull(getSelectedTreeItem(panel));
+            assertEquals("Clear PIN Blocks", getSelectedTreeItem(panel).getValue().toString());
+        });
+    }
+
+    private static boolean isSelected(NavigationRail rail, NavigationRail.Section section) {
+        return rail.getChildren().stream()
+                .filter(ToggleButton.class::isInstance)
+                .map(ToggleButton.class::cast)
+                .anyMatch(button -> button.isSelected() && button.getUserData() == section);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static javafx.scene.control.TreeItem<?> getSelectedTreeItem(SidePanel panel) throws Exception {
+        java.lang.reflect.Field field = SidePanel.class.getDeclaredField("navigationTree");
+        field.setAccessible(true);
+        javafx.scene.control.TreeView<?> tree = (javafx.scene.control.TreeView<?>) field.get(panel);
+        return tree.getSelectionModel().getSelectedItem();
     }
 
     private static void runOnFxThread(ThrowingRunnable runnable) throws Exception {

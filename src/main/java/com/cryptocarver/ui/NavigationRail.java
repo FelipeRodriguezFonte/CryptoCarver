@@ -8,6 +8,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.Priority;
+import java.util.function.Consumer;
 
 /**
  * Navigation Rail - Left sidebar with icon-only navigation
@@ -17,6 +18,8 @@ public class NavigationRail extends VBox {
 
     private final ToggleGroup toggleGroup;
     private SidePanel sidePanel;
+    private Consumer<Section> onSectionSelected;
+    private boolean syncingSelection;
 
     // Navigation sections
     public enum Section {
@@ -118,7 +121,12 @@ public class NavigationRail extends VBox {
     private void handleSectionSelected(Section section) {
         System.out.println("Rail section selected: " + section.getLabel());
 
-        // Open side panel if closed
+        if (syncingSelection) return;
+        if (onSectionSelected != null) {
+            onSectionSelected.accept(section);
+            return;
+        }
+        // Fallback for isolated uses of the control.
         if (sidePanel != null) {
             sidePanel.setVisible(true);
             sidePanel.setManaged(true);
@@ -132,6 +140,25 @@ public class NavigationRail extends VBox {
 
     public void setSidePanel(SidePanel panel) {
         this.sidePanel = panel;
+    }
+
+    public void setOnSectionSelected(Consumer<Section> handler) {
+        this.onSectionSelected = handler;
+    }
+
+    /** Updates active affordance without treating a programmatic route sync as a rail click. */
+    public void selectSectionSilently(Section section) {
+        syncingSelection = true;
+        try {
+            for (var node : getChildren()) {
+                if (node instanceof ToggleButton button && button.getUserData() == section) {
+                    button.setSelected(true);
+                    return;
+                }
+            }
+        } finally {
+            syncingSelection = false;
+        }
     }
 
     public void selectSection(Section section) {
