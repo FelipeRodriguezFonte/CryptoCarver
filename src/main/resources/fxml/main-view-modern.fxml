@@ -91,15 +91,9 @@
                     <fx:define>
                         <ToggleGroup fx:id="visibilityProfileGroup"/>
                     </fx:define>
-                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="%menu.visibility.full" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab">
-                        <tooltip><Tooltip text="%menu.visibility.full.tooltip" /></tooltip>
-                    </RadioMenuItem>
-                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="%menu.visibility.masked" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked">
-                        <tooltip><Tooltip text="%menu.visibility.masked.tooltip" /></tooltip>
-                    </RadioMenuItem>
-                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="%menu.visibility.redacted" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted">
-                        <tooltip><Tooltip text="%menu.visibility.redacted.tooltip" /></tooltip>
-                    </RadioMenuItem>
+                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="%menu.visibility.full" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
+                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="%menu.visibility.masked" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
+                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="%menu.visibility.redacted" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
                 </Menu>
 
                 <Menu fx:id="helpMenu" text="Help">
