@@ -1,6 +1,17 @@
 package com.cryptocarver.ui;
 
+import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.javafx.FontIcon;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignA;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignH;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignK;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignL;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignM;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignP;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignS;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignW;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignX;
 
 import java.util.Map;
 
@@ -11,31 +22,31 @@ import java.util.Map;
 public final class IconRegistry {
     private IconRegistry() { }
 
-    private static final Map<String, String> ICONS = Map.ofEntries(
-            Map.entry("search", "mdi2m-magnify"),
-            Map.entry("processDesigner", "mdi2s-sitemap"),
-            Map.entry("generic", "mdi2w-wrench"),
-            Map.entry("cipher", "mdi2l-lock"),
-            Map.entry("authentication", "mdi2s-shield-check"),
-            Map.entry("keys", "mdi2k-key-variant"),
-            Map.entry("postQuantum", "mdi2a-atom"),
-            Map.entry("xmlSecurity", "mdi2x-xml"),
-            Map.entry("certificates", "mdi2c-certificate"),
-            Map.entry("jose", "mdi2w-web"),
-            Map.entry("cose", "mdi2p-package-variant-closed"),
-            Map.entry("payments", "mdi2c-credit-card-outline"),
-            Map.entry("asn1", "mdi2c-code-json"),
-            Map.entry("history", "mdi2h-history"),
-            Map.entry("warning", "mdi2a-alert-outline"),
-            Map.entry("clipboard", "mdi2c-clipboard-text-outline"),
-            Map.entry("close", "mdi2c-close"),
-            Map.entry("favorite", "mdi2s-star-outline"),
-            Map.entry("default", "mdi2c-cube-outline")
+    private static final Map<String, Ikon> ICONS = Map.ofEntries(
+            Map.entry("search", MaterialDesignM.MAGNIFY),
+            Map.entry("processDesigner", MaterialDesignS.SITEMAP),
+            Map.entry("generic", MaterialDesignW.WRENCH),
+            Map.entry("cipher", MaterialDesignL.LOCK),
+            Map.entry("authentication", MaterialDesignS.SHIELD_CHECK),
+            Map.entry("keys", MaterialDesignK.KEY_VARIANT),
+            Map.entry("postQuantum", MaterialDesignA.ATOM),
+            Map.entry("xmlSecurity", MaterialDesignX.XML),
+            Map.entry("certificates", MaterialDesignC.CERTIFICATE),
+            Map.entry("jose", MaterialDesignW.WEB),
+            Map.entry("cose", MaterialDesignP.PACKAGE_VARIANT_CLOSED),
+            Map.entry("payments", MaterialDesignC.CREDIT_CARD_OUTLINE),
+            Map.entry("asn1", MaterialDesignC.CODE_JSON),
+            Map.entry("history", MaterialDesignH.HISTORY),
+            Map.entry("warning", MaterialDesignA.ALERT_OUTLINE),
+            Map.entry("clipboard", MaterialDesignC.CLIPBOARD_TEXT_OUTLINE),
+            Map.entry("close", MaterialDesignC.CLOSE),
+            Map.entry("favorite", MaterialDesignS.STAR_OUTLINE),
+            Map.entry("default", MaterialDesignC.CUBE_OUTLINE)
     );
 
     public static FontIcon icon(String semanticName) {
-        String literal = ICONS.getOrDefault(normalize(semanticName), ICONS.get("default"));
-        FontIcon icon = new FontIcon(literal);
+        Ikon ikon = ICONS.getOrDefault(normalize(semanticName), ICONS.get("default"));
+        FontIcon icon = new FontIcon(ikon);
         icon.getStyleClass().add("cc-icon");
         icon.setIconSize(16);
         return icon;
