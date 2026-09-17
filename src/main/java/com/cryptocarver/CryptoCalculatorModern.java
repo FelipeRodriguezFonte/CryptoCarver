@@ -50,7 +50,8 @@ public class CryptoCalculatorModern extends Application {
 
             // Load CSS
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-            scene.getStylesheets().add(themeUrl(com.cryptocarver.model.AppSettings.getInstance().getThemePreference()));
+            scene.getStylesheets().add(themeUrl(com.cryptocarver.ui.SystemAppearance.resolve(
+                    com.cryptocarver.model.AppSettings.getInstance().getThemePreference())));
 
             // Setup stage
             primaryStage.setTitle("CryptoCarver");
@@ -115,8 +116,6 @@ public class CryptoCalculatorModern extends Application {
     }
 
     private static String themeUrl(com.cryptocarver.model.ThemePreference preference) {
-        // JavaFX has no portable system appearance API. SYSTEM intentionally starts
-        // with the accessible light theme; platform integration can refine it later.
         String file = preference == com.cryptocarver.model.ThemePreference.DARK ? "theme-dark.css" : "theme-light.css";
         return CryptoCalculatorModern.class.getResource("/css/" + file).toExternalForm();
     }

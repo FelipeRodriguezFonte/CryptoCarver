@@ -626,6 +626,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(languageSystemMenuItem, "app.language.system");
         setText(languageEsMenuItem, "app.language.es");
         setText(languageEnMenuItem, "app.language.en");
+        setText(themeSystemMenuItem, "app.theme.system");
+        setText(themeLightMenuItem, "app.theme.light");
+        setText(themeDarkMenuItem, "app.theme.dark");
         LanguagePreference selected = i18n.getPreference();
         if (languageSystemMenuItem != null) languageSystemMenuItem.setSelected(selected == LanguagePreference.SYSTEM);
         if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
@@ -855,7 +858,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         String light = getClass().getResource("/css/theme-light.css").toExternalForm();
         String dark = getClass().getResource("/css/theme-dark.css").toExternalForm();
         mainPane.getScene().getStylesheets().removeAll(light, dark);
-        mainPane.getScene().getStylesheets().add(theme == com.cryptocarver.model.ThemePreference.DARK ? dark : light);
+        mainPane.getScene().getStylesheets().add(SystemAppearance.resolve(theme)
+                == com.cryptocarver.model.ThemePreference.DARK ? dark : light);
     }
 
     @FXML
