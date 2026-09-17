@@ -35,17 +35,16 @@
             <Label fx:id="unsafeVisibilityWarningLabel" style="-fx-text-fill: #c0392b; -fx-font-size: 10px;" text="⚠ Unsafe lab: sensitive values are visible" />
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" spacing="8">
+        <FlowPane alignment="CENTER_LEFT" prefWrapLength="900.0" styleClass="responsive-action-bar">
             <Label text="Filter:" />
             <TextField fx:id="historyFilterField" prefWidth="220.0" promptText="Operation, date or property" />
             <Label text="Module:" />
             <ComboBox fx:id="historyModuleFilterCombo" prefWidth="145.0" promptText="All modules" />
-            <Button onAction="#handleClearHistoryFilter" style="-fx-font-size: 11px; -fx-padding: 4 8;" text="Clear filters" />
-            <Region HBox.hgrow="ALWAYS" />
-            <Button fx:id="compareBtn" onAction="#handleCompareHistory" style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Compare 2" />
-            <Button onAction="#importOperationRecipe" style="-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Import Recipe" />
-            <Button onAction="#handleClearHistory" style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Clear History" />
-        </HBox>
+            <Button minWidth="USE_PREF_SIZE" onAction="#handleClearHistoryFilter" style="-fx-font-size: 11px; -fx-padding: 4 8;" text="Clear filters" />
+            <Button fx:id="compareBtn" minWidth="USE_PREF_SIZE" onAction="#handleCompareHistory" style="-fx-background-color: #8e44ad; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Compare 2" />
+            <Button minWidth="USE_PREF_SIZE" onAction="#importOperationRecipe" style="-fx-background-color: #546e7a; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Import Recipe" />
+            <Button minWidth="USE_PREF_SIZE" onAction="#handleClearHistory" style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10;" text="Clear History" />
+        </FlowPane>
 
         <FlowPane prefWrapLength="900.0" styleClass="responsive-action-bar">
             <Label style="-fx-text-fill: #607d8b; -fx-font-size: 11px;" text="The latest operation is selected automatically. Select a different row to export it." />
