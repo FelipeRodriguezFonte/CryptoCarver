@@ -40,10 +40,10 @@
             <TextField fx:id="historyFilterField" prefWidth="220.0" promptText="Operation, date or property" />
             <Label text="Module:" />
             <ComboBox fx:id="historyModuleFilterCombo" prefWidth="145.0" promptText="All modules" />
-            <Button styleClass="ux-inline-5d5d194412" minWidth="USE_PREF_SIZE" onAction="#handleClearHistoryFilter" text="Clear filters" />
-            <Button styleClass="ux-inline-b2a28a2c9c" fx:id="compareBtn" minWidth="USE_PREF_SIZE" onAction="#handleCompareHistory" text="Compare 2" />
-            <Button styleClass="ux-inline-f8ea22b522" minWidth="USE_PREF_SIZE" onAction="#importOperationRecipe" text="Import Recipe" />
-            <Button styleClass="ux-inline-6ab6128509" minWidth="USE_PREF_SIZE" onAction="#handleClearHistory" text="Clear History" />
+            <Button styleClass="ux-inline-5d5d194412" onAction="#handleClearHistoryFilter" text="Clear filters" />
+            <Button styleClass="ux-inline-b2a28a2c9c" fx:id="compareBtn" onAction="#handleCompareHistory" text="Compare 2" />
+            <Button styleClass="ux-inline-f8ea22b522" onAction="#importOperationRecipe" text="Import Recipe" />
+            <Button styleClass="ux-inline-6ab6128509" onAction="#handleClearHistory" text="Clear History" />
         </FlowPane>
 
         <FlowPane prefWrapLength="900.0" styleClass="responsive-action-bar">
