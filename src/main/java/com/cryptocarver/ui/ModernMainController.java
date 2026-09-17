@@ -211,6 +211,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private com.cryptocarver.model.OperationSessionLog operationSessionLog =
             new com.cryptocarver.model.OperationSessionLog();
     private String currentActiveOperation = "Dashboard"; // Defaul
+    private boolean processDesignerWorkspace;
+    private boolean sidePanelVisibleBeforeProcessDesigner;
+    private boolean inspectorVisibleBeforeProcessDesigner;
     @FXML
     private ComboBox<String> outputFormatCombo;
 
@@ -1089,6 +1092,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         this.currentActiveOperation = itemName;
+        if (!"Process Designer".equals(itemName)) {
+            exitProcessDesignerWorkspace();
+        }
         if (navigationController != null) navigationController.navigate(itemName);
 
         // Navigation alone is not a result. Clear the previous published
@@ -3369,12 +3375,42 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void showProcessDesigner() {
         hideAllContainers();
+        enterProcessDesignerWorkspace();
         if (processDesignerContainer != null) {
             processDesignerContainer.setManaged(true);
             processDesignerContainer.setVisible(true);
             processDesignerContainer.setExpanded(true);
             updateContentHeader("Process Designer");
             updateContentSubtitle("Visual workflow builder and execution engine");
+        }
+    }
+
+    /** Gives the designer its own canvas without permanently changing shell panels. */
+    private void enterProcessDesignerWorkspace() {
+        if (processDesignerWorkspace) return;
+        processDesignerWorkspace = true;
+        sidePanelVisibleBeforeProcessDesigner = sidePanel != null && sidePanel.isVisible();
+        inspectorVisibleBeforeProcessDesigner = inspectorPanel != null && inspectorPanel.isVisible();
+        if (sidePanel != null) {
+            sidePanel.setVisible(false);
+            sidePanel.setManaged(false);
+        }
+        if (inspectorPanel != null) {
+            inspectorPanel.setVisible(false);
+            inspectorPanel.setManaged(false);
+        }
+    }
+
+    private void exitProcessDesignerWorkspace() {
+        if (!processDesignerWorkspace) return;
+        processDesignerWorkspace = false;
+        if (sidePanel != null) {
+            sidePanel.setVisible(sidePanelVisibleBeforeProcessDesigner);
+            sidePanel.setManaged(sidePanelVisibleBeforeProcessDesigner);
+        }
+        if (inspectorPanel != null) {
+            inspectorPanel.setVisible(inspectorVisibleBeforeProcessDesigner);
+            inspectorPanel.setManaged(inspectorVisibleBeforeProcessDesigner);
         }
     }
 
