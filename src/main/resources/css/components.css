@@ -142,32 +142,57 @@
 /* Navigation Rail */
 .navigation-rail {
     -fx-background-color: -color-bg-sidebar;
-    -fx-padding: 8 0;
+    -fx-padding: 8 2;
+    -fx-spacing: 4;
 }
 
 /* Rail Buttons */
 .rail-button {
     -fx-background-color: transparent;
     -fx-text-fill: -color-text-subtle; /* -cc-border */
-    -fx-font-size: 20px;
-    -fx-background-radius: 4;
+    -fx-font-size: 10px;
+    -fx-font-weight: 600;
+    -fx-background-radius: 5;
     -fx-cursor: hand;
-    -fx-padding: 0; /* Remove padding to prevent truncation in 40px button */
+    -fx-padding: 4 2 3 2;
     -fx-alignment: center;
+    -fx-content-display: top;
+    -fx-graphic-text-gap: 3;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 0 3;
+    -fx-border-insets: 0 0 0 -2;
 }
 
 .rail-button:hover {
     -fx-background-color: -cc-alpha-01;
-    -fx-text-fill: -cc-bg-surface;
+    -fx-text-fill: -cc-on-accent;
 }
 
 .rail-button:selected {
-    -fx-background-color: -color-primary;
-    -fx-text-fill: -cc-bg-surface;
+    -fx-background-color: -cc-alpha-02;
+    -fx-border-color: -cc-accent;
+    -fx-text-fill: -cc-on-accent;
 }
 
 .rail-button:focused {
-    -fx-border-color: transparent;
+    -fx-border-color: -cc-focus-ring;
+    -fx-border-width: 1;
+    -fx-border-insets: 0;
+}
+
+.rail-button .cc-icon {
+    -fx-icon-color: -color-text-subtle;
+}
+
+.rail-button:hover .cc-icon,
+.rail-button:selected .cc-icon {
+    -fx-icon-color: -cc-on-accent;
+}
+
+.rail-button.rail-group-start {
+    -fx-border-width: 1 0 0 3;
+    -fx-border-color: -cc-border;
+    -fx-padding: 8 2 3 2;
 }
 
 

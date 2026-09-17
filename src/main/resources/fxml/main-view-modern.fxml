@@ -6,6 +6,7 @@
 <?import javafx.scene.text.TextFlow?>
 <?import com.cryptocarver.ui.NavigationRail?>
 <?import com.cryptocarver.ui.SidePanel?>
+<?import com.cryptocarver.ui.ResponsiveWorkspaceSplitPane?>
 <?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 <?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 
@@ -105,11 +106,11 @@
             </MenuBar>
 
             <!-- Toolbar -->
-            <FlowPane styleClass="main-toolbar">
+            <HBox alignment="CENTER_LEFT" spacing="10" minHeight="44" prefHeight="44" maxHeight="44" styleClass="main-toolbar">
                 <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Button text="☰" onAction="#handleToggleSidePanel" styleClass="ghost-button" accessibleText="Toggle side panel"/>
                     <Button fx:id="toolbarSearchButton" text="Search operations" onAction="#handleOpenCommandPalette" styleClass="secondary-button"/>
                     <Button fx:id="toolbarSaveSessionButton" text="Save Session" onAction="#handleSaveSession" styleClass="link-button"/>
-                    <Button fx:id="toolbarClearButton" text="Clear" onAction="#handleClearInput" styleClass="link-button"/>
                 </HBox>
 
                 <!-- Format Flow Bar -->
@@ -139,26 +140,24 @@
                               accessibleHelp="Select the format used to display the operation output."/>
                 </HBox>
 
-                <HBox alignment="CENTER_RIGHT" spacing="10">
-                    <Button fx:id="toolbarExpandButton" text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="link-button"/>
-                    <Button fx:id="toolbarShelfButton" text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="link-button"/>
-                    <Button fx:id="toolbarCopyButton" text="Copy Output" onAction="#handleCopyOutput" styleClass="link-button"/>
-                </HBox>
-            </FlowPane>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Inspector" onAction="#handleToggleInspector" styleClass="ghost-button" accessibleText="Toggle inspector"/>
+            </HBox>
         </VBox>
     </top>
 
     <!-- Main Content Area with Rail + SidePanel + Content + Inspector -->
     <center>
-        <HBox>
-            <!-- Navigation Rail (left, 48px) -->
-            <NavigationRail fx:id="navigationRail"/>
+        <ResponsiveWorkspaceSplitPane fx:id="workspaceSplitPane" dividerPositions="0.22, 0.78">
+            <items>
+                <!-- Navigation tree: rail plus section tree. -->
+                <HBox minWidth="200" styleClass="workspace-tree-pane">
+                    <NavigationRail fx:id="navigationRail"/>
+                    <SidePanel fx:id="sidePanel"/>
+                </HBox>
 
-            <!-- Side Panel (280px, collapsible) -->
-            <SidePanel fx:id="sidePanel"/>
-
-            <!-- Main Content Area -->
-            <VBox fx:id="mainContentArea" HBox.hgrow="ALWAYS" styleClass="main-content-vbox">
+                <!-- Main Content Area -->
+                <VBox fx:id="mainContentArea" minWidth="560" styleClass="main-content-vbox">
 
                 <!-- Content Header with Breadcrumbs & Favorite Star Toggle -->
                 <HBox styleClass="content-header" alignment="CENTER_LEFT" spacing="10">
@@ -375,8 +374,8 @@
                 </ScrollPane>
             </VBox>
 
-            <!-- Inspector Panel (right, collapsible) -->
-            <VBox fx:id="inspectorPanel" minWidth="280" maxWidth="280" styleClass="inspector-panel">
+                <!-- Inspector Panel (right, collapsible) -->
+                <VBox fx:id="inspectorPanel" minWidth="260" styleClass="inspector-panel">
 
                 <!-- Inspector Header -->
                 <HBox alignment="CENTER_LEFT" spacing="8" styleClass="inspector-header-bar">
@@ -440,23 +439,11 @@
                             </VBox>
                         </VBox>
 
-                        <!-- History Section -->
-                        <HBox styleClass="inspector-section-header">
-                            <Label fx:id="inspectorHistoryTitle" text="History" styleClass="inspector-section-title"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Button styleClass="ux-inline-09780ec374" fx:id="inspectorExportJsonButton" text="Export JSON" onAction="#handleExportHistory">
-                                <tooltip><Tooltip text="Export the complete operation history as JSON"/></tooltip>
-                            </Button>
-                            <Button styleClass="ux-inline-c8f8ac35b4" fx:id="inspectorClearHistoryButton" text="Clear" onAction="#handleClearHistory"/>
-                        </HBox>
-
-                        <VBox styleClass="ux-inline-1684f00703" fx:id="historyContainer" spacing="4"/>
-
                     </VBox>
                 </ScrollPane>
-            </VBox>
-
-        </HBox>
+                </VBox>
+            </items>
+        </ResponsiveWorkspaceSplitPane>
     </center>
 
     <!-- Status Bar -->

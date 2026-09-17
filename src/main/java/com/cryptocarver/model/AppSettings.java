@@ -86,6 +86,29 @@ public final class AppSettings {
         save();
     }
 
+    /** Last user-selected workspace divider positions, expressed as normalized fractions. */
+    public synchronized double getWorkspaceTreeDividerPosition() {
+        return clampDivider(data.workspaceTreeDividerPosition, 0.0, 1.0, 0.22);
+    }
+
+    public synchronized void setWorkspaceTreeDividerPosition(double position) {
+        data.workspaceTreeDividerPosition = clampDivider(position, 0.0, 1.0, 0.22);
+        save();
+    }
+
+    public synchronized double getWorkspaceInspectorDividerPosition() {
+        return clampDivider(data.workspaceInspectorDividerPosition, 0.0, 1.0, 0.78);
+    }
+
+    public synchronized void setWorkspaceInspectorDividerPosition(double position) {
+        data.workspaceInspectorDividerPosition = clampDivider(position, 0.0, 1.0, 0.78);
+        save();
+    }
+
+    private static double clampDivider(double value, double min, double max, double fallback) {
+        return Double.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+    }
+
     public synchronized String getCustomTsaUrl() { return data.customTsaUrl == null ? "" : data.customTsaUrl; }
 
     public synchronized void setCustomTsaUrl(String value) {
@@ -285,6 +308,8 @@ public final class AppSettings {
         private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
         private LanguagePreference languagePreference = LanguagePreference.SYSTEM;
         private ThemePreference themePreference = ThemePreference.SYSTEM;
+        private double workspaceTreeDividerPosition = 0.22;
+        private double workspaceInspectorDividerPosition = 0.78;
         private List<String> favorites = new ArrayList<>();
         private String lastRoute = "";
     }

@@ -11,8 +11,9 @@ import javafx.scene.layout.Priority;
 import java.util.function.Consumer;
 
 /**
- * Navigation Rail - Left sidebar with icon-only navigation
- * Modern IDE-style navigation with CSS styling
+ * Navigation Rail - compact icon-and-label navigation.
+ * Search intentionally lives in the side panel/command palette, not in this
+ * primary section rail.  The SEARCH enum value remains for route compatibility.
  */
 public class NavigationRail extends VBox {
 
@@ -62,13 +63,15 @@ public class NavigationRail extends VBox {
         getStyleClass().add("navigation-rail");
         setAlignment(Pos.TOP_CENTER);
         setSpacing(4);
-        setMinWidth(48);
-        setMaxWidth(48);
-        setPrefWidth(48);
+        setMinWidth(64);
+        setMaxWidth(64);
+        setPrefWidth(64);
 
         // Create buttons for main sections
         for (Section section : Section.values()) {
-            addButton(section);
+            if (section != Section.SEARCH) {
+                addButton(section);
+            }
         }
 
         // Select Keys by default
@@ -76,16 +79,26 @@ public class NavigationRail extends VBox {
     }
 
     private void addButton(Section section) {
-        ToggleButton button = new ToggleButton();
-        button.setGraphic(IconRegistry.icon(section.getIcon()));
+        ToggleButton button = new ToggleButton(compactLabel(section));
+        var icon = IconRegistry.icon(section.getIcon());
+        icon.setIconSize(18);
+        button.setGraphic(icon);
         button.setToggleGroup(toggleGroup);
         button.getStyleClass().add("rail-button");
-        button.setMinSize(40, 40);
-        button.setMaxSize(40, 40);
+        button.setMinWidth(60);
+        button.setMaxWidth(60);
+        button.setMinHeight(46);
+        button.setPrefHeight(46);
+        button.setMaxHeight(46);
+        button.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
+        button.setGraphicTextGap(3);
         button.setTooltip(new Tooltip(localizedLabel(section)));
         button.setAccessibleText(localizedLabel(section));
         button.setAccessibleHelp(localizedLabel(section));
         button.setFocusTraversable(true);
+        if (isGroupStart(section)) {
+            button.getStyleClass().add("rail-group-start");
+        }
 
         // Selection handler
         button.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
@@ -96,6 +109,21 @@ public class NavigationRail extends VBox {
 
         button.setUserData(section);
         getChildren().add(button);
+    }
+
+    private String compactLabel(Section section) {
+        String label = localizedLabel(section).trim();
+        if (label.length() <= 10) return label;
+        int separator = label.indexOf(' ');
+        if (separator > 0 && separator <= 9) return label.substring(0, separator);
+        return label.substring(0, 9) + "…";
+    }
+
+    private boolean isGroupStart(Section section) {
+        return switch (section) {
+            case PROCESS_DESIGNER, CIPHER, POST_QUANTUM, PAYMENTS, HISTORY -> true;
+            default -> false;
+        };
     }
 
     private String localizedLabel(Section section) {
@@ -112,6 +140,7 @@ public class NavigationRail extends VBox {
         for (var node : getChildren()) {
             if (node instanceof ToggleButton button && button.getUserData() instanceof Section section) {
                 String label = localizedLabel(section);
+                button.setText(compactLabel(section));
                 button.setTooltip(new Tooltip(label));
                 button.setAccessibleText(label);
                 button.setAccessibleHelp(label);

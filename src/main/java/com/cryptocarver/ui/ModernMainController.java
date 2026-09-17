@@ -62,6 +62,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private BorderPane mainPane;
+    /** Workspace split pane owns divider persistence and responsive collapsing. */
+    @FXML
+    private ResponsiveWorkspaceSplitPane workspaceSplitPane;
     @FXML
     private ToggleGroup visibilityProfileGroup;
 

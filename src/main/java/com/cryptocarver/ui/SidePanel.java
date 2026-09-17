@@ -13,6 +13,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -46,7 +48,9 @@ public class SidePanel extends VBox {
         OperationNode(OperationDescriptor desc) { this.descriptor = desc; this.label = desc.getTitle(); }
         OperationNode(com.cryptocarver.model.HistoryCommand cmd) {
             this.historyCommand = cmd;
-            this.label = cmd.getOperation() + " (" + cmd.getTimestamp() + ")";
+            // Navigation recents are intentionally compact: the timestamp is
+            // useful context, but does not belong in the tree row label.
+            this.label = cmd.getNavigationOperation();
             this.descriptor = OperationRegistry.getInstance().resolveNavigation(cmd.getNavigationOperation()).orElse(null);
         }
 
@@ -146,6 +150,10 @@ public class SidePanel extends VBox {
                             tooltipText += " (" + I18nService.getInstance().text("side.status." + item.descriptor.getStatus().name()) + ")";
                         }
                         setTooltip(new Tooltip(tooltipText));
+
+                        if (item.historyCommand != null) {
+                            setTooltip(new Tooltip(item.label + "\n" + item.historyCommand.getTimestamp()));
+                        }
 
                     } else {
                         setText(item.label);
@@ -345,7 +353,7 @@ public class SidePanel extends VBox {
         if (favs.isEmpty()) return;
 
         TreeItem<OperationNode> favsGroup = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.favorites")));
-        for (String fav : favs) {
+        for (String fav : favs.stream().limit(5).toList()) {
             OperationDescriptor desc = OperationRegistry.getInstance().resolveNavigation(fav).orElse(null);
             if (desc != null) {
                 favsGroup.getChildren().add(new TreeItem<>(new OperationNode(desc)));
@@ -362,10 +370,18 @@ public class SidePanel extends VBox {
         if (items.isEmpty()) return;
 
         TreeItem<OperationNode> recentsGroup = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.recent")));
-        for (com.cryptocarver.model.HistoryCommand item : items.stream().limit(8).toList()) {
+        Set<String> seenNavigation = new LinkedHashSet<>();
+        for (com.cryptocarver.model.HistoryCommand item : items) {
+            String navigation = item.getNavigationOperation();
+            if (navigation == null || navigation.isBlank() || seenNavigation.contains(navigation)) continue;
+            // Legacy history can contain a result label that is no longer a
+            // registered navigation target; do not expose a dead tree row.
+            if (OperationRegistry.getInstance().resolveNavigation(navigation).isEmpty()) continue;
+            seenNavigation.add(navigation);
+            if (seenNavigation.size() > 5) break;
             recentsGroup.getChildren().add(new TreeItem<>(new OperationNode(item)));
         }
-        rootItem.getChildren().add(recentsGroup);
+        if (!recentsGroup.getChildren().isEmpty()) rootItem.getChildren().add(recentsGroup);
     }
 
     private void buildHistoryTree() {
