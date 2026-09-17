@@ -6,6 +6,7 @@
 <?import javafx.scene.text.TextFlow?>
 <?import com.cryptocarver.ui.NavigationRail?>
 <?import com.cryptocarver.ui.SidePanel?>
+<?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 
 <StackPane fx:id="rootStackPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.cryptocarver.ui.ModernMainController">
@@ -30,6 +31,14 @@
                 </Menu>
 
                 <Menu fx:id="editMenu" text="Edit">
+                    <NativeTextEditMenuItem text="Undo" operation="UNDO" />
+                    <NativeTextEditMenuItem text="Redo" operation="REDO" />
+                    <SeparatorMenuItem />
+                    <NativeTextEditMenuItem text="Cut" operation="CUT" />
+                    <NativeTextEditMenuItem text="Copy" operation="COPY" />
+                    <NativeTextEditMenuItem text="Paste" operation="PASTE" />
+                    <NativeTextEditMenuItem text="Select All" operation="SELECT_ALL" />
+                    <SeparatorMenuItem />
                     <MenuItem fx:id="clearInputMenuItem" text="Clear Input" onAction="#handleClearInput" accelerator="Shortcut+Shift+I" />
                     <MenuItem fx:id="clearOutputMenuItem" text="Clear Output" onAction="#handleClearOutput" accelerator="Shortcut+Shift+O" />
                     <MenuItem fx:id="copyOutputMenuItem" text="Copy Output" onAction="#handleCopyOutput" accelerator="Shortcut+Shift+C" />
@@ -59,13 +68,8 @@
                     </Menu>
                 </Menu>
 
-                <Menu fx:id="securityMenu" text="Security">
-                    <fx:define>
-                        <ToggleGroup fx:id="visibilityProfileGroup"/>
-                    </fx:define>
-                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="Visibility: FULL_LAB (Debug/Learning)" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
-                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="Visibility: MASKED (Classroom/Demo)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
-                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="Visibility: REDACTED (Strict/Production)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
+                <Menu fx:id="laboratoryMenu" text="Laboratory" userData="laboratory">
+                    <MenuItem fx:id="laboratoryQuickStartMenuItem" text="Quick Start" onAction="#handleQuickStart" />
                 </Menu>
 
                 <Menu fx:id="toolsMenu" text="Tools">
@@ -74,6 +78,15 @@
                     <MenuItem fx:id="byteInspectorMenuItem" text="Byte Inspector" onAction="#handleByteInspector"/>
                     <SeparatorMenuItem/>
                     <MenuItem fx:id="clearKeyCacheMenuItem" text="Clear Lab Key Cache" onAction="#handleClearLabKeyCache"/>
+                </Menu>
+
+                <Menu fx:id="securityMenu" text="Security">
+                    <fx:define>
+                        <ToggleGroup fx:id="visibilityProfileGroup"/>
+                    </fx:define>
+                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="Full visibility (laboratory)" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
+                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="Masked (demo/classroom)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
+                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="Redacted (strict)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
                 </Menu>
 
                 <Menu fx:id="helpMenu" text="Help">
@@ -379,18 +392,14 @@
 
                         <!-- Input/Output Section -->
                         <VBox spacing="8" style="-fx-padding: 12;">
-                            <GridPane hgap="10" vgap="5">
-                                <Label fx:id="inspectorInputBytesTitle" text="Input Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="inspector-label-small"/>
-                                <Label fx:id="inputBytesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="inspector-value"/>
-
-                                <Label fx:id="inspectorOutputBytesTitle" text="Output Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="inspector-label-small"/>
-                                <Label fx:id="outputBytesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="inspector-value"/>
-
-                                <columnConstraints>
-                                    <ColumnConstraints minWidth="100"/>
-                                    <ColumnConstraints hgrow="ALWAYS" halignment="RIGHT"/>
-                                </columnConstraints>
-                            </GridPane>
+                            <VBox spacing="2" styleClass="inspector-detail-stack">
+                                <Label fx:id="inspectorInputBytesTitle" text="Input Bytes:" styleClass="inspector-label-small"/>
+                                <Label fx:id="inputBytesLabel" text="0" styleClass="inspector-value"/>
+                            </VBox>
+                            <VBox spacing="2" styleClass="inspector-detail-stack">
+                                <Label fx:id="inspectorOutputBytesTitle" text="Output Bytes:" styleClass="inspector-label-small"/>
+                                <Label fx:id="outputBytesLabel" text="0" styleClass="inspector-value"/>
+                            </VBox>
 
                             <Separator styleClass="separator-horizontal"/>
 

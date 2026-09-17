@@ -278,6 +278,14 @@
     -fx-font-size: 12px;
 }
 
+.inspector-detail-stack {
+    -fx-padding: 2 0 6 0;
+}
+
+.inspector-detail-stack .inspector-value {
+    -fx-wrap-text: true;
+}
+
 /* Warning Box */
 .warning-box {
     -fx-background-color: #fff3cd; /* Bootstrap warning yellow */
