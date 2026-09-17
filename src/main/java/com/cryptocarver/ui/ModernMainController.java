@@ -4690,18 +4690,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 } else {
                     HBox row = new HBox(10);
                     row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                    row.setStyle("-fx-padding: 6 10;");
+                    row.getStyleClass().add("command-palette-item");
 
-                    Label categoryBadge = new Label("[" + item.getCategory() + "]");
+                    Label categoryBadge = new Label(item.getCategory());
                     categoryBadge.getStyleClass().add("command-palette-category");
 
                     VBox textContainer = new VBox(2);
                     Label titleLabel = new Label(item.getTitle());
-                    titleLabel.getStyleClass().add("history-card-title");
+                    titleLabel.getStyleClass().add("command-palette-item-title");
 
                     Label descLabel = new Label(item.getDescription());
-                    descLabel.getStyleClass().add("subtle-text");
-                    descLabel.setStyle("-fx-font-size: 11px;");
+                    descLabel.getStyleClass().add("command-palette-item-desc");
 
                     textContainer.getChildren().addAll(titleLabel, descLabel);
                     HBox.setHgrow(textContainer, Priority.ALWAYS);

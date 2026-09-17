@@ -2,6 +2,7 @@ package com.cryptocarver.model;
 
 import com.cryptocarver.ui.ModernMainController;
 import com.cryptocarver.ui.UiNavigationRegistry;
+import com.cryptocarver.service.I18nService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,6 +42,13 @@ public final class CommandRegistry {
             List<String> keywords = new ArrayList<>(descriptor.getAliases());
             keywords.add(descriptor.getCategory());
             keywords.add(descriptor.getNavigationPath());
+            // MAC is a workspace containing several recognizable algorithms.
+            // Keep each algorithm discoverable as its own palette result while
+            // retaining the single canonical navigation destination.
+            if ("op_auth_mac".equals(descriptor.getId())) {
+                addMacCommands(commands, controller);
+                continue;
+            }
             commands.add(new CommandItem(
                     "nav_" + descriptor.getId(),
                     descriptor.getTitle(),
@@ -148,5 +156,23 @@ public final class CommandRegistry {
         ));
 
         return commands;
+    }
+
+    private static void addMacCommands(List<CommandItem> commands, ModernMainController controller) {
+        I18nService i18n = I18nService.getInstance();
+        String navigation = i18n.text("command.category.navigation", i18n.text("nav.authentication"));
+        commands.add(new CommandItem("nav_auth_hmac", i18n.text("command.hmac.title"), navigation,
+                i18n.text("command.hmac.description"),
+                Arrays.asList("HMAC", "Message Authentication Codes", "MAC"), null, () -> true,
+                () -> controller.navigateToModule("MAC")));
+        commands.add(new CommandItem("nav_auth_cmac", i18n.text("command.cmac.title"), navigation,
+                i18n.text("command.cmac.description"),
+                Arrays.asList("CMAC", "Message Authentication Codes", "MAC"), null, () -> true,
+                () -> controller.navigateToModule("MAC")));
+        commands.add(new CommandItem("nav_auth_retail_mac", i18n.text("command.retailMac.title"),
+                i18n.text("command.category.navigation", i18n.text("nav.payments")),
+                i18n.text("command.retailMac.description"),
+                Arrays.asList("Retail MAC", "MAC", "EMV", "ISO 9797-1"), null, () -> true,
+                () -> controller.navigateToModule("EMV Operations")));
     }
 }

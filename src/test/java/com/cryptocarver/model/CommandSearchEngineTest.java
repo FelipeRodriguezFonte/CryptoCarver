@@ -94,6 +94,32 @@ class CommandSearchEngineTest {
     }
 
     @Test
+    @DisplayName("MAC substring searches aliases and ranks title matches first")
+    void testMacSubstringMatchesAliases() {
+        CommandItem hmac = new CommandItem("hmac", "HMAC", "Authentication",
+                "Hash-based message authentication code", List.of("HMAC"), null, () -> true, () -> {});
+        CommandItem cmac = new CommandItem("cmac", "CMAC", "Authentication",
+                "Cipher-based message authentication code", List.of("CMAC"), null, () -> true, () -> {});
+        CommandItem retail = new CommandItem("retail", "Retail MAC", "Payments",
+                "ISO 9797-1 retail authentication", List.of("Retail MAC"), null, () -> true, () -> {});
+        CommandItem cose = new CommandItem("cose", "COSE_Mac0", "COSE",
+                "CBOR message authentication", List.of("COSE MAC0"), null, () -> true, () -> {});
+
+        List<CommandItem> results = CommandSearchEngine.search(List.of(hmac, cmac, retail, cose), "mac");
+        assertEquals(List.of("retail", "hmac", "cmac", "cose"),
+                results.stream().map(CommandItem::getId).toList());
+    }
+
+    @Test
+    @DisplayName("Description matches rank below titles and aliases")
+    void testDescriptionMatch() {
+        CommandItem descriptionOnly = new CommandItem("description", "Security tool", "Tools",
+                "Calculate a message authentication code", List.of(), null, () -> true, () -> {});
+        List<CommandItem> results = CommandSearchEngine.search(List.of(descriptionOnly), "authentication");
+        assertEquals("description", results.get(0).getId());
+    }
+
+    @Test
     @DisplayName("Deterministic ordering preserved for ties")
     void testDeterministicOrder() {
         List<CommandItem> results1 = CommandSearchEngine.search(allCommands, "nav");

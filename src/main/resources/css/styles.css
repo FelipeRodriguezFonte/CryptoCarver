@@ -2219,20 +2219,65 @@
     -fx-background-color: #e2e8f0;
 }
 
+/* Command palette: keep palette rows independent from dark history cards. */
+.command-palette-list {
+    -fx-background-color: #f8fafc;
+    -fx-control-inner-background: #f8fafc;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 4px;
+}
+
+.command-palette-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.command-palette-list .list-cell:filled:hover {
+    -fx-background-color: #e2e8f0;
+    -fx-background-radius: 4px;
+}
+
+.command-palette-list .list-cell:filled:selected {
+    -fx-background-color: #dbeafe;
+    -fx-background-radius: 4px;
+}
+
+.command-palette-item {
+    -fx-padding: 7px 10px;
+    -fx-spacing: 10px;
+    -fx-background-color: transparent;
+}
+
+.command-palette-item-title {
+    -fx-text-fill: #0f172a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.command-palette-item-desc {
+    -fx-text-fill: #475569;
+    -fx-font-size: 11px;
+}
+
 .command-palette-category {
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2px 6px;
     -fx-background-radius: 4px;
-    -fx-text-fill: #93c5fd;
-    -fx-background-color: #1e3a8a;
+    -fx-text-fill: #334155;
+    -fx-background-color: #e2e8f0;
 }
 
 .command-palette-shortcut {
     -fx-font-size: 10px;
-    -fx-text-fill: #e2e8f0;
+    -fx-text-fill: #334155;
     -fx-padding: 2px 6px;
-    -fx-background-color: #334155;
+    -fx-background-color: #e2e8f0;
+    -fx-border-color: #cbd5e1;
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
     -fx-background-radius: 4px;
 }
 
