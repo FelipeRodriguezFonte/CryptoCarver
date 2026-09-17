@@ -231,6 +231,22 @@ sobrevive en los dos idiomas.
 - **TVV ausente ≠ TVV inválido.** p. 1560: un token fijo guardado en un CKDS
   no-KDSR no tiene MKVP ni TVV. Bytes 60-63 a cero significa «sin materializar»,
   no «corrupto».
+- **Los campos de uso y de gestión de un token variable se leen byte a byte**
+  (`VariableFieldDecoder`, Tablas 619-629 y 631). Cada byte alto y bajo sale con
+  su offset, su patrón `B'xxxx xxxx'`, la palabra clave de Key Token Build2 de
+  cada bit y lo que permite, y también las palabras clave **sin activar**: la
+  restricción de un KEK suele estar en lo que falta (`WR-AES` y nada más). La
+  ficha resume solo las palabras clave en vigor; los valores por defecto
+  (`XPRT-DES`, `NOP2AUTH`, uso en CCA y UDX) se ven en el detalle, no en la ficha.
+- **Algunos bytes solo se leen con otro delante.** KUF1 HOB de un KEK es o bien
+  bits de operación o bien `B'0000 0001'` (`EXPTT31D`/`IMPTT31D`) en exclusiva, y
+  de eso depende si `VARDRV-D` o `WR-TR31` en KUF2 son válidos. KUF2 LOB de un
+  PINPROT cambia de significado según KUF1 diga entrante o saliente. Los KUF3+ de
+  un DKYGENKY se leen con la tabla del tipo que genera, desplazados dos campos.
+  Los bloques activo/pasivo de KDKGENKY se muestran enteros, sin decodificar.
+- **Bits reservados, valores no definidos y combinaciones prohibidas avisan**
+  (`USAGE_FIELD_*`, `MANAGEMENT_FIELD_RESERVED_BITS`), pero no son hallazgos del
+  lote: el lote no cambia.
 - **U+00A0.** El separador que descarta `IcsfHex.clean` no es solo el espacio:
   copiar de un emulador de terminal produce espacios duros, y sin eso el token
   falla como si el hexadecimal fuera inválido.
@@ -293,6 +309,7 @@ marcadores `{0}` sin sustituir, y que la sangría sobreviva.
 | `IcsfBatchAnalyzerTest` | Cada hallazgo detectado y sin falsos positivos, estadísticas, duplicados |
 | `IcsfBatchOutputTest` | Informe de texto, CSV con BOM, JSON, conmutador de detalle |
 | `IcsfBatchConsistencyTest` | El invariante lote ↔ individual, token a token |
+| `IcsfUsageFieldsTest` | Campos de uso y gestión byte a byte: el EXPORTER `EXPTT31D`, reservados, combinaciones, PINPROT, DKYGENKY, HMAC |
 | `IcsfCoverageTest` | Tokens variable-length y PKA, y que **los 23 hallazgos son alcanzables** |
 | `IcsfDetailI18nTest` | Que **todo** el detalle resuelve en español y en inglés |
 | `IncludedPaneI18nUITest` | Que un pane incluido traduce su título **y** su contenido |

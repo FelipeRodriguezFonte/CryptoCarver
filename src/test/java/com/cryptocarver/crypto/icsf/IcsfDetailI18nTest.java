@@ -45,6 +45,23 @@ class IcsfDetailI18nTest {
         tokens.add(IcsfTestTokens.truncatedDes());
         tokens.add(IcsfTestTokens.variableLength(true, true));
         tokens.add(IcsfTestTokens.variableLength(false, false));
+        // Every key-usage table, including the context-dependent bytes and the warnings.
+        tokens.add(IcsfTestTokens.hex(IcsfTestTokens.AES_EXPTT31D_EXPORTER));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0004, "E00001008000A8000000", "000000000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0003, "8100010040030103", "F20100000505"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0002, "C0000180", "8000C000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0005, "8000003D00000100", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0006, "800000000101", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0007, "400001000000", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0009, "02802000010080000180", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0009, "030000010100000140000080", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x000A, "00080001", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x000B, "0100" + "00".repeat(24), "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0001, "E000FF00", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0001, "23000901", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x03, 0x0002, "C000F800", "80000000"));
+        tokens.add(IcsfTestTokens.variableLength(0x01, 0x0008, "0001", "0000"));
+        tokens.add(IcsfTestTokens.variableLength(0x02, 0x0055, "1234", "80000000"));
         tokens.add(IcsfTestTokens.pkaPublicRsa());
         tokens.add(new byte[16]);
 

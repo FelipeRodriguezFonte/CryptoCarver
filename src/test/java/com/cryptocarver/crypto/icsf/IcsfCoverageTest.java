@@ -75,7 +75,7 @@ class IcsfCoverageTest {
         assertTrue(result.value(SummaryKey.EXPORTABILITY).orElseThrow().text().contains("symmetric key"));
         assertEquals("PRESENT", result.code(SummaryKey.PEDIGREE, ""));
         assertTrue(result.value(SummaryKey.PEDIGREE).orElseThrow().text().contains("Randomly generated"));
-        assertTrue(result.value(SummaryKey.ALLOWED_USES).orElseThrow().text().contains("encryption"));
+        assertEquals("ENCRYPT, DECRYPT, CBC", result.value(SummaryKey.ALLOWED_USES).orElseThrow().text());
     }
 
     @Test
