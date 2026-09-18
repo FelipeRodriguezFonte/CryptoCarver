@@ -37,7 +37,7 @@ class SpecializedLiveI18nUITest {
             I18nService service = I18nService.getInstance();
             service.setPreference(LanguagePreference.EN);
             try {
-                Parent root = new FXMLLoader(getClass().getResource("/fxml/pqc.fxml")).load();
+                Parent root = UiTestFxml.loader(getClass().getResource("/fxml/pqc.fxml")).load();
                 Accordion accordion = (Accordion) root.lookupAll(".module-accordion").stream().findFirst().orElse(null);
                 assertNotNull(accordion);
                 assertEquals("🔑 PQC Key Generation", accordion.getPanes().get(0).getText());
@@ -57,7 +57,7 @@ class SpecializedLiveI18nUITest {
             I18nService service = I18nService.getInstance();
             service.setPreference(LanguagePreference.EN);
             try {
-                Parent root = new FXMLLoader(getClass().getResource("/fxml/jose.fxml")).load();
+                Parent root = UiTestFxml.loader(getClass().getResource("/fxml/jose.fxml")).load();
                 Label header = (Label) root.lookupAll(".section-header").stream().findFirst().orElse(null);
                 assertNotNull(header);
                 assertEquals("JSON Web Token (JWT)", header.getText());

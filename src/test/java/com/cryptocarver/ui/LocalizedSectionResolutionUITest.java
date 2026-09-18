@@ -58,7 +58,7 @@ class LocalizedSectionResolutionUITest {
         runAndWait(() -> {
             I18nService.getInstance().setPreference(LanguagePreference.ES);
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 loader.setResources(I18nService.getInstance().getBundle());
                 loader.load();
                 controllerRef.set(loader.getController());
@@ -147,7 +147,7 @@ class LocalizedSectionResolutionUITest {
 
     private ModernMainController load() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
             loader.setResources(I18nService.getInstance().getBundle());
             loader.load();
             return loader.getController();

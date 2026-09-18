@@ -106,7 +106,7 @@ class Ux21LiveUITest {
 
     @Test
     void compareResultsShowsDifferenceAndCanReset() throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/compare_results.fxml"));
+        FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/compare_results.fxml"));
         final CompareResultsController[] ref = new CompareResultsController[1];
         fx(() -> {
             try {
@@ -127,7 +127,7 @@ class Ux21LiveUITest {
         final ModernMainController[] ref = new ModernMainController[1];
         fx(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(Ux21LiveUITest.class.getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(Ux21LiveUITest.class.getResource("/fxml/main-view-modern.fxml"));
                 loader.load();
                 ref[0] = loader.getController();
             } catch (Exception e) { throw new RuntimeException(e); }

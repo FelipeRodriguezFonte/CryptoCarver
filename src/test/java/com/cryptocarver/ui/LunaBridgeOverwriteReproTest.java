@@ -72,7 +72,7 @@ public class LunaBridgeOverwriteReproTest {
     void testInspectorEditsPersistAndAreNotOverwrittenByCompatibilityBridge() throws Exception {
         runOnFxThread(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
 

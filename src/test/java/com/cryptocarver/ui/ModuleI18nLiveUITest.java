@@ -61,8 +61,8 @@ class ModuleI18nLiveUITest {
         AtomicReference<Parent> keysRoot = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                cipherRoot.set(new FXMLLoader(getClass().getResource("/fxml/cipher.fxml")).load());
-                keysRoot.set(new FXMLLoader(getClass().getResource("/fxml/keys.fxml")).load());
+                cipherRoot.set(UiTestFxml.loader(getClass().getResource("/fxml/cipher.fxml")).load());
+                keysRoot.set(UiTestFxml.loader(getClass().getResource("/fxml/keys.fxml")).load());
             } catch (Exception exception) {
                 throw new RuntimeException(exception);
             }

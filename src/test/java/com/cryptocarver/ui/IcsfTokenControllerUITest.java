@@ -73,7 +73,7 @@ class IcsfTokenControllerUITest {
     }
 
     private static FXMLLoader load() throws Exception {
-        FXMLLoader loader = new FXMLLoader(
+        FXMLLoader loader = UiTestFxml.loader(
                 IcsfTokenControllerUITest.class.getResource("/fxml/icsf_token.fxml"));
         assertNotNull(loader.getLocation(), "icsf_token.fxml must be on the classpath");
         loader.load();

@@ -63,7 +63,7 @@ class IcsfBatchControllerUITest {
     }
 
     private static FXMLLoader load() throws Exception {
-        FXMLLoader loader = new FXMLLoader(
+        FXMLLoader loader = UiTestFxml.loader(
                 IcsfBatchControllerUITest.class.getResource("/fxml/icsf_batch.fxml"));
         assertNotNull(loader.getLocation(), "icsf_batch.fxml must be on the classpath");
         loader.load();

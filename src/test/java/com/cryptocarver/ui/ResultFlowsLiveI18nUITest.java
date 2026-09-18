@@ -38,7 +38,7 @@ class ResultFlowsLiveI18nUITest {
             I18nService service = I18nService.getInstance();
             service.setPreference(LanguagePreference.EN);
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 assertEquals("🧩 Process Designer", root.getText());
                 service.setPreference(LanguagePreference.ES);
@@ -57,7 +57,7 @@ class ResultFlowsLiveI18nUITest {
             I18nService service = I18nService.getInstance();
             service.setPreference(LanguagePreference.EN);
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/clipboard_shelf.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/clipboard_shelf.fxml"));
                 Parent root = loader.load();
                 Label header = (Label) root.lookupAll(".header-label").stream().findFirst().orElse(null);
                 assertNotNull(header);

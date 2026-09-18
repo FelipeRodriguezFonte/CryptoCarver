@@ -130,7 +130,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -163,7 +163,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -217,7 +217,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -265,7 +265,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -309,7 +309,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -341,7 +341,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -373,7 +373,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();
@@ -407,7 +407,7 @@ class ExpandResultAuditTest {
         runAndWait(() -> {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controller.initialize();

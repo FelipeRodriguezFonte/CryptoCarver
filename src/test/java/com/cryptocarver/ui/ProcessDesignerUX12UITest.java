@@ -72,7 +72,7 @@ class ProcessDesignerUX12UITest {
     void testProcessDesignerUX12ValidationDryRunAndInspector() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 assertNotNull(controller, "ProcessDesignerController must be loaded");
@@ -121,7 +121,7 @@ class ProcessDesignerUX12UITest {
 
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 controllerRef[0] = controller;
@@ -199,7 +199,7 @@ class ProcessDesignerUX12UITest {
     void testProcessDesignerUX12ValidationSelectionAndNarrowLayout() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 assertNotNull(controller);

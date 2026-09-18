@@ -66,7 +66,7 @@ class Ux23AccessibilityLiveUITest {
         final Node[] target = new Node[1];
 
         fx(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
             try {
                 root[0] = loader.load();
             } catch (Exception e) {

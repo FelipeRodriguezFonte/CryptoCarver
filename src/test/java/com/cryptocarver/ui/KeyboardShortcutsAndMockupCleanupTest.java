@@ -102,7 +102,11 @@ public class KeyboardShortcutsAndMockupCleanupTest {
     }
 
     @Test
-    void testFxmlInitialHistoryContainerIsEmpty() throws Exception {
+    void testFxmlDeclaresNoInspectorHistoryList() throws Exception {
+        // The Inspector used to hold its own history list (fx:id="historyContainer"), which this
+        // test guarded against shipping with mockup cards inside it. The list was removed so that
+        // the History view is the single place executions are listed; the guard now checks that
+        // the shell does not grow a second one back.
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         DocumentBuilder db = dbf.newDocumentBuilder();
@@ -110,28 +114,12 @@ public class KeyboardShortcutsAndMockupCleanupTest {
         assertNotNull(is, "main-view-modern.fxml not found");
 
         Document doc = db.parse(is);
-        NodeList vboxes = doc.getElementsByTagName("VBox");
-
-        Element historyBoxEl = null;
-        for (int i = 0; i < vboxes.getLength(); i++) {
-            Element vbox = (Element) vboxes.item(i);
-            if ("historyContainer".equals(vbox.getAttribute("fx:id"))) {
-                historyBoxEl = vbox;
-                break;
-            }
+        NodeList all = doc.getElementsByTagName("*");
+        for (int i = 0; i < all.getLength(); i++) {
+            Element element = (Element) all.item(i);
+            assertNotEquals("historyContainer", element.getAttribute("fx:id"),
+                    "History belongs to the History view, not to an Inspector list in the shell");
         }
-
-        assertNotNull(historyBoxEl, "historyContainer node must exist in main-view-modern.fxml");
-
-        int elementChildCount = 0;
-        NodeList childNodes = historyBoxEl.getChildNodes();
-        for (int j = 0; j < childNodes.getLength(); j++) {
-            if (childNodes.item(j).getNodeType() == Node.ELEMENT_NODE) {
-                elementChildCount++;
-            }
-        }
-
-        assertEquals(0, elementChildCount, "historyContainer in main-view-modern.fxml must start completely empty of static elements");
     }
 
     @Test
@@ -162,7 +150,7 @@ public class KeyboardShortcutsAndMockupCleanupTest {
             try {
                 URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
                 assertNotNull(resource, "main-view-modern.fxml not found");
-                FXMLLoader loader = new FXMLLoader(resource);
+                FXMLLoader loader = UiTestFxml.loader(resource);
                 loader.load();
 
                 ModernMainController controller = loader.getController();

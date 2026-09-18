@@ -68,7 +68,7 @@ public class ProcessDesignerUndoRedoTest {
     void testUndoRedoPreservesStructuralEqualityAcrossCommandTypes() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
 
@@ -159,7 +159,7 @@ public class ProcessDesignerUndoRedoTest {
     void testUndoRedoMoveNodeAndChangeConfiguration() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
 

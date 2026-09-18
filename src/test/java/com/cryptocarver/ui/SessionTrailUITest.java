@@ -50,7 +50,7 @@ class SessionTrailUITest {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 loader.load();
                 ModernMainController controller = loader.getController();
                 controllerRef.set(controller);
