@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 public class CompareResultsController {
+    private final DialogService dialogService = new DialogService();
 
     @FXML private javafx.scene.layout.VBox compareResultsRoot;
     private ModuleI18n.Binding moduleI18n;
@@ -152,13 +153,9 @@ public class CompareResultsController {
             }
             Files.writeString(file.toPath(), content, StandardCharsets.UTF_8);
 
-            Alert confirmation = new Alert(Alert.AlertType.INFORMATION, t("module.compare.saved", file.getAbsolutePath()), ButtonType.OK);
-            confirmation.setTitle(t("module.compare.exported"));
-            confirmation.setHeaderText(t("module.compare.exportedHeader"));
-            confirmation.showAndWait();
+            dialogService.info(t("module.compare.exported"), t("module.compare.saved", file.getAbsolutePath()));
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, t("module.compare.writeError", e.getMessage()), ButtonType.OK);
-            alert.showAndWait();
+            dialogService.error(t("module.compare.exported"), t("module.compare.writeError", e.getMessage()));
         }
     }
 

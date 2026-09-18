@@ -9,7 +9,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import javafx.application.Platform;
+import javafx.scene.layout.Pane;
 
 /**
  * Loads a module FXML once and keeps its scene graph and controller available
@@ -74,6 +78,44 @@ public final class ModuleLoader {
     /** Loads without selecting the route, useful for background preloading. */
     public Parent preload(String route) throws IOException {
         return load(route, false);
+    }
+
+    /** Loads a registered module asynchronously, always parsing FXML on JavaFX's thread. */
+    public CompletableFuture<Parent> loadAsync(String route, Executor executor, boolean show) {
+        Objects.requireNonNull(executor, "executor");
+        CompletableFuture<Parent> result = new CompletableFuture<>();
+        executor.execute(() -> Platform.runLater(() -> {
+            try {
+                result.complete(load(route, show));
+            } catch (IOException | RuntimeException error) {
+                result.completeExceptionally(error);
+            }
+        }));
+        return result;
+    }
+
+    /**
+     * Loads a module and installs it in a host pane, replacing its children
+     * atomically on the JavaFX thread.  This is the adapter used by shells
+     * migrating from eager {@code fx:include} nodes to deferred modules.
+     */
+    public CompletableFuture<Parent> loadInto(String route, Pane host, Executor executor, boolean show) {
+        Objects.requireNonNull(host, "host");
+        return loadAsync(route, executor, show).thenCompose(root -> {
+            CompletableFuture<Void> attached = new CompletableFuture<>();
+            Runnable attach = () -> {
+                try {
+                    host.getChildren().setAll(root);
+                    if (show) visibleRoute = normalizeRoute(route);
+                    attached.complete(null);
+                } catch (RuntimeException error) {
+                    attached.completeExceptionally(error);
+                }
+            };
+            if (Platform.isFxApplicationThread()) attach.run();
+            else Platform.runLater(attach);
+            return attached.thenApply(ignored -> root);
+        });
     }
 
     public Optional<Object> controller(String route) {

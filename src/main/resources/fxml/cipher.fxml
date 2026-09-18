@@ -151,15 +151,15 @@
                     <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherAlgorithmCombo" prefWidth="250"/>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherSourceField" promptText="Source file path" HBox.hgrow="ALWAYS"/>
-                        <Button text="…" onAction="#chooseFileCipherSource" styleClass="secondary-button"/>
+                        <Button text="…" accessibleText="Choose source file" onAction="#chooseFileCipherSource" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherDestinationField" promptText="Output file path" HBox.hgrow="ALWAYS"/>
-                        <Button text="…" onAction="#chooseFileCipherDestination" styleClass="secondary-button"/>
+                        <Button text="…" accessibleText="Choose destination file" onAction="#chooseFileCipherDestination" styleClass="secondary-button"/>
                     </HBox>
                     <HBox spacing="5">
                         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="fileCipherTagField" promptText="Detached AEAD tag path (.tag; required for GCM / ChaCha)" HBox.hgrow="ALWAYS"/>
-                        <Button text="…" onAction="#chooseFileCipherTag" styleClass="secondary-button"/>
+                        <Button text="…" accessibleText="Choose authentication tag file" onAction="#chooseFileCipherTag" styleClass="secondary-button"/>
                     </HBox>
                     <TextField styleClass="ux-inline-74263851ef" fx:id="fileCipherKeyField" promptText="Key in hexadecimal"/>
                     <HBox spacing="5">

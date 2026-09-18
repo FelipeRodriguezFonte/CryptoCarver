@@ -25,14 +25,14 @@ jobs:
           cache: maven
       - name: Run contract tests
         run: >-
-          mvn -q -Dtest=I18nServiceTest,AccessibilitySupportTest,PreferencesServiceTest,LocalHelpServiceTest test
+          mvn -q -Dtest=I18nServiceTest,AccessibilitySupportTest,PreferencesServiceTest,LocalHelpServiceTest,Ux47ReleaseQualityGateTest test
       - name: Check UI hygiene budgets
         shell: bash
         run: |
           set -euo pipefail
           inline_count="$(rg -l 'style="' src/main/resources/fxml | xargs -r rg -o 'style="' | wc -l | tr -d ' ')"
           emoji_count="$(rg -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml 2>/dev/null | wc -l | tr -d ' ')"
-          test "${inline_count}" -le 900 || { echo "Inline FXML style budget exceeded: ${inline_count}" >&2; exit 1; }
+          test "${inline_count}" -eq 0 || { echo "Inline FXML styles are forbidden: ${inline_count}" >&2; exit 1; }
           test "${emoji_count}" -le 12 || { echo "UI emoji budget exceeded: ${emoji_count}" >&2; exit 1; }
           echo "UI hygiene budgets: inline=${inline_count}, emoji=${emoji_count}"
 

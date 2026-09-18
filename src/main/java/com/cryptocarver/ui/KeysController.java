@@ -6324,12 +6324,11 @@ public class KeysController {
             return;
         }
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Warning: Reveal Secret Key");
-        alert.setHeaderText("Are you sure you want to reveal raw secret key bytes?");
-        alert.setContentText("Warning: Exporting or displaying cleartext key material violates production security standards. Only proceed in isolated lab environments.");
-
-        java.util.Optional<ButtonType> result = alert.showAndWait();
+        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+                keyLabTable.getScene().getWindow(), "Warning: Reveal Secret Key",
+                "Are you sure you want to reveal raw secret key bytes?",
+                new Label("Warning: Exporting or displaying cleartext key material violates production security standards. Only proceed in isolated lab environments."),
+                ButtonType.CANCEL, ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 byte[] keyBytes = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().revealExportableKeyForFullLab(km.getId());
@@ -6411,13 +6410,12 @@ public class KeysController {
 
         boolean willArchive = !"ARCHIVED".equalsIgnoreCase(km.getStatus());
         String actionText = willArchive ? "archive" : "restore";
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirm " + (willArchive ? "Archive" : "Restore"));
-        alert.setHeaderText((willArchive ? "Archive" : "Restore") + " Key: " + km.getName());
-        alert.setContentText("Are you sure you want to " + actionText + " this key? "
-            + (willArchive ? "Archived keys are hidden from standard operations but kept in history." : "This key will be active again."));
-
-        java.util.Optional<ButtonType> result = alert.showAndWait();
+        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+                keyLabTable.getScene().getWindow(), "Confirm " + (willArchive ? "Archive" : "Restore"),
+                (willArchive ? "Archive" : "Restore") + " Key: " + km.getName(),
+                new Label("Are you sure you want to " + actionText + " this key? "
+                        + (willArchive ? "Archived keys are hidden from standard operations but kept in history." : "This key will be active again.")),
+                ButtonType.CANCEL, ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().archiveKey(km.getId());
             refreshKeyLabTable();
@@ -6434,12 +6432,10 @@ public class KeysController {
         KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
         if (km == null) return;
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirm Deletion");
-        alert.setHeaderText("Delete Key: " + km.getName());
-        alert.setContentText("Are you sure you want to permanently delete this key from the Lab? This action cannot be undone.");
-
-        java.util.Optional<ButtonType> result = alert.showAndWait();
+        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+                keyLabTable.getScene().getWindow(), "Confirm Deletion", "Delete Key: " + km.getName(),
+                new Label("Are you sure you want to permanently delete this key from the Lab? This action cannot be undone."),
+                ButtonType.CANCEL, ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().deleteKey(km.getId());
             refreshKeyLabTable();

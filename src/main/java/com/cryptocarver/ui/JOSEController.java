@@ -52,6 +52,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    private final DialogService dialogService = new DialogService();
 
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
     private ModuleI18n.Binding moduleI18n;
@@ -774,15 +775,12 @@ public class JOSEController implements Initializable {
             }
             // Security Warning for Symmetric Keys in JWKS
             if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
-                Alert warning = new Alert(Alert.AlertType.WARNING);
-                warning.setTitle("Security Warning");
-                warning.setHeaderText("Symmetric Key in Public JWKS");
-                warning.setContentText("You are adding a SYMMETRIC key (Secret) to this JWK Set.\n\n" +
+                String warningText = "You are adding a SYMMETRIC key (Secret) to this JWK Set.\n\n" +
                         "If you publish this JWKS file publicly (e.g. at .well-known/jwks.json), ANYONE will be able to read your secret key and forge tokens.\n\n"
-                        +
-                        "Are you sure you want to proceed?");
-                warning.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
-                java.util.Optional<ButtonType> result = warning.showAndWait();
+                        + "Are you sure you want to proceed?";
+                java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.WARNING, null,
+                        "Security Warning", "Symmetric Key in Public JWKS", new Label(warningText),
+                        ButtonType.NO, ButtonType.YES);
                 if (result.isEmpty() || result.get() != ButtonType.YES) {
                     return;
                 }
@@ -876,16 +874,11 @@ public class JOSEController implements Initializable {
         try {
             String json = jwksArea.getText();
             String publicJson = this.exportPublicJWKS(json);
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Public JWKS");
-            alert.setHeaderText("Public Keys Only");
             TextArea area = new TextArea(publicJson);
             area.setEditable(false);
             area.setWrapText(true);
             area.setPrefSize(500, 300);
-            alert.getDialogPane().setContent(area);
-            alert.setResizable(true);
-            alert.showAndWait();
+            dialogService.show(Alert.AlertType.INFORMATION, null, "Public JWKS", "Public Keys Only", area, ButtonType.OK);
         } catch (Exception e) {
             showError("Export Error", e.getMessage());
         }

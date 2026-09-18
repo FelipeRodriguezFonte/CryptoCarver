@@ -53,5 +53,9 @@ declara una sola vez en `pom.xml`; no se edita en los scripts de empaquetado.
 ## Evidencia de accesibilidad y calidad continua
 
 - [ ] Ejecutar el job `quality-gates` y conservar su resumen junto al artefacto.
+- [ ] Confirmar que `Ux47ReleaseQualityGateTest` pasa: no hay estilos inline en
+  FXML, los botones solo-icono tienen nombre accesible, los aceleradores no se
+  duplican por vista y `messages_es.properties` mantiene las claves y
+  placeholders del bundle base.
 - [ ] Pasada manual de VoiceOver/Narrador: foco visible, nombre accesible para
   controles de solo icono y anuncio de finalización de operaciones.

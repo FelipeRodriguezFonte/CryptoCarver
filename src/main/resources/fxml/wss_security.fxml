@@ -48,7 +48,7 @@
                             </VBox>
                             <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <TextField fx:id="wssSignKeyPathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                                <Button text="..." onAction="#handleBrowseWssKey" styleClass="secondary-button"/>
+                                <Button text="..." accessibleText="Choose signing key" onAction="#handleBrowseWssKey" styleClass="secondary-button"/>
                             </HBox>
 
                             <Label text="KeyStore Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -93,7 +93,7 @@
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="wssVerifyTrustStorePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="..." onAction="#handleBrowseWssTrustStore" styleClass="secondary-button"/>
+                            <Button text="..." accessibleText="Choose trust store" onAction="#handleBrowseWssTrustStore" styleClass="secondary-button"/>
                         </HBox>
                     </GridPane>
 
@@ -188,7 +188,7 @@
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="wssEncryptCertificatePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="..." onAction="#handleBrowseWssEncryptCertificate" styleClass="secondary-button"/>
+                            <Button text="..." accessibleText="Choose encryption certificate" onAction="#handleBrowseWssEncryptCertificate" styleClass="secondary-button"/>
                         </HBox>
 
                         <Label text="Data encryption:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -230,7 +230,7 @@
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="wssDecryptKeyStorePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="..." onAction="#handleBrowseWssDecryptKeyStore" styleClass="secondary-button"/>
+                            <Button text="..." accessibleText="Choose decryption key store" onAction="#handleBrowseWssDecryptKeyStore" styleClass="secondary-button"/>
                         </HBox>
 
                         <Label text="KeyStore password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>

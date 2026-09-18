@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Single entry point for modal dialogs used by the modern UI.
@@ -84,6 +85,17 @@ public final class DialogService {
     public void warning(String title, String detail) { warning(null, title, detail); }
 
     public void error(String title, String detail) { error(null, title, detail); }
+
+    /** Shows a themed alert with optional custom content and buttons. */
+    public Optional<ButtonType> show(Alert.AlertType type, Window owner, String title,
+                                     String header, Node content, ButtonType... buttons) {
+        ButtonType[] safeButtons = buttons == null || buttons.length == 0
+                ? new ButtonType[]{ButtonType.OK} : buttons;
+        Alert alert = new Alert(type, "", safeButtons);
+        configure(alert, owner, title, header);
+        if (content != null) alert.getDialogPane().setContent(content);
+        return alert.showAndWait();
+    }
 
     /**
      * Opens an input chooser and remembers its last directory under {@code type}.

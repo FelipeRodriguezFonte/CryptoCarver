@@ -130,19 +130,19 @@
                     <Label text="Source:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileInputPathField" promptText="Input File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button styleClass="ux-inline-7023c1077f" text="..." onAction="#handleBrowseInputFile"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose input file" onAction="#handleBrowseInputFile"/>
                     </HBox>
 
                     <Label text="Target:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileOutputPathField" promptText="Output File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button styleClass="ux-inline-7023c1077f" text="..." onAction="#handleBrowseOutputFile"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose output file" onAction="#handleBrowseOutputFile"/>
                     </HBox>
 
                     <Label text="Compare:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileComparePathField" promptText="Second File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button styleClass="ux-inline-7023c1077f" text="..." onAction="#handleBrowseCompareFile"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose comparison file" onAction="#handleBrowseCompareFile"/>
                     </HBox>
 
                     <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="form-label"/>
