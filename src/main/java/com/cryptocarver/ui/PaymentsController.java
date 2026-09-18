@@ -309,16 +309,32 @@ public class PaymentsController {
             ibm3624ConvTableField.setText("0123456789012345");
         }
         if (paymentsResultPanel != null) {
-            bindResult(paymentsResultPanel, pinBlockResultArea, "PIN block");
-            bindResult(paymentsResultPanel, cvvResultArea, "CVV");
-            bindResult(paymentsResultPanel, encResultArea, "Encrypted PIN block");
-            bindResult(paymentsResultPanel, ibm3624ResultArea, "IBM 3624 PIN");
+            paymentsResultPanel.connectTo(() -> mainController);
+            // An encoded PIN block is the input to decoding it, so those two chain. A CVV and a
+            // generated IBM 3624 PIN are not the input to anything here, so they pass no target
+            // and the action is hidden while their result is on screen.
+            bindResult(paymentsResultPanel, pinBlockResultArea, "PIN block",
+                    pinBlockField == null ? null : pinBlockField::setText);
+            bindResult(paymentsResultPanel, cvvResultArea, "CVV", null);
+            bindResult(paymentsResultPanel, encResultArea, "Encrypted PIN block",
+                    encPinBlockFieldDecode == null ? null : encPinBlockFieldDecode::setText);
+            bindResult(paymentsResultPanel, ibm3624ResultArea, "IBM 3624 PIN", null);
         }
     }
 
-    private static void bindResult(ResultPanel panel, TextArea area, String operation) {
+    /**
+     * Routes one operation's result area into the shared result surface.
+     *
+     * <p>{@code chainTarget} is where "use as input" should put the value while this operation's
+     * result is the one shown; a null one hides the action rather than leaving it inert.
+     */
+    private static void bindResult(ResultPanel panel, TextArea area, String operation,
+                                   java.util.function.Consumer<String> chainTarget) {
         if (panel == null || area == null) return;
-        area.textProperty().addListener((obs, oldValue, value) -> panel.showText(operation, value));
+        area.textProperty().addListener((obs, oldValue, value) -> {
+            panel.showText(operation, value);
+            panel.setChainHandler(chainTarget);
+        });
     }
 
     public void init(StatusReporter reporter) {

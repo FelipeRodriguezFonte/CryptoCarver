@@ -41,6 +41,15 @@ public final class ResultPanel extends VBox {
     private Runnable expandHandler;
     private Runnable saveStepHandler;
     private Consumer<String> chainHandler;
+    private final Button shelfButton;
+    private final Button expandButton;
+    private final Button saveButton;
+    private final Button chainButton;
+    // Kept so changing the format re-renders the same result rather than needing it published
+    // again, and so the re-render goes through the same visibility policy as the first one.
+    private OperationResult lastResult;
+    private SecretVisibilityProfile lastVisibility = SecretVisibilityProfile.REDACTED;
+    private String lastOutputLabel = "Salida";
 
     public ResultPanel() {
         getStyleClass().add("result-panel");
@@ -58,6 +67,7 @@ public final class ResultPanel extends VBox {
         formatSelector.getSelectionModel().selectFirst();
         formatSelector.getStyleClass().add("result-panel-format");
         formatSelector.setAccessibleText("Formato de salida");
+        formatSelector.valueProperty().addListener((observable, previous, chosen) -> renderOutputs());
 
         HBox header = new HBox(10, statusLabel, operationLabel, metricsLabel, formatSelector);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -66,12 +76,18 @@ public final class ResultPanel extends VBox {
 
         HBox actions = new HBox(6);
         actions.setAlignment(Pos.CENTER_RIGHT);
-        Button copy = action("Copiar", "Copiar resultado", () -> copyCurrent());
-        Button shelf = action("Shelf", "Añadir resultado al Shelf", () -> addCurrentToShelf());
-        Button expand = action("Ampliar", "Ampliar resultado", () -> run(expandHandler));
-        Button save = action("Guardar", "Guardar paso", () -> run(saveStepHandler));
-        Button chain = action("Usar como entrada", "Usar resultado como entrada", () -> chainCurrent());
-        actions.getChildren().addAll(copy, shelf, expand, save, chain);
+        Button copy = action("Copiar", "Copiar resultado", this::copyCurrent);
+        shelfButton = action("Shelf", "Añadir resultado al Shelf", this::addCurrentToShelf);
+        expandButton = action("Ampliar", "Ampliar resultado", () -> run(expandHandler));
+        saveButton = action("Guardar", "Guardar paso", () -> run(saveStepHandler));
+        chainButton = action("Usar como entrada", "Usar resultado como entrada", this::chainCurrent);
+        // An action a module has not wired would be a button that quietly does nothing, so it
+        // is hidden until a handler exists. Copy always works: it falls back to the clipboard.
+        for (Button button : new Button[]{shelfButton, expandButton, saveButton, chainButton}) {
+            button.setVisible(false);
+            button.setManaged(false);
+        }
+        actions.getChildren().addAll(copy, shelfButton, expandButton, saveButton, chainButton);
 
         getChildren().addAll(header, new Separator(), outputs, actions, copiedLabel);
     }
@@ -95,15 +111,23 @@ public final class ResultPanel extends VBox {
         int inputSize = result.getInput() == null ? 0 : result.getInput().length;
         int outputSize = result.getOutput() == null ? 0 : result.getOutput().length;
         metricsLabel.setText(inputSize + " B → " + outputSize + " B · " + Math.max(0, durationMillis) + " ms");
-        outputs.getChildren().clear();
 
-        if (result.getOutput() != null && result.getOutput().length > 0) {
-            addOutput("Salida", OperationResultRenderer.render(result, visibility));
-        } else if (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank()) {
-            addOutput("Salida", OperationResultRenderer.render(result, visibility));
-        } else {
-            addOutput("Resumen", OperationResultRenderer.render(result, visibility));
-        }
+        lastResult = result;
+        lastVisibility = visibility;
+        boolean hasOutput = (result.getOutput() != null && result.getOutput().length > 0)
+                || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
+        lastOutputLabel = hasOutput ? "Salida" : "Resumen";
+        // A summary has no bytes to re-encode, so offering a format for it would be a control
+        // that changes nothing.
+        formatSelector.setDisable(!hasOutput);
+        renderOutputs();
+    }
+
+    private void renderOutputs() {
+        outputs.getChildren().clear();
+        if (lastResult == null) return;
+        addOutput(lastOutputLabel, OperationResultRenderer.render(lastResult, lastVisibility,
+                OperationResultRenderer.OutputFormat.of(formatSelector.getValue())));
     }
 
     /** Publishes a plain text result for legacy controls that still own their output area. */
@@ -131,11 +155,61 @@ public final class ResultPanel extends VBox {
         outputs.getChildren().add(row);
     }
 
+    /**
+     * Wires the actions the shell performs on the current result.
+     *
+     * <p>The reporter is supplied lazily because a module is built before the shell hands it
+     * one: reading it at click time is what makes the buttons work at all. Chaining is not here
+     * — feeding a result back as input is the module's own business, so a module that has
+     * somewhere to put it calls {@link #setChainHandler}, and one that does not shows no button.
+     */
+    public void connectTo(java.util.function.Supplier<StatusReporter> shell) {
+        Objects.requireNonNull(shell, "shell");
+        setCopyHandler(value -> {
+            StatusReporter reporter = shell.get();
+            if (reporter != null) reporter.copyCurrentResult();
+            else copyToClipboard(value);
+        });
+        setShelfHandler(value -> {
+            StatusReporter reporter = shell.get();
+            if (reporter != null) reporter.addCurrentResultToShelf();
+        });
+        setExpandHandler(() -> {
+            StatusReporter reporter = shell.get();
+            if (reporter != null) reporter.expandCurrentResult();
+        });
+        setSaveStepHandler(() -> {
+            StatusReporter reporter = shell.get();
+            if (reporter != null) reporter.saveCurrentResultAsSessionStep();
+        });
+    }
+
     public void setCopyHandler(Consumer<String> handler) { copyHandler = handler; }
-    public void setShelfHandler(Consumer<String> handler) { shelfHandler = handler; }
-    public void setExpandHandler(Runnable handler) { expandHandler = handler; }
-    public void setSaveStepHandler(Runnable handler) { saveStepHandler = handler; }
-    public void setChainHandler(Consumer<String> handler) { chainHandler = handler; }
+
+    public void setShelfHandler(Consumer<String> handler) {
+        shelfHandler = handler;
+        show(shelfButton, handler != null);
+    }
+
+    public void setExpandHandler(Runnable handler) {
+        expandHandler = handler;
+        show(expandButton, handler != null);
+    }
+
+    public void setSaveStepHandler(Runnable handler) {
+        saveStepHandler = handler;
+        show(saveButton, handler != null);
+    }
+
+    public void setChainHandler(Consumer<String> handler) {
+        chainHandler = handler;
+        show(chainButton, handler != null);
+    }
+
+    private static void show(Button button, boolean visible) {
+        button.setVisible(visible);
+        button.setManaged(visible);
+    }
     public Status getStatus() { return status; }
     public VBox getOutputs() { return outputs; }
 
@@ -164,11 +238,16 @@ public final class ResultPanel extends VBox {
     private void copyCurrent() {
         String value = currentText();
         if (copyHandler != null) copyHandler.accept(value);
-        else javafx.scene.input.Clipboard.getSystemClipboard().setContent(
-                new javafx.scene.input.ClipboardContent() {{ putString(value); }});
+        else copyToClipboard(value);
         copiedLabel.setText("Copiado");
         copiedLabel.setManaged(true);
         copiedLabel.setVisible(true);
+    }
+
+    private static void copyToClipboard(String value) {
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(value == null ? "" : value);
+        javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
     }
 
     private void addCurrentToShelf() {

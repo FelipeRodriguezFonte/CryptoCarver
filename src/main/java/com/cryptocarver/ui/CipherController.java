@@ -195,6 +195,10 @@ public class CipherController {
         if (cipherOutputArea != null && cipherResultPanel != null) {
             cipherOutputArea.textProperty().addListener((obs, oldValue, value) ->
                     cipherResultPanel.showText("Cipher", value));
+            cipherResultPanel.connectTo(() -> statusReporter);
+            if (cipherInputArea != null) {
+                cipherResultPanel.setChainHandler(cipherInputArea::setText);
+            }
         }
     }
 

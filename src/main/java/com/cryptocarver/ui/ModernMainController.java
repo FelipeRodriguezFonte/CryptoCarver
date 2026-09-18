@@ -2307,6 +2307,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return lastPublishedResultSnapshot != null || !resolveCurrentOutputText().isBlank();
     }
 
+    // A module's result surface offers the same actions as the shell's result bar, on the same
+    // result: the shell is what knows which result is current and what the visibility policy
+    // allows, so these delegate instead of resolving it a second time.
+
+    @Override
+    public void copyCurrentResult() {
+        handleCopyOutput();
+    }
+
+    @Override
+    public void addCurrentResultToShelf() {
+        handleAddCurrentOutputToShelf();
+    }
+
+    @Override
+    public void expandCurrentResult() {
+        handleOpenExpandedResultViewer();
+    }
+
+    @Override
+    public void saveCurrentResultAsSessionStep() {
+        handleSaveCurrentResultAsSessionStep();
+    }
+
     @FXML
     public void handleCopyOutput() {
         String content = resolveCurrentOutputText();

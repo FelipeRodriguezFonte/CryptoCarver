@@ -109,6 +109,10 @@ public class AuthenticationController {
         if (authOutputArea != null && authResultPanel != null) {
             authOutputArea.textProperty().addListener((obs, oldValue, value) ->
                     authResultPanel.showText("Authentication", value));
+            authResultPanel.connectTo(() -> mainController);
+            if (authInputArea != null) {
+                authResultPanel.setChainHandler(authInputArea::setText);
+            }
         }
     }
 

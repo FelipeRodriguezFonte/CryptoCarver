@@ -632,9 +632,15 @@ public class GenericController {
                         .toArray(javafx.scene.Node[]::new);
         moduleI18n = ModuleI18n.bind(genericContainer, ModuleTextCatalog.generic(), excluded);
         if (genericResultPanel != null) {
-            bindResult(genericResultPanel, hashOutputArea, "Generic operation");
-            bindResult(genericResultPanel, modResultArea, "Modular arithmetic");
-            bindResult(genericResultPanel, fileResultArea, "File operation");
+            genericResultPanel.connectTo(() -> statusReporter);
+            // The module has one result surface but several operations feeding it, so each
+            // binding also says where "use as input" should put the value. Modular arithmetic
+            // and file operations have no single field to chain into, so they pass none and
+            // the button stays hidden while their result is the one on screen.
+            bindResult(genericResultPanel, hashOutputArea, "Generic operation",
+                    hashInputArea == null ? null : hashInputArea::setText);
+            bindResult(genericResultPanel, modResultArea, "Modular arithmetic", null);
+            bindResult(genericResultPanel, fileResultArea, "File operation", null);
         }
         localeChangeListener = locale -> {
             if (batchStatusLabel == null) return;
@@ -760,9 +766,19 @@ public class GenericController {
         initializeEBCDICConverter();
     }
 
-    private static void bindResult(ResultPanel panel, TextArea area, String operation) {
+    /**
+     * Routes one operation's result area into the shared result surface.
+     *
+     * <p>{@code chainTarget} is where "use as input" should put the value while this operation's
+     * result is the one shown; a null one hides the action rather than leaving it inert.
+     */
+    private static void bindResult(ResultPanel panel, TextArea area, String operation,
+                                   java.util.function.Consumer<String> chainTarget) {
         if (panel == null || area == null) return;
-        area.textProperty().addListener((obs, oldValue, value) -> panel.showText(operation, value));
+        area.textProperty().addListener((obs, oldValue, value) -> {
+            panel.showText(operation, value);
+            panel.setChainHandler(chainTarget);
+        });
     }
 
     private void refreshHashTemplateCombo() {
