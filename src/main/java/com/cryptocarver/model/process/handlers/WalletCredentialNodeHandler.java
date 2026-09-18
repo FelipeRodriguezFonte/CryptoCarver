@@ -5,6 +5,7 @@ import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
+import com.cryptocarver.crypto.TrustedListInspector;
 import com.cryptocarver.model.process.*;
 import com.nimbusds.jose.JWSAlgorithm;
 
@@ -32,7 +33,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             "SDJWT_ISSUE", "SDJWT_ISSUE_VC", "SDJWT_PRESENT", "SDJWT_VERIFY", "SDJWT_INSPECT",
             "STATUS_LIST_RESOLVE", "STATUS_LIST_DESCRIBE",
             "CBOR_INSPECT", "CBOR_TO_JSON", "CBOR_FROM_JSON",
-            "EIDAS_CERT_INSPECT");
+            "EIDAS_CERT_INSPECT",
+            "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY", "TRUSTED_LIST_FIND_CERT");
 
     private static final List<String> SIGN_ALGORITHMS = List.of(
             "ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512");
@@ -82,7 +84,10 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 descriptor("CBOR_INSPECT", "cborInspect", List.of(combo("view", CBOR_VIEWS, "tree"))),
                 descriptor("CBOR_TO_JSON", "cborToJson", List.of()),
                 descriptor("CBOR_FROM_JSON", "cborFromJson", List.of()),
-                descriptor("EIDAS_CERT_INSPECT", "eidasCertInspect", List.of()));
+                descriptor("EIDAS_CERT_INSPECT", "eidasCertInspect", List.of()),
+                descriptor("TRUSTED_LIST_INSPECT", "trustedListInspect", List.of()),
+                descriptor("TRUSTED_LIST_VERIFY", "trustedListVerify", List.of()),
+                descriptor("TRUSTED_LIST_FIND_CERT", "trustedListFindCert", List.of()));
     }
 
     @Override public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
@@ -96,6 +101,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "CBOR_INSPECT", "CBOR_TO_JSON" -> List.of(port("cbor", any, true));
             case "CBOR_FROM_JSON" -> List.of(port("json", any, true));
             case "EIDAS_CERT_INSPECT" -> List.of(port("certificate", any, true));
+            case "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY" -> List.of(port("trustedList", any, true));
+            case "TRUSTED_LIST_FIND_CERT" -> List.of(port("trustedList", any, true), port("certificate", any, true));
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };
     }
@@ -141,7 +148,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             }
             case "CBOR_INSPECT" -> enumValue(node, "view", CBOR_VIEWS);
             case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON",
-                 "EIDAS_CERT_INSPECT" -> { }
+                 "EIDAS_CERT_INSPECT", "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY",
+                 "TRUSTED_LIST_FIND_CERT" -> { }
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         }
     }
@@ -217,6 +225,43 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
             case "EIDAS_CERT_INSPECT" -> text(EidasCertificateInspector.describe(
                     certificate(bytes(inputs, "certificate")), Locale.getDefault()));
+
+            case "TRUSTED_LIST_INSPECT" -> text(TrustedListInspector.describe(
+                    bytes(inputs, "trustedList"), Locale.getDefault()));
+
+            case "TRUSTED_LIST_VERIFY" -> {
+                TrustedListInspector.SignatureResult result =
+                        TrustedListInspector.verifySignature(bytes(inputs, "trustedList"));
+                StringBuilder report = new StringBuilder();
+                report.append("signature: ").append(result.signatureValid() ? "valid" : "INVALID").append('\n');
+                if (result.signingCertificate() != null) {
+                    report.append("signed by: ")
+                            .append(result.signingCertificate().getSubjectX500Principal()).append('\n');
+                }
+                report.append(result.trustNote()).append('\n');
+                yield text(report.toString());
+            }
+
+            case "TRUSTED_LIST_FIND_CERT" -> {
+                TrustedListInspector.TrustedList list =
+                        TrustedListInspector.parse(bytes(inputs, "trustedList"));
+                List<TrustedListInspector.Match> matches = TrustedListInspector.findCertificate(
+                        list, certificate(bytes(inputs, "certificate")));
+                if (matches.isEmpty()) {
+                    yield text("This certificate is not listed in this Trusted List.");
+                }
+                StringBuilder report = new StringBuilder();
+                for (TrustedListInspector.Match match : matches) {
+                    report.append(match.service().providerName())
+                            .append(" / ").append(match.service().serviceName())
+                            .append("\n  status   : ").append(match.service().statusLabel())
+                            .append("\n  matched  : ").append(match.matchedBy()).append('\n');
+                    for (String qualifier : match.service().qualifiers()) {
+                        report.append("  qualifier: ").append(qualifier).append('\n');
+                    }
+                }
+                yield text(report.toString());
+            }
 
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };

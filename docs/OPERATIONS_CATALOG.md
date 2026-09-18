@@ -204,6 +204,7 @@ name means a private key in one node and a public key in another.
 | Token Status List | `STATUS_LIST_RESOLVE`, `STATUS_LIST_DESCRIBE` |
 | CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |
 | eIDAS certificate profiles | `EIDAS_CERT_INSPECT` |
+| Trusted Lists (TS 119 612) | `TRUSTED_LIST_INSPECT`, `TRUSTED_LIST_VERIFY`, `TRUSTED_LIST_FIND_CERT` |
 
 These nodes are local-only: they manipulate artefacts supplied as text and never
 fetch an issuer's metadata, a JWKS or a status list over the network.
