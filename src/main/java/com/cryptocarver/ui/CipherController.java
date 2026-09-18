@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.AsymmetricCipher;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.SymmetricCipher;
 import com.cryptocarver.crypto.StreamingCipher;
+import com.cryptocarver.crypto.FormatPreservingEncryption;
 import com.cryptocarver.crypto.LineFileCipher;
 import com.cryptocarver.crypto.EBCDICConverter;
 import com.cryptocarver.model.OperationResult;
@@ -98,6 +99,16 @@ public class CipherController {
     @FXML private Label gcmTagBadgeLabel;
     @FXML private Label aadBadgeLabel;
 
+    // Format-preserving encryption workbench
+    @FXML private ComboBox<String> fpeOperationCombo;
+    @FXML private ComboBox<String> fpeAlgorithmCombo;
+    @FXML private ComboBox<String> fpeAlphabetPresetCombo;
+    @FXML private TextField fpeKeyField;
+    @FXML private TextField fpeTweakField;
+    @FXML private TextField fpeAlphabetField;
+    @FXML private TextArea fpeInputArea;
+    @FXML private TextArea fpeOutputArea;
+
     // Last AEAD encryption components, kept separately from the rendered result.
     private String lastAeadCiphertext;
     private String lastAeadTag;
@@ -179,6 +190,27 @@ public class CipherController {
                 fileCipherLineCharsetCombo, fileCipherCompactCbcCheck);
         setRSACombos(rsaPaddingCombo, asymmetricInputFormatCombo, asymmetricOutputFormatCombo);
 
+        if (fpeOperationCombo != null) fpeOperationCombo.getItems().setAll("ENCRYPT", "DECRYPT");
+        if (fpeAlgorithmCombo != null) fpeAlgorithmCombo.getItems().setAll("FF1", "FF3_1");
+        if (fpeOperationCombo != null) fpeOperationCombo.setValue("ENCRYPT");
+        if (fpeAlgorithmCombo != null) fpeAlgorithmCombo.setValue("FF1");
+        if (fpeAlphabetPresetCombo != null) {
+            fpeAlphabetPresetCombo.getItems().setAll("Decimal (0-9)", "Alphanumeric", "ASCII printable", "Custom");
+            fpeAlphabetPresetCombo.setValue("Decimal (0-9)");
+            fpeAlphabetField.setText("0123456789");
+            fpeAlphabetPresetCombo.valueProperty().addListener((obs, oldValue, value) -> {
+                if ("Decimal (0-9)".equals(value)) fpeAlphabetField.setText("0123456789");
+                else if ("Alphanumeric".equals(value)) fpeAlphabetField.setText("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+                else if ("ASCII printable".equals(value)) {
+                    StringBuilder b = new StringBuilder();
+                    for (int i = 0x20; i <= 0x7e; i++) b.append((char) i);
+                    fpeAlphabetField.setText(b.toString());
+                } else fpeAlphabetField.clear();
+            });
+        }
+        setupHexValidation(fpeKeyField);
+        setupHexValidation(fpeTweakField);
+
         setupHexValidation(symmetricKeyField);
         setupHexValidation(ivField);
         setupHexValidation(gcmTagField);
@@ -199,6 +231,28 @@ public class CipherController {
             if (cipherInputArea != null) {
                 cipherResultPanel.setChainHandler(cipherInputArea::setText);
             }
+        }
+    }
+
+    @FXML
+    public void handleFpe() {
+        try {
+            String input = fpeInputArea == null ? "" : fpeInputArea.getText();
+            String alphabet = fpeAlphabetField == null ? "" : fpeAlphabetField.getText();
+            byte[] key = DataConverter.hexToBytes(fpeKeyField.getText().trim());
+            byte[] tweak = fpeTweakField.getText().trim().isEmpty()
+                    ? new byte[0] : DataConverter.hexToBytes(fpeTweakField.getText().trim());
+            FormatPreservingEncryption.Algorithm algorithm = FormatPreservingEncryption.Algorithm.valueOf(fpeAlgorithmCombo.getValue());
+            boolean encrypt = "ENCRYPT".equals(fpeOperationCombo.getValue());
+            String result = encrypt
+                    ? FormatPreservingEncryption.encrypt(algorithm, input, key, alphabet, tweak)
+                    : FormatPreservingEncryption.decrypt(algorithm, input, key, alphabet, tweak);
+            fpeOutputArea.setText(result);
+            if (statusReporter != null) statusReporter.updateStatus("FPE " + (encrypt ? "encryption" : "decryption") + " completed");
+        } catch (Exception e) {
+            if (statusReporter != null) statusReporter.showError("FPE Error", e.getMessage());
+            else if (fpeOutputArea != null) fpeOutputArea.setText("Error: " + e.getMessage());
+            LOG.warn("FPE operation failed", e);
         }
     }
 

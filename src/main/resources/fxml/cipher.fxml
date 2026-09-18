@@ -145,6 +145,37 @@
                 </VBox>
             </TitledPane>
 
+            <TitledPane text="🔢 Format-Preserving Encryption (FF1 / FF3-1)" expanded="false">
+                <VBox spacing="10" styleClass="cipher-pane-content" maxWidth="720">
+                    <Label text="Encrypt text while preserving its alphabet and length. FF3-1 is legacy compatibility only; FPE does not authenticate data." styleClass="helper-text" wrapText="true" />
+                    <GridPane hgap="12" vgap="8">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="130" prefWidth="130" halignment="RIGHT" />
+                            <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        <Label text="Operation:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <ComboBox fx:id="fpeOperationCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="Algorithm:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <ComboBox fx:id="fpeAlgorithmCombo" maxWidth="Infinity" styleClass="cipher-field" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label text="AES key (hex):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <TextField fx:id="fpeKeyField" promptText="16, 24, or 32-byte AES key" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label text="Tweak (hex):" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <TextField fx:id="fpeTweakField" promptText="Optional for FF1; exactly 7 bytes for FF3-1" styleClass="cipher-field,cipher-monospace" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Label text="Alphabet:" styleClass="cipher-field-label" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                            <ComboBox fx:id="fpeAlphabetPresetCombo" prefWidth="190" />
+                            <TextField fx:id="fpeAlphabetField" promptText="Custom alphabet" HBox.hgrow="ALWAYS" styleClass="cipher-field,cipher-monospace" />
+                        </HBox>
+                    </GridPane>
+                    <GridPane hgap="12">
+                        <columnConstraints><ColumnConstraints percentWidth="50" hgrow="ALWAYS" /><ColumnConstraints percentWidth="50" hgrow="ALWAYS" /></columnConstraints>
+                        <VBox spacing="5" GridPane.columnIndex="0"><Label text="Input" styleClass="cipher-io-label" /><TextArea fx:id="fpeInputArea" prefHeight="90" wrapText="true" styleClass="cipher-io-area,cipher-monospace" /></VBox>
+                        <VBox spacing="5" GridPane.columnIndex="1"><Label text="Output" styleClass="cipher-io-label" /><TextArea fx:id="fpeOutputArea" prefHeight="90" editable="false" wrapText="true" styleClass="cipher-io-area,cipher-output-area,cipher-monospace" /></VBox>
+                    </GridPane>
+                    <FlowPane styleClass="responsive-action-bar"><Button text="Run FPE" onAction="#handleFpe" styleClass="action-button-primary" /></FlowPane>
+                </VBox>
+            </TitledPane>
+
             <TitledPane text="📁 File Cipher (Streaming)" expanded="false">
                 <VBox styleClass="ux-inline-1684f00703" spacing="6">
                     <Label styleClass="ux-inline-39414733db" text="Processes the file in chunks. GCM and ChaCha20-Poly1305 use a detached 16-byte tag." wrapText="true"/>
