@@ -7,7 +7,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import com.cryptocarver.service.I18nService;
+import com.cryptocarver.ui.Fxml;
 import com.cryptocarver.ui.NativePlatformIntegration;
 import com.cryptocarver.ui.WindowStateManager;
 import com.cryptocarver.ui.WindowStateStore;
@@ -39,8 +39,7 @@ public class CryptoCalculatorModern extends Application {
     public void start(Stage primaryStage) {
         try {
             // Load modern FXML
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
-            loader.setResources(I18nService.getInstance().getBundle());
+            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
             Parent root = loader.load();
 
             // A 1400x900 window does not fit every desktop: a 1366x768 laptop, or any

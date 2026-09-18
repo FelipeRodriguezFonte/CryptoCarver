@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.io.File;
@@ -135,8 +136,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button errorBannerCloseBtn;
     private InlineErrorPresenter inlineErrorPresenter;
     private StatusBarPresenter statusBarPresenter;
-    @FXML
-    private VBox historyContainer;
     @FXML
     private Label sessionTrailCountLabel;
     @FXML private Label inspectorSessionTrailTitle;
@@ -359,12 +358,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final OperationExecutor operationExecutor = new OperationExecutor();
     private final ModuleLoader moduleLoader = new ModuleLoader(ModernMainController.class);
 
-    private void configureDeferredModules() {
-        java.util.concurrent.Executor direct = Runnable::run;
-        for (ModuleHost host : new ModuleHost[]{jose, cose, keysContainer, certificatesContainer,
+    private ModuleHost[] moduleHosts() {
+        return new ModuleHost[]{jose, cose, keysContainer, certificatesContainer,
                 cipherContainer, authenticationContainer, paymentsContainer, emvContainer,
                 genericContainer, historyView, clipboardShelf, postQuantumContainer,
-                xmlSecurityContainer, wssSecurityContainer, processDesignerContainer}) {
+                xmlSecurityContainer, wssSecurityContainer, processDesignerContainer};
+    }
+
+    private void configureDeferredModules() {
+        java.util.concurrent.Executor direct = Runnable::run;
+        for (ModuleHost host : moduleHosts()) {
             if (host != null) host.configure(moduleLoader, direct);
         }
     }
@@ -374,7 +377,86 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (host == null) return null;
         host.showConfigured();
         Object controller = host.controller();
+        connectShellServices(controller);
         return controllerType.isInstance(controller) ? controllerType.cast(controller) : null;
+    }
+
+    /**
+     * Connects a module to the shell's result publishing and shared format controls.
+     *
+     * <p>This has to happen as the module materializes, not in {@link #initialize()}: modules
+     * load on first use, so at initialization time every module controller is still null and a
+     * null-guarded wiring pass there silently connects nothing. A module left unconnected keeps
+     * its reporter null, and since each module guards on that, its results and errors are
+     * dropped instead of reaching the status bar.
+     */
+    private void connectShellServices(Object controller) {
+        if (controller instanceof JOSEController jose) {
+            jose.setReporter(this);
+        } else if (controller instanceof COSEController cose) {
+            cose.setReporter(this);
+        } else if (controller instanceof HistoryController history) {
+            history.setHistoryManager(historyManager());
+            history.setOperationNavigator(this);
+        } else if (controller instanceof ClipboardShelfController shelf) {
+            shelf.setNavigator(this, this);
+        } else if (controller instanceof GenericController generic) {
+            generic.setStatusReporter(this);
+            generic.setFormatControls(inputFormatCombo, outputFormatCombo);
+            if (generic.getKeyCertificateWorkbenchController() != null) {
+                generic.getKeyCertificateWorkbenchController().setStatusReporter(this);
+            }
+            if (generic.getCryptoEnvelopeInspectorController() != null) {
+                generic.getCryptoEnvelopeInspectorController().setStatusReporter(this);
+            }
+        }
+    }
+
+    /**
+     * Materializes every deferred module and runs the same initialization the shell performs
+     * when the user first navigates to it.
+     *
+     * <p>Modules load on first use, so the {@code *Controller} fields stay null until the user
+     * reaches the section that owns them, and their {@code init} wiring — status reporter,
+     * shared format combos, cross-module callbacks — runs at that moment. UI tests assert on
+     * those controllers directly and have no user to navigate for them, so they call this once
+     * after loading the shell. It delegates to the real loaders rather than to
+     * {@link #ensureModule} so a test sees a module wired the way the app wires it. Must run on
+     * the FX thread.
+     */
+    void materializeModulesForTesting() {
+        // Loading a module also shows it, so which module is on screen is remembered and put
+        // back afterwards: a shell with every module visible at once is a state the app never
+        // reaches, and code that asks what is currently visible would answer from it.
+        ModuleHost[] hosts = moduleHosts();
+        boolean[] wasVisible = new boolean[hosts.length];
+        boolean[] wasManaged = new boolean[hosts.length];
+        for (int i = 0; i < hosts.length; i++) {
+            if (hosts[i] == null) continue;
+            wasVisible[i] = hosts[i].isVisible();
+            wasManaged[i] = hosts[i].isManaged();
+        }
+
+        loadSymmetricKeysContent();
+        loadCipherContent();
+        loadAuthenticationContent();
+        loadEMVContent();
+        loadPaymentsContent();
+        loadPostQuantumContent();
+        loadXMLSecurityContent();
+        loadWssSecurityContent();
+        if (genericContainerController == null) genericContainerController = ensureModule(genericContainer, GenericController.class);
+        if (joseController == null) joseController = ensureModule(jose, JOSEController.class);
+        if (coseController == null) coseController = ensureModule(cose, COSEController.class);
+        if (historyViewController == null) historyViewController = ensureModule(historyView, HistoryController.class);
+        if (clipboardShelfController == null) clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
+        if (processDesignerContainerController == null) processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
+
+        for (int i = 0; i < hosts.length; i++) {
+            if (hosts[i] == null) continue;
+            hosts[i].setVisible(wasVisible[i]);
+            hosts[i].setManaged(wasManaged[i]);
+        }
     }
 
     public OperationExecutor getOperationExecutor() {
@@ -500,8 +582,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void initialize() {
         configureDeferredModules();
-        if (joseController != null) joseController.setReporter(this);
-        if (coseController != null) coseController.setReporter(this);
+        // Module reporters are wired in connectShellServices as each module materializes.
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
 
@@ -567,16 +648,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         // Load symmetric keys content (default)
         loadSymmetricKeysContent();
-        if (genericContainerController != null) {
-            genericContainerController.setStatusReporter(this);
-            genericContainerController.setFormatControls(inputFormatCombo, outputFormatCombo);
-        }
-        if (genericContainerController != null && genericContainerController.getKeyCertificateWorkbenchController() != null) {
-            genericContainerController.getKeyCertificateWorkbenchController().setStatusReporter(this);
-        }
-        if (genericContainerController != null && genericContainerController.getCryptoEnvelopeInspectorController() != null) {
-            genericContainerController.getCryptoEnvelopeInspectorController().setStatusReporter(this);
-        }
 
         // Show the symmetric keys by default
         showSymmetricKeys();
@@ -1614,13 +1685,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 inlineErrorPresenter.hideBanner();
             }
         }
-
-        // Ensure history container is visible (it might be hidden by Saved Sessions
-        // view)
-        if (historyContainer != null && !historyContainer.isVisible()) {
-            historyContainer.setManaged(true);
-            historyContainer.setVisible(true);
-        }
     }
 
     private OperationInspectorPresenter inspectorPresenter() {
@@ -1730,67 +1794,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // History Managemen
 
-    private void initializeHistory() {
+    /** The shared history store, created on first use. */
+    private com.cryptocarver.model.HistoryManager historyManager() {
         if (historyManager == null) {
             historyManager = new com.cryptocarver.model.HistoryManager();
         }
+        return historyManager;
+    }
+
+    private void initializeHistory() {
         if (sidePanel != null) {
-            sidePanel.setHistoryManager(historyManager);
+            sidePanel.setHistoryManager(historyManager());
             sidePanel.setOnHistoryItemSelected(this::showRecentHistoryCommand);
         }
-        if (historyViewController != null) {
-            historyViewController.setHistoryManager(historyManager);
-            historyViewController.setOperationNavigator(this);
-        }
-        if (clipboardShelfController != null) {
-            clipboardShelfController.setNavigator(this, this);
-        }
+        // The History view and the Clipboard Shelf are deferred modules: they are wired in
+        // connectShellServices when they materialize, since both are still null here.
         refreshHistoryUI();
     }
 
+    /**
+     * Refreshes every surface that shows history.
+     *
+     * <p>The Inspector's own history card list was removed in favour of a single History view,
+     * so what is left is the side-panel's recent-operations group and, once the user has opened
+     * it, the History module's table.
+     */
     private void refreshHistoryUI() {
-        if (historyContainer == null || historyManager == null) return;
-        historyContainer.getChildren().clear();
-
-        java.util.List<com.cryptocarver.model.HistoryCommand> items = historyManager.getHistoryItems();
-
-        if (items.isEmpty()) {
-            Label placeholder = new Label("No recent operations");
-            placeholder.getStyleClass().add("muted-text");
-            placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 10;");
-            historyContainer.getChildren().add(placeholder);
-        } else {
-            for (com.cryptocarver.model.HistoryCommand item : items) {
-                HBox historyCommand = new HBox(8);
-                historyCommand.getStyleClass().add("history-card");
-                historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-                VBox infoBox = new VBox(2);
-                Label opLabel = new Label(item.getOperation());
-                opLabel.getStyleClass().add("history-card-title");
-
-                String relTime = formatRelativeTime(item.getTimestamp());
-                Label timeLabel = new Label(relTime);
-                timeLabel.getStyleClass().add("history-card-time");
-                Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
-
-                infoBox.getChildren().addAll(opLabel, timeLabel);
-                HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
-
-                Button reopenButton = new Button("Reopen");
-                reopenButton.getStyleClass().add("history-card-action");
-                reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
-
-                reopenButton.setOnAction(e -> {
-                    reopenHistoryOperation(item);
-                });
-
-                historyCommand.getChildren().addAll(infoBox, reopenButton);
-                historyContainer.getChildren().add(historyCommand);
-            }
-        }
-
         refreshHistoryNavigation();
+        if (historyViewController != null) {
+            historyViewController.refresh();
+        }
     }
 
     @Override
@@ -2061,14 +2094,33 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void expandCipherAccordionPane(String itemName) {
-        if (cipherContainer == null)
-            return;
+    /**
+     * The accordion of a materialized module, wherever it sits under its host.
+     *
+     * <p>A module used to be inlined into its container, which put its accordion one level
+     * down. Deferred modules are loaded into a {@link ModuleHost}, so the host's child is the
+     * module's FXML root and the accordion is deeper still. Looking only at direct children
+     * finds nothing, and since every caller here treats "no accordion" as "nothing to expand",
+     * that failure is silent: navigating to an operation opens its module but leaves the
+     * matching pane closed.
+     */
+    private static Accordion moduleAccordion(ModuleHost host) {
+        return host == null ? null : findAccordion(host);
+    }
 
-        Accordion accordion = (Accordion) cipherContainer.getChildren().stream()
-                .filter(node -> node instanceof Accordion)
-                .findFirst()
-                .orElse(null);
+    private static Accordion findAccordion(Node node) {
+        if (node instanceof Accordion accordion) return accordion;
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                Accordion found = findAccordion(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private void expandCipherAccordionPane(String itemName) {
+        Accordion accordion = moduleAccordion(cipherContainer);
 
         if (accordion != null) {
             String targetPane = "";
@@ -2105,13 +2157,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandAuthenticationAccordionPane(String itemName) {
-        if (authenticationContainer == null)
-            return;
-
-        Accordion accordion = (Accordion) authenticationContainer.getChildren().stream()
-                .filter(node -> node instanceof Accordion)
-                .findFirst()
-                .orElse(null);
+        Accordion accordion = moduleAccordion(authenticationContainer);
 
         if (accordion != null) {
             String targetPane = "";
@@ -2143,13 +2189,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandPaymentsAccordionPane(String itemName) {
-        if (paymentsContainer == null)
-            return;
-
-        Accordion accordion = (Accordion) paymentsContainer.getChildren().stream()
-                .filter(node -> node instanceof Accordion)
-                .findFirst()
-                .orElse(null);
+        Accordion accordion = moduleAccordion(paymentsContainer);
 
         if (accordion != null) {
             String targetPane = "";
@@ -3459,7 +3499,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandGenericAccordionPane(String paneName) {
-        Accordion accordion = genericContainer != null && genericContainer.root() instanceof Accordion a ? a : null;
+        Accordion accordion = moduleAccordion(genericContainer);
         if (paneName == null || paneName.isBlank() || accordion == null || accordion.getPanes().isEmpty())
             return;
 
@@ -3518,15 +3558,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandEMVAccordionPane(String title) {
-        if (title != null && !title.isBlank() && emvContainer != null && !emvContainer.getChildren().isEmpty()) {
-            if (emvContainer.getChildren().get(0) instanceof Accordion) {
-                Accordion acc = (Accordion) emvContainer.getChildren().get(0);
-                for (TitledPane pane : acc.getPanes()) {
-                    if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
-                        acc.setExpandedPane(pane);
-                        revealExpandedPane(pane);
-                        break;
-                    }
+        Accordion acc = moduleAccordion(emvContainer);
+        if (title != null && !title.isBlank() && acc != null) {
+            for (TitledPane pane : acc.getPanes()) {
+                if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
+                    acc.setExpandedPane(pane);
+                    revealExpandedPane(pane);
+                    break;
                 }
             }
         }
