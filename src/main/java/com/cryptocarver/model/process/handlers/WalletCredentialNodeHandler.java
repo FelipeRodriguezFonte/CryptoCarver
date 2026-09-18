@@ -4,9 +4,11 @@ import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.MdocOperations;
+import com.cryptocarver.crypto.OpenId4VpInspector;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.crypto.TrustedListInspector;
+import com.cryptocarver.crypto.Ts12ScaOperations;
 import com.cryptocarver.model.process.*;
 import com.nimbusds.jose.JWSAlgorithm;
 
@@ -36,7 +38,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             "CBOR_INSPECT", "CBOR_TO_JSON", "CBOR_FROM_JSON",
             "EIDAS_CERT_INSPECT",
             "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY", "TRUSTED_LIST_FIND_CERT",
-            "MDOC_ISSUE", "MDOC_VERIFY", "MDOC_INSPECT");
+            "MDOC_ISSUE", "MDOC_VERIFY", "MDOC_INSPECT",
+            "SCA_TRANSACTION_DATA", "SCA_VERIFY", "OID4VP_INSPECT");
 
     private static final List<String> SIGN_ALGORITHMS = List.of(
             "ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512");
@@ -44,6 +47,10 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
     private static final List<String> CBOR_VIEWS = List.of("tree", "diagnostic", "summary");
     /** ISO/IEC 18013-5 Table 24 allows exactly these three. */
     private static final List<String> MDOC_DIGESTS = List.of("SHA-256", "SHA-384", "SHA-512");
+    /** The four transaction data types TS12 defines. */
+    private static final List<String> SCA_TYPES = java.util.Arrays.stream(
+            Ts12ScaOperations.TransactionType.values())
+            .map(Ts12ScaOperations.TransactionType::urn).toList();
 
     @Override public Set<String> supportedTypes() {
         return TYPES;
@@ -100,7 +107,22 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                         multiline("devicePublicKey"),
                         text("validityDays", "365"))),
                 descriptor("MDOC_VERIFY", "mdocVerify", List.of(multiline("issuerPublicKey"))),
-                descriptor("MDOC_INSPECT", "mdocInspect", List.of()));
+                descriptor("MDOC_INSPECT", "mdocInspect", List.of()),
+                descriptor("SCA_TRANSACTION_DATA", "scaTransactionData", List.of(
+                        combo("transactionType", SCA_TYPES, "urn:eudi:sca:payment:1"),
+                        text("credentialIds", "sca"),
+                        combo("sdAlgorithm", HASH_ALGORITHMS, "sha-256"))),
+                descriptor("SCA_VERIFY", "scaVerify", List.of(
+                        combo("algorithm", SIGN_ALGORITHMS, "ES256"),
+                        multiline("issuerPublicKey"),
+                        multiline("holderPublicKey"),
+                        text("audience", ""),
+                        text("nonce", ""),
+                        text("responseMode", "direct_post.jwt"),
+                        multiline("transactionData"))),
+                descriptor("OID4VP_INSPECT", "oid4vpInspect", List.of(
+                        combo("algorithm", SIGN_ALGORITHMS, "ES256"),
+                        multiline("issuerPublicKey"))));
     }
 
     @Override public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
@@ -118,6 +140,9 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "TRUSTED_LIST_FIND_CERT" -> List.of(port("trustedList", any, true), port("certificate", any, true));
             case "MDOC_ISSUE" -> List.of(port("claims", any, true), port("key", any, false));
             case "MDOC_VERIFY", "MDOC_INSPECT" -> List.of(port("mdoc", any, true));
+            case "SCA_TRANSACTION_DATA" -> List.of(port("payload", any, true));
+            case "SCA_VERIFY" -> List.of(port("presentation", any, true));
+            case "OID4VP_INSPECT" -> List.of(port("request", any, true));
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };
     }
@@ -171,6 +196,12 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 supplied(node, "docType");
             }
             case "MDOC_VERIFY" -> supplied(node, "issuerPublicKey");
+            case "SCA_TRANSACTION_DATA" -> enumValue(node, "transactionType", SCA_TYPES);
+            case "SCA_VERIFY" -> {
+                enumValue(node, "algorithm", SIGN_ALGORITHMS);
+                supplied(node, "issuerPublicKey");
+            }
+            case "OID4VP_INSPECT" -> enumValue(node, "algorithm", SIGN_ALGORITHMS);
             case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON",
                  "EIDAS_CERT_INSPECT", "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY",
                  "TRUSTED_LIST_FIND_CERT", "MDOC_INSPECT" -> { }
@@ -290,6 +321,36 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
             case "MDOC_INSPECT" -> text(MdocOperations.describe(
                     bytes(inputs, "mdoc"), null, java.time.Instant.now(), Locale.getDefault()));
+
+            case "SCA_TRANSACTION_DATA" -> text(Ts12ScaOperations.encodeTransactionData(
+                    Ts12ScaOperations.TransactionType.fromUrn(
+                            value(node, "transactionType", "urn:eudi:sca:payment:1")),
+                    lines(value(node, "credentialIds", "sca")),
+                    string(inputs, "payload"),
+                    value(node, "sdAlgorithm", "sha-256")));
+
+            case "SCA_VERIFY" -> {
+                JWSAlgorithm algorithm = JWSAlgorithm.parse(value(node, "algorithm", "ES256"));
+                Ts12ScaOperations.ScaReport report = Ts12ScaOperations.verify(
+                        string(inputs, "presentation"),
+                        lines(value(node, "transactionData", "")),
+                        JOSEService.createVerifier(algorithm, setting(node, inputs, "issuerPublicKey")),
+                        blankToNull(value(node, "holderPublicKey", "")) == null
+                                ? null
+                                : JOSEService.createVerifier(algorithm, value(node, "holderPublicKey", "")),
+                        blankToNull(value(node, "audience", "")),
+                        blankToNull(value(node, "nonce", "")),
+                        blankToNull(value(node, "responseMode", "")));
+                yield text(Ts12ScaOperations.describe(report, Locale.getDefault()));
+            }
+
+            case "OID4VP_INSPECT" -> {
+                String key = value(node, "issuerPublicKey", "");
+                yield text(OpenId4VpInspector.describe(string(inputs, "request"),
+                        blankToNull(key) == null ? null : JOSEService.createVerifier(
+                                JWSAlgorithm.parse(value(node, "algorithm", "ES256")), key),
+                        Locale.getDefault()));
+            }
 
             case "TRUSTED_LIST_FIND_CERT" -> {
                 TrustedListInspector.TrustedList list =
