@@ -30,7 +30,7 @@
                         <Label text="Claims (JSON):" styleClass="form-label"/>
                         <TextArea fx:id="sdJwtClaimsArea" prefHeight="90" wrapText="true" promptText="{&quot;given_name&quot;: &quot;John&quot;}"/>
                         <Label text="Selectively disclosable paths (one per line; a [] suffix makes each element of an array disclosable):" styleClass="form-label" wrapText="true"/>
-                        <TextArea fx:id="sdJwtDisclosableArea" prefHeight="60" wrapText="true" promptText="given_name&#10;address.locality&#10;nationalities[]"/>
+                        <TextArea fx:id="sdJwtDisclosableArea" prefHeight="60" wrapText="true" promptText="given_name, address.locality, nationalities[]"/>
                         <Label text="Credential type (vct, optional — set it to issue an SD-JWT VC):" styleClass="form-label" wrapText="true"/>
                         <TextField fx:id="sdJwtVctField" promptText="urn:eudi:pid:1" styleClass="form-field"/>
                         <Label text="Decoy digests:" styleClass="form-label"/>

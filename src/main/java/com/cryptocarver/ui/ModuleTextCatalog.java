@@ -717,6 +717,8 @@ public final class ModuleTextCatalog {
         map.put("Issue", "module.wallet.issue");
         map.put("Present", "module.wallet.present");
         map.put("Verify and inspect", "module.wallet.verifyAndInspect");
+        map.put("Verify", "module.wallet.verify");
+        map.put("Inspect", "module.wallet.inspect");
         map.put("Resolve", "module.wallet.resolve");
         map.put("From JSON", "module.wallet.fromJson");
         map.put("Load Example", "module.wallet.loadExample");
