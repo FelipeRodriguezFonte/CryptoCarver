@@ -4,6 +4,8 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.LanguagePreference;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -49,12 +51,38 @@ class I18nServiceTest {
     }
 
     @Test
+    void aListenerNobodyHoldsStopsBeingNotified() {
+        AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
+        I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
+                Locale.ENGLISH, getClass().getClassLoader());
+        AtomicInteger notifications = new AtomicInteger();
+
+        // Registered and immediately unreachable, the way a screen's listener becomes once the
+        // screen is gone. The service must not be what keeps it alive: holding listeners
+        // strongly meant every controller ever built stayed registered, and a suite run
+        // accumulated thousands of them, each re-localizing a screen nobody could see.
+        service.addLocaleChangeListener(locale -> notifications.incrementAndGet());
+        System.gc();
+
+        service.setPreference(LanguagePreference.ES);
+        assertEquals(0, notifications.get(), "A listener nobody holds must not be notified");
+
+        Consumer<Locale> held = locale -> notifications.incrementAndGet();
+        service.addLocaleChangeListener(held);
+        System.gc();
+        service.setPreference(LanguagePreference.EN);
+        assertEquals(1, notifications.get(), "A listener its owner still holds must be notified");
+    }
+
+    @Test
     void systemPreferenceResolvesSystemLocaleAndNotifiesListeners() {
         AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
         I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
                 Locale.forLanguageTag("es-ES"), getClass().getClassLoader());
         AtomicReference<Locale> notified = new AtomicReference<>();
-        service.addLocaleChangeListener(notified::set);
+        // The service holds listeners weakly, so the caller owns this reference.
+        Consumer<Locale> listener = notified::set;
+        service.addLocaleChangeListener(listener);
 
         assertEquals(LanguagePreference.SYSTEM, service.getPreference());
         assertEquals(Locale.forLanguageTag("es"), service.getLocale());

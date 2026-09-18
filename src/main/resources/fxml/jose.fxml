@@ -389,7 +389,7 @@
 
                 <TitledPane text="Nested (Sign + Encrypt)">
                     <VBox spacing="12" styleClass="module-pane-content">
-                        <Label text="1. Inner Token (Signed):" style="-fx-font-weight: bold; -fx-text-fill: #a0aec0;"/>
+                        <Label styleClass="ux-inline-a0728ad430" text="1. Inner Token (Signed):"/>
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
                                 <ColumnConstraints minWidth="150" prefWidth="150"/>
@@ -411,7 +411,7 @@
 
                         <Separator/>
 
-                        <Label text="2. Outer Token (Encrypted):" style="-fx-font-weight: bold; -fx-text-fill: #a0aec0;"/>
+                        <Label styleClass="ux-inline-a0728ad430" text="2. Outer Token (Encrypted):"/>
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
                                 <ColumnConstraints minWidth="150" prefWidth="150"/>
@@ -492,7 +492,7 @@
         <Label text="Visual Breakdown:" styleClass="form-label"/>
 
         <ScrollPane fitToWidth="true" styleClass="edge-to-edge" prefHeight="400">
-             <TextFlow fx:id="inspectorOutputFlow" styleClass="code-area" style="-fx-padding: 10; -fx-background-color: #1e293b; -fx-border-color: #334155; -fx-border-radius: 4; -fx-background-radius: 4;"/>
+             <TextFlow fx:id="inspectorOutputFlow" styleClass="code-area ux-inline-9250a3b4b6"/>
         </ScrollPane>
     </VBox>
 

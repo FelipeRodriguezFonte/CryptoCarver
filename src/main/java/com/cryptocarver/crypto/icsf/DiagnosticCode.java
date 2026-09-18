@@ -36,6 +36,16 @@ public enum DiagnosticCode {
     MANAGEMENT_FIELDS_TRUNCATED,
     /** A DESUSECV token with non-zero management fields, which Table 630 reserves. */
     DESUSECV_RESERVED_NONZERO,
+    /** A key-usage field count (kuf) the table for this key type does not allow. */
+    USAGE_FIELD_COUNT_UNEXPECTED,
+    /** A key-usage byte with bits set that its table reserves. */
+    USAGE_FIELD_RESERVED_BITS,
+    /** An enumerated key-usage byte holding a value its table does not define. */
+    USAGE_FIELD_UNDEFINED_VALUE,
+    /** Key-usage bits the table forbids together, e.g. VARDRV-D without EXPTT31D. */
+    USAGE_FIELD_COMBINATION_INVALID,
+    /** A key-management byte with bits set that Table 629 reserves. */
+    MANAGEMENT_FIELD_RESERVED_BITS,
 
     // --- PKA (Tables 637-659) --------------------------------------------
     /** A section declares a length that does not fit in the token. */

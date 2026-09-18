@@ -31,7 +31,7 @@ public class KeyCertificateWorkbenchControllerUITest {
 
         Platform.runLater(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/key_certificate_workbench.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/key_certificate_workbench.fxml"));
                 Parent root = loader.load();
                 KeyCertificateWorkbenchController controller = loader.getController();
                 assertNotNull(controller);

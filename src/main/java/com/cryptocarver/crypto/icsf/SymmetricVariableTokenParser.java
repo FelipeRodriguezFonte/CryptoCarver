@@ -230,8 +230,8 @@ final class SymmetricVariableTokenParser {
         }
 
         IcsfSection uses = new IcsfSection(t("icsf.section.permittedUses"));
-        List<IcsfText> useSummary = decodeUsageFields(algorithm, keyTypeName, usageFieldCount,
-                usageFields, uses);
+        List<String> useKeywords = VariableFieldDecoder.decodeUsage(algorithm, keyTypeName, usageFields,
+                usageOffset, usageFieldCount, uses, result);
 
         IcsfSection management = new IcsfSection(t("icsf.section.management"));
         Exportability exportability;
@@ -242,7 +242,7 @@ final class SymmetricVariableTokenParser {
         // reading it as exportability would be inventing.
         boolean desUseCv = algorithm == 0x01;
         if (desUseCv) {
-            exportability = Exportability.NOT_APPLICABLE;
+            exportability = Exportability.NOT_APPLICABLE_DESUSECV;
             exportDetail = t("icsf.export.desusecv");
             management.add(managementOffset, managementFields.length,
                     t("icsf.field.managementReserved"), IcsfHex.hex(managementFields),
@@ -252,17 +252,17 @@ final class SymmetricVariableTokenParser {
                         t("icsf.warn.desusecvReserved", IcsfHex.hex(managementFields)));
             }
         } else if (managementCount >= 1 && managementFields.length >= 2) {
+            VariableFieldDecoder.decodeManagement(managementFields, managementOffset, managementCount,
+                    management, result);
             int high = managementFields[0] & 0xFF;
             int low = managementFields[1] & 0xFF;
             String[] allowedKeys = {"icsf.var.export.symmetric", "icsf.var.export.asymUnauth",
                     "icsf.var.export.asymAuth", "icsf.var.export.raw", "icsf.var.export.cpacf"};
             List<IcsfText> allowed = new ArrayList<>();
             for (int index = 0; index < allowedKeys.length; index++) {
-                boolean on = IcsfHex.bit(high, index);
-                management.add(t(allowedKeys[index]), on);
-                if (on) allowed.add(t(allowedKeys[index]));
+                if (IcsfHex.bit(high, index)) allowed.add(t(allowedKeys[index]));
             }
-            management.add(t("icsf.var.export.compliantTagged"), IcsfHex.bit(high, 7));
+            // The bytes themselves are read by VariableFieldDecoder above; here only the verdicts.
             result.compliantTagged(IcsfHex.bit(high, 7));
 
             String[] prohibitedKeys = {"icsf.var.export.prohibitDes", "icsf.var.export.prohibitAes",
@@ -270,9 +270,7 @@ final class SymmetricVariableTokenParser {
             List<IcsfText> prohibited = new ArrayList<>();
             for (int index = 0; index < prohibitedKeys.length; index++) {
                 if (prohibitedKeys[index] == null) continue;
-                boolean on = IcsfHex.bit(low, index);
-                management.add(t(prohibitedKeys[index]), on);
-                if (on) prohibited.add(t(prohibitedKeys[index]));
+                if (IcsfHex.bit(low, index)) prohibited.add(t(prohibitedKeys[index]));
             }
 
             if (allowed.isEmpty()) {
@@ -291,23 +289,8 @@ final class SymmetricVariableTokenParser {
         }
 
         if (!desUseCv && managementCount >= 2 && managementFields.length >= 4) {
-            int high = managementFields[2] & 0xFF;
-            int low = managementFields[3] & 0xFF;
-            String completeness = switch ((high >> 6) & 0b11) {
-                case 0b11 -> "icsf.var.completeness.twoOrMoreMissing";
-                case 0b10 -> "icsf.var.completeness.oneMissing";
-                case 0b01 -> "icsf.var.completeness.mayBeCompleted";
-                default -> "icsf.var.completeness.complete";
-            };
-            management.add(t("icsf.field.completeness"), true, t(completeness));
-            String[] historyKeys = {null, null, null, "icsf.var.history.untrustedKek",
-                    "icsf.var.history.noAttributes", "icsf.var.history.weakerKey",
-                    "icsf.var.history.nonCca", "icsf.var.history.ecb"};
-            for (int index = 3; index < historyKeys.length; index++) {
-                boolean on = IcsfHex.bit(low, index);
-                management.add(t(historyKeys[index]), on);
-                if (on) result.securityHistoryDegraded(true);
-            }
+            // Table 629, KMF2 LOB: any of the five security-history bits.
+            if ((managementFields[3] & 0x1F) != 0) result.securityHistoryDegraded(true);
         }
 
         IcsfText pedigree = t("icsf.pedigree.notPresent");
@@ -346,15 +329,16 @@ final class SymmetricVariableTokenParser {
                 .summary(SummaryKey.EFFECTIVE_STRENGTH, EffectiveStrength.NOT_APPLICABLE)
                 .summary(SummaryKey.MATERIAL_STATE, material, stateText(materialState))
                 .summary(SummaryKey.WRAPPING, wrapValue, SymmetricFixedTokenParser.wrapLabel(wrapValue))
-                .summary(SummaryKey.CONTROL_VECTOR, CvState.NOT_APPLICABLE, t("icsf.cvState.variable"))
+                .summary(SummaryKey.CONTROL_VECTOR, CvState.NOT_APPLICABLE_VARIABLE, t("icsf.cvState.variable"))
                 .summary(SummaryKey.TVV, TvvState.NOT_APPLICABLE, t("icsf.tvv.notApplicable"))
                 .summary(SummaryKey.MKVP, mkvpAbsent ? MkvpState.ABSENT : MkvpState.PRESENT)
                 .summary(SummaryKey.PROTECTION, wrapValue, t("icsf.protection.under",
                         SymmetricFixedTokenParser.wrapLabel(wrapValue), kvpText(kvpType)))
                 .summary(SummaryKey.PAYLOAD_LENGTH, String.valueOf(payloadBits),
                         t("icsf.length.bits", payloadBits))
-                .summary(SummaryKey.ALLOWED_USES, useSummary.isEmpty() ? "SEE_FLAGS" : "DECODED",
-                        joined(useSummary))
+                .summary(SummaryKey.ALLOWED_USES, useKeywords.isEmpty() ? "SEE_FLAGS" : "DECODED",
+                        useKeywords.isEmpty() ? t("icsf.uses.seeFlags")
+                                : IcsfText.raw(String.join(", ", useKeywords)))
                 .summary(SummaryKey.EXPORTABILITY, exportability, exportDetail)
                 .summary(SummaryKey.PEDIGREE, pedigreePresent ? "PRESENT" : "ABSENT", pedigree);
 
@@ -424,100 +408,5 @@ final class SymmetricVariableTokenParser {
             case HMAC -> IcsfText.raw("HMAC");
             default -> t("icsf.value.reserved");
         };
-    }
-
-    /** Decodes the key-usage fields for the commonest key types. */
-    private static List<IcsfText> decodeUsageFields(int algorithm, String keyTypeName, int count,
-                                                    byte[] usageFields, IcsfSection section) {
-        List<IcsfText> uses = new ArrayList<>();
-        if (algorithm == 0x03 || (algorithm == 0x02 && "MAC".equals(keyTypeName))) {
-            // HMAC (Table 620) and, by extension, AES MAC share generate/verify semantics.
-            if (count >= 1) {
-                int high = high(usageFields, 1);
-                boolean generate = IcsfHex.bit(high, 0);
-                boolean verify = IcsfHex.bit(high, 1);
-                section.add(t("icsf.use.generate"), generate);
-                section.add(t("icsf.use.verify"), verify);
-                if (generate) uses.add(t("icsf.use.generateMac"));
-                if (verify) uses.add(t("icsf.use.verifyMac"));
-            }
-            if (count >= 2 && algorithm == 0x03) {
-                int high = high(usageFields, 2);
-                String[] hashes = {"SHA-1", "SHA-224", "SHA-256", "SHA-384", "SHA-512"};
-                for (int index = 0; index < hashes.length; index++) {
-                    if (IcsfHex.bit(high, index)) {
-                        section.add(t("icsf.use.permittedHash", hashes[index]), true);
-                    }
-                }
-            }
-        } else if (algorithm == 0x02 && "CIPHER".equals(keyTypeName)) {
-            // Table 628
-            if (count >= 1) {
-                int high = high(usageFields, 1);
-                boolean encrypt = IcsfHex.bit(high, 0);
-                boolean decrypt = IcsfHex.bit(high, 1);
-                boolean translate = IcsfHex.bit(high, 2);
-                section.add(t("icsf.use.encrypt"), encrypt);
-                section.add(t("icsf.use.decrypt"), decrypt);
-                section.add(t("icsf.use.dataTranslateOnly"), translate);
-                if (encrypt) uses.add(t("icsf.use.encryption"));
-                if (decrypt) uses.add(t("icsf.use.decryption"));
-                if (translate) uses.add(t("icsf.use.dataTranslate"));
-            }
-            if (count >= 2) {
-                Map<Integer, String> modes = Map.ofEntries(
-                        Map.entry(0x00, "CBC"), Map.entry(0x01, "ECB"), Map.entry(0x02, "CFB"),
-                        Map.entry(0x03, "OFB"), Map.entry(0x04, "GCM"), Map.entry(0x05, "XTS"),
-                        Map.entry(0x06, "FF1"), Map.entry(0x07, "FF2"), Map.entry(0x08, "FF2.1"));
-                int mode = high(usageFields, 2);
-                section.add(t("icsf.use.cipherMode"), true,
-                        mode == 0xFF ? t("icsf.value.anyMode")
-                                : modes.containsKey(mode) ? IcsfText.raw(modes.get(mode))
-                                        : t("icsf.value.reserved"));
-            }
-        } else if (algorithm == 0x02 && ("EXPORTER".equals(keyTypeName) || "IMPORTER".equals(keyTypeName))) {
-            // Table 627 (KEK). These are mnemonics, not words.
-            int high = high(usageFields, 1);
-            String[] names = "EXPORTER".equals(keyTypeName)
-                    ? new String[]{"EXPORT", "TRANSLAT", "GEN-OPEX", "GEN-IMEX", "GEN-EXEX", "GEN-PUB"}
-                    : new String[]{"IMPORT", "TRANSLAT", "GEN-OPIM", "GEN-IMEX", "GEN-IMIM", "GEN-PUB"};
-            for (int index = 0; index < names.length; index++) {
-                if (IcsfHex.bit(high, index)) {
-                    section.add(IcsfText.raw(names[index]), true);
-                    uses.add(IcsfText.raw(names[index]));
-                }
-            }
-            if (count >= 3) {
-                String[] algorithms = {"DES", "AES", "HMAC", "RSA", "ECC", "QSA"};
-                List<String> wrapped = onNames(high(usageFields, 3), algorithms);
-                if (!wrapped.isEmpty()) {
-                    section.add(t("icsf.use.mayWrapAlgorithms"), true,
-                            IcsfText.raw(String.join(", ", wrapped)));
-                }
-            }
-            if (count >= 4) {
-                String[] classes = {"DATA", "KEK", "PIN", "DERIVATION", "CARD", "CVAR"};
-                List<String> wrapped = onNames(high(usageFields, 4), classes);
-                if (!wrapped.isEmpty()) {
-                    section.add(t("icsf.use.mayWrapClasses"), true,
-                            IcsfText.raw(String.join(", ", wrapped)));
-                }
-            }
-        }
-        return uses;
-    }
-
-    private static List<String> onNames(int value, String[] names) {
-        List<String> on = new ArrayList<>();
-        for (int index = 0; index < names.length; index++) {
-            if (IcsfHex.bit(value, index)) on.add(names[index]);
-        }
-        return on;
-    }
-
-    /** High byte of the 1-based usage field {@code index}. */
-    private static int high(byte[] usageFields, int index) {
-        int offset = (index - 1) * 2;
-        return offset < usageFields.length ? usageFields[offset] & 0xFF : 0;
     }
 }

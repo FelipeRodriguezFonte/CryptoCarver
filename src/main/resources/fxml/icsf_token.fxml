@@ -32,21 +32,29 @@
                text="Provenance is not derivable from the bytes, so it is declared, not detected. It changes how an absent MKVP or TVV is read: normal in a raw non-KDSR CKDS record, anomalous in one returned by Key Record Read."
                wrapText="true" styleClass="helper-text"/>
 
-        <Label text="Key token (hexadecimal):" style="-fx-font-weight: bold;"/>
+        <Label styleClass="ux-inline-689e8d50bc" text="Key token (hexadecimal):"/>
         <TextArea fx:id="icsfTokenInputArea" prefHeight="90" wrapText="true"
                   promptText="01 AF 02 ... — or paste the two host rows, high digits above and low digits below"
                   styleClass="monospace-field"/>
 
         <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
             <Button text="Analyze token" onAction="#handleAnalyze" styleClass="action-button-primary"/>
+            <Button text="Load .bin File…" onAction="#handleLoadBinary" styleClass="secondary-button"/>
             <Button text="Save Report…" onAction="#handleSaveReport" styleClass="secondary-button"/>
             <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
             <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
         </FlowPane>
+        <FlowPane prefWrapLength="900" hgap="8" vgap="4" styleClass="responsive-action-bar">
+            <Label text="Examples:"/>
+            <Button text="AES fixed" onAction="#handleSampleAesFixed" styleClass="secondary-button"/>
+            <Button text="AES CIPHER var-length" onAction="#handleSampleVariableCipher" styleClass="secondary-button"/>
+            <Button text="3DES K1|K2|K1" onAction="#handleSampleDesTriple" styleClass="secondary-button"/>
+            <Button text="PKA RSA 2048" onAction="#handleSamplePkaRsa" styleClass="secondary-button"/>
+        </FlowPane>
 
         <Label fx:id="icsfTokenFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>
 
-        <Label text="Summary card:" style="-fx-font-weight: bold;"/>
+        <Label styleClass="ux-inline-689e8d50bc" text="Summary card:"/>
         <TableView fx:id="icsfTokenSummaryTable" prefHeight="230" prefWidth="400" VBox.vgrow="SOMETIMES">
             <columns>
                 <TableColumn fx:id="icsfTokenSummaryFieldColumn" text="Field" prefWidth="190"/>
@@ -55,7 +63,7 @@
             </columns>
         </TableView>
 
-        <Label text="Field-by-field detail, provenance notes and warnings:" style="-fx-font-weight: bold;"/>
+        <Label styleClass="ux-inline-689e8d50bc" text="Field-by-field detail, provenance notes and warnings:"/>
         <TextArea fx:id="icsfTokenDetailArea" editable="false" prefHeight="280" VBox.vgrow="ALWAYS"
                   promptText="The full analysis will appear here."
                   styleClass="result-area,monospace-field"/>

@@ -45,7 +45,7 @@ class PaymentsFormatsLiveI18nUITest {
             I18nService service = I18nService.getInstance();
             service.setPreference(LanguagePreference.EN);
             try {
-                Parent root = new FXMLLoader(getClass().getResource(resource)).load();
+                Parent root = UiTestFxml.loader(getClass().getResource(resource)).load();
                 Accordion accordion = (Accordion) root.lookupAll(".module-accordion").stream().findFirst().orElse(null);
                 assertNotNull(accordion);
                 assertEquals(english, accordion.getPanes().get(0).getText());

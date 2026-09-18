@@ -36,6 +36,9 @@ import javafx.stage.FileChooser;
  * Import to confirm, and keeping the result area common is what makes that flow readable.</p>
  */
 public final class IcsfKeyWrapController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
 
     @FXML private TitledPane icsfKeyWrapPane;
     @FXML private VBox icsfKeyWrapRoot;
@@ -94,7 +97,8 @@ public final class IcsfKeyWrapController {
         // Binding the pane, not the inner box: ModuleI18n reaches the content through
         // TitledPane.getContent(), so one binding covers the title and everything below it.
         i18nBinding = ModuleI18n.bind(icsfKeyWrapPane, ModuleTextCatalog.icsf());
-        I18nService.getInstance().addLocaleChangeListener(locale -> refreshLocalizedRuntimeText());
+        localeChangeListener = locale -> refreshLocalizedRuntimeText();
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
     }
 
     private void configureVariantCombo(ComboBox<KeyWrapScheme.Variant> combo) {

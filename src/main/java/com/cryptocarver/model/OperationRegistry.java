@@ -245,6 +245,22 @@ public class OperationRegistry {
         sb.append("| PQC | `PQC_KEYPAIR_GENERATE`, `PQC_SIGN`, `PQC_VERIFY`, `PQC_KEM_ENCAPSULATE`, `PQC_KEM_DECAPSULATE` |\n");
         sb.append("| X.509 | `CERT_PARSE`, `CERT_SELF_SIGNED_GENERATE`, `CERT_VALIDATE` |\n\n");
         sb.append("These nodes are local-only. Timestamped CAdES and PAdES T/LT/LTA remain excluded until a local timestamp-token input exists.\n");
+        sb.append("\n## Process Designer — Wallet / eIDAS\n\n");
+        sb.append("Nodes for the European Digital Identity Wallet's credential formats. They\n");
+        sb.append("delegate to the `SdJwtOperations`, `StatusListOperations` and `CborInspector`\n");
+        sb.append("facades. Private key material (`key`, `holderKey`) is a secret parameter and is\n");
+        sb.append("never persisted in `.cfprocess.json`; the verification side takes public keys\n");
+        sb.append("under distinct names (`issuerPublicKey`, `holderPublicKey`), so no parameter\n");
+        sb.append("name means a private key in one node and a public key in another.\n\n");
+        sb.append("| Family | Node types |\n|---|---|\n");
+        sb.append("| SD-JWT (RFC 9901) and SD-JWT VC | `SDJWT_ISSUE`, `SDJWT_ISSUE_VC`, `SDJWT_PRESENT`, `SDJWT_VERIFY`, `SDJWT_INSPECT` |\n");
+        sb.append("| Token Status List | `STATUS_LIST_RESOLVE`, `STATUS_LIST_DESCRIBE` |\n");
+        sb.append("| CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |\n\n");
+        sb.append("These nodes are local-only: they manipulate artefacts supplied as text and never\n");
+        sb.append("fetch an issuer's metadata, a JWKS or a status list over the network.\n");
+        sb.append("`SDJWT_PRESENT` selects claims by name rather than by digest, because a node is\n");
+        sb.append("configured once and a claim's digest changes on every issuance — its salt is\n");
+        sb.append("fresh each time.\n");
         return sb.toString();
     }
 }

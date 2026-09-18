@@ -8,32 +8,40 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.Priority;
+import java.util.function.Consumer;
 
 /**
- * Navigation Rail - Left sidebar with icon-only navigation
- * Modern IDE-style navigation with CSS styling
+ * Navigation Rail - compact icon-and-label navigation.
+ * Search intentionally lives in the side panel/command palette, not in this
+ * primary section rail.  The SEARCH enum value remains for route compatibility.
  */
 public class NavigationRail extends VBox {
 
     private final ToggleGroup toggleGroup;
     private SidePanel sidePanel;
+    private Consumer<Section> onSectionSelected;
+    private boolean syncingSelection;
 
     // Navigation sections
     public enum Section {
-        SEARCH("🔍", "Search"),
-        PROCESS_DESIGNER("🧩", "Process Designer"),
-        GENERIC("◈", "Generic"),
-        CIPHER("🔒", "Cipher"),
-        AUTHENTICATION("🛡", "Authentication"),
-        KEYS("🔑", "Keys"),
-        POST_QUANTUM("⚛", "Post-Quantum"),
-        XML_SECURITY("📝", "XML Security"),
-        CERTIFICATES("📜", "Certificates"),
-        JOSE("🌐", "JOSE"),
-        COSE("📦", "COSE"),
-        PAYMENTS("💳", "Payments"),
-        ASN1("{}", "ASN.1"),
-        HISTORY("⏱", "History");
+        SEARCH("search", "Search"),
+        PROCESS_DESIGNER("processDesigner", "Process Designer"),
+        GENERIC("generic", "Generic"),
+        CIPHER("cipher", "Cipher"),
+        AUTHENTICATION("authentication", "Authentication"),
+        KEYS("keys", "Keys"),
+        POST_QUANTUM("postQuantum", "Post-Quantum"),
+        // Declaration order is the rail's visual order and nothing else: routes resolve by
+        // name and no caller depends on ordinal(), so grouping drives the order here.
+        // Formats and standards, per docs/HANDOFF_UX_PROFESIONAL.md UXP-21.
+        CERTIFICATES("certificates", "Certificates"),
+        JOSE("jose", "JOSE"),
+        COSE("cose", "COSE"),
+        XML_SECURITY("xmlSecurity", "XML Security"),
+        ASN1("asn1", "ASN.1"),
+        // Domain.
+        PAYMENTS("payments", "Payments"),
+        HISTORY("history", "History");
 
         private final String icon;
         private final String label;
@@ -59,12 +67,19 @@ public class NavigationRail extends VBox {
         getStyleClass().add("navigation-rail");
         setAlignment(Pos.TOP_CENTER);
         setSpacing(4);
-        setMinWidth(48);
-        setMaxWidth(48);
-        setPrefWidth(48);
+        setMinWidth(64);
+        setMaxWidth(64);
+        setPrefWidth(64);
 
         // Create buttons for main sections
         for (Section section : Section.values()) {
+            if (section == Section.SEARCH) continue;
+            // Group boundaries are drawn as their own hairline node, never as a border on the
+            // button: a border shared the edges with the active-section indicator, so a selected
+            // group head repainted its separator in the accent colour.
+            if (isGroupStart(section) && !getChildren().isEmpty()) {
+                addGroupSeparator();
+            }
             addButton(section);
         }
 
@@ -73,11 +88,19 @@ public class NavigationRail extends VBox {
     }
 
     private void addButton(Section section) {
-        ToggleButton button = new ToggleButton(section.getIcon());
+        ToggleButton button = new ToggleButton(compactLabel(section));
+        var icon = IconRegistry.icon(section.getIcon());
+        icon.setIconSize(18);
+        button.setGraphic(icon);
         button.setToggleGroup(toggleGroup);
         button.getStyleClass().add("rail-button");
-        button.setMinSize(40, 40);
-        button.setMaxSize(40, 40);
+        button.setMinWidth(60);
+        button.setMaxWidth(60);
+        button.setMinHeight(46);
+        button.setPrefHeight(46);
+        button.setMaxHeight(46);
+        button.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
+        button.setGraphicTextGap(3);
         button.setTooltip(new Tooltip(localizedLabel(section)));
         button.setAccessibleText(localizedLabel(section));
         button.setAccessibleHelp(localizedLabel(section));
@@ -94,6 +117,37 @@ public class NavigationRail extends VBox {
         getChildren().add(button);
     }
 
+    private void addGroupSeparator() {
+        Region separator = new Region();
+        separator.getStyleClass().add("rail-separator");
+        separator.setMinHeight(1);
+        separator.setPrefHeight(1);
+        separator.setMaxHeight(1);
+        separator.setMinWidth(28);
+        separator.setPrefWidth(28);
+        separator.setMaxWidth(28);
+        separator.setMouseTransparent(true);
+        separator.setFocusTraversable(false);
+        VBox.setMargin(separator, new javafx.geometry.Insets(3, 0, 3, 0));
+        getChildren().add(separator);
+    }
+
+    private String compactLabel(Section section) {
+        String label = localizedLabel(section).trim();
+        if (label.length() <= 10) return label;
+        int separator = label.indexOf(' ');
+        if (separator > 0 && separator <= 9) return label.substring(0, separator);
+        return label.substring(0, 9) + "…";
+    }
+
+    private boolean isGroupStart(Section section) {
+        // Work | Cryptography | Formats and standards | Domain | History (UXP-21).
+        return switch (section) {
+            case PROCESS_DESIGNER, GENERIC, CERTIFICATES, PAYMENTS, HISTORY -> true;
+            default -> false;
+        };
+    }
+
     private String localizedLabel(Section section) {
         return I18nService.getInstance().text("nav." + switch (section) {
             case POST_QUANTUM -> "postQuantum";
@@ -108,6 +162,7 @@ public class NavigationRail extends VBox {
         for (var node : getChildren()) {
             if (node instanceof ToggleButton button && button.getUserData() instanceof Section section) {
                 String label = localizedLabel(section);
+                button.setText(compactLabel(section));
                 button.setTooltip(new Tooltip(label));
                 button.setAccessibleText(label);
                 button.setAccessibleHelp(label);
@@ -118,7 +173,12 @@ public class NavigationRail extends VBox {
     private void handleSectionSelected(Section section) {
         System.out.println("Rail section selected: " + section.getLabel());
 
-        // Open side panel if closed
+        if (syncingSelection) return;
+        if (onSectionSelected != null) {
+            onSectionSelected.accept(section);
+            return;
+        }
+        // Fallback for isolated uses of the control.
         if (sidePanel != null) {
             sidePanel.setVisible(true);
             sidePanel.setManaged(true);
@@ -132,6 +192,25 @@ public class NavigationRail extends VBox {
 
     public void setSidePanel(SidePanel panel) {
         this.sidePanel = panel;
+    }
+
+    public void setOnSectionSelected(Consumer<Section> handler) {
+        this.onSectionSelected = handler;
+    }
+
+    /** Updates active affordance without treating a programmatic route sync as a rail click. */
+    public void selectSectionSilently(Section section) {
+        syncingSelection = true;
+        try {
+            for (var node : getChildren()) {
+                if (node instanceof ToggleButton button && button.getUserData() == section) {
+                    button.setSelected(true);
+                    return;
+                }
+            }
+        } finally {
+            syncingSelection = false;
+        }
     }
 
     public void selectSection(Section section) {

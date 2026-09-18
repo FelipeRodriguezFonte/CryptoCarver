@@ -15,7 +15,7 @@
                     <tabs>
                         <Tab text="Decode">
                             <content>
-                                <VBox spacing="10.0" style="-fx-padding: 10;">
+                                <VBox styleClass="ux-inline-31b3bfce5a" spacing="10.0">
                                     <children>
                                         <GridPane hgap="10.0" vgap="10.0">
                                             <columnConstraints>
@@ -42,7 +42,7 @@
                                         </GridPane>
 
                                         <Label styleClass="section-label" text="ASN.1 Data (Hex, Base64, or PEM)" />
-                                        <TextArea fx:id="asn1InputArea" prefHeight="100.0" promptText="Paste ASN.1 data here..." wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+                                        <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="asn1InputArea" prefHeight="100.0" promptText="Paste ASN.1 data here..." wrapText="true"/>
 
                                         <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
                                             <children>
@@ -81,7 +81,7 @@
                         </Tab>
                         <Tab text="Encode">
                             <content>
-                                <VBox spacing="10.0" style="-fx-padding: 10;">
+                                <VBox styleClass="ux-inline-31b3bfce5a" spacing="10.0">
                                     <children>
                                         <GridPane hgap="10.0" vgap="10.0">
                                             <columnConstraints>
@@ -105,7 +105,7 @@
                                         </GridPane>
 
                                         <Label styleClass="section-label" text="Value (for Strings/Integers) or Hex Content (for Wrappers)" />
-                                        <TextArea fx:id="asn1EncodeInputArea" prefHeight="100.0" promptText="Enter value to encode..." wrapText="true" style="-fx-font-family: 'Monospaced';"/>
+                                        <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="asn1EncodeInputArea" prefHeight="100.0" promptText="Enter value to encode..." wrapText="true"/>
 
                                         <HBox spacing="10.0" alignment="CENTER_LEFT">
                                             <children>
@@ -115,7 +115,7 @@
                                         </HBox>
 
                                         <Label styleClass="section-label" text="Encoded Output (DER Hex)" />
-                                        <TextArea fx:id="asn1EncodeOutputArea" editable="false" prefHeight="150.0" style="-fx-font-family: 'Monospaced';" wrapText="true" VBox.vgrow="ALWAYS" />
+                                        <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="asn1EncodeOutputArea" editable="false" prefHeight="150.0" wrapText="true" VBox.vgrow="ALWAYS" />
                                     </children>
                                 </VBox>
                             </content>

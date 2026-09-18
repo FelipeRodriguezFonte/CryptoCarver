@@ -72,7 +72,7 @@ public class ProcessDesignerDuplicatePortUITest {
     void theDefaultConnectPathRefusesAPortAnExplicitLinkAlreadyHolds() throws Exception {
         onFx(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController c = loader.getController();
                 Stage stage = new Stage();
@@ -107,7 +107,7 @@ public class ProcessDesignerDuplicatePortUITest {
     void reconnectingThroughTheDefaultPathStillReplacesTheEarlierDefaultLink() throws Exception {
         onFx(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController c = loader.getController();
                 Stage stage = new Stage();

@@ -9,6 +9,8 @@ import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 import java.util.Enumeration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -91,9 +93,27 @@ class WssEncryptionOperationsTest {
         assertEquals(WssEncryptionOperations.OperationResult.Status.ERROR,
                 WssEncryptionOperations.decryptSoapBody(encrypted.xml(), empty, PASSWORD).status());
 
-        String tampered = encrypted.xml().replaceFirst("(<xenc:CipherValue>)[A-Za-z0-9+/]", "$1A");
         assertEquals(WssEncryptionOperations.OperationResult.Status.ERROR,
-                WssEncryptionOperations.decryptSoapBody(tampered, keyStore, PASSWORD).status());
+                WssEncryptionOperations.decryptSoapBody(tamperFirstCipherValue(encrypted.xml()), keyStore, PASSWORD)
+                        .status());
+    }
+
+    /**
+     * Corrupts the first base64 character of the first CipherValue.
+     *
+     * <p>Overwriting it with a fixed letter is not a corruption when the ciphertext already
+     * starts with that letter, and then the "tampered" document decrypts cleanly: a one-in-64
+     * failure per run, on random ciphertext. The replacement is chosen against the original
+     * instead, so the document always differs.
+     */
+    private static String tamperFirstCipherValue(String xml) {
+        Matcher cipherValue = Pattern.compile("(?:<xenc:CipherValue>)([A-Za-z0-9+/])").matcher(xml);
+        assertTrue(cipherValue.find(), "Encrypted SOAP must carry a CipherValue to tamper with");
+        char original = cipherValue.group(1).charAt(0);
+        char corrupted = original == 'A' ? 'B' : 'A';
+        return new StringBuilder(xml)
+                .replace(cipherValue.start(1), cipherValue.end(1), String.valueOf(corrupted))
+                .toString();
     }
 
     @Test

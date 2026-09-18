@@ -36,7 +36,7 @@ class Ux19SpecializedLiveUITest {
             for (String resource : List.of("asn1.fxml", "xml_security.fxml", "wss_security.fxml",
                     "jose.fxml", "payments.fxml", "process_designer.fxml")) {
                 try {
-                    Parent root = new FXMLLoader(getClass().getResource("/fxml/" + resource)).load();
+                    Parent root = UiTestFxml.loader(getClass().getResource("/fxml/" + resource)).load();
                     assertTrue(hasContent(root), resource + " must not be an empty panel");
                     assertTrue(findButtons(root).stream().anyMatch(button -> "Reset".equals(button.getText())
                             || "Clear".equals(button.getText())
@@ -54,8 +54,8 @@ class Ux19SpecializedLiveUITest {
             try {
                 I18nService service = I18nService.getInstance();
                 service.setPreference(LanguagePreference.EN);
-                Parent asn1 = new FXMLLoader(getClass().getResource("/fxml/asn1.fxml")).load();
-                Parent payments = new FXMLLoader(getClass().getResource("/fxml/payments.fxml")).load();
+                Parent asn1 = UiTestFxml.loader(getClass().getResource("/fxml/asn1.fxml")).load();
+                Parent payments = UiTestFxml.loader(getClass().getResource("/fxml/payments.fxml")).load();
                 Scene scene = new Scene(asn1);
                 TextArea input = findTextAreas(asn1).stream().findFirst().orElseThrow();
                 input.setText("3080A1B2");

@@ -7,13 +7,19 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import com.cryptocarver.service.I18nService;
+import com.cryptocarver.ui.Fxml;
+import com.cryptocarver.ui.NativePlatformIntegration;
+import com.cryptocarver.ui.WindowStateManager;
+import com.cryptocarver.ui.WindowStateStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Modern launcher for the new Rail + SidePanel UI
  * This is a prototype to test the new navigation structure
  */
 public class CryptoCalculatorModern extends Application {
+    private static final Logger LOG = LoggerFactory.getLogger(CryptoCalculatorModern.class);
 
     /** Size the Rail + SidePanel + Inspector layout was designed against. */
     private static final double DESIGN_WIDTH = 1400;
@@ -33,8 +39,7 @@ public class CryptoCalculatorModern extends Application {
     public void start(Stage primaryStage) {
         try {
             // Load modern FXML
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
-            loader.setResources(I18nService.getInstance().getBundle());
+            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
             Parent root = loader.load();
 
             // A 1400x900 window does not fit every desktop: a 1366x768 laptop, or any
@@ -50,6 +55,8 @@ public class CryptoCalculatorModern extends Application {
 
             // Load CSS
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            scene.getStylesheets().add(themeUrl(com.cryptocarver.ui.SystemAppearance.resolve(
+                    com.cryptocarver.model.AppSettings.getInstance().getThemePreference())));
 
             // Setup stage
             primaryStage.setTitle("CryptoCarver");
@@ -58,7 +65,11 @@ public class CryptoCalculatorModern extends Application {
             // impossible to resize back into view.
             primaryStage.setMinWidth(Math.min(DESIGN_MIN_WIDTH, workArea.getWidth()));
             primaryStage.setMinHeight(Math.min(DESIGN_MIN_HEIGHT, workArea.getHeight()));
-            if (workArea.getWidth() < DESIGN_WIDTH || workArea.getHeight() < DESIGN_HEIGHT) {
+            WindowStateStore windowStateStore = new WindowStateStore();
+            WindowStateStore.State savedState = windowStateStore.load();
+            if (Double.isFinite(savedState.x()) || savedState.maximized()) {
+                WindowStateManager.restore(primaryStage, savedState, workArea);
+            } else if (workArea.getWidth() < DESIGN_WIDTH || workArea.getHeight() < DESIGN_HEIGHT) {
                 // Every pixel counts on a display that cannot show the design size.
                 primaryStage.setMaximized(true);
             }
@@ -100,39 +111,33 @@ public class CryptoCalculatorModern extends Application {
                 System.err.println("Error loading application icon: " + e.getMessage());
             }
 
+            NativePlatformIntegration.configure(primaryStage, scene, root);
             primaryStage.show();
             // Window decorations are added on top of the scene size, so the frame can
             // still overflow the work area after show(). Pull it back into view.
-            confineToWorkArea(primaryStage, workArea);
+            WindowStateManager.confine(primaryStage, workArea);
+            primaryStage.setOnCloseRequest(event -> windowStateStore.save(
+                    WindowStateManager.capture(primaryStage, Screen.getPrimary())));
+            primaryStage.widthProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.heightProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.xProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.yProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.maximizedProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
 
             System.out.println("✅ Modern UI launched successfully!");
 
         } catch (Exception e) {
-            System.err.println("❌ Error launching modern UI:");
-            e.printStackTrace();
+            LOG.error("Error launching modern UI", e);
         }
     }
 
-    /** Keeps the whole window frame, title bar included, inside the screen's work area. */
-    private static void confineToWorkArea(Stage stage, Rectangle2D workArea) {
-        if (stage.isMaximized()) {
-            return;
-        }
-        if (stage.getWidth() > workArea.getWidth()) {
-            stage.setWidth(workArea.getWidth());
-        }
-        if (stage.getHeight() > workArea.getHeight()) {
-            stage.setHeight(workArea.getHeight());
-        }
-        stage.setX(clamp(stage.getX(), workArea.getMinX(), workArea.getMaxX() - stage.getWidth()));
-        stage.setY(clamp(stage.getY(), workArea.getMinY(), workArea.getMaxY() - stage.getHeight()));
+    private static String themeUrl(com.cryptocarver.model.ThemePreference preference) {
+        String file = preference == com.cryptocarver.model.ThemePreference.DARK ? "theme-dark.css" : "theme-light.css";
+        return CryptoCalculatorModern.class.getResource("/css/" + file).toExternalForm();
     }
 
-    private static double clamp(double value, double min, double max) {
-        if (max < min) {
-            return min;
-        }
-        return Math.max(min, Math.min(max, value));
+    private static void saveWindowState(Stage stage, WindowStateStore store) {
+        if (stage.isShowing()) store.save(WindowStateManager.capture(stage, Screen.getPrimary()));
     }
 
     public static void main(String[] args) {

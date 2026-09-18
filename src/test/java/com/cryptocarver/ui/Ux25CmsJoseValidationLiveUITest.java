@@ -255,7 +255,7 @@ class Ux25CmsJoseValidationLiveUITest {
 
         private static CmsFixture load() {
             try {
-                FXMLLoader loader = new FXMLLoader(Ux25CmsJoseValidationLiveUITest.class
+                FXMLLoader loader = UiTestFxml.loader(Ux25CmsJoseValidationLiveUITest.class
                         .getResource("/fxml/cms_inspector.fxml"));
                 TitledPane root = loader.load();
                 CmsInspectorController controller = loader.getController();
@@ -300,7 +300,7 @@ class Ux25CmsJoseValidationLiveUITest {
 
         private static JoseFixture load() {
             try {
-                FXMLLoader loader = new FXMLLoader(Ux25CmsJoseValidationLiveUITest.class
+                FXMLLoader loader = UiTestFxml.loader(Ux25CmsJoseValidationLiveUITest.class
                         .getResource("/fxml/jose.fxml"));
                 Parent root = loader.load();
                 JOSEController controller = loader.getController();

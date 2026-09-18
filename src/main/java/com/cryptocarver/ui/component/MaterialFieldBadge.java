@@ -9,6 +9,9 @@ import javafx.scene.control.TextInputControl;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Reusable material field status badge and validator indicator.
@@ -30,6 +33,7 @@ public class MaterialFieldBadge extends Label {
     private ComboBox<String> formatCombo;
     private TextInputControl targetInput;
     private Integer expectedBytes;
+    private Set<Integer> acceptedByteLengths;
     private Status currentStatus = Status.EMPTY;
     private int currentByteCount = 0;
     private String currentFormatName = "UTF-8";
@@ -81,6 +85,15 @@ public class MaterialFieldBadge extends Label {
 
     public void setExpectedBytes(Integer expectedBytes) {
         this.expectedBytes = expectedBytes;
+        this.acceptedByteLengths = null;
+        updateState();
+    }
+
+    public void setAcceptedByteLengths(int... acceptedByteLengths) {
+        this.expectedBytes = null;
+        this.acceptedByteLengths = acceptedByteLengths == null
+                ? null
+                : IntStream.of(acceptedByteLengths).boxed().collect(Collectors.toUnmodifiableSet());
         updateState();
     }
 
@@ -207,7 +220,13 @@ public class MaterialFieldBadge extends Label {
                 errorDetail = "Odd hex length (" + hexClean.length() + " chars)";
             } else {
                 byteCount = hexClean.length() / 2;
-                if (expectedBytes != null && expectedBytes > 0 && byteCount != expectedBytes) {
+                if (acceptedByteLengths != null && !acceptedByteLengths.isEmpty()
+                        && !acceptedByteLengths.contains(byteCount)) {
+                    valid = false;
+                    String expected = acceptedByteLengths.stream().sorted()
+                            .map(String::valueOf).collect(Collectors.joining(" or "));
+                    errorDetail = byteCount + "B (expected " + expected + "B)";
+                } else if (expectedBytes != null && expectedBytes > 0 && byteCount != expectedBytes) {
                     valid = false;
                     errorDetail = byteCount + "B (expected " + expectedBytes + "B)";
                 }

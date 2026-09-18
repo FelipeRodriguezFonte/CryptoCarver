@@ -97,7 +97,7 @@ class IncludedPaneI18nUITest {
                                          String spanishTitle, String spanishContentFragment)
             throws Exception {
         onFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(
+            FXMLLoader loader = UiTestFxml.loader(
                     IncludedPaneI18nUITest.class.getResource(resource));
             assertNotNull(loader.getLocation(), "missing resource " + resource);
             loader.load();

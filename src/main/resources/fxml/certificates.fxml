@@ -108,8 +108,8 @@
                     <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
                         <ComboBox fx:id="certTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                        <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                        <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                        <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
                             <items>
                                 <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCertTemplate"/>
                                 <MenuItem text="Export Selected Template..." onAction="#handleExportCertTemplate"/>
@@ -117,7 +117,7 @@
                                 <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCertTemplate"/>
                             </items>
                         </MenuButton>
-                        <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
                     </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>
@@ -295,7 +295,7 @@
                             <Tab text="Encryption (EnvelopedData)">
                                 <content>
                                     <VBox spacing="12" styleClass="module-pane-content">
-                                        <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-padding: 0 0 5 0;">
+                                        <HBox styleClass="ux-inline-283ebdf400" spacing="15" alignment="CENTER_LEFT">
                                             <Label text="Source:" styleClass="form-label"/>
                                             <fx:define>
                                                 <ToggleGroup fx:id="cmsEncryptSourceToggleGroup"/>

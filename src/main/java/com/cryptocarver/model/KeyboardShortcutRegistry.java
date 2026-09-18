@@ -15,7 +15,6 @@ public class KeyboardShortcutRegistry {
             new KeyboardShortcutEntry("Save Session", "Shortcut+S", "Save current workspace state to session file", "File"),
             new KeyboardShortcutEntry("Import Key", "Shortcut+O", "Import cryptographic key or certificate file", "File"),
             new KeyboardShortcutEntry("Exit Application", "Shortcut+Q", "Close CryptoCarver workbench", "File"),
-            new KeyboardShortcutEntry("Clear Input", "Shortcut+Shift+I", "Clear all input fields in active view", "Edit"),
             new KeyboardShortcutEntry("Clear Output", "Shortcut+Shift+O", "Clear output results in active view", "Edit"),
             new KeyboardShortcutEntry("Copy Output", "Shortcut+Shift+C", "Copy operation result text to system clipboard", "Edit"),
             new KeyboardShortcutEntry("Toggle Side Panel", "Shortcut+B", "Show/hide navigation sidebar", "View"),

@@ -40,13 +40,13 @@ public enum SymmetricCipherSpec {
     ),
     TDES_CBC(
         "3DES/CBC/PKCS7Padding", "3DES", "CBC", "PKCS7Padding",
-        8, false, Set.of(24), "Legacy / laboratory",
-        "IV: 8 bytes / DES block size\nAAD: not supported\nAuthenticated encryption: no\nWARNING: 3DES is legacy; prefer AES-GCM or ChaCha20-Poly1305.", true
+        8, false, Set.of(16, 24), "Legacy / laboratory",
+        "Key: 16 bytes (expanded as K1/K2/K1) or 24 bytes\nIV: 8 bytes / DES block size\nAAD: not supported\nAuthenticated encryption: no\nWARNING: 3DES is legacy; prefer AES-GCM or ChaCha20-Poly1305.", true
     ),
     TDES_CBC_NO_PADDING(
         "3DES/CBC/NoPadding", "3DES", "CBC", "NoPadding",
-        8, false, Set.of(24), "Legacy / laboratory",
-        "IV: 8 bytes / DES block size\nPadding: none (payload must be a multiple of 8 bytes)\nAAD: not supported\nAuthenticated encryption: no\nWARNING: 3DES is legacy; prefer AES-GCM or ChaCha20-Poly1305.", true
+        8, false, Set.of(16, 24), "Legacy / laboratory",
+        "Key: 16 bytes (expanded as K1/K2/K1) or 24 bytes\nIV: 8 bytes / DES block size\nPadding: none (payload must be a multiple of 8 bytes)\nAAD: not supported\nAuthenticated encryption: no\nWARNING: 3DES is legacy; prefer AES-GCM or ChaCha20-Poly1305.", true
     );
 
     public final String algorithm;

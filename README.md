@@ -79,13 +79,24 @@ paneles separados dentro de **Keys → Tools**.
 
 **Analizador individual** — ámbito, algoritmo, tipo de clave, longitud y
 **fortaleza efectiva**, estado del material, envoltura, exportabilidad,
-Control Vector, TVV, MKVP, historia de seguridad y *pedigree*.
+Control Vector, TVV, MKVP, historia de seguridad y *pedigree*. El token se pega
+en hexadecimal o se carga desde un fichero binario (`.bin`, `.tok`, `.key`,
+`.dat`), y hay cuatro tokens de ejemplo —AES fixed, AES CIPHER variable-length,
+3DES `K1|K2|K1` y PKA RSA 2048— para probarlo sin datos reales.
 
 **Análisis en lote** — inventario normalizado de 18 columnas, estadísticas
 sobre 12 dimensiones, catálogo de 23 hallazgos de auditoría, e informes en
 `.txt` y `.csv`. Lee tres formas de pegar tokens, detectadas bloque a bloque:
 uno por línea, dos filas del host por token (dígito alto arriba, bajo abajo), o
-un bloque entero de hexadecimal apilado. Las tres se pueden forzar a mano.
+un bloque entero de hexadecimal apilado. Las tres se pueden forzar a mano. Un
+**lote de ejemplo** las enseña todas. Las estadísticas separan lo que un
+inventario tiene que separar: una DATA leída de su CV frente a una DATA con CV a
+ceros, un DES simple frente a una triple que colapsa a simple, o *no aplica*
+por ser externo, PKA o variable-length.
+
+Los tokens de ejemplo son byte a byte los de la herramienta en Python de la que
+sale este módulo, así que un informe de aquí se puede poner al lado de uno de
+allí.
 
 **Procedencia** — no se deduce de los bytes, así que se declara: copia cruda del
 data set, `CSNBKRR`/`CSNDKRR`, o inferir. Cambia cómo se leen un MKVP y un TVV
@@ -154,13 +165,14 @@ clave sin serlo.
 > claro. Usa claves de prueba. Los informes que genera llevan claves y tokens
 > enteros en hexadecimal.
 
-Desde la CLI, con los mismos cuatro verbos:
+Desde la CLI, con los mismos cuatro verbos. El `--cli` delante es obligatorio: sin
+él, el JAR abre la interfaz gráfica.
 
 ```bash
-java -jar cryptocarver.jar icsf-export --key 0123456789ABCDEFFEDCBA9876543210 --kek 404142434445464748494A4B4C4D4E4F --type EXPORTER
-java -jar cryptocarver.jar icsf-import --token 020000000000C000... --kek 404142434445464748494A4B4C4D4E4F
-java -jar cryptocarver.jar icsf-inspect --token 020000000000C000...
-java -jar cryptocarver.jar icsf-resolve --token 020000000000C000... --kek 4041... --expected-key 0123...
+java -jar cryptocarver.jar --cli icsf-export --key 0123456789ABCDEFFEDCBA9876543210 --kek 404142434445464748494A4B4C4D4E4F --type EXPORTER
+java -jar cryptocarver.jar --cli icsf-import --token 020000000000C000... --kek 404142434445464748494A4B4C4D4E4F
+java -jar cryptocarver.jar --cli icsf-inspect --token 020000000000C000...
+java -jar cryptocarver.jar --cli icsf-resolve --token 020000000000C000... --kek 4041... --expected-key 0123...
 ```
 
 | Opción | Para qué |
@@ -177,11 +189,18 @@ java -jar cryptocarver.jar icsf-resolve --token 020000000000C000... --kek 4041..
 Con `--json` los veredictos salen como **códigos** (`MATCHES_KEY`, `POSSIBLE_EVEN`)
 además de como texto, para poder ramificar en un script sin depender del idioma.
 
-Desde la CLI:
+> **Si vienes de `icsf_keywrap.py`.** Las opciones van en inglés y hay una que
+> se llama igual pero **no hace lo mismo**: el `--nocv` del Python envuelve con el
+> KEK sin variante, y aquí eso es `--variant nocv`; el `--nocv` de aquí solo marca
+> el bit NOCV en el token, que en el Python es `--marcar-nocv`. Y el byte 4: el
+> Python escribe por defecto X'01' (Tabla 616) y aquí X'00' (hosts reales); para
+> que los dos tokens salgan idénticos, añade `--table616-version`.
+
+Los analizadores, desde la CLI (también con `--cli` delante):
 
 ```bash
-java -jar cryptocarver.jar icsf-token 020000000100C000... --provenance kds-crudo
-java -jar cryptocarver.jar icsf-batch tokens.txt --csv inventario.csv --txt informe.txt --no-detail
+java -jar cryptocarver.jar --cli icsf-token 020000000100C000... --provenance kds-crudo
+java -jar cryptocarver.jar --cli icsf-batch tokens.txt --csv inventario.csv --txt informe.txt --no-detail
 ```
 
 ### 💳 Algoritmos de Pago

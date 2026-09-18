@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.AsymmetricCipher;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.SymmetricCipher;
 import com.cryptocarver.crypto.StreamingCipher;
+import com.cryptocarver.crypto.FormatPreservingEncryption;
 import com.cryptocarver.crypto.LineFileCipher;
 import com.cryptocarver.crypto.EBCDICConverter;
 import com.cryptocarver.model.OperationResult;
@@ -12,7 +13,6 @@ import com.cryptocarver.utils.OperationHistory;
 import com.cryptocarver.model.FileCipherRecipe;
 import com.cryptocarver.model.FileCipherRecipeCodec;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -23,6 +23,8 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -53,11 +55,15 @@ import java.util.Map;
  */
 public class CipherController {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CipherController.class);
+    private final DialogService dialogService = new DialogService();
+
     @FXML private VBox cipherRoot;
     private ModuleI18n.Binding moduleI18n;
 
     @FXML private TextArea cipherInputArea;
     @FXML private TextArea cipherOutputArea;
+    @FXML private ResultPanel cipherResultPanel;
     private ComboBox<String> cipherInputFormatCombo;
     private ComboBox<String> outputFormatCombo;
     private StatusReporter statusReporter;
@@ -92,6 +98,16 @@ public class CipherController {
     @FXML private Label ivBadgeLabel;
     @FXML private Label gcmTagBadgeLabel;
     @FXML private Label aadBadgeLabel;
+
+    // Format-preserving encryption workbench
+    @FXML private ComboBox<String> fpeOperationCombo;
+    @FXML private ComboBox<String> fpeAlgorithmCombo;
+    @FXML private ComboBox<String> fpeAlphabetPresetCombo;
+    @FXML private TextField fpeKeyField;
+    @FXML private TextField fpeTweakField;
+    @FXML private TextField fpeAlphabetField;
+    @FXML private TextArea fpeInputArea;
+    @FXML private TextArea fpeOutputArea;
 
     // Last AEAD encryption components, kept separately from the rendered result.
     private String lastAeadCiphertext;
@@ -174,6 +190,27 @@ public class CipherController {
                 fileCipherLineCharsetCombo, fileCipherCompactCbcCheck);
         setRSACombos(rsaPaddingCombo, asymmetricInputFormatCombo, asymmetricOutputFormatCombo);
 
+        if (fpeOperationCombo != null) fpeOperationCombo.getItems().setAll("ENCRYPT", "DECRYPT");
+        if (fpeAlgorithmCombo != null) fpeAlgorithmCombo.getItems().setAll("FF1", "FF3_1");
+        if (fpeOperationCombo != null) fpeOperationCombo.setValue("ENCRYPT");
+        if (fpeAlgorithmCombo != null) fpeAlgorithmCombo.setValue("FF1");
+        if (fpeAlphabetPresetCombo != null) {
+            fpeAlphabetPresetCombo.getItems().setAll("Decimal (0-9)", "Alphanumeric", "ASCII printable", "Custom");
+            fpeAlphabetPresetCombo.setValue("Decimal (0-9)");
+            fpeAlphabetField.setText("0123456789");
+            fpeAlphabetPresetCombo.valueProperty().addListener((obs, oldValue, value) -> {
+                if ("Decimal (0-9)".equals(value)) fpeAlphabetField.setText("0123456789");
+                else if ("Alphanumeric".equals(value)) fpeAlphabetField.setText("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+                else if ("ASCII printable".equals(value)) {
+                    StringBuilder b = new StringBuilder();
+                    for (int i = 0x20; i <= 0x7e; i++) b.append((char) i);
+                    fpeAlphabetField.setText(b.toString());
+                } else fpeAlphabetField.clear();
+            });
+        }
+        setupHexValidation(fpeKeyField);
+        setupHexValidation(fpeTweakField);
+
         setupHexValidation(symmetricKeyField);
         setupHexValidation(ivField);
         setupHexValidation(gcmTagField);
@@ -187,6 +224,36 @@ public class CipherController {
 
         refreshCipherTemplateCombo();
         updateModeAndAlgorithmVisibility();
+        if (cipherOutputArea != null && cipherResultPanel != null) {
+            cipherOutputArea.textProperty().addListener((obs, oldValue, value) ->
+                    cipherResultPanel.showText("Cipher", value));
+            cipherResultPanel.connectTo(() -> statusReporter);
+            if (cipherInputArea != null) {
+                cipherResultPanel.setChainHandler(cipherInputArea::setText);
+            }
+        }
+    }
+
+    @FXML
+    public void handleFpe() {
+        try {
+            String input = fpeInputArea == null ? "" : fpeInputArea.getText();
+            String alphabet = fpeAlphabetField == null ? "" : fpeAlphabetField.getText();
+            byte[] key = DataConverter.hexToBytes(fpeKeyField.getText().trim());
+            byte[] tweak = fpeTweakField.getText().trim().isEmpty()
+                    ? new byte[0] : DataConverter.hexToBytes(fpeTweakField.getText().trim());
+            FormatPreservingEncryption.Algorithm algorithm = FormatPreservingEncryption.Algorithm.valueOf(fpeAlgorithmCombo.getValue());
+            boolean encrypt = "ENCRYPT".equals(fpeOperationCombo.getValue());
+            String result = encrypt
+                    ? FormatPreservingEncryption.encrypt(algorithm, input, key, alphabet, tweak)
+                    : FormatPreservingEncryption.decrypt(algorithm, input, key, alphabet, tweak);
+            fpeOutputArea.setText(result);
+            if (statusReporter != null) statusReporter.updateStatus("FPE " + (encrypt ? "encryption" : "decryption") + " completed");
+        } catch (Exception e) {
+            if (statusReporter != null) statusReporter.showError("FPE Error", e.getMessage());
+            else if (fpeOutputArea != null) fpeOutputArea.setText("Error: " + e.getMessage());
+            LOG.warn("FPE operation failed", e);
+        }
     }
 
     @FXML
@@ -739,7 +806,7 @@ public class CipherController {
             }
         } catch (Exception e) {
             statusReporter.showError("Load Error", "Failed to load Public Key: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Unable to load public key", e);
         }
     }
 
@@ -784,7 +851,7 @@ public class CipherController {
             }
         } catch (Exception e) {
             statusReporter.showError("Load Error", "Failed to load Private Key: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Unable to load private key", e);
         }
     }
 
@@ -943,13 +1010,9 @@ public class CipherController {
 
             // Security warning
             if (RecipeUIHelper.requiresSecurityWarning(recipe)) {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("Advertencia de Seguridad");
-                alert.setHeaderText("Exportando IV/Nonce o AAD");
-                alert.setContentText("El archivo de receta contendrá el IV/Nonce o AAD.\n" +
+                dialogService.warning("Advertencia de Seguridad", "Exportando IV/Nonce o AAD\n\nEl archivo de receta contendrá el IV/Nonce o AAD.\n" +
                         "La clave secreta NUNCA se exportará.\n" +
                         "(Reusar un IV/Nonce con la misma clave en modo fichero o CBC compromete la seguridad).");
-                alert.showAndWait();
             }
 
             FileChooser chooser = new FileChooser();
@@ -961,11 +1024,7 @@ public class CipherController {
                 statusReporter.updateStatus("Receta exportada a " + dest.getName());
             }
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error de Exportación");
-            alert.setHeaderText("No se pudo exportar la receta");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            dialogService.error("Error de Exportación", "No se pudo exportar la receta\n\n" + e.getMessage());
         }
     }
 
@@ -1013,22 +1072,14 @@ public class CipherController {
                 boolean isAeadLines = recipe.isLinesMode() &&
                         ("AES-256-GCM".equals(recipe.getAlgorithm()) || "ChaCha20-Poly1305".equals(recipe.getAlgorithm()));
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Receta Importada");
-                alert.setHeaderText("Receta v" + recipe.getVersion() + " cargada con éxito");
-                alert.setContentText("Algoritmo: " + recipe.getAlgorithm() +
+                dialogService.info("Receta Importada", "Receta v" + recipe.getVersion() + " cargada con éxito\n\nAlgoritmo: " + recipe.getAlgorithm() +
                         "\nModo Líneas: " + recipe.isLinesMode() +
                         (isAeadLines ? " (cada registro generará su propio nonce/tag)" : "") +
                         "\nFormato: " + (recipe.getLineEncoding() != null ? recipe.getLineEncoding() : "N/A") +
                         "\nLa Clave Secreta y Rutas de Fichero NO fueron sobrescritas.");
-                alert.showAndWait();
             }
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error de Importación");
-            alert.setHeaderText("No se pudo importar la receta");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            dialogService.error("Error de Importación", "No se pudo importar la receta\n\n" + e.getMessage());
         }
     }
 
@@ -1405,6 +1456,55 @@ public class CipherController {
         }
     }
 
+    /** Selects a usable Key Lab key for symmetric operations without revealing its bytes. */
+    public void selectLabKey(String keyId) {
+        var provider = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance();
+        var km = provider.getKeyMetadata(keyId);
+        if (km == null) throw new IllegalArgumentException("Key Lab entry was not found: " + keyId);
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) {
+            throw new IllegalArgumentException("Symmetric Cipher requires a symmetric Key Lab entry");
+        }
+        if ("ARCHIVED".equalsIgnoreCase(km.getStatus())) {
+            throw new IllegalArgumentException("Restore the archived Key Lab entry before using it");
+        }
+        if (!km.hasKeyMaterial()) {
+            throw new IllegalArgumentException("The selected Key Lab entry contains metadata only; re-import or regenerate its key material");
+        }
+        if (!km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT)
+                && !km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT)) {
+            throw new IllegalArgumentException("The selected Key Lab entry is not authorized for encryption or decryption");
+        }
+        symKeySourceCombo.setValue("Simulated HSM");
+        refreshHsmKeys();
+        if (!symHsmKeyCombo.getItems().contains(keyId)) {
+            throw new IllegalArgumentException("The selected key is not available to the Symmetric Cipher workspace");
+        }
+        symHsmKeyCombo.setValue(keyId);
+        selectAlgorithmForLabKey(km);
+        updateKeySourceVisibility();
+        updateModeAndAlgorithmVisibility();
+    }
+
+    private void selectAlgorithmForLabKey(com.cryptocarver.crypto.hsm.KeyMaterial km) {
+        if (symmetricAlgorithmCombo == null || km.getAlgorithm() == null) return;
+        String stored = km.getAlgorithm().toUpperCase(java.util.Locale.ROOT);
+        String target = null;
+        if (stored.equals("AES") || stored.startsWith("AES-")) {
+            target = "AES-" + km.getSize();
+        } else if (stored.equals("3DES") || stored.equals("DESEDE") || stored.contains("TRIPLE DES")) {
+            target = "3DES (Triple DES)";
+        } else if (stored.equals("DES")) {
+            target = "DES";
+        } else if (stored.contains("XCHACHA20")) {
+            target = "XChaCha20-Poly1305";
+        } else if (stored.contains("CHACHA20")) {
+            target = "ChaCha20";
+        }
+        if (target != null && symmetricAlgorithmCombo.getItems().contains(target)) {
+            symmetricAlgorithmCombo.setValue(target);
+        }
+    }
+
     public void saveCurrentKeyToHsm() {
         try {
             if (symmetricKeyField == null || symmetricKeyField.getText().trim().isEmpty()) {
@@ -1470,23 +1570,13 @@ public class CipherController {
      * Generate IV based on current algorithm
      */
     public void generateIV() {
-        if (ivField == null)
+        if (ivField == null || symmetricAlgorithmCombo == null || cipherModeCombo == null)
             return;
 
         String algorithm = symmetricAlgorithmCombo.getValue();
         String mode = cipherModeCombo.getValue();
-        int ivLength;
-
-        // Determine correct IV length
-        if (algorithm.equals("ChaCha20") || algorithm.equals("ChaCha20-Poly1305")) {
-            ivLength = 12; // 96 bits for ChaCha20 (RFC 7539 standard)
-        } else if (algorithm.equals("XChaCha20-Poly1305")) {
-            ivLength = 24; // 192 bits for XChaCha20
-        } else if (mode.equalsIgnoreCase("GCM")) {
-            ivLength = 12; // 96 bits recommended for GCM
-        } else {
-            ivLength = 16; // Default to 128 bits (16 bytes) for AES blocks etc.
-        }
+        int ivLength = SymmetricCipher.getRecommendedIvLength(algorithm, mode);
+        if (ivLength == 0) return;
 
         byte[] iv = new byte[ivLength];
         new java.security.SecureRandom().nextBytes(iv);
@@ -2746,35 +2836,42 @@ public class CipherController {
         if (symKeyBadgeLabel != null && symKeyBadge == null) {
             symKeyBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Manual Key");
             symKeyBadge.attach(symmetricKeyField, "Hex");
-            symKeyBadge.textProperty().addListener((obs, oldVal, newVal) -> symKeyBadgeLabel.setText(newVal));
-            symKeyBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                symKeyBadgeLabel.getStyleClass().setAll(symKeyBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(symKeyBadge, symKeyBadgeLabel);
         }
         if (ivBadgeLabel != null && ivBadge == null) {
             ivBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("IV / Nonce");
             ivBadge.attach(ivField, "Hex");
-            ivBadge.textProperty().addListener((obs, oldVal, newVal) -> ivBadgeLabel.setText(newVal));
-            ivBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                ivBadgeLabel.getStyleClass().setAll(ivBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(ivBadge, ivBadgeLabel);
         }
         if (gcmTagBadgeLabel != null && tagBadge == null) {
             tagBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("AEAD Tag");
             tagBadge.attach(gcmTagField, "Hex");
-            tagBadge.textProperty().addListener((obs, oldVal, newVal) -> gcmTagBadgeLabel.setText(newVal));
-            tagBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                gcmTagBadgeLabel.getStyleClass().setAll(tagBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(tagBadge, gcmTagBadgeLabel);
         }
         if (aadBadgeLabel != null && aadBadge == null) {
             aadBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("AAD");
             aadBadge.attach(aadField, "Hex / ASCII");
-            aadBadge.textProperty().addListener((obs, oldVal, newVal) -> aadBadgeLabel.setText(newVal));
-            aadBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                aadBadgeLabel.getStyleClass().setAll(aadBadge.getStyleClass());
-            });
+            mirrorMaterialBadge(aadBadge, aadBadgeLabel);
         }
+    }
+
+    private static void mirrorMaterialBadge(
+            com.cryptocarver.ui.component.MaterialFieldBadge source,
+            Label target) {
+        Runnable sync = () -> {
+            target.setText(source.getText());
+            target.getStyleClass().setAll(source.getStyleClass());
+            boolean hasUsefulStatus = source.getCurrentStatus()
+                    != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY;
+            boolean show = hasUsefulStatus && source.isVisible() && source.isManaged();
+            target.setVisible(show);
+            target.setManaged(show);
+        };
+        source.textProperty().addListener((obs, oldVal, newVal) -> sync.run());
+        source.visibleProperty().addListener((obs, oldVal, newVal) -> sync.run());
+        source.managedProperty().addListener((obs, oldVal, newVal) -> sync.run());
+        source.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> sync.run());
+        sync.run();
     }
 
     private void updateMaterialBadges(String algo, String mode, boolean isStreamCipher, boolean isAEAD, boolean isXChaChaPoly, boolean isChaChaPoly, boolean isGCM) {
@@ -2801,13 +2898,17 @@ public class CipherController {
                 symKeyBadge.updateStateIncomplete("Select HSM Key from Lab");
             }
         } else if (symKeyBadge != null) {
-            symKeyBadge.setExpectedBytes(expectedKeyBytes);
+            if (algoUpper.contains("3DES") || algoUpper.contains("TRIPLEDES")) {
+                symKeyBadge.setAcceptedByteLengths(16, 24);
+            } else {
+                symKeyBadge.setExpectedBytes(expectedKeyBytes);
+            }
             symKeyBadge.updateState();
         }
 
-        int expectedNonceBytes = isXChaChaPoly ? 24 : (isGCM || isChaChaPoly ? 12 : (isStreamCipher ? 8 : 16));
+        int expectedNonceBytes = SymmetricCipher.getRecommendedIvLength(algo, mode);
         if (ivBadge != null) {
-            ivBadge.setExpectedBytes(expectedNonceBytes);
+            if (expectedNonceBytes > 0) ivBadge.setExpectedBytes(expectedNonceBytes);
             ivBadge.updateState();
         }
         if (tagBadge != null) {
@@ -2816,6 +2917,22 @@ public class CipherController {
         }
         if (aadBadge != null) {
             aadBadge.updateState();
+        }
+
+        setBadgeVisibility(symKeyBadgeLabel, symKeyBadge != null
+                && symKeyBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+        setBadgeVisibility(ivBadgeLabel, expectedNonceBytes > 0 && ivBadge != null
+                && ivBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+        setBadgeVisibility(gcmTagBadgeLabel, isAEAD && tagBadge != null
+                && tagBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+        setBadgeVisibility(aadBadgeLabel, isAEAD && aadBadge != null
+                && aadBadge.getCurrentStatus() != com.cryptocarver.ui.component.MaterialFieldBadge.Status.EMPTY);
+    }
+
+    private static void setBadgeVisibility(Label badgeLabel, boolean visible) {
+        if (badgeLabel != null) {
+            badgeLabel.setVisible(visible);
+            badgeLabel.setManaged(visible);
         }
     }
 
@@ -3506,7 +3623,7 @@ public class CipherController {
         for (String algorithm : SymmetricCipher.SUPPORTED_ALGORITHMS) {
             if (algorithm.equals("DES") && keyLength == 8) {
                 candidates.add(algorithm);
-            } else if (algorithm.contains("3DES") && keyLength == 24) {
+            } else if (algorithm.contains("3DES") && (keyLength == 16 || keyLength == 24)) {
                 candidates.add(algorithm);
             } else if (algorithm.equals("AES-128") && keyLength == 16) {
                 candidates.add(algorithm);
@@ -4456,11 +4573,8 @@ public class CipherController {
         }
 
         if (cipherInputFormatCombo != null && !cipherInputFormatCombo.getItems().contains(targetFormat)) {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
-            alert.setTitle("Format Not Supported");
-            alert.setHeaderText("Incompatible Format");
-            alert.setContentText("The format " + format + " is not supported by Symmetric Cipher Input.");
-            alert.showAndWait();
+            dialogService.warning("Format Not Supported", "Incompatible Format\n\nThe format " + format
+                    + " is not supported by Symmetric Cipher Input.");
             return;
         }
 

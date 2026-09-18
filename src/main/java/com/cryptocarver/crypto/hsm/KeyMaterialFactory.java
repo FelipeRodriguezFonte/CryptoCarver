@@ -11,9 +11,14 @@ import javax.crypto.SecretKey;
 public class KeyMaterialFactory {
 
     public static KeyMaterial fromSecretKey(String id, SecretKey key, KeyExportability exportability, Set<KeyUsage> usages) {
+        return fromSecretKey(id, key, exportability, usages, 3);
+    }
+
+    public static KeyMaterial fromSecretKey(String id, SecretKey key, KeyExportability exportability, Set<KeyUsage> usages,
+                                            int kcvLength) {
         if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
         int size = key.getEncoded() != null ? key.getEncoded().length * 8 : 0;
-        String kcvVal = calculateKcv(key);
+        String kcvVal = calculateKcv(key, kcvLength);
         return new KeyMaterial(
                 id,
                 generateFingerprint(key.getEncoded()),
@@ -105,17 +110,17 @@ public class KeyMaterialFactory {
         );
     }
 
-    private static String calculateKcv(SecretKey key) {
+    private static String calculateKcv(SecretKey key, int kcvLength) {
         byte[] encoded = key.getEncoded();
         if (encoded == null) return "N/A";
         try {
             byte[] kcvBytes;
             if (key.getAlgorithm().toUpperCase().contains("AES")) {
-                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_AES(encoded);
+                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_AES(encoded, kcvLength);
             } else if (key.getAlgorithm().toUpperCase().contains("DES") || key.getAlgorithm().toUpperCase().contains("3DES")) {
-                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_VISA(encoded);
+                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_VISA(encoded, kcvLength);
             } else {
-                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_SHA256(encoded);
+                kcvBytes = com.cryptocarver.crypto.KeyOperations.calculateKCV_SHA256(encoded, kcvLength);
             }
             return com.cryptocarver.util.DataConverter.bytesToHex(kcvBytes).toUpperCase();
         } catch (Exception e) {

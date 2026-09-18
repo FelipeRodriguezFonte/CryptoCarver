@@ -102,6 +102,21 @@ public class MaterialFieldBadgeTest {
     }
 
     @Test
+    public void testAcceptedByteLengthsConstraint() {
+        TextField input = new TextField("0123456789ABCDEFFEDCBA9876543210");
+        MaterialFieldBadge badge = new MaterialFieldBadge("3DES Key");
+        badge.setAcceptedByteLengths(16, 24);
+        badge.attach(input, "Hex");
+
+        assertEquals(MaterialFieldBadge.Status.VALID, badge.getCurrentStatus());
+        input.setText("0123456789ABCDEFFEDCBA98765432100123456789ABCDEF");
+        assertEquals(MaterialFieldBadge.Status.VALID, badge.getCurrentStatus());
+        input.setText("0011223344556677");
+        assertEquals(MaterialFieldBadge.Status.INVALID, badge.getCurrentStatus());
+        assertTrue(badge.getText().contains("expected 16 or 24B"));
+    }
+
+    @Test
     public void testBase64FormatValidation() {
         TextField input = new TextField();
         ComboBox<String> formatCombo = new ComboBox<>();

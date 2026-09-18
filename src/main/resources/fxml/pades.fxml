@@ -12,7 +12,7 @@
             <TitledPane text="PDF Advanced Electronic Signatures (PAdES)" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="PAdES laboratory — local PKCS#12 signing key" styleClass="helper-text"/>
-                    <Label text="Signs PDF incrementally as Baseline-B, or Baseline-T when timestamping is explicitly enabled. It never overwrites an output file. 64 MiB limit." wrapText="true" styleClass="helper-text" style="-fx-text-fill: #9a3412;"/>
+                    <Label text="Signs PDF incrementally as Baseline-B, or Baseline-T when timestamping is explicitly enabled. It never overwrites an output file. 64 MiB limit." wrapText="true" styleClass="helper-text ux-inline-47dcc17db5"/>
 
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
@@ -61,7 +61,7 @@
                     </HBox>
 
                     <CheckBox fx:id="padesVisibleSignatureCheck" text="Add visible signature text" onAction="#handleVisibleSignatureOptionChanged"/>
-                    <VBox fx:id="padesVisibleSignatureBox" spacing="8" visible="false" managed="false" style="-fx-padding: 0 0 0 16;">
+                    <VBox styleClass="ux-inline-04a9b71194" fx:id="padesVisibleSignatureBox" spacing="8" visible="false" managed="false">
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <Label text="Page" styleClass="form-label"/><TextField fx:id="padesVisiblePageField" text="1" prefWidth="45" styleClass="form-field"/>
                             <Label text="X" styleClass="form-label"/><TextField fx:id="padesVisibleXField" text="40" prefWidth="55" styleClass="form-field"/>

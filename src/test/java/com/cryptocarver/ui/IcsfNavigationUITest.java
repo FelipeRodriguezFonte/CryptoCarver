@@ -123,7 +123,7 @@ class IcsfNavigationUITest {
     private static Fixture openKeysWithATallPaneExpanded() throws Exception {
         Fixture fixture = new Fixture();
         onFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(IcsfNavigationUITest.class.getResource("/fxml/main-view-modern.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(IcsfNavigationUITest.class.getResource("/fxml/main-view-modern.fxml"));
             Parent root = loader.load();
             ModernMainController controller = loader.getController();
             Scene scene = new Scene(root, 1400, 900);

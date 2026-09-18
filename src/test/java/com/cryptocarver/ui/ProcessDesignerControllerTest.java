@@ -51,7 +51,7 @@ class ProcessDesignerControllerTest {
     @Test
     void contextualInspectorVisibilityIsCorrect() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root);
             ProcessDesignerController controller = loader.getController();
@@ -82,7 +82,7 @@ class ProcessDesignerControllerTest {
     @Test
     void deleteSelectedRemovesConnectionBetweenTwoSelectedNodesBeforeDeletingNodes() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             loader.load();
             ProcessDesignerController controller = loader.getController();
             var definition = controller.toDefinition();
@@ -103,7 +103,7 @@ class ProcessDesignerControllerTest {
     @Test
     void addsBase64UrlNodes() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root);
             ProcessDesignerController controller = loader.getController();
@@ -119,7 +119,7 @@ class ProcessDesignerControllerTest {
     @Test
     void nodeNameCanBeEditedWithoutChangingItsOperation() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             loader.load();
             ProcessDesignerController controller = loader.getController();
             controller.handleAddEncrypt();
@@ -136,7 +136,7 @@ class ProcessDesignerControllerTest {
     @Test
     void presetsLoadEditableAndCryptographicExamplesExecute() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             loader.load();
             ProcessDesignerController controller = loader.getController();
 
@@ -160,7 +160,7 @@ class ProcessDesignerControllerTest {
     @Test
     void phase3EncryptUIAndExecution() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root);
             ProcessDesignerController controller = loader.getController();
@@ -206,7 +206,7 @@ class ProcessDesignerControllerTest {
     @Test
     void phase3VerifyUIMultiPort() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root);
             ProcessDesignerController controller = loader.getController();
@@ -266,7 +266,7 @@ class ProcessDesignerControllerTest {
     @Test
     void connectsOperationToOutputWhenSelectionOrderIsReversed() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             new Scene(root);
             ProcessDesignerController controller = loader.getController();
@@ -293,7 +293,7 @@ class ProcessDesignerControllerTest {
     @Test
     void gcmInspectorAndConnectionMenuExposeAadPort() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             new Scene(root);
             ProcessDesignerController controller = loader.getController();
@@ -332,7 +332,7 @@ class ProcessDesignerControllerTest {
     @Test
     void phase35_fileInputModeTogglesCharsetVisibility() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             ProcessDesignerController controller = loader.getController();
 
@@ -360,7 +360,7 @@ class ProcessDesignerControllerTest {
 
         runOnFxThread(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 Parent root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 ctrlRef.set(controller);
@@ -442,7 +442,7 @@ class ProcessDesignerControllerTest {
     @Test
     void generatedKeyCanBeConnectedToEncryptAndDecryptFromTheCanvas() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             loader.load();
             ProcessDesignerController controller = loader.getController();
             controller.handleClearCanvas();
@@ -492,7 +492,7 @@ class ProcessDesignerControllerTest {
 
         runOnFxThread(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 Parent root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 ctrlRef.set(controller);
@@ -542,7 +542,7 @@ class ProcessDesignerControllerTest {
 
         runOnFxThread(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 Parent root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 ctrlRef.set(controller);
@@ -578,7 +578,7 @@ class ProcessDesignerControllerTest {
     @Test
     void phase37_uiIsolationsAndConstraints() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             ProcessDesignerController controller = loader.getController();
 
@@ -601,7 +601,7 @@ class ProcessDesignerControllerTest {
     @Test
     void phase38_decryptUiExpansion() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             Parent root = loader.load();
             ProcessDesignerController controller = loader.getController();
 
@@ -625,7 +625,7 @@ class ProcessDesignerControllerTest {
     @Test
     void wssBodyEncryptionNodesExposeOnlyRelevantConfiguration() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             loader.load();
             ProcessDesignerController controller = loader.getController();
 
@@ -657,7 +657,7 @@ class ProcessDesignerControllerTest {
     @Test
     void wssSignatureAndUsernameTokenNodesExposeContextualInspector() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
             loader.load();
             ProcessDesignerController controller = loader.getController();
 

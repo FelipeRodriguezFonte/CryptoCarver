@@ -79,7 +79,7 @@ class Ux28bAsymmetricShelfLiveUITest {
 
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 mainController = loader.getController();
                 keysController = mainController.getKeysController();
@@ -119,7 +119,8 @@ class Ux28bAsymmetricShelfLiveUITest {
         TabPane rsaTabs = readField(keysController, "rsaKeyMaterialTabs");
         Button rsaPublicSend = readField(keysController, "rsaSendShelfBtn");
         Button rsaPrivateSend = readField(keysController, "rsaSendPrivateShelfBtn");
-        Button globalShelf = readField(mainController, "toolbarShelfButton");
+        // "Add to Shelf" moved out of the global toolbar into the result area.
+        Button globalShelf = readField(mainController, "resultShelfButton");
         MenuItem shelfShortcut = readField(mainController, "clipboardShelfMenuItem");
         TextField shelfSearch = readField(readField(mainController, "clipboardShelfController"), "searchField");
 
@@ -209,8 +210,19 @@ class Ux28bAsymmetricShelfLiveUITest {
         assertFalse(ecdsaPublic.getValue().contains("=== ECDSA"));
     }
 
+    /**
+     * The status message without the status bar's own decoration.
+     *
+     * <p>The bar renders "{@code <icon> <message> · <time>}", and neither the icon nor the
+     * wall-clock time is what these assertions are about.
+     */
     private String readStatus() throws Exception {
-        return runAndGet(() -> ((javafx.scene.control.Label) readFieldUnchecked(mainController, "statusLabel")).getText());
+        String rendered = runAndGet(
+                () -> ((javafx.scene.control.Label) readFieldUnchecked(mainController, "statusLabel")).getText());
+        if (rendered == null) return null;
+        String withoutIcon = rendered.replaceFirst("^[✓×]\\s*", "");
+        int separator = withoutIcon.lastIndexOf(" · ");
+        return separator < 0 ? withoutIcon : withoutIcon.substring(0, separator);
     }
 
     private ClipboardEntry onlyEntryWithValue(String value) {

@@ -39,7 +39,7 @@ class Ux24LegacyValidationLiveUITest {
     void realAsn1FxmlRouteUsesSharedErrorContractAndFieldKey() throws Exception {
         final RecordingReporter[] reporter = new RecordingReporter[1];
         fx(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/asn1.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/asn1.fxml"));
             try {
                 Parent root = loader.load();
                 ASN1Controller controller = loader.getController();

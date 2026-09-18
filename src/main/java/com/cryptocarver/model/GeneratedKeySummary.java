@@ -133,6 +133,22 @@ public class GeneratedKeySummary implements Serializable {
         return kcv3BytesHex;
     }
 
+    /**
+     * Return the conventional zero-block KCV truncated to the requested byte length.
+     */
+    public String getFormattedKcv(int byteLength) {
+        if (kcvErrorReason != null) {
+            return "KCV unavailable: " + kcvErrorReason;
+        }
+        if (byteLength < 1) {
+            throw new IllegalArgumentException("KCV length must be positive");
+        }
+        if (kcvFullHex == null || kcvFullHex.length() < byteLength * 2) {
+            return "KCV unavailable: Requested length exceeds encrypted block";
+        }
+        return kcvFullHex.substring(0, byteLength * 2);
+    }
+
     public String getFingerprintTruncated() {
         return fingerprintTruncated;
     }

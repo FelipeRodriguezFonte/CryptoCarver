@@ -3,6 +3,7 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.icsf.Diagnostic;
 import com.cryptocarver.crypto.icsf.IcsfMessages;
 import com.cryptocarver.crypto.icsf.IcsfHex;
+import com.cryptocarver.crypto.icsf.IcsfSamples;
 import com.cryptocarver.crypto.icsf.IcsfTokenParser;
 import com.cryptocarver.crypto.icsf.IcsfTokenReport;
 import com.cryptocarver.crypto.icsf.Origin;
@@ -24,8 +25,10 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 /**
@@ -40,9 +43,18 @@ import java.util.Map;
  * (CSNBKEX / CSNBKIM versus TR-31 export/import) are different services.</p>
  */
 public final class IcsfTokenController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
 
     /** One line of the summary card. */
     public record SummaryRow(String field, String value, String detail) { }
+
+    /**
+     * Anything past this is not a key token. Refusing it keeps a mistaken pick — a dump,
+     * a disk image — from flooding the input area with megabytes of hexadecimal.
+     */
+    static final int MAX_TOKEN_FILE_BYTES = 64 * 1024;
 
     @FXML private TitledPane icsfTokenPane;
     @FXML private VBox icsfTokenRoot;
@@ -105,7 +117,8 @@ public final class IcsfTokenController {
         // Binding the pane, not the inner box: ModuleI18n reaches the content through
         // TitledPane.getContent(), so one binding covers the title and everything below it.
         i18nBinding = ModuleI18n.bind(icsfTokenPane, ModuleTextCatalog.icsf());
-        I18nService.getInstance().addLocaleChangeListener(locale -> refreshLocalizedRuntimeText());
+        localeChangeListener = locale -> refreshLocalizedRuntimeText();
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
     }
 
     public void setStatusReporter(StatusReporter reporter) {
@@ -200,6 +213,76 @@ public final class IcsfTokenController {
         icsfTokenOriginCombo.setValue(Origin.INFER);
         icsfTokenFormatCombo.setValue(InputShape.LINEAR);
         feedback(t("icsf.token.reset", "Defaults restored."), false);
+    }
+
+    @FXML
+    private void handleLoadBinary() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(t("icsf.token.loadBinaryTitle", "Load a binary key token"));
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter(t("icsf.file.binary", "Binary key token"),
+                        "*.bin", "*.tok", "*.key", "*.dat"),
+                new FileChooser.ExtensionFilter(t("icsf.file.all", "All files"), "*.*"));
+        File source = chooser.showOpenDialog(icsfTokenRoot.getScene() == null
+                ? null : icsfTokenRoot.getScene().getWindow());
+        if (source != null) loadBinary(source.toPath());
+    }
+
+    /** Puts a binary token file into the input as hexadecimal. Kept apart from the dialog for tests. */
+    void loadBinary(Path source) {
+        String name = String.valueOf(source.getFileName());
+        try {
+            long size = Files.size(source);
+            if (size > MAX_TOKEN_FILE_BYTES) {
+                feedback(t("icsf.token.binaryTooLarge",
+                        "{0} is {1} bytes, far more than any key token: it is not one.", name, size), true);
+                return;
+            }
+            byte[] data = Files.readAllBytes(source);
+            if (data.length == 0) {
+                feedback(t("icsf.token.binaryEmpty", "{0} is empty: there is no token in it.", name), true);
+                return;
+            }
+            showInput(IcsfHex.hex(data));
+            feedback(t("icsf.token.loadedBinary", "Loaded {0} ({1} bytes). Press Analyze token.",
+                    name, data.length), false);
+        } catch (IOException exception) {
+            feedback(t("icsf.token.loadBinaryFailed", "Could not read the file: {0}",
+                    String.valueOf(exception.getMessage())), true);
+        }
+    }
+
+    @FXML
+    private void handleSampleAesFixed() {
+        loadSample(IcsfSamples.aesFixed(), "AES fixed");
+    }
+
+    @FXML
+    private void handleSampleVariableCipher() {
+        loadSample(IcsfSamples.variableLengthCipher(), "AES CIPHER var-length");
+    }
+
+    @FXML
+    private void handleSampleDesTriple() {
+        loadSample(IcsfSamples.desTripleK1K2K1(), "3DES K1|K2|K1");
+    }
+
+    @FXML
+    private void handleSamplePkaRsa() {
+        loadSample(IcsfSamples.pkaRsa2048(), "PKA RSA 2048");
+    }
+
+    private void loadSample(byte[] token, String name) {
+        showInput(IcsfHex.hex(token));
+        feedback(t("icsf.token.sampleLoaded", "Example loaded: {0}. Press Analyze token.", name), false);
+    }
+
+    /** New input: always linear hex, and whatever was analysed before no longer describes it. */
+    private void showInput(String hex) {
+        icsfTokenFormatCombo.setValue(InputShape.LINEAR);
+        icsfTokenInputArea.setText(hex);
+        summaryRows.clear();
+        icsfTokenDetailArea.clear();
     }
 
     // =====================================================================

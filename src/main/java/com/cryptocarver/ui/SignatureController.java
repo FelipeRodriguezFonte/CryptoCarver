@@ -1,4 +1,6 @@
 package com.cryptocarver.ui;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cryptocarver.crypto.SignatureOperations;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
@@ -15,6 +17,7 @@ import java.security.PublicKey;
  * @author Felipe
  */
 public class SignatureController {
+    private static final Logger LOG = LoggerFactory.getLogger(SignatureController.class);
 
     private MainController mainController;
 
@@ -112,7 +115,7 @@ public class SignatureController {
         } catch (Exception e) {
             mainController.showError("Signature Error",
                 "Error creating signature: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error creating signature", e);
         }
     }
 
@@ -202,7 +205,7 @@ public class SignatureController {
         } catch (Exception e) {
             mainController.showError("Verification Error",
                 "Error verifying signature: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error verifying signature", e);
         }
     }
 

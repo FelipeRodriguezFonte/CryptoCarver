@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.cryptocarver.ui.ResultPanel?>
 
 <VBox fx:id="paymentsContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.PaymentsController"
       managed="false" visible="false" spacing="14" styleClass="content-container-vbox,payments-module">
-    <HBox alignment="CENTER_RIGHT">
+    <VBox spacing="4" styleClass="page-header">
+        <Label text="Payments &amp; PIN" styleClass="content-title-label,page-title"/>
+        <Label text="Generate and verify payment credentials and PIN blocks using the selected payment standard." styleClass="helper-text,page-description" wrapText="true"/>
+    </VBox>
+    <HBox spacing="8" styleClass="page-actions" alignment="CENTER_RIGHT">
         <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
         <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
+    <ResultPanel fx:id="paymentsResultPanel"/>
     <Accordion styleClass="module-accordion">
         <panes>
             <TitledPane text="💳 CVV Operations (CVV/CVV2/iCVV)" expanded="true">
@@ -51,7 +57,7 @@
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Encode PIN Block" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
+                        <Label text="Encode PIN Block" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
                         <Label text="PIN (4-12 digits):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <TextField fx:id="pinField" promptText="Enter PIN" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
@@ -62,7 +68,7 @@
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2"/>
 
-                        <Label text="Decode PIN Block" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2"/>
+                        <Label text="Decode PIN Block" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2"/>
                         <Label text="PIN Block (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
                         <TextField fx:id="pinBlockField" promptText="16 or 32 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
@@ -78,7 +84,7 @@
             <TitledPane text="🔐 Encrypted PIN Blocks (ISO)">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="Format:" styleClass="form-label" style="-fx-font-weight: bold;"/>
+                        <Label text="Format:" styleClass="form-label ux-inline-689e8d50bc"/>
                         <ComboBox fx:id="encPinBlockFormatCombo" styleClass="form-field" prefWidth="250"/>
                     </HBox>
                     <Separator/>
@@ -87,7 +93,7 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Encode" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
+                        <Label text="Encode" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
                         <Label text="PIN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <TextField fx:id="encPinField" promptText="4-12 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
@@ -98,7 +104,7 @@
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2"/>
 
-                        <Label text="Decode" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2"/>
+                        <Label text="Decode" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2"/>
                         <Label text="Encrypted PIN Block (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
                         <TextField fx:id="encPinBlockFieldDecode" promptText="16 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
@@ -118,7 +124,7 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Generate PIN from Offset" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
+                        <Label text="Generate PIN from Offset" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
                         <Label text="PVK (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <TextField fx:id="ibm3624PvkField" promptText="16/32/48 hex (TDES)" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                         <Label text="Conversion Table:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
@@ -128,7 +134,7 @@
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
                         <TextField fx:id="ibm3624PanField" promptText="Up to 19 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
 
-                        <Label text="Validation Data Config" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2"/>
+                        <Label text="Validation Data Config" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2"/>
                         <HBox spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2">
                             <Label text="Start Pos:" styleClass="form-label"/><TextField fx:id="ibm3624StartField" text="0" styleClass="form-field" prefWidth="50"/>
                             <Label text="Length:" styleClass="form-label"/><TextField fx:id="ibm3624LengthField" text="16" styleClass="form-field" prefWidth="50"/>
@@ -139,7 +145,7 @@
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="8" GridPane.columnSpan="2"/>
 
-                        <Label text="Verify PIN" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="9" GridPane.columnSpan="2"/>
+                        <Label text="Verify PIN" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="9" GridPane.columnSpan="2"/>
                         <Label text="PIN to Verify:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="10"/>
                         <TextField fx:id="ibm3624PinVerifyField" promptText="4-12 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
                         <Button text="Verify PIN" onAction="#handleVerifyIbm3624Pin" styleClass="action-button,primary-action" maxWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="11"/>
@@ -155,7 +161,7 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Generate Offset (IBM 3624)" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
+                        <Label text="Generate Offset (IBM 3624)" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
                         <Label text="PVK (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <TextField fx:id="genOffsetPvkField" promptText="16/32 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                         <Label text="Dec Table (16 digits):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
@@ -175,7 +181,7 @@
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="8" GridPane.columnSpan="2"/>
 
-                        <Label text="Generate PVV (VISA)" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="9" GridPane.columnSpan="2"/>
+                        <Label text="Generate PVV (VISA)" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="9" GridPane.columnSpan="2"/>
                         <Label text="PVK (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="10"/>
                         <TextField fx:id="genPvvPvkField" promptText="16/32 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="11"/>
@@ -189,7 +195,7 @@
 
                         <Separator GridPane.columnIndex="0" GridPane.rowIndex="16" GridPane.columnSpan="2"/>
 
-                        <Label text="Derive PIN from PVV (VISA)" styleClass="form-label" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="17" GridPane.columnSpan="2"/>
+                        <Label text="Derive PIN from PVV (VISA)" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="17" GridPane.columnSpan="2"/>
                         <Label text="PVK (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="18"/>
                         <TextField fx:id="derivePvvPvkField" promptText="16/32 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="18"/>
                         <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="19"/>

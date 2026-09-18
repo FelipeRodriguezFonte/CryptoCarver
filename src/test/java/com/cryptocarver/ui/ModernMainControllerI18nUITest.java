@@ -66,7 +66,7 @@ class ModernMainControllerI18nUITest {
         AtomicReference<Menu> fileMenu = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 loader.load();
                 controller.set(loader.getController());
                 fileMenu.set(readField(controller.get(), "fileMenu"));
@@ -83,7 +83,7 @@ class ModernMainControllerI18nUITest {
             I18nService.getInstance().setPreference(LanguagePreference.ES);
             controller.get().navigateTo("Manual Conversion");
         });
-        Accordion generic = readField(controller.get(), "genericContainer");
+        Accordion generic = UiTestNodes.accordionIn(readField(controller.get(), "genericContainer"));
         assertEquals("🔤 Conversión manual", generic.getExpandedPane().getText(),
                 "Canonical sidebar routes must expand a pane after its visible text is localized");
     }

@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controller for Keys tab - Enhanced with asymmetric cryptography
@@ -35,6 +37,9 @@ import java.util.function.Consumer;
  * @author Felipe
  */
 public class KeysController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(KeysController.class);
+    private final DialogService dialogService = new DialogService();
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
@@ -79,6 +84,12 @@ public class KeysController {
     @FXML private TextField keyLabDetailNameField;
     @FXML private Label keyLabDetailAlgoLabel;
     @FXML private Label keyLabDetailBitsLabel;
+    @FXML private CheckBox keyLabUsageEncryptCheck;
+    @FXML private CheckBox keyLabUsageDecryptCheck;
+    @FXML private CheckBox keyLabUsageMacCheck;
+    @FXML private CheckBox keyLabUsageWrapCheck;
+    @FXML private CheckBox keyLabUsageUnwrapCheck;
+    @FXML private Label keyLabDetailExportabilityLabel;
     @FXML private Label keyLabDetailKcvLabel;
     @FXML private Label keyLabDetailFingerprintLabel;
     @FXML private Label keyLabDetailOriginLabel;
@@ -88,6 +99,8 @@ public class KeysController {
     @FXML private TextField keyLabDetailValueField;
     @FXML private Button keyLabRevealBtn;
     @FXML private Button keyLabArchiveBtn;
+    @FXML private Button keyLabUseCipherBtn;
+    @FXML private Button keyLabUseMacBtn;
 
     private StatusReporter mainController;
     private Runnable hsmRefreshCallback = () -> { };
@@ -114,6 +127,7 @@ public class KeysController {
     @FXML private Label summaryOriginLabel;
     @FXML private Label summarySavedStatusLabel;
     @FXML private TitledPane validationPane;
+    @FXML private CheckBox useFourByteKcvCheck;
     @FXML private Button copyGeneratedKeyButton;
     @FXML private Button copyGeneratedKcvButton;
     @FXML private Button copyGeneratedSummaryButton;
@@ -688,9 +702,7 @@ public class KeysController {
     }
 
     private void logTR31Failure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        System.err.print(InlineErrorPresenter.redactSecrets("TR-31 " + operation + " failed:\n" + trace));
+        LOG.error("TR-31 {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 
     private void setSectionVisible(VBox section, boolean visible) {
@@ -1279,13 +1291,13 @@ public class KeysController {
             String subject = leaf.getSubjectX500Principal().getName();
             String issuer = leaf.getIssuerX500Principal().getName();
 
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirm Token Update");
-            alert.setHeaderText("Updating certificate chain for alias: " + alias);
-            alert.setContentText("Leaf Subject: " + subject + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size() + "\n\nProceed with token modification?");
-
-            java.util.Optional<javafx.scene.control.ButtonType> result = alert.showAndWait();
-            if (result.isEmpty() || result.get() != javafx.scene.control.ButtonType.OK) {
+            javafx.stage.Window owner = keysRoot == null || keysRoot.getScene() == null
+                    ? null : keysRoot.getScene().getWindow();
+            boolean confirmed = dialogService.confirmDestructive(owner, "Confirm Token Update",
+                    "Updating certificate chain for alias: " + alias + "\n\nLeaf Subject: " + subject
+                            + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size()
+                            + "\n\nProceed with token modification?", "Update");
+            if (!confirmed) {
                 updateStatus("Update cancelled by user");
                 return;
             }
@@ -1897,10 +1909,10 @@ public class KeysController {
                     details.add(com.cryptocarver.model.OperationDetail.secretDetail("Generated Key", keyHex));
                     try {
                         if (keyType.contains("DES") || keyType.contains("3DES")) {
-                            byte[] kcv = KeyOperations.calculateKCV_VISA(key);
+                            byte[] kcv = KeyOperations.calculateKCV_VISA(key, selectedKcvLength());
                             details.add(com.cryptocarver.model.OperationDetail.publicDetail("KCV (VISA)", DataConverter.bytesToHex(kcv)));
                         } else {
-                            byte[] kcv = KeyOperations.calculateKCV_AES(key);
+                            byte[] kcv = KeyOperations.calculateKCV_AES(key, selectedKcvLength());
                             details.add(com.cryptocarver.model.OperationDetail.publicDetail("KCV (AES)", DataConverter.bytesToHex(kcv)));
                         }
                     } catch (Exception e) {
@@ -1949,8 +1961,8 @@ public class KeysController {
         String kcvHex = "N/A";
         try {
             byte[] kcvBytes = (algoName.contains("DES") || algoName.contains("3DES"))
-                    ? KeyOperations.calculateKCV_VISA(keyBytes)
-                    : KeyOperations.calculateKCV_AES(keyBytes);
+                    ? KeyOperations.calculateKCV_VISA(keyBytes, selectedKcvLength())
+                    : KeyOperations.calculateKCV_AES(keyBytes, selectedKcvLength());
             kcvHex = DataConverter.bytesToHex(kcvBytes);
         } catch (Exception ignored) {}
 
@@ -2011,7 +2023,7 @@ public class KeysController {
         javafx.scene.layout.VBox usageBox = new javafx.scene.layout.VBox(5);
         javafx.scene.control.CheckBox chkEncrypt = new javafx.scene.control.CheckBox("ENCRYPT"); chkEncrypt.setSelected(true);
         javafx.scene.control.CheckBox chkDecrypt = new CheckBox("DECRYPT"); chkDecrypt.setSelected(true);
-        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC"); chkMac.setSelected(algoName.contains("HMAC") || algoName.contains("GMAC"));
+        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC"); chkMac.setSelected(true);
         javafx.scene.control.CheckBox chkWrap = new javafx.scene.control.CheckBox("WRAP / UNWRAP (KEY_WRAP)"); chkWrap.setSelected(true);
         usageBox.getChildren().addAll(chkEncrypt, chkDecrypt, chkMac, chkWrap);
         grid.add(usageLabel, 0, 2);
@@ -2126,7 +2138,7 @@ public class KeysController {
         if (generatedKeySummaryCard == null || summary == null) return;
         if (summaryAlgoLabel != null) summaryAlgoLabel.setText(summary.getAlgorithm());
         if (summaryLengthLabel != null) summaryLengthLabel.setText(summary.getFormattedLength());
-        if (summaryKcvLabel != null) summaryKcvLabel.setText(summary.getFormattedKcv());
+        if (summaryKcvLabel != null) summaryKcvLabel.setText(summary.getFormattedKcv(selectedKcvLength()));
         if (summaryFingerprintLabel != null) summaryFingerprintLabel.setText(summary.getFingerprintTruncated());
         if (summaryParityLabel != null) summaryParityLabel.setText(summary.getParityStatus());
         if (summaryOriginLabel != null) summaryOriginLabel.setText(summary.getOrigin());
@@ -2159,7 +2171,7 @@ public class KeysController {
             updateStatus("No generated key summary available to copy.");
             return;
         }
-        String kcv = currentGeneratedKeySummary.getFormattedKcv();
+        String kcv = currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength());
         copyToClipboard(kcv);
         updateStatus("Copied KCV to clipboard: " + kcv);
     }
@@ -2179,7 +2191,7 @@ public class KeysController {
         sb.append("--- Generated Key Summary ---\n");
         sb.append("Algorithm: ").append(currentGeneratedKeySummary.getAlgorithm()).append("\n");
         sb.append("Length: ").append(currentGeneratedKeySummary.getFormattedLength()).append("\n");
-        sb.append("KCV: ").append(currentGeneratedKeySummary.getFormattedKcv()).append("\n");
+        sb.append("KCV: ").append(currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength())).append("\n");
         sb.append("Fingerprint: ").append(currentGeneratedKeySummary.getFingerprintTruncated()).append("\n");
         sb.append("Odd Parity: ").append(currentGeneratedKeySummary.getParityStatus()).append("\n");
         sb.append("Origin: ").append(currentGeneratedKeySummary.getOrigin()).append("\n");
@@ -2206,6 +2218,21 @@ public class KeysController {
             validationPane.setExpanded(true);
         }
         handleValidateKey();
+    }
+
+    @FXML
+    public void handleKcvLengthToggle() {
+        if (currentGeneratedKeySummary != null) {
+            updateGeneratedKeySummaryCard(currentGeneratedKeySummary);
+        }
+        if (validationResultArea != null && validationResultArea.isVisible()
+                && keyInputField != null && !keyInputField.getText().isBlank()) {
+            handleValidateKey();
+        }
+    }
+
+    private int selectedKcvLength() {
+        return useFourByteKcvCheck == null || useFourByteKcvCheck.isSelected() ? 4 : 3;
     }
 
     private void copyToClipboard(String text) {
@@ -2251,18 +2278,21 @@ public class KeysController {
 
             // Calculate all KCVs
             result.append("----------------------------------------\n");
+            int kcvLength = selectedKcvLength();
             result.append("KEY CHECK VALUES (KCV)\n");
             result.append("----------------------------------------\n\n");
+            result.append("Output Length: ").append(kcvLength).append(" bytes (")
+                    .append(kcvLength * 2).append(" hex characters)\n\n");
 
             try {
-                byte[] kcvVisa = KeyOperations.calculateKCV_VISA(key);
+                byte[] kcvVisa = KeyOperations.calculateKCV_VISA(key, kcvLength);
                 result.append("KCV (VISA):     ").append(DataConverter.bytesToHex(kcvVisa)).append("\n");
             } catch (Exception e) {
                 result.append("KCV (VISA):     Error - ").append(e.getMessage()).append("\n");
             }
 
             try {
-                byte[] kcvAtalla = KeyOperations.calculateKCV_ATALLA(key);
+                byte[] kcvAtalla = KeyOperations.calculateKCV_ATALLA(key, kcvLength);
                 result.append("KCV (ATALLA):   ").append(DataConverter.bytesToHex(kcvAtalla)).append("\n\n");
             } catch (Exception e) {
                 result.append("KCV (ATALLA):   Error - ").append(e.getMessage()).append("\n\n");
@@ -2271,14 +2301,14 @@ public class KeysController {
             result.append("--- Modern Methods ---\n\n");
 
             try {
-                byte[] kcvSha256 = KeyOperations.calculateKCV_SHA256(key);
+                byte[] kcvSha256 = KeyOperations.calculateKCV_SHA256(key, kcvLength);
                 result.append("KCV (SHA256):   ").append(DataConverter.bytesToHex(kcvSha256)).append("\n");
             } catch (Exception e) {
                 result.append("KCV (SHA256):   Error - ").append(e.getMessage()).append("\n");
             }
 
             try {
-                byte[] kcvCMAC = KeyOperations.calculateKCV_CMAC(key);
+                byte[] kcvCMAC = KeyOperations.calculateKCV_CMAC(key, kcvLength);
                 result.append("KCV (CMAC):     ").append(DataConverter.bytesToHex(kcvCMAC)).append("\n");
             } catch (Exception e) {
                 result.append("KCV (CMAC):     Error - ").append(e.getMessage()).append("\n");
@@ -2287,7 +2317,7 @@ public class KeysController {
             // Only calculate AES KCV for AES keys
             if (key.length == 16 || key.length == 24 || key.length == 32) {
                 try {
-                    byte[] kcvAES = KeyOperations.calculateKCV_AES(key);
+                    byte[] kcvAES = KeyOperations.calculateKCV_AES(key, kcvLength);
                     result.append("KCV (AES):      ").append(DataConverter.bytesToHex(kcvAES)).append("\n");
                 } catch (Exception e) {
                     result.append("KCV (AES):      Error - ").append(e.getMessage()).append("\n");
@@ -2933,7 +2963,7 @@ public class KeysController {
 
         } catch (Exception e) {
             showError("Generation Error", "Error generating certificate: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Certificate generation failed", e);
         }
     }
 
@@ -3160,7 +3190,7 @@ public class KeysController {
         } catch (Exception e) {
             valResultArea.setText("Error during validation: " + e.getMessage());
             updateStatus("Validation error");
-            e.printStackTrace();
+            LOG.warn("Certificate validation failed", e);
         }
     }
 
@@ -3891,9 +3921,7 @@ public class KeysController {
     }
 
     private void logRsaKexFailure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        System.err.print(InlineErrorPresenter.redactSecrets("RSA Key Exchange " + operation + " failed:\n" + trace));
+        LOG.error("RSA Key Exchange {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 
     // ============================================================================
@@ -4172,9 +4200,7 @@ public class KeysController {
     }
 
     private void logTr34Failure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        System.err.print(InlineErrorPresenter.redactSecrets("TR-34 " + operation + " failed:\n" + trace));
+        LOG.error("TR-34 {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 
     /**
@@ -4982,11 +5008,11 @@ public class KeysController {
                         .status((cadesTOption ? "CAdES-T" : (cadesBesOption ? "CAdES-BES" : "CMS")) + " signature generated successfully").build());
             }, error -> {
                 showError("Signing Error", "Error signing data: " + error.getMessage());
-                error.printStackTrace();
+                LOG.warn("Key operation failed", error);
             }, () -> updateStatus("Signing cancelled"));
         } catch (Exception e) {
             showError("Signing Error", "Error signing data: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5084,7 +5110,7 @@ public class KeysController {
         } catch (Exception e) {
             cmsOutputArea.setText("Verification Failed: " + e.getMessage());
             updateStatus("Verification failed");
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5255,7 +5281,7 @@ public class KeysController {
                     .status("CMS data encrypted successfully").build());
         } catch (Exception e) {
             showError("Encryption Error", "Error encrypting data: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5312,7 +5338,7 @@ public class KeysController {
         } catch (Exception e) {
             cmsOutputArea.setText("Decryption Failed: " + e.getMessage());
             updateStatus("Decryption failed");
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5434,7 +5460,7 @@ public class KeysController {
 
         } catch (Exception e) {
             showError("Validation Error", "Error validating chain: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -6037,6 +6063,8 @@ public class KeysController {
         keyLabDetailNameField.setText(km.getName());
         keyLabDetailAlgoLabel.setText(km.getAlgorithm());
         keyLabDetailBitsLabel.setText(km.getSize() + " bits");
+        setKeyLabUsageControls(km);
+        keyLabDetailExportabilityLabel.setText(km.getExportability().name());
         keyLabDetailKcvLabel.setText(km.getKcv());
         keyLabDetailFingerprintLabel.setText(km.getFingerprint());
         keyLabDetailOriginLabel.setText(km.getOrigin());
@@ -6057,6 +6085,51 @@ public class KeysController {
         } else {
             keyLabArchiveBtn.setText("Archive");
         }
+        updateKeyLabUseActions(km);
+    }
+
+    private void updateKeyLabUseActions(KeyMaterial km) {
+        boolean usable = km != null
+                && km.getType() == com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC
+                && km.hasKeyMaterial()
+                && !"ARCHIVED".equalsIgnoreCase(km.getStatus());
+        boolean canCipher = usable && (km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT)
+                || km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT));
+        boolean canMac = usable && km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+
+        if (keyLabUseCipherBtn != null) {
+            keyLabUseCipherBtn.setDisable(!canCipher);
+            keyLabUseCipherBtn.setTooltip(new Tooltip(keyLabActionReason(km, canCipher, "ENCRYPT or DECRYPT")));
+        }
+        if (keyLabUseMacBtn != null) {
+            keyLabUseMacBtn.setDisable(!canMac);
+            keyLabUseMacBtn.setTooltip(new Tooltip(keyLabActionReason(km, canMac, "MAC")));
+        }
+    }
+
+    private void setKeyLabUsageControls(KeyMaterial km) {
+        boolean symmetric = km != null && km.getType() == com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC;
+        setUsageControl(keyLabUsageEncryptCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT);
+        setUsageControl(keyLabUsageDecryptCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+        setUsageControl(keyLabUsageMacCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+        setUsageControl(keyLabUsageWrapCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.WRAP);
+        setUsageControl(keyLabUsageUnwrapCheck, symmetric, km, com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP);
+    }
+
+    private void setUsageControl(CheckBox control, boolean enabled, KeyMaterial km,
+            com.cryptocarver.crypto.hsm.KeyUsage usage) {
+        if (control == null) return;
+        control.setSelected(km != null && km.getUsages().contains(usage));
+        control.setDisable(!enabled);
+    }
+
+    private String keyLabActionReason(KeyMaterial km, boolean allowed, String requiredUsage) {
+        if (allowed) return "Load this key by reference without revealing its value";
+        if (km == null) return "Select a Key Lab entry first";
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) return "This operation requires a symmetric key";
+        if ("ARCHIVED".equalsIgnoreCase(km.getStatus())) return "Restore the archived key before using it";
+        if (!km.hasKeyMaterial()) return "This entry contains metadata only; re-import or regenerate the key material";
+        return "The key is not authorized for " + requiredUsage + " usage";
     }
 
     private void clearKeyLabDetails() {
@@ -6064,6 +6137,8 @@ public class KeysController {
         keyLabDetailNameField.clear();
         keyLabDetailAlgoLabel.setText("N/A");
         keyLabDetailBitsLabel.setText("N/A");
+        setKeyLabUsageControls(null);
+        keyLabDetailExportabilityLabel.setText("N/A");
         keyLabDetailKcvLabel.setText("N/A");
         keyLabDetailFingerprintLabel.setText("N/A");
         keyLabDetailOriginLabel.setText("N/A");
@@ -6073,6 +6148,49 @@ public class KeysController {
         keyLabDetailValueField.clear();
         keyLabRevealBtn.setDisable(true);
         keyLabArchiveBtn.setText("Archive");
+        updateKeyLabUseActions(null);
+    }
+
+    @FXML
+    public void handleUseKeyLabInCipher() {
+        useSelectedKeyLabEntry(false);
+    }
+
+    @FXML
+    public void handleUseKeyLabInMac() {
+        useSelectedKeyLabEntry(true);
+    }
+
+    private void useSelectedKeyLabEntry(boolean forMac) {
+        KeyMaterial km = keyLabTable == null ? null : keyLabTable.getSelectionModel().getSelectedItem();
+        if (km == null) {
+            showError("Key Lab", "Select a key first");
+            return;
+        }
+        boolean allowed = forMac
+                ? km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+                : km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT)
+                    || km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC
+                || "ARCHIVED".equalsIgnoreCase(km.getStatus()) || !km.hasKeyMaterial() || !allowed) {
+            showError("Key Lab", keyLabActionReason(km, false, forMac ? "MAC" : "ENCRYPT or DECRYPT"));
+            return;
+        }
+        if (!(mainController instanceof ModernMainController modern)) {
+            showError("Key Lab", "Direct operational loading is available in the modern workspace");
+            return;
+        }
+        try {
+            if (forMac) {
+                modern.useLabKeyInMac(km.getId());
+                updateStatus("Loaded Key Lab entry \"" + km.getName() + "\" in MAC by reference");
+            } else {
+                modern.useLabKeyInSymmetricCipher(km.getId());
+                updateStatus("Loaded Key Lab entry \"" + km.getName() + "\" in Symmetric Cipher by reference");
+            }
+        } catch (RuntimeException e) {
+            showError("Key Lab", e.getMessage());
+        }
     }
 
     @FXML
@@ -6111,7 +6229,8 @@ public class KeysController {
             String id = UUID.randomUUID().toString();
             KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
                     id, spec, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
-                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC),
+                    selectedKcvLength()
             );
             km.setName(name);
             km.setModified(System.currentTimeMillis());
@@ -6161,7 +6280,8 @@ public class KeysController {
             String id = UUID.randomUUID().toString();
             KeyMaterial km = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(
                     id, spec, com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE,
-                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC)
+                    java.util.Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT, com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT, com.cryptocarver.crypto.hsm.KeyUsage.MAC),
+                    selectedKcvLength()
             );
             km.setName(name);
             km.setModified(System.currentTimeMillis());
@@ -6198,12 +6318,11 @@ public class KeysController {
             return;
         }
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Warning: Reveal Secret Key");
-        alert.setHeaderText("Are you sure you want to reveal raw secret key bytes?");
-        alert.setContentText("Warning: Exporting or displaying cleartext key material violates production security standards. Only proceed in isolated lab environments.");
-
-        java.util.Optional<ButtonType> result = alert.showAndWait();
+        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+                keyLabTable.getScene().getWindow(), "Warning: Reveal Secret Key",
+                "Are you sure you want to reveal raw secret key bytes?",
+                new Label("Warning: Exporting or displaying cleartext key material violates production security standards. Only proceed in isolated lab environments."),
+                ButtonType.CANCEL, ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 byte[] keyBytes = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().revealExportableKeyForFullLab(km.getId());
@@ -6242,7 +6361,29 @@ public class KeysController {
             return;
         }
 
-        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().updateKeyMetadata(km.getId(), newName, km.getStatus());
+        java.util.Set<com.cryptocarver.crypto.hsm.KeyUsage> usages =
+                java.util.EnumSet.noneOf(com.cryptocarver.crypto.hsm.KeyUsage.class);
+        usages.addAll(km.getUsages());
+        if (km.getType() == com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) {
+            usages.removeAll(java.util.EnumSet.of(
+                    com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT,
+                    com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT,
+                    com.cryptocarver.crypto.hsm.KeyUsage.MAC,
+                    com.cryptocarver.crypto.hsm.KeyUsage.WRAP,
+                    com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP));
+            if (keyLabUsageEncryptCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT);
+            if (keyLabUsageDecryptCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT);
+            if (keyLabUsageMacCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.MAC);
+            if (keyLabUsageWrapCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.WRAP);
+            if (keyLabUsageUnwrapCheck.isSelected()) usages.add(com.cryptocarver.crypto.hsm.KeyUsage.UNWRAP);
+        }
+        if (usages.isEmpty()) {
+            showError("Validation Error", "Select at least one allowed key usage");
+            return;
+        }
+
+        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance()
+                .updateKeyMetadata(km.getId(), newName, km.getStatus(), usages);
         refreshKeyLabTable();
         for (KeyMaterial item : keyLabTable.getItems()) {
             if (item.getId().equals(km.getId())) {
@@ -6263,13 +6404,12 @@ public class KeysController {
 
         boolean willArchive = !"ARCHIVED".equalsIgnoreCase(km.getStatus());
         String actionText = willArchive ? "archive" : "restore";
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirm " + (willArchive ? "Archive" : "Restore"));
-        alert.setHeaderText((willArchive ? "Archive" : "Restore") + " Key: " + km.getName());
-        alert.setContentText("Are you sure you want to " + actionText + " this key? "
-            + (willArchive ? "Archived keys are hidden from standard operations but kept in history." : "This key will be active again."));
-
-        java.util.Optional<ButtonType> result = alert.showAndWait();
+        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+                keyLabTable.getScene().getWindow(), "Confirm " + (willArchive ? "Archive" : "Restore"),
+                (willArchive ? "Archive" : "Restore") + " Key: " + km.getName(),
+                new Label("Are you sure you want to " + actionText + " this key? "
+                        + (willArchive ? "Archived keys are hidden from standard operations but kept in history." : "This key will be active again.")),
+                ButtonType.CANCEL, ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().archiveKey(km.getId());
             refreshKeyLabTable();
@@ -6286,12 +6426,10 @@ public class KeysController {
         KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
         if (km == null) return;
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirm Deletion");
-        alert.setHeaderText("Delete Key: " + km.getName());
-        alert.setContentText("Are you sure you want to permanently delete this key from the Lab? This action cannot be undone.");
-
-        java.util.Optional<ButtonType> result = alert.showAndWait();
+        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+                keyLabTable.getScene().getWindow(), "Confirm Deletion", "Delete Key: " + km.getName(),
+                new Label("Are you sure you want to permanently delete this key from the Lab? This action cannot be undone."),
+                ButtonType.CANCEL, ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().deleteKey(km.getId());
             refreshKeyLabTable();

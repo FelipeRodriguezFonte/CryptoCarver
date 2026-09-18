@@ -17,23 +17,62 @@ final class OperationResultRenderer {
     private OperationResultRenderer() {
     }
 
+    /** How a result's bytes are presented. It never affects whether they may be shown at all. */
+    enum OutputFormat {
+        TEXT, HEX, BASE64;
+
+        static OutputFormat of(String label) {
+            if (label == null) return TEXT;
+            return switch (label.trim().toLowerCase(java.util.Locale.ROOT)) {
+                case "hex" -> HEX;
+                case "base64" -> BASE64;
+                default -> TEXT;
+            };
+        }
+    }
+
     static String render(OperationResult result, SecretVisibilityProfile visibility) {
+        return render(result, visibility, OutputFormat.TEXT);
+    }
+
+    /**
+     * Renders a result in the requested presentation format.
+     *
+     * <p>The visibility checks are the same ones {@link #render(OperationResult,
+     * SecretVisibilityProfile)} performs and they run first, so choosing a format can never turn
+     * a redacted or masked value back into readable bytes. A summary has no bytes to re-encode,
+     * so it ignores the format.
+     */
+    static String render(OperationResult result, SecretVisibilityProfile visibility, OutputFormat format) {
         if (result == null) return "";
         SecretVisibilityProfile policy = visibility == null ? SecretVisibilityProfile.REDACTED : visibility;
+        OutputFormat requested = format == null ? OutputFormat.TEXT : format;
 
         String protectedResult = protectedValue(classification(result.getDetails()), policy);
         if (protectedResult != null) return protectedResult;
 
         if (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank()) {
             protectedResult = protectedValue(result.getEnrichedOutputClassification(), policy);
-            return protectedResult == null ? result.getEnrichedOutput() : protectedResult;
+            if (protectedResult != null) return protectedResult;
+            return requested == OutputFormat.TEXT
+                    ? result.getEnrichedOutput()
+                    : encode(result.getEnrichedOutput().getBytes(StandardCharsets.UTF_8), requested);
         }
 
         byte[] output = result.getOutput();
         if (output == null || output.length == 0) return summary(result, policy);
 
         protectedResult = protectedValue(result.getOutputClassification(), policy);
-        return protectedResult == null ? renderBytes(output) : protectedResult;
+        return protectedResult == null ? encode(output, requested) : protectedResult;
+    }
+
+    private static String encode(byte[] bytes, OutputFormat format) {
+        if (bytes == null || bytes.length == 0) return "";
+        return switch (format) {
+            case HEX -> hex(bytes);
+            case BASE64 -> java.util.Base64.getEncoder().encodeToString(bytes);
+            case TEXT -> renderBytes(bytes);
+        };
     }
 
     static OperationDetail.Classification classification(OperationResult result) {
@@ -46,6 +85,10 @@ final class OperationResultRenderer {
     static String renderBytes(byte[] bytes) {
         if (bytes == null || bytes.length == 0) return "";
         if (isPrintableUtf8(bytes)) return new String(bytes, StandardCharsets.UTF_8);
+        return hex(bytes);
+    }
+
+    private static String hex(byte[] bytes) {
         char[] encoded = new char[bytes.length * 2];
         for (int index = 0; index < bytes.length; index++) {
             int value = bytes[index] & 0xFF;

@@ -113,6 +113,42 @@ class ModernMainControllerFxmlStaticTest {
     }
 
     @Test
+    void testFourByteKcvControlIsSelectedByDefault() throws Exception {
+        try (InputStream is = getClass().getResourceAsStream("/fxml/keys.fxml")) {
+            assertNotNull(is);
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
+            Element control = findElementsByTagName(doc.getDocumentElement(), "CheckBox").stream()
+                    .filter(element -> "useFourByteKcvCheck".equals(element.getAttribute("fx:id")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Four-byte KCV control is missing"));
+
+            assertEquals("true", control.getAttribute("selected"));
+            assertEquals("#handleKcvLengthToggle", control.getAttribute("onAction"));
+        }
+    }
+
+    @Test
+    void testKeyLabOffersDirectReferenceActions() throws Exception {
+        try (InputStream is = getClass().getResourceAsStream("/fxml/keys.fxml")) {
+            assertNotNull(is);
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
+            java.util.List<Element> buttons = findElementsByTagName(doc.getDocumentElement(), "Button");
+
+            Element cipherAction = buttons.stream()
+                    .filter(element -> "keyLabUseCipherBtn".equals(element.getAttribute("fx:id")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Key Lab to Symmetric Cipher action is missing"));
+            Element macAction = buttons.stream()
+                    .filter(element -> "keyLabUseMacBtn".equals(element.getAttribute("fx:id")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Key Lab to MAC action is missing"));
+
+            assertEquals("#handleUseKeyLabInCipher", cipherAction.getAttribute("onAction"));
+            assertEquals("#handleUseKeyLabInMac", macAction.getAttribute("onAction"));
+        }
+    }
+
+    @Test
     void testCertificatesFxml() throws Exception {
         verifyFxmlAgainstController("/fxml/certificates.fxml", CertificatesController.class);
     }
@@ -293,9 +329,11 @@ class ModernMainControllerFxmlStaticTest {
         assertNotNull(resultSummaryBar, "resultSummaryBar element missing in main-view-modern.fxml");
 
         List<Element> buttons = findElementsByTagName(resultSummaryBar, "Button");
-        assertEquals(3, buttons.size(), "resultSummaryBar must contain 3 action buttons");
+        assertEquals(4, buttons.size(), "resultSummaryBar must contain 4 action buttons");
 
         List<String> actionHandlers = extractAttributes(resultSummaryBar, "onAction");
+        assertTrue(actionHandlers.contains("#handleSaveCurrentResultAsSessionStep"),
+                "Missing #handleSaveCurrentResultAsSessionStep");
         assertTrue(actionHandlers.contains("#handleOpenExpandedResultViewer"), "Missing #handleOpenExpandedResultViewer");
         assertTrue(actionHandlers.contains("#handleAddCurrentOutputToShelf"), "Missing #handleAddCurrentOutputToShelf");
         assertTrue(actionHandlers.contains("#handleCopyOutput"), "Missing #handleCopyOutput");

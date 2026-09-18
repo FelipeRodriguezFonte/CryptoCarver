@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class ClipboardShelfController {
+    private final DialogService dialogService = new DialogService();
 
     @FXML private javafx.scene.layout.VBox clipboardShelfRoot;
     private ModuleI18n.Binding moduleI18n;
@@ -411,7 +412,8 @@ public class ClipboardShelfController {
         if (e1.isSessionOnlyPrivateKey() || e2.isSessionOnlyPrivateKey()) {
             detailsArea.setText("Comparison blocked: session-only private-key entries cannot be compared or exported.");
             warningLabel.setVisible(true);
-            warningLabel.setText("🔒 Session-only private keys are excluded from comparison and reports.");
+            warningLabel.setText("Session-only private keys are excluded from comparison and reports.");
+            warningLabel.setGraphic(IconRegistry.icon("cipher"));
             setActionAvailability(pinBtn, false, "Pin selected entry", "Select one entry to pin or unpin");
             setActionAvailability(editTagsNoteBtn, false, "Edit note and tags", "Select one entry to edit its note and tags");
             setActionAvailability(useInMenu, false, "Use selected result in an operation", "Select one entry to use its result");
@@ -535,8 +537,7 @@ public class ClipboardShelfController {
             stage.setScene(new Scene(root, 750, 550));
             stage.show();
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, t("module.compare.openError", e.getMessage()), ButtonType.OK);
-            alert.showAndWait();
+            dialogService.error(t("module.compare.openError"), t("module.compare.openError", e.getMessage()));
         }
     }
 
@@ -689,10 +690,7 @@ public class ClipboardShelfController {
         ClipboardEntry.Format fmt = entry.getFormat();
         if (!supportsTarget(fmt, targetType)) {
             String message = t("module.shelf.incompatible", fmt.name(), targetType);
-            Alert alert = new Alert(Alert.AlertType.WARNING, message, ButtonType.OK);
-            alert.setTitle(t("module.shelf.incompatibleTitle"));
-            alert.setHeaderText(t("module.shelf.incompatibleHeader"));
-            alert.showAndWait();
+            dialogService.warning(t("module.shelf.incompatibleTitle"), message);
             if (navigator != null) navigator.updateStatus(message);
             return;
         }

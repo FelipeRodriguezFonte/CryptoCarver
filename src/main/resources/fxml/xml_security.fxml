@@ -21,7 +21,7 @@
                         <Label text="XML File to Sign:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="xmlSignInputPathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="..." onAction="#handleBrowseXMLSignInput" style="-fx-min-width: 25px;"/>
+                            <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose XML to sign" onAction="#handleBrowseXMLSignInput"/>
                         </HBox>
 
                         <Label text="Signature Source:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -43,7 +43,7 @@
                             <Label fx:id="xmlSignKeyPathLabel" text="PKCS#12 / JKS / PEM KeyStore:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <TextField fx:id="xmlSignKeyPathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                                <Button text="..." onAction="#handleBrowseXMLKey" style="-fx-min-width: 25px;"/>
+                                <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose XML signing key" onAction="#handleBrowseXMLKey"/>
                             </HBox>
 
                             <Label fx:id="xmlSignKeyPasswordLabel" text="KeyStore Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -136,7 +136,7 @@
                         <Label text="File to timestamp:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="xmlTimestampFileField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Open..." onAction="#handleBrowseTimestampFile" style="-fx-min-width: 25px;"/>
+                            <Button styleClass="ux-inline-7023c1077f" text="Open..." onAction="#handleBrowseTimestampFile"/>
                         </HBox>
 
                         <Label text="Imprint hash:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -161,13 +161,13 @@
                         <Label text="Saved token to inspect (opt):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="xmlTimestampTokenField" promptText="Path to .tsq/.tst" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="Open..." onAction="#handleBrowseTimestampToken" style="-fx-min-width: 25px;"/>
+                            <Button styleClass="ux-inline-7023c1077f" text="Open..." onAction="#handleBrowseTimestampToken"/>
                         </HBox>
 
                         <Label text="TrustStore (optional):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="8" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="xmlTimestampTrustStoreField" promptText="Truststore path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="..." onAction="#handleBrowseTimestampTrustStore" style="-fx-min-width: 25px;"/>
+                            <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose timestamp trust store" onAction="#handleBrowseTimestampTrustStore"/>
                             <PasswordField fx:id="xmlTimestampTrustStorePasswordField" promptText="Password" styleClass="form-field"/>
                         </HBox>
                     </GridPane>
@@ -201,7 +201,7 @@
                         <Label text="TrustStore Path:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="8" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="xmlVerifyTrustStorePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                            <Button text="..." onAction="#handleBrowseXMLTrustStore" style="-fx-min-width: 25px;"/>
+                            <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose XML trust store" onAction="#handleBrowseXMLTrustStore"/>
                         </HBox>
 
                         <Label text="TrustStore Password:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>

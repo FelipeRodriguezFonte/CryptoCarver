@@ -185,6 +185,7 @@ public final class DesKeyAnalysis {
             case UNRELIABLE_SINGLE -> IcsfText.of("icsf.strength.unreliableSingle");
             case UNRELIABLE_DOUBLE -> IcsfText.of("icsf.strength.unreliableDouble");
             case UNRELIABLE_TRIPLE -> IcsfText.of("icsf.strength.unreliableTriple");
+            case SINGLE_LENGTH -> IcsfText.of("icsf.strength.singleLengthNothingToCompare");
             case NOT_APPLICABLE -> IcsfText.of("icsf.strength.notApplicable");
         };
     }

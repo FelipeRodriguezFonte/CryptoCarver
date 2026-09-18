@@ -7,6 +7,7 @@ import com.cryptocarver.model.SafeTemplateAllowlist;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -151,13 +152,13 @@ public final class SafeTemplateUIHelper {
             return;
         }
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete personal template '" + template.getName() + "'?", ButtonType.YES, ButtonType.NO);
         I18nService i18n = I18nService.getInstance();
-        confirm.setTitle(i18n.text("dialog.template.delete.title"));
-        confirm.setHeaderText(i18n.text("dialog.template.delete.header"));
-        if (owner != null) confirm.initOwner(owner);
-
-        Optional<ButtonType> result = confirm.showAndWait();
+        DialogService dialogs = new DialogService(i18n);
+        Optional<ButtonType> result = dialogs.show(Alert.AlertType.CONFIRMATION, owner,
+                i18n.text("dialog.template.delete.title"),
+                i18n.text("dialog.template.delete.header"),
+                new Label("Are you sure you want to delete personal template '" + template.getName() + "'?"),
+                ButtonType.NO, ButtonType.YES);
         if (result.isPresent() && result.get() == ButtonType.YES) {
             boolean deleted = PersonalTemplateStore.getInstance().deleteTemplate(template.getId());
             if (deleted) {
@@ -221,10 +222,6 @@ public final class SafeTemplateUIHelper {
     }
 
     private static void showAlert(Window owner, Alert.AlertType type, String title, String message) {
-        Alert alert = new Alert(type, message, ButtonType.OK);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        if (owner != null) alert.initOwner(owner);
-        alert.showAndWait();
+        new DialogService().show(type, owner, title, null, new Label(message), ButtonType.OK);
     }
 }

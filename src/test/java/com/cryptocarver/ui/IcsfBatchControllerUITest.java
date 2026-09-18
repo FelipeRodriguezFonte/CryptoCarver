@@ -63,7 +63,7 @@ class IcsfBatchControllerUITest {
     }
 
     private static FXMLLoader load() throws Exception {
-        FXMLLoader loader = new FXMLLoader(
+        FXMLLoader loader = UiTestFxml.loader(
                 IcsfBatchControllerUITest.class.getResource("/fxml/icsf_batch.fxml"));
         assertNotNull(loader.getLocation(), "icsf_batch.fxml must be on the classpath");
         loader.load();
@@ -295,6 +295,24 @@ class IcsfBatchControllerUITest {
             assertTrue(field(loader, "icsfBatchFindingsTable", TableView.class).getItems().isEmpty());
             assertTrue(field(loader, "icsfBatchInventoryTable", TableView.class).getItems().isEmpty());
             assertTrue(field(loader, "icsfBatchReportArea", TextArea.class).getText().isEmpty());
+        });
+    }
+
+    @Test
+    void theExampleBatchLoadsAndEveryEntryInItAnalyses() throws Exception {
+        onFxThread(() -> {
+            FXMLLoader loader = load();
+            IcsfBatchController controller = loader.getController();
+
+            invoke(controller, "handleLoadSample");
+            assertFalse(field(loader, "icsfBatchInputArea", TextArea.class).getText().isBlank());
+            invoke(controller, "handleAnalyze");
+
+            // Labelled lines and a two-row token together: only automatic reading takes both.
+            assertEquals(7, controller.items().size());
+            assertTrue(controller.items().stream().allMatch(item -> item.isOk()));
+            assertTrue(controller.report().findings().stream()
+                    .anyMatch(finding -> finding.code() == FindingCode.BYTE59_FUERA_DE_TABLA));
         });
     }
 

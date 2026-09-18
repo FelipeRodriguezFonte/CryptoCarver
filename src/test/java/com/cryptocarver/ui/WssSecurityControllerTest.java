@@ -41,7 +41,7 @@ class WssSecurityControllerTest {
     @Test
     void testUiElementsAreLoaded() throws Exception {
         runOnFxThread(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/wss_security.fxml"));
+            FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/wss_security.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root);
             WssSecurityController controller = loader.getController();

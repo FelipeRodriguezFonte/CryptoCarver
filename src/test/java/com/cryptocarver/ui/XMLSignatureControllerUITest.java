@@ -36,7 +36,7 @@ public class XMLSignatureControllerUITest {
         Platform.runLater(() -> {
             try {
                 URL location = XMLSignatureControllerUITest.class.getResource("/fxml/xml_security.fxml");
-                FXMLLoader loader = new FXMLLoader(location);
+                FXMLLoader loader = UiTestFxml.loader(location);
                 root = loader.load();
                 controller = loader.getController();
             } catch (Exception e) {

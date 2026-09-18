@@ -6,6 +6,10 @@
 <?import javafx.scene.text.TextFlow?>
 <?import com.cryptocarver.ui.NavigationRail?>
 <?import com.cryptocarver.ui.SidePanel?>
+<?import com.cryptocarver.ui.ResponsiveWorkspaceSplitPane?>
+<?import com.cryptocarver.ui.ModuleHost?>
+<?import com.cryptocarver.ui.NativeTextEditMenuItem?>
+<?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 
 <StackPane fx:id="rootStackPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.cryptocarver.ui.ModernMainController">
@@ -23,13 +27,22 @@
                     <MenuItem fx:id="importScreenMenuItem" text="Import Screen Configuration..." onAction="#handleImportScreenConfiguration" />
                     <SeparatorMenuItem />
                     <MenuItem fx:id="saveSessionMenuItem" text="Save Session" onAction="#handleSaveSession" accelerator="Shortcut+S" />
+                    <MenuItem fx:id="exportSessionTrailMenuItem" text="Export Session Trail..." onAction="#handleExportSessionTrail" />
                     <MenuItem fx:id="exportHistoryMenuItem" text="Export History..." onAction="#handleExportHistory" />
                     <SeparatorMenuItem />
                     <MenuItem fx:id="exitMenuItem" text="Exit" onAction="#handleExit" accelerator="Shortcut+Q" />
                 </Menu>
 
-                <Menu fx:id="editMenu" text="Edit">
-                    <MenuItem fx:id="clearInputMenuItem" text="Clear Input" onAction="#handleClearInput" accelerator="Shortcut+Shift+I" />
+                <Menu fx:id="editMenu" text="%menu.edit">
+                    <NativeTextEditMenuItem text="%menu.undo" operation="UNDO" />
+                    <NativeTextEditMenuItem text="%menu.redo" operation="REDO" />
+                    <SeparatorMenuItem />
+                    <NativeTextEditMenuItem text="%menu.cut" operation="CUT" />
+                    <NativeTextEditMenuItem text="%menu.copy" operation="COPY" />
+                    <NativeTextEditMenuItem text="%menu.paste" operation="PASTE" />
+                    <NativeTextEditMenuItem text="%menu.selectAll" operation="SELECT_ALL" />
+                    <SeparatorMenuItem />
+                    <MenuItem fx:id="clearInputMenuItem" text="Clear Input" onAction="#handleClearInput" />
                     <MenuItem fx:id="clearOutputMenuItem" text="Clear Output" onAction="#handleClearOutput" accelerator="Shortcut+Shift+O" />
                     <MenuItem fx:id="copyOutputMenuItem" text="Copy Output" onAction="#handleCopyOutput" accelerator="Shortcut+Shift+C" />
                     <MenuItem fx:id="addToShelfMenuItem" text="Add Output to Clipboard Shelf" onAction="#handleAddCurrentOutputToShelf" />
@@ -56,15 +69,16 @@
                         <RadioMenuItem fx:id="languageEsMenuItem" text="Español" userData="ES" toggleGroup="$languagePreferenceGroup" onAction="#handleLanguageEs"/>
                         <RadioMenuItem fx:id="languageEnMenuItem" text="English" userData="EN" toggleGroup="$languagePreferenceGroup" onAction="#handleLanguageEn"/>
                     </Menu>
+                    <Menu fx:id="appearanceMenu" text="Appearance">
+                        <fx:define><ToggleGroup fx:id="themePreferenceGroup"/></fx:define>
+                        <RadioMenuItem fx:id="themeSystemMenuItem" text="System" toggleGroup="$themePreferenceGroup" onAction="#handleThemeSystem"/>
+                        <RadioMenuItem fx:id="themeLightMenuItem" text="Light" toggleGroup="$themePreferenceGroup" onAction="#handleThemeLight"/>
+                        <RadioMenuItem fx:id="themeDarkMenuItem" text="Dark" toggleGroup="$themePreferenceGroup" onAction="#handleThemeDark"/>
+                    </Menu>
                 </Menu>
 
-                <Menu fx:id="securityMenu" text="Security">
-                    <fx:define>
-                        <ToggleGroup fx:id="visibilityProfileGroup"/>
-                    </fx:define>
-                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="Visibility: FULL_LAB (Debug/Learning)" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
-                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="Visibility: MASKED (Classroom/Demo)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
-                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="Visibility: REDACTED (Strict/Production)" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
+                <Menu fx:id="laboratoryMenu" text="%menu.laboratory" userData="laboratory">
+                    <MenuItem fx:id="laboratoryQuickStartMenuItem" text="%menu.quickStart" onAction="#handleQuickStart" />
                 </Menu>
 
                 <Menu fx:id="toolsMenu" text="Tools">
@@ -73,6 +87,15 @@
                     <MenuItem fx:id="byteInspectorMenuItem" text="Byte Inspector" onAction="#handleByteInspector"/>
                     <SeparatorMenuItem/>
                     <MenuItem fx:id="clearKeyCacheMenuItem" text="Clear Lab Key Cache" onAction="#handleClearLabKeyCache"/>
+                </Menu>
+
+                <Menu fx:id="securityMenu" text="Security">
+                    <fx:define>
+                        <ToggleGroup fx:id="visibilityProfileGroup"/>
+                    </fx:define>
+                    <RadioMenuItem fx:id="visibilityFullLabMenuItem" text="%menu.visibility.full" toggleGroup="$visibilityProfileGroup" selected="true" onAction="#handleVisibilityFullLab" />
+                    <RadioMenuItem fx:id="visibilityMaskedMenuItem" text="%menu.visibility.masked" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityMasked" />
+                    <RadioMenuItem fx:id="visibilityRedactedMenuItem" text="%menu.visibility.redacted" toggleGroup="$visibilityProfileGroup" onAction="#handleVisibilityRedacted" />
                 </Menu>
 
                 <Menu fx:id="helpMenu" text="Help">
@@ -84,11 +107,11 @@
             </MenuBar>
 
             <!-- Toolbar -->
-            <FlowPane styleClass="main-toolbar">
+            <HBox alignment="CENTER_LEFT" spacing="10" minHeight="44" prefHeight="44" maxHeight="44" styleClass="main-toolbar">
                 <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Button text="☰" onAction="#handleToggleSidePanel" styleClass="ghost-button" accessibleText="Toggle side panel"/>
                     <Button fx:id="toolbarSearchButton" text="Search operations" onAction="#handleOpenCommandPalette" styleClass="secondary-button"/>
                     <Button fx:id="toolbarSaveSessionButton" text="Save Session" onAction="#handleSaveSession" styleClass="link-button"/>
-                    <Button fx:id="toolbarClearButton" text="Clear" onAction="#handleClearInput" styleClass="link-button"/>
                 </HBox>
 
                 <!-- Format Flow Bar -->
@@ -118,26 +141,24 @@
                               accessibleHelp="Select the format used to display the operation output."/>
                 </HBox>
 
-                <HBox alignment="CENTER_RIGHT" spacing="10">
-                    <Button fx:id="toolbarExpandButton" text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="link-button"/>
-                    <Button fx:id="toolbarShelfButton" text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="link-button"/>
-                    <Button fx:id="toolbarCopyButton" text="Copy Output" onAction="#handleCopyOutput" styleClass="link-button"/>
-                </HBox>
-            </FlowPane>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Inspector" onAction="#handleToggleInspector" styleClass="ghost-button" accessibleText="Toggle inspector"/>
+            </HBox>
         </VBox>
     </top>
 
     <!-- Main Content Area with Rail + SidePanel + Content + Inspector -->
     <center>
-        <HBox>
-            <!-- Navigation Rail (left, 48px) -->
-            <NavigationRail fx:id="navigationRail"/>
+        <ResponsiveWorkspaceSplitPane fx:id="workspaceSplitPane" dividerPositions="0.22, 0.78">
+            <items>
+                <!-- Navigation tree: rail plus section tree. -->
+                <HBox minWidth="200" styleClass="workspace-tree-pane">
+                    <NavigationRail fx:id="navigationRail"/>
+                    <SidePanel fx:id="sidePanel"/>
+                </HBox>
 
-            <!-- Side Panel (280px, collapsible) -->
-            <SidePanel fx:id="sidePanel"/>
-
-            <!-- Main Content Area -->
-            <VBox fx:id="mainContentArea" HBox.hgrow="ALWAYS" styleClass="main-content-vbox">
+                <!-- Main Content Area -->
+                <VBox fx:id="mainContentArea" minWidth="560" styleClass="main-content-vbox">
 
                 <!-- Content Header with Breadcrumbs & Favorite Star Toggle -->
                 <HBox styleClass="content-header" alignment="CENTER_LEFT" spacing="10">
@@ -165,6 +186,7 @@
                         <Label fx:id="resultStatusBadge" text="NEUTRAL" styleClass="result-status-neutral" accessibleText="Last operation result status: NEUTRAL"/>
                     </FlowPane>
                     <FlowPane prefWrapLength="400" hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="responsive-action-bar">
+                        <Button fx:id="resultSaveStepButton" text="Save Step" onAction="#handleSaveCurrentResultAsSessionStep" styleClass="secondary-button" accessibleText="Save the current result in the session trail"/>
                         <Button fx:id="resultExpandButton" text="Expand Result" onAction="#handleOpenExpandedResultViewer" styleClass="secondary-button" accessibleText="Expand result viewer"/>
                         <Button fx:id="resultShelfButton" text="Add to Shelf" onAction="#handleAddCurrentOutputToShelf" styleClass="secondary-button" accessibleText="Add current output to clipboard shelf"/>
                         <Button fx:id="resultCopyButton" text="Copy Output" onAction="#handleCopyOutput" styleClass="action-button-primary" accessibleText="Copy output to clipboard"/>
@@ -175,7 +197,7 @@
                 <HBox fx:id="errorBanner" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" focusTraversable="false" styleClass="inline-error-banner">
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <HBox spacing="6" alignment="CENTER_LEFT">
-                            <Label text="⚠️" accessibleText="" style="-fx-font-size: 13px;"/>
+                            <Label styleClass="ux-inline-da9c4cada5" text="⚠️" accessibleText=""/>
                             <Label fx:id="errorBannerTitle" text="Operation Failed" accessibleText="Operation Failed" accessibleHelp="Error message" styleClass="error-banner-title"/>
                         </HBox>
                         <Label fx:id="errorBannerRemedy" text="Check parameters and try again." accessibleText="Check parameters and try again." accessibleHelp="Recommended action" styleClass="error-banner-remedy" wrapText="true"/>
@@ -188,27 +210,27 @@
                 </HBox>
 
                 <!-- Guided Flow Panel (reusable) -->
-                <HBox fx:id="guidedFlowPanel" spacing="15" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="guided-flow-panel" style="-fx-background-color: #1e293b; -fx-padding: 10 15; -fx-background-radius: 8; -fx-margin: 5 0;">
+                <HBox fx:id="guidedFlowPanel" spacing="15" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="guided-flow-panel ux-inline-d8a3fb5a2c">
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
-                        <Label fx:id="guideStepTitleLabel" text="Step 1: Choose data/input format" style="-fx-font-weight: bold; -fx-text-fill: #60a5fa; -fx-font-size: 13px;"/>
-                        <Label fx:id="guideStepDescLabel" text="Configure the input source type and encoding on the format flow bar." style="-fx-text-fill: #94a3b8; -fx-font-size: 11px;" wrapText="true"/>
+                        <Label styleClass="ux-inline-47484768be" fx:id="guideStepTitleLabel" text="Step 1: Choose data/input format"/>
+                        <Label styleClass="ux-inline-b2d7ff5bea" fx:id="guideStepDescLabel" text="Configure the input source type and encoding on the format flow bar." wrapText="true"/>
                     </VBox>
                     <HBox spacing="8" alignment="CENTER_RIGHT">
-                        <Button fx:id="guideBackBtn" text="Back" onAction="#handleGuideBack" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                        <Button fx:id="guideNextBtn" text="Next" onAction="#handleGuideNext" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                        <Button fx:id="guideSkipBtn" text="Skip Guidance" onAction="#handleGuideSkip" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                        <Button fx:id="guideExitBtn" text="Exit" onAction="#handleGuideExit" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                        <Button fx:id="guideBackBtn" text="Back" onAction="#handleGuideBack" styleClass="secondary-button ux-inline-401c00305b"/>
+                        <Button fx:id="guideNextBtn" text="Next" onAction="#handleGuideNext" styleClass="action-button-primary ux-inline-401c00305b"/>
+                        <Button fx:id="guideSkipBtn" text="Skip Guidance" onAction="#handleGuideSkip" styleClass="secondary-button ux-inline-401c00305b"/>
+                        <Button fx:id="guideExitBtn" text="Exit" onAction="#handleGuideExit" styleClass="secondary-button ux-inline-401c00305b"/>
                     </HBox>
                 </HBox>
 
                 <!-- Execution Readiness Panel (reusable compact card) -->
-                <HBox fx:id="readinessPanel" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="readiness-panel" style="-fx-padding: 8 14; -fx-background-radius: 6; -fx-margin: 4 0; -fx-background-color: #1e293b;">
+                <HBox fx:id="readinessPanel" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="readiness-panel ux-inline-4ca8ef014b">
                     <Label fx:id="readinessStatusBadge" text="✔ READY" styleClass="readiness-status-ready"/>
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
-                        <Label fx:id="readinessSummaryLabel" text="Execution Readiness Checklist" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #f8fafc;"/>
+                        <Label styleClass="ux-inline-d9f657c0dd" fx:id="readinessSummaryLabel" text="Execution Readiness Checklist"/>
                         <FlowPane fx:id="readinessChecksContainer" hgap="10" vgap="4"/>
                     </VBox>
-                    <Button fx:id="readinessToggleDetailsBtn" text="Show Details" onAction="#handleToggleReadinessDetails" styleClass="secondary-button" style="-fx-font-size: 10px; -fx-padding: 3 8;"/>
+                    <Button fx:id="readinessToggleDetailsBtn" text="Show Details" onAction="#handleToggleReadinessDetails" styleClass="secondary-button ux-inline-8e3aa95844"/>
                 </HBox>
 
                 <!-- Scrollable Content -->
@@ -216,10 +238,10 @@
                     <VBox fx:id="contentContainer" spacing="0" styleClass="content-container-vbox">
 
                         <!-- Quick Start Container -->
-                        <VBox fx:id="quickStartContainer" managed="false" visible="false" spacing="20" style="-fx-padding: 20;">
+                        <VBox styleClass="ux-inline-8d20c1fddd" fx:id="quickStartContainer" managed="false" visible="false" spacing="20">
                             <VBox spacing="5">
-                                <Label text="Laboratory Quick Start" styleClass="quick-start-title" style="-fx-font-size: 18px;"/>
-                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." styleClass="quick-start-description" style="-fx-font-size: 13px;"/>
+                                <Label text="Laboratory Quick Start" styleClass="quick-start-title ux-inline-fb7f3b0802"/>
+                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." styleClass="quick-start-description ux-inline-da9c4cada5"/>
                             </VBox>
 
                             <GridPane hgap="15" vgap="15">
@@ -232,60 +254,60 @@
                                 <VBox styleClass="form-group-box" GridPane.columnIndex="0" GridPane.rowIndex="0">
                                     <Label text="🔒 Encrypt a message" styleClass="form-group-title"/>
                                     <Label text="Secure data using symmetric keys (e.g. AES-256)." styleClass="helper-text" wrapText="true"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
-                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                        <Label text="Medium (Key Material / Secrets)" style="-fx-text-fill: #b54708; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    <HBox styleClass="ux-inline-b5ef81bd0a" spacing="8" alignment="CENTER_LEFT">
+                                        <Label styleClass="ux-inline-0ed0fa4650" text="Sensitivity:"/>
+                                        <Label styleClass="ux-inline-c0bff2bb67" text="Medium (Key Material / Secrets)"/>
                                     </HBox>
-                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedEncrypt" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                    <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedEncrypt" styleClass="action-button-primary ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 2: Calculate a hash -->
                                 <VBox styleClass="form-group-box" GridPane.columnIndex="1" GridPane.rowIndex="0">
                                     <Label text="🔐 Calculate a hash" styleClass="form-group-title"/>
                                     <Label text="Generate a secure one-way hash (e.g. SHA-256)." styleClass="helper-text" wrapText="true"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
-                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                        <Label text="Low (No secrets involved)" style="-fx-text-fill: #027a48; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    <HBox styleClass="ux-inline-b5ef81bd0a" spacing="8" alignment="CENTER_LEFT">
+                                        <Label styleClass="ux-inline-0ed0fa4650" text="Sensitivity:"/>
+                                        <Label styleClass="ux-inline-bed983efd1" text="Low (No secrets involved)"/>
                                     </HBox>
-                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedHash" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                    <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedHash" styleClass="action-button-primary ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 3: Sign or verify data -->
                                 <VBox styleClass="form-group-box" GridPane.columnIndex="0" GridPane.rowIndex="1">
                                     <Label text="🖋 Sign or verify data" styleClass="form-group-title"/>
                                     <Label text="Generate asymmetric signatures or verify authenticity." styleClass="helper-text" wrapText="true"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
-                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                        <Label text="High (Private signing keys)" style="-fx-text-fill: #b42318; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    <HBox styleClass="ux-inline-b5ef81bd0a" spacing="8" alignment="CENTER_LEFT">
+                                        <Label styleClass="ux-inline-0ed0fa4650" text="Sensitivity:"/>
+                                        <Label styleClass="ux-inline-1ec5e1dd8f" text="High (Private signing keys)"/>
                                     </HBox>
-                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedSign" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                    <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedSign" styleClass="action-button-primary ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 4: Inspect a certificate -->
                                 <VBox styleClass="form-group-box" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                     <Label text="🔍 Inspect a certificate" styleClass="form-group-title"/>
                                     <Label text="Parse and validate public X.509 certificates." styleClass="helper-text" wrapText="true"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
-                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                        <Label text="Low (Public data only)" style="-fx-text-fill: #027a48; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    <HBox styleClass="ux-inline-b5ef81bd0a" spacing="8" alignment="CENTER_LEFT">
+                                        <Label styleClass="ux-inline-0ed0fa4650" text="Sensitivity:"/>
+                                        <Label styleClass="ux-inline-bed983efd1" text="Low (Public data only)"/>
                                     </HBox>
-                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedCert" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                    <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedCert" styleClass="action-button-primary ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 5: Convert encodings -->
                                 <VBox styleClass="form-group-box" GridPane.columnIndex="0" GridPane.rowIndex="2">
                                     <Label text="🔄 Convert encodings" styleClass="form-group-title"/>
                                     <Label text="Transform data formats (Base64, Hex, EBCDIC, etc.)." styleClass="helper-text" wrapText="true"/>
-                                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 5 0 0 0;">
-                                        <Label text="Sensitivity:" style="-fx-font-size: 11px; -fx-font-weight: bold;"/>
-                                        <Label text="Low (No secrets)" style="-fx-text-fill: #027a48; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                    <HBox styleClass="ux-inline-b5ef81bd0a" spacing="8" alignment="CENTER_LEFT">
+                                        <Label styleClass="ux-inline-0ed0fa4650" text="Sensitivity:"/>
+                                        <Label styleClass="ux-inline-bed983efd1" text="Low (No secrets)"/>
                                     </HBox>
-                                    <Region VBox.vgrow="ALWAYS" style="-fx-min-height: 10px;"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedConvert" styleClass="action-button-primary" style="-fx-font-size: 12px;"/>
+                                    <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedConvert" styleClass="action-button-primary ux-inline-7011792fac"/>
                                 </VBox>
                             </GridPane>
                         </VBox>
@@ -296,15 +318,15 @@
 
                         <!-- This is where Symmetric Keys Accordion will be loaded -->
                         <!-- Saved Sessions Container -->
-                        <!-- JOSE CONTAINER -->                        <fx:include fx:id="jose" source="jose.fxml"/>
-                        <!-- COSE CONTAINER -->                        <fx:include fx:id="cose" source="cose.fxml"/>
+                        <ModuleHost fx:id="jose" resource="/fxml/jose.fxml" managed="false" visible="false" />
+                        <ModuleHost fx:id="cose" resource="/fxml/cose.fxml" managed="false" visible="false" />
 
 
-                        <VBox fx:id="savedSessionsContainer" managed="false" visible="false" spacing="15" style="-fx-padding: 20;">
+                        <VBox styleClass="ux-inline-8d20c1fddd" fx:id="savedSessionsContainer" managed="false" visible="false" spacing="15">
                             <!-- Header -->
                             <VBox spacing="5">
-                                <Label text="Saved Sessions" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #e2e8f0;"/>
-                                <Label text="Restore your previous work sessions." style="-fx-text-fill: #a0aec0; -fx-font-size: 13px;"/>
+                                <Label styleClass="ux-inline-98d654c0fb" text="Saved Sessions"/>
+                                <Label styleClass="ux-inline-0665f452ba" text="Restore your previous work sessions."/>
                             </VBox>
 
                             <!-- Sessions List -->
@@ -312,80 +334,85 @@
                         </VBox>
 
                         <!-- Keys Container -->
-                        <fx:include fx:id="keysContainer" source="keys.fxml"/>
+                        <ModuleHost fx:id="keysContainer" resource="/fxml/keys.fxml" managed="false" visible="false" />
 
                         <!-- Certificates Operations -->
-                        <fx:include fx:id="certificatesContainer" source="certificates.fxml"/>
+                        <ModuleHost fx:id="certificatesContainer" resource="/fxml/certificates.fxml" managed="false" visible="false" />
 
                         <!-- CIPHER CONTENT -->
-                        <fx:include fx:id="cipherContainer" source="cipher.fxml"/>
+                        <ModuleHost fx:id="cipherContainer" resource="/fxml/cipher.fxml" managed="false" visible="false" />
 
                         <!-- Authentication Container -->
-                        <fx:include fx:id="authenticationContainer" source="authentication.fxml"/>
+                        <ModuleHost fx:id="authenticationContainer" resource="/fxml/authentication.fxml" managed="false" visible="false" />
 
                         <!-- Payments Container -->
-                        <fx:include fx:id="paymentsContainer" source="payments.fxml"/>
+                        <ModuleHost fx:id="paymentsContainer" resource="/fxml/payments.fxml" managed="false" visible="false" />
 
                         <!-- EMV Container -->
-                        <fx:include fx:id="emvContainer" source="emv.fxml"/>
+                        <ModuleHost fx:id="emvContainer" resource="/fxml/emv.fxml" managed="false" visible="false" />
 
                         <!-- Generic Utilities Container -->
                         <!-- GENERIC CONTENT (Hashing, Encoding, etc) -->
-                <fx:include fx:id="genericContainer" source="generic.fxml" />
+                <ModuleHost fx:id="genericContainer" resource="/fxml/generic.fxml" managed="false" visible="false" />
 
                     <!-- Recent Operations / History -->
-                    <fx:include fx:id="historyView" source="history.fxml" />
-                    <fx:include fx:id="clipboardShelf" source="clipboard_shelf.fxml" />
+                    <ModuleHost fx:id="historyView" resource="/fxml/history.fxml" managed="false" visible="false" />
+                    <ModuleHost fx:id="clipboardShelf" resource="/fxml/clipboard_shelf.fxml" managed="false" visible="false" />
 
                     <!-- Post-Quantum Cryptography Container -->
-                    <fx:include source="pqc.fxml" fx:id="postQuantumContainer" />
+                    <ModuleHost fx:id="postQuantumContainer" resource="/fxml/pqc.fxml" managed="false" visible="false" />
 
                     <!-- XML Security Container -->
-                    <fx:include source="xml_security.fxml" fx:id="xmlSecurityContainer" />
+                    <ModuleHost fx:id="xmlSecurityContainer" resource="/fxml/xml_security.fxml" managed="false" visible="false" />
 
                     <!-- WSS Security Container -->
-                    <fx:include source="wss_security.fxml" fx:id="wssSecurityContainer" />
+                    <ModuleHost fx:id="wssSecurityContainer" resource="/fxml/wss_security.fxml" managed="false" visible="false" />
 
                     <!-- Process Designer Container -->
-                    <fx:include source="process_designer.fxml" fx:id="processDesignerContainer" />
+                    <ModuleHost fx:id="processDesignerContainer" resource="/fxml/process_designer.fxml" managed="false" visible="false" />
 
                     </VBox>
                 </ScrollPane>
             </VBox>
 
-            <!-- Inspector Panel (right, collapsible) -->
-            <VBox fx:id="inspectorPanel" minWidth="280" maxWidth="280" styleClass="inspector-panel">
+                <!-- Inspector Panel (right, collapsible) -->
+                <VBox fx:id="inspectorPanel" minWidth="260" styleClass="inspector-panel">
 
                 <!-- Inspector Header -->
                 <HBox alignment="CENTER_LEFT" spacing="8" styleClass="inspector-header-bar">
-                    <Label fx:id="inspectorTitleLabel" text="Inspector" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
+                    <Label styleClass="ux-inline-8eb1b6eca4" fx:id="inspectorTitleLabel" text="Inspector"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="inspectorToggleButton" text="✕" onAction="#handleToggleInspector" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-cursor: hand;" accessibleText="Close the Inspector panel"/>
+                    <Button styleClass="ux-inline-ab6e31d870" fx:id="inspectorToggleButton" text="✕" onAction="#handleToggleInspector" accessibleText="Close the Inspector panel"/>
                 </HBox>
 
-                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;">
+                <!-- Compact session actions; operation details already live in History. -->
+                <HBox spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header">
+                    <Label fx:id="inspectorSessionTrailTitle" text="Session log" styleClass="inspector-section-title"/>
+                    <Label styleClass="ux-inline-cb001c4862" fx:id="sessionTrailCountLabel" text="0"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorAddSessionStepButton" text="Add" onAction="#handleSaveCurrentResultAsSessionStep" disable="true" accessibleText="Add the current operation to the session log"/>
+                    <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorExportSessionTrailButton" text="Export" onAction="#handleExportSessionTrail" disable="true" accessibleText="Export the session log as text"/>
+                </HBox>
+
+                <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" VBox.vgrow="ALWAYS">
                     <VBox spacing="0">
 
                         <!-- Input/Output Section -->
-                        <VBox spacing="8" style="-fx-padding: 12;">
-                            <GridPane hgap="10" vgap="5">
-                                <Label fx:id="inspectorInputBytesTitle" text="Input Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="inspector-label-small"/>
-                                <Label fx:id="inputBytesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="inspector-value"/>
-
-                                <Label fx:id="inspectorOutputBytesTitle" text="Output Bytes:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="inspector-label-small"/>
-                                <Label fx:id="outputBytesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="inspector-value"/>
-
-                                <columnConstraints>
-                                    <ColumnConstraints minWidth="100"/>
-                                    <ColumnConstraints hgrow="ALWAYS" halignment="RIGHT"/>
-                                </columnConstraints>
-                            </GridPane>
+                        <VBox styleClass="ux-inline-e3394729d2" spacing="8">
+                            <VBox spacing="2" styleClass="inspector-detail-stack">
+                                <Label fx:id="inspectorInputBytesTitle" text="Input Bytes:" styleClass="inspector-label-small"/>
+                                <Label fx:id="inputBytesLabel" text="0" styleClass="inspector-value"/>
+                            </VBox>
+                            <VBox spacing="2" styleClass="inspector-detail-stack">
+                                <Label fx:id="inspectorOutputBytesTitle" text="Output Bytes:" styleClass="inspector-label-small"/>
+                                <Label fx:id="outputBytesLabel" text="0" styleClass="inspector-value"/>
+                            </VBox>
 
                             <Separator styleClass="separator-horizontal"/>
 
                             <VBox spacing="4">
                                 <Label fx:id="inspectorAlgorithmTitle" text="Algorithm:" styleClass="inspector-label-small"/>
-                                <Label fx:id="operationLabel" text="No result yet" style="-fx-font-weight: bold;"/>
+                                <Label styleClass="ux-inline-689e8d50bc" fx:id="operationLabel" text="No result yet"/>
                             </VBox>
 
                              <Separator styleClass="separator-horizontal"/>
@@ -400,41 +427,29 @@
                         <HBox styleClass="inspector-section-header">
                             <Label fx:id="inspectorSecurityTipsTitle" text="Security Tips" styleClass="inspector-section-title"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Label text="&lt;" style="-fx-text-fill: white; -fx-font-size: 10px;"/>
+                            <Label styleClass="ux-inline-7917b6784a" text="&lt;"/>
                         </HBox>
 
-                        <VBox fx:id="securityTipBox" managed="false" visible="false" style="-fx-padding: 12;">
+                        <VBox styleClass="ux-inline-e3394729d2" fx:id="securityTipBox" managed="false" visible="false">
                             <VBox styleClass="warning-box" spacing="5">
                                 <HBox spacing="8" alignment="CENTER_LEFT">
-                                    <Label text="⚠️" style="-fx-font-size: 16px;"/>
+                                    <Label styleClass="ux-inline-496ad89056" text="⚠️"/>
                                     <Label fx:id="inspectorWarningTitle" text="Warning" styleClass="warning-title"/>
                                 </HBox>
                                 <Label fx:id="securityTipLabel" text="" wrapText="true" styleClass="warning-text"/>
                             </VBox>
                         </VBox>
 
-                        <!-- History Section -->
-                        <HBox styleClass="inspector-section-header">
-                            <Label fx:id="inspectorHistoryTitle" text="History" styleClass="inspector-section-title"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Button fx:id="inspectorExportJsonButton" text="Export JSON" onAction="#handleExportHistory" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #81c784; -fx-cursor: hand;">
-                                <tooltip><Tooltip text="Export the complete operation history as JSON"/></tooltip>
-                            </Button>
-                            <Button fx:id="inspectorClearHistoryButton" text="Clear" onAction="#handleClearHistory" style="-fx-font-size: 10px; -fx-padding: 2 6; -fx-background-color: transparent; -fx-text-fill: #90caf9; -fx-cursor: hand;"/>
-                        </HBox>
-
-                        <VBox fx:id="historyContainer" spacing="4" style="-fx-padding: 8;"/>
-
                     </VBox>
                 </ScrollPane>
-            </VBox>
-
-        </HBox>
+                </VBox>
+            </items>
+        </ResponsiveWorkspaceSplitPane>
     </center>
 
     <!-- Status Bar -->
     <bottom>
-        <HBox styleClass="status-bar" spacing="10" alignment="CENTER_LEFT">
+        <HBox styleClass="status-bar" spacing="10" alignment="CENTER_LEFT" minHeight="26" prefHeight="26" maxHeight="26">
             <Label fx:id="statusLabel" text="Ready" styleClass="status-label-main"/>
             <HBox fx:id="asyncProgressBox" visible="false" managed="false" alignment="CENTER_LEFT" spacing="8" styleClass="async-progress-box">
                 <ProgressIndicator fx:id="asyncProgressSpinner" prefWidth="16" prefHeight="16" styleClass="async-progress-spinner"/>
@@ -443,28 +458,29 @@
                 <Button fx:id="asyncCancelBtn" text="Cancel" onAction="#handleCancelAsyncOperation" styleClass="async-cancel-button"/>
             </HBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="runtimeInfoLabel" text="Java -- | JavaFX -- | BouncyCastle" styleClass="status-label-info"/>
+            <Button fx:id="statusVisibilityButton" text="Full visibility" onAction="#handleOpenSecurityMenu" styleClass="status-context-button"/>
+            <Label fx:id="statusLanguageLabel" text="Language: System" styleClass="status-label-info"/>
         </HBox>
     </bottom>
 
 </BorderPane>
 
     <!-- Command Palette Overlay -->
-    <VBox fx:id="commandPaletteOverlay" managed="false" visible="false" alignment="TOP_CENTER" style="-fx-background-color: rgba(15, 23, 42, 0.65); -fx-padding: 60 20 20 20;">
-        <VBox spacing="10" maxWidth="660" styleClass="command-palette-card" style="-fx-background-color: #1e293b; -fx-padding: 16; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 20, 0, 0, 10);">
-            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-background-color: #0f172a; -fx-padding: 8 12; -fx-background-radius: 6; -fx-border-color: #334155; -fx-border-radius: 6;">
-                <Label text="🔍" style="-fx-font-size: 14px;"/>
-                <TextField fx:id="commandSearchField" promptText="Type a command or search (e.g. aes, hash, jwt, shelf, cert)..." HBox.hgrow="ALWAYS" style="-fx-background-color: transparent; -fx-text-fill: #f8fafc; -fx-font-size: 13px; -fx-border-width: 0;"/>
-                <Label fx:id="commandEscapeLabel" text="ESC to close" style="-fx-font-size: 10px; -fx-text-fill: #94a3b8; -fx-padding: 2 6; -fx-background-color: #334155; -fx-background-radius: 4;"/>
+    <VBox styleClass="ux-inline-fe40b18811" fx:id="commandPaletteOverlay" managed="false" visible="false" alignment="TOP_CENTER">
+        <VBox spacing="10" maxWidth="660" styleClass="command-palette-card ux-inline-03666b7226">
+            <HBox styleClass="ux-inline-d10a1c8686" spacing="10" alignment="CENTER_LEFT">
+                <Label styleClass="ux-inline-bfa169e50b" text="🔍"/>
+                <TextField styleClass="ux-inline-1f94a8378e" fx:id="commandSearchField" promptText="Type a command or search (e.g. aes, hash, jwt, shelf, cert)..." HBox.hgrow="ALWAYS"/>
+                <Label styleClass="ux-inline-b5126e5afc" fx:id="commandEscapeLabel" text="ESC to close"/>
             </HBox>
             <ListView fx:id="commandResultsListView" prefHeight="320" styleClass="command-palette-list"/>
-                <Label fx:id="commandEmptyLabel" text="No commands found" managed="false" visible="false" style="-fx-text-fill: #94a3b8; -fx-font-size: 13px; -fx-padding: 20; -fx-alignment: center;"/>
-            <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-padding: 4 6;">
-                <Label fx:id="commandNavigateLabel" text="↑↓ Navigate" style="-fx-font-size: 10px; -fx-text-fill: #64748b;"/>
-                <Label fx:id="commandSelectLabel" text="↵ Select" style="-fx-font-size: 10px; -fx-text-fill: #64748b;"/>
-                <Label fx:id="commandCancelLabel" text="ESC Cancel" style="-fx-font-size: 10px; -fx-text-fill: #64748b;"/>
+                <Label styleClass="ux-inline-1cfaaa7b58" fx:id="commandEmptyLabel" text="No commands found" managed="false" visible="false"/>
+            <HBox styleClass="ux-inline-2deae339e2" spacing="15" alignment="CENTER_LEFT">
+                <Label styleClass="ux-inline-afb686f346" fx:id="commandNavigateLabel" text="↑↓ Navigate"/>
+                <Label styleClass="ux-inline-afb686f346" fx:id="commandSelectLabel" text="↵ Select"/>
+                <Label styleClass="ux-inline-afb686f346" fx:id="commandCancelLabel" text="ESC Cancel"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="commandTitleLabel" text="CryptoCarver Command Palette" style="-fx-font-size: 10px; -fx-text-fill: #475569; -fx-font-style: italic;"/>
+                <Label styleClass="ux-inline-8b220494b6" fx:id="commandTitleLabel" text="CryptoCarver Command Palette"/>
             </HBox>
         </VBox>
     </VBox>

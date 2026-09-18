@@ -1,6 +1,8 @@
 package com.cryptocarver.crypto;
 
 import com.cryptocarver.util.DataConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.Key;
 import java.security.MessageDigest;
@@ -13,6 +15,7 @@ import java.security.interfaces.RSAKey;
 
 /** Human-readable diagnostics for key and certificate material. */
 public final class KeyMaterialInspector {
+    private static final Logger LOG = LoggerFactory.getLogger(KeyMaterialInspector.class);
     private KeyMaterialInspector() { }
 
     public static String describeKey(Key key) {
@@ -90,7 +93,7 @@ public final class KeyMaterialInspector {
             verifier.update(challenge);
             return verifier.verify(signature);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.warn("Could not verify key signature", e);
             return false;
         }
     }

@@ -1,12 +1,11 @@
 package com.cryptocarver.ui;
 
 import javafx.application.Platform;
-import javafx.animation.PauseTransition;
-import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.io.File;
@@ -30,6 +29,10 @@ import com.cryptocarver.service.I18nService;
  */
 public class ModernMainController implements StatusReporter, OperationNavigator {
 
+    private static javafx.stage.Window windowOf(Node node) {
+        return node == null || node.getScene() == null ? null : node.getScene().getWindow();
+    }
+
     private static final double COMPACT_LAYOUT_WIDTH = 1_100;
     /** Rendered per platform so Windows and Linux do not show macOS glyphs as empty boxes. */
     private static final String COMMAND_PALETTE_SHORTCUT =
@@ -42,13 +45,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML private javafx.scene.control.Label contentPlaceholderLabel;
-    @FXML private javafx.scene.layout.VBox jose;
-    @FXML private javafx.scene.layout.VBox cose;
+    @FXML private ModuleHost jose;
+    @FXML private ModuleHost cose;
     @FXML private GenericController genericContainerController;
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
-    private final PauseTransition statusResetTimer = new PauseTransition(Duration.seconds(3));
     private final ExpandedTextViewer expandedTextViewer = new ExpandedTextViewer();
+    private final DialogService dialogService = new DialogService();
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
@@ -65,6 +68,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private BorderPane mainPane;
+    /** Workspace split pane owns divider persistence and responsive collapsing. */
+    @FXML
+    private ResponsiveWorkspaceSplitPane workspaceSplitPane;
     @FXML
     private ToggleGroup visibilityProfileGroup;
 
@@ -72,15 +78,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private NavigationRail navigationRail;
     @FXML
     private SidePanel sidePanel;
+    private NavigationController navigationController;
     @FXML
     private VBox mainContentArea;
     @FXML
     private ScrollPane mainScrollPane;
     @FXML
     private VBox contentContainer;
-    @FXML private VBox keysContainer;
+    @FXML private ModuleHost keysContainer;
     @FXML private KeysController keysContainerController;
-    @FXML private VBox certificatesContainer;
+    @FXML private ModuleHost certificatesContainer;
     @FXML private CertificatesController certificatesContainerController;
     @FXML
     private VBox inspectorPanel;
@@ -89,7 +96,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private boolean inspectorHiddenForCompactLayout;
 
     // CIPHER UI
-    @FXML private VBox cipherContainer;
+    @FXML private ModuleHost cipherContainer;
     @FXML private CipherController cipherContainerController;
 
     // Header labels
@@ -118,9 +125,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private Label securityTipLabel;
     @FXML
     private VBox securityTipBox;
-    @FXML
-    private Label runtimeInfoLabel;
     @FXML private Label statusLabel;
+    @FXML private Button statusVisibilityButton;
+    @FXML private Label statusLanguageLabel;
     @FXML private HBox errorBanner;
     @FXML private Label errorBannerTitle;
     @FXML private Label errorBannerRemedy;
@@ -128,15 +135,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button errorBannerCopyDetailsBtn;
     @FXML private Button errorBannerCloseBtn;
     private InlineErrorPresenter inlineErrorPresenter;
+    private StatusBarPresenter statusBarPresenter;
     @FXML
-    private VBox historyContainer;
+    private Label sessionTrailCountLabel;
+    @FXML private Label inspectorSessionTrailTitle;
+    @FXML private Button inspectorAddSessionStepButton;
+    @FXML private Button inspectorExportSessionTrailButton;
     @FXML
-    private VBox historyView;
+    private ModuleHost historyView;
     @FXML
     private HistoryController historyViewController;
 
     @FXML
-    private VBox clipboardShelf;
+    private ModuleHost clipboardShelf;
     @FXML
     private ClipboardShelfController clipboardShelfController;
 
@@ -152,6 +163,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button resultExpandButton;
     @FXML private Button resultShelfButton;
     @FXML private Button resultCopyButton;
+    @FXML private Button resultSaveStepButton;
     @FXML private Button inspectorToggleButton;
 
     // Quick Start & Guided Workflows
@@ -200,23 +212,27 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
     private com.cryptocarver.model.SavedSessionsManager savedSessionsManager;
+    private com.cryptocarver.model.OperationSessionLog operationSessionLog =
+            new com.cryptocarver.model.OperationSessionLog();
     private String currentActiveOperation = "Dashboard"; // Defaul
+    private boolean processDesignerWorkspace;
+    private boolean sidePanelVisibleBeforeProcessDesigner;
+    private boolean inspectorVisibleBeforeProcessDesigner;
     @FXML
     private ComboBox<String> outputFormatCombo;
 
     // Symmetric and asymmetric key controls are owned by keysContainerController.
     // Certificate, CRL and CMS controls are owned by certificatesContainerController.
     // Generic Tab FXML Fields
-    @FXML
-    private Accordion genericContainer;
+    @FXML private ModuleHost genericContainer;
 
     // Post-Quantum UI
-    @FXML private VBox postQuantumContainer;
+    @FXML private ModuleHost postQuantumContainer;
     @FXML private PostQuantumController postQuantumContainerController;
 
     // XML Security UI
-    @FXML private VBox xmlSecurityContainer;
-    @FXML private VBox wssSecurityContainer;
+    @FXML private ModuleHost xmlSecurityContainer;
+    @FXML private ModuleHost wssSecurityContainer;
     @FXML private WssSecurityController wssSecurityContainerController;
     @FXML private TextField xmlSignInputPathField;
     @FXML private TextField xmlSignKeyPathField;
@@ -226,7 +242,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private ComboBox<String> xmlSignPackagingCombo;
     // New Controllers
     @FXML private XMLSignatureController xmlSecurityContainerController;
-    @FXML private TitledPane processDesignerContainer;
+    @FXML private ModuleHost processDesignerContainer;
     @FXML private ProcessDesignerController processDesignerContainerController;
 
     // Generic Utilities
@@ -238,15 +254,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private TextField uuidOutputField;
 
     // Authentication Tab FXML Fields
-    @FXML private VBox authenticationContainer;
+    @FXML private ModuleHost authenticationContainer;
     @FXML private AuthenticationController authenticationContainerController;
 
     // Payments module
-    @FXML private VBox paymentsContainer;
+    @FXML private ModuleHost paymentsContainer;
     @FXML private PaymentsController paymentsContainerController;
 
     // EMV module
-    @FXML private VBox emvContainer;
+    @FXML private ModuleHost emvContainer;
     @FXML private EMVController emvContainerController;
 
     // Controllers
@@ -265,15 +281,22 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Menu securityMenu;
     @FXML private Menu toolsMenu;
     @FXML private Menu helpMenu;
+    @FXML private Menu laboratoryMenu;
     @FXML private Menu languageMenu;
+    @FXML private Menu appearanceMenu;
     @FXML private RadioMenuItem languageSystemMenuItem;
     @FXML private RadioMenuItem languageEsMenuItem;
     @FXML private RadioMenuItem languageEnMenuItem;
     @FXML private ToggleGroup languagePreferenceGroup;
+    @FXML private ToggleGroup themePreferenceGroup;
+    @FXML private RadioMenuItem themeSystemMenuItem;
+    @FXML private RadioMenuItem themeLightMenuItem;
+    @FXML private RadioMenuItem themeDarkMenuItem;
     @FXML private MenuItem importKeyMenuItem;
     @FXML private MenuItem exportScreenMenuItem;
     @FXML private MenuItem importScreenMenuItem;
     @FXML private MenuItem saveSessionMenuItem;
+    @FXML private MenuItem exportSessionTrailMenuItem;
     @FXML private MenuItem exportHistoryMenuItem;
     @FXML private MenuItem exitMenuItem;
     @FXML private MenuItem clearInputMenuItem;
@@ -300,6 +323,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private MenuItem shortcutsMenuItem;
     @FXML private MenuItem diagnosticsMenuItem;
     @FXML private MenuItem aboutMenuItem;
+    @FXML private MenuItem laboratoryQuickStartMenuItem;
     @FXML private Button toolbarSearchButton;
     @FXML private Button toolbarSaveSessionButton;
     @FXML private Button toolbarClearButton;
@@ -332,6 +356,108 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label commandTitleLabel;
 
     private final OperationExecutor operationExecutor = new OperationExecutor();
+    private final ModuleLoader moduleLoader = new ModuleLoader(ModernMainController.class);
+
+    private ModuleHost[] moduleHosts() {
+        return new ModuleHost[]{jose, cose, keysContainer, certificatesContainer,
+                cipherContainer, authenticationContainer, paymentsContainer, emvContainer,
+                genericContainer, historyView, clipboardShelf, postQuantumContainer,
+                xmlSecurityContainer, wssSecurityContainer, processDesignerContainer};
+    }
+
+    private void configureDeferredModules() {
+        java.util.concurrent.Executor direct = Runnable::run;
+        for (ModuleHost host : moduleHosts()) {
+            if (host != null) host.configure(moduleLoader, direct);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T ensureModule(ModuleHost host, Class<T> controllerType) {
+        if (host == null) return null;
+        host.showConfigured();
+        Object controller = host.controller();
+        connectShellServices(controller);
+        return controllerType.isInstance(controller) ? controllerType.cast(controller) : null;
+    }
+
+    /**
+     * Connects a module to the shell's result publishing and shared format controls.
+     *
+     * <p>This has to happen as the module materializes, not in {@link #initialize()}: modules
+     * load on first use, so at initialization time every module controller is still null and a
+     * null-guarded wiring pass there silently connects nothing. A module left unconnected keeps
+     * its reporter null, and since each module guards on that, its results and errors are
+     * dropped instead of reaching the status bar.
+     */
+    private void connectShellServices(Object controller) {
+        if (controller instanceof JOSEController jose) {
+            jose.setReporter(this);
+        } else if (controller instanceof COSEController cose) {
+            cose.setReporter(this);
+        } else if (controller instanceof HistoryController history) {
+            history.setHistoryManager(historyManager());
+            history.setOperationNavigator(this);
+        } else if (controller instanceof ClipboardShelfController shelf) {
+            shelf.setNavigator(this, this);
+        } else if (controller instanceof GenericController generic) {
+            generic.setStatusReporter(this);
+            generic.setFormatControls(inputFormatCombo, outputFormatCombo);
+            if (generic.getKeyCertificateWorkbenchController() != null) {
+                generic.getKeyCertificateWorkbenchController().setStatusReporter(this);
+            }
+            if (generic.getCryptoEnvelopeInspectorController() != null) {
+                generic.getCryptoEnvelopeInspectorController().setStatusReporter(this);
+            }
+        }
+    }
+
+    /**
+     * Materializes every deferred module and runs the same initialization the shell performs
+     * when the user first navigates to it.
+     *
+     * <p>Modules load on first use, so the {@code *Controller} fields stay null until the user
+     * reaches the section that owns them, and their {@code init} wiring — status reporter,
+     * shared format combos, cross-module callbacks — runs at that moment. UI tests assert on
+     * those controllers directly and have no user to navigate for them, so they call this once
+     * after loading the shell. It delegates to the real loaders rather than to
+     * {@link #ensureModule} so a test sees a module wired the way the app wires it. Must run on
+     * the FX thread.
+     */
+    void materializeModulesForTesting() {
+        // Loading a module also shows it, so which module is on screen is remembered and put
+        // back afterwards: a shell with every module visible at once is a state the app never
+        // reaches, and code that asks what is currently visible would answer from it.
+        ModuleHost[] hosts = moduleHosts();
+        boolean[] wasVisible = new boolean[hosts.length];
+        boolean[] wasManaged = new boolean[hosts.length];
+        for (int i = 0; i < hosts.length; i++) {
+            if (hosts[i] == null) continue;
+            wasVisible[i] = hosts[i].isVisible();
+            wasManaged[i] = hosts[i].isManaged();
+        }
+
+        loadSymmetricKeysContent();
+        loadCipherContent();
+        loadAuthenticationContent();
+        loadEMVContent();
+        loadPaymentsContent();
+        loadPostQuantumContent();
+        loadXMLSecurityContent();
+        loadWssSecurityContent();
+        if (genericContainerController == null) genericContainerController = ensureModule(genericContainer, GenericController.class);
+        if (joseController == null) joseController = ensureModule(jose, JOSEController.class);
+        if (coseController == null) coseController = ensureModule(cose, COSEController.class);
+        if (historyViewController == null) historyViewController = ensureModule(historyView, HistoryController.class);
+        if (clipboardShelfController == null) clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
+        if (processDesignerContainerController == null) processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
+
+        for (int i = 0; i < hosts.length; i++) {
+            if (hosts[i] == null) continue;
+            hosts[i].setVisible(wasVisible[i]);
+            hosts[i].setManaged(wasManaged[i]);
+        }
+    }
 
     public OperationExecutor getOperationExecutor() {
         return operationExecutor;
@@ -455,8 +581,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void initialize() {
-        if (joseController != null) joseController.setReporter(this);
-        if (coseController != null) coseController.setReporter(this);
+        configureDeferredModules();
+        // Module reporters are wired in connectShellServices as each module materializes.
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
 
@@ -485,13 +611,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             });
         }
 
-        if (runtimeInfoLabel != null) {
-            String javaVer = System.getProperty("java.version");
-            String javafxVer = System.getProperty("javafx.version");
-            String javaText = (javaVer != null && !javaVer.isBlank()) ? "Java " + javaVer : "Java";
-            String javafxText = (javafxVer != null && !javafxVer.isBlank()) ? "JavaFX " + javafxVer : "JavaFX";
-            runtimeInfoLabel.setText(javaText + " | " + javafxText + " | BouncyCastle");
-        }
+        statusBarPresenter = new StatusBarPresenter(statusLabel, statusVisibilityButton, statusLanguageLabel, i18n);
 
         if (visibilityProfileGroup != null) {
             com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
@@ -510,6 +630,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         // Handle item selection from SidePanel
         sidePanel.setOnItemSelected(this::handleItemSelected);
+        navigationController = new NavigationController(navigationRail, sidePanel, this::handleItemSelected);
+        navigationController.install();
 
         i18n.refreshFromSettings();
         i18nListener = locale -> {
@@ -522,26 +644,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         // Initialize History
         initializeHistory();
+        refreshSessionTrailUI();
 
         // Load symmetric keys content (default)
         loadSymmetricKeysContent();
-        loadCipherContent();
-        loadAuthenticationContent();
-        loadPaymentsContent();
-        loadEMVContent();
-        if (genericContainerController != null) {
-            genericContainerController.setStatusReporter(this);
-            genericContainerController.setFormatControls(inputFormatCombo, outputFormatCombo);
-        }
-        if (genericContainerController != null && genericContainerController.getKeyCertificateWorkbenchController() != null) {
-            genericContainerController.getKeyCertificateWorkbenchController().setStatusReporter(this);
-        }
-        if (genericContainerController != null && genericContainerController.getCryptoEnvelopeInspectorController() != null) {
-            genericContainerController.getCryptoEnvelopeInspectorController().setStatusReporter(this);
-        }
-        loadPostQuantumContent();
-        loadXMLSecurityContent();
-        loadWssSecurityContent();
 
         // Show the symmetric keys by default
         showSymmetricKeys();
@@ -568,12 +674,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(securityMenu, "menu.security");
         setText(toolsMenu, "menu.tools");
         setText(helpMenu, "menu.help");
+        setText(laboratoryMenu, "menu.laboratory");
         setText(languageMenu, "menu.language");
+        setText(appearanceMenu, "menu.appearance");
 
         setText(importKeyMenuItem, "menu.importKey");
         setText(exportScreenMenuItem, "menu.exportScreen");
         setText(importScreenMenuItem, "menu.importScreen");
         setText(saveSessionMenuItem, "menu.saveSession");
+        setText(exportSessionTrailMenuItem, "menu.exportSessionTrail");
         setText(exportHistoryMenuItem, "menu.exportHistory");
         setText(exitMenuItem, "menu.exit");
         setText(clearInputMenuItem, "menu.clearInput");
@@ -600,6 +709,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(shortcutsMenuItem, "menu.shortcuts");
         setText(diagnosticsMenuItem, "menu.diagnostics");
         setText(aboutMenuItem, "menu.about");
+        setText(laboratoryQuickStartMenuItem, "menu.quickStart");
         if (mainMenuBar != null) {
             mainMenuBar.getMenus().stream()
                     .filter(menu -> "laboratory".equals(menu.getUserData()))
@@ -610,10 +720,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(languageSystemMenuItem, "app.language.system");
         setText(languageEsMenuItem, "app.language.es");
         setText(languageEnMenuItem, "app.language.en");
+        setText(themeSystemMenuItem, "app.theme.system");
+        setText(themeLightMenuItem, "app.theme.light");
+        setText(themeDarkMenuItem, "app.theme.dark");
         LanguagePreference selected = i18n.getPreference();
         if (languageSystemMenuItem != null) languageSystemMenuItem.setSelected(selected == LanguagePreference.SYSTEM);
         if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
         if (languageEnMenuItem != null) languageEnMenuItem.setSelected(selected == LanguagePreference.EN);
+        com.cryptocarver.model.ThemePreference theme = com.cryptocarver.model.AppSettings.getInstance().getThemePreference();
+        if (themeSystemMenuItem != null) themeSystemMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.SYSTEM);
+        if (themeLightMenuItem != null) themeLightMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.LIGHT);
+        if (themeDarkMenuItem != null) themeDarkMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.DARK);
 
         if (toolbarSearchButton != null) {
             toolbarSearchButton.setText(i18n.text("toolbar.search", COMMAND_PALETTE_SHORTCUT));
@@ -634,6 +751,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setAccessibleText(resultExpandButton, "a11y.resultExpand");
         setAccessibleText(resultShelfButton, "a11y.resultShelf");
         setAccessibleText(resultCopyButton, "a11y.resultCopy");
+        setText(resultSaveStepButton, "sessionTrail.saveStep");
+        setAccessibleText(resultSaveStepButton, "a11y.sessionTrailSaveStep");
+        setText(inspectorSessionTrailTitle, "sessionTrail.title");
+        setText(inspectorAddSessionStepButton, "sessionTrail.addShort");
+        setText(inspectorExportSessionTrailButton, "sessionTrail.exportTxt");
+        setAccessibleText(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
+        if (inspectorExportSessionTrailButton != null) {
+            inspectorExportSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.exportTitle"));
+        }
         setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
         setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
         if (inputFormatCombo != null) {
@@ -713,7 +839,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         updateFavoriteToggleState(currentActiveOperation);
         if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
                 || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
-            statusLabel.setText(i18n.text("status.ready"));
+            statusBarPresenter.showStatus(i18n.text("status.ready"));
+        }
+        if (statusBarPresenter != null) {
+            statusBarPresenter.refreshContext(com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
         }
         if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
             inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
@@ -813,6 +942,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private void handleLanguageSystem() { i18n.setPreference(LanguagePreference.SYSTEM); }
     @FXML private void handleLanguageEs() { i18n.setPreference(LanguagePreference.ES); }
     @FXML private void handleLanguageEn() { i18n.setPreference(LanguagePreference.EN); }
+    @FXML private void handleThemeSystem() { setTheme(com.cryptocarver.model.ThemePreference.SYSTEM); }
+    @FXML private void handleThemeLight() { setTheme(com.cryptocarver.model.ThemePreference.LIGHT); }
+    @FXML private void handleThemeDark() { setTheme(com.cryptocarver.model.ThemePreference.DARK); }
+
+    private void setTheme(com.cryptocarver.model.ThemePreference theme) {
+        com.cryptocarver.model.AppSettings.getInstance().setThemePreference(theme);
+        if (mainPane == null || mainPane.getScene() == null) return;
+        String light = getClass().getResource("/css/theme-light.css").toExternalForm();
+        String dark = getClass().getResource("/css/theme-dark.css").toExternalForm();
+        mainPane.getScene().getStylesheets().removeAll(light, dark);
+        mainPane.getScene().getStylesheets().add(SystemAppearance.resolve(theme)
+                == com.cryptocarver.model.ThemePreference.DARK ? dark : light);
+    }
+
+    @FXML
+    private void handleOpenSecurityMenu() {
+        if (securityMenu != null) securityMenu.show();
+    }
+
+    private void refreshStatusBarContext() {
+        if (statusBarPresenter != null) {
+            statusBarPresenter.refreshContext(com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
+        }
+    }
 
     /**
      * Keeps the working canvas usable on laptop-sized windows. The inspector
@@ -844,6 +997,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadCipherContent() {
+        if (cipherContainerController == null) cipherContainerController = ensureModule(cipherContainer, CipherController.class);
         if (cipherContainerController != null) {
             cipherController = cipherContainerController;
             cipherController.initModern(this, inputFormatCombo, outputFormatCombo,
@@ -852,12 +1006,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadAuthenticationContent() {
+        if (authenticationContainerController == null) authenticationContainerController = ensureModule(authenticationContainer, AuthenticationController.class);
         if (authenticationContainerController != null) {
             authenticationContainerController.init(this, inputFormatCombo, outputFormatCombo);
         }
     }
 
     private void loadEMVContent() {
+        if (emvContainerController == null) emvContainerController = ensureModule(emvContainer, EMVController.class);
         if (emvContainerController != null) {
             emvController = emvContainerController;
             emvController.init(this);
@@ -865,6 +1021,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadPaymentsContent() {
+        if (paymentsContainerController == null) paymentsContainerController = ensureModule(paymentsContainer, PaymentsController.class);
         if (paymentsContainerController != null) {
             paymentsController = paymentsContainerController;
             paymentsController.init(this);
@@ -873,6 +1030,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private void loadSymmetricKeysContent() {
         try {
+            if (keysContainerController == null) keysContainerController = ensureModule(keysContainer, KeysController.class);
+            if (certificatesContainerController == null) certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
             keysController = keysContainerController;
             if (keysController == null) return;
             keysController.init(this, () -> {
@@ -894,6 +1053,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public KeysController getKeysController() {
         return keysController;
+    }
+
+    /** Opens Symmetric Cipher with the selected Key Lab entry bound by reference. */
+    public void useLabKeyInSymmetricCipher(String keyId) {
+        if (cipherController == null) {
+            throw new IllegalStateException("Symmetric Cipher workspace is not available");
+        }
+        cipherController.selectLabKey(keyId);
+        navigateTo("Symmetric Ciphers");
+    }
+
+    /** Opens MAC with the selected Key Lab entry bound by reference. */
+    public void useLabKeyInMac(String keyId) {
+        if (authenticationContainerController == null) {
+            throw new IllegalStateException("MAC workspace is not available");
+        }
+        authenticationContainerController.selectLabKey(keyId);
+        navigateTo("Message Authentication Codes");
     }
 
     // ============================================================
@@ -1009,6 +1186,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         this.currentActiveOperation = itemName;
+        if (!"Process Designer".equals(itemName)) {
+            exitProcessDesignerWorkspace();
+        }
+        if (navigationController != null) navigationController.navigate(itemName);
 
         // Navigation alone is not a result. Clear the previous published
         // snapshot so Expand Result cannot accidentally expose data from the
@@ -1230,15 +1411,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             breadcrumbSectionBtn.setTooltip(new Tooltip(i18n.text("bread.navigateSection", sectionLabel)));
         }
 
+        String localizedModule = localizedModuleText(moduleLabel);
+        boolean showModule = resolved.isPresent()
+                && resolved.get().section() != null
+                && !resolved.get().section().isBlank()
+                && !localizedModule.equalsIgnoreCase(sectionLabel)
+                && !localizedModule.equalsIgnoreCase(operationLabel);
+        boolean showOperation = !operationLabel.equalsIgnoreCase(sectionLabel);
+
         if (breadcrumbModuleBtn != null) {
-            breadcrumbModuleBtn.setText(localizedModuleText(moduleLabel));
+            breadcrumbModuleBtn.setText(localizedModule);
             breadcrumbModuleBtn.setUserData(canonicalModulePath);
-            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel)));
-            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModuleText(moduleLabel))));
+            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModule));
+            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModule)));
+            breadcrumbModuleBtn.setVisible(showModule);
+            breadcrumbModuleBtn.setManaged(showModule);
         }
 
         if (breadcrumbOperationLabel != null) {
             breadcrumbOperationLabel.setText(operationLabel);
+            breadcrumbOperationLabel.setVisible(showOperation);
+            breadcrumbOperationLabel.setManaged(showOperation);
+        }
+        if (breadcrumbSep1 != null) {
+            boolean visible = showModule || showOperation;
+            breadcrumbSep1.setVisible(visible);
+            breadcrumbSep1.setManaged(visible);
+        }
+        if (breadcrumbSep2 != null) {
+            breadcrumbSep2.setVisible(showModule && showOperation);
+            breadcrumbSep2.setManaged(showModule && showOperation);
         }
     }
 
@@ -1258,28 +1460,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
                 case HISTORY -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
                 case PROCESS_DESIGNER -> navigationRail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
-                default -> showQuickStart();
+                case GENERIC, EPOCH_CONVERTER, JSON_FORMATTER, CLIPBOARD_SHELF ->
+                        navigationRail.selectSection(NavigationRail.Section.GENERIC);
+                case SAVED_SESSIONS -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
             }
             return;
         }
-        String sectionText = breadcrumbSectionBtn.getText();
-        if (navigationRail == null) {
-            showQuickStart();
-            return;
-        }
-        switch (sectionText) {
-            case "Symmetric Keys", "Asymmetric Keys" -> navigationRail.selectSection(NavigationRail.Section.KEYS);
-            case "Ciphers" -> navigationRail.selectSection(NavigationRail.Section.CIPHER);
-            case "Signatures & MAC" -> navigationRail.selectSection(NavigationRail.Section.AUTHENTICATION);
-            case "Certificates & CMS" -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
-            case "JOSE / JWT" -> navigationRail.selectSection(NavigationRail.Section.JOSE);
-            case "Post-Quantum PQC" -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
-            case "XML Security", "WSS Security" -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
-            case "EMV & Smartcards", "Payment Cryptography" -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
-            case "Process Designer", "Diseñador de procesos" -> navigationRail.selectSection(NavigationRail.Section.PROCESS_DESIGNER);
-            case "History" -> navigationRail.selectSection(NavigationRail.Section.HISTORY);
-            default -> showQuickStart();
-        }
+        if (navigationController != null) navigationController.navigate(currentActiveOperation);
     }
 
     @FXML
@@ -1498,13 +1685,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 inlineErrorPresenter.hideBanner();
             }
         }
-
-        // Ensure history container is visible (it might be hidden by Saved Sessions
-        // view)
-        if (historyContainer != null && !historyContainer.isVisible()) {
-            historyContainer.setManaged(true);
-            historyContainer.setVisible(true);
-        }
     }
 
     private OperationInspectorPresenter inspectorPresenter() {
@@ -1614,67 +1794,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // History Managemen
 
-    private void initializeHistory() {
+    /** The shared history store, created on first use. */
+    private com.cryptocarver.model.HistoryManager historyManager() {
         if (historyManager == null) {
             historyManager = new com.cryptocarver.model.HistoryManager();
         }
+        return historyManager;
+    }
+
+    private void initializeHistory() {
         if (sidePanel != null) {
-            sidePanel.setHistoryManager(historyManager);
+            sidePanel.setHistoryManager(historyManager());
             sidePanel.setOnHistoryItemSelected(this::showRecentHistoryCommand);
         }
-        if (historyViewController != null) {
-            historyViewController.setHistoryManager(historyManager);
-            historyViewController.setOperationNavigator(this);
-        }
-        if (clipboardShelfController != null) {
-            clipboardShelfController.setNavigator(this, this);
-        }
+        // The History view and the Clipboard Shelf are deferred modules: they are wired in
+        // connectShellServices when they materialize, since both are still null here.
         refreshHistoryUI();
     }
 
+    /**
+     * Refreshes every surface that shows history.
+     *
+     * <p>The Inspector's own history card list was removed in favour of a single History view,
+     * so what is left is the side-panel's recent-operations group and, once the user has opened
+     * it, the History module's table.
+     */
     private void refreshHistoryUI() {
-        if (historyContainer == null || historyManager == null) return;
-        historyContainer.getChildren().clear();
-
-        java.util.List<com.cryptocarver.model.HistoryCommand> items = historyManager.getHistoryItems();
-
-        if (items.isEmpty()) {
-            Label placeholder = new Label("No recent operations");
-            placeholder.getStyleClass().add("muted-text");
-            placeholder.setStyle("-fx-font-size: 11px; -fx-padding: 10;");
-            historyContainer.getChildren().add(placeholder);
-        } else {
-            for (com.cryptocarver.model.HistoryCommand item : items) {
-                HBox historyCommand = new HBox(8);
-                historyCommand.getStyleClass().add("history-card");
-                historyCommand.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-                VBox infoBox = new VBox(2);
-                Label opLabel = new Label(item.getOperation());
-                opLabel.getStyleClass().add("history-card-title");
-
-                String relTime = formatRelativeTime(item.getTimestamp());
-                Label timeLabel = new Label(relTime);
-                timeLabel.getStyleClass().add("history-card-time");
-                Tooltip.install(timeLabel, new Tooltip("Executed on: " + item.getTimestamp()));
-
-                infoBox.getChildren().addAll(opLabel, timeLabel);
-                HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
-
-                Button reopenButton = new Button("Reopen");
-                reopenButton.getStyleClass().add("history-card-action");
-                reopenButton.setAccessibleText("Reopen operation " + item.getOperation());
-
-                reopenButton.setOnAction(e -> {
-                    reopenHistoryOperation(item);
-                });
-
-                historyCommand.getChildren().addAll(infoBox, reopenButton);
-                historyContainer.getChildren().add(historyCommand);
-            }
-        }
-
         refreshHistoryNavigation();
+        if (historyViewController != null) {
+            historyViewController.refresh();
+        }
     }
 
     @Override
@@ -1842,18 +1991,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                         historyManager.getHistoryItems(), visibility);
                 writer.write(json);
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle(i18n.text("dialog.exportHistory.success"));
-                alert.setHeaderText(null);
-                alert.setContentText("History successfully exported using " + visibility + " policy to:\n"
-                        + file.getAbsolutePath());
-                alert.showAndWait();
+                dialogService.info(i18n.text("dialog.exportHistory.success"),
+                        "History successfully exported using " + visibility + " policy to:\n" + file.getAbsolutePath());
             } catch (IOException e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle(i18n.text("dialog.exportHistory.failure"));
-                alert.setHeaderText(i18n.text("dialog.exportHistory.saveFailure"));
-                alert.setContentText(e.getMessage());
-                alert.showAndWait();
+                dialogService.error(i18n.text("dialog.exportHistory.failure"),
+                        i18n.text("dialog.exportHistory.saveFailure") + "\n" + e.getMessage());
             }
         }
     }
@@ -1869,11 +2011,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private boolean confirmClearHistory() {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                i18n.text("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setTitle(i18n.text("module.history.clearTitle"));
-        confirmation.setHeaderText(i18n.text("module.history.clearHeader"));
-        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        return dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                i18n.text("module.history.clearTitle"), i18n.text("module.history.clearHeader"),
+                new Label(i18n.text("module.history.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
+                .orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     /**
@@ -1882,6 +2023,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * navigation uses the FXML-backed controller.
      */
     private void showHistoryView() {
+        if (historyViewController == null) historyViewController = ensureModule(historyView, HistoryController.class);
         hideAllContainers();
         initializeHistory();
         if (historyView != null) {
@@ -1897,6 +2039,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showClipboardShelf() {
+        if (clipboardShelfController == null) clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
         hideAllContainers();
         if (clipboardShelf != null) {
             clipboardShelf.setManaged(true);
@@ -1931,6 +2074,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showCertificates() {
+        if (certificatesContainerController == null) certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
         hideAllContainers();
 
         // Show certificates accordion
@@ -1941,6 +2085,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showCipher() {
+        loadCipherContent();
         hideAllContainers();
 
         if (cipherContainer != null) {
@@ -1949,14 +2094,33 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void expandCipherAccordionPane(String itemName) {
-        if (cipherContainer == null)
-            return;
+    /**
+     * The accordion of a materialized module, wherever it sits under its host.
+     *
+     * <p>A module used to be inlined into its container, which put its accordion one level
+     * down. Deferred modules are loaded into a {@link ModuleHost}, so the host's child is the
+     * module's FXML root and the accordion is deeper still. Looking only at direct children
+     * finds nothing, and since every caller here treats "no accordion" as "nothing to expand",
+     * that failure is silent: navigating to an operation opens its module but leaves the
+     * matching pane closed.
+     */
+    private static Accordion moduleAccordion(ModuleHost host) {
+        return host == null ? null : findAccordion(host);
+    }
 
-        Accordion accordion = (Accordion) cipherContainer.getChildren().stream()
-                .filter(node -> node instanceof Accordion)
-                .findFirst()
-                .orElse(null);
+    private static Accordion findAccordion(Node node) {
+        if (node instanceof Accordion accordion) return accordion;
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                Accordion found = findAccordion(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private void expandCipherAccordionPane(String itemName) {
+        Accordion accordion = moduleAccordion(cipherContainer);
 
         if (accordion != null) {
             String targetPane = "";
@@ -1983,6 +2147,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showAuthentication() {
+        loadAuthenticationContent();
         hideAllContainers();
 
         if (authenticationContainer != null) {
@@ -1992,13 +2157,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandAuthenticationAccordionPane(String itemName) {
-        if (authenticationContainer == null)
-            return;
-
-        Accordion accordion = (Accordion) authenticationContainer.getChildren().stream()
-                .filter(node -> node instanceof Accordion)
-                .findFirst()
-                .orElse(null);
+        Accordion accordion = moduleAccordion(authenticationContainer);
 
         if (accordion != null) {
             String targetPane = "";
@@ -2020,6 +2179,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showPayments() {
+        loadPaymentsContent();
         hideAllContainers();
 
         if (paymentsContainer != null) {
@@ -2029,13 +2189,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandPaymentsAccordionPane(String itemName) {
-        if (paymentsContainer == null)
-            return;
-
-        Accordion accordion = (Accordion) paymentsContainer.getChildren().stream()
-                .filter(node -> node instanceof Accordion)
-                .findFirst()
-                .orElse(null);
+        Accordion accordion = moduleAccordion(paymentsContainer);
 
         if (accordion != null) {
             String targetPane = "";
@@ -2072,8 +2226,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         String requestedOperation = title == null || title.isBlank() ? "Unknown operation" : title;
-        contentPlaceholderLabel.setText("📋 " + requestedOperation
+        contentPlaceholderLabel.setText(requestedOperation
                 + "\n\nNo view is registered for this legacy operation. Select a tool from the side panel.");
+        contentPlaceholderLabel.setGraphic(IconRegistry.icon("clipboard"));
         contentPlaceholderLabel.setManaged(true);
         contentPlaceholderLabel.setVisible(true);
         updateContentHeader(requestedOperation);
@@ -2104,11 +2259,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             Platform.runLater(() -> updateStatus(message));
             return;
         }
-        if (statusLabel == null) return;
-        statusLabel.setText(message);
-        statusResetTimer.stop();
-        statusResetTimer.setOnFinished(event -> statusLabel.setText(i18n.text("status.ready")));
-        statusResetTimer.playFromStart();
+        if (statusBarPresenter != null) statusBarPresenter.showStatus(message);
     }
 
     // Menu handlers
@@ -2154,6 +2305,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public boolean hasCurrentResult() {
         return lastPublishedResultSnapshot != null || !resolveCurrentOutputText().isBlank();
+    }
+
+    // A module's result surface offers the same actions as the shell's result bar, on the same
+    // result: the shell is what knows which result is current and what the visibility policy
+    // allows, so these delegate instead of resolving it a second time.
+
+    @Override
+    public void copyCurrentResult() {
+        handleCopyOutput();
+    }
+
+    @Override
+    public void addCurrentResultToShelf() {
+        handleAddCurrentOutputToShelf();
+    }
+
+    @Override
+    public void expandCurrentResult() {
+        handleOpenExpandedResultViewer();
+    }
+
+    @Override
+    public void saveCurrentResultAsSessionStep() {
+        handleSaveCurrentResultAsSessionStep();
     }
 
     @FXML
@@ -2395,6 +2570,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean hasPayload = (result.getOutput() != null && result.getOutput().length > 0)
                 || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
         boolean hasInspectableResult = hasPayload || !result.getDetails().isEmpty();
+        if (inspectorAddSessionStepButton != null) {
+            inspectorAddSessionStepButton.setDisable(isFailed || !hasInspectableResult);
+        }
 
         if (resultSummaryBar != null) {
             if (isFailed || !hasInspectableResult) {
@@ -2446,6 +2624,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             resultSummaryBar.setManaged(false);
             resultSummaryBar.setVisible(false);
         }
+        if (inspectorAddSessionStepButton != null) inspectorAddSessionStepButton.setDisable(true);
     }
 
 
@@ -2924,10 +3103,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void handleShowKeyboardShortcuts() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Keyboard Shortcuts");
-        alert.setHeaderText("CryptoCarver Keyboard Shortcuts");
-
         VBox contentBox = new VBox(10);
         contentBox.setPrefWidth(540);
         contentBox.setStyle("-fx-padding: 10;");
@@ -2965,17 +3140,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
 
         contentBox.getChildren().add(scrollPane);
-        alert.getDialogPane().setContent(contentBox);
-        alert.getDialogPane().setPrefWidth(580);
-        alert.showAndWait();
+        dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane),
+                "Keyboard Shortcuts", "CryptoCarver Keyboard Shortcuts", contentBox, ButtonType.OK);
     }
 
     @FXML
     private void handleAbout() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About CryptoCarver");
-        alert.setHeaderText("CryptoCarver");
-        alert.setContentText("A comprehensive tool for cryptographic operations.\n\n" +
+        dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane), "About CryptoCarver", "CryptoCarver",
+                new Label("A comprehensive tool for cryptographic operations.\n\n" +
                 "Version: 1.0.0\n" +
                 "Author: Felipe Rodríguez Fonte\n" +
                 "Contact: felipe.rodriguez.fonte@gmail.com\n\n" +
@@ -2984,8 +3156,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 "- Digital Signatures & Certificates\n" +
                 "- Payments (EMV, PIN, CVV)\n" +
                 "- JOSE (JWT, JWE, JWK)\n" +
-                "- ASN.1 Analysis");
-        alert.showAndWait();
+                "- ASN.1 Analysis"), ButtonType.OK);
     }
 
     /**
@@ -3013,14 +3184,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         report.setPrefRowCount(15);
         report.setStyle("-fx-font-family: monospace; -fx-font-size: 11px;");
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("CryptoCarver diagnostics");
-        alert.setHeaderText("Runtime information (safe to copy)");
-        alert.getDialogPane().setContent(report);
-        alert.getDialogPane().setPrefWidth(680);
         ButtonType copyButton = new ButtonType("Copy report", ButtonBar.ButtonData.LEFT);
-        alert.getDialogPane().getButtonTypes().add(copyButton);
-        java.util.Optional<ButtonType> selected = alert.showAndWait();
+        java.util.Optional<ButtonType> selected = dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane),
+                "CryptoCarver diagnostics", "Runtime information (safe to copy)", report, copyButton, ButtonType.OK);
         if (selected.isPresent() && selected.get() == copyButton) {
             javafx.scene.input.ClipboardContent clipboard = new javafx.scene.input.ClipboardContent();
             clipboard.putString(diagnosticText);
@@ -3106,11 +3272,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             System.out.println("SHOW_WARNING: " + title + " - " + message);
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogService.warning(windowOf(mainPane), title, message);
     }
 
     @Override
@@ -3119,11 +3281,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             System.out.println("SHOW_INFO: " + title + " - " + message);
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogService.info(windowOf(mainPane), title, message);
     }
 
     // Generic module initialized by FXML include
@@ -3280,18 +3438,49 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void showProcessDesigner() {
+        if (processDesignerContainerController == null) processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
         hideAllContainers();
+        enterProcessDesignerWorkspace();
         if (processDesignerContainer != null) {
             processDesignerContainer.setManaged(true);
             processDesignerContainer.setVisible(true);
-            processDesignerContainer.setExpanded(true);
+            if (processDesignerContainer.root() instanceof TitledPane pane) pane.setExpanded(true);
             updateContentHeader("Process Designer");
             updateContentSubtitle("Visual workflow builder and execution engine");
         }
     }
 
+    /** Gives the designer its own canvas without permanently changing shell panels. */
+    private void enterProcessDesignerWorkspace() {
+        if (processDesignerWorkspace) return;
+        processDesignerWorkspace = true;
+        sidePanelVisibleBeforeProcessDesigner = sidePanel != null && sidePanel.isVisible();
+        inspectorVisibleBeforeProcessDesigner = inspectorPanel != null && inspectorPanel.isVisible();
+        if (sidePanel != null) {
+            sidePanel.setVisible(false);
+            sidePanel.setManaged(false);
+        }
+        if (inspectorPanel != null) {
+            inspectorPanel.setVisible(false);
+            inspectorPanel.setManaged(false);
+        }
+    }
+
+    private void exitProcessDesignerWorkspace() {
+        if (!processDesignerWorkspace) return;
+        processDesignerWorkspace = false;
+        if (sidePanel != null) {
+            sidePanel.setVisible(sidePanelVisibleBeforeProcessDesigner);
+            sidePanel.setManaged(sidePanelVisibleBeforeProcessDesigner);
+        }
+        if (inspectorPanel != null) {
+            inspectorPanel.setVisible(inspectorVisibleBeforeProcessDesigner);
+            inspectorPanel.setManaged(inspectorVisibleBeforeProcessDesigner);
+        }
+    }
+
     public TitledPane getProcessDesignerContainer() {
-        return processDesignerContainer;
+        return processDesignerContainer != null && processDesignerContainer.root() instanceof TitledPane pane ? pane : null;
     }
 
     public ProcessDesignerController getProcessDesignerContainerController() {
@@ -3299,6 +3488,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showGeneric() {
+        if (genericContainerController == null) genericContainerController = ensureModule(genericContainer, GenericController.class);
         hideAllContainers();
 
         if (genericContainer != null) {
@@ -3309,6 +3499,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showJOSE() {
+        if (joseController == null) joseController = ensureModule(jose, JOSEController.class);
         hideAllContainers();
         if (jose != null) {
             jose.setManaged(true);
@@ -3320,6 +3511,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showCOSE() {
+        if (coseController == null) coseController = ensureModule(cose, COSEController.class);
         hideAllContainers();
         if (cose != null) {
             cose.setManaged(true);
@@ -3331,12 +3523,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandGenericAccordionPane(String paneName) {
-        if (paneName == null || paneName.isBlank() || genericContainer == null || genericContainer.getPanes().isEmpty())
+        Accordion accordion = moduleAccordion(genericContainer);
+        if (paneName == null || paneName.isBlank() || accordion == null || accordion.getPanes().isEmpty())
             return;
 
-        for (TitledPane pane : genericContainer.getPanes()) {
+        for (TitledPane pane : accordion.getPanes()) {
             if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.generic())) {
-                genericContainer.setExpandedPane(pane);
+                accordion.setExpandedPane(pane);
                 revealExpandedPane(pane);
                 break;
             }
@@ -3389,15 +3582,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandEMVAccordionPane(String title) {
-        if (title != null && !title.isBlank() && emvContainer != null && !emvContainer.getChildren().isEmpty()) {
-            if (emvContainer.getChildren().get(0) instanceof Accordion) {
-                Accordion acc = (Accordion) emvContainer.getChildren().get(0);
-                for (TitledPane pane : acc.getPanes()) {
-                    if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
-                        acc.setExpandedPane(pane);
-                        revealExpandedPane(pane);
-                        break;
-                    }
+        Accordion acc = moduleAccordion(emvContainer);
+        if (title != null && !title.isBlank() && acc != null) {
+            for (TitledPane pane : acc.getPanes()) {
+                if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
+                    acc.setExpandedPane(pane);
+                    revealExpandedPane(pane);
+                    break;
                 }
             }
         }
@@ -3470,7 +3661,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             Label nameLabel = new Label(session.getName());
             nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px;");
 
-            Label detailsLabel = new Label(session.getTimestamp() + " • " + session.getOperation());
+            com.cryptocarver.model.OperationSessionLog savedLog = session.getOperationLog();
+            String stepSummary = savedLog == null ? ""
+                    : " • " + i18n.text("sessionTrail.savedCount", savedLog.size());
+            Label detailsLabel = new Label(session.getTimestamp() + " • " + session.getOperation() + stepSummary);
             detailsLabel.setStyle("-fx-text-fill: #a0aec0; -fx-font-size: 11px;");
 
             infoBox.getChildren().addAll(nameLabel, detailsLabel);
@@ -3481,6 +3675,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             loadButton.setStyle("-fx-font-size: 11px; -fx-padding: 5 10;");
             loadButton.setOnAction(e -> {
                 restoreUIState(session.getUiState());
+                com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
+                operationSessionLog = loadedLog == null
+                        ? new com.cryptocarver.model.OperationSessionLog() : loadedLog;
+                refreshSessionTrailUI();
                 // Switch to the relevant view contex
                 handleItemSelected(session.getOperation());
                 updateStatus("Loaded session: " + session.getName());
@@ -3515,6 +3713,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
         updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
+        refreshStatusBarContext();
         if (keysController != null) {
             keysController.updateVisibilityControls();
             keysController.refreshKeyLabTable();
@@ -3525,6 +3724,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityMasked() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
         updateStatus("Visibility set to MASKED (Classroom/Demo)");
+        refreshStatusBarContext();
         if (keysController != null) {
             keysController.updateVisibilityControls();
             keysController.refreshKeyLabTable();
@@ -3535,6 +3735,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityRedacted() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         updateStatus("Visibility set to REDACTED (Strict/Production)");
+        refreshStatusBarContext();
         if (keysController != null) {
             keysController.updateVisibilityControls();
             keysController.refreshKeyLabTable();
@@ -3552,6 +3753,146 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().clear();
         showInfo("Success", "Lab Key Cache cleared");
         refreshHsmKeyCombos();
+    }
+
+    /** Adds the latest completed result to the current session's ordered trail. */
+    @FXML
+    public void handleSaveCurrentResultAsSessionStep() {
+        if (lastPublishedResultSnapshot == null) {
+            showWarning(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.noResult"));
+            return;
+        }
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(i18n.text("sessionTrail.dialogTitle"));
+        dialog.setHeaderText(i18n.text("sessionTrail.dialogHeader"));
+        ButtonType saveButton = new ButtonType(i18n.text("sessionTrail.saveStep"),
+                ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
+
+        TextField titleField = new TextField(lastPublishedResultSnapshot.getOperation());
+        titleField.setPromptText(i18n.text("sessionTrail.titlePrompt"));
+        TextField tagsField = new TextField();
+        tagsField.setPromptText(i18n.text("sessionTrail.tagsPrompt"));
+        Label unsafeWarning = new Label(i18n.text("sessionTrail.unsafeWarning"));
+        unsafeWarning.setWrapText(true);
+        unsafeWarning.setStyle("-fx-text-fill: #dc2626; -fx-font-weight: bold;");
+        CheckBox unsafeConfirmation = new CheckBox(i18n.text("sessionTrail.unsafeConfirm"));
+        unsafeConfirmation.setWrapText(true);
+        GridPane form = new GridPane();
+        form.setHgap(10);
+        form.setVgap(10);
+        form.add(new Label(i18n.text("sessionTrail.stepTitle")), 0, 0);
+        form.add(titleField, 1, 0);
+        form.add(new Label(i18n.text("sessionTrail.tags")), 0, 1);
+        form.add(tagsField, 1, 1);
+        form.add(unsafeWarning, 0, 2, 2, 1);
+        form.add(unsafeConfirmation, 0, 3, 2, 1);
+        GridPane.setHgrow(titleField, Priority.ALWAYS);
+        GridPane.setHgrow(tagsField, Priority.ALWAYS);
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setMinWidth(480);
+
+        Node saveNode = dialog.getDialogPane().lookupButton(saveButton);
+        saveNode.disableProperty().bind(javafx.beans.binding.Bindings.or(
+                titleField.textProperty().isEmpty(), unsafeConfirmation.selectedProperty().not()));
+        Platform.runLater(titleField::requestFocus);
+
+        Optional<ButtonType> selected = dialog.showAndWait();
+        if (selected.isPresent() && selected.get() == saveButton) {
+            saveCurrentResultAsSessionStep(titleField.getText(), tagsField.getText());
+        }
+    }
+
+    com.cryptocarver.model.SessionOperationStep saveCurrentResultAsSessionStep(String title, String commaSeparatedTags) {
+        if (lastPublishedResultSnapshot == null) {
+            throw new IllegalStateException("No completed operation result is available");
+        }
+        java.util.List<String> tags = commaSeparatedTags == null || commaSeparatedTags.isBlank()
+                ? java.util.List.of()
+                : java.util.Arrays.stream(commaSeparatedTags.split(","))
+                        .map(String::trim)
+                        .filter(value -> !value.isEmpty())
+                        .toList();
+        com.cryptocarver.model.SessionOperationStep step = operationSessionLog.add(
+                lastPublishedResultSnapshot, title, tags, captureClearTextTrailParameters());
+        refreshSessionTrailUI();
+        if (inspectorPanel != null && !inspectorPanel.isVisible()) {
+            inspectorPanel.setVisible(true);
+            inspectorPanel.setManaged(true);
+            inspectorHiddenForCompactLayout = false;
+        }
+        updateStatus(i18n.text("sessionTrail.saved", step.getTitle()));
+        return step;
+    }
+
+    /**
+     * Captures the active operation's controls without applying the History
+     * redaction policy. This is intentionally unsafe and is called only after
+     * the clear-text confirmation in the Save Step dialog.
+     */
+    private java.util.Map<String, Object> captureClearTextTrailParameters() {
+        try {
+            return new java.util.LinkedHashMap<>(captureActiveScreenConfiguration().toState());
+        } catch (RuntimeException unsupportedRoute) {
+            LOG.debug("Falling back to full UI-state capture for session trail", unsupportedRoute);
+            return new java.util.LinkedHashMap<>(captureUIState());
+        }
+    }
+
+    private void refreshSessionTrailUI() {
+        int count = operationSessionLog == null ? 0 : operationSessionLog.size();
+        if (sessionTrailCountLabel != null) {
+            sessionTrailCountLabel.setText(i18n.text("sessionTrail.compactCount", count));
+            sessionTrailCountLabel.setAccessibleText(i18n.text("sessionTrail.count", count));
+        }
+        if (inspectorExportSessionTrailButton != null) {
+            inspectorExportSessionTrailButton.setDisable(count == 0);
+        }
+    }
+
+    @FXML
+    public void handleExportSessionTrail() {
+        if (operationSessionLog == null || operationSessionLog.isEmpty()) {
+            showWarning(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.nothingToExport"));
+            return;
+        }
+        FileChooser chooser = LocalizedDialogSupport.fileChooser(
+                "sessionTrail.exportTitle", "sessionTrail.textFiles", "Text files", "*.txt");
+        chooser.setInitialFileName("cryptocarver-session-trail-"
+                + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                + ".txt");
+        Stage owner = mainPane != null && mainPane.getScene() != null
+                && mainPane.getScene().getWindow() instanceof Stage stage ? stage : null;
+        File selected = chooser.showSaveDialog(owner);
+        if (selected == null) return;
+        try {
+            exportSessionTrail(selected.toPath());
+            updateStatus(i18n.text("sessionTrail.exported", selected.getName()));
+        } catch (IOException e) {
+            LOG.error("Could not export session trail", e);
+            showWarning(i18n.text("sessionTrail.exportTitle"), e.getMessage());
+        }
+    }
+
+    void exportSessionTrail(java.nio.file.Path target) throws IOException {
+        if (target == null) throw new IllegalArgumentException("Export target is required");
+        java.nio.file.Path parent = target.toAbsolutePath().getParent();
+        if (parent != null) Files.createDirectories(parent);
+        Files.writeString(target, operationSessionLog.toText(), StandardCharsets.UTF_8);
+    }
+
+    @FXML
+    public void handleClearSessionTrail() {
+        if (operationSessionLog == null || operationSessionLog.isEmpty()) return;
+        if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                i18n.text("sessionTrail.title"), i18n.text("sessionTrail.clear"),
+                new Label(i18n.text("sessionTrail.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
+                .filter(ButtonType.OK::equals).isPresent()) {
+            operationSessionLog.clear();
+            refreshSessionTrailUI();
+            updateStatus(i18n.text("sessionTrail.cleared"));
+        }
     }
 
     @FXML
@@ -3591,8 +3932,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 currentOperation = "Generic";
             }
 
-            com.cryptocarver.model.SavedSession session = new com.cryptocarver.model.SavedSession(name, currentOperation,
-                    state);
+            com.cryptocarver.model.SavedSession session = new com.cryptocarver.model.SavedSession(
+                    name, currentOperation, state, operationSessionLog);
             savedSessionsManager.addSession(session);
 
             updateStatus("Session saved: " + name);
@@ -3629,12 +3970,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (selected.isEmpty()) return;
             password = selected.get();
         } else {
-            Alert warning = new Alert(Alert.AlertType.CONFIRMATION,
-                    "The exported JSON can contain raw cryptographic keys and sensitive input. Continue?",
-                    ButtonType.CANCEL, ButtonType.OK);
-            warning.setTitle("Unsafe Plain Configuration");
-            warning.setHeaderText("Secrets will not be encrypted");
-            if (warning.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                    "Unsafe Plain Configuration", "Secrets will not be encrypted",
+                    new Label("The exported JSON can contain raw cryptographic keys and sensitive input. Continue?"),
+                    ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         }
 
         FileChooser chooser = new FileChooser();
@@ -3690,16 +4029,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             } finally {
                 if (password != null) java.util.Arrays.fill(password, '\0');
             }
-            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                    "Operation: " + configuration.operation()
+            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                    "Import Screen Configuration", "Review portable configuration",
+                    new Label("Operation: " + configuration.operation()
                             + "\nModule: " + configuration.module()
                             + "\nFields: " + configuration.values().size()
                             + "\nCreated: " + configuration.createdAt()
-                            + "\n\nImporting may place raw keys or passwords in the laboratory UI.",
-                    ButtonType.CANCEL, ButtonType.OK);
-            confirmation.setTitle("Import Screen Configuration");
-            confirmation.setHeaderText("Review portable configuration");
-            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+                            + "\n\nImporting may place raw keys or passwords in the laboratory UI."),
+                    ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
             applyScreenConfiguration(configuration);
             if (isLegacyKeyGenerationConfiguration(configuration)) {
                 showWarning("Generated Key Not Present",
@@ -3858,12 +4195,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // ============================================================
 
     private void loadPostQuantumContent() {
+        if (postQuantumContainerController == null) postQuantumContainerController = ensureModule(postQuantumContainer, PostQuantumController.class);
         if (postQuantumContainerController != null) {
             postQuantumContainerController.initModule(this);
         }
     }
 
     private void showPostQuantum() {
+        loadPostQuantumContent();
         hideAllContainers();
         if (postQuantumContainer != null) {
             postQuantumContainer.setManaged(true);
@@ -3883,12 +4222,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // ============================================================
 
     private void loadXMLSecurityContent() {
+        if (xmlSecurityContainerController == null) xmlSecurityContainerController = ensureModule(xmlSecurityContainer, XMLSignatureController.class);
         if (xmlSecurityContainerController != null) {
             xmlSecurityContainerController.initModule(this);
         }
     }
 
     private void showXMLSecurity() {
+        loadXMLSecurityContent();
         hideAllContainers();
         if (xmlSecurityContainer != null) {
             xmlSecurityContainer.setManaged(true);
@@ -3904,12 +4245,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadWssSecurityContent() {
+        if (wssSecurityContainerController == null) wssSecurityContainerController = ensureModule(wssSecurityContainer, WssSecurityController.class);
         if (wssSecurityContainerController != null) {
             wssSecurityContainerController.initModule(this);
         }
     }
 
     private void showWssSecurity() {
+        loadWssSecurityContent();
         hideAllContainers();
         if (wssSecurityContainer != null) {
             wssSecurityContainer.setManaged(true);
@@ -4074,7 +4417,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private void setupLaboratoryMenu() {
         if (mainMenuBar == null) return;
-        boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "Laboratory".equals(m.getText()));
+        boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "laboratory".equals(m.getUserData()));
         if (!hasLabMenu) {
             javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
             labMenu.setUserData("laboratory");
@@ -4500,18 +4843,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 } else {
                     HBox row = new HBox(10);
                     row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                    row.setStyle("-fx-padding: 6 10;");
+                    row.getStyleClass().add("command-palette-item");
 
-                    Label categoryBadge = new Label("[" + item.getCategory() + "]");
+                    Label categoryBadge = new Label(item.getCategory());
                     categoryBadge.getStyleClass().add("command-palette-category");
 
                     VBox textContainer = new VBox(2);
                     Label titleLabel = new Label(item.getTitle());
-                    titleLabel.getStyleClass().add("history-card-title");
+                    titleLabel.getStyleClass().add("command-palette-item-title");
 
                     Label descLabel = new Label(item.getDescription());
-                    descLabel.getStyleClass().add("subtle-text");
-                    descLabel.setStyle("-fx-font-size: 11px;");
+                    descLabel.getStyleClass().add("command-palette-item-desc");
 
                     textContainer.getChildren().addAll(titleLabel, descLabel);
                     HBox.setHgrow(textContainer, Priority.ALWAYS);

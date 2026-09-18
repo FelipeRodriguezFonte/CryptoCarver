@@ -18,6 +18,8 @@ import com.cryptocarver.utils.OperationHistory;
 import com.cryptocarver.codec.ByteFormat;
 import com.cryptocarver.codec.CodecRegistry;
 import com.cryptocarver.codec.CodecException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
@@ -40,6 +42,10 @@ import java.util.Map;
  * @author Felipe
  */
 public class GenericController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
+    private static final Logger LOG = LoggerFactory.getLogger(GenericController.class);
 
     @FunctionalInterface
     interface BatchRunnerExecutor {
@@ -67,6 +73,7 @@ public class GenericController {
     }
     @FXML private TextArea hashInputArea;
     @FXML private TextArea hashOutputArea;
+    @FXML private ResultPanel genericResultPanel;
 
     @FXML private ComboBox<String> batchInputFormatCombo;
     @FXML private ComboBox<String> batchOperationCombo;
@@ -624,12 +631,24 @@ public class GenericController {
                         .filter(pane -> pane.getText() != null && pane.getText().contains("Process Designer"))
                         .toArray(javafx.scene.Node[]::new);
         moduleI18n = ModuleI18n.bind(genericContainer, ModuleTextCatalog.generic(), excluded);
-        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+        if (genericResultPanel != null) {
+            genericResultPanel.connectTo(() -> statusReporter);
+            // The module has one result surface but several operations feeding it, so each
+            // binding also says where "use as input" should put the value. Modular arithmetic
+            // and file operations have no single field to chain into, so they pass none and
+            // the button stays hidden while their result is the one on screen.
+            bindResult(genericResultPanel, hashOutputArea, "Generic operation",
+                    hashInputArea == null ? null : hashInputArea::setText);
+            bindResult(genericResultPanel, modResultArea, "Modular arithmetic", null);
+            bindResult(genericResultPanel, fileResultArea, "File operation", null);
+        }
+        localeChangeListener = locale -> {
             if (batchStatusLabel == null) return;
             if (activeBatchTask != null && activeBatchTask.isRunning()) {
                 batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
             }
-        });
+        };
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         if (batchInputFormatCombo != null) {
             batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchInputFormatCombo.setValue("CSV");
@@ -745,6 +764,21 @@ public class GenericController {
         refreshManualTemplateCombo();
 
         initializeEBCDICConverter();
+    }
+
+    /**
+     * Routes one operation's result area into the shared result surface.
+     *
+     * <p>{@code chainTarget} is where "use as input" should put the value while this operation's
+     * result is the one shown; a null one hides the action rather than leaving it inert.
+     */
+    private static void bindResult(ResultPanel panel, TextArea area, String operation,
+                                   java.util.function.Consumer<String> chainTarget) {
+        if (panel == null || area == null) return;
+        area.textProperty().addListener((obs, oldValue, value) -> {
+            panel.showText(operation, value);
+            panel.setChainHandler(chainTarget);
+        });
     }
 
     private void refreshHashTemplateCombo() {
@@ -2350,7 +2384,7 @@ public class GenericController {
             statusReporter.showError("Format Error", "Invalid input format: " + e.getMessage());
         } catch (Exception e) {
             statusReporter.showError("Conversion Error", "Error: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Conversion failed", e);
         }
     }
 

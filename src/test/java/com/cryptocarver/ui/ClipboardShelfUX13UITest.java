@@ -63,7 +63,7 @@ class ClipboardShelfUX13UITest {
             try {
                 manager.clear();
 
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/clipboard_shelf.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/clipboard_shelf.fxml"));
                 Parent root = loader.load();
                 ClipboardShelfController controller = loader.getController();
 
@@ -111,7 +111,7 @@ class ClipboardShelfUX13UITest {
                 );
                 manager.addEntry(secretEntry);
 
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/clipboard_shelf.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/clipboard_shelf.fxml"));
                 Parent root = loader.load();
                 ClipboardShelfController controller = loader.getController();
 

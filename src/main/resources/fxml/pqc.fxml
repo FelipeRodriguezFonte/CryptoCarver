@@ -61,13 +61,13 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="This demo illustrates the Key Encapsulation Mechanism (KEM). It is not a full communication protocol." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="1. Alice generates a key pair (uses the ML-KEM key generated above)." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label text="1. Alice generates a key pair (uses the ML-KEM key generated above)." styleClass="form-label ux-inline-689e8d50bc"/>
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Label text="KEM algorithm:" styleClass="form-label"/>
                         <ComboBox fx:id="pqcKemAlgoCombo" prefWidth="300" styleClass="form-field"/>
                     </HBox>
 
-                    <Label text="2. Bob uses Alice's public key to encapsulate a shared secret." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label text="2. Bob uses Alice's public key to encapsulate a shared secret." styleClass="form-label ux-inline-689e8d50bc"/>
                     <Button text="Bob: Encapsulate Shared Secret" onAction="#handlePQCEncapsulate" styleClass="action-button,primary-action" maxWidth="240"/>
                     <Label text="Encapsulation Ciphertext sent to Alice (Hex):" styleClass="form-label"/>
                     <TextArea fx:id="pqcKemCiphertextArea" prefHeight="50" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
@@ -76,12 +76,12 @@
 
                     <Separator/>
 
-                    <Label text="3. Alice decapsulates the ciphertext using her private key." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label text="3. Alice decapsulates the ciphertext using her private key." styleClass="form-label ux-inline-689e8d50bc"/>
                     <Button text="Alice: Decapsulate Ciphertext" onAction="#handlePQCDecapsulate" styleClass="secondary-button" maxWidth="240"/>
                     <Label text="Alice's Shared Secret (Hex):" styleClass="form-label"/>
                     <TextField fx:id="pqcAliceSecretField" editable="false" styleClass="result-area,monospace-field,form-field"/>
 
-                    <Label fx:id="pqcKemStatusLabel" text="Generate an ML-KEM key pair to begin." styleClass="form-label" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="pqcKemStatusLabel" text="Generate an ML-KEM key pair to begin." styleClass="form-label ux-inline-689e8d50bc"/>
                 </VBox>
             </TitledPane>
 

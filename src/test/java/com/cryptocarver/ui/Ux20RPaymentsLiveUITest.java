@@ -40,7 +40,7 @@ class Ux20RPaymentsLiveUITest {
             service.setPreference(LanguagePreference.EN);
             Stage stage = new Stage();
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/payments.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/payments.fxml"));
                 Parent root = loader.load();
                 root.setManaged(true);
                 root.setVisible(true);

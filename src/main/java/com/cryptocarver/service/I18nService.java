@@ -4,6 +4,7 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.LanguagePreference;
 import java.text.MessageFormat;
 import java.util.List;
+import java.lang.ref.WeakReference;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -28,7 +29,7 @@ public final class I18nService {
     private final AppSettings settings;
     private final String bundleBaseName;
     private final ClassLoader classLoader;
-    private final List<Consumer<Locale>> listeners = new CopyOnWriteArrayList<>();
+    private final List<WeakReference<Consumer<Locale>>> listeners = new CopyOnWriteArrayList<>();
     private Locale systemLocale;
     private LanguagePreference preference;
     private Locale locale;
@@ -98,12 +99,25 @@ public final class I18nService {
         notifyListeners();
     }
 
+    /**
+     * Registers a listener for locale changes.
+     *
+     * <p>This service is a singleton that outlives every screen, so it holds the listener
+     * weakly: <b>the caller must keep its own reference</b>, normally a field on whatever the
+     * listener updates, and the registration ends when that object is collected. Holding them
+     * strongly meant every controller ever constructed stayed registered and stayed reachable
+     * — a suite run reached 2593 live listeners, each re-localizing a screen nobody could see
+     * any more, which alone was enough to saturate the FX thread.
+     */
     public void addLocaleChangeListener(Consumer<Locale> listener) {
-        if (listener != null) listeners.add(listener);
+        if (listener != null) listeners.add(new WeakReference<>(listener));
     }
 
     public void removeLocaleChangeListener(Consumer<Locale> listener) {
-        listeners.remove(listener);
+        listeners.removeIf(reference -> {
+            Consumer<Locale> registered = reference.get();
+            return registered == null || registered.equals(listener);
+        });
     }
 
     public String text(String key) {
@@ -163,7 +177,10 @@ public final class I18nService {
 
     private void notifyListeners() {
         Locale changedLocale = getLocale();
-        for (Consumer<Locale> listener : listeners) {
+        listeners.removeIf(reference -> reference.get() == null);
+        for (WeakReference<Consumer<Locale>> reference : listeners) {
+            Consumer<Locale> listener = reference.get();
+            if (listener == null) continue;
             try {
                 listener.accept(changedLocale);
             } catch (RuntimeException exception) {

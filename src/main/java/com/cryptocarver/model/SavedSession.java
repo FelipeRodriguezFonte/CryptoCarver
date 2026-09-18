@@ -14,13 +14,20 @@ public class SavedSession implements Serializable {
     private String timestamp;
     private String operation; // The content header/operation name when saved
     private Map<String, Object> uiState;
+    private OperationSessionLog operationLog;
 
     public SavedSession(String name, String operation, Map<String, Object> uiState) {
+        this(name, operation, uiState, null);
+    }
+
+    public SavedSession(String name, String operation, Map<String, Object> uiState,
+                        OperationSessionLog operationLog) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
         this.timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         this.operation = operation;
         this.uiState = uiState;
+        this.operationLog = operationLog == null ? null : operationLog.copy();
     }
 
     public String getId() {
@@ -41,6 +48,10 @@ public class SavedSession implements Serializable {
 
     public Map<String, Object> getUiState() {
         return uiState;
+    }
+
+    public OperationSessionLog getOperationLog() {
+        return operationLog == null ? null : operationLog.copy();
     }
 
     @Override

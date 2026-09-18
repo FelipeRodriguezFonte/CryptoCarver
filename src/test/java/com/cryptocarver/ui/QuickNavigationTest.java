@@ -164,7 +164,7 @@ public class QuickNavigationTest {
     void testReopenRecentHistoryCommandRestoresState() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 
@@ -182,7 +182,7 @@ public class QuickNavigationTest {
     void testCanonicalModuleBreadcrumbNavigation() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 
@@ -204,7 +204,7 @@ public class QuickNavigationTest {
     void testBreadcrumbsReflectsAllRegisteredRoutes() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 
@@ -237,7 +237,7 @@ public class QuickNavigationTest {
     void testToggleFavoriteHeaderButtonAndCommandPaletteAction() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 
@@ -265,7 +265,7 @@ public class QuickNavigationTest {
     void testQuickStartNavigation() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 

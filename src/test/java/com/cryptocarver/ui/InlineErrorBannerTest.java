@@ -220,7 +220,7 @@ public class InlineErrorBannerTest {
     void testRealAuthenticationControllerHandlersTriggerInlineErrorBanner() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 
@@ -267,7 +267,7 @@ public class InlineErrorBannerTest {
     void testRealInvalidSignatureVerificationPreservesErrorBanner() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 
@@ -314,7 +314,7 @@ public class InlineErrorBannerTest {
     void testRealKeysControllerCertificateHandlersTriggerInlineErrorBanner() {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
 

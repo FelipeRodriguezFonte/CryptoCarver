@@ -102,8 +102,8 @@ public final class IcsfBatchAnalyzer {
             if (counts.isEmpty()) continue;
             if (counts.size() == 1) {
                 String only = counts.keySet().iterator().next();
-                if (only.equals(IcsfVocabulary.Scope.NOT_APPLICABLE.name())
-                        || only.equals("NOT_APPLICABLE") || only.equals(InventoryRow.NONE)) {
+                // By prefix: a dimension that does not apply for one named reason is still unused.
+                if (IcsfVocabulary.isNotApplicable(only) || only.equals(InventoryRow.NONE)) {
                     continue;
                 }
             }

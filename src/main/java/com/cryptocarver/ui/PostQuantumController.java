@@ -31,6 +31,9 @@ import java.util.function.Consumer;
  * Controller for Post-Quantum Cryptography operations
  */
 public class PostQuantumController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
 
     private static final Logger LOG = LoggerFactory.getLogger(PostQuantumController.class);
 
@@ -105,9 +108,10 @@ public class PostQuantumController {
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(pqcAccordion, ModuleTextCatalog.pqc());
-        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
             if (pqcKeyStatusLabel != null && currentPublicKey == null) pqcKeyStatusLabel.setText(t("status.ready"));
-        });
+        };
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         IngestionUIHelper.bindField(pqcSignInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(pqcVerifySignatureField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
         IngestionUIHelper.bindField(pqcPublicKeyArea, pqcKeyStatusLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);

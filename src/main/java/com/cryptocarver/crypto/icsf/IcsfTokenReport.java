@@ -90,7 +90,8 @@ public final class IcsfTokenReport {
                         field.offset(), field.length(),
                         IcsfMessages.resolve(field.name(), locale), field.rawHex()));
                 String value = IcsfMessages.resolve(field.value(), locale);
-                if (!value.isEmpty()) lines.add("      -> " + value);
+                // Byte-level readings run over several lines; keep them under their arrow.
+                if (!value.isEmpty()) lines.add("      -> " + value.replace("\n", System.lineSeparator() + "         "));
             }
             for (IcsfSection.Flag flag : section.flags()) {
                 String help = IcsfMessages.resolve(flag.detail(), locale);

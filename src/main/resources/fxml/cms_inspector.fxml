@@ -6,21 +6,21 @@
 
 <TitledPane fx:id="cmsInspectorRoot" text="🔍 Inspect / Validate CMS" expanded="false" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.CmsInspectorController">
     <content>
-        <VBox spacing="10" style="-fx-padding: 10;">
-            <Label text="CMS Source (Base64 / PEM / DER File):" style="-fx-font-weight: bold;"/>
+        <VBox styleClass="ux-inline-31b3bfce5a" spacing="10">
+            <Label styleClass="ux-inline-689e8d50bc" text="CMS Source (Base64 / PEM / DER File):"/>
             <HBox spacing="10">
                 <Button text="Load CMS file..." onAction="#handleLoadCmsFile" />
                 <Label fx:id="cmsFilePathLabel" text="No file selected" />
             </HBox>
-            <TextArea fx:id="cmsInputArea" promptText="Or paste CMS bytes here..." prefHeight="80" style="-fx-font-family: 'Monospaced';"/>
-            
+            <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="cmsInputArea" promptText="Or paste CMS bytes here..." prefHeight="80"/>
+
             <Label text="Detached Content (Optional, for detached signature verification):" />
             <CheckBox fx:id="cmsDetachedCheck" text="Provide detached content" onAction="#handleDetachedToggle" />
             <HBox spacing="10" fx:id="cmsDetachedFileBox" managed="false" visible="false">
                 <Button text="Load Content file..." onAction="#handleLoadContentFile" />
                 <Label fx:id="cmsContentPathLabel" text="No file selected" />
             </HBox>
-            <TextArea fx:id="cmsContentArea" promptText="Or paste content here..." prefHeight="60" style="-fx-font-family: 'Monospaced';" managed="false" visible="false"/>
+            <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="cmsContentArea" promptText="Or paste content here..." prefHeight="60" managed="false" visible="false"/>
 
             <Label text="Truststore (Optional, for PKIX path validation):" />
             <HBox spacing="10" alignment="CENTER_LEFT">
@@ -28,7 +28,7 @@
                 <Label fx:id="truststorePathLabel" text="No truststore selected" />
                 <PasswordField fx:id="truststorePasswordField" promptText="Password (not saved)" />
             </HBox>
-            
+
             <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
                 <Button text="Inspect CMS" onAction="#handleInspectCms" styleClass="action-button-primary"/>
                 <Button text="Validate SignedData" onAction="#handleValidateSignedData" styleClass="action-button-secondary"/>
@@ -36,9 +36,9 @@
                 <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
                 <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
             </FlowPane>
-            
-            <Label text="Inspection Results:" style="-fx-font-weight: bold;"/>
-            <TextArea fx:id="cmsReportArea" editable="false" prefHeight="200" style="-fx-font-family: 'Monospaced';"/>
+
+            <Label styleClass="ux-inline-689e8d50bc" text="Inspection Results:"/>
+            <TextArea styleClass="ux-inline-8e6d20ca1b" fx:id="cmsReportArea" editable="false" prefHeight="200"/>
         </VBox>
     </content>
 </TitledPane>

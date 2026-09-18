@@ -58,7 +58,7 @@ public class LunaSecretLeakReproTest {
     void sensitiveParametersAreNeverWrittenToNodeConfiguration() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 Stage stage = new Stage();
@@ -89,7 +89,7 @@ public class LunaSecretLeakReproTest {
     void undoDoesNotRestorePlaintextKeyIntoConfiguration() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 Stage stage = new Stage();
@@ -128,7 +128,7 @@ public class LunaSecretLeakReproTest {
     void paymentPanPinAndPinBlockRemainTransientSecrets() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/process_designer.fxml"));
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/process_designer.fxml"));
                 TitledPane root = loader.load();
                 ProcessDesignerController controller = loader.getController();
                 Stage stage = new Stage(); stage.setScene(new Scene(root, 1200, 800)); stage.show();

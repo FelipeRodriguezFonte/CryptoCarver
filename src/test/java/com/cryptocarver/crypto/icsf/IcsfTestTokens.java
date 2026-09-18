@@ -222,6 +222,53 @@ final class IcsfTestTokens {
         return token;
     }
 
+    /** The AES EXPORTER a user brought in: EXPTT31D + VARDRV-D, wraps AES keys only. */
+    static final String AES_EXPTT31D_EXPORTER = "0100008C050000000301ED51238AC5C881E40000000000000000020200000100001E"
+            + "0000000002800002000304010001004000F80003F00000000505869BE05A0F76BDE1C8310EDE3CEF4B97E913CF"
+            + "97654E0EB74245D300964058C69CB9B06331F60DB5851EB3FC879E3B4F13E9D681DF4007DD7C25F20713C73C0B9E"
+            + "E81F0734B65E598B320EC5201878B9";
+
+    /**
+     * An internal variable-length token of any key type, with the usage and management
+     * fields given as hex and the associated-data arithmetic worked out (Table 618).
+     */
+    static byte[] variableLength(int algorithm, int keyType, String usageHex, String managementHex) {
+        byte[] usage = hex(usageHex);
+        byte[] management = hex(managementHex);
+        int associatedDataLength = 16 + usage.length + management.length;
+        int payloadBits = 256;
+        int payloadStart = 30 + associatedDataLength;
+        int length = payloadStart + payloadBits / 8;
+
+        byte[] token = new byte[length];
+        token[0] = 0x01;
+        token[2] = (byte) ((length >> 8) & 0xFF);
+        token[3] = (byte) (length & 0xFF);
+        token[4] = 0x05;
+        token[8] = 0x03;
+        token[9] = 0x01;
+        for (int index = 0; index < 16; index++) token[10 + index] = (byte) (0xA0 + index);
+        token[26] = 0x02;
+        token[27] = 0x02;
+        token[30] = 0x01;
+        token[32] = (byte) ((associatedDataLength >> 8) & 0xFF);
+        token[33] = (byte) (associatedDataLength & 0xFF);
+        token[38] = (byte) ((payloadBits >> 8) & 0xFF);
+        token[39] = (byte) (payloadBits & 0xFF);
+        token[41] = (byte) algorithm;
+        token[42] = (byte) ((keyType >> 8) & 0xFF);
+        token[43] = (byte) (keyType & 0xFF);
+        token[44] = (byte) (usage.length / 2);
+        System.arraycopy(usage, 0, token, 45, usage.length);
+        int managementCountOffset = 45 + usage.length;
+        token[managementCountOffset] = (byte) (management.length / 2);
+        System.arraycopy(management, 0, token, managementCountOffset + 1, management.length);
+        for (int index = 0; index < payloadBits / 8; index++) {
+            token[payloadStart + index] = (byte) (0x50 + index);
+        }
+        return token;
+    }
+
     /**
      * A PKA token (Tables 637-646) carrying only an RSA public key section.
      *

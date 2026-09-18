@@ -73,4 +73,24 @@ public interface StatusReporter {
 
     default void navigateTo(String operation) {
     }
+
+    /**
+     * Actions a module's result surface offers on the result the shell is currently showing.
+     *
+     * <p>The shell already resolves which result that is, applies the visibility policy and
+     * reports the outcome in the status bar, so a module delegates rather than reimplementing
+     * any of it. They default to doing nothing for the reporters used in isolation, such as
+     * tests and standalone panes.
+     */
+    default void copyCurrentResult() {
+    }
+
+    default void addCurrentResultToShelf() {
+    }
+
+    default void expandCurrentResult() {
+    }
+
+    default void saveCurrentResultAsSessionStep() {
+    }
 }

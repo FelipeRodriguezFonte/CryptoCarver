@@ -1,5 +1,7 @@
 # Mejoras de UX — CryptoCarver (análisis 2026-08-03)
 
+> **Sustituido por [`HANDOFF_UX_PROFESIONAL.md`](HANDOFF_UX_PROFESIONAL.md) (2026-09-17).** Los bloques aún abiertos de este documento están incorporados allí.
+
 Estado tras los handoffs UX-01 a UX-25. La mayoría de la propuesta original (`HANDOFF_UX_PROPUESTA.md`) ya está resuelta: FXML muerto eliminado, aceleradores corregidos, errores accionables (`UserFacingError`/`InlineErrorPresenter`), navegación con recientes/favoritos/migas/paleta, e i18n ES/EN de base. Quedan 2 bloques grandes sin empezar y varias deudas puntuales.
 
 ## 1. Tema y tokens de estilo — PENDIENTE (no iniciado)

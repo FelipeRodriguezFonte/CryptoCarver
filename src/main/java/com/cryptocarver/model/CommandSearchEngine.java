@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -34,7 +35,7 @@ public final class CommandSearchEngine {
             return new ArrayList<>(commands);
         }
 
-        String normalized = query.trim().toLowerCase();
+        String normalized = query.trim().toLowerCase(Locale.ROOT);
         List<ScoredCommand> scoredList = new ArrayList<>();
 
         for (int i = 0; i < commands.size(); i++) {
@@ -53,9 +54,9 @@ public final class CommandSearchEngine {
     }
 
     private static int computeScore(CommandItem cmd, String q) {
-        String title = cmd.getTitle().toLowerCase();
-        String category = cmd.getCategory().toLowerCase();
-        String description = cmd.getDescription().toLowerCase();
+        String title = cmd.getTitle().toLowerCase(Locale.ROOT);
+        String category = cmd.getCategory().toLowerCase(Locale.ROOT);
+        String description = cmd.getDescription().toLowerCase(Locale.ROOT);
 
         // Exact title match
         if (title.equals(q)) {
@@ -64,50 +65,55 @@ public final class CommandSearchEngine {
 
         // Title starts with query
         if (title.startsWith(q)) {
-            return 800;
+            return 900;
         }
 
         // Title contains word starting with query
         String[] titleWords = title.split("\\s+");
         for (String word : titleWords) {
             if (word.startsWith(q)) {
-                return 600;
+                return 800;
             }
         }
 
         // Title contains query anywhere
         if (title.contains(q)) {
-            return 500;
+            return 700;
         }
 
-        // Category matches or starts with query
-        if (category.equals(q) || category.startsWith(q)) {
-            return 400;
-        }
-
-        // Keyword starts with query
+        // Keywords are the command's aliases. They rank below title matches,
+        // but above prose in the description (e.g. "mac" matches HMAC/CMAC).
         for (String kw : cmd.getKeywords()) {
-            String kwLower = kw.toLowerCase();
+            String kwLower = kw.toLowerCase(Locale.ROOT);
             if (kwLower.equals(q)) {
-                return 350;
+                return 600;
             }
-            if (kwLower.startsWith(q)) {
-                return 300;
+            if (kwLower.startsWith(q) || containsWordStartingWith(kwLower, q)) {
+                return 550;
             }
-        }
-
-        // Keyword contains query
-        for (String kw : cmd.getKeywords()) {
-            if (kw.toLowerCase().contains(q)) {
+            if (kwLower.contains(q)) {
                 return 250;
             }
         }
 
-        // Description contains word starting with query
-        if (description.contains(q)) {
+        // Description is deliberately the lowest-priority searchable field.
+        if (description.contains(q) || containsWordStartingWith(description, q)) {
+            return 200;
+        }
+
+        // Keep category search as a backwards-compatible, lowest-priority
+        // fallback for commands built by older callers.
+        if (category.contains(q)) {
             return 100;
         }
 
         return 0;
+    }
+
+    private static boolean containsWordStartingWith(String value, String query) {
+        for (String word : value.split("[^\\p{L}\\p{N}]+")) {
+            if (word.startsWith(query)) return true;
+        }
+        return false;
     }
 }

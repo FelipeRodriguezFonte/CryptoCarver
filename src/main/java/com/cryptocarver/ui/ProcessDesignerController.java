@@ -47,6 +47,10 @@ import java.util.stream.Collectors;
  * searchable palette, and undo/redo command stack.
  */
 public class ProcessDesignerController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
+    private final DialogService dialogService = new DialogService();
 
     private ModuleI18n.Binding moduleI18n;
 
@@ -131,7 +135,7 @@ public class ProcessDesignerController {
 
     @FXML public void initialize() {
         moduleI18n = ModuleI18n.bind(processDesignerRoot, ModuleTextCatalog.processDesigner());
-        I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
             if (processStatusLabel != null && (processStatusLabel.getText() == null || processStatusLabel.getText().isBlank())) {
                 processStatusLabel.setText(t("status.ready"));
             }
@@ -140,7 +144,8 @@ public class ProcessDesignerController {
             }
             updateSelectionUi();
             buildPalette();
-        });
+        };
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         configureExecutionStatusTable();
 
         // Canvas Scale & Zoom setup
@@ -1395,7 +1400,7 @@ public class ProcessDesignerController {
     @FXML public void handleOpenExpandedExecutionResult() {
         String trace = executionOutputArea == null ? "" : executionOutputArea.getText();
         if (trace == null || trace.isBlank()) {
-            new Alert(Alert.AlertType.INFORMATION, t("module.process.runBeforeExpand")).showAndWait();
+            dialogService.info("Process Designer", t("module.process.runBeforeExpand"));
             return;
         }
         javafx.stage.Window owner = workflowCanvas == null || workflowCanvas.getScene() == null ? null : workflowCanvas.getScene().getWindow();

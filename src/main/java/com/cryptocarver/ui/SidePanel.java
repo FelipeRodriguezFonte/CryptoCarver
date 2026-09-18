@@ -13,6 +13,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -32,6 +34,7 @@ public class SidePanel extends VBox {
      *  spliced in, so a bare section switch lands on that section's own content rather than
      *  an unrelated global favorite. Null for sections with nothing selectable (e.g. Search). */
     private TreeItem<OperationNode> firstPrimaryOperation;
+    private boolean synchronizingSelection;
 
     private Consumer<com.cryptocarver.model.HistoryCommand> onHistoryItemSelected;
 
@@ -45,7 +48,9 @@ public class SidePanel extends VBox {
         OperationNode(OperationDescriptor desc) { this.descriptor = desc; this.label = desc.getTitle(); }
         OperationNode(com.cryptocarver.model.HistoryCommand cmd) {
             this.historyCommand = cmd;
-            this.label = cmd.getOperation() + " (" + cmd.getTimestamp() + ")";
+            // Navigation recents are intentionally compact: the timestamp is
+            // useful context, but does not belong in the tree row label.
+            this.label = cmd.getNavigationOperation();
             this.descriptor = OperationRegistry.getInstance().resolveNavigation(cmd.getNavigationOperation()).orElse(null);
         }
 
@@ -66,8 +71,8 @@ public class SidePanel extends VBox {
         header.setPadding(new Insets(8));
         header.getStyleClass().add("side-panel-header");
 
-        Label searchIcon = new Label("🔍");
-        searchIcon.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px;");
+        javafx.scene.Node searchIcon = IconRegistry.icon("search");
+        searchIcon.getStyleClass().add("side-panel-search-icon");
 
         searchField = new TextField();
         searchField.setPromptText(I18nService.getInstance().text("side.search"));
@@ -114,16 +119,19 @@ public class SidePanel extends VBox {
                     if (item.descriptor != null) {
                         HBox content = new HBox(5);
                         content.setAlignment(Pos.CENTER_LEFT);
-                        Label iconLabel = new Label(item.descriptor.getIcon());
                         Label textLabel = new Label(item.historyCommand != null ? item.label : item.descriptor.getTitle());
-                        content.getChildren().addAll(iconLabel, textLabel);
+                        // Group icons provide hierarchy; leaf rows stay quiet and scannable.
+                        if (!newValIsLeaf(item)) {
+                            content.getChildren().add(IconRegistry.operation(item.descriptor.getId(), item.descriptor.getIcon()));
+                        }
+                        content.getChildren().add(textLabel);
 
                         if (item.descriptor.getStatus() == OperationDescriptor.Status.EXPERIMENTAL) {
-                            Label expBadge = new Label("EXP");
+                            Label expBadge = new Label(I18nService.getInstance().text("side.badge.experimental"));
                             expBadge.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
                             content.getChildren().add(expBadge);
                         } else if (item.descriptor.getStatus() == OperationDescriptor.Status.PLANNED) {
-                            Label planBadge = new Label("PLANNED");
+                            Label planBadge = new Label(I18nService.getInstance().text("side.badge.planned"));
                             planBadge.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
                             content.getChildren().add(planBadge);
                             textLabel.setStyle("-fx-text-fill: #7f8c8d;");
@@ -139,9 +147,13 @@ public class SidePanel extends VBox {
                             tooltipText += "\n" + I18nService.getInstance().text("side.aliases", String.join(", ", item.descriptor.getAliases()));
                         }
                         if (item.descriptor.getStatus() != OperationDescriptor.Status.STABLE) {
-                            tooltipText += " (" + item.descriptor.getStatus() + ")";
+                            tooltipText += " (" + I18nService.getInstance().text("side.status." + item.descriptor.getStatus().name()) + ")";
                         }
                         setTooltip(new Tooltip(tooltipText));
+
+                        if (item.historyCommand != null) {
+                            setTooltip(new Tooltip(item.label + "\n" + item.historyCommand.getTimestamp()));
+                        }
 
                     } else {
                         setText(item.label);
@@ -156,6 +168,7 @@ public class SidePanel extends VBox {
 
         // Item selection handler
         navigationTree.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
+            if (synchronizingSelection) return;
             if (newVal != null && newVal.isLeaf()) {
                 OperationNode selected = newVal.getValue();
 
@@ -185,6 +198,12 @@ public class SidePanel extends VBox {
 
         // Initialize with default content (Keys)
         updateContent(NavigationRail.Section.KEYS);
+    }
+
+    private boolean newValIsLeaf(OperationNode item) {
+        // OperationNode descriptors represent leaves in the registry.  Group
+        // rows have no descriptor and therefore never enter this branch.
+        return item.descriptor != null;
     }
 
     private com.cryptocarver.model.HistoryManager historyManager;
@@ -277,6 +296,35 @@ public class SidePanel extends VBox {
         }
     }
 
+    /** Selects and reveals the leaf for an externally initiated operation without re-entering navigation. */
+    public boolean selectOperation(String navigationPath) {
+        TreeItem<OperationNode> item = findOperation(rootItem, navigationPath);
+        if (item == null) return false;
+        synchronizingSelection = true;
+        try {
+            navigationTree.getSelectionModel().select(item);
+            navigationTree.scrollTo(navigationTree.getRow(item));
+            return true;
+        } finally {
+            synchronizingSelection = false;
+        }
+    }
+
+    private TreeItem<OperationNode> findOperation(TreeItem<OperationNode> node, String navigationPath) {
+        if (node == null) return null;
+        OperationNode value = node.getValue();
+        if (value != null && value.descriptor != null
+                && (value.descriptor.getNavigationPath().equalsIgnoreCase(navigationPath)
+                || value.descriptor.getTitle().equalsIgnoreCase(navigationPath))) {
+            return node;
+        }
+        for (TreeItem<OperationNode> child : node.getChildren()) {
+            TreeItem<OperationNode> found = findOperation(child, navigationPath);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     private TreeItem<OperationNode> findFirstSelectableLeaf(TreeItem<OperationNode> node) {
         if (node == null) return null;
         for (TreeItem<OperationNode> child : node.getChildren()) {
@@ -305,7 +353,7 @@ public class SidePanel extends VBox {
         if (favs.isEmpty()) return;
 
         TreeItem<OperationNode> favsGroup = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.favorites")));
-        for (String fav : favs) {
+        for (String fav : favs.stream().limit(5).toList()) {
             OperationDescriptor desc = OperationRegistry.getInstance().resolveNavigation(fav).orElse(null);
             if (desc != null) {
                 favsGroup.getChildren().add(new TreeItem<>(new OperationNode(desc)));
@@ -322,10 +370,18 @@ public class SidePanel extends VBox {
         if (items.isEmpty()) return;
 
         TreeItem<OperationNode> recentsGroup = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.recent")));
-        for (com.cryptocarver.model.HistoryCommand item : items.stream().limit(8).toList()) {
+        Set<String> seenNavigation = new LinkedHashSet<>();
+        for (com.cryptocarver.model.HistoryCommand item : items) {
+            String navigation = item.getNavigationOperation();
+            if (navigation == null || navigation.isBlank() || seenNavigation.contains(navigation)) continue;
+            // Legacy history can contain a result label that is no longer a
+            // registered navigation target; do not expose a dead tree row.
+            if (OperationRegistry.getInstance().resolveNavigation(navigation).isEmpty()) continue;
+            seenNavigation.add(navigation);
+            if (seenNavigation.size() > 5) break;
             recentsGroup.getChildren().add(new TreeItem<>(new OperationNode(item)));
         }
-        rootItem.getChildren().add(recentsGroup);
+        if (!recentsGroup.getChildren().isEmpty()) rootItem.getChildren().add(recentsGroup);
     }
 
     private void buildHistoryTree() {
@@ -342,7 +398,7 @@ public class SidePanel extends VBox {
         if (desc != null) {
             rootItem.getChildren().add(new TreeItem<>(new OperationNode(desc)));
         } else {
-            rootItem.getChildren().add(new TreeItem<>(new OperationNode("Process Designer")));
+            rootItem.getChildren().add(new TreeItem<>(new OperationNode(I18nService.getInstance().text("nav.processDesigner"))));
         }
     }
 
@@ -356,9 +412,9 @@ public class SidePanel extends VBox {
     }
 
     private void buildKeysTree() {
-        TreeItem<OperationNode> symmetric = new TreeItem<>(new OperationNode("Symmetric"));
-        TreeItem<OperationNode> asymmetric = new TreeItem<>(new OperationNode("Asymmetric"));
-        TreeItem<OperationNode> tools = new TreeItem<>(new OperationNode("Tools"));
+        TreeItem<OperationNode> symmetric = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.keys.symmetric")));
+        TreeItem<OperationNode> asymmetric = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.keys.asymmetric")));
+        TreeItem<OperationNode> tools = new TreeItem<>(new OperationNode(I18nService.getInstance().text("side.keys.tools")));
 
         List<OperationDescriptor> keysOps = OperationRegistry.getInstance().getAll().stream()
                 .filter(o -> "Keys".equals(o.getCategory()))

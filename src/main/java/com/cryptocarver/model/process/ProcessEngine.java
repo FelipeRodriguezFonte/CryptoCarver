@@ -32,6 +32,7 @@ public final class ProcessEngine {
         new RandomBytesNodeHandler(),
         new PlumbingNodeHandler(),
         new EncodingFormatNodeHandler(),
+        new FormatPreservingEncryptionNodeHandler(),
         new UtilityInspectionNodeHandler()
     ));
 

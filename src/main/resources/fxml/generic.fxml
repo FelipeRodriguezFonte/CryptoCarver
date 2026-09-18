@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.cryptocarver.ui.ResultPanel?>
 
 <Accordion xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.GenericController" fx:id="genericContainer" managed="false" visible="false" styleClass="module-accordion">
     <panes>
@@ -21,14 +22,14 @@
             </VBox>
         </TitledPane>
 
-        <!-- HASHING -->
+        <!-- HASHING: the operation remains a single card so its result and primary action stay together. -->
         <TitledPane text="🔐 Hashing" expanded="true">
             <VBox spacing="12" styleClass="module-pane-content">
                 <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                     <Label text="Apply Template:" styleClass="form-label"/>
                     <ComboBox fx:id="hashTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                    <Button text="Apply" onAction="#handleApplyHashTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                    <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                    <Button text="Apply" onAction="#handleApplyHashTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
+                    <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
                         <items>
                             <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveHashTemplate"/>
                             <MenuItem text="Export Selected Template..." onAction="#handleExportHashTemplate"/>
@@ -36,7 +37,7 @@
                             <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteHashTemplate"/>
                         </items>
                     </MenuButton>
-                    <Button text="Reset Defaults" onAction="#handleResetHashDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                    <Button text="Reset Defaults" onAction="#handleResetHashDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
                 </FlowPane>
 
                 <HBox spacing="8" alignment="CENTER_LEFT">
@@ -52,6 +53,7 @@
 
                 <Label text="Output:" styleClass="form-label"/>
                 <TextArea fx:id="hashOutputArea" prefRowCount="2" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
+                <ResultPanel fx:id="genericResultPanel"/>
             </VBox>
         </TitledPane>
 
@@ -69,7 +71,7 @@
                     <Label text="Out Col:" styleClass="form-label"/>
                     <TextField fx:id="batchOutputColumnField" text="result" prefWidth="60" styleClass="form-field"/>
                 </HBox>
-                <VBox fx:id="batchCryptoConfigBox" managed="false" visible="false" spacing="8" style="-fx-padding: 8; -fx-border-color: #444; -fx-border-radius: 4;">
+                <VBox styleClass="ux-inline-afb8c30032" fx:id="batchCryptoConfigBox" managed="false" visible="false" spacing="8">
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="80" prefWidth="80"/>
@@ -128,19 +130,19 @@
                     <Label text="Source:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileInputPathField" promptText="Input File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="..." onAction="#handleBrowseInputFile" style="-fx-min-width: 25px;"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose input file" onAction="#handleBrowseInputFile"/>
                     </HBox>
 
                     <Label text="Target:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileOutputPathField" promptText="Output File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="..." onAction="#handleBrowseOutputFile" style="-fx-min-width: 25px;"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose output file" onAction="#handleBrowseOutputFile"/>
                     </HBox>
 
                     <Label text="Compare:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="form-label"/>
                     <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
                         <TextField fx:id="fileComparePathField" promptText="Second File Path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                        <Button text="..." onAction="#handleBrowseCompareFile" style="-fx-min-width: 25px;"/>
+                        <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose comparison file" onAction="#handleBrowseCompareFile"/>
                     </HBox>
 
                     <Label text="Format:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="form-label"/>
@@ -177,8 +179,8 @@
                  <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                      <Label text="Apply Template:" styleClass="form-label"/>
                      <ComboBox fx:id="manualTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                     <Button text="Apply" onAction="#handleApplyManualTemplate" styleClass="action-button-primary" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
-                     <MenuButton text="Manage Template" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;">
+                     <Button text="Apply" onAction="#handleApplyManualTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
+                     <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
                          <items>
                              <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveManualTemplate"/>
                              <MenuItem text="Export Selected Template..." onAction="#handleExportManualTemplate"/>
@@ -186,7 +188,7 @@
                              <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteManualTemplate"/>
                          </items>
                      </MenuButton>
-                     <Button text="Reset Defaults" onAction="#handleResetManualDefaults" styleClass="secondary-button" style="-fx-font-size: 11px; -fx-padding: 4 10;"/>
+                     <Button text="Reset Defaults" onAction="#handleResetManualDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
                  </FlowPane>
 
                  <HBox spacing="8" alignment="CENTER_LEFT">

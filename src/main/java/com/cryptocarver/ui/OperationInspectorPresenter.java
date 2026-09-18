@@ -5,7 +5,6 @@ import com.cryptocarver.model.OperationDescriptor;
 import com.cryptocarver.model.OperationRegistry;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
@@ -130,7 +129,8 @@ final class OperationInspectorPresenter {
 
         for (OperationDetail detail : details) {
             if (detail == null) continue;
-            HBox row = new HBox(10);
+            VBox row = new VBox(2);
+            row.getStyleClass().add("inspector-detail-stack");
             Label key = new Label(detail.name() + ":");
             key.getStyleClass().addAll("inspector-detail-key", "inspector-label");
             Label value = new Label(detail.value() == null ? "" : detail.value());

@@ -36,6 +36,11 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class HistoryController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
+
+    private final DialogService dialogService = new DialogService();
 
     @FXML private VBox mainHistoryContainer;
     @FXML private ComboBox<SecretVisibilityProfile> visibilityCombo;
@@ -74,10 +79,11 @@ public class HistoryController {
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(mainHistoryContainer, ModuleTextCatalog.history());
-        I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
             refresh();
             historyTable.refresh();
-        });
+        };
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         detailsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -507,11 +513,11 @@ public class HistoryController {
     private boolean confirmClearHistory() {
         if (historyManager == null || historyManager.getHistoryItems().isEmpty()) return true;
         if (Boolean.getBoolean("test.mode")) return true;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                t("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setTitle(t("module.history.clearTitle"));
-        confirmation.setHeaderText(t("module.history.clearHeader"));
-        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        javafx.stage.Window owner = mainHistoryContainer == null || mainHistoryContainer.getScene() == null
+                ? null : mainHistoryContainer.getScene().getWindow();
+        return dialogService.confirmDestructive(owner, t("module.history.clearTitle"),
+                t("module.history.clearHeader") + "\n\n" + t("module.history.clearConfirm"),
+                t("dialog.confirm"));
     }
 
     @FXML
@@ -545,10 +551,8 @@ public class HistoryController {
             if (navigator != null) {
                 navigator.updateStatus("Recipe exported: " + file.getName());
             }
-            Alert confirmation = new Alert(Alert.AlertType.INFORMATION, "Recipe saved to:\n" + file.getAbsolutePath(), ButtonType.OK);
-            confirmation.setTitle("Recipe exported");
-            confirmation.setHeaderText("Reusable non-secret configuration saved");
-            confirmation.showAndWait();
+            dialogService.info(mainHistoryContainer.getScene().getWindow(), "Recipe exported",
+                    "Recipe saved to:\n" + file.getAbsolutePath());
         } catch (Exception e) {
             showError("Recipe Export", "Unable to write recipe: " + e.getMessage());
         }
@@ -703,11 +707,6 @@ public class HistoryController {
             }
         });
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("History Comparison");
-        alert.setHeaderText("Comparing:\n1) " + selected.get(0).getOperation() + "\n2) " + selected.get(1).getOperation()
-                + "\n\nValues policy: " + visibility);
-
         Label summary = new Label(differenceCount + " different of " + diffs.size() + " compared properties");
         CheckBox onlyDifferences = new CheckBox("Show differences only");
         onlyDifferences.setSelected(differenceCount > 0);
@@ -716,10 +715,12 @@ public class HistoryController {
         visibleDiffs.setPredicate(diff -> !onlyDifferences.isSelected() || diff.isDifferent);
         VBox content = new VBox(8, summary, onlyDifferences, diffTable);
         content.setPrefSize(600, 400);
-        alert.getDialogPane().setContent(content);
         ButtonType openExpanded = new ButtonType("Open expanded", ButtonBar.ButtonData.OTHER);
-        alert.getButtonTypes().add(openExpanded);
-        alert.showAndWait().ifPresent(button -> {
+        dialogService.show(Alert.AlertType.INFORMATION, mainHistoryContainer == null || mainHistoryContainer.getScene() == null ? null : mainHistoryContainer.getScene().getWindow(),
+                "History Comparison",
+                "Comparing:\n1) " + selected.get(0).getOperation() + "\n2) " + selected.get(1).getOperation()
+                        + "\n\nValues policy: " + visibility,
+                content, ButtonType.OK, openExpanded).ifPresent(button -> {
             if (button != openExpanded) {
                 return;
             }
@@ -763,10 +764,11 @@ public class HistoryController {
                     .append("\nVersion: ").append(recipe.version()).append("\nCreated: ").append(recipe.createdAt()).append("\n\nParameters:\n");
             resolvedParameters.forEach((key, value) -> preview.append(key).append(" = ").append(value).append('\n'));
 
-            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION, preview.toString(), ButtonType.CANCEL, ButtonType.OK);
-            confirmation.setTitle("Load Operation Recipe");
-            confirmation.setHeaderText("Review recipe before restoring its state");
-            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            if (dialogService.show(Alert.AlertType.CONFIRMATION,
+                    mainHistoryContainer == null || mainHistoryContainer.getScene() == null ? null : mainHistoryContainer.getScene().getWindow(),
+                    "Load Operation Recipe", "Review recipe before restoring its state",
+                    new Label(preview.toString()), ButtonType.CANCEL, ButtonType.OK)
+                    .orElse(ButtonType.CANCEL) != ButtonType.OK) return;
 
             Map<String, Object> state = new LinkedHashMap<>();
             resolvedParameters.forEach((key, value) -> { if (!"historyTimestamp".equals(key)) state.put(key, value); });
@@ -781,9 +783,8 @@ public class HistoryController {
     }
 
     private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
-        alert.setTitle(title);
-        alert.setHeaderText("Error");
-        alert.showAndWait();
+        javafx.stage.Window owner = mainHistoryContainer == null || mainHistoryContainer.getScene() == null
+                ? null : mainHistoryContainer.getScene().getWindow();
+        dialogService.error(owner, title, message);
     }
 }

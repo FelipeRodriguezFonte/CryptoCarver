@@ -14,6 +14,9 @@
     <description>CryptoCarver - Advanced Cryptographic Test Tool with JavaFX GUI</description>
 
     <properties>
+        <!-- The JavaFX suite runs in the default build. Pass -DrunUiTests=false to skip it
+             on a machine with no display. -->
+        <runUiTests>true</runUiTests>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
         <javafx.version>21.0.5</javafx.version>
@@ -40,6 +43,18 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
             <version>${javafx.version}</version>
+        </dependency>
+
+        <!-- Offline, bundled vector icons (Apache 2.0). -->
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-javafx</artifactId>
+            <version>12.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-materialdesign2-pack</artifactId>
+            <version>12.3.1</version>
         </dependency>
 
         <!-- BouncyCastle para algoritmos criptográficos adicionales -->
@@ -251,16 +266,26 @@
                 </configuration>
             </plugin>
 
-            <!-- Keep the default quality gate deterministic and headless. UI,
-                 network/integration and benchmark suites are explicit opt-ins. -->
+            <!-- The UI suite runs in the default gate: it is the only coverage for the
+                 shell, and while it was an opt-in it drifted 110 failures behind the code
+                 without the default build noticing. It needs a display, so a headless machine
+                 runs it under Xvfb (scripts/run-ui-tests.sh) or skips it with
+                 -DrunUiTests=false. Network/integration and benchmark suites stay opt-in. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <excludedGroups>ui,integration,benchmark</excludedGroups>
+                    <excludedGroups>integration,benchmark</excludedGroups>
                     <useSystemClassLoader>true</useSystemClassLoader>
                     <systemPropertyVariables>
+                        <!-- The UI test classes gate themselves on this property as well as on
+                             their tag, so both have to allow them through. -->
+                        <runUiTests>${runUiTests}</runUiTests>
+                        <!-- UI tests must not open modal JavaFX dialogs: they block the FX
+                             thread and make the suite wait for a click that never comes.
+                             Controllers emit non-modal diagnostics under test.mode instead. -->
+                        <test.mode>true</test.mode>
                         <!-- AppSettings, OperationHistory, HistoryManager, ClipboardShelfManager,
                              SavedSessionsManager, PersonalTemplateStore and SimulatedHsmProvider all
                              anchor their storage to user.home. Without this the suite reads and
@@ -309,6 +334,7 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.cryptocarver.Launcher</mainClass>
                                 </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                             </transformers>
                             <filters>
                                 <filter>
@@ -412,9 +438,11 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <!-- JUnit 5 uses tags; the base configuration's
-                                 excludedGroups otherwise leaves the opt-in
-                                 profile with zero discovered UI tests. -->
+                            <!-- Narrows the run to the JavaFX suite alone. The default
+                                 build already includes it, so this is for running only
+                                 the UI tests — what scripts/run-ui-tests.sh does under
+                                 Xvfb. Project properties do not activate a profile, so
+                                 the default build never lands here. -->
                             <groups>ui</groups>
                             <excludedGroups>none</excludedGroups>
                             <systemPropertyVariables>

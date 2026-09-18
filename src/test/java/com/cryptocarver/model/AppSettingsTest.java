@@ -59,4 +59,21 @@ public class AppSettingsTest {
         assertThrows(IllegalArgumentException.class, () -> settings.savePkcs11Profile(null, "/lib.so", 0));
         assertThrows(IllegalArgumentException.class, () -> settings.savePkcs11Profile("Name", "/lib.so", -1));
     }
+
+    @Test
+    public void testWorkspaceDividerPositionsPersistAndClamp() {
+        Path settingsFile = temporaryDirectory.resolve("workspace-settings.json");
+        AppSettings settings = new AppSettings(settingsFile);
+        settings.setWorkspaceTreeDividerPosition(0.31);
+        settings.setWorkspaceInspectorDividerPosition(0.69);
+
+        AppSettings reloaded = new AppSettings(settingsFile);
+        assertEquals(0.31, reloaded.getWorkspaceTreeDividerPosition(), 0.0001);
+        assertEquals(0.69, reloaded.getWorkspaceInspectorDividerPosition(), 0.0001);
+
+        reloaded.setWorkspaceTreeDividerPosition(Double.NaN);
+        reloaded.setWorkspaceInspectorDividerPosition(4.0);
+        assertEquals(0.22, reloaded.getWorkspaceTreeDividerPosition(), 0.0001);
+        assertEquals(1.0, reloaded.getWorkspaceInspectorDividerPosition(), 0.0001);
+    }
 }

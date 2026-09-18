@@ -38,7 +38,7 @@ public final class ModuleI18n {
     public static Binding bind(Node root, Map<String, String> keys, Node... excludedRoots) {
         Binding binding = new Binding(root, keys == null ? Map.of() : keys, excludedRoots);
         binding.refresh();
-        I18nService.getInstance().addLocaleChangeListener(locale -> {
+        binding.localeChangeListener = locale -> {
             if (Platform.isFxApplicationThread()) {
                 binding.refresh();
                 return;
@@ -51,11 +51,14 @@ public final class ModuleI18n {
                 // No toolkit is available yet; the next FXML initialization
                 // performs the initial refresh on the FX thread.
             }
-        });
+        };
+        I18nService.getInstance().addLocaleChangeListener(binding.localeChangeListener);
         return binding;
     }
 
     public static final class Binding {
+        /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+        private java.util.function.Consumer<java.util.Locale> localeChangeListener;
         private final Node root;
         private final Map<String, String> keys;
         private final Set<Node> excludedRoots;

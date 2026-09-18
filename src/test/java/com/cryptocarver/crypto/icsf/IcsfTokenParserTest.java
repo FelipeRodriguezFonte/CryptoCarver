@@ -96,7 +96,8 @@ class IcsfTokenParserTest {
         assertEquals("128", result.code(SummaryKey.KEY_LENGTH, ""));
         assertTrue(result.is(SummaryKey.TVV, TvvState.VALID));
         assertTrue(result.is(SummaryKey.MKVP, MkvpState.ABSENT));
-        assertTrue(result.is(SummaryKey.CONTROL_VECTOR, CvState.ZERO));
+        // Zero is what Table 614 requires of an AES DATA key, not the legacy DES "zero CV".
+        assertTrue(result.is(SummaryKey.CONTROL_VECTOR, CvState.ZERO_AES_DATA));
         // Flag byte 6 is zero: neither encrypted nor "no key", so the key is in the clear.
         assertTrue(result.is(SummaryKey.MATERIAL_STATE, MaterialState.CLEAR));
     }
@@ -131,6 +132,8 @@ class IcsfTokenParserTest {
         assertTrue(result.is(SummaryKey.WRAPPING, WrapMethod.ECB));
         assertTrue(result.is(SummaryKey.EXPORTABILITY, Exportability.YES));
         assertEquals(Boolean.TRUE, result.controlVectorStructureValid().orElse(null));
+        // An external token has no MKVP field at all, which is not the same as an absent one.
+        assertTrue(result.is(SummaryKey.MKVP, MkvpState.NOT_APPLICABLE_EXTERNAL));
     }
 
     @Test
@@ -149,8 +152,11 @@ class IcsfTokenParserTest {
         ParseResult result = IcsfTokenParser.parse(IcsfTestTokens.des(IcsfTestTokens.ZERO_CV_TYPE, 8));
 
         assertTrue(result.is(SummaryKey.CONTROL_VECTOR, CvState.ZERO));
-        assertEquals("DATA", result.code(SummaryKey.KEY_TYPE, ""));
+        // Kept apart from a DATA key read from its CV, which does carry control bits.
+        assertEquals("DATA_ZERO_CV", result.code(SummaryKey.KEY_TYPE, ""));
         assertTrue(result.is(SummaryKey.KEY_LENGTH, DesKeyForm.SINGLE));
+        // 56 bits by construction, not a longer key that collapsed: nothing to compare.
+        assertTrue(result.is(SummaryKey.EFFECTIVE_STRENGTH, EffectiveStrength.SINGLE_LENGTH));
         // With no CV bits there is nothing to read: the bytes cannot settle exportability.
         assertTrue(result.is(SummaryKey.EXPORTABILITY, Exportability.NOT_DETERMINABLE));
     }

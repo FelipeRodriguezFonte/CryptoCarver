@@ -41,6 +41,7 @@ public class AuthenticationController {
     // Shared UI components
     @FXML private TextArea authInputArea;
     @FXML private TextArea authOutputArea;
+    @FXML private ResultPanel authResultPanel;
     private ComboBox<String> inputFormatCombo;
     private ComboBox<String> outputFormatCombo;
 
@@ -71,6 +72,8 @@ public class AuthenticationController {
     @FXML private Label authMacWarningLabel;
     @FXML private ComboBox<String> macKeySourceCombo;
     @FXML private ComboBox<String> macHsmKeyCombo;
+    @FXML private Button macSaveToLabBtn;
+    @FXML private Button macInspectKeyBtn;
 
     @FXML private Label sigPrivKeyBadgeLabel;
     @FXML private Label sigPubKeyBadgeLabel;
@@ -102,6 +105,15 @@ public class AuthenticationController {
         IngestionUIHelper.bindField(authMacKeyField, authMacKeyInfoLabel, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
 
         initBadges();
+        updateMacKeyBadgeState();
+        if (authOutputArea != null && authResultPanel != null) {
+            authOutputArea.textProperty().addListener((obs, oldValue, value) ->
+                    authResultPanel.showText("Authentication", value));
+            authResultPanel.connectTo(() -> mainController);
+            if (authInputArea != null) {
+                authResultPanel.setChainHandler(authInputArea::setText);
+            }
+        }
     }
 
     private void initBadges() {
@@ -336,7 +348,8 @@ public class AuthenticationController {
                         var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(item);
                         if (km != null) {
                             String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
-                            setText(km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort);
+                            String prefix = km.hasKeyMaterial() ? "" : "[Metadata-only] ";
+                            setText(prefix + km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort);
                         } else {
                             setText(item);
                         }
@@ -350,7 +363,8 @@ public class AuthenticationController {
                     var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(item);
                     if (km != null) {
                         String kcvShort = km.getKcv() != null && km.getKcv().length() >= 6 ? km.getKcv().substring(0, 6) : km.getKcv();
-                        return km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort;
+                        String prefix = km.hasKeyMaterial() ? "" : "[Metadata-only] ";
+                        return prefix + km.getName() + " — " + km.getAlgorithm() + " — KCV " + kcvShort;
                     }
                     return item;
                 }
@@ -359,6 +373,7 @@ public class AuthenticationController {
                     return string;
                 }
             });
+            hsmKeyCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateMacKeyBadgeState());
         }
 
         if (macKeySourceCombo != null) {
@@ -367,10 +382,12 @@ public class AuthenticationController {
             macKeySourceCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
                 updateMacKeySourceVisibility();
                 refreshHsmKeys();
+                updateMacKeyBadgeState();
             });
             macKeySourceCombo.setOnAction(e -> {
                 updateMacKeySourceVisibility();
                 refreshHsmKeys();
+                updateMacKeyBadgeState();
             });
         }
 
@@ -877,8 +894,8 @@ public class AuthenticationController {
     }
 
     private void updateMacKeySourceVisibility() {
-        boolean isHsm = "Simulated HSM".equals(macKeySourceCombo.getValue())
-                || "PKCS#11 Token".equals(macKeySourceCombo.getValue());
+        boolean isLab = "Simulated HSM".equals(macKeySourceCombo.getValue());
+        boolean isHsm = isLab || "PKCS#11 Token".equals(macKeySourceCombo.getValue());
         if (authMacKeyField != null) {
             authMacKeyField.setVisible(!isHsm);
             authMacKeyField.setManaged(!isHsm);
@@ -886,6 +903,38 @@ public class AuthenticationController {
         if (macHsmKeyCombo != null) {
             macHsmKeyCombo.setVisible(isHsm);
             macHsmKeyCombo.setManaged(isHsm);
+        }
+        if (macSaveToLabBtn != null) {
+            macSaveToLabBtn.setVisible(!isHsm);
+            macSaveToLabBtn.setManaged(!isHsm);
+        }
+        if (macInspectKeyBtn != null) {
+            macInspectKeyBtn.setVisible(isLab);
+            macInspectKeyBtn.setManaged(isLab);
+        }
+        updateMacKeyBadgeState();
+    }
+
+    private void updateMacKeyBadgeState() {
+        if (macKeyBadge == null || macKeySourceCombo == null) return;
+        if ("Simulated HSM".equals(macKeySourceCombo.getValue())) {
+            String keyId = macHsmKeyCombo == null ? null : macHsmKeyCombo.getValue();
+            var km = keyId == null ? null
+                    : com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
+            if (km == null) {
+                macKeyBadge.updateStateIncomplete("Select a key from Key Lab");
+            } else {
+                macKeyBadge.updateStateKeyReference(km.getName(), km.getAlgorithm(), km.getKcv(), km.hasKeyMaterial());
+            }
+        } else if ("PKCS#11 Token".equals(macKeySourceCombo.getValue())) {
+            String alias = macHsmKeyCombo == null ? null : macHsmKeyCombo.getValue();
+            if (alias == null || alias.isBlank()) {
+                macKeyBadge.updateStateIncomplete("Select a token key");
+            } else {
+                macKeyBadge.updateStateKeyReference(alias, "PKCS#11", null, true);
+            }
+        } else {
+            macKeyBadge.updateState();
         }
     }
 
@@ -941,6 +990,46 @@ public class AuthenticationController {
         saveCurrentKeyToHsm();
     }
 
+    @FXML
+    private void handleInspectMacKey() {
+        String keyId = macHsmKeyCombo == null ? null : macHsmKeyCombo.getValue();
+        if (keyId == null || keyId.isBlank()) {
+            mainController.showError("Inspect Error", "No Key Lab entry is currently selected.");
+            return;
+        }
+        if (mainController instanceof ModernMainController modern && modern.getKeysController() != null) {
+            modern.navigateTo("Key Lab");
+            modern.getKeysController().selectKeyInKeyLab(keyId);
+        }
+    }
+
+    /** Selects a usable Key Lab key for MAC operations without revealing its bytes. */
+    public void selectLabKey(String keyId) {
+        var provider = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance();
+        var km = provider.getKeyMetadata(keyId);
+        if (km == null) throw new IllegalArgumentException("Key Lab entry was not found: " + keyId);
+        if (km.getType() != com.cryptocarver.crypto.hsm.KeyType.SYMMETRIC) {
+            throw new IllegalArgumentException("MAC operations require a symmetric Key Lab entry");
+        }
+        if ("ARCHIVED".equalsIgnoreCase(km.getStatus())) {
+            throw new IllegalArgumentException("Restore the archived Key Lab entry before using it");
+        }
+        if (!km.hasKeyMaterial()) {
+            throw new IllegalArgumentException("The selected Key Lab entry contains metadata only; re-import or regenerate its key material");
+        }
+        if (!km.getUsages().contains(com.cryptocarver.crypto.hsm.KeyUsage.MAC)) {
+            throw new IllegalArgumentException("The selected Key Lab entry is not authorized for MAC usage");
+        }
+        macKeySourceCombo.setValue("Simulated HSM");
+        refreshHsmKeys();
+        if (!macHsmKeyCombo.getItems().contains(keyId)) {
+            throw new IllegalArgumentException("The selected key is not available to the MAC workspace");
+        }
+        macHsmKeyCombo.setValue(keyId);
+        updateMacKeySourceVisibility();
+        refreshPreflight();
+    }
+
     public void handleClear() {
         authInputArea.clear();
         authOutputArea.clear();
@@ -954,6 +1043,10 @@ public class AuthenticationController {
             String keyId = macHsmKeyCombo.getValue();
             if (keyId == null || keyId.isEmpty()) {
                 throw new IllegalArgumentException("Please select a key from the Lab Cache");
+            }
+            var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
+            if (km != null && !km.hasKeyMaterial()) {
+                throw new IllegalStateException("Selected Key Lab entry contains metadata only. Re-import or regenerate the key bytes.");
             }
             return keyId;
         }

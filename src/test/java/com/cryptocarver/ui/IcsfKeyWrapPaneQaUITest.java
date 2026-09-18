@@ -159,7 +159,7 @@ class IcsfKeyWrapPaneQaUITest {
     private static Pane open() throws Exception {
         Pane pane = new Pane();
         onFx(() -> {
-            FXMLLoader loader = new FXMLLoader(
+            FXMLLoader loader = UiTestFxml.loader(
                     IcsfKeyWrapPaneQaUITest.class.getResource("/fxml/icsf_keywrap.fxml"));
             Parent root = loader.load();
             Scene scene = new Scene(root, 900, 800);

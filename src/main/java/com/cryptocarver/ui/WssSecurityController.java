@@ -20,6 +20,7 @@ import java.util.Enumeration;
 import java.util.Arrays;
 
 public class WssSecurityController {
+    private final DialogService dialogService = new DialogService();
 
     private static final Logger LOG = LoggerFactory.getLogger(WssSecurityController.class);
 
@@ -584,8 +585,6 @@ public class WssSecurityController {
                     t("module.wss.errorTitle"), safeMessage, safeMessage, fieldKey));
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.ERROR, safeMessage, ButtonType.OK);
-        alert.setHeaderText(t("module.wss.errorTitle"));
-        alert.showAndWait();
+        dialogService.error(t("module.wss.errorTitle"), safeMessage);
     }
 }
