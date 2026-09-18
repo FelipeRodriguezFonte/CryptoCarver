@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controller for Keys tab - Enhanced with asymmetric cryptography
@@ -35,6 +37,9 @@ import java.util.function.Consumer;
  * @author Felipe
  */
 public class KeysController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(KeysController.class);
+    private final DialogService dialogService = new DialogService();
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
@@ -1288,13 +1293,13 @@ public class KeysController {
             String subject = leaf.getSubjectX500Principal().getName();
             String issuer = leaf.getIssuerX500Principal().getName();
 
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirm Token Update");
-            alert.setHeaderText("Updating certificate chain for alias: " + alias);
-            alert.setContentText("Leaf Subject: " + subject + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size() + "\n\nProceed with token modification?");
-
-            java.util.Optional<javafx.scene.control.ButtonType> result = alert.showAndWait();
-            if (result.isEmpty() || result.get() != javafx.scene.control.ButtonType.OK) {
+            javafx.stage.Window owner = keysRoot == null || keysRoot.getScene() == null
+                    ? null : keysRoot.getScene().getWindow();
+            boolean confirmed = dialogService.confirmDestructive(owner, "Confirm Token Update",
+                    "Updating certificate chain for alias: " + alias + "\n\nLeaf Subject: " + subject
+                            + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size()
+                            + "\n\nProceed with token modification?", "Update");
+            if (!confirmed) {
                 updateStatus("Update cancelled by user");
                 return;
             }
@@ -2960,7 +2965,7 @@ public class KeysController {
 
         } catch (Exception e) {
             showError("Generation Error", "Error generating certificate: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Certificate generation failed", e);
         }
     }
 
@@ -3187,7 +3192,7 @@ public class KeysController {
         } catch (Exception e) {
             valResultArea.setText("Error during validation: " + e.getMessage());
             updateStatus("Validation error");
-            e.printStackTrace();
+            LOG.warn("Certificate validation failed", e);
         }
     }
 
@@ -5009,11 +5014,11 @@ public class KeysController {
                         .status((cadesTOption ? "CAdES-T" : (cadesBesOption ? "CAdES-BES" : "CMS")) + " signature generated successfully").build());
             }, error -> {
                 showError("Signing Error", "Error signing data: " + error.getMessage());
-                error.printStackTrace();
+                LOG.warn("Key operation failed", error);
             }, () -> updateStatus("Signing cancelled"));
         } catch (Exception e) {
             showError("Signing Error", "Error signing data: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5111,7 +5116,7 @@ public class KeysController {
         } catch (Exception e) {
             cmsOutputArea.setText("Verification Failed: " + e.getMessage());
             updateStatus("Verification failed");
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5282,7 +5287,7 @@ public class KeysController {
                     .status("CMS data encrypted successfully").build());
         } catch (Exception e) {
             showError("Encryption Error", "Error encrypting data: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5339,7 +5344,7 @@ public class KeysController {
         } catch (Exception e) {
             cmsOutputArea.setText("Decryption Failed: " + e.getMessage());
             updateStatus("Decryption failed");
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 
@@ -5461,7 +5466,7 @@ public class KeysController {
 
         } catch (Exception e) {
             showError("Validation Error", "Error validating chain: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Key operation failed", e);
         }
     }
 

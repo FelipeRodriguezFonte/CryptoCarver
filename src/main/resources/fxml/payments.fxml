@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.cryptocarver.ui.ResultPanel?>
 
 <VBox fx:id="paymentsContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.PaymentsController"
@@ -13,6 +14,7 @@
         <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
         <Button text="Reset Defaults" onAction="#handleReset" styleClass="secondary-button"/>
     </HBox>
+    <ResultPanel fx:id="paymentsResultPanel"/>
     <Accordion styleClass="module-accordion">
         <panes>
             <TitledPane text="💳 CVV Operations (CVV/CVV2/iCVV)" expanded="true">

@@ -106,6 +106,17 @@ public final class ResultPanel extends VBox {
         }
     }
 
+    /** Publishes a plain text result for legacy controls that still own their output area. */
+    public void showText(String operation, String value) {
+        String text = value == null ? "" : value;
+        OperationResult result = OperationResult.forOperation(
+                        operation == null || operation.isBlank() ? "Resultado" : operation)
+                .output(text.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                .build();
+        setResult(result, SecretVisibilityProfile.FULL_LAB,
+                text.isBlank() ? Status.EMPTY : Status.SUCCESS, 0);
+    }
+
     public void addOutput(String label, String value) {
         Label name = new Label(label == null || label.isBlank() ? "Salida" : label);
         name.getStyleClass().add("result-panel-output-label");

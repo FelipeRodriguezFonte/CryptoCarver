@@ -37,6 +37,8 @@ import java.util.TreeSet;
 
 public class HistoryController {
 
+    private final DialogService dialogService = new DialogService();
+
     @FXML private VBox mainHistoryContainer;
     @FXML private ComboBox<SecretVisibilityProfile> visibilityCombo;
     @FXML private Label unsafeVisibilityWarningLabel;
@@ -507,11 +509,11 @@ public class HistoryController {
     private boolean confirmClearHistory() {
         if (historyManager == null || historyManager.getHistoryItems().isEmpty()) return true;
         if (Boolean.getBoolean("test.mode")) return true;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                t("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setTitle(t("module.history.clearTitle"));
-        confirmation.setHeaderText(t("module.history.clearHeader"));
-        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        javafx.stage.Window owner = mainHistoryContainer == null || mainHistoryContainer.getScene() == null
+                ? null : mainHistoryContainer.getScene().getWindow();
+        return dialogService.confirmDestructive(owner, t("module.history.clearTitle"),
+                t("module.history.clearHeader") + "\n\n" + t("module.history.clearConfirm"),
+                t("dialog.confirm"));
     }
 
     @FXML
@@ -545,10 +547,8 @@ public class HistoryController {
             if (navigator != null) {
                 navigator.updateStatus("Recipe exported: " + file.getName());
             }
-            Alert confirmation = new Alert(Alert.AlertType.INFORMATION, "Recipe saved to:\n" + file.getAbsolutePath(), ButtonType.OK);
-            confirmation.setTitle("Recipe exported");
-            confirmation.setHeaderText("Reusable non-secret configuration saved");
-            confirmation.showAndWait();
+            dialogService.info(mainHistoryContainer.getScene().getWindow(), "Recipe exported",
+                    "Recipe saved to:\n" + file.getAbsolutePath());
         } catch (Exception e) {
             showError("Recipe Export", "Unable to write recipe: " + e.getMessage());
         }
@@ -781,9 +781,8 @@ public class HistoryController {
     }
 
     private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
-        alert.setTitle(title);
-        alert.setHeaderText("Error");
-        alert.showAndWait();
+        javafx.stage.Window owner = mainHistoryContainer == null || mainHistoryContainer.getScene() == null
+                ? null : mainHistoryContainer.getScene().getWindow();
+        dialogService.error(owner, title, message);
     }
 }

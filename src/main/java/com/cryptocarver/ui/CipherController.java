@@ -12,7 +12,6 @@ import com.cryptocarver.utils.OperationHistory;
 import com.cryptocarver.model.FileCipherRecipe;
 import com.cryptocarver.model.FileCipherRecipeCodec;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -23,6 +22,8 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -53,11 +54,15 @@ import java.util.Map;
  */
 public class CipherController {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CipherController.class);
+    private final DialogService dialogService = new DialogService();
+
     @FXML private VBox cipherRoot;
     private ModuleI18n.Binding moduleI18n;
 
     @FXML private TextArea cipherInputArea;
     @FXML private TextArea cipherOutputArea;
+    @FXML private ResultPanel cipherResultPanel;
     private ComboBox<String> cipherInputFormatCombo;
     private ComboBox<String> outputFormatCombo;
     private StatusReporter statusReporter;
@@ -187,6 +192,10 @@ public class CipherController {
 
         refreshCipherTemplateCombo();
         updateModeAndAlgorithmVisibility();
+        if (cipherOutputArea != null && cipherResultPanel != null) {
+            cipherOutputArea.textProperty().addListener((obs, oldValue, value) ->
+                    cipherResultPanel.showText("Cipher", value));
+        }
     }
 
     @FXML
@@ -739,7 +748,7 @@ public class CipherController {
             }
         } catch (Exception e) {
             statusReporter.showError("Load Error", "Failed to load Public Key: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Unable to load public key", e);
         }
     }
 
@@ -784,7 +793,7 @@ public class CipherController {
             }
         } catch (Exception e) {
             statusReporter.showError("Load Error", "Failed to load Private Key: " + e.getMessage());
-            e.printStackTrace();
+            LOG.warn("Unable to load private key", e);
         }
     }
 
@@ -943,13 +952,9 @@ public class CipherController {
 
             // Security warning
             if (RecipeUIHelper.requiresSecurityWarning(recipe)) {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("Advertencia de Seguridad");
-                alert.setHeaderText("Exportando IV/Nonce o AAD");
-                alert.setContentText("El archivo de receta contendrá el IV/Nonce o AAD.\n" +
+                dialogService.warning("Advertencia de Seguridad", "Exportando IV/Nonce o AAD\n\nEl archivo de receta contendrá el IV/Nonce o AAD.\n" +
                         "La clave secreta NUNCA se exportará.\n" +
                         "(Reusar un IV/Nonce con la misma clave en modo fichero o CBC compromete la seguridad).");
-                alert.showAndWait();
             }
 
             FileChooser chooser = new FileChooser();
@@ -961,11 +966,7 @@ public class CipherController {
                 statusReporter.updateStatus("Receta exportada a " + dest.getName());
             }
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error de Exportación");
-            alert.setHeaderText("No se pudo exportar la receta");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            dialogService.error("Error de Exportación", "No se pudo exportar la receta\n\n" + e.getMessage());
         }
     }
 
@@ -1013,22 +1014,14 @@ public class CipherController {
                 boolean isAeadLines = recipe.isLinesMode() &&
                         ("AES-256-GCM".equals(recipe.getAlgorithm()) || "ChaCha20-Poly1305".equals(recipe.getAlgorithm()));
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Receta Importada");
-                alert.setHeaderText("Receta v" + recipe.getVersion() + " cargada con éxito");
-                alert.setContentText("Algoritmo: " + recipe.getAlgorithm() +
+                dialogService.info("Receta Importada", "Receta v" + recipe.getVersion() + " cargada con éxito\n\nAlgoritmo: " + recipe.getAlgorithm() +
                         "\nModo Líneas: " + recipe.isLinesMode() +
                         (isAeadLines ? " (cada registro generará su propio nonce/tag)" : "") +
                         "\nFormato: " + (recipe.getLineEncoding() != null ? recipe.getLineEncoding() : "N/A") +
                         "\nLa Clave Secreta y Rutas de Fichero NO fueron sobrescritas.");
-                alert.showAndWait();
             }
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error de Importación");
-            alert.setHeaderText("No se pudo importar la receta");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            dialogService.error("Error de Importación", "No se pudo importar la receta\n\n" + e.getMessage());
         }
     }
 
@@ -4522,11 +4515,8 @@ public class CipherController {
         }
 
         if (cipherInputFormatCombo != null && !cipherInputFormatCombo.getItems().contains(targetFormat)) {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
-            alert.setTitle("Format Not Supported");
-            alert.setHeaderText("Incompatible Format");
-            alert.setContentText("The format " + format + " is not supported by Symmetric Cipher Input.");
-            alert.showAndWait();
+            dialogService.warning("Format Not Supported", "Incompatible Format\n\nThe format " + format
+                    + " is not supported by Symmetric Cipher Input.");
             return;
         }
 

@@ -41,6 +41,7 @@ public class AuthenticationController {
     // Shared UI components
     @FXML private TextArea authInputArea;
     @FXML private TextArea authOutputArea;
+    @FXML private ResultPanel authResultPanel;
     private ComboBox<String> inputFormatCombo;
     private ComboBox<String> outputFormatCombo;
 
@@ -105,6 +106,10 @@ public class AuthenticationController {
 
         initBadges();
         updateMacKeyBadgeState();
+        if (authOutputArea != null && authResultPanel != null) {
+            authOutputArea.textProperty().addListener((obs, oldValue, value) ->
+                    authResultPanel.showText("Authentication", value));
+        }
     }
 
     private void initBadges() {

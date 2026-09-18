@@ -11,6 +11,12 @@ declara una sola vez en `pom.xml`; no se edita en los scripts de empaquetado.
 - [ ] Hacer un recorrido manual de las herramientas modificadas y de **Expand Result**.
 - [ ] Abrir **Help → Diagnostics** y confirmar que el informe se puede copiar o
   guardar, sin incluir claves, entradas ni rutas de usuario.
+- [ ] En macOS comprobar preferencias (tema, idioma, escala y densidad) y que se
+  conservan al reiniciar; en Windows comprobar las mismas opciones con Ctrl+,.
+- [ ] Confirmar que el botón de limpieza sensible vacía campos de clave/PIN y que
+  un valor copiado con expiración desaparece del portapapeles.
+- [ ] Abrir la ayuda contextual sin red y comprobar que el encabezado de la
+  operación y sus referencias a estándares se muestran en el idioma elegido.
 
 ## Artefactos y procedencia
 
@@ -43,3 +49,9 @@ declara una sola vez en `pom.xml`; no se edita en los scripts de empaquetado.
 - [ ] Publicar JAR, SBOM, `SHA256SUMS`, `RELEASE_MANIFEST.md` y notas juntos.
 - [ ] Identificar el commit exacto de origen y conservar los artefactos.
 - [ ] Indicar si hay migraciones de configuración o pasos de downgrade.
+
+## Evidencia de accesibilidad y calidad continua
+
+- [ ] Ejecutar el job `quality-gates` y conservar su resumen junto al artefacto.
+- [ ] Pasada manual de VoiceOver/Narrador: foco visible, nombre accesible para
+  controles de solo icono y anuncio de finalización de operaciones.

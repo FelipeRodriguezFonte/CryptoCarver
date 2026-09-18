@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.cryptocarver.ui.ResultPanel?>
 
 <VBox fx:id="cipherRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.CipherController"
@@ -29,6 +30,8 @@
             </VBox>
         </GridPane>
     </VBox>
+
+    <ResultPanel fx:id="cipherResultPanel"/>
 
     <Accordion styleClass="cipher-accordion">
         <panes>

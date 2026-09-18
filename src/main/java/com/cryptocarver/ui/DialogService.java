@@ -69,6 +69,22 @@ public final class DialogService {
         alert.showAndWait();
     }
 
+    public void warning(Window owner, String title, String detail) {
+        Alert alert = new Alert(Alert.AlertType.WARNING, nonBlank(detail, ""), ButtonType.OK);
+        configure(alert, owner, title, null);
+        alert.showAndWait();
+    }
+
+    public void error(Window owner, String title, String detail) {
+        Alert alert = new Alert(Alert.AlertType.ERROR, nonBlank(detail, ""), ButtonType.OK);
+        configure(alert, owner, title, null);
+        alert.showAndWait();
+    }
+
+    public void warning(String title, String detail) { warning(null, title, detail); }
+
+    public void error(String title, String detail) { error(null, title, detail); }
+
     /**
      * Opens an input chooser and remembers its last directory under {@code type}.
      * A null return means that the user cancelled the chooser.

@@ -67,6 +67,7 @@ public class GenericController {
     }
     @FXML private TextArea hashInputArea;
     @FXML private TextArea hashOutputArea;
+    @FXML private ResultPanel genericResultPanel;
 
     @FXML private ComboBox<String> batchInputFormatCombo;
     @FXML private ComboBox<String> batchOperationCombo;
@@ -624,6 +625,11 @@ public class GenericController {
                         .filter(pane -> pane.getText() != null && pane.getText().contains("Process Designer"))
                         .toArray(javafx.scene.Node[]::new);
         moduleI18n = ModuleI18n.bind(genericContainer, ModuleTextCatalog.generic(), excluded);
+        if (genericResultPanel != null) {
+            bindResult(genericResultPanel, hashOutputArea, "Generic operation");
+            bindResult(genericResultPanel, modResultArea, "Modular arithmetic");
+            bindResult(genericResultPanel, fileResultArea, "File operation");
+        }
         com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
             if (batchStatusLabel == null) return;
             if (activeBatchTask != null && activeBatchTask.isRunning()) {
@@ -745,6 +751,11 @@ public class GenericController {
         refreshManualTemplateCombo();
 
         initializeEBCDICConverter();
+    }
+
+    private static void bindResult(ResultPanel panel, TextArea area, String operation) {
+        if (panel == null || area == null) return;
+        area.textProperty().addListener((obs, oldValue, value) -> panel.showText(operation, value));
     }
 
     private void refreshHashTemplateCombo() {

@@ -52,6 +52,7 @@ public class PaymentsController {
     @FXML private ComboBox<String> pinBlockFormatCombo;
     @FXML private ComboBox<String> pinBlockFormatDecodeCombo;
     @FXML private TextArea pinBlockResultArea;
+    @FXML private ResultPanel paymentsResultPanel;
 
     // CVV controls
     @FXML private TextField cvkAField;
@@ -307,6 +308,17 @@ public class PaymentsController {
         if (ibm3624ConvTableField != null && ibm3624ConvTableField.getText().isBlank()) {
             ibm3624ConvTableField.setText("0123456789012345");
         }
+        if (paymentsResultPanel != null) {
+            bindResult(paymentsResultPanel, pinBlockResultArea, "PIN block");
+            bindResult(paymentsResultPanel, cvvResultArea, "CVV");
+            bindResult(paymentsResultPanel, encResultArea, "Encrypted PIN block");
+            bindResult(paymentsResultPanel, ibm3624ResultArea, "IBM 3624 PIN");
+        }
+    }
+
+    private static void bindResult(ResultPanel panel, TextArea area, String operation) {
+        if (panel == null || area == null) return;
+        area.textProperty().addListener((obs, oldValue, value) -> panel.showText(operation, value));
     }
 
     public void init(StatusReporter reporter) {

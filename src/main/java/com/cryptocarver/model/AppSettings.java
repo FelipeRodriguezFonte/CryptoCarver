@@ -86,6 +86,28 @@ public final class AppSettings {
         save();
     }
 
+    /** Centralized shell preferences. Values are deliberately non-secret. */
+    public synchronized String getStartupRoute() { return data.startupRoute == null ? "" : data.startupRoute; }
+    public synchronized void setStartupRoute(String route) { data.startupRoute = route == null ? "" : route.trim(); save(); }
+    public synchronized boolean isConfirmDestructiveActions() { return data.confirmDestructiveActions; }
+    public synchronized void setConfirmDestructiveActions(boolean value) { data.confirmDestructiveActions = value; save(); }
+    public synchronized double getTextScale() { return Double.isFinite(data.textScale) ? Math.max(0.8, Math.min(1.5, data.textScale)) : 1.0; }
+    public synchronized void setTextScale(double value) { data.textScale = Double.isFinite(value) ? Math.max(0.8, Math.min(1.5, value)) : 1.0; save(); }
+    public synchronized boolean isCompactDensity() { return data.compactDensity; }
+    public synchronized void setCompactDensity(boolean value) { data.compactDensity = value; save(); }
+    public synchronized int getHistoryRetentionDays() { return Math.max(0, Math.min(3650, data.historyRetentionDays)); }
+    public synchronized void setHistoryRetentionDays(int value) { data.historyRetentionDays = Math.max(0, Math.min(3650, value)); save(); }
+    public synchronized boolean isPersistHistorySecrets() { return data.persistHistorySecrets; }
+    public synchronized void setPersistHistorySecrets(boolean value) { data.persistHistorySecrets = value; save(); }
+    public synchronized int getClipboardClearSeconds() { return Math.max(0, Math.min(3600, data.clipboardClearSeconds)); }
+    public synchronized void setClipboardClearSeconds(int value) { data.clipboardClearSeconds = Math.max(0, Math.min(3600, value)); save(); }
+    public synchronized boolean isClearKeyCacheOnExit() { return data.clearKeyCacheOnExit; }
+    public synchronized void setClearKeyCacheOnExit(boolean value) { data.clearKeyCacheOnExit = value; save(); }
+    public synchronized int getNetworkTimeoutSeconds() { return Math.max(1, Math.min(300, data.networkTimeoutSeconds)); }
+    public synchronized void setNetworkTimeoutSeconds(int value) { data.networkTimeoutSeconds = Math.max(1, Math.min(300, value)); save(); }
+    public synchronized String getProxy() { return data.proxy == null ? "" : data.proxy; }
+    public synchronized void setProxy(String value) { data.proxy = value == null ? "" : value.trim(); save(); }
+
     /** Last user-selected workspace divider positions, expressed as normalized fractions. */
     public synchronized double getWorkspaceTreeDividerPosition() {
         return clampDivider(data.workspaceTreeDividerPosition, 0.0, 1.0, 0.22);
@@ -308,6 +330,16 @@ public final class AppSettings {
         private SecretVisibilityProfile secretVisibility = SecretVisibilityProfile.FULL_LAB;
         private LanguagePreference languagePreference = LanguagePreference.SYSTEM;
         private ThemePreference themePreference = ThemePreference.SYSTEM;
+        private String startupRoute = "";
+        private boolean confirmDestructiveActions = true;
+        private double textScale = 1.0;
+        private boolean compactDensity = false;
+        private int historyRetentionDays = 90;
+        private boolean persistHistorySecrets = false;
+        private int clipboardClearSeconds = 30;
+        private boolean clearKeyCacheOnExit = true;
+        private int networkTimeoutSeconds = 30;
+        private String proxy = "";
         private double workspaceTreeDividerPosition = 0.22;
         private double workspaceInspectorDividerPosition = 0.78;
         private List<String> favorites = new ArrayList<>();

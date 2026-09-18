@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.cryptocarver.ui.ResultPanel?>
 
 <VBox fx:id="authenticationRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.AuthenticationController"
@@ -178,5 +179,6 @@
         <TextArea fx:id="authOutputArea" prefHeight="130" editable="false" wrapText="true"
                   promptText="The generated value or verification result will appear here."
                   styleClass="result-area,monospace-field"/>
+        <ResultPanel fx:id="authResultPanel"/>
     </VBox>
 </VBox>

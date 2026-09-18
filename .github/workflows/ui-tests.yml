@@ -9,6 +9,33 @@ permissions:
   contents: read
 
 jobs:
+  quality-gates:
+    name: UX quality gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Java and Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Run contract tests
+        run: >-
+          mvn -q -Dtest=I18nServiceTest,AccessibilitySupportTest,PreferencesServiceTest,LocalHelpServiceTest test
+      - name: Check UI hygiene budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          inline_count="$(rg -l 'style="' src/main/resources/fxml | xargs -r rg -o 'style="' | wc -l | tr -d ' ')"
+          emoji_count="$(rg -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml 2>/dev/null | wc -l | tr -d ' ')"
+          test "${inline_count}" -le 900 || { echo "Inline FXML style budget exceeded: ${inline_count}" >&2; exit 1; }
+          test "${emoji_count}" -le 12 || { echo "UI emoji budget exceeded: ${emoji_count}" >&2; exit 1; }
+          echo "UI hygiene budgets: inline=${inline_count}, emoji=${emoji_count}"
+
   pkcs11-integration:
     name: PKCS#11 inventory integration (SoftHSM2)
     runs-on: ubuntu-24.04
