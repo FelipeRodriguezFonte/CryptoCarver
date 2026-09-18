@@ -115,9 +115,12 @@ class WalletControllerDefaultsTest {
                     .replace("&quot;", "\"").replace("&apos;", "'")
                     .replace("&lt;", "<").replace("&gt;", ">")
                     .replace("&amp;", "&");
-            // Short labels are field captions handled by the shared catalogue or
-            // are proper nouns; the prose is what this is about.
-            if (text.length() < 25) {
+            // Every button is checked whatever its length, because a button is
+            // an instruction and an untranslated one reads as broken. Short
+            // labels are field captions the shared catalogue already handles,
+            // or proper nouns, so only the prose among them is checked.
+            boolean button = matcher.group(0).startsWith("<Button");
+            if (!button && text.length() < 25) {
                 continue;
             }
             String key = catalog.get(text);

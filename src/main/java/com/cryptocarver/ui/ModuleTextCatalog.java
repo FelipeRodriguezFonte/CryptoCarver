@@ -787,6 +787,16 @@ public final class ModuleTextCatalog {
                 "module.wallet.lbl.fileNameDSSPicks");
         map.put("Signed document (base64 or hexadecimal):",
                 "module.wallet.lbl.signedDocumentBase64Or");
+        map.put("Inspect only", "module.wallet.btn.inspectOnly");
+        map.put("Resolve index", "module.wallet.btn.resolveIndex");
+        map.put("Describe list", "module.wallet.btn.describeList");
+        map.put("Verify signature", "module.wallet.btn.verifySignature");
+        map.put("Find certificate", "module.wallet.btn.findCertificate");
+        map.put("To JSON", "module.wallet.btn.toJson");
+        map.put("Build", "module.wallet.btn.build");
+        map.put("Validate", "module.wallet.btn.validate");
+        map.put("ETSI report", "module.wallet.btn.etsiReport");
+        map.put("Encode", "module.wallet.btn.encode");
         map.put("SCA with the wallet (TS12)", "module.wallet.scaTitle");
         map.put("AdES validation", "module.wallet.adesTitle");
         map.put("Build transaction data", "module.wallet.buildTransactionData");
