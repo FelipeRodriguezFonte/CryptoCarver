@@ -31,12 +31,16 @@ public class NavigationRail extends VBox {
         AUTHENTICATION("authentication", "Authentication"),
         KEYS("keys", "Keys"),
         POST_QUANTUM("postQuantum", "Post-Quantum"),
-        XML_SECURITY("xmlSecurity", "XML Security"),
+        // Declaration order is the rail's visual order and nothing else: routes resolve by
+        // name and no caller depends on ordinal(), so grouping drives the order here.
+        // Formats and standards, per docs/HANDOFF_UX_PROFESIONAL.md UXP-21.
         CERTIFICATES("certificates", "Certificates"),
         JOSE("jose", "JOSE"),
         COSE("cose", "COSE"),
-        PAYMENTS("payments", "Payments"),
+        XML_SECURITY("xmlSecurity", "XML Security"),
         ASN1("asn1", "ASN.1"),
+        // Domain.
+        PAYMENTS("payments", "Payments"),
         HISTORY("history", "History");
 
         private final String icon;
@@ -69,9 +73,14 @@ public class NavigationRail extends VBox {
 
         // Create buttons for main sections
         for (Section section : Section.values()) {
-            if (section != Section.SEARCH) {
-                addButton(section);
+            if (section == Section.SEARCH) continue;
+            // Group boundaries are drawn as their own hairline node, never as a border on the
+            // button: a border shared the edges with the active-section indicator, so a selected
+            // group head repainted its separator in the accent colour.
+            if (isGroupStart(section) && !getChildren().isEmpty()) {
+                addGroupSeparator();
             }
+            addButton(section);
         }
 
         // Select Keys by default
@@ -96,9 +105,6 @@ public class NavigationRail extends VBox {
         button.setAccessibleText(localizedLabel(section));
         button.setAccessibleHelp(localizedLabel(section));
         button.setFocusTraversable(true);
-        if (isGroupStart(section)) {
-            button.getStyleClass().add("rail-group-start");
-        }
 
         // Selection handler
         button.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
@@ -111,6 +117,21 @@ public class NavigationRail extends VBox {
         getChildren().add(button);
     }
 
+    private void addGroupSeparator() {
+        Region separator = new Region();
+        separator.getStyleClass().add("rail-separator");
+        separator.setMinHeight(1);
+        separator.setPrefHeight(1);
+        separator.setMaxHeight(1);
+        separator.setMinWidth(28);
+        separator.setPrefWidth(28);
+        separator.setMaxWidth(28);
+        separator.setMouseTransparent(true);
+        separator.setFocusTraversable(false);
+        VBox.setMargin(separator, new javafx.geometry.Insets(3, 0, 3, 0));
+        getChildren().add(separator);
+    }
+
     private String compactLabel(Section section) {
         String label = localizedLabel(section).trim();
         if (label.length() <= 10) return label;
@@ -120,8 +141,9 @@ public class NavigationRail extends VBox {
     }
 
     private boolean isGroupStart(Section section) {
+        // Work | Cryptography | Formats and standards | Domain | History (UXP-21).
         return switch (section) {
-            case PROCESS_DESIGNER, CIPHER, POST_QUANTUM, PAYMENTS, HISTORY -> true;
+            case PROCESS_DESIGNER, GENERIC, CERTIFICATES, PAYMENTS, HISTORY -> true;
             default -> false;
         };
     }
