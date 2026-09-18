@@ -1,5 +1,24 @@
 # Propuesta: eIDAS 2 / cartera europea, y paridad con BP-Tools
 
+### Estado de ejecución
+
+Actualizado el 18 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
+
+| Fase | Estado |
+|---|---|
+| A — CBOR expuesto, SD-JWT VC, Token Status List | **Hecha** en el núcleo, con tests, y en el Process Designer. Sin paneles de interfaz propios ni entradas en `OperationRegistry`. |
+| B — Linter de certificados eIDAS | **Hecha**: `EidasCertificateInspector`, con TS 119 412-6 (PID, Wallet, QcPSB) y TS 119 411-8 (política WRPAC y sus requisitos). |
+| B — Trusted Lists (TS 119 612 / 119 602) | Pendiente. Falta añadir `dss-tsl-validation`. |
+| C — mdoc / mDL | Pendiente. La capa CBOR que necesitaba ya está. |
+| D — TS12 SCA e inspector OpenID4VP | Pendiente. `SdJwtOperations.KeyBinding` ya acepta los claims extra que TS12 necesita. |
+| E — Cierre de niveles AdES | Pendiente. |
+| Carril pagos | Pendiente, salvo FPE, que se hizo por otra vía. |
+
+Límites declarados y no disimulados: la comparación de key usage contra los
+tipos A/B/C/F de la tabla 1 de EN 319 412-2 no está implementada (se informan
+los bits y no se afirma conformidad), y nada de esto decide cualificación, que
+la determina la lista de confianza.
+
 ## Contexto
 
 Pregunta que motiva esta propuesta: *"¿Qué capacidades tenía BP-Tools, o ha
