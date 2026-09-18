@@ -8,6 +8,9 @@ import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import com.cryptocarver.service.I18nService;
+import com.cryptocarver.ui.NativePlatformIntegration;
+import com.cryptocarver.ui.WindowStateManager;
+import com.cryptocarver.ui.WindowStateStore;
 
 /**
  * Modern launcher for the new Rail + SidePanel UI
@@ -60,7 +63,11 @@ public class CryptoCalculatorModern extends Application {
             // impossible to resize back into view.
             primaryStage.setMinWidth(Math.min(DESIGN_MIN_WIDTH, workArea.getWidth()));
             primaryStage.setMinHeight(Math.min(DESIGN_MIN_HEIGHT, workArea.getHeight()));
-            if (workArea.getWidth() < DESIGN_WIDTH || workArea.getHeight() < DESIGN_HEIGHT) {
+            WindowStateStore windowStateStore = new WindowStateStore();
+            WindowStateStore.State savedState = windowStateStore.load();
+            if (Double.isFinite(savedState.x()) || savedState.maximized()) {
+                WindowStateManager.restore(primaryStage, savedState, workArea);
+            } else if (workArea.getWidth() < DESIGN_WIDTH || workArea.getHeight() < DESIGN_HEIGHT) {
                 // Every pixel counts on a display that cannot show the design size.
                 primaryStage.setMaximized(true);
             }
@@ -102,10 +109,18 @@ public class CryptoCalculatorModern extends Application {
                 System.err.println("Error loading application icon: " + e.getMessage());
             }
 
+            NativePlatformIntegration.configure(primaryStage, scene, root);
             primaryStage.show();
             // Window decorations are added on top of the scene size, so the frame can
             // still overflow the work area after show(). Pull it back into view.
-            confineToWorkArea(primaryStage, workArea);
+            WindowStateManager.confine(primaryStage, workArea);
+            primaryStage.setOnCloseRequest(event -> windowStateStore.save(
+                    WindowStateManager.capture(primaryStage, Screen.getPrimary())));
+            primaryStage.widthProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.heightProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.xProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.yProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
+            primaryStage.maximizedProperty().addListener((obs, oldValue, newValue) -> saveWindowState(primaryStage, windowStateStore));
 
             System.out.println("✅ Modern UI launched successfully!");
 
@@ -120,26 +135,8 @@ public class CryptoCalculatorModern extends Application {
         return CryptoCalculatorModern.class.getResource("/css/" + file).toExternalForm();
     }
 
-    /** Keeps the whole window frame, title bar included, inside the screen's work area. */
-    private static void confineToWorkArea(Stage stage, Rectangle2D workArea) {
-        if (stage.isMaximized()) {
-            return;
-        }
-        if (stage.getWidth() > workArea.getWidth()) {
-            stage.setWidth(workArea.getWidth());
-        }
-        if (stage.getHeight() > workArea.getHeight()) {
-            stage.setHeight(workArea.getHeight());
-        }
-        stage.setX(clamp(stage.getX(), workArea.getMinX(), workArea.getMaxX() - stage.getWidth()));
-        stage.setY(clamp(stage.getY(), workArea.getMinY(), workArea.getMaxY() - stage.getHeight()));
-    }
-
-    private static double clamp(double value, double min, double max) {
-        if (max < min) {
-            return min;
-        }
-        return Math.max(min, Math.min(max, value));
+    private static void saveWindowState(Stage stage, WindowStateStore store) {
+        if (stage.isShowing()) store.save(WindowStateManager.capture(stage, Screen.getPrimary()));
     }
 
     public static void main(String[] args) {
