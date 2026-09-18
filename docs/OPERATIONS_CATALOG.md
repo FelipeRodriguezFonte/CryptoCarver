@@ -188,3 +188,25 @@ only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.
 | X.509 | `CERT_PARSE`, `CERT_SELF_SIGNED_GENERATE`, `CERT_VALIDATE` |
 
 These nodes are local-only. Timestamped CAdES and PAdES T/LT/LTA remain excluded until a local timestamp-token input exists.
+
+## Process Designer — Wallet / eIDAS
+
+Nodes for the European Digital Identity Wallet's credential formats. They
+delegate to the `SdJwtOperations`, `StatusListOperations` and `CborInspector`
+facades. Private key material (`key`, `holderKey`) is declared as a secret
+parameter and is never persisted in `.cfprocess.json`; the verification side
+takes public keys under distinct names (`issuerPublicKey`, `holderPublicKey`)
+so that no parameter name means a private key in one node and a public key in
+another.
+
+| Family | Node types |
+|---|---|
+| SD-JWT (RFC 9901) and SD-JWT VC | `SDJWT_ISSUE`, `SDJWT_ISSUE_VC`, `SDJWT_PRESENT`, `SDJWT_VERIFY`, `SDJWT_INSPECT` |
+| Token Status List | `STATUS_LIST_RESOLVE`, `STATUS_LIST_DESCRIBE` |
+| CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |
+
+These nodes are local-only: they manipulate artefacts supplied as text and
+never fetch an issuer's metadata, a JWKS or a status list over the network.
+`SDJWT_PRESENT` selects claims by name rather than by digest, because a node is
+configured once and a claim's digest changes on every issuance — its salt is
+fresh each time.

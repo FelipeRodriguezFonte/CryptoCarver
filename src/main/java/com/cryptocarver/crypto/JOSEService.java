@@ -405,7 +405,9 @@ public class JOSEService {
         return new DirectDecrypter(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    private static JWSVerifier createVerifier(JWSAlgorithm algorithm, String key) throws Exception {
+    /** Public because SD-JWT verification needs the same key-to-verifier
+     *  resolution and there is no reason for a second copy of it. */
+    public static JWSVerifier createVerifier(JWSAlgorithm algorithm, String key) throws Exception {
         if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) return new PromiscuousMACVerifier(key, algorithm);
         if (JWSAlgorithm.Family.RSA.contains(algorithm)) return new RSASSAVerifier((RSAPublicKey) parseRSAPublicKey(key));
         if (JWSAlgorithm.Family.EC.contains(algorithm)) return new ECDSAVerifier(requireEcPublicKey(algorithm, key));

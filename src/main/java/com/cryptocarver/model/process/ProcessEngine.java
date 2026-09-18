@@ -22,6 +22,7 @@ public final class ProcessEngine {
         new HashNodeHandler(),
         new CodecNodeHandler(),
         new JoseCoseNodeHandler(),
+        new WalletCredentialNodeHandler(),
         new EnvelopeSignatureNodeHandler(),
         new PaymentOperationsNodeHandler(),
         new KeyOperationsNodeHandler(),
