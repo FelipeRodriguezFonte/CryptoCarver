@@ -1,47 +1,44 @@
 package com.cryptocarver.ui;
 
+import com.cryptocarver.model.OperationDescriptor;
+import com.cryptocarver.model.OperationRegistry;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Every section must actually render something when the user opens it.
+ * Every registered operation must put something on screen.
  *
- * <p>Modules load on demand into a {@link ModuleHost}. Nine module roots still carry
+ * <p>Modules load on demand into a {@link ModuleHost}, and nine module roots still carry
  * {@code visible="false" managed="false"} from when the shell inlined them with {@code
- * fx:include} — back then the root *was* the container the shell showed, so starting hidden
- * was right. With a host in between, a root left hidden never appears: the section opened on a
- * blank pane, with the shell reporting the module as visible and every existing test passing,
- * because the module was loaded, wired and correct. Only its height gave it away.
+ * fx:include} — back then the root <em>was</em> the container the shell showed. With a host in
+ * between, a root left hidden never appears and the host collapses to nothing: 33 operations
+ * opened a blank pane while the shell reported the module as visible and the whole suite stayed
+ * green, because the module really was loaded, wired and correct.
  *
- * <p>So this asserts on height. The shell loads this module without a user, so the assertion
- * is about what a user would see.
+ * <p>Nothing about a module's state distinguished that from working, so this measures what the
+ * user gets instead: after navigating, the content area must hold a visible child with height.
  */
 @Tag("ui")
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class ModuleHostVisibilityUITest {
-
-    /** One operation per module, chosen to route to a different host each time. */
-    private static final Map<String, String> OPERATION_BY_HOST = new LinkedHashMap<>(Map.of(
-            "Symmetric Ciphers", "cipherContainer",
-            "Key Lab", "keysContainer",
-            "Hashing", "genericContainer",
-            "Digital Signatures", "authenticationContainer",
-            "Clear PIN Blocks", "paymentsContainer"));
 
     @BeforeAll
     static void startFx() throws Exception {
@@ -67,15 +64,16 @@ class ModuleHostVisibilityUITest {
     }
 
     @Test
-    void openingASectionRendersItsModule() throws Exception {
+    void everyOperationRendersSomething() throws Exception {
         final ModernMainController[] shell = new ModernMainController[1];
+        final Parent[] root = new Parent[1];
         fx(() -> {
             try {
                 FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
-                Parent root = loader.load();
+                root[0] = loader.load();
                 shell[0] = loader.getController();
                 Stage stage = new Stage();
-                stage.setScene(new Scene(root, 1400, 900));
+                stage.setScene(new Scene(root[0], 1400, 900));
                 stage.show();
             } catch (Exception failure) {
                 throw new RuntimeException(failure);
@@ -84,33 +82,45 @@ class ModuleHostVisibilityUITest {
 
         Method route = ModernMainController.class.getDeclaredMethod("handleItemSelected", String.class);
         route.setAccessible(true);
+        Field contentContainer = ModernMainController.class.getDeclaredField("contentContainer");
+        contentContainer.setAccessible(true);
 
-        for (Map.Entry<String, String> entry : OPERATION_BY_HOST.entrySet()) {
+        List<String> blank = new ArrayList<>();
+        for (OperationDescriptor operation : OperationRegistry.getInstance().getAll()) {
+            String name = operation.getTitle();
             fx(() -> {
                 try {
-                    route.invoke(shell[0], entry.getKey());
+                    route.invoke(shell[0], name);
                 } catch (Exception failure) {
                     throw new RuntimeException(failure);
                 }
             });
             fx(() -> {
-                ModuleHost host = readHost(shell[0], entry.getValue());
-                assertTrue(host.isVisible() && host.isManaged(),
-                        entry.getKey() + " must show " + entry.getValue());
-                assertTrue(host.prefHeight(-1) > 0,
-                        entry.getKey() + " opened an empty pane: " + entry.getValue()
-                                + " has no height, so the module is loaded but never displayed");
+                root[0].applyCss();
+                root[0].layout();
+                if (tallestVisibleChild(contentContainer, shell[0]) <= 1.0) blank.add(name);
             });
         }
+
+        assertTrue(blank.isEmpty(),
+                "These operations open an empty content area — their module is loaded but never shown: " + blank);
     }
 
-    private static ModuleHost readHost(ModernMainController shell, String field) {
+    /** Height of the tallest child the content area is actually showing. */
+    private static double tallestVisibleChild(Field contentContainer, ModernMainController shell) {
         try {
-            java.lang.reflect.Field declared = ModernMainController.class.getDeclaredField(field);
-            declared.setAccessible(true);
-            return (ModuleHost) declared.get(shell);
+            Parent container = (Parent) contentContainer.get(shell);
+            double tallest = 0;
+            for (Node child : container.getChildrenUnmodifiable()) {
+                if (!child.isVisible() || !child.isManaged()) continue;
+                double height = child instanceof Region region
+                        ? region.getHeight()
+                        : child.getBoundsInParent().getHeight();
+                tallest = Math.max(tallest, height);
+            }
+            return tallest;
         } catch (ReflectiveOperationException failure) {
-            throw new AssertionError("No module host named " + field, failure);
+            throw new AssertionError("Could not read the shell's content area", failure);
         }
     }
 }
