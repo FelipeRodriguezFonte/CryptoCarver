@@ -59,9 +59,16 @@ public class SidePanel extends VBox {
     }
 
     public SidePanel() {
-        // Panel styling via CSS
+        // Panel styling via CSS.
+        // 280 is the floor and the preferred width, not a ceiling. This panel
+        // sits in the split pane's tree column, and a fixed maximum meant the
+        // column could be wider than the panel would ever draw: the divider is
+        // persisted and defaults to 0.22 of the window, so on any reasonably
+        // wide screen there was a band of dead grey between the list and the
+        // content, and dragging the divider only made it wider. Growing into
+        // the column is what makes the divider mean something.
         setMinWidth(280);
-        setMaxWidth(280);
+        setMaxWidth(Double.MAX_VALUE);
         setPrefWidth(280);
         getStyleClass().add("side-panel");
 

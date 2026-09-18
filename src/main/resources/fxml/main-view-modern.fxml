@@ -154,7 +154,7 @@
                 <!-- Navigation tree: rail plus section tree. -->
                 <HBox minWidth="200" styleClass="workspace-tree-pane">
                     <NavigationRail fx:id="navigationRail"/>
-                    <SidePanel fx:id="sidePanel"/>
+                    <SidePanel fx:id="sidePanel" HBox.hgrow="ALWAYS"/>
                 </HBox>
 
                 <!-- Main Content Area -->
