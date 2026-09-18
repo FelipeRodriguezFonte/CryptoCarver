@@ -2,6 +2,8 @@ package com.cryptocarver.crypto;
 
 import com.cryptocarver.util.DataConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
@@ -12,6 +14,7 @@ import java.security.Security;
  * Payment cryptography operations (PIN blocks, CVV, MAC)
  */
 public class PaymentOperations {
+    private static final Logger LOG = LoggerFactory.getLogger(PaymentOperations.class);
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -597,7 +600,7 @@ public class PaymentOperations {
             return digits.toString().substring(0, 3);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Payment cryptography operation failed", e);
             return "ERR";
         }
     }

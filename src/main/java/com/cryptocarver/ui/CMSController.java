@@ -1,4 +1,6 @@
 package com.cryptocarver.ui;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cryptocarver.crypto.CMSOperations;
 import com.cryptocarver.util.DataConverter;
@@ -18,6 +20,7 @@ import java.util.*;
  * Controller for CMS/PKCS#7 operations
  */
 public class CMSController {
+    private static final Logger LOG = LoggerFactory.getLogger(CMSController.class);
 
     private MainController mainController;
 
@@ -219,7 +222,7 @@ public class CMSController {
 
         } catch (Exception e) {
             generateResultArea.setText("Error generating PKCS#7:\n" + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error generating PKCS#7", e);
             mainController.updateStatus("Error: " + e.getMessage());
         }
     }
@@ -310,7 +313,7 @@ public class CMSController {
 
         } catch (Exception e) {
             verifyResultArea.setText("Error verifying PKCS#7:\n" + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error verifying PKCS#7", e);
             mainController.updateStatus("Error: " + e.getMessage());
         }
     }

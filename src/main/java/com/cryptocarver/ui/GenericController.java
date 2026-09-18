@@ -18,6 +18,8 @@ import com.cryptocarver.utils.OperationHistory;
 import com.cryptocarver.codec.ByteFormat;
 import com.cryptocarver.codec.CodecRegistry;
 import com.cryptocarver.codec.CodecException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
@@ -40,6 +42,7 @@ import java.util.Map;
  * @author Felipe
  */
 public class GenericController {
+    private static final Logger LOG = LoggerFactory.getLogger(GenericController.class);
 
     @FunctionalInterface
     interface BatchRunnerExecutor {
@@ -2361,7 +2364,7 @@ public class GenericController {
             statusReporter.showError("Format Error", "Invalid input format: " + e.getMessage());
         } catch (Exception e) {
             statusReporter.showError("Conversion Error", "Error: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Conversion failed", e);
         }
     }
 

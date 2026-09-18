@@ -1,7 +1,8 @@
 package com.cryptocarver.ui;
 
 import javafx.scene.Parent;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.Node;
 
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -12,11 +13,14 @@ import java.util.concurrent.CompletableFuture;
  * {@link ModuleLoader} remains the cache and this node only displays the
  * currently selected root.
  */
-public final class ModuleHost extends StackPane {
+public final class ModuleHost extends VBox {
 
     private ModuleLoader loader;
     private Executor executor;
     private String activeRoute;
+    private String resource;
+    private Parent root;
+    private Object controller;
 
     public ModuleHost() {
         getStyleClass().add("module-host");
@@ -26,6 +30,33 @@ public final class ModuleHost extends StackPane {
         this.loader = Objects.requireNonNull(loader, "loader");
         this.executor = Objects.requireNonNull(executor, "executor");
     }
+
+    /** Resource used by FXML shells that declare a deferred module host. */
+    public void setResource(String resource) { this.resource = resource; }
+    public String getResource() { return resource; }
+
+    /** Loads this host synchronously on the FX thread, once, and caches its root/controller. */
+    public Parent loadNow() {
+        if (root != null) return root;
+        if (loader == null || executor == null) {
+            throw new IllegalStateException("ModuleHost is not configured");
+        }
+        if (resource == null || resource.isBlank()) {
+            throw new IllegalStateException("ModuleHost resource is not configured");
+        }
+        try {
+            loader.register(resource, resource);
+            root = loader.load(resource, false);
+            controller = loader.controller(resource).orElse(null);
+            getChildren().setAll(root);
+            return root;
+        } catch (java.io.IOException error) {
+            throw new IllegalStateException("Unable to load module '" + resource + "'", error);
+        }
+    }
+
+    public Object controller() { return controller; }
+    public Parent root() { return root; }
 
     public CompletableFuture<Parent> show(String route) {
         if (loader == null || executor == null) {
@@ -37,6 +68,15 @@ public final class ModuleHost extends StackPane {
                     activeRoute = normalized;
                     return root;
                 });
+    }
+
+    /** Shows the FXML-declared module, loading it only on first use. */
+    public Parent showConfigured() {
+        Parent loaded = loadNow();
+        setManaged(true);
+        setVisible(true);
+        activeRoute = resource;
+        return loaded;
     }
 
     public CompletableFuture<Parent> preload(String route) {

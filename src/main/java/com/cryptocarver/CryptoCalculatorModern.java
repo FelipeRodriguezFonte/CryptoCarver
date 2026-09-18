@@ -11,12 +11,15 @@ import com.cryptocarver.service.I18nService;
 import com.cryptocarver.ui.NativePlatformIntegration;
 import com.cryptocarver.ui.WindowStateManager;
 import com.cryptocarver.ui.WindowStateStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Modern launcher for the new Rail + SidePanel UI
  * This is a prototype to test the new navigation structure
  */
 public class CryptoCalculatorModern extends Application {
+    private static final Logger LOG = LoggerFactory.getLogger(CryptoCalculatorModern.class);
 
     /** Size the Rail + SidePanel + Inspector layout was designed against. */
     private static final double DESIGN_WIDTH = 1400;
@@ -125,8 +128,7 @@ public class CryptoCalculatorModern extends Application {
             System.out.println("✅ Modern UI launched successfully!");
 
         } catch (Exception e) {
-            System.err.println("❌ Error launching modern UI:");
-            e.printStackTrace();
+            LOG.error("Error launching modern UI", e);
         }
     }
 

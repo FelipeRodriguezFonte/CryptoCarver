@@ -7,6 +7,7 @@
 <?import com.cryptocarver.ui.NavigationRail?>
 <?import com.cryptocarver.ui.SidePanel?>
 <?import com.cryptocarver.ui.ResponsiveWorkspaceSplitPane?>
+<?import com.cryptocarver.ui.ModuleHost?>
 <?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 <?import com.cryptocarver.ui.NativeTextEditMenuItem?>
 
@@ -317,8 +318,8 @@
 
                         <!-- This is where Symmetric Keys Accordion will be loaded -->
                         <!-- Saved Sessions Container -->
-                        <!-- JOSE CONTAINER -->                        <fx:include fx:id="jose" source="jose.fxml"/>
-                        <!-- COSE CONTAINER -->                        <fx:include fx:id="cose" source="cose.fxml"/>
+                        <ModuleHost fx:id="jose" resource="/fxml/jose.fxml" managed="false" visible="false" />
+                        <ModuleHost fx:id="cose" resource="/fxml/cose.fxml" managed="false" visible="false" />
 
 
                         <VBox styleClass="ux-inline-8d20c1fddd" fx:id="savedSessionsContainer" managed="false" visible="false" spacing="15">
@@ -333,42 +334,42 @@
                         </VBox>
 
                         <!-- Keys Container -->
-                        <fx:include fx:id="keysContainer" source="keys.fxml"/>
+                        <ModuleHost fx:id="keysContainer" resource="/fxml/keys.fxml" managed="false" visible="false" />
 
                         <!-- Certificates Operations -->
-                        <fx:include fx:id="certificatesContainer" source="certificates.fxml"/>
+                        <ModuleHost fx:id="certificatesContainer" resource="/fxml/certificates.fxml" managed="false" visible="false" />
 
                         <!-- CIPHER CONTENT -->
-                        <fx:include fx:id="cipherContainer" source="cipher.fxml"/>
+                        <ModuleHost fx:id="cipherContainer" resource="/fxml/cipher.fxml" managed="false" visible="false" />
 
                         <!-- Authentication Container -->
-                        <fx:include fx:id="authenticationContainer" source="authentication.fxml"/>
+                        <ModuleHost fx:id="authenticationContainer" resource="/fxml/authentication.fxml" managed="false" visible="false" />
 
                         <!-- Payments Container -->
-                        <fx:include fx:id="paymentsContainer" source="payments.fxml"/>
+                        <ModuleHost fx:id="paymentsContainer" resource="/fxml/payments.fxml" managed="false" visible="false" />
 
                         <!-- EMV Container -->
-                        <fx:include fx:id="emvContainer" source="emv.fxml"/>
+                        <ModuleHost fx:id="emvContainer" resource="/fxml/emv.fxml" managed="false" visible="false" />
 
                         <!-- Generic Utilities Container -->
                         <!-- GENERIC CONTENT (Hashing, Encoding, etc) -->
-                <fx:include fx:id="genericContainer" source="generic.fxml" />
+                <ModuleHost fx:id="genericContainer" resource="/fxml/generic.fxml" managed="false" visible="false" />
 
                     <!-- Recent Operations / History -->
-                    <fx:include fx:id="historyView" source="history.fxml" />
-                    <fx:include fx:id="clipboardShelf" source="clipboard_shelf.fxml" />
+                    <ModuleHost fx:id="historyView" resource="/fxml/history.fxml" managed="false" visible="false" />
+                    <ModuleHost fx:id="clipboardShelf" resource="/fxml/clipboard_shelf.fxml" managed="false" visible="false" />
 
                     <!-- Post-Quantum Cryptography Container -->
-                    <fx:include source="pqc.fxml" fx:id="postQuantumContainer" />
+                    <ModuleHost fx:id="postQuantumContainer" resource="/fxml/pqc.fxml" managed="false" visible="false" />
 
                     <!-- XML Security Container -->
-                    <fx:include source="xml_security.fxml" fx:id="xmlSecurityContainer" />
+                    <ModuleHost fx:id="xmlSecurityContainer" resource="/fxml/xml_security.fxml" managed="false" visible="false" />
 
                     <!-- WSS Security Container -->
-                    <fx:include source="wss_security.fxml" fx:id="wssSecurityContainer" />
+                    <ModuleHost fx:id="wssSecurityContainer" resource="/fxml/wss_security.fxml" managed="false" visible="false" />
 
                     <!-- Process Designer Container -->
-                    <fx:include source="process_designer.fxml" fx:id="processDesignerContainer" />
+                    <ModuleHost fx:id="processDesignerContainer" resource="/fxml/process_designer.fxml" managed="false" visible="false" />
 
                     </VBox>
                 </ScrollPane>

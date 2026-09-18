@@ -702,9 +702,7 @@ public class KeysController {
     }
 
     private void logTR31Failure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        System.err.print(InlineErrorPresenter.redactSecrets("TR-31 " + operation + " failed:\n" + trace));
+        LOG.error("TR-31 {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 
     private void setSectionVisible(VBox section, boolean visible) {
@@ -3923,9 +3921,7 @@ public class KeysController {
     }
 
     private void logRsaKexFailure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        System.err.print(InlineErrorPresenter.redactSecrets("RSA Key Exchange " + operation + " failed:\n" + trace));
+        LOG.error("RSA Key Exchange {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 
     // ============================================================================
@@ -4204,9 +4200,7 @@ public class KeysController {
     }
 
     private void logTr34Failure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        System.err.print(InlineErrorPresenter.redactSecrets("TR-34 " + operation + " failed:\n" + trace));
+        LOG.error("TR-34 {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 
     /**

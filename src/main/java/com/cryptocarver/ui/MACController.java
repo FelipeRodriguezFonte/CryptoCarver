@@ -4,6 +4,8 @@ import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.scene.control.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controller for Message Authentication Code (MAC) operations
@@ -11,6 +13,7 @@ import javafx.scene.control.*;
  * @author Felipe
  */
 public class MACController {
+    private static final Logger LOG = LoggerFactory.getLogger(MACController.class);
 
     private MainController mainController;
 
@@ -184,7 +187,7 @@ public class MACController {
         } catch (Exception e) {
             mainController.showError("MAC Error",
                 "Error generating MAC: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error generating MAC", e);
         }
     }
 
@@ -284,7 +287,7 @@ public class MACController {
         } catch (Exception e) {
             mainController.showError("Verification Error",
                 "Error verifying MAC: " + e.getMessage());
-            e.printStackTrace();
+            LOG.error("Error verifying MAC", e);
         }
     }
 

@@ -451,8 +451,6 @@ public class COSEController implements Initializable {
     }
 
     private void logFailure(String operation, Exception error) {
-        StringWriter trace = new StringWriter();
-        error.printStackTrace(new PrintWriter(trace));
-        LOG.error("COSE {} failed:\n{}", operation, InlineErrorPresenter.redactSecrets(trace.toString()));
+        LOG.error("COSE {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
     }
 }

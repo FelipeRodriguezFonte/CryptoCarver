@@ -44,8 +44,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML private javafx.scene.control.Label contentPlaceholderLabel;
-    @FXML private javafx.scene.layout.VBox jose;
-    @FXML private javafx.scene.layout.VBox cose;
+    @FXML private ModuleHost jose;
+    @FXML private ModuleHost cose;
     @FXML private GenericController genericContainerController;
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
@@ -84,9 +84,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private ScrollPane mainScrollPane;
     @FXML
     private VBox contentContainer;
-    @FXML private VBox keysContainer;
+    @FXML private ModuleHost keysContainer;
     @FXML private KeysController keysContainerController;
-    @FXML private VBox certificatesContainer;
+    @FXML private ModuleHost certificatesContainer;
     @FXML private CertificatesController certificatesContainerController;
     @FXML
     private VBox inspectorPanel;
@@ -95,7 +95,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private boolean inspectorHiddenForCompactLayout;
 
     // CIPHER UI
-    @FXML private VBox cipherContainer;
+    @FXML private ModuleHost cipherContainer;
     @FXML private CipherController cipherContainerController;
 
     // Header labels
@@ -143,12 +143,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button inspectorAddSessionStepButton;
     @FXML private Button inspectorExportSessionTrailButton;
     @FXML
-    private VBox historyView;
+    private ModuleHost historyView;
     @FXML
     private HistoryController historyViewController;
 
     @FXML
-    private VBox clipboardShelf;
+    private ModuleHost clipboardShelf;
     @FXML
     private ClipboardShelfController clipboardShelfController;
 
@@ -225,16 +225,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // Symmetric and asymmetric key controls are owned by keysContainerController.
     // Certificate, CRL and CMS controls are owned by certificatesContainerController.
     // Generic Tab FXML Fields
-    @FXML
-    private Accordion genericContainer;
+    @FXML private ModuleHost genericContainer;
 
     // Post-Quantum UI
-    @FXML private VBox postQuantumContainer;
+    @FXML private ModuleHost postQuantumContainer;
     @FXML private PostQuantumController postQuantumContainerController;
 
     // XML Security UI
-    @FXML private VBox xmlSecurityContainer;
-    @FXML private VBox wssSecurityContainer;
+    @FXML private ModuleHost xmlSecurityContainer;
+    @FXML private ModuleHost wssSecurityContainer;
     @FXML private WssSecurityController wssSecurityContainerController;
     @FXML private TextField xmlSignInputPathField;
     @FXML private TextField xmlSignKeyPathField;
@@ -244,7 +243,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private ComboBox<String> xmlSignPackagingCombo;
     // New Controllers
     @FXML private XMLSignatureController xmlSecurityContainerController;
-    @FXML private TitledPane processDesignerContainer;
+    @FXML private ModuleHost processDesignerContainer;
     @FXML private ProcessDesignerController processDesignerContainerController;
 
     // Generic Utilities
@@ -256,15 +255,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private TextField uuidOutputField;
 
     // Authentication Tab FXML Fields
-    @FXML private VBox authenticationContainer;
+    @FXML private ModuleHost authenticationContainer;
     @FXML private AuthenticationController authenticationContainerController;
 
     // Payments module
-    @FXML private VBox paymentsContainer;
+    @FXML private ModuleHost paymentsContainer;
     @FXML private PaymentsController paymentsContainerController;
 
     // EMV module
-    @FXML private VBox emvContainer;
+    @FXML private ModuleHost emvContainer;
     @FXML private EMVController emvContainerController;
 
     // Controllers
@@ -358,6 +357,25 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label commandTitleLabel;
 
     private final OperationExecutor operationExecutor = new OperationExecutor();
+    private final ModuleLoader moduleLoader = new ModuleLoader(ModernMainController.class);
+
+    private void configureDeferredModules() {
+        java.util.concurrent.Executor direct = Runnable::run;
+        for (ModuleHost host : new ModuleHost[]{jose, cose, keysContainer, certificatesContainer,
+                cipherContainer, authenticationContainer, paymentsContainer, emvContainer,
+                genericContainer, historyView, clipboardShelf, postQuantumContainer,
+                xmlSecurityContainer, wssSecurityContainer, processDesignerContainer}) {
+            if (host != null) host.configure(moduleLoader, direct);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T ensureModule(ModuleHost host, Class<T> controllerType) {
+        if (host == null) return null;
+        host.showConfigured();
+        Object controller = host.controller();
+        return controllerType.isInstance(controller) ? controllerType.cast(controller) : null;
+    }
 
     public OperationExecutor getOperationExecutor() {
         return operationExecutor;
@@ -481,6 +499,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void initialize() {
+        configureDeferredModules();
         if (joseController != null) joseController.setReporter(this);
         if (coseController != null) coseController.setReporter(this);
         System.out.println("ModernMainController initializing...");
@@ -548,10 +567,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         // Load symmetric keys content (default)
         loadSymmetricKeysContent();
-        loadCipherContent();
-        loadAuthenticationContent();
-        loadPaymentsContent();
-        loadEMVContent();
         if (genericContainerController != null) {
             genericContainerController.setStatusReporter(this);
             genericContainerController.setFormatControls(inputFormatCombo, outputFormatCombo);
@@ -562,9 +577,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (genericContainerController != null && genericContainerController.getCryptoEnvelopeInspectorController() != null) {
             genericContainerController.getCryptoEnvelopeInspectorController().setStatusReporter(this);
         }
-        loadPostQuantumContent();
-        loadXMLSecurityContent();
-        loadWssSecurityContent();
 
         // Show the symmetric keys by default
         showSymmetricKeys();
@@ -914,6 +926,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadCipherContent() {
+        if (cipherContainerController == null) cipherContainerController = ensureModule(cipherContainer, CipherController.class);
         if (cipherContainerController != null) {
             cipherController = cipherContainerController;
             cipherController.initModern(this, inputFormatCombo, outputFormatCombo,
@@ -922,12 +935,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadAuthenticationContent() {
+        if (authenticationContainerController == null) authenticationContainerController = ensureModule(authenticationContainer, AuthenticationController.class);
         if (authenticationContainerController != null) {
             authenticationContainerController.init(this, inputFormatCombo, outputFormatCombo);
         }
     }
 
     private void loadEMVContent() {
+        if (emvContainerController == null) emvContainerController = ensureModule(emvContainer, EMVController.class);
         if (emvContainerController != null) {
             emvController = emvContainerController;
             emvController.init(this);
@@ -935,6 +950,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadPaymentsContent() {
+        if (paymentsContainerController == null) paymentsContainerController = ensureModule(paymentsContainer, PaymentsController.class);
         if (paymentsContainerController != null) {
             paymentsController = paymentsContainerController;
             paymentsController.init(this);
@@ -943,6 +959,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private void loadSymmetricKeysContent() {
         try {
+            if (keysContainerController == null) keysContainerController = ensureModule(keysContainer, KeysController.class);
+            if (certificatesContainerController == null) certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
             keysController = keysContainerController;
             if (keysController == null) return;
             keysController.init(this, () -> {
@@ -1972,6 +1990,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * navigation uses the FXML-backed controller.
      */
     private void showHistoryView() {
+        if (historyViewController == null) historyViewController = ensureModule(historyView, HistoryController.class);
         hideAllContainers();
         initializeHistory();
         if (historyView != null) {
@@ -1987,6 +2006,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showClipboardShelf() {
+        if (clipboardShelfController == null) clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
         hideAllContainers();
         if (clipboardShelf != null) {
             clipboardShelf.setManaged(true);
@@ -2021,6 +2041,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showCertificates() {
+        if (certificatesContainerController == null) certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
         hideAllContainers();
 
         // Show certificates accordion
@@ -2031,6 +2052,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showCipher() {
+        loadCipherContent();
         hideAllContainers();
 
         if (cipherContainer != null) {
@@ -2073,6 +2095,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showAuthentication() {
+        loadAuthenticationContent();
         hideAllContainers();
 
         if (authenticationContainer != null) {
@@ -2110,6 +2133,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showPayments() {
+        loadPaymentsContent();
         hideAllContainers();
 
         if (paymentsContainer != null) {
@@ -3350,12 +3374,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void showProcessDesigner() {
+        if (processDesignerContainerController == null) processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
         hideAllContainers();
         enterProcessDesignerWorkspace();
         if (processDesignerContainer != null) {
             processDesignerContainer.setManaged(true);
             processDesignerContainer.setVisible(true);
-            processDesignerContainer.setExpanded(true);
+            if (processDesignerContainer.root() instanceof TitledPane pane) pane.setExpanded(true);
             updateContentHeader("Process Designer");
             updateContentSubtitle("Visual workflow builder and execution engine");
         }
@@ -3391,7 +3416,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public TitledPane getProcessDesignerContainer() {
-        return processDesignerContainer;
+        return processDesignerContainer != null && processDesignerContainer.root() instanceof TitledPane pane ? pane : null;
     }
 
     public ProcessDesignerController getProcessDesignerContainerController() {
@@ -3399,6 +3424,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showGeneric() {
+        if (genericContainerController == null) genericContainerController = ensureModule(genericContainer, GenericController.class);
         hideAllContainers();
 
         if (genericContainer != null) {
@@ -3409,6 +3435,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showJOSE() {
+        if (joseController == null) joseController = ensureModule(jose, JOSEController.class);
         hideAllContainers();
         if (jose != null) {
             jose.setManaged(true);
@@ -3420,6 +3447,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void showCOSE() {
+        if (coseController == null) coseController = ensureModule(cose, COSEController.class);
         hideAllContainers();
         if (cose != null) {
             cose.setManaged(true);
@@ -3431,12 +3459,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void expandGenericAccordionPane(String paneName) {
-        if (paneName == null || paneName.isBlank() || genericContainer == null || genericContainer.getPanes().isEmpty())
+        Accordion accordion = genericContainer != null && genericContainer.root() instanceof Accordion a ? a : null;
+        if (paneName == null || paneName.isBlank() || accordion == null || accordion.getPanes().isEmpty())
             return;
 
-        for (TitledPane pane : genericContainer.getPanes()) {
+        for (TitledPane pane : accordion.getPanes()) {
             if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.generic())) {
-                genericContainer.setExpandedPane(pane);
+                accordion.setExpandedPane(pane);
                 revealExpandedPane(pane);
                 break;
             }
@@ -4104,12 +4133,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // ============================================================
 
     private void loadPostQuantumContent() {
+        if (postQuantumContainerController == null) postQuantumContainerController = ensureModule(postQuantumContainer, PostQuantumController.class);
         if (postQuantumContainerController != null) {
             postQuantumContainerController.initModule(this);
         }
     }
 
     private void showPostQuantum() {
+        loadPostQuantumContent();
         hideAllContainers();
         if (postQuantumContainer != null) {
             postQuantumContainer.setManaged(true);
@@ -4129,12 +4160,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // ============================================================
 
     private void loadXMLSecurityContent() {
+        if (xmlSecurityContainerController == null) xmlSecurityContainerController = ensureModule(xmlSecurityContainer, XMLSignatureController.class);
         if (xmlSecurityContainerController != null) {
             xmlSecurityContainerController.initModule(this);
         }
     }
 
     private void showXMLSecurity() {
+        loadXMLSecurityContent();
         hideAllContainers();
         if (xmlSecurityContainer != null) {
             xmlSecurityContainer.setManaged(true);
@@ -4150,12 +4183,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void loadWssSecurityContent() {
+        if (wssSecurityContainerController == null) wssSecurityContainerController = ensureModule(wssSecurityContainer, WssSecurityController.class);
         if (wssSecurityContainerController != null) {
             wssSecurityContainerController.initModule(this);
         }
     }
 
     private void showWssSecurity() {
+        loadWssSecurityContent();
         hideAllContainers();
         if (wssSecurityContainer != null) {
             wssSecurityContainer.setManaged(true);

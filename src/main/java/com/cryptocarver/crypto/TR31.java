@@ -6,6 +6,8 @@ import org.bouncycastle.crypto.engines.DESedeEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -18,6 +20,7 @@ import java.util.Arrays;
  * Supports versions B (TDES) and D (AES)
  */
 public class TR31 {
+    private static final Logger LOG = LoggerFactory.getLogger(TR31.class);
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -995,7 +998,7 @@ public class TR31 {
             System.out.println("=== All Tests Completed ===");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("TR-31 operation failed", e);
         }
     }
 }
