@@ -1,5 +1,6 @@
 package com.cryptocarver.model.process.handlers;
 
+import com.cryptocarver.crypto.AdesValidationOperations;
 import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
@@ -39,7 +40,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             "EIDAS_CERT_INSPECT",
             "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY", "TRUSTED_LIST_FIND_CERT",
             "MDOC_ISSUE", "MDOC_VERIFY", "MDOC_INSPECT",
-            "SCA_TRANSACTION_DATA", "SCA_VERIFY", "OID4VP_INSPECT");
+            "SCA_TRANSACTION_DATA", "SCA_VERIFY", "OID4VP_INSPECT",
+            "ADES_VALIDATE");
 
     private static final List<String> SIGN_ALGORITHMS = List.of(
             "ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512");
@@ -122,7 +124,10 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                         multiline("transactionData"))),
                 descriptor("OID4VP_INSPECT", "oid4vpInspect", List.of(
                         combo("algorithm", SIGN_ALGORITHMS, "ES256"),
-                        multiline("issuerPublicKey"))));
+                        multiline("issuerPublicKey"))),
+                descriptor("ADES_VALIDATE", "adesValidate", List.of(
+                        text("fileName", "document.p7m"),
+                        check("etsiReport", "false"))));
     }
 
     @Override public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
@@ -143,6 +148,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "SCA_TRANSACTION_DATA" -> List.of(port("payload", any, true));
             case "SCA_VERIFY" -> List.of(port("presentation", any, true));
             case "OID4VP_INSPECT" -> List.of(port("request", any, true));
+            case "ADES_VALIDATE" -> List.of(port("document", any, true));
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };
     }
@@ -202,6 +208,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 supplied(node, "issuerPublicKey");
             }
             case "OID4VP_INSPECT" -> enumValue(node, "algorithm", SIGN_ALGORITHMS);
+            case "ADES_VALIDATE" -> supplied(node, "fileName");
             case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON",
                  "EIDAS_CERT_INSPECT", "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY",
                  "TRUSTED_LIST_FIND_CERT", "MDOC_INSPECT" -> { }
@@ -321,6 +328,17 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
             case "MDOC_INSPECT" -> text(MdocOperations.describe(
                     bytes(inputs, "mdoc"), null, java.time.Instant.now(), Locale.getDefault()));
+
+            case "ADES_VALIDATE" -> {
+                AdesValidationOperations.Result result = AdesValidationOperations.validate(
+                        bytes(inputs, "document"), value(node, "fileName", "document"), null, null);
+                // The full TS 119 102-2 report is the evidence artefact; the
+                // summary is what a person reads. The node emits one or the
+                // other rather than both, because they go to different places.
+                yield text(Boolean.parseBoolean(value(node, "etsiReport", "false"))
+                        ? result.etsiValidationReportXml()
+                        : AdesValidationOperations.describe(result, Locale.getDefault()));
+            }
 
             case "SCA_TRANSACTION_DATA" -> text(Ts12ScaOperations.encodeTransactionData(
                     Ts12ScaOperations.TransactionType.fromUrn(
@@ -444,6 +462,10 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
     private static NodeParameter multiline(String k) {
         return new NodeParameter(k, "module.process.param." + k, ParameterKind.MULTILINE, "");
+    }
+
+    private static NodeParameter check(String k, String d) {
+        return new NodeParameter(k, "module.process.param." + k, ParameterKind.CHECKBOX, d);
     }
 
     private static NodeParameter text(String k, String d) {

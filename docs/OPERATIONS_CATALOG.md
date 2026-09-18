@@ -218,6 +218,7 @@ name means a private key in one node and a public key in another.
 | Trusted Lists (TS 119 612) | `TRUSTED_LIST_INSPECT`, `TRUSTED_LIST_VERIFY`, `TRUSTED_LIST_FIND_CERT` |
 | mdoc / mDL (ISO/IEC 18013-5) | `MDOC_ISSUE`, `MDOC_VERIFY`, `MDOC_INSPECT` |
 | SCA with the wallet (TS12) and OpenID4VP | `SCA_TRANSACTION_DATA`, `SCA_VERIFY`, `OID4VP_INSPECT` |
+| AdES validation (EN 319 102-1, report per TS 119 102-2) | `ADES_VALIDATE` |
 
 These nodes are local-only: they manipulate artefacts supplied as text and never
 fetch an issuer's metadata, a JWKS or a status list over the network.

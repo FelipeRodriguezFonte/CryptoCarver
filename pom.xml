@@ -203,6 +203,25 @@
             <artifactId>dss-validation</artifactId>
             <version>${dss.version}</version>
         </dependency>
+        <!-- CAdES and ASiC, so one validator covers every AdES flavour the
+             eIDAS regulation names. dss-cades already arrived transitively
+             through dss-pades; it is declared here because the validation
+             facade depends on it directly. -->
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-cades</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-asic-cades</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-asic-xades</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-spi</artifactId>
