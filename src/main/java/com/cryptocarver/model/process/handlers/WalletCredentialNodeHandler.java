@@ -1,6 +1,7 @@
 package com.cryptocarver.model.process.handlers;
 
 import com.cryptocarver.crypto.CborInspector;
+import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
@@ -30,7 +31,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
     public static final Set<String> TYPES = Set.of(
             "SDJWT_ISSUE", "SDJWT_ISSUE_VC", "SDJWT_PRESENT", "SDJWT_VERIFY", "SDJWT_INSPECT",
             "STATUS_LIST_RESOLVE", "STATUS_LIST_DESCRIBE",
-            "CBOR_INSPECT", "CBOR_TO_JSON", "CBOR_FROM_JSON");
+            "CBOR_INSPECT", "CBOR_TO_JSON", "CBOR_FROM_JSON",
+            "EIDAS_CERT_INSPECT");
 
     private static final List<String> SIGN_ALGORITHMS = List.of(
             "ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512");
@@ -79,7 +81,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 descriptor("STATUS_LIST_DESCRIBE", "statusListDescribe", List.of()),
                 descriptor("CBOR_INSPECT", "cborInspect", List.of(combo("view", CBOR_VIEWS, "tree"))),
                 descriptor("CBOR_TO_JSON", "cborToJson", List.of()),
-                descriptor("CBOR_FROM_JSON", "cborFromJson", List.of()));
+                descriptor("CBOR_FROM_JSON", "cborFromJson", List.of()),
+                descriptor("EIDAS_CERT_INSPECT", "eidasCertInspect", List.of()));
     }
 
     @Override public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
@@ -92,6 +95,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "STATUS_LIST_RESOLVE", "STATUS_LIST_DESCRIBE" -> List.of(port("statusListToken", any, true));
             case "CBOR_INSPECT", "CBOR_TO_JSON" -> List.of(port("cbor", any, true));
             case "CBOR_FROM_JSON" -> List.of(port("json", any, true));
+            case "EIDAS_CERT_INSPECT" -> List.of(port("certificate", any, true));
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };
     }
@@ -136,7 +140,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 supplied(node, "issuerPublicKey");
             }
             case "CBOR_INSPECT" -> enumValue(node, "view", CBOR_VIEWS);
-            case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON" -> { }
+            case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON",
+                 "EIDAS_CERT_INSPECT" -> { }
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         }
     }
@@ -209,6 +214,9 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
             case "CBOR_TO_JSON" -> text(CborInspector.toJson(bytes(inputs, "cbor")));
             case "CBOR_FROM_JSON" -> FlowValue.binary(CborInspector.fromJson(string(inputs, "json")));
+
+            case "EIDAS_CERT_INSPECT" -> text(EidasCertificateInspector.describe(
+                    certificate(bytes(inputs, "certificate")), Locale.getDefault()));
 
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };
@@ -289,6 +297,14 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
     private static PortDefinition port(String n, Set<Representation> r, boolean required) {
         return new PortDefinition(n, r, required);
+    }
+
+    /** Accepts DER or PEM: the certificate arriving on the wire may have been
+     *  read from a file by an upstream node or pasted as text. */
+    private static java.security.cert.X509Certificate certificate(byte[] material) throws Exception {
+        return (java.security.cert.X509Certificate) java.security.cert.CertificateFactory
+                .getInstance("X.509")
+                .generateCertificate(new java.io.ByteArrayInputStream(material));
     }
 
     private static SdJwtOperations.HashAlgorithm hashAlgorithm(ProcessDefinition.Node node) {

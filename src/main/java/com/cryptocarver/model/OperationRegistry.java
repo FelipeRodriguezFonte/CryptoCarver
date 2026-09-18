@@ -255,7 +255,8 @@ public class OperationRegistry {
         sb.append("| Family | Node types |\n|---|---|\n");
         sb.append("| SD-JWT (RFC 9901) and SD-JWT VC | `SDJWT_ISSUE`, `SDJWT_ISSUE_VC`, `SDJWT_PRESENT`, `SDJWT_VERIFY`, `SDJWT_INSPECT` |\n");
         sb.append("| Token Status List | `STATUS_LIST_RESOLVE`, `STATUS_LIST_DESCRIBE` |\n");
-        sb.append("| CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |\n\n");
+        sb.append("| CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |\n");
+        sb.append("| eIDAS certificate profiles | `EIDAS_CERT_INSPECT` |\n\n");
         sb.append("These nodes are local-only: they manipulate artefacts supplied as text and never\n");
         sb.append("fetch an issuer's metadata, a JWKS or a status list over the network.\n");
         sb.append("`SDJWT_PRESENT` selects claims by name rather than by digest, because a node is\n");

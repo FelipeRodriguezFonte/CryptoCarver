@@ -203,6 +203,7 @@ name means a private key in one node and a public key in another.
 | SD-JWT (RFC 9901) and SD-JWT VC | `SDJWT_ISSUE`, `SDJWT_ISSUE_VC`, `SDJWT_PRESENT`, `SDJWT_VERIFY`, `SDJWT_INSPECT` |
 | Token Status List | `STATUS_LIST_RESOLVE`, `STATUS_LIST_DESCRIBE` |
 | CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |
+| eIDAS certificate profiles | `EIDAS_CERT_INSPECT` |
 
 These nodes are local-only: they manipulate artefacts supplied as text and never
 fetch an issuer's metadata, a JWKS or a status list over the network.
