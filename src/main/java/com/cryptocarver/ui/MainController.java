@@ -14,6 +14,7 @@ import javafx.geometry.Insets;
 public class MainController implements StatusReporter {
 
     private final PauseTransition statusResetTimer = new PauseTransition(Duration.seconds(3));
+    private final DialogService dialogService = new DialogService();
 
     @Override
     public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptocarver.model.OperationDetail> details) {
@@ -934,20 +935,12 @@ public class MainController implements StatusReporter {
 
     @Override
     public void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogService.error(title, message);
     }
 
     @Override
     public void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogService.info(title, message);
     }
 
     /**
@@ -1879,10 +1872,7 @@ public class MainController implements StatusReporter {
 
     @FXML
     private void handleAbout() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About CryptoCarver");
-        alert.setHeaderText("CryptoCarver v" + com.cryptocarver.model.BuildInfo.version());
-        alert.setContentText(
+        String about =
                 "Advanced Cryptographic Tool\n\n" +
                         "A modern evolution of BP-Tools with enhanced features:\n" +
                         "• Multiple cipher algorithms (DES, 3DES, AES, RSA)\n" +
@@ -1892,8 +1882,11 @@ public class MainController implements StatusReporter {
                         "• EMV support\n" +
                         "• Development tools\n\n" +
                         "Cross-platform support: Windows, macOS, Linux\n" +
-                        "Built with Java 21 + JavaFX 21");
-        alert.showAndWait();
+                        "Built with Java 21 + JavaFX 21";
+        dialogService.show(Alert.AlertType.INFORMATION,
+                mainPane == null || mainPane.getScene() == null ? null : mainPane.getScene().getWindow(),
+                "About CryptoCarver", "CryptoCarver v" + com.cryptocarver.model.BuildInfo.version(),
+                new Label(about), ButtonType.OK);
     }
 
     @FXML

@@ -28,6 +28,10 @@ import com.cryptocarver.service.I18nService;
  */
 public class ModernMainController implements StatusReporter, OperationNavigator {
 
+    private static javafx.stage.Window windowOf(Node node) {
+        return node == null || node.getScene() == null ? null : node.getScene().getWindow();
+    }
+
     private static final double COMPACT_LAYOUT_WIDTH = 1_100;
     /** Rendered per platform so Windows and Linux do not show macOS glyphs as empty boxes. */
     private static final String COMMAND_PALETTE_SHORTCUT =
@@ -46,6 +50,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
     private final ExpandedTextViewer expandedTextViewer = new ExpandedTextViewer();
+    private final DialogService dialogService = new DialogService();
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
@@ -1935,18 +1940,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                         historyManager.getHistoryItems(), visibility);
                 writer.write(json);
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle(i18n.text("dialog.exportHistory.success"));
-                alert.setHeaderText(null);
-                alert.setContentText("History successfully exported using " + visibility + " policy to:\n"
-                        + file.getAbsolutePath());
-                alert.showAndWait();
+                dialogService.info(i18n.text("dialog.exportHistory.success"),
+                        "History successfully exported using " + visibility + " policy to:\n" + file.getAbsolutePath());
             } catch (IOException e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle(i18n.text("dialog.exportHistory.failure"));
-                alert.setHeaderText(i18n.text("dialog.exportHistory.saveFailure"));
-                alert.setContentText(e.getMessage());
-                alert.showAndWait();
+                dialogService.error(i18n.text("dialog.exportHistory.failure"),
+                        i18n.text("dialog.exportHistory.saveFailure") + "\n" + e.getMessage());
             }
         }
     }
@@ -1962,11 +1960,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private boolean confirmClearHistory() {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                i18n.text("module.history.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setTitle(i18n.text("module.history.clearTitle"));
-        confirmation.setHeaderText(i18n.text("module.history.clearHeader"));
-        return confirmation.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        return dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                i18n.text("module.history.clearTitle"), i18n.text("module.history.clearHeader"),
+                new Label(i18n.text("module.history.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
+                .orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     /**
@@ -3018,10 +3015,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void handleShowKeyboardShortcuts() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Keyboard Shortcuts");
-        alert.setHeaderText("CryptoCarver Keyboard Shortcuts");
-
         VBox contentBox = new VBox(10);
         contentBox.setPrefWidth(540);
         contentBox.setStyle("-fx-padding: 10;");
@@ -3059,17 +3052,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
 
         contentBox.getChildren().add(scrollPane);
-        alert.getDialogPane().setContent(contentBox);
-        alert.getDialogPane().setPrefWidth(580);
-        alert.showAndWait();
+        dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane),
+                "Keyboard Shortcuts", "CryptoCarver Keyboard Shortcuts", contentBox, ButtonType.OK);
     }
 
     @FXML
     private void handleAbout() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About CryptoCarver");
-        alert.setHeaderText("CryptoCarver");
-        alert.setContentText("A comprehensive tool for cryptographic operations.\n\n" +
+        dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane), "About CryptoCarver", "CryptoCarver",
+                new Label("A comprehensive tool for cryptographic operations.\n\n" +
                 "Version: 1.0.0\n" +
                 "Author: Felipe Rodríguez Fonte\n" +
                 "Contact: felipe.rodriguez.fonte@gmail.com\n\n" +
@@ -3078,8 +3068,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 "- Digital Signatures & Certificates\n" +
                 "- Payments (EMV, PIN, CVV)\n" +
                 "- JOSE (JWT, JWE, JWK)\n" +
-                "- ASN.1 Analysis");
-        alert.showAndWait();
+                "- ASN.1 Analysis"), ButtonType.OK);
     }
 
     /**
@@ -3107,14 +3096,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         report.setPrefRowCount(15);
         report.setStyle("-fx-font-family: monospace; -fx-font-size: 11px;");
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("CryptoCarver diagnostics");
-        alert.setHeaderText("Runtime information (safe to copy)");
-        alert.getDialogPane().setContent(report);
-        alert.getDialogPane().setPrefWidth(680);
         ButtonType copyButton = new ButtonType("Copy report", ButtonBar.ButtonData.LEFT);
-        alert.getDialogPane().getButtonTypes().add(copyButton);
-        java.util.Optional<ButtonType> selected = alert.showAndWait();
+        java.util.Optional<ButtonType> selected = dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane),
+                "CryptoCarver diagnostics", "Runtime information (safe to copy)", report, copyButton, ButtonType.OK);
         if (selected.isPresent() && selected.get() == copyButton) {
             javafx.scene.input.ClipboardContent clipboard = new javafx.scene.input.ClipboardContent();
             clipboard.putString(diagnosticText);
@@ -3200,11 +3184,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             System.out.println("SHOW_WARNING: " + title + " - " + message);
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogService.warning(windowOf(mainPane), title, message);
     }
 
     @Override
@@ -3213,11 +3193,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             System.out.println("SHOW_INFO: " + title + " - " + message);
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogService.info(windowOf(mainPane), title, message);
     }
 
     // Generic module initialized by FXML include
@@ -3818,11 +3794,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void handleClearSessionTrail() {
         if (operationSessionLog == null || operationSessionLog.isEmpty()) return;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                i18n.text("sessionTrail.clearConfirm"), ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setTitle(i18n.text("sessionTrail.title"));
-        confirmation.setHeaderText(i18n.text("sessionTrail.clear"));
-        if (confirmation.showAndWait().filter(ButtonType.OK::equals).isPresent()) {
+        if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                i18n.text("sessionTrail.title"), i18n.text("sessionTrail.clear"),
+                new Label(i18n.text("sessionTrail.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
+                .filter(ButtonType.OK::equals).isPresent()) {
             operationSessionLog.clear();
             refreshSessionTrailUI();
             updateStatus(i18n.text("sessionTrail.cleared"));
@@ -3904,12 +3879,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (selected.isEmpty()) return;
             password = selected.get();
         } else {
-            Alert warning = new Alert(Alert.AlertType.CONFIRMATION,
-                    "The exported JSON can contain raw cryptographic keys and sensitive input. Continue?",
-                    ButtonType.CANCEL, ButtonType.OK);
-            warning.setTitle("Unsafe Plain Configuration");
-            warning.setHeaderText("Secrets will not be encrypted");
-            if (warning.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                    "Unsafe Plain Configuration", "Secrets will not be encrypted",
+                    new Label("The exported JSON can contain raw cryptographic keys and sensitive input. Continue?"),
+                    ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         }
 
         FileChooser chooser = new FileChooser();
@@ -3965,16 +3938,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             } finally {
                 if (password != null) java.util.Arrays.fill(password, '\0');
             }
-            Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                    "Operation: " + configuration.operation()
+            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+                    "Import Screen Configuration", "Review portable configuration",
+                    new Label("Operation: " + configuration.operation()
                             + "\nModule: " + configuration.module()
                             + "\nFields: " + configuration.values().size()
                             + "\nCreated: " + configuration.createdAt()
-                            + "\n\nImporting may place raw keys or passwords in the laboratory UI.",
-                    ButtonType.CANCEL, ButtonType.OK);
-            confirmation.setTitle("Import Screen Configuration");
-            confirmation.setHeaderText("Review portable configuration");
-            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+                            + "\n\nImporting may place raw keys or passwords in the laboratory UI."),
+                    ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
             applyScreenConfiguration(configuration);
             if (isLegacyKeyGenerationConfiguration(configuration)) {
                 showWarning("Generated Key Not Present",
