@@ -90,6 +90,45 @@ class WalletControllerDefaultsTest {
         }
     }
 
+    /**
+     * Every sentence the pane shows has to be translatable. Two rounds of this
+     * module shipped English text into a Spanish window — a pane title once, a
+     * helper paragraph later — because a string was added to the FXML and not
+     * to the catalog. Checking the FXML against the catalog catches the next
+     * one without anyone having to launch the app in Spanish and read it.
+     */
+    @Test
+    void everySentenceThePaneShowsIsTranslatable() throws Exception {
+        String fxml = Files.readString(Path.of("src/main/resources/fxml/wallet.fxml"), StandardCharsets.UTF_8);
+        String spanish = Files.readString(Path.of("src/main/resources/i18n/messages_es.properties"),
+                StandardCharsets.UTF_8);
+        java.util.Map<String, String> catalog = ModuleTextCatalog.wallet();
+
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("<(?:Label|TitledPane|Button)[^>]*?text=\"([^\"]+)\"", java.util.regex.Pattern.DOTALL)
+                .matcher(fxml);
+        java.util.List<String> untranslated = new java.util.ArrayList<>();
+        while (matcher.find()) {
+            // The catalogue is keyed by the text JavaFX renders, so the XML
+            // entities the attribute carries have to come off first.
+            String text = matcher.group(1)
+                    .replace("&quot;", "\"").replace("&apos;", "'")
+                    .replace("&lt;", "<").replace("&gt;", ">")
+                    .replace("&amp;", "&");
+            // Short labels are field captions handled by the shared catalogue or
+            // are proper nouns; the prose is what this is about.
+            if (text.length() < 25) {
+                continue;
+            }
+            String key = catalog.get(text);
+            if (key == null || spanish.lines().noneMatch(line -> line.startsWith(key + "="))) {
+                untranslated.add(text.length() > 60 ? text.substring(0, 60) + "..." : text);
+            }
+        }
+        assertTrue(untranslated.isEmpty(),
+                "These strings would show in English in a Spanish window: " + untranslated);
+    }
+
     /** The navigation rail label comes from `nav.<icon>`; without it the rail
      *  shows the raw key. This was caught by the app logging a missing key on
      *  its first launch. */

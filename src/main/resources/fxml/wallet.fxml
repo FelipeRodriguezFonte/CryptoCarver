@@ -238,4 +238,78 @@
             </panes>
         </Accordion>
     </VBox>
+    <!-- ================================================== SCA / OpenID4VP -->
+    <VBox fx:id="scaSection" spacing="14" managed="false" visible="false">
+        <Label text="SCA with the wallet (TS12)" styleClass="section-header"/>
+        <Label text="PSD2 dynamic linking: what the payer authenticates has to be this payment, so a captured authentication cannot be replayed against another. The wallet signs the hash of the transaction inside the Key Binding JWT; verifying that hash is verifying what the user agreed to. Two authentication factors are counted as categories, not as tokens."
+               wrapText="true" styleClass="helper-text"/>
+        <Accordion styleClass="module-accordion">
+            <panes>
+                <TitledPane text="Build transaction data" expanded="true">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Transaction type:" styleClass="form-label"/>
+                        <ComboBox fx:id="scaTypeCombo" prefWidth="320" styleClass="form-field"/>
+                        <Label text="Credential identifiers (comma separated):" styleClass="form-label"/>
+                        <TextField fx:id="scaCredentialIdsField" text="sca" styleClass="form-field"/>
+                        <Label text="Payload (JSON):" styleClass="form-label"/>
+                        <TextArea fx:id="scaPayloadArea" prefHeight="90" wrapText="true"
+                                  promptText="{&quot;amount&quot;: &quot;123.45&quot;, &quot;currency&quot;: &quot;EUR&quot;, &quot;payee&quot;: &quot;Shop&quot;}"/>
+                        <Button text="Build" onAction="#handleScaBuild" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="scaEntryArea" prefHeight="80" wrapText="true"
+                                  promptText="The base64url transaction data entry appears here, and is also the input below"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Verify dynamic linking">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Presentation (SD-JWT VC with its Key Binding JWT):" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="scaPresentationArea" prefHeight="90" wrapText="true" promptText="Paste the presentation"/>
+                        <Label text="Transaction data entries, one per line — every one must be covered by the Key Binding JWT:" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="scaTransactionDataArea" prefHeight="70" wrapText="true"
+                                  promptText="Paste the entries the verifier sent"/>
+                        <Label text="Issuer public key (PEM):" styleClass="form-label"/>
+                        <TextArea fx:id="scaIssuerKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <Label text="Holder public key (PEM):" styleClass="form-label"/>
+                        <TextArea fx:id="scaHolderKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <Label text="Expected audience, nonce and response mode:" styleClass="form-label"/>
+                        <TextField fx:id="scaAudienceField" promptText="https://psp.example" styleClass="form-field"/>
+                        <TextField fx:id="scaNonceField" promptText="nonce from the request" styleClass="form-field"/>
+                        <TextField fx:id="scaResponseModeField" text="direct_post.jwt" styleClass="form-field"/>
+                        <Button text="Verify" onAction="#handleScaVerify" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="scaOutputArea" prefHeight="180" editable="false" wrapText="true"
+                                  promptText="Factors, transaction binding and findings"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Inspect an OpenID4VP request">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Request object (a signed JAR, or the plain JSON request):" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="oid4vpRequestArea" prefHeight="110" wrapText="true" promptText="Paste the request"/>
+                        <Label text="Verifier public key (PEM, optional):" styleClass="form-label"/>
+                        <TextArea fx:id="oid4vpKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <Button text="Inspect" onAction="#handleOid4vpInspect" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="oid4vpOutputArea" prefHeight="180" editable="false" wrapText="true"
+                                  promptText="Client identifier scheme, nonce, response mode, transaction data and findings"/>
+                    </VBox>
+                </TitledPane>
+            </panes>
+        </Accordion>
+    </VBox>
+
+    <!-- ==================================================== AdES validation -->
+    <VBox fx:id="adesSection" spacing="14" managed="false" visible="false">
+        <Label text="AdES validation" styleClass="section-header"/>
+        <Label text="XAdES, PAdES, CAdES and ASiC through one validator. The baseline level is the answer, not a detail: B-B proves who signed, B-T adds when, B-LT carries its revocation evidence so it survives the certificate expiring, B-LTA keeps that provable as algorithms age. Without a trust anchor the chain ends nowhere and the result stays INDETERMINATE."
+               wrapText="true" styleClass="helper-text"/>
+        <VBox spacing="8" styleClass="module-pane-content">
+            <Label text="File name — DSS picks its validator from the extension, so an ASiC handed over as &quot;document&quot; is read as a plain zip:" styleClass="form-label" wrapText="true"/>
+            <TextField fx:id="adesFileNameField" text="document.p7m" styleClass="form-field"/>
+            <Label text="Signed document (base64 or hexadecimal):" styleClass="form-label"/>
+            <TextArea fx:id="adesDocumentArea" prefHeight="140" wrapText="true" promptText="Paste the signed document"/>
+            <HBox spacing="8">
+                <Button text="Validate" onAction="#handleAdesValidate" styleClass="action-button"/>
+                <Button text="ETSI report" onAction="#handleAdesEtsiReport" styleClass="secondary-button"/>
+            </HBox>
+            <TextArea fx:id="adesOutputArea" prefHeight="240" editable="false" wrapText="true"
+                      promptText="Level, indication and findings; or the full TS 119 102-2 report"/>
+        </VBox>
+    </VBox>
 </VBox>

@@ -721,6 +721,77 @@ public final class ModuleTextCatalog {
         map.put("Inspect", "module.wallet.inspect");
         map.put("Resolve", "module.wallet.resolve");
         map.put("From JSON", "module.wallet.fromJson");
+        map.put("PSD2 dynamic linking: what the payer authenticates has to be this payment, so a captured authentication cannot be replayed against another. The wallet signs the hash of the transaction inside the Key Binding JWT; verifying that hash is verifying what the user agreed to. Two authentication factors are counted as categories, not as tokens.",
+                "module.wallet.scaHelp");
+        map.put("XAdES, PAdES, CAdES and ASiC through one validator. The baseline level is the answer, not a detail: B-B proves who signed, B-T adds when, B-LT carries its revocation evidence so it survives the certificate expiring, B-LTA keeps that provable as algorithms age. Without a trust anchor the chain ends nowhere and the result stays INDETERMINATE.",
+                "module.wallet.adesHelp");
+        map.put("Claims are taken as JSON, which cannot express CBOR tags, so elements are issued untagged. A real birth date carries tag 1004: documents from here exercise the digest and signature machinery and are not byte-identical to an issuer's.",
+                "module.wallet.mdocHelp");
+        map.put("Reads qcStatements (EN 319 412-5), PSD2 roles (TS 119 495), the PID, Wallet and PSBEAA provider identifiers of TS 119 412-6, and the wallet-relying party access policies of TS 119 411-8. Findings carry the clause identifier they come from. This describes the certificate; qualification is decided by a trusted list.",
+                "module.wallet.eidasCertHelp");
+        map.put("A signature check here establishes that the list is intact, not that its publisher was entitled to publish it: a forged list verifies against its own key just as well. Authority comes from checking the signing certificate against the List of Trusted Lists and the Official Journal, by hand.",
+                "module.wallet.trustedListHelp");
+        map.put("Issuer private key (PEM, EC or RSA):",
+                "module.wallet.lbl.issuerPrivateKeyPEM");
+        map.put("Selectively disclosable paths (one per line; a [] suffix makes each element of an array disclosable):",
+                "module.wallet.lbl.selectivelyDisclosablePathsOne");
+        map.put("Credential type (vct, optional — set it to issue an SD-JWT VC):",
+                "module.wallet.lbl.credentialTypeVctOptional");
+        map.put("Claims to reveal (one per line; empty reveals all):",
+                "module.wallet.lbl.claimsToRevealOne");
+        map.put("Key binding — audience and nonce, both or neither:",
+                "module.wallet.lbl.keyBindingAudienceAnd");
+        map.put("Holder private key (PEM, for the Key Binding JWT):",
+                "module.wallet.lbl.holderPrivateKeyPEM");
+        map.put("Holder public key (PEM, optional — needed to verify key binding):",
+                "module.wallet.lbl.holderPublicKeyPEM");
+        map.put("Expected audience and nonce (optional):",
+                "module.wallet.lbl.expectedAudienceAndNonce");
+        map.put("Presentation (no key needed):",
+                "module.wallet.lbl.presentationNoKeyNeeded");
+        map.put("Issuer private key (PEM, EC):",
+                "module.wallet.lbl.issuerPrivateKeyPEM");
+        map.put("Document signer certificate (PEM) — travels as x5chain:",
+                "module.wallet.lbl.documentSignerCertificatePEM");
+        map.put("Device public key (PEM, optional) — bound into the MSO so a device signature can be tied to this document:",
+                "module.wallet.lbl.devicePublicKeyPEM");
+        map.put("Elements (JSON, keyed by namespace):",
+                "module.wallet.lbl.elementsJSONKeyedBy");
+        map.put("Issuer public key (PEM). Leave empty to use the certificate the document carries, which shows internal consistency and not provenance:",
+                "module.wallet.lbl.issuerPublicKeyPEM");
+        map.put("Statuses (comma or whitespace separated; 0 valid, 1 revoked, 2 suspended):",
+                "module.wallet.lbl.statusesCommaOrWhitespace");
+        map.put("List URI (goes in sub, and must match the credential's uri):",
+                "module.wallet.lbl.listURIGoesIn");
+        map.put("Issuer private key (PEM):",
+                "module.wallet.lbl.issuerPrivateKeyPEM");
+        map.put("Issuer public key (PEM, optional):",
+                "module.wallet.lbl.issuerPublicKeyPEM");
+        map.put("Certificate (PEM or base64 DER):",
+                "module.wallet.lbl.certificatePEMOrBase64");
+        map.put("Certificate to look up (PEM, optional):",
+                "module.wallet.lbl.certificateToLookUp");
+        map.put("Credential identifiers (comma separated):",
+                "module.wallet.lbl.credentialIdentifiersCommaSeparated");
+        map.put("Presentation (SD-JWT VC with its Key Binding JWT):",
+                "module.wallet.lbl.presentationSDJWTVC");
+        map.put("Transaction data entries, one per line — every one must be covered by the Key Binding JWT:",
+                "module.wallet.lbl.transactionDataEntriesOne");
+        map.put("Expected audience, nonce and response mode:",
+                "module.wallet.lbl.expectedAudienceNonceAnd");
+        map.put("Request object (a signed JAR, or the plain JSON request):",
+                "module.wallet.lbl.requestObjectASigned");
+        map.put("Verifier public key (PEM, optional):",
+                "module.wallet.lbl.verifierPublicKeyPEM");
+        map.put("File name — DSS picks its validator from the extension, so an ASiC handed over as \"document\" is read as a plain zip:",
+                "module.wallet.lbl.fileNameDSSPicks");
+        map.put("Signed document (base64 or hexadecimal):",
+                "module.wallet.lbl.signedDocumentBase64Or");
+        map.put("SCA with the wallet (TS12)", "module.wallet.scaTitle");
+        map.put("AdES validation", "module.wallet.adesTitle");
+        map.put("Build transaction data", "module.wallet.buildTransactionData");
+        map.put("Verify dynamic linking", "module.wallet.verifyDynamicLinking");
+        map.put("Inspect an OpenID4VP request", "module.wallet.inspectOid4vp");
         map.put("Load Example", "module.wallet.loadExample");
         return map;
     }

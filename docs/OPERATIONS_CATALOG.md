@@ -131,7 +131,9 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
 |------|-------|----|--------|------|-----------------|---------|
+| 🪪 | AdES Validation | `op_wallet_ades` | EXPERIMENTAL | LOW | `AdES Validation` | AdES, TS 119 102-2, EN 319 102-1, validation report, baseline level |
 | 🪪 | CBOR Inspector | `op_wallet_cbor` | EXPERIMENTAL | NONE | `CBOR Inspector` | CBOR, RFC 8949, diagnostic notation, tag 24 |
+| 🪪 | SCA / OpenID4VP | `op_wallet_sca` | EXPERIMENTAL | HIGH | `SCA / OpenID4VP` | SCA, PSD2, TS12, dynamic linking, OpenID4VP, transaction data |
 | 🪪 | SD-JWT VC | `op_wallet_sdjwt` | EXPERIMENTAL | HIGH | `SD-JWT VC` | SD-JWT, selective disclosure, EUDI, wallet, PID, key binding |
 | 🪪 | Status List | `op_wallet_status_list` | EXPERIMENTAL | LOW | `Status List` | status list, revocation, EUDI, wallet |
 | 🪪 | Trusted List | `op_wallet_trusted_list` | EXPERIMENTAL | LOW | `Trusted List` | trusted list, LOTL, TSL, TS 119 612, eIDAS |

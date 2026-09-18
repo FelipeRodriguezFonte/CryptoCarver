@@ -1,13 +1,16 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
+import com.cryptocarver.crypto.AdesValidationOperations;
 import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.MdocOperations;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
+import com.cryptocarver.crypto.OpenId4VpInspector;
 import com.cryptocarver.crypto.TrustedListInspector;
+import com.cryptocarver.crypto.Ts12ScaOperations;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -60,6 +63,8 @@ public class WalletController implements Initializable {
     @FXML private VBox eidasCertSection;
     @FXML private VBox trustedListSection;
     @FXML private VBox cborSection;
+    @FXML private VBox scaSection;
+    @FXML private VBox adesSection;
 
     // SD-JWT
     @FXML private ComboBox<String> sdJwtAlgoCombo;
@@ -125,6 +130,28 @@ public class WalletController implements Initializable {
     @FXML private TextArea cborJsonArea;
     @FXML private TextArea cborFromJsonOutputArea;
 
+    // SCA / OpenID4VP
+    @FXML private ComboBox<String> scaTypeCombo;
+    @FXML private TextField scaCredentialIdsField;
+    @FXML private TextArea scaPayloadArea;
+    @FXML private TextArea scaEntryArea;
+    @FXML private TextArea scaPresentationArea;
+    @FXML private TextArea scaTransactionDataArea;
+    @FXML private TextArea scaIssuerKeyArea;
+    @FXML private TextArea scaHolderKeyArea;
+    @FXML private TextField scaAudienceField;
+    @FXML private TextField scaNonceField;
+    @FXML private TextField scaResponseModeField;
+    @FXML private TextArea scaOutputArea;
+    @FXML private TextArea oid4vpRequestArea;
+    @FXML private TextArea oid4vpKeyArea;
+    @FXML private TextArea oid4vpOutputArea;
+
+    // AdES validation
+    @FXML private TextField adesFileNameField;
+    @FXML private TextArea adesDocumentArea;
+    @FXML private TextArea adesOutputArea;
+
     private StatusReporter statusReporter;
     private ModuleI18n.Binding moduleI18n;
 
@@ -155,6 +182,12 @@ public class WalletController implements Initializable {
         // The specification defines 1, 2, 4 and 8 and nothing else.
         fill(statusListBitsCombo, "1", "2", "4", "8");
         fill(cborViewCombo, "tree", "diagnostic", "summary");
+        if (scaTypeCombo != null && scaTypeCombo.getItems().isEmpty()) {
+            for (Ts12ScaOperations.TransactionType type : Ts12ScaOperations.TransactionType.values()) {
+                scaTypeCombo.getItems().add(type.urn());
+            }
+            scaTypeCombo.getSelectionModel().selectFirst();
+        }
 
         if (mdocDocTypeField != null && isBlank(textOf(mdocDocTypeField))) {
             mdocDocTypeField.setText(MdocOperations.MDL_DOCTYPE);
@@ -175,7 +208,8 @@ public class WalletController implements Initializable {
             walletContainer.setManaged(true);
             walletContainer.setVisible(true);
         }
-        hide(sdJwtSection, mdocSection, statusListSection, eidasCertSection, trustedListSection, cborSection);
+        hide(sdJwtSection, mdocSection, statusListSection, eidasCertSection, trustedListSection,
+                cborSection, scaSection, adesSection);
         if (sectionName == null) {
             show(sdJwtSection);
             return;
@@ -192,6 +226,10 @@ public class WalletController implements Initializable {
             show(trustedListSection);
         } else if (sectionName.startsWith("CBOR")) {
             show(cborSection);
+        } else if (sectionName.startsWith("SCA")) {
+            show(scaSection);
+        } else if (sectionName.startsWith("AdES")) {
+            show(adesSection);
         } else {
             show(sdJwtSection);
         }
@@ -619,6 +657,118 @@ public class WalletController implements Initializable {
         }
     }
 
+
+    // ------------------------------------------------------ SCA / OpenID4VP
+
+    @FXML
+    private void handleScaBuild() {
+        try {
+            String payload = textOf(scaPayloadArea);
+            if (isBlank(payload)) { showValidation(t("module.wallet.claimsRequired"), "scaPayloadArea"); return; }
+            String entry = Ts12ScaOperations.encodeTransactionData(
+                    Ts12ScaOperations.TransactionType.fromUrn(valueOf(scaTypeCombo,
+                            Ts12ScaOperations.TransactionType.PAYMENT.urn())),
+                    lines(textOf(scaCredentialIdsField)),
+                    payload, "sha-256");
+            scaEntryArea.setText(entry);
+            // The entry is also what the verifying pane consumes, so it is put
+            // there too rather than asking the user to copy it across.
+            if (scaTransactionDataArea != null && isBlank(textOf(scaTransactionDataArea))) {
+                scaTransactionDataArea.setText(entry);
+            }
+            updateStatus(t("module.wallet.status.issued"));
+            publish("SCA Transaction Data", entry);
+        } catch (Exception e) {
+            fail(e, "scaPayloadArea", "sca transaction data");
+        }
+    }
+
+    @FXML
+    private void handleScaVerify() {
+        try {
+            String presentation = textOf(scaPresentationArea);
+            String issuerKey = textOf(scaIssuerKeyArea);
+            if (isBlank(presentation)) { showValidation(t("module.wallet.sdJwtRequired"), "scaPresentationArea"); return; }
+            if (isBlank(issuerKey)) { showValidation(t("module.wallet.keyRequired"), "scaIssuerKeyArea"); return; }
+
+            JWSAlgorithm algorithm = JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256"));
+            String holderKey = textOf(scaHolderKeyArea);
+            Ts12ScaOperations.ScaReport report = Ts12ScaOperations.verify(
+                    presentation,
+                    lines(textOf(scaTransactionDataArea)),
+                    JOSEService.createVerifier(algorithm, issuerKey),
+                    isBlank(holderKey) ? null : JOSEService.createVerifier(algorithm, holderKey),
+                    blankToNull(textOf(scaAudienceField)),
+                    blankToNull(textOf(scaNonceField)),
+                    blankToNull(textOf(scaResponseModeField)));
+
+            String text = Ts12ScaOperations.describe(report, Locale.getDefault());
+            scaOutputArea.setText(text);
+            updateStatus(t("module.wallet.status.verified"));
+            publish("SCA Verify", text, "Dynamic link", report.acceptable() ? "holds" : "does not hold");
+        } catch (Exception e) {
+            fail(e, "scaPresentationArea", "sca verify");
+        }
+    }
+
+    @FXML
+    private void handleOid4vpInspect() {
+        try {
+            String request = textOf(oid4vpRequestArea);
+            if (isBlank(request)) { showValidation(t("module.wallet.requestRequired"), "oid4vpRequestArea"); return; }
+            String key = textOf(oid4vpKeyArea);
+            String report = OpenId4VpInspector.describe(request,
+                    isBlank(key) ? null
+                            : JOSEService.createVerifier(JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256")), key),
+                    Locale.getDefault());
+            oid4vpOutputArea.setText(report);
+            updateStatus(t("module.wallet.status.inspected"));
+            publish("OpenID4VP Request Inspect", report);
+        } catch (Exception e) {
+            fail(e, "oid4vpRequestArea", "openid4vp inspect");
+        }
+    }
+
+    // ------------------------------------------------------ AdES validation
+
+    @FXML
+    private void handleAdesValidate() {
+        runAdes(false);
+    }
+
+    @FXML
+    private void handleAdesEtsiReport() {
+        runAdes(true);
+    }
+
+    private void runAdes(boolean etsiReport) {
+        try {
+            String document = textOf(adesDocumentArea);
+            if (isBlank(document)) { showValidation(t("module.wallet.documentRequired"), "adesDocumentArea"); return; }
+            AdesValidationOperations.Result result = AdesValidationOperations.validate(
+                    decodeDocument(document), textOf(adesFileNameField), null, null);
+            String text = etsiReport
+                    ? result.etsiValidationReportXml()
+                    : AdesValidationOperations.describe(result, Locale.getDefault());
+            adesOutputArea.setText(text);
+            updateStatus(t("module.wallet.status.verified"));
+            publish(etsiReport ? "AdES ETSI Report" : "AdES Validate", text,
+                    "Signatures", String.valueOf(result.signatures().size()));
+        } catch (Exception e) {
+            fail(e, "adesDocumentArea", "ades validate");
+        }
+    }
+
+    /** A signed document is pasted as base64 or as hexadecimal; both are met in
+     *  practice and telling them apart is cheaper than making the user say. */
+    private static byte[] decodeDocument(String value) {
+        String cleaned = value.replaceAll("\\s", "");
+        if (cleaned.matches("(?i)[0-9a-f]+") && cleaned.length() % 2 == 0) {
+            return CborInspector.parseHex(cleaned);
+        }
+        return java.util.Base64.getMimeDecoder().decode(cleaned);
+    }
+
     // --------------------------------------------------------------- toolbar
 
     @FXML
@@ -633,10 +783,15 @@ public class WalletController implements Initializable {
                 statusListTokenArea, statusListVerifyKeyArea, statusListResolveOutputArea,
                 eidasCertArea, eidasCertOutputArea,
                 trustedListXmlArea, trustedListCertArea, trustedListOutputArea,
-                cborInputArea, cborOutputArea, cborJsonArea, cborFromJsonOutputArea);
+                cborInputArea, cborOutputArea, cborJsonArea, cborFromJsonOutputArea,
+                scaPayloadArea, scaEntryArea, scaPresentationArea, scaTransactionDataArea,
+                scaIssuerKeyArea, scaHolderKeyArea, scaOutputArea,
+                oid4vpRequestArea, oid4vpKeyArea, oid4vpOutputArea,
+                adesDocumentArea, adesOutputArea);
         clear(sdJwtVctField, sdJwtAudienceField, sdJwtNonceField,
                 sdJwtVerifyAudienceField, sdJwtVerifyNonceField,
-                statusListUriField, statusListIndexField);
+                statusListUriField, statusListIndexField,
+                scaAudienceField, scaNonceField);
         if (sdJwtDecoyField != null) sdJwtDecoyField.setText("0");
         if (mdocValidityField != null) mdocValidityField.setText("365");
         updateStatus(t("module.wallet.status.cleared"));

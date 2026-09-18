@@ -112,7 +112,7 @@ public final class UiNavigationRegistry {
                 "COSE Encrypt0", "COSE Decrypt0");
         add(routes, new Route(Module.WALLET, null),
                 "SD-JWT VC", "mdoc / mDL", "Status List", "eIDAS Certificate Profiles",
-                "Trusted List", "CBOR Inspector");
+                "Trusted List", "CBOR Inspector", "SCA / OpenID4VP", "AdES Validation");
         add(routes, new Route(Module.EPOCH_CONVERTER, null), "Epoch Converter");
         add(routes, new Route(Module.JSON_FORMATTER, null), "JSON Formatter");
 
