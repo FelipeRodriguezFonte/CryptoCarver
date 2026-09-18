@@ -39,6 +39,7 @@ final class NavigationController {
         return switch (route.module()) {
             case JOSE -> NavigationRail.Section.JOSE;
             case COSE -> NavigationRail.Section.COSE;
+            case WALLET -> NavigationRail.Section.WALLET;
             case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> NavigationRail.Section.KEYS;
             case CERTIFICATES -> NavigationRail.Section.CERTIFICATES;
             case POST_QUANTUM -> NavigationRail.Section.POST_QUANTUM;

@@ -254,6 +254,9 @@ public class SidePanel extends VBox {
             case COSE:
                 buildCategoryTree("COSE");
                 break;
+            case WALLET:
+                buildCategoryTree("Wallet");
+                break;
             case PAYMENTS:
                 buildCategoryTree("Payments");
                 break;

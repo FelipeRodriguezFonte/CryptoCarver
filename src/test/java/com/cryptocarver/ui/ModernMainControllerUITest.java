@@ -1016,6 +1016,7 @@ class ModernMainControllerUITest {
                         getField(controller, "emvContainer"),
                         getField(controller, "jose"),
                         getField(controller, "cose"),
+                        getField(controller, "wallet"),
                         getField(controller, "genericContainer"),
                         getField(controller, "historyView"),
                         getField(controller, "clipboardShelf"),

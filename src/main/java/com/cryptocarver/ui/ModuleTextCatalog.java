@@ -20,6 +20,7 @@ public final class ModuleTextCatalog {
                 cipher(), authentication(), keys(), pkcs11Profiles(), certificates(),
                 generic(), processDesigner(), history(), clipboardShelf(), compareResults(),
                 pqc(), xmlSecurity(), asn1(), wssSecurity(), cose(), jose(), payments(),
+                wallet(),
                 emv(), cmsInspector(), openPgp(), pades(), asic(), cryptoEnvelopeInspector(),
                 icsf());
     }
@@ -699,6 +700,26 @@ public final class ModuleTextCatalog {
         map.put("Decrypted SOAP Output:", "module.wss.decryptedOutput");
         map.put("Decryption Report:", "module.wss.decryptionReport");
         map.put("Save Decrypted XML...", "module.wss.saveDecrypted");
+        return map;
+    }
+
+    public static Map<String, String> wallet() {
+        Map<String, String> map = common();
+        map.put("Wallet / eIDAS 2 — credential formats and trust infrastructure", "module.wallet.subtitle");
+        map.put("SD-JWT VC (RFC 9901), mdoc / mDL (ISO/IEC 18013-5), Token Status List, eIDAS certificate profiles (TS 119 412-6, TS 119 411-8) and Trusted Lists (TS 119 612). Everything is local: no issuer metadata, JWKS, status list or trusted list is ever fetched. Nothing here decides qualification — a trusted list does that, not the bytes.",
+                "module.wallet.disclaimer");
+        map.put("SD-JWT VC", "module.wallet.sdJwtTitle");
+        map.put("mdoc / mDL", "module.wallet.mdocTitle");
+        map.put("Token Status List", "module.wallet.statusListTitle");
+        map.put("eIDAS certificate profiles", "module.wallet.eidasCertTitle");
+        map.put("Trusted List", "module.wallet.trustedListTitle");
+        map.put("CBOR", "module.wallet.cborTitle");
+        map.put("Issue", "module.wallet.issue");
+        map.put("Present", "module.wallet.present");
+        map.put("Verify and inspect", "module.wallet.verifyAndInspect");
+        map.put("Resolve", "module.wallet.resolve");
+        map.put("From JSON", "module.wallet.fromJson");
+        map.put("Load Example", "module.wallet.loadExample");
         return map;
     }
 

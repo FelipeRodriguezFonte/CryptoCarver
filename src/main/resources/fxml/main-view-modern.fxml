@@ -320,6 +320,7 @@
                         <!-- Saved Sessions Container -->
                         <ModuleHost fx:id="jose" resource="/fxml/jose.fxml" managed="false" visible="false" />
                         <ModuleHost fx:id="cose" resource="/fxml/cose.fxml" managed="false" visible="false" />
+                        <ModuleHost fx:id="wallet" resource="/fxml/wallet.fxml" managed="false" visible="false" />
 
 
                         <VBox styleClass="ux-inline-8d20c1fddd" fx:id="savedSessionsContainer" managed="false" visible="false" spacing="15">

@@ -37,6 +37,7 @@ public class NavigationRail extends VBox {
         CERTIFICATES("certificates", "Certificates"),
         JOSE("jose", "JOSE"),
         COSE("cose", "COSE"),
+        WALLET("wallet", "Wallet / eIDAS"),
         XML_SECURITY("xmlSecurity", "XML Security"),
         ASN1("asn1", "ASN.1"),
         // Domain.

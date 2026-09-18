@@ -16,6 +16,7 @@ public final class UiNavigationRegistry {
     public enum Module {
         JOSE,
         COSE,
+        WALLET,
         EPOCH_CONVERTER,
         JSON_FORMATTER,
         KEYS_SYMMETRIC,
@@ -109,6 +110,9 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.COSE, null),
                 "COSE Sign1", "COSE Verify1", "COSE MAC0", "COSE Verify MAC0",
                 "COSE Encrypt0", "COSE Decrypt0");
+        add(routes, new Route(Module.WALLET, null),
+                "SD-JWT VC", "mdoc / mDL", "Status List", "eIDAS Certificate Profiles",
+                "Trusted List", "CBOR Inspector");
         add(routes, new Route(Module.EPOCH_CONVERTER, null), "Epoch Converter");
         add(routes, new Route(Module.JSON_FORMATTER, null), "JSON Formatter");
 

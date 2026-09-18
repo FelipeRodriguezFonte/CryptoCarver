@@ -34,6 +34,7 @@ public final class IconRegistry {
             Map.entry("certificates", MaterialDesignC.CERTIFICATE),
             Map.entry("jose", MaterialDesignW.WEB),
             Map.entry("cose", MaterialDesignP.PACKAGE_VARIANT_CLOSED),
+            Map.entry("wallet", MaterialDesignW.WALLET_OUTLINE),
             Map.entry("payments", MaterialDesignC.CREDIT_CARD_OUTLINE),
             Map.entry("asn1", MaterialDesignC.CODE_JSON),
             Map.entry("history", MaterialDesignH.HISTORY),
@@ -75,6 +76,7 @@ public final class IconRegistry {
             case "📜", "certificates" -> "certificates";
             case "🌐", "jose" -> "jose";
             case "📦", "cose" -> "cose";
+            case "🪪", "wallet" -> "wallet";
             case "💳", "payments" -> "payments";
             case "{}", "asn1" -> "asn1";
             case "⏱", "history" -> "history";

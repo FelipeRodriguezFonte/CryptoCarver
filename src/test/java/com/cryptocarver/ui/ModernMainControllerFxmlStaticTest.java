@@ -48,6 +48,11 @@ class ModernMainControllerFxmlStaticTest {
     }
 
     @Test
+    void testWalletFxml() throws Exception {
+        verifyFxmlAgainstController("/fxml/wallet.fxml", WalletController.class);
+    }
+
+    @Test
     void testCompressedHexFxml() throws Exception {
         verifyFxmlAgainstController("/fxml/compressed_hex.fxml", CompressedHexController.class);
     }

@@ -127,6 +127,17 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔮 | PQC Key Generation | `op_pqc_gen` | EXPERIMENTAL | HIGH | `PQC Key Generation` | ML-KEM, Kyber, ML-DSA, Dilithium |
 | ✒ | PQC Sign/Verify | `op_pqc_sign` | EXPERIMENTAL | HIGH | `PQC Sign/Verify` | SLH-DSA, SPHINCS+ |
 
+## Wallet
+
+| Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
+|------|-------|----|--------|------|-----------------|---------|
+| 🪪 | CBOR Inspector | `op_wallet_cbor` | EXPERIMENTAL | NONE | `CBOR Inspector` | CBOR, RFC 8949, diagnostic notation, tag 24 |
+| 🪪 | SD-JWT VC | `op_wallet_sdjwt` | EXPERIMENTAL | HIGH | `SD-JWT VC` | SD-JWT, selective disclosure, EUDI, wallet, PID, key binding |
+| 🪪 | Status List | `op_wallet_status_list` | EXPERIMENTAL | LOW | `Status List` | status list, revocation, EUDI, wallet |
+| 🪪 | Trusted List | `op_wallet_trusted_list` | EXPERIMENTAL | LOW | `Trusted List` | trusted list, LOTL, TSL, TS 119 612, eIDAS |
+| 🪪 | eIDAS Certificate Profiles | `op_wallet_eidas_cert` | EXPERIMENTAL | LOW | `eIDAS Certificate Profiles` | qcStatements, QWAC, QSealC, PSD2, TS 119 412-6, TS 119 411-8 |
+| 🪪 | mdoc / mDL | `op_wallet_mdoc` | EXPERIMENTAL | HIGH | `mdoc / mDL` | mdoc, mDL, 18013-5, MSO, EUDI, wallet |
+
 ## XML Security
 
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |

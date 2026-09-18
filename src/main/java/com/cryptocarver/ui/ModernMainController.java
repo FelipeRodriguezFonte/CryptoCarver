@@ -47,6 +47,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private javafx.scene.control.Label contentPlaceholderLabel;
     @FXML private ModuleHost jose;
     @FXML private ModuleHost cose;
+    @FXML private ModuleHost wallet;
     @FXML private GenericController genericContainerController;
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
@@ -272,6 +273,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private CipherController cipherController;
     @FXML private JOSEController joseController;
     @FXML private COSEController coseController;
+    @FXML private WalletController walletController;
 
     @FXML
     private MenuBar mainMenuBar;
@@ -359,7 +361,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ModuleLoader moduleLoader = new ModuleLoader(ModernMainController.class);
 
     private ModuleHost[] moduleHosts() {
-        return new ModuleHost[]{jose, cose, keysContainer, certificatesContainer,
+        return new ModuleHost[]{jose, cose, wallet, keysContainer, certificatesContainer,
                 cipherContainer, authenticationContainer, paymentsContainer, emvContainer,
                 genericContainer, historyView, clipboardShelf, postQuantumContainer,
                 xmlSecurityContainer, wssSecurityContainer, processDesignerContainer};
@@ -395,6 +397,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             jose.setReporter(this);
         } else if (controller instanceof COSEController cose) {
             cose.setReporter(this);
+        } else if (controller instanceof WalletController wallet) {
+            wallet.setReporter(this);
         } else if (controller instanceof HistoryController history) {
             history.setHistoryManager(historyManager());
             history.setOperationNavigator(this);
@@ -1230,6 +1234,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         switch (route.module()) {
             case JOSE -> showJOSE();
             case COSE -> showCOSE();
+            case WALLET -> showWallet();
             case EPOCH_CONVERTER -> handleEpochConverter();
             case JSON_FORMATTER -> handleJsonFormatter();
             case KEYS_SYMMETRIC -> {
@@ -1372,6 +1377,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case CERTIFICATES -> i18n.text("bread.certificatesCms");
                 case JOSE -> i18n.text("bread.joseJwt");
                 case COSE -> i18n.text("bread.coseSign1");
+                case WALLET -> i18n.text("bread.wallet");
                 case POST_QUANTUM -> i18n.text("bread.postQuantumPqc");
                 case XML_SECURITY -> i18n.text("bread.xmlSecurity");
                 case WSS_SECURITY -> i18n.text("bread.wssSecurity");
@@ -1455,6 +1461,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 case CERTIFICATES -> navigationRail.selectSection(NavigationRail.Section.CERTIFICATES);
                 case JOSE -> navigationRail.selectSection(NavigationRail.Section.JOSE);
                 case COSE -> navigationRail.selectSection(NavigationRail.Section.COSE);
+                case WALLET -> navigationRail.selectSection(NavigationRail.Section.WALLET);
                 case POST_QUANTUM -> navigationRail.selectSection(NavigationRail.Section.POST_QUANTUM);
                 case XML_SECURITY, WSS_SECURITY -> navigationRail.selectSection(NavigationRail.Section.XML_SECURITY);
                 case EMV, PAYMENTS -> navigationRail.selectSection(NavigationRail.Section.PAYMENTS);
@@ -1771,6 +1778,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return switch (route.module()) {
             case JOSE -> new ConfigurationTarget(joseController, jose);
             case COSE -> new ConfigurationTarget(coseController, cose);
+            case WALLET -> new ConfigurationTarget(walletController, wallet);
             case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> new ConfigurationTarget(keysContainerController, keysContainer);
             case CERTIFICATES -> new ConfigurationTarget(certificatesContainerController, certificatesContainer);
             case GENERIC -> new ConfigurationTarget(genericContainerController, genericContainer);
@@ -3399,6 +3407,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             cose.setVisible(false);
             cose.setManaged(false);
         }
+        if (wallet != null) {
+            wallet.setVisible(false);
+            wallet.setManaged(false);
+        }
         if (genericContainer != null) {
             genericContainer.setVisible(false);
             genericContainer.setManaged(false);
@@ -3507,6 +3519,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         if (joseController != null) {
             joseController.showSection(currentActiveOperation);
+        }
+    }
+
+    private void showWallet() {
+        if (walletController == null) walletController = ensureModule(wallet, WalletController.class);
+        hideAllContainers();
+        if (wallet != null) {
+            wallet.setManaged(true);
+            wallet.setVisible(true);
+        }
+        if (walletController != null) {
+            walletController.showSection(currentActiveOperation);
         }
     }
 

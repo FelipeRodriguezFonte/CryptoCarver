@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!-- Button text here avoids "_" entirely: Button defaults mnemonicParsing=true and swallows a
+     single underscore as a shortcut marker (see the note in cose.fxml). Where a literal
+     underscore is unavoidable in a label, plain Labels are used, which default to
+     mnemonicParsing=false. -->
+<VBox fx:id="walletContainer" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cryptocarver.ui.WalletController" managed="false" visible="false" spacing="10" styleClass="content-container-vbox,wallet-module">
+    <HBox alignment="CENTER_RIGHT">
+        <Button text="Clear" onAction="#handleClear" styleClass="secondary-button"/>
+        <Button text="Load Example" onAction="#handleLoadExample" styleClass="secondary-button"/>
+    </HBox>
+
+    <Label text="Wallet / eIDAS 2 — credential formats and trust infrastructure" styleClass="helper-text"/>
+    <Label text="SD-JWT VC (RFC 9901), mdoc / mDL (ISO/IEC 18013-5), Token Status List, eIDAS certificate profiles (TS 119 412-6, TS 119 411-8) and Trusted Lists (TS 119 612). Everything is local: no issuer metadata, JWKS, status list or trusted list is ever fetched. Nothing here decides qualification — a trusted list does that, not the bytes."
+           wrapText="true" styleClass="helper-text"/>
+
+    <!-- ============================================================ SD-JWT -->
+    <VBox fx:id="sdJwtSection" spacing="14" managed="false" visible="false">
+        <Label text="SD-JWT VC" styleClass="section-header"/>
+        <Accordion styleClass="module-accordion">
+            <panes>
+                <TitledPane text="Issue" expanded="true">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Algorithm:" styleClass="form-label"/>
+                        <ComboBox fx:id="sdJwtAlgoCombo" prefWidth="220" styleClass="form-field"/>
+                        <Label text="Issuer private key (PEM, EC or RSA):" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtIssuerKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PRIVATE KEY-----"/>
+                        <Label text="Claims (JSON):" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtClaimsArea" prefHeight="90" wrapText="true" promptText="{&quot;given_name&quot;: &quot;John&quot;}"/>
+                        <Label text="Selectively disclosable paths (one per line; a [] suffix makes each element of an array disclosable):" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="sdJwtDisclosableArea" prefHeight="60" wrapText="true" promptText="given_name&#10;address.locality&#10;nationalities[]"/>
+                        <Label text="Credential type (vct, optional — set it to issue an SD-JWT VC):" styleClass="form-label" wrapText="true"/>
+                        <TextField fx:id="sdJwtVctField" promptText="urn:eudi:pid:1" styleClass="form-field"/>
+                        <Label text="Decoy digests:" styleClass="form-label"/>
+                        <TextField fx:id="sdJwtDecoyField" text="0" prefWidth="120" styleClass="form-field"/>
+                        <Button text="Issue" onAction="#handleSdJwtIssue" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="sdJwtIssueOutputArea" prefHeight="90" editable="false" wrapText="true"
+                                  promptText="The SD-JWT with every Disclosure attached will appear here"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Present">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="SD-JWT as issued:" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtPresentInputArea" prefHeight="80" wrapText="true" promptText="Paste the issued SD-JWT"/>
+                        <Label text="Claims to reveal (one per line; empty reveals all):" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="sdJwtRevealArea" prefHeight="60" wrapText="true" promptText="given_name"/>
+                        <Label text="Key binding — audience and nonce, both or neither:" styleClass="form-label" wrapText="true"/>
+                        <TextField fx:id="sdJwtAudienceField" promptText="https://verifier.example" styleClass="form-field"/>
+                        <TextField fx:id="sdJwtNonceField" promptText="nonce from the verifier" styleClass="form-field"/>
+                        <Label text="Holder private key (PEM, for the Key Binding JWT):" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtHolderKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PRIVATE KEY-----"/>
+                        <Button text="Present" onAction="#handleSdJwtPresent" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="sdJwtPresentOutputArea" prefHeight="90" editable="false" wrapText="true"
+                                  promptText="The narrowed presentation will appear here"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Verify">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Presentation:" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtVerifyInputArea" prefHeight="80" wrapText="true" promptText="Paste the presentation"/>
+                        <Label text="Issuer public key (PEM):" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtVerifyIssuerKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <Label text="Holder public key (PEM, optional — needed to verify key binding):" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="sdJwtVerifyHolderKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <Label text="Expected audience and nonce (optional):" styleClass="form-label"/>
+                        <TextField fx:id="sdJwtVerifyAudienceField" promptText="https://verifier.example" styleClass="form-field"/>
+                        <TextField fx:id="sdJwtVerifyNonceField" promptText="nonce the verifier issued" styleClass="form-field"/>
+                        <Button text="Verify" onAction="#handleSdJwtVerify" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="sdJwtVerifyOutputArea" prefHeight="110" editable="false" wrapText="true"
+                                  promptText="The rebuilt payload will appear here"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Inspect">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Presentation (no key needed):" styleClass="form-label"/>
+                        <TextArea fx:id="sdJwtInspectInputArea" prefHeight="80" wrapText="true" promptText="Paste any SD-JWT"/>
+                        <Button text="Inspect" onAction="#handleSdJwtInspect" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="sdJwtInspectOutputArea" prefHeight="140" editable="false" wrapText="true"
+                                  promptText="Header, payload, decoded Disclosures and key binding"/>
+                    </VBox>
+                </TitledPane>
+            </panes>
+        </Accordion>
+    </VBox>
+
+    <!-- ============================================================== mdoc -->
+    <VBox fx:id="mdocSection" spacing="14" managed="false" visible="false">
+        <Label text="mdoc / mDL" styleClass="section-header"/>
+        <Label text="Claims are taken as JSON, which cannot express CBOR tags, so elements are issued untagged. A real birth date carries tag 1004: documents from here exercise the digest and signature machinery and are not byte-identical to an issuer's."
+               wrapText="true" styleClass="helper-text"/>
+        <Accordion styleClass="module-accordion">
+            <panes>
+                <TitledPane text="Issue" expanded="true">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Document type:" styleClass="form-label"/>
+                        <TextField fx:id="mdocDocTypeField" styleClass="form-field"/>
+                        <Label text="Digest algorithm:" styleClass="form-label"/>
+                        <ComboBox fx:id="mdocDigestCombo" prefWidth="220" styleClass="form-field"/>
+                        <Label text="Issuer private key (PEM, EC):" styleClass="form-label"/>
+                        <TextArea fx:id="mdocIssuerKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PRIVATE KEY-----"/>
+                        <Label text="Document signer certificate (PEM) — travels as x5chain:" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="mdocSignerCertArea" prefHeight="70" wrapText="true" promptText="-----BEGIN CERTIFICATE-----"/>
+                        <Label text="Device public key (PEM, optional) — bound into the MSO so a device signature can be tied to this document:" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="mdocDeviceKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <Label text="Elements (JSON, keyed by namespace):" styleClass="form-label"/>
+                        <TextArea fx:id="mdocClaimsArea" prefHeight="90" wrapText="true" promptText="{&quot;org.iso.18013.5.1&quot;: {&quot;family_name&quot;: &quot;Doe&quot;}}"/>
+                        <Label text="Validity (days):" styleClass="form-label"/>
+                        <TextField fx:id="mdocValidityField" text="365" prefWidth="120" styleClass="form-field"/>
+                        <Button text="Issue" onAction="#handleMdocIssue" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="mdocIssueOutputArea" prefHeight="90" editable="false" wrapText="true"
+                                  promptText="The IssuerSigned structure, hex-encoded"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Verify and inspect">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="mdoc (hex):" styleClass="form-label"/>
+                        <TextArea fx:id="mdocVerifyInputArea" prefHeight="90" wrapText="true" promptText="Paste the hex-encoded IssuerSigned structure"/>
+                        <Label text="Issuer public key (PEM). Leave empty to use the certificate the document carries, which shows internal consistency and not provenance:" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="mdocVerifyIssuerKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <HBox spacing="8">
+                            <Button text="Verify" onAction="#handleMdocVerify" styleClass="action-button"/>
+                            <Button text="Inspect only" onAction="#handleMdocInspect" styleClass="secondary-button"/>
+                        </HBox>
+                        <TextArea fx:id="mdocVerifyOutputArea" prefHeight="160" editable="false" wrapText="true"
+                                  promptText="The MSO, the disclosed elements and the findings"/>
+                    </VBox>
+                </TitledPane>
+            </panes>
+        </Accordion>
+    </VBox>
+
+    <!-- ====================================================== status list -->
+    <VBox fx:id="statusListSection" spacing="14" managed="false" visible="false">
+        <Label text="Token Status List" styleClass="section-header"/>
+        <Accordion styleClass="module-accordion">
+            <panes>
+                <TitledPane text="Issue" expanded="true">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Bits per entry:" styleClass="form-label"/>
+                        <ComboBox fx:id="statusListBitsCombo" prefWidth="220" styleClass="form-field"/>
+                        <Label text="Statuses (comma or whitespace separated; 0 valid, 1 revoked, 2 suspended):" styleClass="form-label" wrapText="true"/>
+                        <TextArea fx:id="statusListStatusesArea" prefHeight="60" wrapText="true" promptText="0,0,1,0,2,0,0,0"/>
+                        <Label text="List URI (goes in sub, and must match the credential's uri):" styleClass="form-label" wrapText="true"/>
+                        <TextField fx:id="statusListUriField" promptText="https://issuer.example/statuslists/1" styleClass="form-field"/>
+                        <Label text="Algorithm:" styleClass="form-label"/>
+                        <ComboBox fx:id="statusListAlgoCombo" prefWidth="220" styleClass="form-field"/>
+                        <Label text="Issuer private key (PEM):" styleClass="form-label"/>
+                        <TextArea fx:id="statusListKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PRIVATE KEY-----"/>
+                        <Button text="Issue" onAction="#handleStatusListIssue" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="statusListOutputArea" prefHeight="80" editable="false" wrapText="true"
+                                  promptText="The Status List Token will appear here"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="Resolve">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="Status List Token:" styleClass="form-label"/>
+                        <TextArea fx:id="statusListTokenArea" prefHeight="80" wrapText="true" promptText="Paste the Status List Token"/>
+                        <Label text="Credential index:" styleClass="form-label"/>
+                        <TextField fx:id="statusListIndexField" prefWidth="120" promptText="7" styleClass="form-field"/>
+                        <Label text="Issuer public key (PEM, optional):" styleClass="form-label"/>
+                        <TextArea fx:id="statusListVerifyKeyArea" prefHeight="70" wrapText="true" promptText="-----BEGIN PUBLIC KEY-----"/>
+                        <HBox spacing="8">
+                            <Button text="Resolve index" onAction="#handleStatusListResolve" styleClass="action-button"/>
+                            <Button text="Describe list" onAction="#handleStatusListDescribe" styleClass="secondary-button"/>
+                        </HBox>
+                        <TextArea fx:id="statusListResolveOutputArea" prefHeight="120" editable="false" wrapText="true"
+                                  promptText="The status, or a summary of the whole list"/>
+                    </VBox>
+                </TitledPane>
+            </panes>
+        </Accordion>
+    </VBox>
+
+    <!-- ================================================ eIDAS certificate -->
+    <VBox fx:id="eidasCertSection" spacing="14" managed="false" visible="false">
+        <Label text="eIDAS certificate profiles" styleClass="section-header"/>
+        <Label text="Reads qcStatements (EN 319 412-5), PSD2 roles (TS 119 495), the PID, Wallet and PSBEAA provider identifiers of TS 119 412-6, and the wallet-relying party access policies of TS 119 411-8. Findings carry the clause identifier they come from. This describes the certificate; qualification is decided by a trusted list."
+               wrapText="true" styleClass="helper-text"/>
+        <VBox spacing="8" styleClass="module-pane-content">
+            <Label text="Certificate (PEM or base64 DER):" styleClass="form-label"/>
+            <TextArea fx:id="eidasCertArea" prefHeight="120" wrapText="true" promptText="-----BEGIN CERTIFICATE-----"/>
+            <Button text="Inspect" onAction="#handleEidasCertInspect" styleClass="action-button" maxWidth="220"/>
+            <TextArea fx:id="eidasCertOutputArea" prefHeight="220" editable="false" wrapText="true"
+                      promptText="Declared profiles, qcStatements, policies and findings"/>
+        </VBox>
+    </VBox>
+
+    <!-- ===================================================== trusted list -->
+    <VBox fx:id="trustedListSection" spacing="14" managed="false" visible="false">
+        <Label text="Trusted List" styleClass="section-header"/>
+        <Label text="A signature check here establishes that the list is intact, not that its publisher was entitled to publish it: a forged list verifies against its own key just as well. Authority comes from checking the signing certificate against the List of Trusted Lists and the Official Journal, by hand."
+               wrapText="true" styleClass="helper-text"/>
+        <VBox spacing="8" styleClass="module-pane-content">
+            <Label text="Trusted List (XML):" styleClass="form-label"/>
+            <TextArea fx:id="trustedListXmlArea" prefHeight="140" wrapText="true" promptText="Paste the TS 119 612 XML"/>
+            <HBox spacing="8">
+                <Button text="Inspect" onAction="#handleTrustedListInspect" styleClass="action-button"/>
+                <Button text="Verify signature" onAction="#handleTrustedListVerify" styleClass="secondary-button"/>
+            </HBox>
+            <Label text="Certificate to look up (PEM, optional):" styleClass="form-label"/>
+            <TextArea fx:id="trustedListCertArea" prefHeight="80" wrapText="true" promptText="-----BEGIN CERTIFICATE-----"/>
+            <Button text="Find certificate" onAction="#handleTrustedListFind" styleClass="action-button" maxWidth="220"/>
+            <TextArea fx:id="trustedListOutputArea" prefHeight="200" editable="false" wrapText="true"
+                      promptText="Scheme, providers, service statuses and qualifiers"/>
+        </VBox>
+    </VBox>
+
+    <!-- ============================================================= CBOR -->
+    <VBox fx:id="cborSection" spacing="14" managed="false" visible="false">
+        <Label text="CBOR" styleClass="section-header"/>
+        <Accordion styleClass="module-accordion">
+            <panes>
+                <TitledPane text="Inspect" expanded="true">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="CBOR (hex):" styleClass="form-label"/>
+                        <TextArea fx:id="cborInputArea" prefHeight="100" wrapText="true" promptText="a26161016162820203"/>
+                        <Label text="View:" styleClass="form-label"/>
+                        <ComboBox fx:id="cborViewCombo" prefWidth="220" styleClass="form-field"/>
+                        <HBox spacing="8">
+                            <Button text="Inspect" onAction="#handleCborInspect" styleClass="action-button"/>
+                            <Button text="To JSON" onAction="#handleCborToJson" styleClass="secondary-button"/>
+                        </HBox>
+                        <TextArea fx:id="cborOutputArea" prefHeight="200" editable="false" wrapText="true"
+                                  promptText="Tag 24 payloads are decoded and followed into"/>
+                    </VBox>
+                </TitledPane>
+                <TitledPane text="From JSON">
+                    <VBox spacing="8" styleClass="module-pane-content">
+                        <Label text="JSON:" styleClass="form-label"/>
+                        <TextArea fx:id="cborJsonArea" prefHeight="100" wrapText="true" promptText="{&quot;a&quot;: 1}"/>
+                        <Button text="Encode" onAction="#handleCborFromJson" styleClass="action-button" maxWidth="220"/>
+                        <TextArea fx:id="cborFromJsonOutputArea" prefHeight="100" editable="false" wrapText="true"
+                                  promptText="Hex-encoded CBOR"/>
+                    </VBox>
+                </TitledPane>
+            </panes>
+        </Accordion>
+    </VBox>
+</VBox>
