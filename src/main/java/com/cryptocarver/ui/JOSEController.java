@@ -52,6 +52,9 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
     private final DialogService dialogService = new DialogService();
 
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
@@ -64,11 +67,12 @@ public class JOSEController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         moduleI18n = ModuleI18n.bind(joseContainer, ModuleTextCatalog.jose());
-        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
             updateJwkInputPresentation();
             if (detachedStatusLabel != null && detachedStatusLabel.getText() != null
                     && detachedStatusLabel.getText().isBlank()) detachedStatusLabel.setText("");
-        });
+        };
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         // Initialize Combo
             if (jwtAlgoCombo != null && jwtAlgoCombo.getItems().isEmpty()) {
                 jwtAlgoCombo.getItems().addAll(

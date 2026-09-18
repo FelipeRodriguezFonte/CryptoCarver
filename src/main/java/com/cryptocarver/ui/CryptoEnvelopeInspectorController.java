@@ -22,6 +22,9 @@ import java.util.Base64;
  * conventions (inline validation, {@link ModuleResetPolicy}, redacted logging).
  */
 public class CryptoEnvelopeInspectorController {
+    /** Held so the binding's locale listener stays registered: I18nService keeps only a weak reference. */
+    private ModuleI18n.Binding moduleI18n;
+
 
     @FXML private TitledPane cryptoEnvelopeInspectorRoot;
     @FXML private TextArea envelopeInputArea;
@@ -38,7 +41,7 @@ public class CryptoEnvelopeInspectorController {
 
     @FXML
     public void initialize() {
-        ModuleI18n.bind(cryptoEnvelopeInspectorRoot, ModuleTextCatalog.cryptoEnvelopeInspector());
+        moduleI18n = ModuleI18n.bind(cryptoEnvelopeInspectorRoot, ModuleTextCatalog.cryptoEnvelopeInspector());
         IngestionUIHelper.bindField(envelopeInputArea, null,
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN,
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,

@@ -18,6 +18,9 @@ import java.util.Base64;
 import java.util.List;
 
 public class ASN1Controller {
+    /** Held so the binding's locale listener stays registered: I18nService keeps only a weak reference. */
+    private ModuleI18n.Binding moduleI18n;
+
 
     private static final Logger LOG = LoggerFactory.getLogger(ASN1Controller.class);
 
@@ -51,7 +54,7 @@ public class ASN1Controller {
 
     @FXML
     public void initialize() {
-        ModuleI18n.bind(asn1Pane, ModuleTextCatalog.asn1());
+        moduleI18n = ModuleI18n.bind(asn1Pane, ModuleTextCatalog.asn1());
         setupASN1TreeView();
     }
 

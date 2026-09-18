@@ -42,6 +42,9 @@ import java.util.Map;
  * @author Felipe
  */
 public class GenericController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
     private static final Logger LOG = LoggerFactory.getLogger(GenericController.class);
 
     @FunctionalInterface
@@ -633,12 +636,13 @@ public class GenericController {
             bindResult(genericResultPanel, modResultArea, "Modular arithmetic");
             bindResult(genericResultPanel, fileResultArea, "File operation");
         }
-        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
             if (batchStatusLabel == null) return;
             if (activeBatchTask != null && activeBatchTask.isRunning()) {
                 batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
             }
-        });
+        };
+        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         if (batchInputFormatCombo != null) {
             batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
             batchInputFormatCombo.setValue("CSV");

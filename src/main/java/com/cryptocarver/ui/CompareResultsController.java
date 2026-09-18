@@ -19,6 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 public class CompareResultsController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
     private final DialogService dialogService = new DialogService();
 
     @FXML private javafx.scene.layout.VBox compareResultsRoot;
@@ -64,7 +67,8 @@ public class CompareResultsController {
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(compareResultsRoot, ModuleTextCatalog.compareResults());
-        I18nService.getInstance().addLocaleChangeListener(locale -> refresh());
+        localeChangeListener = locale -> refresh();
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
     }
 
     public void setEntries(ClipboardEntry entry1, ClipboardEntry entry2) {

@@ -36,6 +36,9 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class HistoryController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
 
     private final DialogService dialogService = new DialogService();
 
@@ -76,10 +79,11 @@ public class HistoryController {
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(mainHistoryContainer, ModuleTextCatalog.history());
-        I18nService.getInstance().addLocaleChangeListener(locale -> {
+        localeChangeListener = locale -> {
             refresh();
             historyTable.refresh();
-        });
+        };
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         detailsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 

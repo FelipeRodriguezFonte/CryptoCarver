@@ -47,6 +47,9 @@ import java.util.stream.Collectors;
  * analyser's own verdict, translated for display but never re-decided.</p>
  */
 public final class IcsfBatchController {
+    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
+    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
+
 
     /** One line of the statistics table. */
     public record StatisticRow(String dimension, String value, String count, String percentage) { }
@@ -99,7 +102,8 @@ public final class IcsfBatchController {
         setUpInventoryTable();
 
         i18nBinding = ModuleI18n.bind(icsfBatchPane, ModuleTextCatalog.icsf());
-        I18nService.getInstance().addLocaleChangeListener(locale -> refreshLocalizedRuntimeText());
+        localeChangeListener = locale -> refreshLocalizedRuntimeText();
+        I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
     }
 
     private void setUpCombos() {
