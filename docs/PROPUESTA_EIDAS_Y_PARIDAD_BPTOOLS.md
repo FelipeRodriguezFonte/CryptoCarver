@@ -9,7 +9,7 @@ Actualizado el 18 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
 | A — CBOR expuesto, SD-JWT VC, Token Status List | **Hecha** en el núcleo, con tests, y en el Process Designer. Sin paneles de interfaz propios ni entradas en `OperationRegistry`. |
 | B — Linter de certificados eIDAS | **Hecha**: `EidasCertificateInspector`, con TS 119 412-6 (PID, Wallet, QcPSB) y TS 119 411-8 (política WRPAC y sus requisitos). |
 | B — Trusted Lists (TS 119 612) | **Hecha**: `TrustedListInspector`, sin `dss-tsl-validation`. El modelo JAXB del spec ya venía por `dss-validation`, y el módulo que falta es el que descarga y refresca por red, que es justo lo que no queremos. TS 119 602 (modelo JSON) sigue pendiente. |
-| C — mdoc / mDL | Pendiente. La capa CBOR que necesitaba ya está. |
+| C — mdoc / mDL | **Hecha** para la mitad del emisor: `IssuerSigned`, MSO, digests, `issuerAuth`, emisión y verificación. La autenticación de dispositivo llega hasta donde puede sin sesión: se verifica un `deviceSignature` contra su session transcript; un `deviceMac` no, porque su clave sale de un ECDH contra la privada efímera del lector. |
 | D — TS12 SCA e inspector OpenID4VP | Pendiente. `SdJwtOperations.KeyBinding` ya acepta los claims extra que TS12 necesita. |
 | E — Cierre de niveles AdES | Pendiente. |
 | Carril pagos | Pendiente, salvo FPE, que se hizo por otra vía. |
