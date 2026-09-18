@@ -3,6 +3,7 @@ package com.cryptocarver.model.process.handlers;
 import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.EidasCertificateInspector;
 import com.cryptocarver.crypto.JOSEService;
+import com.cryptocarver.crypto.MdocOperations;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.crypto.TrustedListInspector;
@@ -34,12 +35,15 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             "STATUS_LIST_RESOLVE", "STATUS_LIST_DESCRIBE",
             "CBOR_INSPECT", "CBOR_TO_JSON", "CBOR_FROM_JSON",
             "EIDAS_CERT_INSPECT",
-            "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY", "TRUSTED_LIST_FIND_CERT");
+            "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY", "TRUSTED_LIST_FIND_CERT",
+            "MDOC_ISSUE", "MDOC_VERIFY", "MDOC_INSPECT");
 
     private static final List<String> SIGN_ALGORITHMS = List.of(
             "ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512");
     private static final List<String> HASH_ALGORITHMS = List.of("sha-256", "sha-384", "sha-512");
     private static final List<String> CBOR_VIEWS = List.of("tree", "diagnostic", "summary");
+    /** ISO/IEC 18013-5 Table 24 allows exactly these three. */
+    private static final List<String> MDOC_DIGESTS = List.of("SHA-256", "SHA-384", "SHA-512");
 
     @Override public Set<String> supportedTypes() {
         return TYPES;
@@ -87,7 +91,16 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 descriptor("EIDAS_CERT_INSPECT", "eidasCertInspect", List.of()),
                 descriptor("TRUSTED_LIST_INSPECT", "trustedListInspect", List.of()),
                 descriptor("TRUSTED_LIST_VERIFY", "trustedListVerify", List.of()),
-                descriptor("TRUSTED_LIST_FIND_CERT", "trustedListFindCert", List.of()));
+                descriptor("TRUSTED_LIST_FIND_CERT", "trustedListFindCert", List.of()),
+                descriptor("MDOC_ISSUE", "mdocIssue", List.of(
+                        text("docType", MdocOperations.MDL_DOCTYPE),
+                        combo("digestAlgorithm", MDOC_DIGESTS, "SHA-256"),
+                        secret("key"),
+                        multiline("signerCertificate"),
+                        multiline("devicePublicKey"),
+                        text("validityDays", "365"))),
+                descriptor("MDOC_VERIFY", "mdocVerify", List.of(multiline("issuerPublicKey"))),
+                descriptor("MDOC_INSPECT", "mdocInspect", List.of()));
     }
 
     @Override public List<PortDefinition> inputPorts(ProcessDefinition.Node node) {
@@ -103,12 +116,16 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "EIDAS_CERT_INSPECT" -> List.of(port("certificate", any, true));
             case "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY" -> List.of(port("trustedList", any, true));
             case "TRUSTED_LIST_FIND_CERT" -> List.of(port("trustedList", any, true), port("certificate", any, true));
+            case "MDOC_ISSUE" -> List.of(port("claims", any, true), port("key", any, false));
+            case "MDOC_VERIFY", "MDOC_INSPECT" -> List.of(port("mdoc", any, true));
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         };
     }
 
     @Override public Representation outputRepresentation(ProcessDefinition.Node node, Map<String, Representation> inputs) {
-        return "CBOR_FROM_JSON".equals(node.type) ? Representation.BINARY : Representation.TEXT_UTF8;
+        return "CBOR_FROM_JSON".equals(node.type) || "MDOC_ISSUE".equals(node.type)
+                ? Representation.BINARY
+                : Representation.TEXT_UTF8;
     }
 
     @Override public void validateConfiguration(ProcessDefinition.Node node) {
@@ -147,9 +164,16 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 supplied(node, "issuerPublicKey");
             }
             case "CBOR_INSPECT" -> enumValue(node, "view", CBOR_VIEWS);
+            case "MDOC_ISSUE" -> {
+                enumValue(node, "digestAlgorithm", MDOC_DIGESTS);
+                supplied(node, "key");
+                supplied(node, "signerCertificate");
+                supplied(node, "docType");
+            }
+            case "MDOC_VERIFY" -> supplied(node, "issuerPublicKey");
             case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON",
                  "EIDAS_CERT_INSPECT", "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY",
-                 "TRUSTED_LIST_FIND_CERT" -> { }
+                 "TRUSTED_LIST_FIND_CERT", "MDOC_INSPECT" -> { }
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         }
     }
@@ -241,6 +265,31 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 report.append(result.trustNote()).append('\n');
                 yield text(report.toString());
             }
+
+            case "MDOC_ISSUE" -> {
+                java.time.Instant now = java.time.Instant.now();
+                long days = Long.parseLong(value(node, "validityDays", "365"));
+                yield FlowValue.binary(MdocOperations.issue(
+                        value(node, "docType", MdocOperations.MDL_DOCTYPE),
+                        string(inputs, "claims"),
+                        value(node, "digestAlgorithm", "SHA-256"),
+                        new MdocOperations.ValidityInfo(now, now,
+                                now.plus(days, java.time.temporal.ChronoUnit.DAYS), null),
+                        JOSEService.parseECPrivateKey(setting(node, inputs, "key")),
+                        certificate(pem(value(node, "signerCertificate", ""))),
+                        blankToNull(value(node, "devicePublicKey", "")) == null
+                                ? null
+                                : JOSEService.requireEcPublicKey(
+                                        JWSAlgorithm.ES256, value(node, "devicePublicKey", ""))));
+            }
+
+            case "MDOC_VERIFY" -> text(MdocOperations.describe(
+                    bytes(inputs, "mdoc"),
+                    JOSEService.requireEcPublicKey(JWSAlgorithm.ES256, value(node, "issuerPublicKey", "")),
+                    java.time.Instant.now(), Locale.getDefault()));
+
+            case "MDOC_INSPECT" -> text(MdocOperations.describe(
+                    bytes(inputs, "mdoc"), null, java.time.Instant.now(), Locale.getDefault()));
 
             case "TRUSTED_LIST_FIND_CERT" -> {
                 TrustedListInspector.TrustedList list =
@@ -342,6 +391,13 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
     private static PortDefinition port(String n, Set<Representation> r, boolean required) {
         return new PortDefinition(n, r, required);
+    }
+
+    /** Strips PEM armour so a certificate pasted as text and one read from a
+     *  file both reach {@link #certificate(byte[])} as DER. */
+    private static byte[] pem(String value) {
+        String normalized = value.replaceAll("-----BEGIN [^-]+-----|-----END [^-]+-----|\\s", "");
+        return java.util.Base64.getDecoder().decode(normalized);
     }
 
     /** Accepts DER or PEM: the certificate arriving on the wire may have been
