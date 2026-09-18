@@ -101,6 +101,17 @@
             <version>1.1.0</version>
         </dependency>
 
+        <!-- CBOR (RFC 8949). Already on the classpath as a transitive dependency
+             of cose-java; declared explicitly because CborInspector and the mdoc
+             work use it directly, and a direct use should not rest on someone
+             else's transitive. Pinned to the version cose-java 1.1.0 resolves,
+             so nothing about COSE changes. -->
+        <dependency>
+            <groupId>com.upokecenter</groupId>
+            <artifactId>cbor</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+
         <!-- Runtime logger for DSS and other SLF4J-based dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
