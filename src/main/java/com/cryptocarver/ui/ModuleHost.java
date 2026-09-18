@@ -48,6 +48,13 @@ public final class ModuleHost extends VBox {
             loader.register(resource, resource);
             root = loader.load(resource, false);
             controller = loader.controller(resource).orElse(null);
+            // Several module roots still declare visible="false" managed="false". That dates
+            // from when the shell inlined them with fx:include: the root *was* the container
+            // the shell showed and hid, so starting hidden was correct. The host is that
+            // container now, so a root left hidden never appears and the host collapses to
+            // zero height - the section opens on an empty pane. The host owns visibility.
+            root.setVisible(true);
+            root.setManaged(true);
             getChildren().setAll(root);
             return root;
         } catch (java.io.IOException error) {
