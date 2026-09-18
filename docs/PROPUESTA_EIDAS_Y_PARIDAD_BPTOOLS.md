@@ -2,7 +2,7 @@
 
 ### Estado de ejecución
 
-Actualizado el 18 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
+Actualizado el 19 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
 
 | Fase | Estado |
 |---|---|
@@ -10,9 +10,9 @@ Actualizado el 18 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
 | B — Linter de certificados eIDAS | **Hecha**: `EidasCertificateInspector`, con TS 119 412-6 (PID, Wallet, QcPSB) y TS 119 411-8 (política WRPAC y sus requisitos). |
 | B — Trusted Lists (TS 119 612) | **Hecha**: `TrustedListInspector`, sin `dss-tsl-validation`. El modelo JAXB del spec ya venía por `dss-validation`, y el módulo que falta es el que descarga y refresca por red, que es justo lo que no queremos. TS 119 602 (modelo JSON) sigue pendiente. |
 | C — mdoc / mDL | **Hecha** para la mitad del emisor: `IssuerSigned`, MSO, digests, `issuerAuth`, emisión y verificación. La autenticación de dispositivo llega hasta donde puede sin sesión: se verifica un `deviceSignature` contra su session transcript; un `deviceMac` no, porque su clave sale de un ECDH contra la privada efímera del lector. |
-| D — TS12 SCA e inspector OpenID4VP | Pendiente. `SdJwtOperations.KeyBinding` ya acepta los claims extra que TS12 necesita. |
-| E — Cierre de niveles AdES | Pendiente. |
-| Interfaz | **Hecha**: módulo «Wallet / eIDAS» con seis secciones (SD-JWT VC, mdoc, lista de estado, perfiles de certificado, lista de confianza y CBOR), en el rail de navegación y en el buscador. |
+| D — TS12 SCA e inspector OpenID4VP | **Hecha**: `Ts12ScaOperations` verifica el enlace dinámico (datos de transacción, dos factores por categoría, jti, response_mode) y `OpenId4VpInspector` lee una petición sin red. |
+| E — Cierre de niveles AdES | **Parcial**: `AdesValidationOperations` valida XAdES, PAdES, CAdES y ASiC con un solo validador y emite el informe TS 119 102-2, con `dss-cades` y `dss-asic-*` añadidos. Falta la parte de **firma** en niveles LT y LTA, que necesita TSA y datos de revocación frescos, es decir red. |
+| Interfaz | **Hecha**: módulo «Wallet / eIDAS» con ocho secciones (SD-JWT VC, mdoc, lista de estado, perfiles de certificado, lista de confianza, CBOR, SCA/OpenID4VP y validación AdES), en el rail y en el buscador, con un test que exige que cada frase del panel esté traducida. |
 | Carril pagos | Pendiente, salvo FPE, que se hizo por otra vía. |
 
 Límites declarados y no disimulados: la comparación de key usage contra los
