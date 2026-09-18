@@ -77,6 +77,10 @@ public class InlineErrorPresenter {
     }
 
     public void showError(UserFacingError error, Node activeSceneRoot) {
+        if (error == null) {
+            hideBanner();
+            return;
+        }
         clearFieldErrors();
         Node previousFocus = activeSceneRoot != null && activeSceneRoot.getScene() != null
                 ? activeSceneRoot.getScene().getFocusOwner() : null;

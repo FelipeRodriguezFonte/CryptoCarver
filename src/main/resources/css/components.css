@@ -1,4 +1,39 @@
 /* CryptoCarver component styles. Consume tokens from tokens.css. */
+
+/* Reusable result and metadata components (UXP-30/33). */
+.result-panel {
+    -fx-background-color: -cc-bg-surface;
+    -fx-border-color: -cc-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: -cc-radius-md;
+    -fx-background-radius: -cc-radius-md;
+}
+.result-panel-status, .result-panel-operation { -fx-font-weight: 600; }
+.result-panel-operation { -fx-text-fill: -cc-text; }
+.result-panel-metrics { -fx-text-fill: -cc-text-secondary; -fx-font-size: 11px; }
+.result-panel-feedback { -fx-text-fill: -cc-success-text; -fx-font-size: 11px; }
+.result-panel-output-label { -fx-text-fill: -cc-text-secondary; -fx-font-weight: 600; }
+.result-panel-output {
+    -fx-control-inner-background: -cc-bg-sunken;
+    -fx-font-family: monospace;
+    -fx-font-size: 13px;
+    -fx-border-color: -cc-border;
+}
+.result-panel-output-row { -fx-padding: 2px 0; }
+.result-status-success { -fx-text-fill: -cc-success-text; }
+.result-status-error { -fx-text-fill: -cc-danger-text; }
+.result-status-warning { -fx-text-fill: -cc-warning-text; }
+.result-status-empty { -fx-text-fill: -cc-text-secondary; }
+.metadata-chip {
+    -fx-padding: 3px 8px;
+    -fx-background-radius: -cc-radius-sm;
+    -fx-border-radius: -cc-radius-sm;
+    -fx-border-width: 1px;
+}
+.metadata-chip-neutral { -fx-background-color: -cc-bg-sunken; -fx-border-color: -cc-border; -fx-text-fill: -cc-text-secondary; }
+.metadata-chip-info { -fx-background-color: -cc-info-bg; -fx-border-color: -cc-info; -fx-text-fill: -cc-info-text; }
+.metadata-chip-warning { -fx-background-color: -cc-warning-bg; -fx-border-color: -cc-warning; -fx-text-fill: -cc-warning-text; }
+.metadata-chip-danger { -fx-background-color: -cc-danger-bg; -fx-border-color: -cc-danger; -fx-text-fill: -cc-danger-text; }
 /* Menu Bar - FIXED STYLING */
 .main-menu-bar {
     -fx-background-color: -color-bg-sidebar;
