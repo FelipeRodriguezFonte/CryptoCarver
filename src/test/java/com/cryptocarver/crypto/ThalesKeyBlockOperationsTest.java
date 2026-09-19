@@ -339,17 +339,17 @@ class ThalesKeyBlockOperationsTest {
     // =====================================================================
 
     @Test
-    void describeSaysWhatItDoesNotDo() {
-        // A report that quietly omits the key data would read like a tool that
-        // failed. It has to say the cryptography is missing, and why.
+    void describeSaysWhatItReadAndWhatItWouldNeedToReadMore() {
+        // A report that stops at the header without saying so reads like a
+        // tool that failed halfway. It has to name what is missing: the LMK.
         KeyBlock block = ThalesKeyBlockOperations.parse(blockOf(MANUAL_HEADER, 24, "0123ABCD"));
 
         String report = ThalesKeyBlockOperations.describe(block);
 
         assertTrue(report.contains("PIN Verification Key (Visa PVV)"), report);
         assertTrue(report.contains("WELL FORMED"), report);
-        assertTrue(report.contains("not decrypted here"), report);
-        assertTrue(report.contains("a variant of the LMK"), report);
+        assertTrue(report.contains("clear parts only"), report);
+        assertTrue(report.contains("Supply the Key Block LMK"), report);
     }
 
     @Test

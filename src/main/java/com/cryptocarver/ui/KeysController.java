@@ -6672,11 +6672,15 @@ public class KeysController {
 
     @FXML private TextArea keyBlockInputArea;
     @FXML private TextArea keyBlockResultArea;
+    @FXML private TextField keyBlockLmkField;
 
     /** Clause 8.5.1.8, the header the manual works through, padded out to the
      *  72 characters it declares. */
-    private static final String MANUAL_KEY_BLOCK =
-            "S00072V2TG22N0033" + "A".repeat(48) + "0123ABCD";
+    /** payShield manual clause 8.8.1: the published 3DES Key Block test LMK. */
+    private static final String KEY_BLOCK_TEST_LMK = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
+    /** A real block under that LMK, generated with BP-Tools and pinned in the tests. */
+    private static final String BP_TOOLS_KEY_BLOCK =
+            "S00072B0TN00E000256A37F894FD49E61DD3FA27FDE8919D07F7AA966F8BF39AB31D00034";
 
     @FXML
     public void handleKeyBlockInspect() {
@@ -6697,9 +6701,34 @@ public class KeysController {
         }
     }
 
+    /**
+     * Unwraps with the Key Block LMK, which the manual never explains how to
+     * turn into the encryption and MAC keys. The derivation here was taken from
+     * BP-Tools and is pinned by a test; see ThalesKeyBlockOperations.
+     */
+    @FXML
+    public void handleKeyBlockUnwrap() {
+        try {
+            String report = ThalesKeyBlockOperations.describe(ThalesKeyBlockOperations.unwrap(
+                    thalesText(keyBlockLmkField), thalesText(keyBlockInputArea)));
+            if (keyBlockResultArea != null) keyBlockResultArea.setText(report);
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("Thales Key Block Unwrap")
+                        .output(report.getBytes(StandardCharsets.UTF_8))
+                        .status(t("module.keys.keyBlock.status"))
+                        .build());
+            }
+        } catch (Exception e) {
+            if (keyBlockResultArea != null) {
+                keyBlockResultArea.setText(t("module.keys.keyBlock.error", String.valueOf(e.getMessage())));
+            }
+        }
+    }
+
     @FXML
     public void handleKeyBlockExample() {
-        if (keyBlockInputArea != null) keyBlockInputArea.setText(MANUAL_KEY_BLOCK);
+        if (keyBlockInputArea != null) keyBlockInputArea.setText(BP_TOOLS_KEY_BLOCK);
+        if (keyBlockLmkField != null) keyBlockLmkField.setText(KEY_BLOCK_TEST_LMK);
         if (keyBlockResultArea != null) keyBlockResultArea.setText(t("module.keys.keyBlock.exampleLoaded"));
     }
 }

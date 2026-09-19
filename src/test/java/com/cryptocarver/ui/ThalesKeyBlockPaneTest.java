@@ -2,6 +2,8 @@ package com.cryptocarver.ui;
 
 import javafx.application.Platform;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -30,31 +32,44 @@ class ThalesKeyBlockPaneTest {
     }
 
     @Test
-    void theManualExampleLoadsAndInspectsCleanly() throws Exception {
+    void theExampleLoadsAndInspectsCleanly() throws Exception {
         KeysController controller = wire();
 
         controller.handleKeyBlockExample();
-        assertTrue(area(controller, "keyBlockInputArea").getText().startsWith("S00072V2TG22N0033"));
+        assertTrue(area(controller, "keyBlockInputArea").getText().startsWith("S00072B0TN00E0002"));
+        assertTrue(field(controller, "keyBlockLmkField").getText().startsWith("0123456789ABCDEF"),
+                "the example has to load its LMK too, or Unwrap does nothing");
 
         controller.handleKeyBlockInspect();
 
         String report = area(controller, "keyBlockResultArea").getText();
-        assertTrue(report.contains("PIN Verification Key (Visa PVV)"), report);
+        assertTrue(report.contains("Base Derivation Key (BDK-1)"), report);
         assertTrue(report.contains("WELL FORMED"), report);
-        // The example's own LMK ID is outside the range its page defines.
-        assertTrue(report.contains("outside the range"), report);
     }
 
     @Test
-    void theReportSaysWhyTheKeyDataIsNotDecrypted() throws Exception {
+    void theExampleUnwrapsToItsKeyAndTheAuthenticatorMatches() throws Exception {
         KeysController controller = wire();
         controller.handleKeyBlockExample();
 
-        controller.handleKeyBlockInspect();
+        controller.handleKeyBlockUnwrap();
 
         String report = area(controller, "keyBlockResultArea").getText();
-        assertTrue(report.contains("not decrypted here"), report);
-        assertTrue(report.contains("a variant of the LMK"), report);
+        assertTrue(report.contains("735B3125EFF2E04ABFBFA1670180A168"), report);
+        assertTrue(report.contains("MATCHES"), report);
+        assertTrue(report.contains("128 bits"), report);
+    }
+
+    @Test
+    void unwrappingWithoutAnLmkIsReportedRatherThanThrown() throws Exception {
+        KeysController controller = wire();
+        controller.handleKeyBlockExample();
+        field(controller, "keyBlockLmkField").setText("");
+
+        controller.handleKeyBlockUnwrap();
+
+        assertTrue(area(controller, "keyBlockResultArea").getText().toLowerCase().contains("lmk"),
+                area(controller, "keyBlockResultArea").getText());
     }
 
     @Test
@@ -101,7 +116,14 @@ class ThalesKeyBlockPaneTest {
         KeysController controller = new KeysController();
         set(controller, "keyBlockInputArea", new TextArea());
         set(controller, "keyBlockResultArea", new TextArea());
+        set(controller, "keyBlockLmkField", new TextField());
         return controller;
+    }
+
+    private static TextInputControl field(KeysController controller, String name) throws Exception {
+        Field declared = KeysController.class.getDeclaredField(name);
+        declared.setAccessible(true);
+        return (TextInputControl) declared.get(controller);
     }
 
     private static TextArea area(KeysController controller, String name) throws Exception {

@@ -46,30 +46,33 @@ import java.util.Set;
  * {@code 'T'} there. A header is a set of restrictions, and a restriction
  * nobody checks is a comment.</p>
  *
- * <h2>What is deliberately missing: the cryptography</h2>
+ * <h2>The cryptography, and where it came from</h2>
  *
- * <p>This class does not encrypt or decrypt key data, and that is not an
- * oversight. Chapter 8 states the algorithms — 3DES-CBC with header bytes 0-7
- * as the IV and a 4-byte CBC-MAC, or AES-CBC with bytes 0-15 and an 8-byte CMAC
- * — but it never states <b>how the encryption and authentication keys come from
- * the LMK</b>. Clause 8.6 says only "a variant of the LMK" and clause 8.7 "a
- * variant of the LMK", without giving the variant. Two other things are left
- * ambiguous with them:</p>
+ * <p>Chapter 8 states the algorithms but never states <b>how the encryption and
+ * authentication keys come from the LMK</b>: clauses 8.6 and 8.7 both say only
+ * "a variant of the LMK". It also leaves the authenticator's scope ambiguous,
+ * saying "the Key Data" for 3DES where it says "the <em>clear</em> key block"
+ * for AES. Neither gap can be closed by reasoning, and guessing produces blocks
+ * that look perfect and that no HSM accepts.</p>
+ *
+ * <p>Both were settled by generating a key block with EFTLab's BP-Tools
+ * Cryptographic Calculator 21.06, under the 3DES Key Block test LMK that the
+ * manual publishes in clause 8.8.1, and reading back what it derived:</p>
  *
  * <ul>
- *   <li>Whether the 3DES authenticator covers the <em>clear</em> or the
- *       <em>encrypted</em> key data. Clause 8.7 says "the Key Data" for 3DES but
- *       "the clear key block" for AES, and that asymmetry is either meaningful
- *       or a slip.</li>
+ *   <li>{@code KBEK = KBPK XOR 45..45} and {@code KBAK = KBPK XOR 4D..4D},
+ *       across the whole key — the variant method of ANSI X9.143 versions A and
+ *       C, with {@code 'E'} for encryption and {@code 'M'} for MAC.</li>
+ *   <li>The authenticator covers the header and the <b>encrypted</b> key data.
+ *       The manual's asymmetric wording was meaningful, not a slip: computing it
+ *       over the clear data gives {@code C033654B} where the HSM gives
+ *       {@code 31D00034}.</li>
  * </ul>
  *
- * <p>Guessing either would produce blocks that look perfect and that no HSM
- * accepts, which is the failure this repository has already been bitten by once
- * — see {@link ThalesLmkOperations}, where two widely published descriptions of
- * a variant scheme put the XOR in two different wrong bytes and a round trip
- * agreed with itself either way. One genuine key block from a payShield, with
- * its LMK, settles all of it in an afternoon. Until then, the clear parts are
- * here and the cryptography is not.</p>
+ * <p>That vector is reproduced in the tests. Only the 3DES scheme is
+ * implemented: the AES one derives its keys rather than varying them, and no
+ * vector for it has been obtained, so it is refused by name instead of
+ * guessed at.</p>
  */
 public final class ThalesKeyBlockOperations {
 
@@ -850,10 +853,234 @@ public final class ThalesKeyBlockOperations {
             }
         }
 
-        report.append("\nThe key data is not decrypted here. Chapter 8 gives the algorithms but never\n");
-        report.append("says how the encryption and authentication keys come from the LMK — clauses 8.6\n");
-        report.append("and 8.7 both say only \"a variant of the LMK\". Guessing it would produce blocks\n");
-        report.append("that look right and that no HSM accepts.\n");
+        report.append("\nThis reads the clear parts only. Supply the Key Block LMK to unwrap the key\n");
+        report.append("data and check the authenticator.\n");
         return report.toString();
+    }
+
+    // =====================================================================
+    // The cryptography — clauses 8.6 and 8.7
+    // =====================================================================
+
+    /** Clause 8.6 — what a key block gives back once the LMK opens it. */
+    public record Unwrapped(KeyBlock block, String clearKey, int keyBits, String padding,
+                            boolean authentic, String expectedAuthenticator) {
+    }
+
+    /** {@code KBPK XOR 45..45}: the encryption variant, 'E'. */
+    public static String encryptionKey(String kbpk) {
+        return variantOf(kbpk, (byte) 0x45);
+    }
+
+    /** {@code KBPK XOR 4D..4D}: the authentication variant, 'M'. */
+    public static String authenticationKey(String kbpk) {
+        return variantOf(kbpk, (byte) 0x4D);
+    }
+
+    private static String variantOf(String kbpk, byte variant) {
+        byte[] key = keyBlockLmk(kbpk);
+        byte[] out = new byte[key.length];
+        for (int i = 0; i < key.length; i++) {
+            out[i] = (byte) (key[i] ^ variant);
+        }
+        return hex(out);
+    }
+
+    private static byte[] keyBlockLmk(String kbpk) {
+        byte[] key = bytes(normalizeHex(kbpk, "Key Block LMK"));
+        if (key.length != 16 && key.length != 24) {
+            throw new IllegalArgumentException("A 3DES Key Block LMK is a double- or triple-length "
+                    + "TDES key (16 or 24 bytes), not " + key.length);
+        }
+        return key;
+    }
+
+    /**
+     * Wraps a key under a 3DES Key Block LMK.
+     *
+     * @param padding the random padding of clause 8.6, supplied so a test can
+     *                be reproducible; {@code null} draws it from a secure
+     *                random, which is what a real personalisation does
+     */
+    public static String wrap(String kbpk, String header, String clearKey, String padding) {
+        String head = normalizeAscii(header);
+        if (head.length() != HEADER_LENGTH) {
+            throw new IllegalArgumentException("The header is " + HEADER_LENGTH + " characters");
+        }
+        if (head.charAt(0) != VersionId.DES.tag()) {
+            throw new IllegalArgumentException("Only version ID '0', the 3DES Key Block LMK, is "
+                    + "implemented. Version '1' derives its keys from the AES LMK rather than "
+                    + "varying them, and no vector for it has been obtained");
+        }
+        byte[] key = bytes(normalizeHex(clearKey, "clear key"));
+        if (key.length == 0) {
+            throw new IllegalArgumentException("There is no key to wrap");
+        }
+
+        int bits = key.length * 8;
+        int unpadded = 2 + key.length;
+        int padLength = (8 - (unpadded % 8)) % 8;
+        byte[] padBytes;
+        if (padding == null) {
+            padBytes = new byte[padLength];
+            new java.security.SecureRandom().nextBytes(padBytes);
+        } else {
+            padBytes = bytes(normalizeHex(padding, "padding"));
+            if (padBytes.length != padLength) {
+                throw new IllegalArgumentException("A " + key.length + "-byte key needs exactly "
+                        + padLength + " bytes of padding to reach a multiple of 8, not " + padBytes.length);
+            }
+        }
+
+        byte[] plain = new byte[2 + key.length + padBytes.length];
+        plain[0] = (byte) (bits >> 8);
+        plain[1] = (byte) bits;
+        System.arraycopy(key, 0, plain, 2, key.length);
+        System.arraycopy(padBytes, 0, plain, 2 + key.length, padBytes.length);
+
+        byte[] headerBytes = head.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] encrypted = cbc(bytes(encryptionKey(kbpk)),
+                java.util.Arrays.copyOfRange(headerBytes, 0, 8), plain, true);
+        String authenticator = authenticator(kbpk, head, hex(encrypted));
+        return head + hex(encrypted) + authenticator;
+    }
+
+    /**
+     * Unwraps a key block and checks its authenticator.
+     *
+     * <p>The authenticator is computed over the header and the <b>encrypted</b>
+     * key data. That is not what clause 8.7's wording suggests for 3DES, and it
+     * is what the hardware does.</p>
+     */
+    public static Unwrapped unwrap(String kbpk, String input) {
+        KeyBlock block = parse(input);
+        if (block.header().versionId() != VersionId.DES.tag()) {
+            throw new IllegalArgumentException("Only version ID '0', the 3DES Key Block LMK, is "
+                    + "implemented; this block declares '" + block.header().versionId() + "'");
+        }
+        String head = block.raw().substring(0, HEADER_LENGTH + optionalCharacters(block));
+        byte[] encrypted = bytes(block.encryptedKeyData());
+        if (encrypted.length == 0 || encrypted.length % 8 != 0) {
+            throw new IllegalArgumentException("The key data is " + encrypted.length
+                    + " bytes, which 3DES cannot have produced");
+        }
+
+        String expected = authenticator(kbpk, head, block.encryptedKeyData());
+        boolean authentic = expected.equalsIgnoreCase(block.authenticator());
+
+        byte[] headerBytes = head.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] plain = cbc(bytes(encryptionKey(kbpk)),
+                java.util.Arrays.copyOfRange(headerBytes, 0, 8), encrypted, false);
+
+        int bits = ((plain[0] & 0xFF) << 8) | (plain[1] & 0xFF);
+        int keyBytes = bits / 8;
+        if (bits % 8 != 0 || keyBytes < 1 || 2 + keyBytes > plain.length) {
+            // Lead with the authenticator when it failed: the nonsense length is
+            // a symptom of the wrong LMK or an altered block, not a finding.
+            throw new IllegalArgumentException(authentic
+                    ? "The recovered key length is " + bits + " bits, which does not fit the "
+                            + plain.length + " bytes of key data, even though the authenticator matched"
+                    : "The authenticator does not match, so this is the wrong LMK or the block was "
+                            + "altered; what came out decrypts to a key length of " + bits + " bits, "
+                            + "which is not a length at all");
+        }
+        String clearKey = hex(java.util.Arrays.copyOfRange(plain, 2, 2 + keyBytes));
+        String padding = hex(java.util.Arrays.copyOfRange(plain, 2 + keyBytes, plain.length));
+        return new Unwrapped(block, clearKey, bits, padding, authentic, expected);
+    }
+
+    private static int optionalCharacters(KeyBlock block) {
+        int total = 0;
+        for (OptionalBlock optional : block.optionalBlocks()) {
+            total += optional.declaredLength();
+        }
+        return total;
+    }
+
+    /** Clause 8.7 — 3DES CBC-MAC with a zero IV, leftmost four bytes. */
+    private static String authenticator(String kbpk, String header, String encryptedKeyData) {
+        byte[] data = concat(header.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                bytes(normalizeHex(encryptedKeyData, "encrypted key data")));
+        if (data.length % 8 != 0) {
+            throw new IllegalArgumentException("The authenticated data is " + data.length
+                    + " bytes; clause 8.7 says no padding is needed because it is always a multiple of 8");
+        }
+        byte[] chained = cbc(bytes(authenticationKey(kbpk)), new byte[8], data, true);
+        return hex(java.util.Arrays.copyOfRange(chained, chained.length - 8, chained.length - 4));
+    }
+
+    private static byte[] cbc(byte[] key, byte[] iv, byte[] data, boolean encrypt) {
+        byte[] full = new byte[24];
+        if (key.length == 16) {
+            System.arraycopy(key, 0, full, 0, 16);
+            System.arraycopy(key, 0, full, 16, 8);
+        } else {
+            full = key.clone();
+        }
+        try {
+            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("DESede/CBC/NoPadding");
+            cipher.init(encrypt ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE,
+                    new javax.crypto.spec.SecretKeySpec(full, "DESede"),
+                    new javax.crypto.spec.IvParameterSpec(iv));
+            return cipher.doFinal(data);
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException("Triple DES is unavailable", e);
+        }
+    }
+
+    private static byte[] concat(byte[] left, byte[] right) {
+        byte[] joined = new byte[left.length + right.length];
+        System.arraycopy(left, 0, joined, 0, left.length);
+        System.arraycopy(right, 0, joined, left.length, right.length);
+        return joined;
+    }
+
+    private static String normalizeAscii(String value) {
+        return value == null ? "" : value.trim().replaceAll("[\\r\\n\\t]", "");
+    }
+
+    public static String describe(Unwrapped unwrapped) {
+        StringBuilder report = new StringBuilder(describe(unwrapped.block()));
+        report.append("\nUnwrapped\n");
+        report.append("  authenticator : ").append(unwrapped.authentic() ? "MATCHES" : "DOES NOT MATCH")
+                .append(" (expected ").append(unwrapped.expectedAuthenticator()).append(")\n");
+        report.append("  key length    : ").append(unwrapped.keyBits()).append(" bits\n");
+        report.append("  key           : ").append(unwrapped.clearKey()).append('\n');
+        report.append("  padding       : ").append(unwrapped.padding()).append('\n');
+        if (!unwrapped.authentic()) {
+            report.append("\nThe key above came out of the block, but the authenticator does not match,\n");
+            report.append("so either the LMK is wrong or the block was altered. Do not trust the key.\n");
+        }
+        return report.toString();
+    }
+
+    // =====================================================================
+    // Bytes
+    //
+    // The block itself is ASCII and the parser above never needs these; only
+    // the key material and the LMK are hexadecimal.
+    // =====================================================================
+
+    static String normalizeHex(String value, String label) {
+        if (value == null) {
+            return "";
+        }
+        String cleaned = value.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        if (cleaned.isEmpty()) {
+            return "";
+        }
+        if (!cleaned.matches("[0-9A-F]+") || (cleaned.length() % 2) != 0) {
+            throw new IllegalArgumentException(label + " must be even-length hexadecimal");
+        }
+        return cleaned;
+    }
+
+    private static byte[] bytes(String hex) {
+        String normalized = normalizeHex(hex, "hexadecimal value");
+        return normalized.isEmpty() ? new byte[0] : java.util.HexFormat.of().parseHex(normalized);
+    }
+
+    private static String hex(byte[] data) {
+        return java.util.HexFormat.of().formatHex(data).toUpperCase(Locale.ROOT);
     }
 }
