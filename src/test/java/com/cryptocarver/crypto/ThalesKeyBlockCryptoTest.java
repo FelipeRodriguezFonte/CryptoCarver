@@ -172,21 +172,28 @@ class ThalesKeyBlockCryptoTest {
         assertFalse(ThalesKeyBlockOperations.unwrap(KBPK, tampered).authentic());
     }
 
+    /**
+     * The AES scheme was refused by name here until a vector for it was
+     * captured; it now has one and lives in {@link ThalesKeyBlockAesTest}. What
+     * survives of that refusal is this: the two versions are different
+     * constructions, and a 3DES block's key data is not a whole number of AES
+     * blocks, so reading one as the other fails on the arithmetic rather than
+     * producing a wrong key quietly.
+     */
     @Test
-    void anAesKeyBlockIsRefusedByNameRatherThanGuessedAt() {
-        String aesBlock = "10072B0AN00E0002" + ENCRYPTED_KEY + MAC + "12345678";
+    void aThreeDesBlockReadAsAnAesOneFailsOnItsLength() {
+        String mislabelled = "10072B0AN00E0002" + ENCRYPTED_KEY + MAC + "12345678";
 
         IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
-                () -> ThalesKeyBlockOperations.unwrap(KBPK, aesBlock));
-        assertTrue(thrown.getMessage().contains("Only version ID '0'"), thrown.getMessage());
+                () -> ThalesKeyBlockOperations.unwrap(KBPK, mislabelled));
+        assertTrue(thrown.getMessage().contains("16-byte block cipher"), thrown.getMessage());
     }
 
     @Test
-    void wrappingRefusesTheAesVersionForTheSameReason() {
+    void theAesSchemePadsToSixteenBytesRatherThanEight() {
         IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
                 () -> ThalesKeyBlockOperations.wrap(KBPK, "10072B0AN00E0002", PLAIN_KEY, PADDING));
-        assertTrue(thrown.getMessage().contains("no vector for it has been obtained"),
-                thrown.getMessage());
+        assertTrue(thrown.getMessage().contains("exactly 14 bytes of padding"), thrown.getMessage());
     }
 
     @Test

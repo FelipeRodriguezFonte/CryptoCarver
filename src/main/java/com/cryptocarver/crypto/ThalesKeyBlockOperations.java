@@ -867,14 +867,78 @@ public final class ThalesKeyBlockOperations {
                             boolean authentic, String expectedAuthenticator) {
     }
 
-    /** {@code KBPK XOR 45..45}: the encryption variant, 'E'. */
+    /** {@code KBPK XOR 45..45}: the 3DES encryption variant, 'E'. */
     public static String encryptionKey(String kbpk) {
         return variantOf(kbpk, (byte) 0x45);
     }
 
-    /** {@code KBPK XOR 4D..4D}: the authentication variant, 'M'. */
+    /** {@code KBPK XOR 4D..4D}: the 3DES authentication variant, 'M'. */
     public static String authenticationKey(String kbpk) {
         return variantOf(kbpk, (byte) 0x4D);
+    }
+
+    /**
+     * The AES scheme's encryption key. Version {@code '1'} does not vary its
+     * LMK, it <b>derives</b> from it, by the CMAC construction of ANSI X9.143
+     * version D. See {@link #deriveAes}.
+     */
+    public static String aesEncryptionKey(String kbpk) {
+        return deriveAes(kbpk, 0x0000);
+    }
+
+    /** The AES scheme's authentication key, the same derivation with usage {@code 0001}. */
+    public static String aesAuthenticationKey(String kbpk) {
+        return deriveAes(kbpk, 0x0001);
+    }
+
+    /**
+     * ANSI X9.143 version D key derivation: AES-CMAC over eight bytes of
+     * derivation data, repeated with an incrementing counter until the output
+     * is as long as the KBPK.
+     *
+     * <pre>
+     *   counter | key usage (2) | separator 00 | algorithm (2) | length in bits (2)
+     * </pre>
+     *
+     * <p>The trap is the width. That is <b>eight</b> bytes fed to a cipher
+     * whose block is sixteen, so CMAC's own {@code 80 00..} padding applies and
+     * the second subkey is used. Zero-padding it to a full block instead — the
+     * obvious thing to do, and what this bench did first — produces a
+     * plausible-looking key that is wrong, and nothing downstream complains
+     * until an HSM rejects the block.</p>
+     */
+    private static String deriveAes(String kbpk, int usage) {
+        byte[] key = aesKeyBlockLmk(kbpk);
+        int bits = key.length * 8;
+        int algorithm = switch (key.length) {
+            case 16 -> 0x02;
+            case 24 -> 0x03;
+            default -> 0x04;
+        };
+        byte[] out = new byte[key.length];
+        int blocks = (key.length + 15) / 16;
+        for (int counter = 1; counter <= blocks; counter++) {
+            byte[] data = {
+                (byte) counter,
+                (byte) (usage >> 8), (byte) usage,
+                0x00,
+                (byte) (algorithm >> 8), (byte) algorithm,
+                (byte) (bits >> 8), (byte) bits,
+            };
+            byte[] block = cmac(key, data);
+            int at = (counter - 1) * 16;
+            System.arraycopy(block, 0, out, at, Math.min(16, out.length - at));
+        }
+        return hex(out);
+    }
+
+    private static byte[] aesKeyBlockLmk(String kbpk) {
+        byte[] key = bytes(normalizeHex(kbpk, "AES Key Block LMK"));
+        if (key.length != 16 && key.length != 24 && key.length != 32) {
+            throw new IllegalArgumentException("An AES Key Block LMK is 16, 24 or 32 bytes, not "
+                    + key.length);
+        }
+        return key;
     }
 
     private static String variantOf(String kbpk, byte variant) {
@@ -907,19 +971,16 @@ public final class ThalesKeyBlockOperations {
         if (head.length() != HEADER_LENGTH) {
             throw new IllegalArgumentException("The header is " + HEADER_LENGTH + " characters");
         }
-        if (head.charAt(0) != VersionId.DES.tag()) {
-            throw new IllegalArgumentException("Only version ID '0', the 3DES Key Block LMK, is "
-                    + "implemented. Version '1' derives its keys from the AES LMK rather than "
-                    + "varying them, and no vector for it has been obtained");
-        }
+        VersionId version = VersionId.of(head.charAt(0));
         byte[] key = bytes(normalizeHex(clearKey, "clear key"));
         if (key.length == 0) {
             throw new IllegalArgumentException("There is no key to wrap");
         }
 
+        int blockBytes = version.blockBytes();
         int bits = key.length * 8;
         int unpadded = 2 + key.length;
-        int padLength = (8 - (unpadded % 8)) % 8;
+        int padLength = (blockBytes - (unpadded % blockBytes)) % blockBytes;
         byte[] padBytes;
         if (padding == null) {
             padBytes = new byte[padLength];
@@ -928,7 +989,8 @@ public final class ThalesKeyBlockOperations {
             padBytes = bytes(normalizeHex(padding, "padding"));
             if (padBytes.length != padLength) {
                 throw new IllegalArgumentException("A " + key.length + "-byte key needs exactly "
-                        + padLength + " bytes of padding to reach a multiple of 8, not " + padBytes.length);
+                        + padLength + " bytes of padding to reach a multiple of " + blockBytes
+                        + ", not " + padBytes.length);
             }
         }
 
@@ -938,10 +1000,8 @@ public final class ThalesKeyBlockOperations {
         System.arraycopy(key, 0, plain, 2, key.length);
         System.arraycopy(padBytes, 0, plain, 2 + key.length, padBytes.length);
 
-        byte[] headerBytes = head.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-        byte[] encrypted = cbc(bytes(encryptionKey(kbpk)),
-                java.util.Arrays.copyOfRange(headerBytes, 0, 8), plain, true);
-        String authenticator = authenticator(kbpk, head, hex(encrypted));
+        byte[] encrypted = encipher(version, kbpk, head, plain, true);
+        String authenticator = authenticator(version, kbpk, head, hex(encrypted));
         return head + hex(encrypted) + authenticator;
     }
 
@@ -954,23 +1014,18 @@ public final class ThalesKeyBlockOperations {
      */
     public static Unwrapped unwrap(String kbpk, String input) {
         KeyBlock block = parse(input);
-        if (block.header().versionId() != VersionId.DES.tag()) {
-            throw new IllegalArgumentException("Only version ID '0', the 3DES Key Block LMK, is "
-                    + "implemented; this block declares '" + block.header().versionId() + "'");
-        }
+        VersionId version = block.version();
         String head = block.raw().substring(0, HEADER_LENGTH + optionalCharacters(block));
         byte[] encrypted = bytes(block.encryptedKeyData());
-        if (encrypted.length == 0 || encrypted.length % 8 != 0) {
-            throw new IllegalArgumentException("The key data is " + encrypted.length
-                    + " bytes, which 3DES cannot have produced");
+        if (encrypted.length == 0 || encrypted.length % version.blockBytes() != 0) {
+            throw new IllegalArgumentException("The key data is " + encrypted.length + " bytes, "
+                    + "which a " + version.blockBytes() + "-byte block cipher cannot have produced");
         }
 
-        String expected = authenticator(kbpk, head, block.encryptedKeyData());
+        String expected = authenticator(version, kbpk, head, block.encryptedKeyData());
         boolean authentic = expected.equalsIgnoreCase(block.authenticator());
 
-        byte[] headerBytes = head.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-        byte[] plain = cbc(bytes(encryptionKey(kbpk)),
-                java.util.Arrays.copyOfRange(headerBytes, 0, 8), encrypted, false);
+        byte[] plain = encipher(version, kbpk, head, encrypted, false);
 
         int bits = ((plain[0] & 0xFF) << 8) | (plain[1] & 0xFF);
         int keyBytes = bits / 8;
@@ -997,16 +1052,113 @@ public final class ThalesKeyBlockOperations {
         return total;
     }
 
-    /** Clause 8.7 — 3DES CBC-MAC with a zero IV, leftmost four bytes. */
-    private static String authenticator(String kbpk, String header, String encryptedKeyData) {
+    /**
+     * Clause 8.6 — the key data under the encryption key, in CBC with the
+     * header as the initialisation vector.
+     *
+     * <p>One block of header: the first eight characters for 3DES, all sixteen
+     * for AES. That is what binds a block's attributes to its key, and it is
+     * the same trick Atalla uses; see {@link AtallaAkbOperations}. Whether a
+     * block carrying optional headers extends the IV or still takes only the
+     * first block has not been observed, and this takes the first block.</p>
+     */
+    private static byte[] encipher(VersionId version, String kbpk, String header,
+                                   byte[] data, boolean encrypt) {
+        byte[] headerBytes = header.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] iv = java.util.Arrays.copyOfRange(headerBytes, 0, version.blockBytes());
+        return version == VersionId.DES
+                ? cbc(bytes(encryptionKey(kbpk)), iv, data, encrypt)
+                : aesCbc(bytes(aesEncryptionKey(kbpk)), iv, data, encrypt);
+    }
+
+    /**
+     * Clause 8.7 — the authenticator over the header and the <b>encrypted</b>
+     * key data: a 3DES CBC-MAC with a zero IV truncated to four bytes, or an
+     * AES-CMAC truncated to eight.
+     */
+    private static String authenticator(VersionId version, String kbpk, String header,
+                                        String encryptedKeyData) {
         byte[] data = concat(header.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
                 bytes(normalizeHex(encryptedKeyData, "encrypted key data")));
+        if (version == VersionId.AES) {
+            return hex(java.util.Arrays.copyOfRange(cmac(bytes(aesAuthenticationKey(kbpk)), data), 0, 8));
+        }
         if (data.length % 8 != 0) {
             throw new IllegalArgumentException("The authenticated data is " + data.length
                     + " bytes; clause 8.7 says no padding is needed because it is always a multiple of 8");
         }
         byte[] chained = cbc(bytes(authenticationKey(kbpk)), new byte[8], data, true);
         return hex(java.util.Arrays.copyOfRange(chained, chained.length - 8, chained.length - 4));
+    }
+
+    private static byte[] aesCbc(byte[] key, byte[] iv, byte[] data, boolean encrypt) {
+        try {
+            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+            cipher.init(encrypt ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE,
+                    new javax.crypto.spec.SecretKeySpec(key, "AES"),
+                    new javax.crypto.spec.IvParameterSpec(iv));
+            return cipher.doFinal(data);
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException("AES is unavailable", e);
+        }
+    }
+
+    private static byte[] aesEcb(byte[] key, byte[] block) {
+        try {
+            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/ECB/NoPadding");
+            cipher.init(javax.crypto.Cipher.ENCRYPT_MODE,
+                    new javax.crypto.spec.SecretKeySpec(key, "AES"));
+            return cipher.doFinal(block);
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException("AES is unavailable", e);
+        }
+    }
+
+    /** NIST SP 800-38B, AES-CMAC. */
+    private static byte[] cmac(byte[] key, byte[] message) {
+        byte[] subkey1 = shiftLeft(aesEcb(key, new byte[16]));
+        byte[] subkey2 = shiftLeft(subkey1);
+
+        int blocks = Math.max(1, (message.length + 15) / 16);
+        byte[] last = new byte[16];
+        if (message.length > 0 && message.length % 16 == 0) {
+            System.arraycopy(message, (blocks - 1) * 16, last, 0, 16);
+            last = xor(last, subkey1);
+        } else {
+            int remaining = message.length - (blocks - 1) * 16;
+            System.arraycopy(message, (blocks - 1) * 16, last, 0, remaining);
+            last[remaining] = (byte) 0x80;
+            last = xor(last, subkey2);
+        }
+
+        byte[] chained = new byte[16];
+        for (int i = 0; i < blocks - 1; i++) {
+            chained = aesEcb(key, xor(chained, java.util.Arrays.copyOfRange(message, i * 16, i * 16 + 16)));
+        }
+        return aesEcb(key, xor(chained, last));
+    }
+
+    /** The subkey doubling of SP 800-38B: shift left one bit, and on carry XOR the field polynomial. */
+    private static byte[] shiftLeft(byte[] input) {
+        byte[] out = new byte[input.length];
+        int carry = 0;
+        for (int i = input.length - 1; i >= 0; i--) {
+            int value = ((input[i] & 0xFF) << 1) | carry;
+            carry = (value >> 8) & 1;
+            out[i] = (byte) value;
+        }
+        if (carry != 0) {
+            out[out.length - 1] ^= (byte) 0x87;
+        }
+        return out;
+    }
+
+    private static byte[] xor(byte[] left, byte[] right) {
+        byte[] out = new byte[left.length];
+        for (int i = 0; i < left.length; i++) {
+            out[i] = (byte) (left[i] ^ right[i]);
+        }
+        return out;
     }
 
     private static byte[] cbc(byte[] key, byte[] iv, byte[] data, boolean encrypt) {
