@@ -589,6 +589,55 @@
             </TitledPane>
 
             <!-- RSA KEY EXCHANGE -->
+            <TitledPane text="🏛 Thales Variant LMK">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Two different things are both called a variant here. The key type variant enforces what kind of key this is and lands on the first byte of the LMK; the key scheme variant enforces the order of a multi-part key and lands on the first byte of the LMK's right half. Both are applied to the encrypting key, and each 8-byte part is encrypted separately in ECB."
+                           wrapText="true" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="190" prefWidth="190"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="LMK pair:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="thalesLmkField" promptText="Double length (32 hex) or triple length (48 hex)" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Key type code:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="thalesKeyTypeField" promptText="209 is MK-SMI: variant 2 of pair code 09, LMK 28-29" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Key scheme:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <ComboBox fx:id="thalesSchemeCombo" maxWidth="Infinity"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
+
+                        <Label text="Clear key:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="thalesClearKeyField" promptText="The key to protect" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Key under LMK:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="thalesCryptogramField" promptText="With or without its scheme tag" maxWidth="Infinity"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Expected check value:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="thalesCheckValueField" promptText="For the key type search" maxWidth="Infinity"
+                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+
+                    <CheckBox fx:id="thalesComponentCheck" text="This is a key component, not a whole key"/>
+
+                    <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
+                        <Button text="Encrypt Under LMK" onAction="#handleThalesEncrypt" styleClass="action-button,primary-action"/>
+                        <Button text="Decrypt Under LMK" onAction="#handleThalesDecrypt" styleClass="secondary-button"/>
+                        <Button text="Explain Wrapping" onAction="#handleThalesDescribe" styleClass="secondary-button"/>
+                        <Button text="Find Key Type" onAction="#handleThalesLookup" styleClass="secondary-button"/>
+                        <Button text="Load Manual Example" onAction="#handleThalesLoadExample" styleClass="secondary-button"/>
+                    </FlowPane>
+
+                    <TextArea fx:id="thalesResultArea" prefHeight="200" editable="false"
+                              styleClass="result-area,monospace-field"/>
+                </VBox>
+            </TitledPane>
+
             <TitledPane text="🔁 RSA Key Exchange">
                 <VBox styleClass="ux-inline-1684f00703" spacing="6">
                     <TabPane tabClosingPolicy="UNAVAILABLE">

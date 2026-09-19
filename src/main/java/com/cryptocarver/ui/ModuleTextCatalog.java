@@ -162,6 +162,34 @@ public final class ModuleTextCatalog {
         map.put("Derive Key", "module.keys.derive");
         map.put("🔗 AES Key Wrap (RFC 3394 / RFC 5649)", "module.keys.keyWrap");
         map.put("Execute Key Wrap", "module.keys.executeWrap");
+        map.put("🏛 Thales Variant LMK",
+                "module.keys.thales.title");
+        map.put("Two different things are both called a variant here. The key type variant enforces what kind of key this is and lands on the first byte of the LMK; the key scheme variant enforces the order of a multi-part key and lands on the first byte of the LMK's right half. Both are applied to the encrypting key, and each 8-byte part is encrypted separately in ECB.",
+                "module.keys.thales.help");
+        map.put("LMK pair:",
+                "module.keys.thales.lmk");
+        map.put("Key type code:",
+                "module.keys.thales.keyType");
+        map.put("Key scheme:",
+                "module.keys.thales.scheme");
+        map.put("Clear key:",
+                "module.keys.thales.clearKey");
+        map.put("Key under LMK:",
+                "module.keys.thales.cryptogram");
+        map.put("Expected check value:",
+                "module.keys.thales.checkValue");
+        map.put("This is a key component, not a whole key",
+                "module.keys.thales.component");
+        map.put("Encrypt Under LMK",
+                "module.keys.thales.encrypt");
+        map.put("Decrypt Under LMK",
+                "module.keys.thales.decrypt");
+        map.put("Explain Wrapping",
+                "module.keys.thales.describe");
+        map.put("Find Key Type",
+                "module.keys.thales.lookup");
+        map.put("Load Manual Example",
+                "module.keys.thales.loadExample");
         map.put("🔒 TR-31 Key Blocks", "module.keys.tr31");
         map.put("🔁 RSA Key Exchange", "module.keys.rsaKex");
         map.put("🔀 TR-34 Key Distribution", "module.keys.tr34");

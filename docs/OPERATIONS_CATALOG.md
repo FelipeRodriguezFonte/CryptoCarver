@@ -120,6 +120,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔍 | EMV TLV Inspector | `op_pay_emv_tlv` | STABLE | LOW | `EMV TLV Inspector` | EMV |
 | 🔒 | Encrypted PIN Blocks | `op_pay_enc_pin` | STABLE | HIGH | `Encrypted PIN Blocks` | - |
 | 🔢 | PIN Generation | `op_pay_pin_gen` | STABLE | HIGH | `PIN Generation` | - |
+| 💳 | Thales Variant LMK | `op_pay_thales_lmk` | EXPERIMENTAL | HIGH | `Thales Variant LMK` | Thales, payShield, LMK, variant, key type code, key scheme |
 
 ## Post-Quantum
 
@@ -187,6 +188,11 @@ Sensitive payment material is transient and never persisted in `.cfprocess.json`
 | EMV | `EMV_ICC_MASTER_KEY`, `EMV_SESSION_KEY`, `EMV_ARQC_GENERATE`, `EMV_ARQC_VERIFY`, `EMV_ARPC`, `EMV_TLV_PARSE` |
 | Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |
 | EMV offline data authentication | `EMV_ODA_STATIC_DATA`, `EMV_ODA_RECOVER_ISSUER_KEY`, `EMV_ODA_RECOVER_ICC_KEY`, `EMV_ODA_VERIFY_SDA`, `EMV_ODA_VERIFY_DDA`, `EMV_ODA_VERIFY_CDA`, `EMV_ODA_SIGN_SSAD`, `EMV_ODA_SIGN_SDAD` |
+| Thales variant LMK | `THALES_LMK_ENCRYPT`, `THALES_LMK_DECRYPT`, `THALES_LMK_DESCRIBE`, `THALES_LMK_LOOKUP`, `THALES_KCV` |
+
+`THALES_LMK_ENCRYPT` emits the cryptogram without its scheme tag, because a `HEX`
+`FlowValue` cannot carry the leading letter. `THALES_LMK_DESCRIBE` prints the tagged
+form a payShield would show, along with both variants and the byte each one lands on.
 
 The two certificate-signing operations of EMV Book 2 produce three data objects each
 (the certificate, the public key remainder and the exponent), and a node emits one

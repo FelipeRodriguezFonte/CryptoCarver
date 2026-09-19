@@ -462,6 +462,7 @@ public class KeysController {
     private void initialize() {
         moduleI18n = ModuleI18n.bind(keysRoot, ModuleTextCatalog.keys());
         initializeRsaKexControls();
+        initializeThalesControls();
         initialize(null, keyTypeCombo, forceOddParityCheck, generatedKeyField, keyInputField, validationResultArea,
                 numComponentsCombo, keyToSplitField, componentResultsArea,
                 component1Field, component2Field, component3Field, component4Field, component5Field);
@@ -6529,5 +6530,139 @@ public class KeysController {
     private boolean isValidHex(String value) {
         if (value == null) return false;
         return value.matches("^[0-9a-fA-F]*$");
+    }
+
+    // =====================================================================
+    // Thales Variant LMK — payShield 10K Host Programmer's Manual, chapter 7
+    // =====================================================================
+
+    @FXML private TextField thalesLmkField;
+    @FXML private TextField thalesKeyTypeField;
+    @FXML private ComboBox<String> thalesSchemeCombo;
+    @FXML private TextField thalesClearKeyField;
+    @FXML private TextField thalesCryptogramField;
+    @FXML private TextField thalesCheckValueField;
+    @FXML private CheckBox thalesComponentCheck;
+    @FXML private TextArea thalesResultArea;
+
+    /** Clause 7.2.3 — the worked example, every value taken from the manual. */
+    private static final String MANUAL_LMK_28_29 = "1A1A1A1A1A1A1A1A1C1C1C1C1C1C1C1C";
+    private static final String MANUAL_MK_SMI = "F1F1F1F1F1F1F1F1C1C1C1C1C1C1C1C1";
+    private static final String MANUAL_CRYPTOGRAM = "5178C9D3D1052B15BF6AEC458B4A4564";
+    private static final String MANUAL_CHECK_VALUE = "8357D9";
+
+    @FXML
+    public void handleThalesEncrypt() {
+        runThales(() -> {
+            ThalesLmkOperations.WrappedKey wrapped = ThalesLmkOperations.encrypt(
+                    thalesText(thalesClearKeyField), thalesKeyTypeCode(), thalesScheme(), thalesLmk(),
+                    thalesComponentCheck != null && thalesComponentCheck.isSelected());
+            if (thalesCryptogramField != null) thalesCryptogramField.setText(wrapped.cryptogram());
+            if (thalesCheckValueField != null) thalesCheckValueField.setText(wrapped.checkValue());
+            return ThalesLmkOperations.describe(wrapped, thalesLmk());
+        }, "Thales LMK Encrypt");
+    }
+
+    @FXML
+    public void handleThalesDecrypt() {
+        runThales(() -> {
+            ThalesLmkOperations.WrappedKey recovered = ThalesLmkOperations.decrypt(
+                    thalesText(thalesCryptogramField), thalesKeyTypeCode(), thalesScheme(), thalesLmk(),
+                    thalesComponentCheck != null && thalesComponentCheck.isSelected());
+            if (thalesClearKeyField != null) thalesClearKeyField.setText(recovered.cryptogram());
+            if (thalesCheckValueField != null) thalesCheckValueField.setText(recovered.checkValue());
+            return "Recovered key: " + recovered.cryptogram()
+                    + "\nCheck value  : " + recovered.checkValue() + "\n";
+        }, "Thales LMK Decrypt");
+    }
+
+    @FXML
+    public void handleThalesDescribe() {
+        runThales(() -> ThalesLmkOperations.describe(
+                ThalesLmkOperations.encrypt(thalesText(thalesClearKeyField), thalesKeyTypeCode(),
+                        thalesScheme(), thalesLmk(),
+                        thalesComponentCheck != null && thalesComponentCheck.isSelected()),
+                thalesLmk()), "Thales LMK");
+    }
+
+    @FXML
+    public void handleThalesLookup() {
+        runThales(() -> ThalesLmkOperations.describe(ThalesLmkOperations.lookup(
+                thalesText(thalesCryptogramField), thalesText(thalesCheckValueField), thalesLmk())),
+                "Thales Key Type Lookup");
+    }
+
+    /**
+     * Fills the pane with the manual's worked example.
+     *
+     * <p>Useful on its own, and useful as a check: run the same FK console
+     * session on a real payShield and the printed cryptogram should be the one
+     * this pane produces. If they differ, this bench is wrong, not the HSM.</p>
+     */
+    @FXML
+    public void handleThalesLoadExample() {
+        if (thalesLmkField != null) thalesLmkField.setText(MANUAL_LMK_28_29);
+        if (thalesKeyTypeField != null) thalesKeyTypeField.setText("209");
+        if (thalesSchemeCombo != null) thalesSchemeCombo.setValue("U");
+        if (thalesClearKeyField != null) thalesClearKeyField.setText(MANUAL_MK_SMI);
+        if (thalesCryptogramField != null) thalesCryptogramField.setText(MANUAL_CRYPTOGRAM);
+        if (thalesCheckValueField != null) thalesCheckValueField.setText(MANUAL_CHECK_VALUE);
+        if (thalesComponentCheck != null) thalesComponentCheck.setSelected(false);
+        if (thalesResultArea != null) {
+            thalesResultArea.setText(t("module.keys.thales.exampleLoaded"));
+        }
+    }
+
+    /**
+     * The scheme list is the variant schemes only. X and Y are the ANSI X9.17
+     * schemes and S is a Key Block: different formats, so offering them here
+     * would be offering to produce something this code does not produce.
+     */
+    private void initializeThalesControls() {
+        if (thalesSchemeCombo == null) {
+            return;
+        }
+        thalesSchemeCombo.getItems().setAll("U", "T", "Z");
+        thalesSchemeCombo.getSelectionModel().selectFirst();
+    }
+
+    private ThalesLmkOperations.Lmk thalesLmk() {
+        return ThalesLmkOperations.Lmk.of(thalesText(thalesLmkField));
+    }
+
+    private String thalesKeyTypeCode() {
+        String code = thalesText(thalesKeyTypeField);
+        return code.isEmpty() ? "000" : code;
+    }
+
+    private ThalesLmkOperations.Scheme thalesScheme() {
+        String value = thalesSchemeCombo == null || thalesSchemeCombo.getValue() == null
+                ? "U" : thalesSchemeCombo.getValue().trim();
+        return ThalesLmkOperations.Scheme.of(value.isEmpty() ? 'U' : value.charAt(0));
+    }
+
+    private static String thalesText(TextInputControl field) {
+        return field == null || field.getText() == null ? "" : field.getText().trim();
+    }
+
+    private interface ThalesStep {
+        String run() throws Exception;
+    }
+
+    private void runThales(ThalesStep step, String operation) {
+        try {
+            String report = step.run();
+            if (thalesResultArea != null) thalesResultArea.setText(report);
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation(operation)
+                        .output(report.getBytes(StandardCharsets.UTF_8))
+                        .status(t("module.keys.thales.status"))
+                        .build());
+            }
+        } catch (Exception e) {
+            if (thalesResultArea != null) {
+                thalesResultArea.setText(t("module.keys.thales.error", String.valueOf(e.getMessage())));
+            }
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.EMVOperations;
 import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.PaymentOperations;
+import com.cryptocarver.crypto.ThalesLmkOperations;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
 import com.cryptocarver.model.process.NodeCatalog;
@@ -37,7 +38,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
             "EMV_ODA_STATIC_DATA", "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY",
             "EMV_ODA_VERIFY_SDA", "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
-            "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD");
+            "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD",
+            "THALES_LMK_ENCRYPT", "THALES_LMK_DECRYPT", "THALES_LMK_DESCRIBE",
+            "THALES_LMK_LOOKUP", "THALES_KCV");
 
     private static final Set<Representation> TEXT = Set.of(Representation.TEXT_UTF8);
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
@@ -50,6 +53,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "DATA_ENCRYPTION_ENCRYPT", "DATA_ENCRYPTION_DECRYPT", "DATA_ENCRYPTION_BOTH_WAYS",
             "KEY_ENCRYPTION", "KEY_DERIVATION");
     private static final List<String> AES_KEY_TYPES = List.of("AES128", "AES192", "AES256");
+    /** payShield 10K Host Programmer's Manual clause 7.2.3: the variant schemes. */
+    private static final List<String> THALES_SCHEMES = List.of("U", "T", "Z");
 
     @Override
     public Set<String> supportedTypes() { return TYPES; }
@@ -95,6 +100,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                     hexPort("dataAuthenticationCode"), hexPort("staticData"));
             case "EMV_ODA_SIGN_SDAD" -> List.of(hexPort("iccModulus"), hexPort("iccPrivateExponent"),
                     hexPort("iccDynamicData"), hexPort("terminalData"));
+            case "THALES_LMK_ENCRYPT" -> List.of(hexPort("clearKey"), hexPort("lmk"));
+            case "THALES_LMK_DECRYPT", "THALES_LMK_DESCRIBE" -> List.of(hexPort("cryptogram"), hexPort("lmk"));
+            case "THALES_LMK_LOOKUP" -> List.of(hexPort("cryptogram"), hexPort("lmk"), textPort("checkValue"));
+            case "THALES_KCV" -> List.of(hexPort("clearKey"));
             default -> List.of();
         };
     }
@@ -107,11 +116,13 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         return switch (node.type.toUpperCase(Locale.ROOT)) {
             case "PIN_BLOCK_ENCODE", "PIN_BLOCK_TRANSLATE", "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
                     "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARPC",
-                    "EMV_ODA_STATIC_DATA", "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD" -> Representation.HEX;
+                    "EMV_ODA_STATIC_DATA", "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD",
+                    "THALES_LMK_ENCRYPT", "THALES_LMK_DECRYPT", "THALES_KCV" -> Representation.HEX;
             case "PIN_BLOCK_DECODE", "CVV_GENERATE", "CVV_VERIFY", "DCVV_GENERATE", "DCVV_VERIFY", "PVV_GENERATE", "PVV_VERIFY",
                     "IBM3624_OFFSET", "EMV_ARQC_VERIFY", "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
                     "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY", "EMV_ODA_VERIFY_SDA",
-                    "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA" -> Representation.TEXT_UTF8;
+                    "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
+                    "THALES_LMK_DESCRIBE", "THALES_LMK_LOOKUP" -> Representation.TEXT_UTF8;
             default -> Representation.BINARY;
         };
     }
@@ -123,7 +134,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 "certificate", "remainder", "keyExponent", "caModulus", "caExponent", "issuerModulus", "issuerExponent",
                 "iccModulus", "iccExponent", "issuerPrivateExponent", "iccPrivateExponent", "staticData", "aip",
                 "sdaTagList", "ssad", "sdad", "terminalData", "unpredictableNumber", "cid", "dataAuthenticationCode",
-                "iccDynamicData")) {
+                "iccDynamicData", "lmk", "clearKey", "cryptogram")) {
             validateConfiguredHex(node, key);
         }
         switch (type) {
@@ -171,6 +182,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_ODA_VERIFY_CDA" -> { require(node, "sdad"); require(node, "iccModulus"); require(node, "iccExponent"); require(node, "unpredictableNumber"); hexLength(node, "unpredictableNumber", 4); }
             case "EMV_ODA_SIGN_SSAD" -> { require(node, "issuerModulus"); require(node, "issuerPrivateExponent"); hexLength(node, "dataAuthenticationCode", 2); }
             case "EMV_ODA_SIGN_SDAD" -> { require(node, "iccModulus"); require(node, "iccPrivateExponent"); require(node, "iccDynamicData"); }
+            case "THALES_LMK_ENCRYPT" -> { require(node, "clearKey"); require(node, "lmk"); thalesKeyType(node); oneOf(node, "scheme", THALES_SCHEMES); }
+            case "THALES_LMK_DECRYPT", "THALES_LMK_DESCRIBE" -> { require(node, "cryptogram"); require(node, "lmk"); thalesKeyType(node); oneOf(node, "scheme", THALES_SCHEMES); }
+            case "THALES_LMK_LOOKUP" -> { require(node, "cryptogram"); require(node, "lmk"); require(node, "checkValue"); }
+            case "THALES_KCV" -> require(node, "clearKey");
             default -> throw new IllegalArgumentException("Unsupported payment operation");
         }
     }
@@ -259,6 +274,23 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                         privateKey(node, inputs, "iccModulus", "iccPrivateExponent"),
                         hexText(node, inputs, "iccDynamicData"),
                         hexTextOptional(node, inputs, "terminalData")));
+                case "THALES_LMK_ENCRYPT" -> hex(ThalesLmkOperations.encrypt(
+                        hexText(node, inputs, "clearKey"), setting(node, "keyType", "000"),
+                        thalesScheme(node), lmk(node, inputs),
+                        Boolean.parseBoolean(setting(node, "component", "false"))).cryptogram());
+                case "THALES_LMK_DECRYPT" -> hex(ThalesLmkOperations.decrypt(
+                        hexText(node, inputs, "cryptogram"), setting(node, "keyType", "000"),
+                        thalesScheme(node), lmk(node, inputs),
+                        Boolean.parseBoolean(setting(node, "component", "false"))).cryptogram());
+                case "THALES_LMK_DESCRIBE" -> text(ThalesLmkOperations.describe(
+                        ThalesLmkOperations.decrypt(hexText(node, inputs, "cryptogram"),
+                                setting(node, "keyType", "000"), thalesScheme(node), lmk(node, inputs),
+                                Boolean.parseBoolean(setting(node, "component", "false"))),
+                        lmk(node, inputs)));
+                case "THALES_LMK_LOOKUP" -> text(ThalesLmkOperations.describe(ThalesLmkOperations.lookup(
+                        hexText(node, inputs, "cryptogram"), text(node, inputs, "checkValue"),
+                        lmk(node, inputs))));
+                case "THALES_KCV" -> hex(ThalesLmkOperations.checkValue(hexText(node, inputs, "clearKey")));
                 default -> throw new IllegalArgumentException("Unsupported payment operation");
             };
         } catch (IllegalArgumentException e) {
@@ -457,8 +489,42 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 secret("iccPrivateExponent", "module.process.param.payment.iccPrivateExponent"),
                 textParam("iccDynamicData", "module.process.param.payment.iccDynamicData", ""),
                 textParam("terminalData", "module.process.param.payment.terminalData", ""))));
+        result.add(descriptor("THALES_LMK_ENCRYPT", "thalesLmkEncrypt", "thalesLmkEncrypt", params(
+                secret("clearKey", "module.process.param.payment.clearKey"),
+                secret("lmk", "module.process.param.payment.lmk"),
+                textParam("keyType", "module.process.param.payment.thalesKeyType", "000"),
+                combo("scheme", "module.process.param.payment.thalesScheme", THALES_SCHEMES, "U"),
+                new NodeParameter("component", "module.process.param.payment.component", ParameterKind.CHECKBOX, "false"))));
+        result.add(descriptor("THALES_LMK_DECRYPT", "thalesLmkDecrypt", "thalesLmkDecrypt", params(
+                secret("cryptogram", "module.process.param.payment.cryptogram"),
+                secret("lmk", "module.process.param.payment.lmk"),
+                textParam("keyType", "module.process.param.payment.thalesKeyType", "000"),
+                combo("scheme", "module.process.param.payment.thalesScheme", THALES_SCHEMES, "U"),
+                new NodeParameter("component", "module.process.param.payment.component", ParameterKind.CHECKBOX, "false"))));
+        result.add(descriptor("THALES_LMK_DESCRIBE", "thalesLmkDescribe", "thalesLmkDescribe", params(
+                secret("cryptogram", "module.process.param.payment.cryptogram"),
+                secret("lmk", "module.process.param.payment.lmk"),
+                textParam("keyType", "module.process.param.payment.thalesKeyType", "000"),
+                combo("scheme", "module.process.param.payment.thalesScheme", THALES_SCHEMES, "U"),
+                new NodeParameter("component", "module.process.param.payment.component", ParameterKind.CHECKBOX, "false"))));
+        result.add(descriptor("THALES_LMK_LOOKUP", "thalesLmkLookup", "thalesLmkLookup", params(
+                secret("cryptogram", "module.process.param.payment.cryptogram"),
+                secret("lmk", "module.process.param.payment.lmk"),
+                textParam("checkValue", "module.process.param.payment.checkValue", ""))));
+        result.add(descriptor("THALES_KCV", "thalesKcv", "thalesKcv", params(
+                secret("clearKey", "module.process.param.payment.clearKey"))));
         return result;
     }
 
     private static NodeParameter cvk(String key) { return secret(key, "module.process.param.payment." + key); }
+
+    private static void thalesKeyType(ProcessDefinition.Node node) {
+        ThalesLmkOperations.keyType(setting(node, "keyType", "000"));
+    }
+    private static ThalesLmkOperations.Scheme thalesScheme(ProcessDefinition.Node node) {
+        return ThalesLmkOperations.Scheme.of(setting(node, "scheme", "U").charAt(0));
+    }
+    private static ThalesLmkOperations.Lmk lmk(ProcessDefinition.Node node, Map<String, FlowValue> inputs) {
+        return ThalesLmkOperations.Lmk.of(hexText(node, inputs, "lmk"));
+    }
 }

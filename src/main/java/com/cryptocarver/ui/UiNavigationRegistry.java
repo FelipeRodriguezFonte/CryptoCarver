@@ -143,6 +143,10 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.KEYS_SYMMETRIC, "AES Key Wrap"), "AES Key Wrap");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-31 Key Blocks"),
                 "TR-31 Key Blocks", "TR-31 Export", "TR-31 Import", "TR-31 Parse");
+        // "LMK" alone is left out: it belongs to no single pane, and an alias
+        // claims a name across the whole application.
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "Thales Variant LMK"),
+                "Thales Variant LMK", "Variant LMK");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "RSA Key Exchange"), "RSA Key Exchange");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-34 Key Distribution"), "TR-34 Key Distribution");
 

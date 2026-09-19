@@ -28,7 +28,7 @@ class PaymentOperationsNodeHandlerTest {
 
     @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
-        assertEquals(29, PaymentOperationsNodeHandler.TYPES.size());
+        assertEquals(34, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {
             assertNotNull(HANDLER.descriptors().stream().filter(d -> d.type().equals(type)).findFirst().orElse(null), type);
         }
