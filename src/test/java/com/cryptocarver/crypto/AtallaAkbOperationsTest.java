@@ -130,6 +130,51 @@ class AtallaAkbOperationsTest {
     // =====================================================================
 
     /**
+     * Three blocks, one key, one MFK, and headers differing by one character.
+     * This is the direct evidence that the header is the initialisation
+     * vector: nothing else about the input changes, and the whole key field
+     * and the MAC change with it.
+     *
+     * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, captured
+     * 2026-09-19.</p>
+     */
+    @Test
+    void threeHeadersOverTheSameKeyGiveThreeDifferentBlocks() {
+        String[][] captured = {
+            {"1PUNE000", "B17A04DCF500DD5F7474C10ACC68D47AC2D2A4CD7948C008", "4FFC0BC8BCC1980E"},
+            {"1PUNE100", "1254CC794315E821A244F07E9CE8B51AC668F54602443390", "292E0D97FB036238"},
+            {"1SUNE100", "4969F3DD1D8139F876405697B81080C8782115DA20A65140", "742CF89964633E8C"},
+        };
+
+        for (String[] row : captured) {
+            assertEquals(row[0] + "," + row[1] + "," + row[2],
+                    AtallaAkbOperations.wrap(MFK, row[0], KEY, PADDING), row[0]);
+        }
+    }
+
+    /**
+     * The tool called two of those three headers invalid — {@code B5} may not
+     * be {@code '1'} — and <b>built the block anyway</b>. So header validity is
+     * advisory, and reading an AKB must not depend on it: a bench that
+     * refused these three would refuse blocks a real device produced.
+     *
+     * <p>What the three captures establish about the header is small and is
+     * all that is claimed: the tool numbers its bytes {@code B0} to {@code B7}
+     * from zero, byte 5 rejects {@code '1'}, and byte 1 accepts both
+     * {@code 'P'} and {@code 'S'}. That is not a field table and this bench
+     * does not pretend to have one.</p>
+     */
+    @Test
+    void aHeaderTheToolCallsInvalidIsStillReadAndStillUnwraps() {
+        String block = AtallaAkbOperations.wrap(MFK, "1PUNE100", KEY, PADDING);
+
+        Unwrapped unwrapped = AtallaAkbOperations.unwrap(MFK, block);
+
+        assertEquals(KEY, unwrapped.clearKey());
+        assertTrue(unwrapped.authentic());
+    }
+
+    /**
      * The header is the CBC initialisation vector. That is the whole mechanism
      * by which an AKB binds a key to its attributes, and it is worth a test of
      * its own: one character changes the key that comes out, not merely the

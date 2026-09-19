@@ -318,9 +318,15 @@ public final class AtallaAkbOperations {
             report.append("\nThe key above came out of the block, but the MAC does not match, so\n");
             report.append("either the MFK is wrong or the block was altered. Do not trust the key.\n");
         }
+        report.append("\nHeader bytes\n");
+        for (int at = 0; at < HEADER_LENGTH; at++) {
+            report.append("  B").append(at).append(" : '").append(akb.header().charAt(at)).append("'\n");
+        }
         report.append("\nThe header's field layout is not decoded. Atalla has not published it and\n");
         report.append("no source for it has been verified, so this bench reports the header as the\n");
-        report.append("eight characters it is rather than inventing meanings for them.\n");
+        report.append("eight characters it is rather than inventing meanings for them. They are\n");
+        report.append("numbered B0 to B7 above because that is how the vendor's own tool names\n");
+        report.append("them when it rejects one, so a complaint about \"B5\" can be located.\n");
         return report.toString();
     }
 

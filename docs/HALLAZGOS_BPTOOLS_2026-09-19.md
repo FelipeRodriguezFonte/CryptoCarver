@@ -1,8 +1,8 @@
 # Lo que salió de las capturas de BP-Tools del 19-09-2026
 
-Once capturas de BP-Tools Cryptographic Calculator 21.06, en tres tandas.
+Catorce capturas de BP-Tools Cryptographic Calculator 21.06, en cuatro tandas.
 Todas las preguntas abiertas quedaron cerradas salvo el desglose de la
-cabecera Atalla. Este documento
+cabecera Atalla, del que sólo se conocen tres hechos sueltos. Este documento
 es el registro de qué se dedujo, de qué sigue sin saberse y de qué haría falta
 capturar para cerrarlo.
 
@@ -56,11 +56,38 @@ Leídos como ASCII, `53` es `'S'` y `44` es `'D'`: *single* y *double*. Esa
 lectura de las letras es una inferencia de dos puntos y no una fuente, pero la
 regla que describe está observada. El caso de 24 bytes sale por aritmética.
 
-### Lo que sigue sin saberse
+### La cabecera: poco, pero verificado
 
-- **El desglose de la cabecera.** `1PUNE000` se lee como ocho caracteres con un
-  dígito de versión delante y nada más. No hay fuente verificada para la tabla
-  de campos y adivinarla produciría un validador que rechaza bloques buenos.
+Tres bloques con la misma clave y la misma MFK, cambiando un carácter de la
+cabecera cada vez, dan dos cosas.
+
+La primera es **la prueba directa de que la cabecera es el vector de
+inicialización**: no cambia nada más de la entrada, y cambian el campo de clave
+entero y el MAC.
+
+| Cabecera | Campo de clave |
+|---|---|
+| `1PUNE000` | `B17A04DC…7948C008` |
+| `1PUNE100` | `1254CC79…02443390` |
+| `1SUNE100` | `4969F3DD…20A65140` |
+
+La segunda es lo que la herramienta dijo sin que se lo preguntara. Marcó
+`1PUNE000` como `[Valid]` y las otras dos como `[INVALID, check B5]`. Como en la
+segunda el único carácter cambiado es el de la posición 5 contando desde cero,
+eso fija **la numeración: la herramienta llama B0 a B7 a los bytes de la
+cabecera**. Y en la tercera, que cambia además la posición 1 de `P` a `S`, sigue
+quejándose sólo de B5 — luego `S` es aceptable ahí.
+
+Total de lo que se puede afirmar: los bytes se numeran B0–B7, el byte 5 rechaza
+el `1`, y el byte 1 acepta `P` y `S`. **Eso no es una tabla de campos** y este
+banco no finge tenerla. El informe imprime la cabecera posición por posición con
+esos nombres para que una queja del HSM sobre «B5» se pueda localizar, y nada
+más.
+
+Y un detalle de comportamiento que sí cambia el código: **la herramienta
+construyó el bloque igualmente**. La validez de la cabecera es orientativa, no
+se impone. Un banco que rechazara esas dos cabeceras rechazaría bloques que un
+dispositivo real produce, así que leer un AKB no depende de ella.
 
 ## 2. Thales Key Block AES (versión `1`) — resuelto
 
@@ -192,15 +219,14 @@ y `KCV (S)` son sus primeros cuatro.** Para `0000000055556666` el estándar da
 
 Queda muy poco, y lo primero es de un solo campo.
 
-## A. Atalla: la cabecera
+## A. Atalla: la clave triple, y poco más
 
-Lo único que le falta al formato. **Tres bloques con la misma clave y la misma
-MFK, cambiando un carácter de la cabecera cada vez**: `1PUNE000`, `1PUNE100`,
-`1SUNE000`. Con eso deduzco qué posiciones son campos y cuáles están fijas, sin
-inventarme la tabla.
+Una **clave de 24 bytes** con la misma MFK y cabecera. Confirmaría por
+observación lo que hoy sale por aritmética: que no lleva relleno.
 
-Y una **clave de 24 bytes** con la misma MFK, que confirmaría por observación lo
-que hoy sale por aritmética: que no lleva relleno.
+La tabla de campos de la cabecera seguiría sin conocerse, y para eso el camino
+barato no son más capturas a ciegas sino la pestaña **AKB Decode**: si desglosa
+una cabecera campo a campo, un pantallazo vale por veinte bloques.
 
 ## C. SafeNet: el resto de la tabla de variantes
 
