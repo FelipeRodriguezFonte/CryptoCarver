@@ -3,11 +3,11 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.PaymentOperations;
 import com.cryptocarver.crypto.DukptKsn;
 import com.cryptocarver.crypto.AesDukpt;
+import com.cryptocarver.crypto.hsm.PayShieldBodyDecomposer;
 import com.cryptocarver.crypto.hsm.PayShieldCommand;
 import com.cryptocarver.crypto.hsm.PayShieldErrorCatalog;
 import com.cryptocarver.crypto.hsm.PayShieldMessage;
 import com.cryptocarver.crypto.hsm.PayShieldMessageCodec;
-import com.cryptocarver.crypto.hsm.PayShieldNcResponse;
 import com.cryptocarver.crypto.hsm.PayShieldResponse;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
+import java.util.Optional;
 
 /**
  * Controller for Payments tab
@@ -337,9 +338,9 @@ public class PaymentsController {
     }
 
     /**
-     * Source: raw NC response supplied in docs/REVISION_CHATGPT_1_Y_PAQUETE_2.md.
-     * Its original capture provenance was not recorded, so the capture request
-     * asks for a replacement request/response pair before treating it as a KAT.
+     * Origin not recorded: this value was already in the tree when its
+     * provenance was questioned, and no independent capture supports it.
+     * Capture NC-00 will replace it.
      */
     @FXML
     public void handleHsmHostLoadExample() {
@@ -391,16 +392,20 @@ public class PaymentsController {
         PayShieldCommand command = findHsmCommand(message.code());
         String body = new String(message.body(), StandardCharsets.US_ASCII);
         String trailer = new String(message.trailer(), StandardCharsets.US_ASCII);
-        return "Type: command\n"
-                + "Header: " + message.header() + "\n"
-                + "Command code: " + message.code() + "\n"
-                + "Command: "
-                + (command == null ? "Unknown; body left opaque" : command.displayName()) + "\n"
-                + "Expected response: "
-                + (command == null ? "Unknown" : command.expectedResponseCode()) + "\n"
-                + "Body length: " + message.body().length + "\n"
-                + "Body (opaque): " + (body.isEmpty() ? "(empty)" : body) + "\n"
-                + "Trailer: " + (trailer.isEmpty() ? "(none)" : trailer);
+        StringBuilder report = new StringBuilder()
+                .append("Type: command\n")
+                .append("Header: ").append(message.header()).append('\n')
+                .append("Command code: ").append(message.code()).append('\n')
+                .append("Command: ")
+                .append(command == null ? "Unknown; body left opaque" : command.displayName())
+                .append('\n')
+                .append("Expected response: ")
+                .append(command == null ? "Unknown" : command.expectedResponseCode()).append('\n')
+                .append("Body length: ").append(message.body().length).append('\n')
+                .append("Body (opaque): ").append(body.isEmpty() ? "(empty)" : body).append('\n')
+                .append("Trailer: ").append(trailer.isEmpty() ? "(none)" : trailer);
+        appendHsmDecomposition(report, PayShieldBodyDecomposer.decompose(message));
+        return report.toString();
     }
 
     private static String describeHsmResponse(PayShieldResponse response) {
@@ -419,10 +424,24 @@ public class PaymentsController {
                 .append("Data length: ").append(response.data().length).append('\n')
                 .append("Data (opaque): ").append(data.isEmpty() ? "(empty)" : data).append('\n')
                 .append("Trailer: ").append(trailer.isEmpty() ? "(none)" : trailer);
-        PayShieldNcResponse.from(response).ifPresent(nc -> report
-                .append("\nLMK check value: ").append(nc.lmkCheckValue())
-                .append("\nFirmware version: ").append(nc.firmwareVersion()));
+        appendHsmDecomposition(report, PayShieldBodyDecomposer.decompose(response));
         return report.toString();
+    }
+
+    private static void appendHsmDecomposition(
+            StringBuilder report,
+            Optional<PayShieldBodyDecomposer.Decomposition> optionalDecomposition) {
+        optionalDecomposition.ifPresent(decomposition -> {
+            report.append("\nBody schema: ")
+                    .append(decomposition.schema().evidenceStatus())
+                    .append(" (").append(decomposition.schema().evidenceId()).append(')');
+            for (PayShieldBodyDecomposer.DecodedField field : decomposition.fields()) {
+                report.append('\n')
+                        .append(field.definition().displayName())
+                        .append(": ")
+                        .append(field.value());
+            }
+        });
     }
 
     private static PayShieldCommand findHsmCommand(String code) {

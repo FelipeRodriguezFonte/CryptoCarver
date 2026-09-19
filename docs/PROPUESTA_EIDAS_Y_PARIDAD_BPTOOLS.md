@@ -111,8 +111,8 @@ Verificados contra el código, ordenados por valor:
 | 4 | **ISO 8583**: bitmap y parser de mensajes; ATM NDC, Wincor, AS2805, APACS30 | Cero |
 | 5 | **MAC ISO 9797-1 algoritmos 2, 4 y 6** | `MACOperations` tiene 1, 3 y 5 |
 | 6 | **PIN blocks heredados**: Docutel, Diebold, Plus, ECI 1-4, Visa 1-4, Europay/Banksys (BP soporta 19+) | `PinBlock` cubre ISO 0/1/2/3/4 e IBM 3624 |
-| 7 | **Banco de comandos host de HSM**: payShield A0/BU/CA/CC/CI/CW/CY/DC/EC/FA/GC/HC/JA/KA/M0-M6/NC, Atalla, Futurex | **Parcial verificable**: envoltura payShield, prefijo TCP, catálogo de códigos, análisis de respuestas y `NC` descompuesto en KCV de LMK y firmware. Sólo el error `00` se traduce como verificado. La captura `NC` suministrada carece de procedencia original y debe sustituirse con la receta de `CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`; los demás cuerpos siguen opacos hasta recibir sus pares HSM Commander. No se abren sockets |
-| 8 | **HCE y tokenización**: Visa LUK/MSD/qVSDC, Mastercard **CVC3** y PIN-CVC3, Mastercard **DS** (DSPK, DS Summary, DS Digest), ICC Dynamic Number, token **CAP**/SecureCode; **AMEX CSC v1/v2** | Cero |
+| 7 | **Banco de comandos host de HSM**: payShield A0/BU/CA/CC/CI/CW/CY/DC/EC/FA/GC/HC/JA/KA/M0-M6/NC, Atalla, Futurex | **Parcial verificable**: envoltura payShield, prefijo TCP, catálogo de códigos y descompositor declarativo exacto por código/error. La forma `NC` está cargada como `PENDING_CAPTURE (NC-00)`, no como vector verificado; también el significado de error `00` queda pendiente de esa captura. Los demás cuerpos siguen opacos hasta añadir su fila respaldada por HSM Commander. No se abren sockets |
+| 8 | **HCE y tokenización**: Visa LUK/MSD/qVSDC, Mastercard **CVC3** y PIN-CVC3, Mastercard **DS** (DSPK, DS Summary, DS Digest), ICC Dynamic Number, token **CAP**/SecureCode; **AMEX CSC v1/v2** | Sin implementación criptográfica. Campaña reproducible de capturas preparada en `CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md` |
 | 9 | Menudeo genérico: MD4, Whirlpool, Tiger-192, variantes CRC32, **Base94**, **BCD**, tablas de **decimalización**, *bit shift*, *trace parser* (extraer hex de un tcpdump), check digit AMEX SE, **parser de ATR**, códigos de respuesta APDU, diccionario de tags EMV | Sólo CRC32 |
 | — | **FPE** | Fuera de alcance de esta propuesta (ver arriba) |
 
@@ -428,12 +428,12 @@ completa, datos claros, entrada exacta al MAC, clave de sesión derivada, bloque
 rellenado, PIN cifrado y MAC final. Hace falta un segundo caso que cambie sólo
 la cabecera APDU para demostrar qué bytes autentica el perfil.
 
-Para **HCE/tokenización**, se requieren fichas independientes —no un único
-resultado por marca— para Visa LUK/MSD/qVSDC, Mastercard CVC3/PIN-CVC3 y DS
-(DSPK, DS Summary, DS Digest), ICC Dynamic Number, CAP/SecureCode y AMEX CSC v1
-y v2. Cada ficha debe fijar versión, opciones y todos los intermedios que
-muestre BP-Tools. Hasta disponer de esos vectores, el estado permanece en cero:
-no se deducen algoritmos a partir del nombre comercial.
+Para **HCE/tokenización**, la campaña reproducible está en
+`docs/CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md`: fichas independientes para Visa
+LUK/MSD/qVSDC, Mastercard CVC3/PIN-CVC3 y DS (DSPK, DS Summary, DS Digest), ICC
+Dynamic Number, CAP/SecureCode y AMEX CSC v1/v2, más pares que cambian sólo UN,
+ATC, contador o dato. Hasta disponer de esos vectores no se deducen algoritmos
+a partir del nombre comercial.
 
 Nota sobre el ODA ya hecho: las dos operaciones que firman certificados
 producen tres objetos de datos cada una (el certificado, el resto de la clave

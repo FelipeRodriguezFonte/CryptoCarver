@@ -1,10 +1,10 @@
 package com.cryptocarver.model.process.handlers;
 
+import com.cryptocarver.crypto.hsm.PayShieldBodyDecomposer;
 import com.cryptocarver.crypto.hsm.PayShieldCommand;
 import com.cryptocarver.crypto.hsm.PayShieldErrorCatalog;
 import com.cryptocarver.crypto.hsm.PayShieldMessage;
 import com.cryptocarver.crypto.hsm.PayShieldMessageCodec;
-import com.cryptocarver.crypto.hsm.PayShieldNcResponse;
 import com.cryptocarver.crypto.hsm.PayShieldResponse;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
@@ -22,6 +22,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /** Process Designer adapter for the offline payShield host-frame bank. */
@@ -159,12 +160,17 @@ public final class HsmHostCommandNodeHandler implements ProcessNodeHandler {
         } catch (IllegalArgumentException e) {
             command = null;
         }
-        return "command=" + message.code()
-                + "\nname=" + (command == null ? "unknown" : command.displayName())
-                + "\nheader=" + message.header()
-                + "\nbodyLength=" + message.body().length
-                + "\nbodyOpaque=" + new String(message.body(), StandardCharsets.US_ASCII)
-                + "\ntrailer=" + new String(message.trailer(), StandardCharsets.US_ASCII);
+        StringBuilder description = new StringBuilder("command=")
+                .append(message.code())
+                .append("\nname=").append(command == null ? "unknown" : command.displayName())
+                .append("\nheader=").append(message.header())
+                .append("\nbodyLength=").append(message.body().length)
+                .append("\nbodyOpaque=")
+                .append(new String(message.body(), StandardCharsets.US_ASCII))
+                .append("\ntrailer=")
+                .append(new String(message.trailer(), StandardCharsets.US_ASCII));
+        appendDecomposition(description, PayShieldBodyDecomposer.decompose(message));
+        return description.toString();
     }
 
     private static String describe(PayShieldResponse response) {
@@ -178,10 +184,25 @@ public final class HsmHostCommandNodeHandler implements ProcessNodeHandler {
                 .append(new String(response.data(), StandardCharsets.US_ASCII))
                 .append("\ntrailer=")
                 .append(new String(response.trailer(), StandardCharsets.US_ASCII));
-        PayShieldNcResponse.from(response).ifPresent(nc -> description
-                .append("\nlmkCheckValue=").append(nc.lmkCheckValue())
-                .append("\nfirmwareVersion=").append(nc.firmwareVersion()));
+        appendDecomposition(description, PayShieldBodyDecomposer.decompose(response));
         return description.toString();
+    }
+
+    private static void appendDecomposition(
+            StringBuilder description,
+            Optional<PayShieldBodyDecomposer.Decomposition> optionalDecomposition) {
+        optionalDecomposition.ifPresent(decomposition -> {
+            description.append("\nschemaEvidenceStatus=")
+                    .append(decomposition.schema().evidenceStatus())
+                    .append("\nschemaEvidenceId=")
+                    .append(decomposition.schema().evidenceId());
+            for (PayShieldBodyDecomposer.DecodedField field : decomposition.fields()) {
+                description.append('\n')
+                        .append(field.definition().name())
+                        .append('=')
+                        .append(field.value());
+            }
+        });
     }
 
     private static String runtimeText(ProcessDefinition.Node node, Map<String, FlowValue> inputs, String key) {

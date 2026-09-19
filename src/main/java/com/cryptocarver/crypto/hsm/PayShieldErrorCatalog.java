@@ -3,33 +3,33 @@ package com.cryptocarver.crypto.hsm;
 import java.util.Map;
 
 /**
- * Error meanings backed by captured traffic.
+ * Provisional error meanings and their visible evidence state.
  *
- * <p>Only {@code 00} is currently evidenced by the successful NC response kept
- * in {@code PayShieldMessageCodecTest}. The former list of plausible global
- * errors was removed because its cited Core Host Commands manual was not
+ * <p>The available NC response has no recorded provenance, so even {@code 00}
+ * remains pending until capture {@code NC-00}. The former list of plausible
+ * global errors was removed because its cited Core Host Commands manual was not
  * actually available. Unknown codes stay visibly unverified until a captured
  * response or a primary clause can be attached to them.
  */
 public final class PayShieldErrorCatalog {
-    private static final Map<String, String> VERIFIED_ERRORS = Map.of(
-            "00", "No error (verified by captured NC response)");
+    private static final Map<String, String> KNOWN_ERRORS = Map.of(
+            "00", "No error (pending independent capture NC-00)");
 
     private PayShieldErrorCatalog() {
     }
 
     public static String translate(String code) {
         requireCode(code);
-        return VERIFIED_ERRORS.getOrDefault(code, "unverified error code (" + code + ")");
+        return KNOWN_ERRORS.getOrDefault(code, "unverified error code (" + code + ")");
     }
 
     public static boolean isKnown(String code) {
         requireCode(code);
-        return VERIFIED_ERRORS.containsKey(code);
+        return KNOWN_ERRORS.containsKey(code);
     }
 
     public static Map<String, String> catalog() {
-        return VERIFIED_ERRORS;
+        return KNOWN_ERRORS;
     }
 
     private static void requireCode(String code) {

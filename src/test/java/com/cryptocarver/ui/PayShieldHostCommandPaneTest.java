@@ -47,6 +47,7 @@ class PayShieldHostCommandPaneTest {
         assertTrue(report.contains("ND"), report);
         assertTrue(report.contains("00"), report);
         assertTrue(report.contains("7B44AC1DDEE2A94B0007-E000"), report);
+        assertTrue(report.contains("Body schema: PENDING_CAPTURE (NC-00)"), report);
         assertTrue(report.contains("LMK check value: 7B44AC1DDEE2A94B"), report);
         assertTrue(report.contains("Firmware version: 0007-E000"), report);
     }
@@ -62,6 +63,7 @@ class PayShieldHostCommandPaneTest {
         String report = area(controller, "hsmHostResultArea").getText();
         assertTrue(report.contains("NC"), report);
         assertTrue(report.toLowerCase().contains("diagnostic"), report);
+        assertTrue(report.contains("Body schema: PENDING_CAPTURE (NC-00)"), report);
     }
 
     @Test

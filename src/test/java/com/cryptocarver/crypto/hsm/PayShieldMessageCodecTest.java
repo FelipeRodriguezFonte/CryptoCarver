@@ -37,13 +37,12 @@ class PayShieldMessageCodecTest {
     }
 
     /**
-     * Source: raw NC response reproduced in docs/REVISION_CHATGPT_1_Y_PAQUETE_2.md,
-     * reviewed 2026-09-19. The original HSM Commander/manual provenance was not
-     * recorded; docs/CAPTURAS_HSM_COMMANDER_PAYSHIELD.md requests a replacement
-     * capture of the complete request/response pair.
+     * Origin not recorded: this value was already in the tree when provenance
+     * was questioned, and no capture supports it. NC-00 in the HSM Commander
+     * capture recipe will replace it.
      */
     @Test
-    void suppliedNcCaptureParsesIntoVerifiedFields() {
+    void suppliedNcValueParsesIntoPendingDeclarativeFields() {
         PayShieldMessageCodec codec = new PayShieldMessageCodec(4);
         PayShieldResponse response = codec.parseResponse(
                 "0000ND007B44AC1DDEE2A94B0007-E000".getBytes(StandardCharsets.US_ASCII));
@@ -51,9 +50,10 @@ class PayShieldMessageCodecTest {
         assertEquals("0000", response.header());
         assertEquals("ND", response.responseCode());
         assertEquals("00", response.errorCode());
-        PayShieldNcResponse nc = PayShieldNcResponse.from(response).orElseThrow();
-        assertEquals("7B44AC1DDEE2A94B", nc.lmkCheckValue());
-        assertEquals("0007-E000", nc.firmwareVersion());
+        PayShieldBodyDecomposer.Decomposition decomposition =
+                PayShieldBodyDecomposer.decompose(response).orElseThrow();
+        assertEquals("7B44AC1DDEE2A94B", decomposition.value("lmkCheckValue").orElseThrow());
+        assertEquals("0007-E000", decomposition.value("firmwareVersion").orElseThrow());
     }
 
     @Test
@@ -71,7 +71,7 @@ class PayShieldMessageCodecTest {
         PayShieldResponse differentShape = new PayShieldResponse(
                 "0000", "ND", "00", "SHORT".getBytes(StandardCharsets.US_ASCII), EMPTY);
 
-        assertFalse(PayShieldNcResponse.from(differentShape).isPresent());
+        assertFalse(PayShieldBodyDecomposer.decompose(differentShape).isPresent());
     }
 
     @Test

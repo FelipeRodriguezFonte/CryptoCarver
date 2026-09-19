@@ -14,8 +14,9 @@ class PayShieldCatalogTest {
     }
 
     @Test
-    void onlyCapturedErrorMeaningsAreClaimedAsVerified() {
+    void knownErrorMeaningKeepsItsPendingEvidenceVisible() {
         assertTrue(PayShieldErrorCatalog.translate("00").startsWith("No error"));
+        assertTrue(PayShieldErrorCatalog.translate("00").contains("pending independent capture NC-00"));
         assertFalse(PayShieldErrorCatalog.isKnown("14"));
         assertTrue(PayShieldErrorCatalog.translate("14").startsWith("unverified"));
     }

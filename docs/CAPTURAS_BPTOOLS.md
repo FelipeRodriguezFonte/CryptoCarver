@@ -158,6 +158,10 @@ descompositor y no viene en ningún sitio con ejemplos reales.
 
 ## 6. Esquemas: CVC3, DS, LUK (ChatGPT, hueco 8)
 
+La campaña campo a campo, con IDs y casos que cambian una sola variable, está
+en [`CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md`](CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md).
+Esta sección queda como resumen.
+
 Casi nada de esto está bien documentado en abierto. La herramienta lo calcula.
 
 **Mastercard CVC3** — Cryptographic Calculator → EMV → CVC3 (o Contactless):
