@@ -58,7 +58,10 @@ a diario:
 - `M0`–`M6` cifrado y MAC de datos
 
 Fuente primaria: **payShield 10K Host Programmer's Manual**, que está público en
-`https://search-your-slide-decks-documents.demo.pathway.com/documents/007-001518-023%20payShield%2010K%20Host%20Programmers%20V2.3a%20-%20Rev%20A1.pdf`
+*payShield 10K Host Programmer's Manual*, documento 007-001518-023 v2.3a.
+Cítalo así, por título, número y cláusula. No pongas una URL en un comentario
+del código: la copia que circula está en un servidor de terceros que puede
+desaparecer, y una cita que no resuelve es peor que ninguna.
 (descárgalo y pásalo por `pdftotext -layout`; yo lo he usado hoy para el Key
 Block y los capítulos están limpios). El detalle campo a campo de cada comando
 está en el *Core Host Commands reference manual*, que es otro documento — si no
