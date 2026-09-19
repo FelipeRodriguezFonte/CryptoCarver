@@ -130,6 +130,10 @@ ellos lleguen ahí y te las pidan, o de golpe si tienes la tarde.
 
 ## 5. HSM Commander — tramas de comando (ChatGPT, hueco 7)
 
+La receta campo a campo y el orden de reutilización están en
+[`CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`](CAPTURAS_HSM_COMMANDER_PAYSHIELD.md).
+Esta sección queda como índice de prioridad.
+
 Aquí el valor no está en el resultado criptográfico sino en **la trama de texto
 literal**, petición y respuesta, tal como viajan. Es lo que va a descomponer el
 banco de comandos.

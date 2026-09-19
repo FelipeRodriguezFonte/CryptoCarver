@@ -25,6 +25,7 @@ public final class ProcessEngine {
         new WalletCredentialNodeHandler(),
         new EnvelopeSignatureNodeHandler(),
         new PaymentOperationsNodeHandler(),
+        new HsmHostCommandNodeHandler(),
         new KeyOperationsNodeHandler(),
         new KeyMaterialNodeHandler(),
         new AdvancedCryptoNodeHandler(),

@@ -261,6 +261,8 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.PAYMENTS, "DUKPT KSN"), "DUKPT TDES", "DUKPT TDES / AES");
         add(routes, new Route(Module.PAYMENTS, "CVV Operations"),
                 "CVV Operations", "CVV Generation");
+        add(routes, new Route(Module.PAYMENTS, "payShield Host Command Bank"),
+                "payShield Host Command Bank");
         add(routes, new Route(Module.PAYMENTS, "Encrypted PIN Blocks"),
                 "Encrypted PIN Block Operations", "Encrypted PIN Block Encoding", "Encrypted PIN Block Decoding",
                 "Encrypted PIN Block Encoded", "Encrypted PIN Block Decoded");

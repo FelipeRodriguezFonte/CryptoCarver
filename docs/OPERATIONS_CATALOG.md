@@ -122,6 +122,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🔢 | PIN Generation | `op_pay_pin_gen` | STABLE | HIGH | `PIN Generation` | - |
 | 💳 | Thales Key Block | `op_pay_thales_key_block` | EXPERIMENTAL | LOW | `Thales Key Block` | Thales Key Block, key scheme S, key usage, optional header block |
 | 💳 | Thales Variant LMK | `op_pay_thales_lmk` | EXPERIMENTAL | HIGH | `Thales Variant LMK` | Thales, payShield, LMK, variant, key type code, key scheme |
+| 🖥 | payShield Host Command Bank | `op_pay_payshield_host_bank` | EXPERIMENTAL | HIGH | `payShield Host Command Bank` | HSM host frame, payShield command analyzer, Thales host protocol |
 
 ## Post-Quantum
 
@@ -191,6 +192,7 @@ Sensitive payment material is transient and never persisted in `.cfprocess.json`
 | EMV offline data authentication | `EMV_ODA_STATIC_DATA`, `EMV_ODA_RECOVER_ISSUER_KEY`, `EMV_ODA_RECOVER_ICC_KEY`, `EMV_ODA_VERIFY_SDA`, `EMV_ODA_VERIFY_DDA`, `EMV_ODA_VERIFY_CDA`, `EMV_ODA_SIGN_SSAD`, `EMV_ODA_SIGN_SDAD` |
 | Thales variant LMK | `THALES_LMK_ENCRYPT`, `THALES_LMK_DECRYPT`, `THALES_LMK_DESCRIBE`, `THALES_LMK_LOOKUP`, `THALES_KCV` |
 | Thales Key Block | `THALES_KEY_BLOCK_PARSE`, `THALES_KEY_BLOCK_HEADER` |
+| payShield host frames | `HSM_HOST_COMPOSE`, `HSM_HOST_PARSE_COMMAND`, `HSM_HOST_PARSE_RESPONSE` |
 
 `THALES_LMK_ENCRYPT` emits the cryptogram without its scheme tag, because a `HEX`
 `FlowValue` cannot carry the leading letter. `THALES_LMK_DESCRIBE` prints the tagged

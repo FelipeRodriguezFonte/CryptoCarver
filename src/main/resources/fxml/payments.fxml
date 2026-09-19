@@ -247,6 +247,46 @@
                     <TextArea fx:id="dukptResultArea" prefHeight="230" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
+
+            <TitledPane text="🖥 payShield Host Command Bank">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Compose and inspect host frames locally. The bank never opens a socket. Command bodies remain opaque unless their field layout has been verified from a primary manual or an external vector."
+                           wrapText="true" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="8">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="190" prefWidth="190"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="Message header:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hsmHostHeaderField" text="0000" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Command code:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hsmHostCommandCodeField" text="NC" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Command body:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hsmHostBodyField" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Message trailer (optional):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hsmHostTrailerField" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Header length for analysis:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hsmHostHeaderLengthField" text="4" maxWidth="Infinity"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <CheckBox fx:id="hsmHostTcpPrefixCheck" text="Two-byte TCP length prefix"/>
+                    <Label text="Captured frame:" styleClass="form-label"/>
+                    <TextArea fx:id="hsmHostCapturedFrameArea" prefHeight="90" wrapText="true"
+                              promptText="0000ND007B44AC1DDEE2A94B0007-E000" styleClass="monospace-field"/>
+                    <FlowPane hgap="10" vgap="8" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
+                        <Button text="Compose Command" onAction="#handleHsmHostCompose" styleClass="action-button,primary-action"/>
+                        <Button text="Analyze Command" onAction="#handleHsmHostAnalyzeCommand" styleClass="secondary-button"/>
+                        <Button text="Analyze Response" onAction="#handleHsmHostAnalyzeResponse" styleClass="secondary-button"/>
+                        <Button text="Load NC Example" onAction="#handleHsmHostLoadExample" styleClass="secondary-button"/>
+                    </FlowPane>
+                    <TextArea fx:id="hsmHostResultArea" prefHeight="220" editable="false" wrapText="true"
+                              styleClass="result-area,monospace-field"/>
+                </VBox>
+            </TitledPane>
         </panes>
     </Accordion>
 </VBox>

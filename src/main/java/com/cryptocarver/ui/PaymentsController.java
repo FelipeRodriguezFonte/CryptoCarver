@@ -3,6 +3,12 @@ package com.cryptocarver.ui;
 import com.cryptocarver.crypto.PaymentOperations;
 import com.cryptocarver.crypto.DukptKsn;
 import com.cryptocarver.crypto.AesDukpt;
+import com.cryptocarver.crypto.hsm.PayShieldCommand;
+import com.cryptocarver.crypto.hsm.PayShieldErrorCatalog;
+import com.cryptocarver.crypto.hsm.PayShieldMessage;
+import com.cryptocarver.crypto.hsm.PayShieldMessageCodec;
+import com.cryptocarver.crypto.hsm.PayShieldNcResponse;
+import com.cryptocarver.crypto.hsm.PayShieldResponse;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
@@ -12,6 +18,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 
 /**
  * Controller for Payments tab
@@ -53,6 +62,18 @@ public class PaymentsController {
     @FXML private ComboBox<String> pinBlockFormatDecodeCombo;
     @FXML private TextArea pinBlockResultArea;
     @FXML private ResultPanel paymentsResultPanel;
+
+    // payShield host command bank: local framing and capture analysis only.
+    @FXML private TextField hsmHostHeaderField;
+    @FXML private TextField hsmHostCommandCodeField;
+    @FXML private TextField hsmHostBodyField;
+    @FXML private TextField hsmHostTrailerField;
+    @FXML private TextField hsmHostHeaderLengthField;
+    @FXML private CheckBox hsmHostTcpPrefixCheck;
+    @FXML private TextArea hsmHostCapturedFrameArea;
+    @FXML private TextArea hsmHostResultArea;
+
+    private static final String SUPPLIED_NC_RESPONSE = "0000ND007B44AC1DDEE2A94B0007-E000";
 
     // CVV controls
     @FXML private TextField cvkAField;
@@ -280,6 +301,168 @@ public class PaymentsController {
                     + "\n\n" + t("module.payments.result.aesDukptNote"));
             updateStatus(t("module.payments.status.aesPinBlockProcessed"));
         } catch (Exception e) { showError(t("module.payments.operation.aesPinBlock"), t("module.payments.error.operation", t("module.payments.operation.aesPinBlock"), e.getMessage())); }
+    }
+
+    @FXML
+    public void handleHsmHostCompose() {
+        runHsmHost(() -> {
+            PayShieldMessageCodec codec = hsmHostCodec();
+            byte[] frame = codec.composeCommand(
+                    controlText(hsmHostHeaderField),
+                    controlText(hsmHostCommandCodeField).toUpperCase(java.util.Locale.ROOT),
+                    controlText(hsmHostBodyField).getBytes(StandardCharsets.US_ASCII),
+                    controlText(hsmHostTrailerField).getBytes(StandardCharsets.US_ASCII));
+            String rendered = renderHsmFrame(frame, codec.tcpLengthPrefix());
+            if (hsmHostCapturedFrameArea != null) {
+                hsmHostCapturedFrameArea.setText(rendered);
+            }
+            return describeHsmCommand(codec.parseCommand(frame));
+        });
+    }
+
+    @FXML
+    public void handleHsmHostAnalyzeCommand() {
+        runHsmHost(() -> {
+            PayShieldMessageCodec codec = hsmHostCodec();
+            return describeHsmCommand(codec.parseCommand(readHsmFrame(codec.tcpLengthPrefix())));
+        });
+    }
+
+    @FXML
+    public void handleHsmHostAnalyzeResponse() {
+        runHsmHost(() -> {
+            PayShieldMessageCodec codec = hsmHostCodec();
+            return describeHsmResponse(codec.parseResponse(readHsmFrame(codec.tcpLengthPrefix())));
+        });
+    }
+
+    /**
+     * Source: raw NC response supplied in docs/REVISION_CHATGPT_1_Y_PAQUETE_2.md.
+     * Its original capture provenance was not recorded, so the capture request
+     * asks for a replacement request/response pair before treating it as a KAT.
+     */
+    @FXML
+    public void handleHsmHostLoadExample() {
+        if (hsmHostHeaderLengthField != null) {
+            hsmHostHeaderLengthField.setText("4");
+        }
+        if (hsmHostTcpPrefixCheck != null) {
+            hsmHostTcpPrefixCheck.setSelected(false);
+        }
+        if (hsmHostCapturedFrameArea != null) {
+            hsmHostCapturedFrameArea.setText(SUPPLIED_NC_RESPONSE);
+        }
+        if (hsmHostResultArea != null) {
+            hsmHostResultArea.setText(t("module.payments.hsmHost.exampleLoaded"));
+        }
+    }
+
+    private PayShieldMessageCodec hsmHostCodec() {
+        String length = controlText(hsmHostHeaderLengthField);
+        int headerLength;
+        try {
+            headerLength = Integer.parseInt(length);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("header length must be a decimal integer");
+        }
+        return new PayShieldMessageCodec(headerLength,
+                hsmHostTcpPrefixCheck != null && hsmHostTcpPrefixCheck.isSelected());
+    }
+
+    private byte[] readHsmFrame(boolean tcpPrefix) {
+        String value = controlText(hsmHostCapturedFrameArea);
+        if (!tcpPrefix) {
+            return value.getBytes(StandardCharsets.US_ASCII);
+        }
+        try {
+            return HexFormat.of().parseHex(value.replaceAll("\\s+", ""));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("a TCP-prefixed frame must be entered as hexadecimal");
+        }
+    }
+
+    private static String renderHsmFrame(byte[] frame, boolean tcpPrefix) {
+        return tcpPrefix
+                ? HexFormat.of().withUpperCase().formatHex(frame)
+                : new String(frame, StandardCharsets.US_ASCII);
+    }
+
+    private static String describeHsmCommand(PayShieldMessage message) {
+        PayShieldCommand command = findHsmCommand(message.code());
+        String body = new String(message.body(), StandardCharsets.US_ASCII);
+        String trailer = new String(message.trailer(), StandardCharsets.US_ASCII);
+        return "Type: command\n"
+                + "Header: " + message.header() + "\n"
+                + "Command code: " + message.code() + "\n"
+                + "Command: "
+                + (command == null ? "Unknown; body left opaque" : command.displayName()) + "\n"
+                + "Expected response: "
+                + (command == null ? "Unknown" : command.expectedResponseCode()) + "\n"
+                + "Body length: " + message.body().length + "\n"
+                + "Body (opaque): " + (body.isEmpty() ? "(empty)" : body) + "\n"
+                + "Trailer: " + (trailer.isEmpty() ? "(none)" : trailer);
+    }
+
+    private static String describeHsmResponse(PayShieldResponse response) {
+        PayShieldCommand command = findHsmCommandByResponse(response.responseCode());
+        String data = new String(response.data(), StandardCharsets.US_ASCII);
+        String trailer = new String(response.trailer(), StandardCharsets.US_ASCII);
+        StringBuilder report = new StringBuilder()
+                .append("Type: response\n")
+                .append("Header: ").append(response.header()).append('\n')
+                .append("Response code: ").append(response.responseCode()).append('\n')
+                .append("Command: ")
+                .append(command == null ? "Unknown" : command.name() + " — " + command.displayName())
+                .append('\n')
+                .append("Error code: ").append(response.errorCode()).append(" — ")
+                .append(PayShieldErrorCatalog.translate(response.errorCode())).append('\n')
+                .append("Data length: ").append(response.data().length).append('\n')
+                .append("Data (opaque): ").append(data.isEmpty() ? "(empty)" : data).append('\n')
+                .append("Trailer: ").append(trailer.isEmpty() ? "(none)" : trailer);
+        PayShieldNcResponse.from(response).ifPresent(nc -> report
+                .append("\nLMK check value: ").append(nc.lmkCheckValue())
+                .append("\nFirmware version: ").append(nc.firmwareVersion()));
+        return report.toString();
+    }
+
+    private static PayShieldCommand findHsmCommand(String code) {
+        try {
+            return PayShieldCommand.valueOf(code);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static PayShieldCommand findHsmCommandByResponse(String responseCode) {
+        for (PayShieldCommand command : PayShieldCommand.values()) {
+            if (command.expectedResponseCode().equals(responseCode)) {
+                return command;
+            }
+        }
+        return null;
+    }
+
+    private interface HsmHostStep {
+        String run();
+    }
+
+    private void runHsmHost(HsmHostStep step) {
+        try {
+            String report = step.run();
+            if (hsmHostResultArea != null) {
+                hsmHostResultArea.setText(report);
+            }
+            updateStatus(t("module.payments.hsmHost.status"));
+        } catch (Exception e) {
+            if (hsmHostResultArea != null) {
+                hsmHostResultArea.setText(
+                        t("module.payments.hsmHost.error", String.valueOf(e.getMessage())));
+            }
+        }
+    }
+
+    private static String controlText(TextInputControl control) {
+        return control == null || control.getText() == null ? "" : control.getText().trim();
     }
 
     @FXML

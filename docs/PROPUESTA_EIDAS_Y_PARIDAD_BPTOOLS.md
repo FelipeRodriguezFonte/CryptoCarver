@@ -111,7 +111,7 @@ Verificados contra el código, ordenados por valor:
 | 4 | **ISO 8583**: bitmap y parser de mensajes; ATM NDC, Wincor, AS2805, APACS30 | Cero |
 | 5 | **MAC ISO 9797-1 algoritmos 2, 4 y 6** | `MACOperations` tiene 1, 3 y 5 |
 | 6 | **PIN blocks heredados**: Docutel, Diebold, Plus, ECI 1-4, Visa 1-4, Europay/Banksys (BP soporta 19+) | `PinBlock` cubre ISO 0/1/2/3/4 e IBM 3624 |
-| 7 | **Banco de comandos host de HSM**: payShield A0/BU/CA/CC/CI/CW/CY/DC/EC/FA/GC/HC/JA/KA/M0-M6/NC, Atalla, Futurex | Sólo caché HSM simulada de sesión. Es el diferenciador de KeyLab |
+| 7 | **Banco de comandos host de HSM**: payShield A0/BU/CA/CC/CI/CW/CY/DC/EC/FA/GC/HC/JA/KA/M0-M6/NC, Atalla, Futurex | **Parcial verificable**: envoltura payShield, prefijo TCP, catálogo de códigos, análisis de respuestas y `NC` descompuesto en KCV de LMK y firmware. Sólo el error `00` se traduce como verificado. La captura `NC` suministrada carece de procedencia original y debe sustituirse con la receta de `CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`; los demás cuerpos siguen opacos hasta recibir sus pares HSM Commander. No se abren sockets |
 | 8 | **HCE y tokenización**: Visa LUK/MSD/qVSDC, Mastercard **CVC3** y PIN-CVC3, Mastercard **DS** (DSPK, DS Summary, DS Digest), ICC Dynamic Number, token **CAP**/SecureCode; **AMEX CSC v1/v2** | Cero |
 | 9 | Menudeo genérico: MD4, Whirlpool, Tiger-192, variantes CRC32, **Base94**, **BCD**, tablas de **decimalización**, *bit shift*, *trace parser* (extraer hex de un tcpdump), check digit AMEX SE, **parser de ATR**, códigos de respuesta APDU, diccionario de tags EMV | Sólo CRC32 |
 | — | **FPE** | Fuera de alcance de esta propuesta (ver arriba) |
@@ -398,6 +398,42 @@ Fase E (cierre AdES).
 **Carril pagos** — ~~EMV ODA (SDA/DDA/CDA)~~ hecha → formatos
 Thales/Atalla/Futurex → ISO 8583 → secure messaging por esquema → el menudeo
 genérico. FPE va por separado, fuera de esta propuesta.
+
+## Vectores externos pendientes para cerrar los huecos 3, 7 y 8
+
+El banco payShield implementa únicamente el framing verificable con el
+*payShield 10K Host Programmer's Manual*, documento 007-001518-023, revisión A1,
+secciones 1.3–1.5, y la forma de una respuesta `NC` suministrada. La procedencia
+original de esa respuesta no quedó registrada, de modo que no se presenta como
+KAT externo. La receta exacta para sustituirla y capturar los siguientes
+comandos está en `docs/CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`. En todos los casos
+se necesitan petición, respuesta, cabecera, prefijo TCP, ventana completa y
+versión de la herramienta:
+
+- A0, A6, A8 y BU: un caso de LMK de variante y otro de Key Block LMK, con los
+  campos opcionales visibles y la respuesta de error producida al alterar un
+  campo obligatorio.
+- CA, CC, DC y EC: PAN sintético, PIN sintético, formatos de bloque, claves de
+  test y bloques de entrada/salida. Un segundo caso debe cambiar un dígito no
+  relacionado con paridad DES.
+- CW y CY: PAN sintético, expiración, código de servicio, CVK de test, CVV y una
+  verificación fallida.
+- FA: ZMK/ZPK de test, esquemas de clave de entrada/salida y KCV devuelto.
+- M0, M2, M4 y M6: algoritmo/modo, IV, relleno, clave de test, datos exactos y
+  MAC/cifrado resultante, incluyendo un caso en el límite de bloque.
+
+Para **secure messaging EMV**, una ficha separada para Visa y Mastercard debe
+incluir versión/perfil exactos, MK-SMI/MK-SMC de test, PAN/PSN, ATC, APDU
+completa, datos claros, entrada exacta al MAC, clave de sesión derivada, bloque
+rellenado, PIN cifrado y MAC final. Hace falta un segundo caso que cambie sólo
+la cabecera APDU para demostrar qué bytes autentica el perfil.
+
+Para **HCE/tokenización**, se requieren fichas independientes —no un único
+resultado por marca— para Visa LUK/MSD/qVSDC, Mastercard CVC3/PIN-CVC3 y DS
+(DSPK, DS Summary, DS Digest), ICC Dynamic Number, CAP/SecureCode y AMEX CSC v1
+y v2. Cada ficha debe fijar versión, opciones y todos los intermedios que
+muestre BP-Tools. Hasta disponer de esos vectores, el estado permanece en cero:
+no se deducen algoritmos a partir del nombre comercial.
 
 Nota sobre el ODA ya hecho: las dos operaciones que firman certificados
 producen tres objetos de datos cada una (el certificado, el resto de la clave
