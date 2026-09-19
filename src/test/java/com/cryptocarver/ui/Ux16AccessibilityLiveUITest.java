@@ -72,6 +72,12 @@ class Ux16AccessibilityLiveUITest {
     void accessibleTextAndHelpRefreshInEnglishAndSpanish() throws Exception {
         AtomicReference<Button> button = new AtomicReference<>();
         AtomicReference<TextField> field = new AtomicReference<>();
+        // I18nService holds locale listeners weakly and says so: the caller keeps
+        // the binding, normally as a controller field. Dropping it here left the
+        // listener collectable, so whether the switch to Spanish arrived came
+        // down to whether a GC had run — the test passed or failed by luck, and
+        // adding unrelated test classes was enough to change the odds.
+        AtomicReference<ModuleI18n.Binding> binding = new AtomicReference<>();
         runAndWait(() -> {
             Button apply = new Button("Apply");
             apply.setAccessibleText("Apply");
@@ -83,9 +89,9 @@ class Ux16AccessibilityLiveUITest {
             new Scene(root);
             button.set(apply);
             field.set(input);
-            ModuleI18n.bind(root, java.util.Map.of(
+            binding.set(ModuleI18n.bind(root, java.util.Map.of(
                     "Apply", "module.common.apply",
-                    "Input:", "module.common.input"));
+                    "Input:", "module.common.input")));
         });
 
         assertEquals("Apply", button.get().getAccessibleText());
@@ -100,6 +106,9 @@ class Ux16AccessibilityLiveUITest {
     void languageRefreshPreservesFocusAndDialogDetail() throws Exception {
         AtomicReference<TextField> field = new AtomicReference<>();
         AtomicReference<Scene> scene = new AtomicReference<>();
+        // Held for the same reason as above: this test is about what a language
+        // refresh does to focus, and without a live binding there is no refresh.
+        AtomicReference<ModuleI18n.Binding> binding = new AtomicReference<>();
         runAndWait(() -> {
             TextField input = new TextField();
             input.setAccessibleText("Input:");
@@ -107,7 +116,7 @@ class Ux16AccessibilityLiveUITest {
             Scene created = new Scene(root);
             scene.set(created);
             field.set(input);
-            ModuleI18n.bind(root, java.util.Map.of("Input:", "module.common.input"));
+            binding.set(ModuleI18n.bind(root, java.util.Map.of("Input:", "module.common.input")));
             input.requestFocus();
         });
         assertSame(field.get(), scene.get().getFocusOwner());
