@@ -1,7 +1,8 @@
 # Lo que salió de las capturas de BP-Tools del 19-09-2026
 
-Seis capturas de BP-Tools Cryptographic Calculator 21.06. Las cinco preguntas
-abiertas quedaron cerradas, cuatro de ellas en la primera pasada. Este documento
+Once capturas de BP-Tools Cryptographic Calculator 21.06, en tres tandas.
+Todas las preguntas abiertas quedaron cerradas salvo el desglose de la
+cabecera Atalla. Este documento
 es el registro de qué se dedujo, de qué sigue sin saberse y de qué haría falta
 capturar para cerrarlo.
 
@@ -40,13 +41,26 @@ con un solo vector. Se escribe `45`/`4D` porque son la `E` y la `M` de X9.143.
 Segundo, el MAC va sobre el **texto cifrado**, igual que en el Thales Key Block.
 Dos formatos independientes, la misma trampa.
 
+### La regla de relleno, con el segundo vector
+
+El campo de clave mide **siempre 24 bytes**, y el hueco se rellena con un byte
+repetido que **nombra la longitud de la clave**:
+
+| Clave | Relleno |
+|---|---|
+| 8 bytes | `53` × 16 |
+| 16 bytes | `44` × 8 |
+| 24 bytes | ninguno |
+
+Leídos como ASCII, `53` es `'S'` y `44` es `'D'`: *single* y *double*. Esa
+lectura de las letras es una inferencia de dos puntos y no una fuente, pero la
+regla que describe está observada. El caso de 24 bytes sale por aritmética.
+
 ### Lo que sigue sin saberse
 
 - **El desglose de la cabecera.** `1PUNE000` se lee como ocho caracteres con un
   dígito de versión delante y nada más. No hay fuente verificada para la tabla
   de campos y adivinarla produciría un validador que rechaza bloques buenos.
-- **La regla de relleno.** El vector mete una clave de 16 bytes en un campo de
-  24, y los ocho sobrantes salen como `44` repetido — constante, no aleatorio.
 
 ## 2. Thales Key Block AES (versión `1`) — resuelto
 
@@ -155,21 +169,18 @@ bajo una misma KBPK son lo que separa «la derivación es correcta» de «la
 derivación funciona para esta cabecera», porque la cabecera *es* el vector de
 inicialización.
 
-## 7. Atalla con clave simple — no cuadra, y sé por qué
+## 7. Atalla con clave simple — resuelto
 
-La captura de la pestaña Lookup trae un AKB con una clave DES simple dentro:
+La pestaña Lookup usaba otra MFK, `2ABC3DEF4567018998107645FED3CBA20123456789ABCDEF`.
+Con ella el bloque se reproduce entero:
 
 ```
 1PUNE000,D3266EC69C61820019F4A9640A8F603DA14F78E154C7522D,55720A06F8964B8F
-→ 0000000055556666
+→ 0000000055556666   relleno 53 × 16   MAC válido
 ```
 
-Con la MFK de las capturas anteriores no sale ni la clave ni el MAC. Como el MAC
-sólo depende de la MFK, la cabecera y el texto cifrado, eso significa que **la
-pestaña Lookup usaba otra MFK**. Probé las diez claves conocidas de esta sesión
-y ninguna valida el MAC.
-
-No es un problema del algoritmo: es un dato que falta. Ver la lista de abajo.
+Dos MFK distintas, dos longitudes de clave distintas, el mismo algoritmo. El
+formato Atalla queda cerrado salvo el desglose de la cabecera.
 
 De paso, algo verificado y útil: **`KCV (V)` es el KCV estándar de seis dígitos
 y `KCV (S)` son sus primeros cuatro.** Para `0000000055556666` el estándar da
@@ -181,23 +192,15 @@ y `KCV (S)` son sus primeros cuatro.** Para `0000000055556666` el estándar da
 
 Queda muy poco, y lo primero es de un solo campo.
 
-## A. La MFK de la pestaña Atalla Lookup ← lo más barato que hay
+## A. Atalla: la cabecera
 
-**Sólo hace falta el valor del campo MFK que tenía esa pestaña** cuando se hizo
-el lookup de las 21:03. Con eso, el AKB de clave simple de arriba queda
-verificado y con él la regla de relleno para claves de 8 bytes, que es la única
-pieza que le falta al formato Atalla.
+Lo único que le falta al formato. **Tres bloques con la misma clave y la misma
+MFK, cambiando un carácter de la cabecera cada vez**: `1PUNE000`, `1PUNE100`,
+`1SUNE000`. Con eso deduzco qué posiciones son campos y cuáles están fijas, sin
+inventarme la tabla.
 
-## B. Atalla: la clave triple y la cabecera
-
-1. Misma MFK y cabecera `1PUNE000`, **clave de 24 bytes**. Confirma si el campo
-   de clave es fijo de 24 bytes o del tamaño de la clave.
-2. **Tres cabeceras que difieran en un carácter** con la misma clave:
-   `1PUNE000`, `1PUNE100`, `1SUNE000`. Deducir qué posiciones son campos sin
-   inventarme la tabla.
-
-Si la pestaña **AKB Decode** desglosa la cabecera campo a campo, un pantallazo
-de eso vale por las dos.
+Y una **clave de 24 bytes** con la misma MFK, que confirmaría por observación lo
+que hoy sale por aritmética: que no lleva relleno.
 
 ## C. SafeNet: el resto de la tabla de variantes
 

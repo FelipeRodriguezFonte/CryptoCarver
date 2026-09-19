@@ -65,23 +65,29 @@ import javax.crypto.spec.SecretKeySpec;
  * because no source for the field table has been verified. Guessing at it would
  * produce a validator that rejects good blocks.</p>
  *
- * <p><b>The padding rule.</b> The captured vector wraps a 16-byte key into a
- * 24-byte field, and the eight spare bytes came back as {@code 44} repeated —
- * a constant, not random. Whether the field is always 24 bytes, and whether
- * that filler is fixed, needs a vector with a single- and a triple-length key.
- * Until then {@link #wrap} takes the padding as an argument, and its default
- * reproduces what was observed.</p>
+ * <p><b>The triple-length case.</b> Two vectors fix the padding rule: the key
+ * field is always 24 bytes, and the spare room is filled with one repeated
+ * byte that names the key's length. A 16-byte key is followed by eight
+ * {@code 44}s and an 8-byte key by sixteen {@code 53}s — which, read as ASCII,
+ * are {@code 'D'} for double and {@code 'S'} for single. That reading is a
+ * two-point inference and not a source; what follows from it, that a
+ * 24-byte key has no padding at all, is arithmetic rather than a guess, but it
+ * has not been seen either. {@link #wrap} still takes the padding as an
+ * argument, and its default follows the rule above.</p>
  */
 public final class AtallaAkbOperations {
 
     /** The ASCII header is the CBC IV, so it is exactly one DES block wide. */
     public static final int HEADER_LENGTH = 8;
 
-    /** The width the captured vector used for a double-length key. */
+    /** The key field is a fixed 24 bytes whatever the key's length. */
     private static final int KEY_FIELD_BYTES = 24;
 
-    /** The filler byte observed in the captured vector. Not documented anywhere. */
-    private static final byte OBSERVED_PAD = 0x44;
+    /** Filler after a single-length key: ASCII 'S'. */
+    private static final byte PAD_SINGLE = 0x53;
+
+    /** Filler after a double-length key: ASCII 'D'. */
+    private static final byte PAD_DOUBLE = 0x44;
 
     private AtallaAkbOperations() {
     }
@@ -203,7 +209,7 @@ public final class AtallaAkbOperations {
         byte[] padBytes;
         if (padding == null) {
             padBytes = new byte[KEY_FIELD_BYTES - key.length];
-            Arrays.fill(padBytes, OBSERVED_PAD);
+            Arrays.fill(padBytes, fillerFor(key.length));
         } else {
             padBytes = bytes(normalizeHex(padding, "padding"));
             if ((key.length + padBytes.length) % 8 != 0) {
@@ -224,6 +230,9 @@ public final class AtallaAkbOperations {
         byte[] key = bytes(normalizeHex(clearKey, "clear key"));
         byte[] random = new byte[Math.max(0, KEY_FIELD_BYTES - key.length)];
         new SecureRandom().nextBytes(random);
+        // Deliberately not the 'S'/'D' filler: a real device may pad with
+        // anything, and a caller who wants the tool's output byte for byte
+        // passes null instead.
         return wrap(mfk, header, clearKey, hex(random));
     }
 
@@ -242,20 +251,38 @@ public final class AtallaAkbOperations {
         byte[] iv = akb.header().getBytes(StandardCharsets.US_ASCII);
         byte[] plain = cbc(bytes(encryptionKey(mfk)), iv, bytes(akb.encryptedKey()), false);
 
-        // Nothing in the block says where the key ends. The field is padded out
-        // and the length is carried by the header, whose field table is not
-        // known, so both parts are handed back and named rather than guessed at.
+        // Nothing in the block says where the key ends: the header carries the
+        // length and its field table is not known. So the key is found by
+        // stripping whole 8-byte blocks of filler off the end, and both parts
+        // are handed back named rather than silently joined.
+        //
+        // A key whose own last block were entirely 'D' or 'S' would be read
+        // short. That is a degenerate key, and the alternative — trusting a
+        // header field nobody has documented — is worse.
         int keyBytes = plain.length;
-        while (keyBytes > 8 && plain[keyBytes - 1] == OBSERVED_PAD) {
-            keyBytes--;
-        }
-        keyBytes -= keyBytes % 8;
-        if (keyBytes == 0) {
-            keyBytes = plain.length;
+        byte filler = plain[plain.length - 1];
+        if (filler == PAD_SINGLE || filler == PAD_DOUBLE) {
+            while (keyBytes > 8 && isFiller(plain, keyBytes - 8, filler)) {
+                keyBytes -= 8;
+            }
         }
         String clearKey = hex(Arrays.copyOfRange(plain, 0, keyBytes));
         String padding = hex(Arrays.copyOfRange(plain, keyBytes, plain.length));
         return new Unwrapped(akb, clearKey, padding, authentic, expected);
+    }
+
+    /** ASCII 'S' after a single-length key, 'D' after a double-length one. */
+    private static byte fillerFor(int keyLength) {
+        return keyLength == 8 ? PAD_SINGLE : PAD_DOUBLE;
+    }
+
+    private static boolean isFiller(byte[] plain, int from, byte filler) {
+        for (int i = from; i < from + 8; i++) {
+            if (plain[i] != filler) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** 3DES CBC-MAC with a zero IV over the header and the encrypted key field. */

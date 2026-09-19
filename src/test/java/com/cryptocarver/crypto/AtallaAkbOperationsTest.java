@@ -67,6 +67,64 @@ class AtallaAkbOperationsTest {
                 AtallaAkbOperations.checkValue(KEY));
     }
 
+    /**
+     * A second capture, and the one that settles the padding rule: a
+     * <b>single</b>-length key under a different MFK, read back through the
+     * tool's AKB Decode tab.
+     *
+     * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Atalla HSM
+     * Keys, AKB Decode, captured 2026-09-19.</p>
+     */
+    @Test
+    void aSingleLengthKeyUnderADifferentMfkIsReproduced() {
+        String mfk = "2ABC3DEF4567018998107645FED3CBA20123456789ABCDEF";
+        String key = "0000000055556666";
+        String block = "1PUNE000,"
+                + "D3266EC69C61820019F4A9640A8F603DA14F78E154C7522D,"
+                + "55720A06F8964B8F";
+
+        assertEquals(block, AtallaAkbOperations.wrap(mfk, HEADER, key, null));
+
+        Unwrapped unwrapped = AtallaAkbOperations.unwrap(mfk, block);
+        assertEquals(key, unwrapped.clearKey());
+        assertEquals("53535353535353535353535353535353", unwrapped.padding());
+        assertTrue(unwrapped.authentic());
+    }
+
+    /**
+     * The two vectors together give the rule: the key field is a fixed 24
+     * bytes, and the filler names the key's length — {@code 53} is ASCII
+     * {@code 'S'} after a single-length key, {@code 44} is {@code 'D'} after a
+     * double-length one. That reading of the letters is an inference from two
+     * points, not a source, but the rule it describes is observed.
+     */
+    @Test
+    void theFillerNamesTheKeyLength() {
+        String mfk = "2ABC3DEF4567018998107645FED3CBA20123456789ABCDEF";
+
+        assertEquals("53535353535353535353535353535353",
+                AtallaAkbOperations.unwrap(mfk,
+                        AtallaAkbOperations.wrap(mfk, HEADER, "0000000055556666", null)).padding());
+        assertEquals("4444444444444444",
+                AtallaAkbOperations.unwrap(MFK,
+                        AtallaAkbOperations.wrap(MFK, HEADER, KEY, null)).padding());
+    }
+
+    /**
+     * And the case that follows by arithmetic and has not been seen: a
+     * 24-byte key fills the field exactly, so there is no filler at all.
+     */
+    @Test
+    void aTripleLengthKeyLeavesNoRoomForFiller() {
+        String key24 = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
+
+        Unwrapped unwrapped = AtallaAkbOperations.unwrap(MFK,
+                AtallaAkbOperations.wrap(MFK, HEADER, key24, null));
+
+        assertEquals(key24, unwrapped.clearKey());
+        assertEquals("", unwrapped.padding());
+    }
+
     // =====================================================================
     // What the construction actually binds
     // =====================================================================
