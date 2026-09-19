@@ -218,6 +218,11 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.EMV, "Track 2"),
                 "Track 2 Encoding", "Track 2 Decoding", "Track 2 Operations");
         add(routes, new Route(Module.EMV, "EMV TLV Inspector"), "EMV TLV Inspector");
+        // Only names that belong to this pane. "SDA", "DDA" and "CDA" are left out
+        // on purpose: an alias claims a name globally, and short ones get claimed
+        // away from the module that should own them.
+        add(routes, new Route(Module.EMV, "Offline Data Authentication"),
+                "EMV Offline Data Authentication", "Offline Data Authentication");
 
         add(routes, new Route(Module.HISTORY, null), "Recent Operations");
         add(routes, new Route(Module.HISTORY, null, Variant.HISTORY_EXPORT), "Export History");

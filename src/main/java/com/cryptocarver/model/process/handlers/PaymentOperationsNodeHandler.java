@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.AesDukpt;
 import com.cryptocarver.crypto.CheckDigitCalculator;
 import com.cryptocarver.crypto.DukptKsn;
 import com.cryptocarver.crypto.EMVOperations;
+import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.PaymentOperations;
 import com.cryptocarver.model.process.ExecutionContext;
@@ -18,6 +19,7 @@ import com.cryptocarver.model.process.Representation;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -32,7 +34,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "PVV_GENERATE", "PVV_VERIFY", "IBM3624_OFFSET",
             "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
             "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARQC_VERIFY", "EMV_ARPC",
-            "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE");
+            "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
+            "EMV_ODA_STATIC_DATA", "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY",
+            "EMV_ODA_VERIFY_SDA", "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
+            "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD");
 
     private static final Set<Representation> TEXT = Set.of(Representation.TEXT_UTF8);
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
@@ -73,6 +78,23 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_TLV_PARSE" -> List.of(hexPort("input"));
             case "TRACK2_ENCODE" -> List.of(textPort("pan"), textPort("expiry"), textPort("serviceCode"), textPort("discretionary"));
             case "TRACK2_PARSE" -> List.of(textPort("track2"));
+            case "EMV_ODA_STATIC_DATA" -> List.of(textPort("records"), hexPort("aip"), hexPort("sdaTagList"));
+            case "EMV_ODA_RECOVER_ISSUER_KEY" -> List.of(hexPort("certificate"), hexPort("remainder"),
+                    hexPort("keyExponent"), hexPort("caModulus"), hexPort("caExponent"), textPort("pan"));
+            case "EMV_ODA_RECOVER_ICC_KEY" -> List.of(hexPort("certificate"), hexPort("remainder"),
+                    hexPort("keyExponent"), hexPort("issuerModulus"), hexPort("issuerExponent"),
+                    hexPort("staticData"), textPort("pan"));
+            case "EMV_ODA_VERIFY_SDA" -> List.of(hexPort("ssad"), hexPort("issuerModulus"),
+                    hexPort("issuerExponent"), hexPort("staticData"));
+            case "EMV_ODA_VERIFY_DDA" -> List.of(hexPort("sdad"), hexPort("iccModulus"),
+                    hexPort("iccExponent"), hexPort("terminalData"));
+            case "EMV_ODA_VERIFY_CDA" -> List.of(hexPort("sdad"), hexPort("iccModulus"),
+                    hexPort("iccExponent"), hexPort("unpredictableNumber"), hexPort("cid"),
+                    hexPort("transactionData"));
+            case "EMV_ODA_SIGN_SSAD" -> List.of(hexPort("issuerModulus"), hexPort("issuerPrivateExponent"),
+                    hexPort("dataAuthenticationCode"), hexPort("staticData"));
+            case "EMV_ODA_SIGN_SDAD" -> List.of(hexPort("iccModulus"), hexPort("iccPrivateExponent"),
+                    hexPort("iccDynamicData"), hexPort("terminalData"));
             default -> List.of();
         };
     }
@@ -84,9 +106,12 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     public Representation outputRepresentation(ProcessDefinition.Node node, Map<String, Representation> inputs) {
         return switch (node.type.toUpperCase(Locale.ROOT)) {
             case "PIN_BLOCK_ENCODE", "PIN_BLOCK_TRANSLATE", "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
-                    "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARPC" -> Representation.HEX;
+                    "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARPC",
+                    "EMV_ODA_STATIC_DATA", "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD" -> Representation.HEX;
             case "PIN_BLOCK_DECODE", "CVV_GENERATE", "CVV_VERIFY", "DCVV_GENERATE", "DCVV_VERIFY", "PVV_GENERATE", "PVV_VERIFY",
-                    "IBM3624_OFFSET", "EMV_ARQC_VERIFY", "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE" -> Representation.TEXT_UTF8;
+                    "IBM3624_OFFSET", "EMV_ARQC_VERIFY", "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
+                    "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY", "EMV_ODA_VERIFY_SDA",
+                    "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA" -> Representation.TEXT_UTF8;
             default -> Representation.BINARY;
         };
     }
@@ -94,7 +119,11 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     @Override
     public void validateConfiguration(ProcessDefinition.Node node) {
         String type = node.type.toUpperCase(Locale.ROOT);
-        for (String key : List.of("cvkA", "cvkB", "pvk", "decTable", "ipek", "bdk", "ksn", "pinBlock", "imk", "mkac", "atc", "un", "sk", "arqc", "csu", "transactionData")) {
+        for (String key : List.of("cvkA", "cvkB", "pvk", "decTable", "ipek", "bdk", "ksn", "pinBlock", "imk", "mkac", "atc", "un", "sk", "arqc", "csu", "transactionData",
+                "certificate", "remainder", "keyExponent", "caModulus", "caExponent", "issuerModulus", "issuerExponent",
+                "iccModulus", "iccExponent", "issuerPrivateExponent", "iccPrivateExponent", "staticData", "aip",
+                "sdaTagList", "ssad", "sdad", "terminalData", "unpredictableNumber", "cid", "dataAuthenticationCode",
+                "iccDynamicData")) {
             validateConfiguredHex(node, key);
         }
         switch (type) {
@@ -131,6 +160,17 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_TLV_PARSE" -> require(node, "input");
             case "TRACK2_ENCODE" -> { require(node, "pan"); require(node, "expiry"); require(node, "serviceCode"); pan(node, "pan"); decimal(node, "expiry", 4, 4); decimal(node, "serviceCode", 3, 3); }
             case "TRACK2_PARSE" -> require(node, "track2");
+            // Offline data authentication. The PAN is deliberately not required:
+            // Book 2 makes the issuer identifier and PAN checks conditional on the
+            // terminal having read one, and a bench often has only the certificate.
+            case "EMV_ODA_STATIC_DATA" -> require(node, "records");
+            case "EMV_ODA_RECOVER_ISSUER_KEY" -> { require(node, "certificate"); require(node, "caModulus"); require(node, "caExponent"); }
+            case "EMV_ODA_RECOVER_ICC_KEY" -> { require(node, "certificate"); require(node, "issuerModulus"); require(node, "issuerExponent"); }
+            case "EMV_ODA_VERIFY_SDA" -> { require(node, "ssad"); require(node, "issuerModulus"); require(node, "issuerExponent"); }
+            case "EMV_ODA_VERIFY_DDA" -> { require(node, "sdad"); require(node, "iccModulus"); require(node, "iccExponent"); }
+            case "EMV_ODA_VERIFY_CDA" -> { require(node, "sdad"); require(node, "iccModulus"); require(node, "iccExponent"); require(node, "unpredictableNumber"); hexLength(node, "unpredictableNumber", 4); }
+            case "EMV_ODA_SIGN_SSAD" -> { require(node, "issuerModulus"); require(node, "issuerPrivateExponent"); hexLength(node, "dataAuthenticationCode", 2); }
+            case "EMV_ODA_SIGN_SDAD" -> { require(node, "iccModulus"); require(node, "iccPrivateExponent"); require(node, "iccDynamicData"); }
             default -> throw new IllegalArgumentException("Unsupported payment operation");
         }
     }
@@ -175,6 +215,50 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 case "EMV_TLV_PARSE" -> text(EmvTlv.transactionSummary(EmvTlv.analyze(hexText(node, inputs, "input"))));
                 case "TRACK2_ENCODE" -> text(PaymentOperations.encodeTrack2(text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), textOptional(node, inputs, "discretionary")));
                 case "TRACK2_PARSE" -> text(PaymentOperations.parseTrack2(text(node, inputs, "track2")));
+                case "EMV_ODA_STATIC_DATA" -> hex(EmvOdaOperations.staticDataToBeAuthenticated(
+                        records(textOptional(node, inputs, "records")),
+                        hexTextOptional(node, inputs, "aip"),
+                        hexTextOptional(node, inputs, "sdaTagList")).hex());
+                case "EMV_ODA_RECOVER_ISSUER_KEY" -> text(EmvOdaOperations.describe(
+                        EmvOdaOperations.recoverIssuerPublicKey(
+                                hexText(node, inputs, "certificate"),
+                                hexTextOptional(node, inputs, "remainder"),
+                                hexTextOptional(node, inputs, "keyExponent"),
+                                publicKey(node, inputs, "caModulus", "caExponent"),
+                                textOptional(node, inputs, "pan"))));
+                case "EMV_ODA_RECOVER_ICC_KEY" -> text(EmvOdaOperations.describe(
+                        EmvOdaOperations.recoverIccPublicKey(
+                                hexText(node, inputs, "certificate"),
+                                hexTextOptional(node, inputs, "remainder"),
+                                hexTextOptional(node, inputs, "keyExponent"),
+                                publicKey(node, inputs, "issuerModulus", "issuerExponent"),
+                                hexTextOptional(node, inputs, "staticData"),
+                                textOptional(node, inputs, "pan"))));
+                case "EMV_ODA_VERIFY_SDA" -> text(EmvOdaOperations.describe(
+                        EmvOdaOperations.verifyStaticApplicationData(
+                                hexText(node, inputs, "ssad"),
+                                publicKey(node, inputs, "issuerModulus", "issuerExponent"),
+                                hexTextOptional(node, inputs, "staticData"))));
+                case "EMV_ODA_VERIFY_DDA" -> text(EmvOdaOperations.describe(
+                        EmvOdaOperations.verifyDynamicApplicationData(
+                                hexText(node, inputs, "sdad"),
+                                publicKey(node, inputs, "iccModulus", "iccExponent"),
+                                hexTextOptional(node, inputs, "terminalData"))));
+                case "EMV_ODA_VERIFY_CDA" -> text(EmvOdaOperations.describe(
+                        EmvOdaOperations.verifyCombinedApplicationData(
+                                hexText(node, inputs, "sdad"),
+                                publicKey(node, inputs, "iccModulus", "iccExponent"),
+                                hexText(node, inputs, "unpredictableNumber"),
+                                hexTextOptional(node, inputs, "cid"),
+                                hexTextOptional(node, inputs, "transactionData"))));
+                case "EMV_ODA_SIGN_SSAD" -> hex(EmvOdaOperations.signStaticApplicationData(
+                        privateKey(node, inputs, "issuerModulus", "issuerPrivateExponent"),
+                        hexTextOptional(node, inputs, "dataAuthenticationCode"),
+                        hexTextOptional(node, inputs, "staticData")));
+                case "EMV_ODA_SIGN_SDAD" -> hex(EmvOdaOperations.signDynamicApplicationData(
+                        privateKey(node, inputs, "iccModulus", "iccPrivateExponent"),
+                        hexText(node, inputs, "iccDynamicData"),
+                        hexTextOptional(node, inputs, "terminalData")));
                 default -> throw new IllegalArgumentException("Unsupported payment operation");
             };
         } catch (IllegalArgumentException e) {
@@ -216,6 +300,19 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     private static String hexTextOptional(ProcessDefinition.Node node, Map<String, FlowValue> inputs, String name) {
         if (!inputs.containsKey(name) && !node.configuration.containsKey(name)) return "";
         return hexText(node, inputs, name);
+    }
+    /** AFL records, one per line or comma separated; order is what the terminal read. */
+    private static List<String> records(String value) {
+        if (value == null || value.isBlank()) return List.of();
+        return Arrays.stream(value.split("[,;\\s]+")).filter(s -> !s.isBlank()).toList();
+    }
+    private static EmvOdaOperations.RsaPublicKey publicKey(ProcessDefinition.Node node, Map<String, FlowValue> inputs,
+                                                           String modulusKey, String exponentKey) {
+        return EmvOdaOperations.RsaPublicKey.of(hexText(node, inputs, modulusKey), hexText(node, inputs, exponentKey));
+    }
+    private static EmvOdaOperations.RsaPrivateKey privateKey(ProcessDefinition.Node node, Map<String, FlowValue> inputs,
+                                                             String modulusKey, String exponentKey) {
+        return new EmvOdaOperations.RsaPrivateKey(hexText(node, inputs, modulusKey), hexText(node, inputs, exponentKey));
     }
     private static FlowValue text(String value) { return FlowValue.text(value, StandardCharsets.UTF_8); }
     private static FlowValue hex(String value) { return FlowValue.hex(value.toUpperCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8)); }
@@ -314,6 +411,52 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         result.add(descriptor("EMV_TLV_PARSE", "emvTlvParse", "emvTlvParse", params(secret("input", "module.process.param.payment.emvData"))));
         result.add(descriptor("TRACK2_ENCODE", "track2Encode", "track2Encode", params(secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), secret("discretionary", "module.process.param.payment.discretionary"))));
         result.add(descriptor("TRACK2_PARSE", "track2Parse", "track2Parse", params(secret("track2", "module.process.param.payment.track2"))));
+        result.add(descriptor("EMV_ODA_STATIC_DATA", "emvOdaStaticData", "emvOdaStaticData", params(
+                textParam("records", "module.process.param.payment.records", ""),
+                textParam("aip", "module.process.param.payment.aip", ""),
+                textParam("sdaTagList", "module.process.param.payment.sdaTagList", ""))));
+        result.add(descriptor("EMV_ODA_RECOVER_ISSUER_KEY", "emvOdaRecoverIssuerKey", "emvOdaRecoverIssuerKey", params(
+                textParam("certificate", "module.process.param.payment.issuerCertificate", ""),
+                textParam("remainder", "module.process.param.payment.keyRemainder", ""),
+                textParam("keyExponent", "module.process.param.payment.keyExponent", ""),
+                textParam("caModulus", "module.process.param.payment.caModulus", ""),
+                textParam("caExponent", "module.process.param.payment.caExponent", "03"),
+                secret("pan", "module.process.param.payment.pan"))));
+        result.add(descriptor("EMV_ODA_RECOVER_ICC_KEY", "emvOdaRecoverIccKey", "emvOdaRecoverIccKey", params(
+                textParam("certificate", "module.process.param.payment.iccCertificate", ""),
+                textParam("remainder", "module.process.param.payment.keyRemainder", ""),
+                textParam("keyExponent", "module.process.param.payment.keyExponent", ""),
+                textParam("issuerModulus", "module.process.param.payment.issuerModulus", ""),
+                textParam("issuerExponent", "module.process.param.payment.issuerExponent", "03"),
+                textParam("staticData", "module.process.param.payment.staticData", ""),
+                secret("pan", "module.process.param.payment.pan"))));
+        result.add(descriptor("EMV_ODA_VERIFY_SDA", "emvOdaVerifySda", "emvOdaVerifySda", params(
+                textParam("ssad", "module.process.param.payment.ssad", ""),
+                textParam("issuerModulus", "module.process.param.payment.issuerModulus", ""),
+                textParam("issuerExponent", "module.process.param.payment.issuerExponent", "03"),
+                textParam("staticData", "module.process.param.payment.staticData", ""))));
+        result.add(descriptor("EMV_ODA_VERIFY_DDA", "emvOdaVerifyDda", "emvOdaVerifyDda", params(
+                textParam("sdad", "module.process.param.payment.sdad", ""),
+                textParam("iccModulus", "module.process.param.payment.iccModulus", ""),
+                textParam("iccExponent", "module.process.param.payment.iccExponent", "03"),
+                textParam("terminalData", "module.process.param.payment.ddolData", ""))));
+        result.add(descriptor("EMV_ODA_VERIFY_CDA", "emvOdaVerifyCda", "emvOdaVerifyCda", params(
+                textParam("sdad", "module.process.param.payment.sdad", ""),
+                textParam("iccModulus", "module.process.param.payment.iccModulus", ""),
+                textParam("iccExponent", "module.process.param.payment.iccExponent", "03"),
+                textParam("unpredictableNumber", "module.process.param.payment.un", ""),
+                textParam("cid", "module.process.param.payment.cid", ""),
+                textParam("transactionData", "module.process.param.payment.cdaTransactionData", ""))));
+        result.add(descriptor("EMV_ODA_SIGN_SSAD", "emvOdaSignSsad", "emvOdaSignSsad", params(
+                textParam("issuerModulus", "module.process.param.payment.issuerModulus", ""),
+                secret("issuerPrivateExponent", "module.process.param.payment.issuerPrivateExponent"),
+                textParam("dataAuthenticationCode", "module.process.param.payment.dataAuthenticationCode", ""),
+                textParam("staticData", "module.process.param.payment.staticData", ""))));
+        result.add(descriptor("EMV_ODA_SIGN_SDAD", "emvOdaSignSdad", "emvOdaSignSdad", params(
+                textParam("iccModulus", "module.process.param.payment.iccModulus", ""),
+                secret("iccPrivateExponent", "module.process.param.payment.iccPrivateExponent"),
+                textParam("iccDynamicData", "module.process.param.payment.iccDynamicData", ""),
+                textParam("terminalData", "module.process.param.payment.terminalData", ""))));
         return result;
     }
 

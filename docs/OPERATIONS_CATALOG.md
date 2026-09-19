@@ -115,6 +115,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 💳 | CVV Operations | `op_pay_cvv` | STABLE | HIGH | `CVV Operations` | CVV, CVC |
 | 💳 | Clear PIN Blocks | `op_pay_clear_pin` | STABLE | HIGH | `Clear PIN Blocks` | - |
 | 🔑 | DUKPT TDES / AES | `op_pay_dukpt` | STABLE | HIGH | `DUKPT TDES / AES` | DUKPT |
+| 💳 | EMV Offline Data Authentication | `op_pay_emv_oda` | EXPERIMENTAL | HIGH | `EMV Offline Data Authentication` | ODA, SDA, DDA, CDA, SSAD, SDAD, issuer public key, ICC public key |
 | 💳 | EMV Operations | `op_pay_emv_ops` | STABLE | HIGH | `EMV Operations` | - |
 | 🔍 | EMV TLV Inspector | `op_pay_emv_tlv` | STABLE | LOW | `EMV TLV Inspector` | EMV |
 | 🔒 | Encrypted PIN Blocks | `op_pay_enc_pin` | STABLE | HIGH | `Encrypted PIN Blocks` | - |
@@ -185,6 +186,13 @@ Sensitive payment material is transient and never persisted in `.cfprocess.json`
 | DUKPT | `DUKPT_TDES_DERIVE`, `DUKPT_AES_DERIVE`, `DUKPT_PIN_CRYPT` |
 | EMV | `EMV_ICC_MASTER_KEY`, `EMV_SESSION_KEY`, `EMV_ARQC_GENERATE`, `EMV_ARQC_VERIFY`, `EMV_ARPC`, `EMV_TLV_PARSE` |
 | Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |
+| EMV offline data authentication | `EMV_ODA_STATIC_DATA`, `EMV_ODA_RECOVER_ISSUER_KEY`, `EMV_ODA_RECOVER_ICC_KEY`, `EMV_ODA_VERIFY_SDA`, `EMV_ODA_VERIFY_DDA`, `EMV_ODA_VERIFY_CDA`, `EMV_ODA_SIGN_SSAD`, `EMV_ODA_SIGN_SDAD` |
+
+The two certificate-signing operations of EMV Book 2 produce three data objects each
+(the certificate, the public key remainder and the exponent), and a node emits one
+`FlowValue`, so they live in the EMV module's bench rather than here. Everything that
+yields a single value — the static data, the two signatures, and every verification
+report — is a node.
 
 `KEY_SPLIT_XOR` emits `HEX_COMPONENTS`, limited to equal-length components and at most five;
 only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.

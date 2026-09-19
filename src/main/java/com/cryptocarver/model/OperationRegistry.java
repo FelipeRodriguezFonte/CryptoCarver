@@ -127,6 +127,7 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_pay_dukpt", "DUKPT TDES / AES", "Payments", "DUKPT operations", "🔑", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "DUKPT TDES / AES", Arrays.asList("DUKPT")));
         register(new OperationDescriptor("op_pay_emv_tlv", "EMV TLV Inspector", "Payments", "Inspect EMV TLV", "🔍", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "EMV TLV Inspector", Arrays.asList("EMV")));
         register(new OperationDescriptor("op_pay_emv_ops", "EMV Operations", "Payments", "EMV operations", "💳", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "EMV Operations", Collections.emptyList()));
+        register(new OperationDescriptor("op_pay_emv_oda", "EMV Offline Data Authentication", "Payments", "Recover the EMV certificate chain and verify SDA, DDA and CDA", "💳", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "EMV Offline Data Authentication", Arrays.asList("ODA", "SDA", "DDA", "CDA", "SSAD", "SDAD", "issuer public key", "ICC public key")));
 
         // ASN1
         register(new OperationDescriptor("op_asn1_dec", "Decode ASN.1", "ASN1", "Decode ASN.1", "📖", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Decode ASN.1", Collections.emptyList()));
@@ -244,7 +245,13 @@ public class OperationRegistry {
         sb.append("| CVV/PVV | `CVV_GENERATE`, `CVV_VERIFY`, `DCVV_GENERATE`, `DCVV_VERIFY`, `PVV_GENERATE`, `PVV_VERIFY`, `IBM3624_OFFSET` |\n");
         sb.append("| DUKPT | `DUKPT_TDES_DERIVE`, `DUKPT_AES_DERIVE`, `DUKPT_PIN_CRYPT` |\n");
         sb.append("| EMV | `EMV_ICC_MASTER_KEY`, `EMV_SESSION_KEY`, `EMV_ARQC_GENERATE`, `EMV_ARQC_VERIFY`, `EMV_ARPC`, `EMV_TLV_PARSE` |\n");
-        sb.append("| Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |\n\n");
+        sb.append("| Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |\n");
+        sb.append("| EMV offline data authentication | `EMV_ODA_STATIC_DATA`, `EMV_ODA_RECOVER_ISSUER_KEY`, `EMV_ODA_RECOVER_ICC_KEY`, `EMV_ODA_VERIFY_SDA`, `EMV_ODA_VERIFY_DDA`, `EMV_ODA_VERIFY_CDA`, `EMV_ODA_SIGN_SSAD`, `EMV_ODA_SIGN_SDAD` |\n\n");
+        sb.append("The two certificate-signing operations of EMV Book 2 produce three data objects each\n");
+        sb.append("(the certificate, the public key remainder and the exponent), and a node emits one\n");
+        sb.append("`FlowValue`, so they live in the EMV module's bench rather than here. Everything that\n");
+        sb.append("yields a single value — the static data, the two signatures, and every verification\n");
+        sb.append("report — is a node.\n\n");
         sb.append("`KEY_SPLIT_XOR` emits `HEX_COMPONENTS`, limited to equal-length components and at most five;\n");
         sb.append("only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.\n");
         sb.append("\n## Process Designer — Phase 5B.3\n\n");

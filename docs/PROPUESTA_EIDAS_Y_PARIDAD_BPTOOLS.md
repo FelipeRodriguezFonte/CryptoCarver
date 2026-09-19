@@ -13,7 +13,8 @@ Actualizado el 19 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
 | D — TS12 SCA e inspector OpenID4VP | **Hecha**: `Ts12ScaOperations` verifica el enlace dinámico (datos de transacción, dos factores por categoría, jti, response_mode) y `OpenId4VpInspector` lee una petición sin red. |
 | E — Cierre de niveles AdES | **Parcial**: `AdesValidationOperations` valida XAdES, PAdES, CAdES y ASiC con un solo validador y emite el informe TS 119 102-2, con `dss-cades` y `dss-asic-*` añadidos. Falta la parte de **firma** en niveles LT y LTA, que necesita TSA y datos de revocación frescos, es decir red. |
 | Interfaz | **Hecha**: módulo «Wallet / eIDAS» con ocho secciones (SD-JWT VC, mdoc, lista de estado, perfiles de certificado, lista de confianza, CBOR, SCA/OpenID4VP y validación AdES), en el rail y en el buscador, con un test que exige que cada frase del panel esté traducida. |
-| Carril pagos | Pendiente, salvo FPE, que se hizo por otra vía. |
+| Carril pagos — EMV ODA | **Hecha**: `EmvOdaOperations` cubre SDA, DDA y CDA en las dos mitades — recuperar y comprobar lo que presenta una tarjeta, y firmar las mismas estructuras para tener algo que comprobar. Recupera la clave del emisor (tag 90 + 92 + 9F32) y la del ICC (9F46 + 9F48 + 9F47), verifica el SSAD (93) y el SDAD (9F4B) en los dos modos, y desempaqueta el criptograma que CDA lleva dentro. Ocho nodos en el Process Designer, sección propia en el módulo EMV con un botón que personaliza una tarjeta de pruebas, y un test de traducción para el panel. |
+| Carril pagos — resto | Pendiente: formatos Thales/Atalla/Futurex, ISO 8583, secure messaging por esquema, MAC ISO 9797-1 algoritmos 2/4/6, PIN blocks heredados, banco de comandos host de HSM, HCE y tokenización, y el menudeo genérico. FPE se hizo por otra vía. |
 
 Límites declarados y no disimulados: la comparación de key usage contra los
 tipos A/B/C/F de la tabla 1 de EN 319 412-2 no está implementada (se informan
@@ -103,7 +104,7 @@ Verificados contra el código, ordenados por valor:
 | # | Hueco | Estado verificado en el repo |
 |---|---|---|
 | 1 | **Formatos de protección de fabricante**: Thales LMK (esquemas y variantes) y **Thales Key Block**, Atalla **AKB**, Futurex **MFK**, SafeNet **KM**, más el *key lookup* por fuerza bruta sobre juegos de LMK de test | Nada. Pero tenemos TR-31 e ICSF/CCA, que es el análogo más difícil: la arquitectura de `crypto/icsf/keywrap` ya encaja |
-| 2 | **EMV ODA**: SDA/DDA/CDA — recuperación de CA PK, Issuer PK e ICC PK desde certificados, verificación de SSAD y SDAD | Cero. `EMVOperations` llega a UDK, session key, ARQC, ARPC y script MAC |
+| 2 | **EMV ODA**: SDA/DDA/CDA — recuperación de CA PK, Issuer PK e ICC PK desde certificados, verificación de SSAD y SDAD | **Cubierto** por `EmvOdaOperations` (ver la tabla de estado). Lo que había antes, y sigue estando, es `EMVOperations`: UDK, session key, ARQC, ARPC y script MAC |
 | 3 | **Secure messaging EMV** de Visa y Mastercard: cifrado de PIN en scripts y MAC por esquema | Parcial: hay `generateScriptMAC` genérico, faltan los perfiles de esquema |
 | 4 | **ISO 8583**: bitmap y parser de mensajes; ATM NDC, Wincor, AS2805, APACS30 | Cero |
 | 5 | **MAC ISO 9797-1 algoritmos 2, 4 y 6** | `MACOperations` tiene 1, 3 y 5 |
@@ -392,9 +393,16 @@ Dos carriles en paralelo, porque tocan zonas distintas del código:
 certificados + Trusted Lists) → Fase C (mdoc/mDL) → Fase D (TS12 + OpenID4VP) →
 Fase E (cierre AdES).
 
-**Carril pagos** — EMV ODA (SDA/DDA/CDA) → formatos Thales/Atalla/Futurex →
-ISO 8583 → secure messaging por esquema → el menudeo genérico. FPE va por
-separado, fuera de esta propuesta.
+**Carril pagos** — ~~EMV ODA (SDA/DDA/CDA)~~ hecha → formatos
+Thales/Atalla/Futurex → ISO 8583 → secure messaging por esquema → el menudeo
+genérico. FPE va por separado, fuera de esta propuesta.
+
+Nota sobre el ODA ya hecho: las dos operaciones que firman certificados
+producen tres objetos de datos cada una (el certificado, el resto de la clave
+pública y el exponente), y un nodo del Process Designer emite un solo
+`FlowValue`, así que viven en el banco del módulo EMV y no como nodos. Todo lo
+que da un valor único — los datos estáticos, las dos firmas y los informes de
+verificación — sí es nodo.
 
 Empezar por la fase A: es lo más cercano a lo que ya funciona, RFC 9901 es
 estable, y es el cimiento de las fases C y D.

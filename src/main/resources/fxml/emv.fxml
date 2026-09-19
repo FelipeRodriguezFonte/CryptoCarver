@@ -241,6 +241,108 @@
                               styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>
+            <!-- OFFLINE DATA AUTHENTICATION -->
+            <TitledPane text="🧾 Offline Data Authentication (SDA/DDA/CDA)">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Each key is recovered from the certificate above it: the CA key opens tag 90, the issuer key it yields opens tag 9F46, and the ICC key that yields checks the dynamic signature. The static data is part of the ICC certificate's own hash, so an AFL assembled wrongly fails while recovering the key, not where anyone looks for it. SDA proves an issuer signed this data once and nothing about the card in front of you."
+                           wrapText="true" styleClass="form-label"/>
+
+                    <HBox spacing="8">
+                        <Button text="Issue Test Card" onAction="#handleOdaIssueTestCard"
+                                styleClass="secondary-button" maxWidth="160"/>
+                        <Button text="Clear ODA" onAction="#handleOdaClear" styleClass="secondary-button" maxWidth="120"/>
+                    </HBox>
+
+                    <Separator/>
+                    <Label text="Certificate chain" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="210" prefWidth="210"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+
+                        <Label text="CA public key modulus:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaCaModulusArea" prefHeight="48" wrapText="true" promptText="Terminal CA key for this RID and index (8F)"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                        <Label text="CA public key exponent:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaCaExponentField" promptText="03 or 010001" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Issuer certificate (90):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaIssuerCertificateArea" prefHeight="48" wrapText="true" promptText="As long as the CA modulus"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                        <Label text="Issuer key remainder (92):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaIssuerRemainderField" promptText="Only when the key did not fit" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Issuer key exponent (9F32):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaIssuerExponentField" promptText="03 or 010001" maxWidth="Infinity"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="ICC certificate (9F46):" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaIccCertificateArea" prefHeight="48" wrapText="true" promptText="As long as the issuer modulus"
+                                  GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                        <Label text="ICC key remainder (9F48):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaIccRemainderField" promptText="Only when the key did not fit" maxWidth="Infinity"
+                                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="ICC key exponent (9F47):" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaIccExponentField" promptText="03 or 010001" maxWidth="Infinity"
+                                   GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Static data to be authenticated:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaStaticDataArea" prefHeight="48" wrapText="true" promptText="AFL records in the order they were read, then the AIP if tag 9F4A asks for it"
+                                  GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                        <Label text="Application PAN (optional):" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaPanField" promptText="Checked against the issuer identifier and the ICC certificate" maxWidth="Infinity"
+                                   GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="form-field"/>
+                    </GridPane>
+
+                    <Separator/>
+                    <Label text="Signatures" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="210" prefWidth="210"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+
+                        <Label text="Signed static data (93):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaSsadArea" prefHeight="48" wrapText="true" promptText="As long as the issuer modulus"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                        <Label text="Signed dynamic data (9F4B):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaSdadArea" prefHeight="48" wrapText="true" promptText="As long as the ICC modulus"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                        <Label text="DDOL data, or the Unpredictable Number for CDA:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaTerminalDataField" promptText="DDA hashes the whole DDOL; CDA hashes only tag 9F37" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Cryptogram Information Data (9F27):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="odaCidField" promptText="From the GENERATE AC response, for the CDA cross-check" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+
+                        <Label text="Transaction data for the CDA hash:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextArea fx:id="odaTransactionDataArea" prefHeight="48" wrapText="true" promptText="PDOL values, CDOL1 values, then the tags, lengths and values the card returned except 9F4B"
+                                  GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                    </GridPane>
+
+                    <FlowPane hgap="10.0" vgap="8.0" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
+                        <Button text="Recover Keys" onAction="#handleOdaRecoverKeys"
+                                styleClass="action-button,primary-action" maxWidth="150"/>
+                        <Button text="Verify SDA" onAction="#handleOdaVerifySda" styleClass="secondary-button" maxWidth="130"/>
+                        <Button text="Verify DDA" onAction="#handleOdaVerifyDda" styleClass="secondary-button" maxWidth="130"/>
+                        <Button text="Verify CDA" onAction="#handleOdaVerifyCda" styleClass="secondary-button" maxWidth="130"/>
+                    </FlowPane>
+
+                    <TextArea fx:id="odaResultArea" prefHeight="240" editable="false"
+                              styleClass="result-area,monospace-field"/>
+                </VBox>
+            </TitledPane>
         </panes>
     </Accordion>
 </VBox>

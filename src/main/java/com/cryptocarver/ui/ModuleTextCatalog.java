@@ -994,6 +994,56 @@ public final class ModuleTextCatalog {
 
     public static Map<String, String> emv() {
         Map<String, String> map = common();
+        map.put("🧾 Offline Data Authentication (SDA/DDA/CDA)",
+                "module.emv.oda.title");
+        map.put("Each key is recovered from the certificate above it: the CA key opens tag 90, the issuer key it yields opens tag 9F46, and the ICC key that yields checks the dynamic signature. The static data is part of the ICC certificate's own hash, so an AFL assembled wrongly fails while recovering the key, not where anyone looks for it. SDA proves an issuer signed this data once and nothing about the card in front of you.",
+                "module.emv.oda.help");
+        map.put("Issue Test Card",
+                "module.emv.oda.issueTestCard");
+        map.put("Clear ODA",
+                "module.emv.oda.clear");
+        map.put("Certificate chain",
+                "module.emv.oda.chain");
+        map.put("Signatures",
+                "module.emv.oda.signatures");
+        map.put("CA public key modulus:",
+                "module.emv.oda.caModulus");
+        map.put("CA public key exponent:",
+                "module.emv.oda.caExponent");
+        map.put("Issuer certificate (90):",
+                "module.emv.oda.issuerCertificate");
+        map.put("Issuer key remainder (92):",
+                "module.emv.oda.issuerRemainder");
+        map.put("Issuer key exponent (9F32):",
+                "module.emv.oda.issuerExponent");
+        map.put("ICC certificate (9F46):",
+                "module.emv.oda.iccCertificate");
+        map.put("ICC key remainder (9F48):",
+                "module.emv.oda.iccRemainder");
+        map.put("ICC key exponent (9F47):",
+                "module.emv.oda.iccExponent");
+        map.put("Static data to be authenticated:",
+                "module.emv.oda.staticData");
+        map.put("Application PAN (optional):",
+                "module.emv.oda.pan");
+        map.put("Signed static data (93):",
+                "module.emv.oda.ssad");
+        map.put("Signed dynamic data (9F4B):",
+                "module.emv.oda.sdad");
+        map.put("DDOL data, or the Unpredictable Number for CDA:",
+                "module.emv.oda.terminalData");
+        map.put("Cryptogram Information Data (9F27):",
+                "module.emv.oda.cid");
+        map.put("Transaction data for the CDA hash:",
+                "module.emv.oda.transactionData");
+        map.put("Recover Keys",
+                "module.emv.oda.recoverKeys");
+        map.put("Verify SDA",
+                "module.emv.oda.verifySda");
+        map.put("Verify DDA",
+                "module.emv.oda.verifyDda");
+        map.put("Verify CDA",
+                "module.emv.oda.verifyCda");
         map.put("🔬 EMV TLV Inspector", "module.emv.tlvTitle");
         map.put("BER-TLV hexadecimal:", "module.emv.tlvInput");
         map.put("Inspect EMV TLV", "module.emv.inspectTlv");
