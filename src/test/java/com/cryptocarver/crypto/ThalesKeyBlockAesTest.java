@@ -128,6 +128,32 @@ class ThalesKeyBlockAesTest {
                 thrown.getMessage());
     }
 
+    /**
+     * A second capture, same KBPK, different key and a different header — the
+     * algorithm character moves from {@code T} to {@code A}. Two vectors under
+     * one KBPK are what separate "the derivation is right" from "the
+     * derivation happens to work for this one header", because the header is
+     * the initialisation vector.
+     *
+     * <p>Source: the same tool, captured 2026-09-19.</p>
+     */
+    @Test
+    void aSecondCaptureWithADifferentHeaderIsAlsoReproduced() {
+        String header = "10096B0AN00E0002";
+        String key = "0D6B02388AC8EF491902342C5B0EDAD5";
+        String padding = "1FCF86E2401375FF98B3D12C6D0D";
+        String block = header
+                + "1DFDC97FED3ACD531E0F85F811B10D8700B58E7D5CD72CB465DCCE8B79B67CDE"
+                + "6298505CCB7BAD47";
+
+        assertEquals(block, ThalesKeyBlockOperations.wrap(KBPK, header, key, padding));
+
+        Unwrapped unwrapped = ThalesKeyBlockOperations.unwrap(KBPK, block);
+        assertEquals(key, unwrapped.clearKey());
+        assertEquals(padding, unwrapped.padding());
+        assertTrue(unwrapped.authentic());
+    }
+
     // =====================================================================
     // The other KBPK lengths, which have no vector
     // =====================================================================

@@ -88,76 +88,137 @@ segundo, que es exactamente el error que un chequeo a mano no ve.
 
 Fijado en `ThalesLmkBpToolsVectorTest`.
 
-## 4. Futurex — resuelto para el modificador 0
+## 4. Futurex — resuelto
 
-Con modificador 0, el cifrado es **3DES-ECB liso bajo la MFK**, sin variante.
-Confirmado con las dos MFK que la herramienta trae:
+Con cinco criptogramas de la misma clave bajo la misma MFK, uno por
+modificador, la regla sale limpia: el cifrado es **3DES-ECB liso bajo la MFK**,
+y el modificador se aplica XOR-ando **modificador × 8 al primer byte de cada
+parte de 8 bytes**.
 
-| MFK | Criptograma de `0123456789ABCDEFFEDCBA9876543210` |
+| Modificador | Constante |
 |---|---|
-| `D2DE5CD9110F4CAB1111111111111111` | `786DCE0EE3CB07CF5D590C65C17A0E29` |
-| `…0123456789ABCDEF` (triple) | `F0700DDBFB49DDD5A3280E65263A6EED` |
+| 0 | `00` |
+| 1 | `08` |
+| 2 | `10` |
+| 3 | `18` |
+| 4 | `20` |
 
-Sin implementar todavía: un formato de protección de clave cuyo único caso
-conocido es «sin variante» no es un formato, es un ECB. Lo que hace falta es la
-tabla de modificadores.
+Es el modificador desplazado tres bits a la izquierda. Bonito de descubrir y
+peligroso de suponer: está verificado hasta el 4 y `encrypt` rechaza por número
+cualquiera más alto, porque la regla extrapolaría sin quejarse y una conjetura
+sobre separación de claves es justo la que esta rama ya ha pagado dos veces.
 
-## 5. SafeNet — resuelto para la variante 00
+Y el motivo de haber pedido cinco capturas en vez de una: **con el modificador 0
+solo, esto parece ECB sin separación de claves ninguna**. El modificador 0 deja
+la MFK intacta. Una implementación construida sobre esa única captura habría
+ido y vuelto perfectamente y habría estado mal para todas las demás claves del
+HSM.
 
-Con formato 11 (doble longitud DES3, ECB) y variante 00 (DPK), la KM se usa tal
-cual y el cifrado es **3DES-ECB liso**: `968F5C677725C7C4E31E3E4C7ACA58B9`. La
-herramienta lo dice ella misma — imprime «KM (variant applied)» idéntica a la KM.
+Implementado en `FuturexMfkOperations`, 8 tests.
 
-La clave almacenada en el host sale como `1111` + criptograma. El formato es
-`11`, así que los cuatro caracteres no son formato + variante (sería `1100`).
-Con un solo caso no se distingue entre «el formato va duplicado» y otra cosa.
+## 5. SafeNet — resuelto para lo capturado
+
+Dos cosas varían por separado y confundirlas es toda la dificultad.
+
+**El formato de clave** dice cómo se cifra: `11` es 3DES-ECB, `13` es 3DES-CBC
+con IV cero. Nada más las diferencia — y por eso ECB y CBC con IV cero producen
+**el mismo primer bloque**, siempre. Una comprobación a ojo de los primeros ocho
+bytes no distingue los dos formatos. Hay un test que lo fija.
+
+**La variante de la KM** dice para qué es la clave: un byte XOR-ado a los 24 de
+la KM. Y es una **tabla, no una fórmula**:
+
+| Variante | Constante |
+|---|---|
+| `00` DPK | `00` |
+| `01` PPK | `28` |
+| `07` KPV, DT | `18` |
+
+No hay aritmética que lleve de `01 → 28` a `07 → 18`, así que las que faltan no
+se deducen: se leen de la herramienta. `variant()` rechaza un código que no haya
+visto en vez de dejar la KM intacta, porque «intacta» es ella misma una variante
+válida (`00`) y una respuesta mal silenciosa sería indistinguible de una buena.
+
+**La clave almacenada en el host** es `11` + código de formato + criptograma:
+`1111…` para el formato 11 y `1113…` para el 13. Son dos puntos, no una ley.
+Y no lleva la variante dentro: nada en una clave SafeNet almacenada dice para
+qué sirve. Eso es un riesgo de interoperabilidad real, no una manía de este
+banco.
+
+Implementado en `SafeNetKmOperations`, 11 tests.
+
+## 6. Thales Key Block AES — segundo vector
+
+Misma KBPK, otra clave y **otra cabecera** (`10096B0AN00E0002`, con la `A` de
+AES donde antes había una `T`). Se reproduce carácter por carácter. Dos vectores
+bajo una misma KBPK son lo que separa «la derivación es correcta» de «la
+derivación funciona para esta cabecera», porque la cabecera *es* el vector de
+inicialización.
+
+## 7. Atalla con clave simple — no cuadra, y sé por qué
+
+La captura de la pestaña Lookup trae un AKB con una clave DES simple dentro:
+
+```
+1PUNE000,D3266EC69C61820019F4A9640A8F603DA14F78E154C7522D,55720A06F8964B8F
+→ 0000000055556666
+```
+
+Con la MFK de las capturas anteriores no sale ni la clave ni el MAC. Como el MAC
+sólo depende de la MFK, la cabecera y el texto cifrado, eso significa que **la
+pestaña Lookup usaba otra MFK**. Probé las diez claves conocidas de esta sesión
+y ninguna valida el MAC.
+
+No es un problema del algoritmo: es un dato que falta. Ver la lista de abajo.
+
+De paso, algo verificado y útil: **`KCV (V)` es el KCV estándar de seis dígitos
+y `KCV (S)` son sus primeros cuatro.** Para `0000000055556666` el estándar da
+`3BAFC4`, y la herramienta imprime `S: 3BAF` y `V: 3BAFC4`.
 
 ---
 
-# Lo que hace falta capturar para cerrar el resto
+# Lo que hace falta capturar ahora
 
-Todas son la misma pantalla cambiando un desplegable. Valores de la casa:
-clave doble `0123456789ABCDEFFEDCBA9876543210`, triple
-`0123456789ABCDEF8080808080808080FEDCBA9876543210`.
+Queda muy poco, y lo primero es de un solo campo.
 
-## A. Atalla: la regla de relleno y la cabecera
+## A. La MFK de la pestaña Atalla Lookup ← lo más barato que hay
 
-1. **Misma MFK y cabecera `1PUNE000`, clave de 8 bytes** `0123456789ABCDEF`.
-   Dice si el campo sigue midiendo 24 bytes y si el relleno sigue siendo `44`.
-2. **Lo mismo con la clave triple de 24 bytes.** Sin sitio para relleno; confirma
-   que el campo es del tamaño de la clave y no fijo.
-3. **Tres cabeceras distintas con la misma clave**, cambiando un carácter cada
-   vez: `1PUNE000`, `1PUNE100`, `1SUNE000`. Con eso deduzco qué posiciones son
-   campos y cuáles están fijas, sin inventarme la tabla.
+**Sólo hace falta el valor del campo MFK que tenía esa pestaña** cuando se hizo
+el lookup de las 21:03. Con eso, el AKB de clave simple de arriba queda
+verificado y con él la regla de relleno para claves de 8 bytes, que es la única
+pieza que le falta al formato Atalla.
 
-Y si la pestaña **AKB Decode** acepta un bloque y explica la cabecera campo a
-campo, un pantallazo de eso vale por las tres.
+## B. Atalla: la clave triple y la cabecera
 
-## B. Futurex: la tabla de modificadores
+1. Misma MFK y cabecera `1PUNE000`, **clave de 24 bytes**. Confirma si el campo
+   de clave es fijo de 24 bytes o del tamaño de la clave.
+2. **Tres cabeceras que difieran en un carácter** con la misma clave:
+   `1PUNE000`, `1PUNE100`, `1SUNE000`. Deducir qué posiciones son campos sin
+   inventarme la tabla.
 
-El desplegable **Modifier** con la misma clave y la misma MFK, para los valores
-**1, 2, 3 y 4**. Cuatro criptogramas de la misma clave bajo la misma MFK aíslan
-la variante limpiamente. Con eso se implementa.
+Si la pestaña **AKB Decode** desglosa la cabecera campo a campo, un pantallazo
+de eso vale por las dos.
 
-## C. SafeNet: formato y variante
+## C. SafeNet: el resto de la tabla de variantes
 
-1. **Misma clave y KM, variante distinta de 00** (la siguiente de la lista).
-2. **Misma clave y variante 00, formato distinto** (el de longitud simple o el
-   triple).
+El desplegable **Variant** con la misma clave, la misma KM y formato 13, para
+las variantes que queden (`02` a `06`, `08`…). Cada una es una fila de tabla que
+no se puede deducir. Y **un formato distinto de 11 y 13** —el de longitud simple
+o el triple— para confirmar que el prefijo `11` de la clave de host es fijo.
 
-Con esos dos se separa qué parte del prefijo `1111` es el formato y qué parte la
-variante, y qué hace la variante a la KM.
+## D. Futurex: modificadores por encima de 4
 
-## D. Thales Key Block AES: una KBPK de 128 bits
+Si el desplegable llega más allá, **el 5 y el 6**. Casi seguro que siguen la
+regla, y «casi seguro» es exactamente lo que no vale. Dos capturas levantan el
+límite.
 
-La derivación implementada cambia el código de algoritmo y el número de bloques
-CMAC según la longitud de la KBPK, y sólo se capturó el caso de 256 bits. Una
-captura con una **KBPK AES de 16 bytes** confirma los otros dos caminos. Es la
-misma pantalla cambiando el campo AES KBPK.
+## E. Thales Key Block: una KBPK AES de 128 bits
 
-## E. Thales Key Block: un bloque con cabeceras opcionales
+La derivación cambia el código de algoritmo y el número de bloques CMAC según la
+longitud de la KBPK, y sólo está capturado el caso de 256 bits.
 
-En los dos esquemas el IV es el primer bloque de la cabecera. Cuando hay
-cabeceras opcionales, no está observado si el IV se extiende o se queda en el
-primer bloque. El código toma el primer bloque y lo dice. Un bloque con un
-`# Opt. KeyBlocks` distinto de `00` lo resuelve.
+## F. Thales Key Block: un bloque con cabeceras opcionales
+
+En los dos esquemas el IV es el primer bloque de la cabecera. Con cabeceras
+opcionales no está observado si se extiende. Un `# Opt. KeyBlocks` distinto de
+`00` lo resuelve.
