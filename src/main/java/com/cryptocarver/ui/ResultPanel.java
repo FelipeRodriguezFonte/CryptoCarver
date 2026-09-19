@@ -35,6 +35,7 @@ public final class ResultPanel extends VBox {
     private final Label copiedLabel = new Label();
     private final VBox outputs = new VBox(8);
     private final ComboBox<String> formatSelector = new ComboBox<>();
+    private final Label formatLabel = new Label("Formato:");
     private Status status = Status.EMPTY;
     private Consumer<String> copyHandler;
     private Consumer<String> shelfHandler;
@@ -68,8 +69,12 @@ public final class ResultPanel extends VBox {
         formatSelector.getStyleClass().add("result-panel-format");
         formatSelector.setAccessibleText("Formato de salida");
         formatSelector.valueProperty().addListener((observable, previous, chosen) -> renderOutputs());
+        // Without a caption the dropdown reads as an unlabelled box showing the
+        // word "Texto", which says nothing about what it would change.
+        formatLabel.getStyleClass().add("result-panel-format-label");
+        formatLabel.setLabelFor(formatSelector);
 
-        HBox header = new HBox(10, statusLabel, operationLabel, metricsLabel, formatSelector);
+        HBox header = new HBox(10, statusLabel, operationLabel, metricsLabel, formatLabel, formatSelector);
         header.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(operationLabel, Priority.ALWAYS);
         HBox.setHgrow(metricsLabel, Priority.NEVER);
@@ -90,6 +95,28 @@ public final class ResultPanel extends VBox {
         actions.getChildren().addAll(copy, shelfButton, expandButton, saveButton, chainButton);
 
         getChildren().addAll(header, new Separator(), outputs, actions, copiedLabel);
+        showEmpty();
+    }
+
+    /**
+     * The panel as it looks before anything has been published.
+     *
+     * <p>The format selector is absent here rather than merely disabled. With no
+     * result there are no bytes to re-encode, so a dropdown offering Text, Hex
+     * and Base64 is a control whose every option does the same nothing — which
+     * is exactly the rule the action buttons above already follow. The status
+     * also says so in words instead of leaving the header blank.</p>
+     */
+    private void showEmpty() {
+        statusLabel.setText(statusText(Status.EMPTY));
+        showFormatSelector(false);
+    }
+
+    private void showFormatSelector(boolean visible) {
+        formatLabel.setVisible(visible);
+        formatLabel.setManaged(visible);
+        formatSelector.setVisible(visible);
+        formatSelector.setManaged(visible);
     }
 
     private static Button action(String text, String accessibleText, Runnable handler) {
@@ -119,7 +146,7 @@ public final class ResultPanel extends VBox {
         lastOutputLabel = hasOutput ? "Salida" : "Resumen";
         // A summary has no bytes to re-encode, so offering a format for it would be a control
         // that changes nothing.
-        formatSelector.setDisable(!hasOutput);
+        showFormatSelector(hasOutput);
         renderOutputs();
     }
 

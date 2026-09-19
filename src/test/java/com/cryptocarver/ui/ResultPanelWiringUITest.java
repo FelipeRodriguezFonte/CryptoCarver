@@ -199,4 +199,58 @@ class ResultPanelWiringUITest {
     private static List<String> labels(ResultPanel panel) {
         return buttons(panel).stream().map(Button::getText).toList();
     }
+
+    /** Finds the selector whether or not it is currently on screen. */
+    private static ComboBox<?> formatSelector(ResultPanel panel) {
+        for (Node node : panel.getChildren()) {
+            if (node instanceof javafx.scene.layout.HBox row) {
+                for (Node child : row.getChildren()) {
+                    if (child instanceof ComboBox<?> combo) return combo;
+                }
+            }
+        }
+        throw new AssertionError("The result panel has no format selector");
+    }
+
+    @Test
+    void theFormatSelectorIsNotOfferedUntilThereIsSomethingToFormat() throws Exception {
+        // It was on screen from the moment a module loaded, showing "Texto" with
+        // no caption and no result behind it. Every option did the same nothing,
+        // which is the one thing a control must never do.
+        assertFalse(fx(() -> formatSelector(new ResultPanel()).isVisible()),
+                "A panel with no result must not offer an output format");
+
+        assertTrue(fx(() -> {
+            ResultPanel panel = new ResultPanel();
+            panel.setResult(publicResult("bytes".getBytes(StandardCharsets.UTF_8)),
+                    SecretVisibilityProfile.FULL_LAB, ResultPanel.Status.SUCCESS, 1);
+            return formatSelector(panel).isVisible();
+        }), "A result with bytes can be re-encoded, so the format is offered");
+    }
+
+    @Test
+    void aSummaryWithNoBytesIsNotOfferedAFormatEither() throws Exception {
+        OperationResult summary = OperationResult.forOperation("Validation")
+                .detail("Signatures", "1")
+                .build();
+
+        assertFalse(fx(() -> {
+            ResultPanel panel = new ResultPanel();
+            panel.setResult(summary, SecretVisibilityProfile.FULL_LAB, ResultPanel.Status.SUCCESS, 1);
+            return formatSelector(panel).isVisible();
+        }), "There is nothing to re-encode in a summary");
+    }
+
+    @Test
+    void anEmptyPanelSaysSoRatherThanShowingABlankHeader() throws Exception {
+        assertEquals("Sin resultado", fx(() -> {
+            for (Node node : new ResultPanel().getChildren()) {
+                if (node instanceof javafx.scene.layout.HBox row && !row.getChildren().isEmpty()
+                        && row.getChildren().get(0) instanceof javafx.scene.control.Label status) {
+                    return status.getText();
+                }
+            }
+            return "";
+        }));
+    }
 }
