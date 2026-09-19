@@ -190,6 +190,14 @@ public final class ModuleTextCatalog {
                 "module.keys.thales.lookup");
         map.put("Load Manual Example",
                 "module.keys.thales.loadExample");
+        map.put("🧱 Thales Key Block",
+                "module.keys.keyBlock.title");
+        map.put("Same shape as an ANSI X9.143 / TR-31 block, with three differences that make a generic TR-31 reader refuse it: the version ID is a digit rather than a letter, Thales adds its own key usage codes, and it adds its own optional header blocks. The usage table is not a list of names — it says which algorithms and modes each usage permits, which is what lets a malformed header be called malformed. The key data is not decrypted: chapter 8 gives the algorithms but never says how their keys come from the LMK.",
+                "module.keys.keyBlock.help");
+        map.put("Key block (with or without its leading S):",
+                "module.keys.keyBlock.input");
+        map.put("Inspect Key Block",
+                "module.keys.keyBlock.inspect");
         map.put("🔒 TR-31 Key Blocks", "module.keys.tr31");
         map.put("🔁 RSA Key Exchange", "module.keys.rsaKex");
         map.put("🔀 TR-34 Key Distribution", "module.keys.tr34");

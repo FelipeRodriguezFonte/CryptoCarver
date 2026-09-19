@@ -638,6 +638,23 @@
                 </VBox>
             </TitledPane>
 
+            <TitledPane text="🧱 Thales Key Block">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Same shape as an ANSI X9.143 / TR-31 block, with three differences that make a generic TR-31 reader refuse it: the version ID is a digit rather than a letter, Thales adds its own key usage codes, and it adds its own optional header blocks. The usage table is not a list of names — it says which algorithms and modes each usage permits, which is what lets a malformed header be called malformed. The key data is not decrypted: chapter 8 gives the algorithms but never says how their keys come from the LMK." wrapText="true" styleClass="form-label"/>
+                    <Label text="Key block (with or without its leading S):" styleClass="form-label"/>
+                    <TextArea fx:id="keyBlockInputArea" prefHeight="80" wrapText="true"
+                              promptText="S00072V2TG22N0003..." styleClass="monospace-field"/>
+                    <HBox spacing="8">
+                        <Button text="Inspect Key Block" onAction="#handleKeyBlockInspect"
+                                styleClass="action-button,primary-action"/>
+                        <Button text="Load Manual Example" onAction="#handleKeyBlockExample"
+                                styleClass="secondary-button"/>
+                    </HBox>
+                    <TextArea fx:id="keyBlockResultArea" prefHeight="220" editable="false"
+                              styleClass="result-area,monospace-field"/>
+                </VBox>
+            </TitledPane>
+
             <TitledPane text="🔁 RSA Key Exchange">
                 <VBox styleClass="ux-inline-1684f00703" spacing="6">
                     <TabPane tabClosingPolicy="UNAVAILABLE">

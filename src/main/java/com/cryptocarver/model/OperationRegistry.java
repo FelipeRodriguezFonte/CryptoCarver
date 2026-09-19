@@ -129,6 +129,7 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_pay_emv_ops", "EMV Operations", "Payments", "EMV operations", "💳", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "EMV Operations", Collections.emptyList()));
         register(new OperationDescriptor("op_pay_emv_oda", "EMV Offline Data Authentication", "Payments", "Recover the EMV certificate chain and verify SDA, DDA and CDA", "💳", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "EMV Offline Data Authentication", Arrays.asList("ODA", "SDA", "DDA", "CDA", "SSAD", "SDAD", "issuer public key", "ICC public key")));
         register(new OperationDescriptor("op_pay_thales_lmk", "Thales Variant LMK", "Payments", "Wrap and unwrap keys under a Thales payShield variant LMK", "💳", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "Thales Variant LMK", Arrays.asList("Thales", "payShield", "LMK", "variant", "key type code", "key scheme")));
+        register(new OperationDescriptor("op_pay_thales_key_block", "Thales Key Block", "Payments", "Read a Thales Key Block and check its header against chapter 8", "💳", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.LOW, "Thales Key Block", Arrays.asList("Thales Key Block", "key scheme S", "key usage", "optional header block")));
 
         // ASN1
         register(new OperationDescriptor("op_asn1_dec", "Decode ASN.1", "ASN1", "Decode ASN.1", "📖", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.LOW, "Decode ASN.1", Collections.emptyList()));
@@ -248,10 +249,14 @@ public class OperationRegistry {
         sb.append("| EMV | `EMV_ICC_MASTER_KEY`, `EMV_SESSION_KEY`, `EMV_ARQC_GENERATE`, `EMV_ARQC_VERIFY`, `EMV_ARPC`, `EMV_TLV_PARSE` |\n");
         sb.append("| Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |\n");
         sb.append("| EMV offline data authentication | `EMV_ODA_STATIC_DATA`, `EMV_ODA_RECOVER_ISSUER_KEY`, `EMV_ODA_RECOVER_ICC_KEY`, `EMV_ODA_VERIFY_SDA`, `EMV_ODA_VERIFY_DDA`, `EMV_ODA_VERIFY_CDA`, `EMV_ODA_SIGN_SSAD`, `EMV_ODA_SIGN_SDAD` |\n");
-        sb.append("| Thales variant LMK | `THALES_LMK_ENCRYPT`, `THALES_LMK_DECRYPT`, `THALES_LMK_DESCRIBE`, `THALES_LMK_LOOKUP`, `THALES_KCV` |\n\n");
+        sb.append("| Thales variant LMK | `THALES_LMK_ENCRYPT`, `THALES_LMK_DECRYPT`, `THALES_LMK_DESCRIBE`, `THALES_LMK_LOOKUP`, `THALES_KCV` |\n");
+        sb.append("| Thales Key Block | `THALES_KEY_BLOCK_PARSE`, `THALES_KEY_BLOCK_HEADER` |\n\n");
         sb.append("`THALES_LMK_ENCRYPT` emits the cryptogram without its scheme tag, because a `HEX`\n");
         sb.append("`FlowValue` cannot carry the leading letter. `THALES_LMK_DESCRIBE` prints the tagged\n");
         sb.append("form a payShield would show, along with both variants and the byte each one lands on.\n\n");
+        sb.append("The Key Block nodes read and build the clear parts only. Chapter 8 of the payShield\n");
+        sb.append("manual gives the encryption and MAC algorithms but never says how their keys come\n");
+        sb.append("from the LMK, so nothing here decrypts key data.\n\n");
         sb.append("The two certificate-signing operations of EMV Book 2 produce three data objects each\n");
         sb.append("(the certificate, the public key remainder and the exponent), and a node emits one\n");
         sb.append("`FlowValue`, so they live in the EMV module's bench rather than here. Everything that\n");

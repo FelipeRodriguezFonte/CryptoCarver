@@ -6665,4 +6665,41 @@ public class KeysController {
             }
         }
     }
+
+    // =====================================================================
+    // Thales Key Block — payShield 10K Host Programmer's Manual, chapter 8
+    // =====================================================================
+
+    @FXML private TextArea keyBlockInputArea;
+    @FXML private TextArea keyBlockResultArea;
+
+    /** Clause 8.5.1.8, the header the manual works through, padded out to the
+     *  72 characters it declares. */
+    private static final String MANUAL_KEY_BLOCK =
+            "S00072V2TG22N0033" + "A".repeat(48) + "0123ABCD";
+
+    @FXML
+    public void handleKeyBlockInspect() {
+        try {
+            String report = ThalesKeyBlockOperations.describe(
+                    ThalesKeyBlockOperations.parse(thalesText(keyBlockInputArea)));
+            if (keyBlockResultArea != null) keyBlockResultArea.setText(report);
+            if (mainController != null) {
+                mainController.publish(OperationResult.forOperation("Thales Key Block")
+                        .output(report.getBytes(StandardCharsets.UTF_8))
+                        .status(t("module.keys.keyBlock.status"))
+                        .build());
+            }
+        } catch (Exception e) {
+            if (keyBlockResultArea != null) {
+                keyBlockResultArea.setText(t("module.keys.keyBlock.error", String.valueOf(e.getMessage())));
+            }
+        }
+    }
+
+    @FXML
+    public void handleKeyBlockExample() {
+        if (keyBlockInputArea != null) keyBlockInputArea.setText(MANUAL_KEY_BLOCK);
+        if (keyBlockResultArea != null) keyBlockResultArea.setText(t("module.keys.keyBlock.exampleLoaded"));
+    }
 }

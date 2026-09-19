@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.EMVOperations;
 import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.PaymentOperations;
+import com.cryptocarver.crypto.ThalesKeyBlockOperations;
 import com.cryptocarver.crypto.ThalesLmkOperations;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
@@ -40,7 +41,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "EMV_ODA_VERIFY_SDA", "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
             "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD",
             "THALES_LMK_ENCRYPT", "THALES_LMK_DECRYPT", "THALES_LMK_DESCRIBE",
-            "THALES_LMK_LOOKUP", "THALES_KCV");
+            "THALES_LMK_LOOKUP", "THALES_KCV",
+            "THALES_KEY_BLOCK_PARSE", "THALES_KEY_BLOCK_HEADER");
 
     private static final Set<Representation> TEXT = Set.of(Representation.TEXT_UTF8);
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
@@ -55,6 +57,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     private static final List<String> AES_KEY_TYPES = List.of("AES128", "AES192", "AES256");
     /** payShield 10K Host Programmer's Manual clause 7.2.3: the variant schemes. */
     private static final List<String> THALES_SCHEMES = List.of("U", "T", "Z");
+    /** Clause 8.5.1: a digit, not the letter an X9.143 block carries. */
+    private static final List<String> KEY_BLOCK_VERSIONS = List.of("0", "1");
 
     @Override
     public Set<String> supportedTypes() { return TYPES; }
@@ -104,6 +108,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "THALES_LMK_DECRYPT", "THALES_LMK_DESCRIBE" -> List.of(hexPort("cryptogram"), hexPort("lmk"));
             case "THALES_LMK_LOOKUP" -> List.of(hexPort("cryptogram"), hexPort("lmk"), textPort("checkValue"));
             case "THALES_KCV" -> List.of(hexPort("clearKey"));
+            case "THALES_KEY_BLOCK_PARSE" -> List.of(textPort("keyBlock"));
+            case "THALES_KEY_BLOCK_HEADER" -> List.of();
             default -> List.of();
         };
     }
@@ -122,7 +128,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                     "IBM3624_OFFSET", "EMV_ARQC_VERIFY", "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
                     "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY", "EMV_ODA_VERIFY_SDA",
                     "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
-                    "THALES_LMK_DESCRIBE", "THALES_LMK_LOOKUP" -> Representation.TEXT_UTF8;
+                    "THALES_LMK_DESCRIBE", "THALES_LMK_LOOKUP",
+                    "THALES_KEY_BLOCK_PARSE", "THALES_KEY_BLOCK_HEADER" -> Representation.TEXT_UTF8;
             default -> Representation.BINARY;
         };
     }
@@ -186,6 +193,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "THALES_LMK_DECRYPT", "THALES_LMK_DESCRIBE" -> { require(node, "cryptogram"); require(node, "lmk"); thalesKeyType(node); oneOf(node, "scheme", THALES_SCHEMES); }
             case "THALES_LMK_LOOKUP" -> { require(node, "cryptogram"); require(node, "lmk"); require(node, "checkValue"); }
             case "THALES_KCV" -> require(node, "clearKey");
+            case "THALES_KEY_BLOCK_PARSE" -> require(node, "keyBlock");
+            case "THALES_KEY_BLOCK_HEADER" -> { require(node, "keyUsage"); oneOf(node, "versionId", KEY_BLOCK_VERSIONS); }
             default -> throw new IllegalArgumentException("Unsupported payment operation");
         }
     }
@@ -291,6 +300,18 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                         hexText(node, inputs, "cryptogram"), text(node, inputs, "checkValue"),
                         lmk(node, inputs))));
                 case "THALES_KCV" -> hex(ThalesLmkOperations.checkValue(hexText(node, inputs, "clearKey")));
+                case "THALES_KEY_BLOCK_PARSE" -> text(ThalesKeyBlockOperations.describe(
+                        ThalesKeyBlockOperations.parse(text(node, inputs, "keyBlock"))));
+                case "THALES_KEY_BLOCK_HEADER" -> text(ThalesKeyBlockOperations.buildHeader(
+                        ThalesKeyBlockOperations.VersionId.of(setting(node, "versionId", "0").charAt(0)),
+                        setting(node, "keyUsage", "K0"),
+                        setting(node, "algorithm", "T").charAt(0),
+                        setting(node, "modeOfUse", "N").charAt(0),
+                        setting(node, "keyVersionNumber", "00"),
+                        setting(node, "exportability", "N").charAt(0),
+                        integer(node, "optionalBlockCount", 0, 0, 99),
+                        setting(node, "lmkId", "00"),
+                        integer(node, "payloadCharacters", 56, 0, 9983)));
                 default -> throw new IllegalArgumentException("Unsupported payment operation");
             };
         } catch (IllegalArgumentException e) {
@@ -513,6 +534,18 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 textParam("checkValue", "module.process.param.payment.checkValue", ""))));
         result.add(descriptor("THALES_KCV", "thalesKcv", "thalesKcv", params(
                 secret("clearKey", "module.process.param.payment.clearKey"))));
+        result.add(descriptor("THALES_KEY_BLOCK_PARSE", "thalesKeyBlockParse", "thalesKeyBlockParse", params(
+                secret("keyBlock", "module.process.param.payment.keyBlock"))));
+        result.add(descriptor("THALES_KEY_BLOCK_HEADER", "thalesKeyBlockHeader", "thalesKeyBlockHeader", params(
+                combo("versionId", "module.process.param.payment.versionId", KEY_BLOCK_VERSIONS, "0"),
+                textParam("keyUsage", "module.process.param.payment.keyBlockUsage", "K0"),
+                textParam("algorithm", "module.process.param.payment.keyBlockAlgorithm", "T"),
+                textParam("modeOfUse", "module.process.param.payment.modeOfUse", "N"),
+                textParam("keyVersionNumber", "module.process.param.payment.keyVersionNumber", "00"),
+                textParam("exportability", "module.process.param.payment.exportability", "N"),
+                number("optionalBlockCount", "module.process.param.payment.optionalBlockCount", "0"),
+                textParam("lmkId", "module.process.param.payment.lmkId", "00"),
+                number("payloadCharacters", "module.process.param.payment.payloadCharacters", "56"))));
         return result;
     }
 

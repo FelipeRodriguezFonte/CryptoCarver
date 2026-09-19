@@ -147,6 +147,8 @@ public final class UiNavigationRegistry {
         // claims a name across the whole application.
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Thales Variant LMK"),
                 "Thales Variant LMK", "Variant LMK");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "Thales Key Block"),
+                "Thales Key Block");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "RSA Key Exchange"), "RSA Key Exchange");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-34 Key Distribution"), "TR-34 Key Distribution");
 
