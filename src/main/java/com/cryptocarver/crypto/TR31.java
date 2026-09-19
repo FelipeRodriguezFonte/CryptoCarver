@@ -857,13 +857,25 @@ public class TR31 {
         int position = 16;
         for (int index = 0; index < optionalCount; index++) {
             if (position + 4 > keyBlock.length()) throw new IllegalArgumentException("TR-31 optional block " + (index + 1) + " header is truncated");
-            final int dataBytes;
+            final int blockLength;
             try {
-                dataBytes = Integer.parseInt(keyBlock.substring(position + 2, position + 4), 16);
+                blockLength = Integer.parseInt(keyBlock.substring(position + 2, position + 4), 16);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("TR-31 optional block length is not hexadecimal", e);
             }
-            position += 4 + (dataBytes * 2);
+            // The length field is the length of the WHOLE optional block —
+            // its two-character identifier and its two-character length field
+            // included — written in hexadecimal. A 24-character block reads
+            // '18'. Reading it as a count of data bytes to be doubled walks
+            // straight past the next block, and no round-trip test notices,
+            // because this implementation only ever wrote headers with no
+            // optional blocks at all.
+            if (blockLength < 4) {
+                throw new IllegalArgumentException("TR-31 optional block " + (index + 1)
+                        + " declares a length of " + blockLength + "; the minimum is 4, and '00' marks "
+                        + "the extended length form, which is not implemented here");
+            }
+            position += blockLength;
             if (position > keyBlock.length()) throw new IllegalArgumentException("TR-31 optional block " + (index + 1) + " is truncated");
         }
         return position;

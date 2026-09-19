@@ -46,6 +46,9 @@ public class MACOperations {
             "CBC-MAC-3DES",
             "CBC-MAC-AES",
             "ISO-9797-1-ALG1",
+            "ISO-9797-1-ALG2",
+            "ISO-9797-1-ALG4",
+            "ISO-9797-1-ALG6",
             "ANSI-X9.9",
             "ANSI-X9.19",
             "AS2805.4.1",
@@ -76,6 +79,12 @@ public class MACOperations {
             return generateCBCMAC(data, key, algorithm);
         } else if (algorithm.equals("ISO-9797-1-ALG1")) {
             return generateISO9797Alg1(data, key);
+        } else if (algorithm.equals("ISO-9797-1-ALG2")) {
+            return generateISO9797Alg2(data, key, Iso9797Padding.METHOD_1, 64);
+        } else if (algorithm.equals("ISO-9797-1-ALG4")) {
+            return generateISO9797Alg4(data, key, Iso9797Padding.METHOD_1, 64);
+        } else if (algorithm.equals("ISO-9797-1-ALG6")) {
+            return generateISO9797Alg6(data, key, Iso9797Padding.METHOD_1, 64);
         } else if (algorithm.equals("ANSI-X9.9")) {
             return generateANSIX99(data, key);
         } else if (algorithm.equals("ANSI-X9.19")) {
@@ -325,6 +334,123 @@ public class MACOperations {
     }
 
     /**
+     * Padding choices defined by ISO/IEC 9797-1:1999, 6.1.  They are kept
+     * separate from the MAC algorithm: the standard deliberately permits all
+     * three methods with Algorithms 2, 4 and 6.
+     */
+    public enum Iso9797Padding { METHOD_1, METHOD_2, METHOD_3 }
+
+    /** ISO/IEC 9797-1:1999, 7.2: EMAC (Algorithm 2). */
+    public static byte[] generateISO9797Alg2(byte[] data, byte[] key,
+            Iso9797Padding padding, int macLengthBits) throws Exception {
+        Iso9797Input input = prepareIso9797(data, key, padding, macLengthBits, false);
+        byte[] h = cbcLast(input.blocks, input.k);
+        return truncate(desEncrypt(input.kPrime, h), macLengthBits);
+    }
+
+    /** ISO/IEC 9797-1:1999, 7.4: MACDES (Algorithm 4). */
+    public static byte[] generateISO9797Alg4(byte[] data, byte[] key,
+            Iso9797Padding padding, int macLengthBits) throws Exception {
+        Iso9797Input input = prepareIso9797(data, key, padding, macLengthBits, true);
+        byte[] h = initialAndCbcLast(input.blocks, input.k, xorNibbleMask(input.kPrime));
+        return truncate(desEncrypt(input.kPrime, h), macLengthBits);
+    }
+
+    /** ISO/IEC 9797-1:1999, 7.6: XOR of two parallel Algorithm 4 instances. */
+    public static byte[] generateISO9797Alg6(byte[] data, byte[] key,
+            Iso9797Padding padding, int macLengthBits) throws Exception {
+        Iso9797Input input = prepareIso9797(data, key, padding, macLengthBits, true);
+        byte[] first = truncate(desEncrypt(input.kPrime,
+                initialAndCbcLast(input.blocks, input.k, xorNibbleMask(input.kPrime))), 64);
+        byte[] k2 = xorByteMask(input.k, (byte) 0xFF);
+        byte[] kp2 = xorByteMask(input.kPrime, (byte) 0xFF);
+        byte[] second = truncate(desEncrypt(kp2,
+                initialAndCbcLast(input.blocks, k2, xorNibbleMask(kp2))), 64);
+        for (int i = 0; i < first.length; i++) first[i] ^= second[i];
+        return truncate(first, macLengthBits);
+    }
+
+    public static byte[] generateISO9797Alg2(byte[] data, byte[] key,
+            int paddingMethod, int macLengthBits) throws Exception {
+        return generateISO9797Alg2(data, key, padding(paddingMethod), macLengthBits);
+    }
+    public static byte[] generateISO9797Alg4(byte[] data, byte[] key,
+            int paddingMethod, int macLengthBits) throws Exception {
+        return generateISO9797Alg4(data, key, padding(paddingMethod), macLengthBits);
+    }
+    public static byte[] generateISO9797Alg6(byte[] data, byte[] key,
+            int paddingMethod, int macLengthBits) throws Exception {
+        return generateISO9797Alg6(data, key, padding(paddingMethod), macLengthBits);
+    }
+
+    private static Iso9797Padding padding(int method) {
+        return switch (method) {
+            case 1 -> Iso9797Padding.METHOD_1;
+            case 2 -> Iso9797Padding.METHOD_2;
+            case 3 -> Iso9797Padding.METHOD_3;
+            default -> throw new IllegalArgumentException("ISO 9797-1 padding method must be 1, 2, or 3");
+        };
+    }
+
+    private record Iso9797Input(byte[][] blocks, byte[] k, byte[] kPrime) {}
+
+    private static Iso9797Input prepareIso9797(byte[] data, byte[] key,
+            Iso9797Padding padding, int macLengthBits, boolean requireTwoBlocks) {
+        if (data == null || key == null) throw new IllegalArgumentException("Data and key cannot be null");
+        if (key.length != 16) throw new IllegalArgumentException("ISO 9797-1 Algorithms 2, 4 and 6 require K||K' (16-byte DES key)");
+        if (macLengthBits <= 0 || macLengthBits > 64) throw new IllegalArgumentException("MAC length must be 1..64 bits");
+        byte[] padded = iso9797Pad(data, 8, padding);
+        if (padded.length == 0 || padded.length % 8 != 0) throw new IllegalStateException("Invalid ISO 9797-1 padding");
+        if (requireTwoBlocks && padded.length < 16) throw new IllegalArgumentException("ISO 9797-1 Algorithm 4/6 requires at least two padded blocks");
+        byte[][] blocks = new byte[padded.length / 8][8];
+        for (int i = 0; i < blocks.length; i++) System.arraycopy(padded, i * 8, blocks[i], 0, 8);
+        return new Iso9797Input(blocks, java.util.Arrays.copyOfRange(key, 0, 8), java.util.Arrays.copyOfRange(key, 8, 16));
+    }
+
+    private static byte[] iso9797Pad(byte[] data, int blockSize, Iso9797Padding padding) {
+        int remainder = data.length % blockSize;
+        int tail = remainder == 0 ? blockSize : blockSize - remainder;
+        byte[] result;
+        switch (padding) {
+            case METHOD_1 -> result = java.util.Arrays.copyOf(data, data.length + tail);
+            case METHOD_2 -> { result = java.util.Arrays.copyOf(data, data.length + tail); result[data.length] = (byte) 0x80; }
+            case METHOD_3 -> {
+                result = new byte[data.length + tail + blockSize];
+                long bitLength = ((long) data.length) * 8L;
+                for (int i = blockSize - 1; i >= 0; i--) { result[i] = (byte) bitLength; bitLength >>>= 8; }
+                System.arraycopy(data, 0, result, blockSize, data.length);
+            }
+            default -> throw new IllegalArgumentException("Unsupported ISO 9797-1 padding");
+        }
+        if (padding != Iso9797Padding.METHOD_3) System.arraycopy(data, 0, result, 0, data.length);
+        return result;
+    }
+
+    private static byte[] cbcLast(byte[][] blocks, byte[] key) throws Exception {
+        byte[] h = new byte[8];
+        for (byte[] block : blocks) h = desEncrypt(key, xor(h, block));
+        return h;
+    }
+    private static byte[] initialAndCbcLast(byte[][] blocks, byte[] k, byte[] kPrimePrime) throws Exception {
+        byte[] h = desEncrypt(kPrimePrime, desEncrypt(k, blocks[0]));
+        for (int i = 1; i < blocks.length; i++) h = desEncrypt(k, xor(h, blocks[i]));
+        return h;
+    }
+    private static byte[] desEncrypt(byte[] key, byte[] block) throws Exception {
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("DES/ECB/NoPadding", "BC");
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "DES"));
+        return cipher.doFinal(block);
+    }
+    private static byte[] xor(byte[] a, byte[] b) { byte[] out = a.clone(); for (int i = 0; i < out.length; i++) out[i] ^= b[i]; return out; }
+    private static byte[] xorNibbleMask(byte[] key) { return xorByteMask(key, (byte) 0xF0); }
+    private static byte[] xorByteMask(byte[] key, byte mask) { byte[] out = key.clone(); for (int i = 0; i < out.length; i++) out[i] ^= mask; return out; }
+    private static byte[] truncate(byte[] value, int bits) {
+        int bytes = (bits + 7) / 8; byte[] out = java.util.Arrays.copyOf(value, bytes);
+        if ((bits & 7) != 0) out[bytes - 1] &= (byte) (0xFF << (8 - (bits & 7)));
+        return out;
+    }
+
+    /**
      * Generate ANSI X9.19 MAC (Retail MAC - ISO 9797-1 Algorithm 3)
      * Financial standard using DES with encrypt-decrypt-encrypt on final block
      * Uses ISO9797Alg3Mac from BouncyCastle (Retail MAC)
@@ -474,6 +600,12 @@ public class MACOperations {
             // ISO 9797-1 Standards
             case "ISO-9797-1-ALG1":
                 return "ISO 9797-1 Algorithm 1 - Standard CBC-MAC with DES (8-byte output, zero padding)";
+            case "ISO-9797-1-ALG2":
+                return "ISO 9797-1 Algorithm 2 (EMAC) - DES K||K' with selectable padding and truncation";
+            case "ISO-9797-1-ALG4":
+                return "ISO 9797-1 Algorithm 4 (MacDES) - initial/output transformations with selectable padding";
+            case "ISO-9797-1-ALG6":
+                return "ISO 9797-1 Algorithm 6 - XOR of two Algorithm 4 computations";
 
             // ANSI Standards
             case "ANSI-X9.9":
@@ -504,6 +636,8 @@ public class MACOperations {
             return "16, 24, or 32 bytes (128, 192, or 256 bits)";
         } else if (algorithm.equals("ISO-9797-1-ALG1")) {
             return "8 bytes (64 bits, DES)";
+        } else if (algorithm.equals("ISO-9797-1-ALG2") || algorithm.equals("ISO-9797-1-ALG4") || algorithm.equals("ISO-9797-1-ALG6")) {
+            return "16 bytes (K||K', two DES keys)";
         } else if (algorithm.equals("ANSI-X9.9")) {
             return "8 bytes (64 bits)";
         } else if (algorithm.equals("ANSI-X9.19")) {

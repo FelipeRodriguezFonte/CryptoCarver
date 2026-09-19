@@ -3406,7 +3406,7 @@ public class KeysController {
             if (!header.optionalBlockDetails.isEmpty()) {
                 result.append("OPTIONAL BLOCKS:\n");
                 for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
-                    result.append("  ").append(block.id()).append(" (" ).append(block.dataLength()).append(" bytes): ").append(block.data()).append("\n");
+                    result.append("  ").append(block.id()).append(" (" ).append(block.dataCharacters()).append(" characters): ").append(block.data()).append("\n");
                 }
                 result.append("\n");
             }
@@ -3599,7 +3599,7 @@ public class KeysController {
                 result.append("OPTIONAL BLOCKS:\n");
                 result.append("------------------\n");
                 for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
-                    result.append(block.id()).append(": ").append(block.dataLength()).append(" bytes\n");
+                    result.append(block.id()).append(": ").append(block.dataCharacters()).append(" characters\n");
                     result.append("  Data: ").append(block.data()).append("\n");
                 }
                 result.append("\n");

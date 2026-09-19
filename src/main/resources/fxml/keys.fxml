@@ -543,7 +543,7 @@
                                              prefWidth="150"/>
                                 </GridPane>
                                 <Label styleClass="ux-inline-ba9ea6419e" text="Optional blocks (compact, optional):"/>
-                                <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr31OptionalBlocksField" promptText="0100KS02ABCD  (count, reserved, ID, length, data)"/>
+                                <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr31OptionalBlocksField" promptText="0100KS08ABCD  (count, reserved, ID, whole-block length, data)"/>
 
                                 <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
                                         styleClass="action-button ux-inline-ba9ea6419e" maxWidth="180"/>

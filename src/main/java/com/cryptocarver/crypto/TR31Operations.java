@@ -49,10 +49,16 @@ public class TR31Operations {
             if (position + 4 > compact.length()) throw new IllegalArgumentException("Optional block " + (index + 1) + " header is truncated");
             String id = compact.substring(position, position + 2);
             if (!id.matches("[A-Z0-9]{2}")) throw new IllegalArgumentException("Optional-block identifier must be alphanumeric");
-            final int byteLength;
-            try { byteLength = Integer.parseInt(compact.substring(position + 2, position + 4), 16); }
+            final int blockLength;
+            try { blockLength = Integer.parseInt(compact.substring(position + 2, position + 4), 16); }
             catch (NumberFormatException e) { throw new IllegalArgumentException("Optional block " + id + " length must be hexadecimal", e); }
-            position += 4 + byteLength * 2;
+            // The length field is the length of the WHOLE optional block, its
+            // two-character identifier and two-character length field included,
+            // written in hexadecimal. 'KS08ABCD' is eight characters long and
+            // carries four of data. Reading it as a count of data bytes to be
+            // doubled walks past the next block.
+            if (blockLength < 4) throw new IllegalArgumentException("Optional block " + id + " declares a length of " + blockLength + "; the minimum is 4 because the identifier and the length field are inside it");
+            position += blockLength;
             if (position > compact.length()) throw new IllegalArgumentException("Optional block " + id + " is truncated");
         }
         if (position != compact.length()) throw new IllegalArgumentException("Optional-block section contains trailing characters after " + count + " declared block(s)");
@@ -85,7 +91,7 @@ public class TR31Operations {
             sb.append("Input Length: ").append(keyBlock == null ? 0 : keyBlock.length()).append("\n");
             sb.append("Optional Blocks: ").append(header.optionalBlockDetails.size()).append("\n");
             for (OptionalBlock block : header.optionalBlockDetails) {
-                sb.append("  - ").append(block.id()).append(": ").append(block.dataLength()).append(" bytes, data=")
+                sb.append("  - ").append(block.id()).append(": ").append(block.dataCharacters()).append(" characters, data=")
                         .append(block.data()).append("\n");
             }
             if (!header.diagnostics.isEmpty()) {
@@ -265,15 +271,16 @@ public class TR31Operations {
             for (int i = 0; i < header.numOptionalBlocks; i++) {
                 if (position + 4 > limit) throw new IllegalArgumentException("Optional block " + (i + 1) + " header is truncated");
                 String id = keyBlock.substring(position, position + 2);
-                int dataLength;
-                try { dataLength = Integer.parseInt(keyBlock.substring(position + 2, position + 4), 16); }
+                int blockLength;
+                try { blockLength = Integer.parseInt(keyBlock.substring(position + 2, position + 4), 16); }
                 catch (NumberFormatException e) { throw new IllegalArgumentException("Optional block " + id + " has invalid hexadecimal length"); }
-                int end = position + 4 + dataLength * 2;
-                if (end > limit) throw new IllegalArgumentException("Optional block " + id + " is truncated (declares " + dataLength + " bytes)");
+                if (blockLength < 4) throw new IllegalArgumentException("Optional block " + id + " declares a length of " + blockLength + "; the minimum is 4 because the identifier and the length field are inside it");
+                int end = position + blockLength;
+                if (end > limit) throw new IllegalArgumentException("Optional block " + id + " is truncated (declares " + blockLength + " characters)");
                 String data = keyBlock.substring(position + 4, end);
                 if (!id.matches("[A-Z0-9]{2}")) header.diagnostics.add("WARNING: optional-block identifier " + id + " is not alphanumeric");
                 if (!data.matches("[0-9A-Fa-f]*")) header.diagnostics.add("INFO: optional block " + id + " contains non-hex data; shown verbatim");
-                header.optionalBlockDetails.add(new OptionalBlock(id, dataLength, data));
+                header.optionalBlockDetails.add(new OptionalBlock(id, data.length(), data));
                 position = end;
             }
             header.optionalBlocks = keyBlock.substring(16, position);
@@ -308,5 +315,7 @@ public class TR31Operations {
     }
 
     /** Parsed optional block in the compact format currently emitted by HeaderBuilder. */
-    public record OptionalBlock(String id, int dataLength, String data) { }
+    /** @param dataCharacters the data alone: the declared length less the four
+ *                       characters of identifier and length field */
+    public record OptionalBlock(String id, int dataCharacters, String data) { }
 }

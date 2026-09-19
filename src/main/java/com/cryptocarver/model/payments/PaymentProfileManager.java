@@ -137,8 +137,8 @@ public class PaymentProfileManager {
             .addParameter("exportability", "N (Non-exportable)")
             .addInput("kbpk", "00112233445566778899AABBCCDDEEFF")
             .addInput("keyToWrap", "11111111111111111111111111111111")
-            .addInput("optionalBlocks", "0100KS02ABCD") // 1 block, reserved 00, ID KS, len 02, data ABCD
-            .addOutput("header", "D0120D0AB00N0100KS02ABCD")
+            .addInput("optionalBlocks", "0100KS08ABCD") // 1 block, reserved 00, ID KS, whole-block length 08, data ABCD
+            .addOutput("header", "D0120D0AB00N0100KS08ABCD")
             .build()
         );
 

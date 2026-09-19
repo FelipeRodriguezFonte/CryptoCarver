@@ -10,15 +10,15 @@ class TR31OperationsTest {
 
     @Test
     void parsesOptionalBlocksIntoStructuredDetails() throws Exception {
-        TR31Operations.TR31Header header = TR31Operations.TR31Header.parse("B0024P0TE00E0100KS02ABCD");
+        TR31Operations.TR31Header header = TR31Operations.TR31Header.parse("B0024P0TE00E0100KS08ABCD");
 
         assertEquals("B", header.versionId);
         assertEquals(1, header.optionalBlockDetails.size());
         TR31Operations.OptionalBlock block = header.optionalBlockDetails.get(0);
         assertEquals("KS", block.id());
-        assertEquals(2, block.dataLength());
+        assertEquals(4, block.dataCharacters());
         assertEquals("ABCD", block.data());
-        assertTrue(TR31Operations.parseHeader("B0024P0TE00E0100KS02ABCD").contains("KS: 2 bytes"));
+        assertTrue(TR31Operations.parseHeader("B0024P0TE00E0100KS08ABCD").contains("KS: 4 characters"));
     }
 
     @Test
@@ -51,7 +51,7 @@ class TR31OperationsTest {
         String key = "00112233445566778899AABBCCDDEEFF";
         String header = new HeaderBuilder()
                 .version('B').keyUsage("P0").algorithm('T').modeOfUse('E').exportability('N')
-                .optionalBlocks("0100KS02ABCD").build();
+                .optionalBlocks("0100KS08ABCD").build();
 
         TR31 tr31 = new TR31(kbpk);
         String block = tr31.wrap(header, key);
@@ -63,7 +63,7 @@ class TR31OperationsTest {
 
     @Test
     void validatesCompactOptionalBlocksBeforeWrapping() {
-        assertEquals("0100KS02ABCD", TR31Operations.normalizeOptionalBlocks("01 00 KS02ABCD"));
+        assertEquals("0100KS08ABCD", TR31Operations.normalizeOptionalBlocks("01 00 KS08ABCD"));
         assertThrows(IllegalArgumentException.class, () -> TR31Operations.normalizeOptionalBlocks("0100KS02AB"));
     }
 
