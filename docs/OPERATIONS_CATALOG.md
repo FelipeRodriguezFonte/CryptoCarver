@@ -194,6 +194,7 @@ Sensitive payment material is transient and never persisted in `.cfprocess.json`
 | Thales variant LMK | `THALES_LMK_ENCRYPT`, `THALES_LMK_DECRYPT`, `THALES_LMK_DESCRIBE`, `THALES_LMK_LOOKUP`, `THALES_KCV` |
 | Thales Key Block | `THALES_KEY_BLOCK_PARSE`, `THALES_KEY_BLOCK_HEADER` |
 | payShield host frames | `HSM_HOST_COMPOSE`, `HSM_HOST_PARSE_COMMAND`, `HSM_HOST_PARSE_RESPONSE` |
+| ISO 8583 | `ISO8583_PARSE`, `ISO8583_BUILD` |
 
 `THALES_LMK_ENCRYPT` emits the cryptogram without its scheme tag, because a `HEX`
 `FlowValue` cannot carry the leading letter. `THALES_LMK_DESCRIBE` prints the tagged
@@ -208,8 +209,6 @@ The two certificate-signing operations of EMV Book 2 produce three data objects 
 `FlowValue`, so they live in the EMV module's bench rather than here. Everything that
 yields a single value — the static data, the two signatures, and every verification
 report — is a node.
-
-| ISO 8583 | `ISO8583_PARSE`, `ISO8583_BUILD` |
 
 ISO 8583 nodes are profile-driven laboratory tooling for the documented ISO 8583:1987 and :1993 field dictionaries. PAN, track data, PIN blocks and whole messages are transient and never persisted in `.cfprocess.json`.
 
