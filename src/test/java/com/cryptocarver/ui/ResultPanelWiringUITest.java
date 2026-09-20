@@ -284,7 +284,11 @@ class ResultPanelWiringUITest {
 
     @Test
     void anEmptyPanelSaysSoRatherThanShowingABlankHeader() throws Exception {
-        assertEquals("Sin resultado", fx(() -> {
+        com.cryptocarver.service.I18nService service = com.cryptocarver.service.I18nService.getInstance();
+        com.cryptocarver.model.LanguagePreference previous = service.getPreference();
+        try {
+            service.setPreference(com.cryptocarver.model.LanguagePreference.ES);
+            assertEquals("Sin resultado", fx(() -> {
             for (Node node : new ResultPanel().getChildren()) {
                 if (node instanceof javafx.scene.layout.HBox row && !row.getChildren().isEmpty()
                         && row.getChildren().get(0) instanceof javafx.scene.control.Label status) {
@@ -293,5 +297,8 @@ class ResultPanelWiringUITest {
             }
             return "";
         }));
+        } finally {
+            service.setPreference(previous);
+        }
     }
 }
