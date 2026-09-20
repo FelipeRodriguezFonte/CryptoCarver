@@ -3,6 +3,8 @@ package com.cryptocarver.ui;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.service.I18nService;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -15,6 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -42,6 +45,7 @@ public final class ResultPanel extends VBox {
     private Runnable expandHandler;
     private Runnable saveStepHandler;
     private Consumer<String> chainHandler;
+    private final Button copyButton;
     private final Button shelfButton;
     private final Button expandButton;
     private final Button saveButton;
@@ -50,7 +54,9 @@ public final class ResultPanel extends VBox {
     // again, and so the re-render goes through the same visibility policy as the first one.
     private OperationResult lastResult;
     private SecretVisibilityProfile lastVisibility = SecretVisibilityProfile.REDACTED;
-    private String lastOutputLabel = "Salida";
+    private boolean lastOutputIsSummary = false;
+    private String customOutputLabel;
+    private final Consumer<Locale> localeListener;
 
     public ResultPanel() {
         getStyleClass().add("result-panel");
@@ -67,7 +73,6 @@ public final class ResultPanel extends VBox {
         formatSelector.getItems().addAll("Texto", "Hex", "Base64");
         formatSelector.getSelectionModel().selectFirst();
         formatSelector.getStyleClass().add("result-panel-format");
-        formatSelector.setAccessibleText("Formato de salida");
         formatSelector.valueProperty().addListener((observable, previous, chosen) -> renderOutputs());
         // Without a caption the dropdown reads as an unlabelled box showing the
         // word "Texto", which says nothing about what it would change.
@@ -81,20 +86,34 @@ public final class ResultPanel extends VBox {
 
         HBox actions = new HBox(6);
         actions.setAlignment(Pos.CENTER_RIGHT);
-        Button copy = action("Copiar", "Copiar resultado", this::copyCurrent);
-        shelfButton = action("Shelf", "Añadir resultado al Shelf", this::addCurrentToShelf);
-        expandButton = action("Ampliar", "Ampliar resultado", () -> run(expandHandler));
-        saveButton = action("Guardar", "Guardar paso", () -> run(saveStepHandler));
-        chainButton = action("Usar como entrada", "Usar resultado como entrada", this::chainCurrent);
+        copyButton = action(this::copyCurrent);
+        shelfButton = action(this::addCurrentToShelf);
+        expandButton = action(() -> run(expandHandler));
+        saveButton = action(() -> run(saveStepHandler));
+        chainButton = action(this::chainCurrent);
         // An action a module has not wired would be a button that quietly does nothing, so it
         // is hidden until a handler exists. Copy always works: it falls back to the clipboard.
         for (Button button : new Button[]{shelfButton, expandButton, saveButton, chainButton}) {
             button.setVisible(false);
             button.setManaged(false);
         }
-        actions.getChildren().addAll(copy, shelfButton, expandButton, saveButton, chainButton);
+        actions.getChildren().addAll(copyButton, shelfButton, expandButton, saveButton, chainButton);
 
         getChildren().addAll(header, new Separator(), outputs, actions, copiedLabel);
+
+        localeListener = locale -> {
+            if (Platform.isFxApplicationThread()) {
+                updateLocalization();
+            } else {
+                try {
+                    Platform.runLater(this::updateLocalization);
+                } catch (IllegalStateException ignored) {
+                    // No FX toolkit running (e.g. headless tests)
+                }
+            }
+        };
+        I18nService.getInstance().addLocaleChangeListener(localeListener);
+        updateLocalization();
         showEmpty();
     }
 
@@ -119,12 +138,35 @@ public final class ResultPanel extends VBox {
         formatSelector.setManaged(visible);
     }
 
-    private static Button action(String text, String accessibleText, Runnable handler) {
-        Button button = new Button(text);
-        button.setAccessibleText(accessibleText);
+    private static Button action(Runnable handler) {
+        Button button = new Button();
         button.getStyleClass().addAll("btn", "btn-ghost", "btn-sm");
         button.setOnAction(event -> handler.run());
         return button;
+    }
+
+    private void updateLocalization() {
+        I18nService i18n = I18nService.getInstance();
+        statusLabel.setText(statusText(status));
+        formatSelector.setAccessibleText(i18n.text("resultPanel.format.accessibleText"));
+        copiedLabel.setText(i18n.text("resultPanel.feedback.copied"));
+
+        copyButton.setText(i18n.text("resultPanel.action.copy"));
+        copyButton.setAccessibleText(i18n.text("resultPanel.action.copy.accessibleText"));
+
+        shelfButton.setText(i18n.text("resultPanel.action.shelf"));
+        shelfButton.setAccessibleText(i18n.text("resultPanel.action.shelf.accessibleText"));
+
+        expandButton.setText(i18n.text("resultPanel.action.expand"));
+        expandButton.setAccessibleText(i18n.text("resultPanel.action.expand.accessibleText"));
+
+        saveButton.setText(i18n.text("resultPanel.action.saveStep"));
+        saveButton.setAccessibleText(i18n.text("resultPanel.action.saveStep.accessibleText"));
+
+        chainButton.setText(i18n.text("resultPanel.action.chain"));
+        chainButton.setAccessibleText(i18n.text("resultPanel.action.chain.accessibleText"));
+
+        renderOutputs();
     }
 
     public void setResult(OperationResult result, SecretVisibilityProfile visibility,
@@ -143,7 +185,8 @@ public final class ResultPanel extends VBox {
         lastVisibility = visibility;
         boolean hasOutput = (result.getOutput() != null && result.getOutput().length > 0)
                 || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
-        lastOutputLabel = hasOutput ? "Salida" : "Resumen";
+        lastOutputIsSummary = !hasOutput;
+        customOutputLabel = null;
         // A summary has no bytes to re-encode, so offering a format for it would be a control
         // that changes nothing.
         showFormatSelector(hasOutput);
@@ -153,15 +196,22 @@ public final class ResultPanel extends VBox {
     private void renderOutputs() {
         outputs.getChildren().clear();
         if (lastResult == null) return;
-        addOutput(lastOutputLabel, OperationResultRenderer.render(lastResult, lastVisibility,
+        String label = customOutputLabel != null
+                ? customOutputLabel
+                : (lastOutputIsSummary
+                ? I18nService.getInstance().text("resultPanel.output.summary")
+                : I18nService.getInstance().text("resultPanel.output.output"));
+        addOutput(label, OperationResultRenderer.render(lastResult, lastVisibility,
                 OperationResultRenderer.OutputFormat.of(formatSelector.getValue())));
     }
 
     /** Publishes a plain text result for legacy controls that still own their output area. */
     public void showText(String operation, String value) {
         String text = value == null ? "" : value;
-        OperationResult result = OperationResult.forOperation(
-                        operation == null || operation.isBlank() ? "Resultado" : operation)
+        String opName = operation == null || operation.isBlank()
+                ? I18nService.getInstance().text("resultPanel.output.defaultOperation")
+                : operation;
+        OperationResult result = OperationResult.forOperation(opName)
                 .output(text.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                 .build();
         setResult(result, SecretVisibilityProfile.FULL_LAB,
@@ -169,13 +219,16 @@ public final class ResultPanel extends VBox {
     }
 
     public void addOutput(String label, String value) {
-        Label name = new Label(label == null || label.isBlank() ? "Salida" : label);
+        String displayLabel = label == null || label.isBlank()
+                ? I18nService.getInstance().text("resultPanel.output.output")
+                : label;
+        Label name = new Label(displayLabel);
         name.getStyleClass().add("result-panel-output-label");
         TextArea area = new TextArea(value == null ? "" : value);
         area.setEditable(false);
         area.setWrapText(true);
         area.setPrefRowCount(3);
-        area.setAccessibleText(name.getText() + " resultado");
+        area.setAccessibleText(I18nService.getInstance().text("resultPanel.output.accessibleText", name.getText()));
         area.getStyleClass().add("result-panel-output");
         VBox row = new VBox(4, name, area);
         row.getStyleClass().add("result-panel-output-row");
@@ -266,7 +319,7 @@ public final class ResultPanel extends VBox {
         String value = currentText();
         if (copyHandler != null) copyHandler.accept(value);
         else copyToClipboard(value);
-        copiedLabel.setText("Copiado");
+        copiedLabel.setText(I18nService.getInstance().text("resultPanel.feedback.copied"));
         copiedLabel.setManaged(true);
         copiedLabel.setVisible(true);
     }
@@ -288,11 +341,12 @@ public final class ResultPanel extends VBox {
     private static void run(Runnable handler) { if (handler != null) handler.run(); }
 
     private static String statusText(Status value) {
+        I18nService i18n = I18nService.getInstance();
         return switch (value) {
-            case SUCCESS -> "✓ Éxito";
-            case ERROR -> "✕ Error";
-            case WARNING -> "⚠ Advertencia";
-            case EMPTY -> "Sin resultado";
+            case SUCCESS -> i18n.text("resultPanel.status.success");
+            case ERROR -> i18n.text("resultPanel.status.error");
+            case WARNING -> i18n.text("resultPanel.status.warning");
+            case EMPTY -> i18n.text("resultPanel.status.empty");
         };
     }
 
@@ -310,3 +364,4 @@ public final class ResultPanel extends VBox {
         return grouped.toString();
     }
 }
+
