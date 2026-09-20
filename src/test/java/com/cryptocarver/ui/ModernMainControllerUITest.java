@@ -70,8 +70,12 @@ class ModernMainControllerUITest {
         jfxIsSetup = true;
     }
 
+    private String originalTestMode;
+
     @org.junit.jupiter.api.BeforeEach
     void resetSettings() {
+        originalTestMode = System.getProperty("test.mode");
+        System.setProperty("test.mode", "true");
         if (isolatedUserHome != null) {
             java.nio.file.Path isolatedFile = isolatedUserHome.resolve(".cryptocarver").resolve("settings.json");
             try {
@@ -86,6 +90,11 @@ class ModernMainControllerUITest {
     @org.junit.jupiter.api.AfterEach
     void tearDownSettings() {
         com.cryptocarver.model.AppSettings.resetInstanceForTesting();
+        if (originalTestMode != null) {
+            System.setProperty("test.mode", originalTestMode);
+        } else {
+            System.clearProperty("test.mode");
+        }
     }
 
     private <T> T getField(Object target, String name) throws Exception {
@@ -1550,19 +1559,21 @@ class ModernMainControllerUITest {
 
     @Test
     void testGenericModuleExtracted() throws Exception {
+        String previousTestMode = System.getProperty("test.mode");
         System.setProperty("test.mode", "true");
-        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
-        runAndWait(() -> {
-            try {
-                URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
-                FXMLLoader loader = UiTestFxml.loader(resource);
-                Parent root = loader.load();
-                ModernMainController controller = loader.getController();
-                controllerRef.set(controller);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to load FXML", e);
-            }
-        });
+        try {
+            AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+            runAndWait(() -> {
+                try {
+                    URL resource = getClass().getResource("/fxml/main-view-modern.fxml");
+                    FXMLLoader loader = UiTestFxml.loader(resource);
+                    Parent root = loader.load();
+                    ModernMainController controller = loader.getController();
+                    controllerRef.set(controller);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to load FXML", e);
+                }
+            });
 
         ModernMainController controller = controllerRef.get();
         assertNotNull(controller);
@@ -1684,6 +1695,10 @@ class ModernMainControllerUITest {
                 throw new RuntimeException(e);
             }
         });
+        } finally {
+            if (previousTestMode == null) System.clearProperty("test.mode");
+            else System.setProperty("test.mode", previousTestMode);
+        }
     }
 
     @Test

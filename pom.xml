@@ -466,6 +466,7 @@
                             <excludedGroups>none</excludedGroups>
                             <systemPropertyVariables>
                                 <runUiTests>true</runUiTests>
+                                <test.mode>true</test.mode>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
