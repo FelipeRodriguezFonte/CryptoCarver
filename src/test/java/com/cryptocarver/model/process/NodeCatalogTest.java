@@ -99,4 +99,24 @@ class NodeCatalogTest {
         assertTrue(MESSAGES_ES.containsKey(key),
                 "Key '" + key + "' missing in messages_es.properties (" + context + ")");
     }
+
+    @Test
+    void keyBlockNodesAreGroupedUnderKeyMaterialCategory() {
+        Set<String> expectedKeyBlockTypes = Set.of(
+                "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER",
+                "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
+                "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT",
+                "FUTUREX_MFK_ENCRYPT", "FUTUREX_MFK_DECRYPT",
+                "THALES_KEY_BLOCK_PARSE", "THALES_KEY_BLOCK_HEADER"
+        );
+
+        List<NodeDescriptor> keyMaterialDescriptors = NodeCatalog.descriptorsByCategory("Key Material");
+        Set<String> presentTypes = keyMaterialDescriptors.stream()
+                .map(NodeDescriptor::type)
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertTrue(presentTypes.containsAll(expectedKeyBlockTypes),
+                "Missing key block types in Key Material category: " + expectedKeyBlockTypes);
+    }
 }
+
