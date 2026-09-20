@@ -237,6 +237,9 @@ public class OperationRegistry {
         sb.append("| Key derivation | `KDF_HKDF`, `KDF_SP800_108`, `KDF_X963`, `KDF_SCRYPT`, `KDF_ARGON2` |\n");
         sb.append("| AES key wrap | `AES_KEYWRAP_3394`, `AES_UNWRAP_3394`, `AES_KEYWRAP_5649`, `AES_UNWRAP_5649` |\n");
         sb.append("| TR-31 and ICSF | `TR31_WRAP`, `TR31_UNWRAP`, `TR31_PARSE_HEADER`, `ICSF_TOKEN_PARSE` |\n");
+        sb.append("| Atalla AKB | `ATALLA_AKB_WRAP`, `ATALLA_AKB_UNWRAP`, `ATALLA_AKB_PARSE_HEADER` |\n");
+        sb.append("| SafeNet KM | `SAFENET_KM_ENCRYPT`, `SAFENET_KM_DECRYPT` |\n");
+        sb.append("| Futurex MFK | `FUTUREX_MFK_ENCRYPT`, `FUTUREX_MFK_DECRYPT` |\n");
         sb.append("| Asymmetric material | `KEYPAIR_GENERATE`, `RSA_KEYPAIR_GENERATE` (compatibility alias), `KEY_MATERIAL_INSPECT` |\n\n");
         sb.append("`ICSF_TOKEN_PARSE` is read-only. The current Process Designer transports XOR\n");
         sb.append("shares as one lossless HEX bundle (`share:share:share`) because the 5B SPI\n");

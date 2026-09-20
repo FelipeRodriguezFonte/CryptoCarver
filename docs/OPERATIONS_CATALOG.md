@@ -172,6 +172,9 @@ never persisted in `.cfprocess.json`.
 | Key derivation | `KDF_HKDF`, `KDF_SP800_108`, `KDF_X963`, `KDF_SCRYPT`, `KDF_ARGON2` |
 | AES key wrap | `AES_KEYWRAP_3394`, `AES_UNWRAP_3394`, `AES_KEYWRAP_5649`, `AES_UNWRAP_5649` |
 | TR-31 and ICSF | `TR31_WRAP`, `TR31_UNWRAP`, `TR31_PARSE_HEADER`, `ICSF_TOKEN_PARSE` |
+| Atalla AKB | `ATALLA_AKB_WRAP`, `ATALLA_AKB_UNWRAP`, `ATALLA_AKB_PARSE_HEADER` |
+| SafeNet KM | `SAFENET_KM_ENCRYPT`, `SAFENET_KM_DECRYPT` |
+| Futurex MFK | `FUTUREX_MFK_ENCRYPT`, `FUTUREX_MFK_DECRYPT` |
 | Asymmetric material | `KEYPAIR_GENERATE`, `RSA_KEYPAIR_GENERATE` (compatibility alias), `KEY_MATERIAL_INSPECT` |
 
 `ICSF_TOKEN_PARSE` is read-only. The current Process Designer transports XOR
