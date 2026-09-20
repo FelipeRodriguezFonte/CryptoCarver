@@ -39,6 +39,7 @@ public final class PayShieldBodyDecomposer {
     private static Optional<Decomposition> firstExactMatch(
             List<PayShieldBodySchema> candidates,
             byte[] body) {
+        // PayShieldBodySchemas rejects ambiguous direction/code/error/length keys at startup.
         return candidates.stream()
                 .map(schema -> decompose(schema, body))
                 .flatMap(Optional::stream)
@@ -50,7 +51,7 @@ public final class PayShieldBodyDecomposer {
      * This all-or-nothing rule is what prevents a nearby firmware shape from
      * being presented as if it were the captured one.
      */
-    private static Optional<Decomposition> decompose(PayShieldBodySchema schema, byte[] body) {
+    static Optional<Decomposition> decompose(PayShieldBodySchema schema, byte[] body) {
         if (body.length != schema.bodyLength()) {
             return Optional.empty();
         }

@@ -3,9 +3,13 @@ package com.cryptocarver.crypto.hsm;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PayShieldBodyDecomposerTest {
@@ -67,6 +71,105 @@ class PayShieldBodyDecomposerTest {
 
         assertTrue(decomposition.fields().isEmpty());
         assertEquals("NC-00", decomposition.schema().evidenceId());
+    }
+
+    @Test
+    void everyVerifiedSchemaDecomposesItsCapturedBody() {
+        List<PayShieldBodySchema> verifiedSchemas = PayShieldBodySchemas.all().stream()
+                .filter(schema -> schema.evidenceStatus()
+                        == PayShieldBodySchema.EvidenceStatus.VERIFIED)
+                .toList();
+
+        assertEquals(0, verifiedSchemas.size(),
+                "verified schemas count must match recognized captured evidence count");
+
+        verifiedSchemas.forEach(PayShieldBodyDecomposerTest::assertDecomposesCapturedBody);
+    }
+
+    @Test
+    void syntheticVerifiedSchemaDecomposesItsCapturedBody() {
+        byte[] sample = "0123456789ABCDEF0007-E000".getBytes(StandardCharsets.US_ASCII);
+        PayShieldBodySchema synthetic = new PayShieldBodySchema(
+                PayShieldBodySchema.Direction.RESPONSE,
+                "ND",
+                "00",
+                PayShieldBodySchema.EvidenceStatus.VERIFIED,
+                "SYNTHETIC-01",
+                sample,
+                List.of(
+                        new PayShieldBodySchema.Field("lmkCheckValue", "LMK check value", 16, PayShieldBodySchema.FieldType.HEX),
+                        new PayShieldBodySchema.Field("firmwareVersion", "Firmware version", 9, PayShieldBodySchema.FieldType.PRINTABLE_ASCII)));
+
+        assertDecomposesCapturedBody(synthetic);
+    }
+
+    @Test
+    void verifiedSchemaFailsWhenSampleLengthOrFieldsMismatch() {
+        PayShieldBodySchema wrongLength = new PayShieldBodySchema(
+                PayShieldBodySchema.Direction.RESPONSE,
+                "ND",
+                "00",
+                PayShieldBodySchema.EvidenceStatus.VERIFIED,
+                "SYNTHETIC-LENGTH-MISMATCH",
+                "SHORT".getBytes(StandardCharsets.US_ASCII),
+                List.of(
+                        new PayShieldBodySchema.Field("lmkCheckValue", "LMK check value", 16, PayShieldBodySchema.FieldType.HEX),
+                        new PayShieldBodySchema.Field("firmwareVersion", "Firmware version", 9, PayShieldBodySchema.FieldType.PRINTABLE_ASCII)));
+
+        assertFalse(PayShieldBodyDecomposer.decompose(wrongLength, wrongLength.capturedBody()).isPresent());
+        assertThrows(AssertionError.class, () -> assertDecomposesCapturedBody(wrongLength));
+
+        PayShieldBodySchema wrongFields = new PayShieldBodySchema(
+                PayShieldBodySchema.Direction.RESPONSE,
+                "ND",
+                "00",
+                PayShieldBodySchema.EvidenceStatus.VERIFIED,
+                "SYNTHETIC-FIELD-MISMATCH",
+                "0123456789ABCDEG0007-E000".getBytes(StandardCharsets.US_ASCII),
+                List.of(
+                        new PayShieldBodySchema.Field("lmkCheckValue", "LMK check value", 16, PayShieldBodySchema.FieldType.HEX),
+                        new PayShieldBodySchema.Field("firmwareVersion", "Firmware version", 9, PayShieldBodySchema.FieldType.PRINTABLE_ASCII)));
+
+        assertFalse(PayShieldBodyDecomposer.decompose(wrongFields, wrongFields.capturedBody()).isPresent());
+        assertThrows(AssertionError.class, () -> assertDecomposesCapturedBody(wrongFields));
+    }
+
+    @Test
+    void verifiedSchemaCannotOmitItsCapturedBody() {
+        assertThrows(IllegalArgumentException.class, () -> new PayShieldBodySchema(
+                PayShieldBodySchema.Direction.COMMAND, "ZZ", null,
+                PayShieldBodySchema.EvidenceStatus.VERIFIED, "CAP-01", null, List.of()));
+    }
+
+    @Test
+    void validationRejectsAmbiguousSchemasWithSameDirectionCodeErrorAndLength() {
+        PayShieldBodySchema schema1 = new PayShieldBodySchema(
+                PayShieldBodySchema.Direction.RESPONSE, "ND", "00",
+                PayShieldBodySchema.EvidenceStatus.PENDING_CAPTURE, "NC-00", null,
+                List.of(new PayShieldBodySchema.Field("lmkCheckValue", "LMK check value", 16, PayShieldBodySchema.FieldType.HEX)));
+
+        PayShieldBodySchema schema2 = new PayShieldBodySchema(
+                PayShieldBodySchema.Direction.RESPONSE, "ND", "00",
+                PayShieldBodySchema.EvidenceStatus.PENDING_CAPTURE, "NC-01", null,
+                List.of(new PayShieldBodySchema.Field("otherValue", "Other value", 16, PayShieldBodySchema.FieldType.PRINTABLE_ASCII)));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> PayShieldBodySchemas.validate(List.of(schema1, schema2)));
+        assertTrue(ex.getMessage().contains("ND:00:16"));
+    }
+
+    private static void assertDecomposesCapturedBody(PayShieldBodySchema schema) {
+        byte[] capturedBody = schema.capturedBody();
+        assertNotNull(capturedBody, schema.evidenceId());
+        PayShieldBodyDecomposer.Decomposition decomposition =
+                PayShieldBodyDecomposer.decompose(schema, capturedBody)
+                        .orElseThrow(() -> new AssertionError(
+                                "Schema " + schema.evidenceId() + " does not decompose its captured body"));
+        assertEquals(schema, decomposition.schema());
+        assertEquals(new String(capturedBody, StandardCharsets.US_ASCII),
+                decomposition.fields().stream()
+                        .map(PayShieldBodyDecomposer.DecodedField::value)
+                        .collect(Collectors.joining()));
     }
 
     private static PayShieldResponse response(String data) {

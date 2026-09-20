@@ -19,6 +19,7 @@ public final class PayShieldBodySchemas {
                     null,
                     PENDING_CAPTURE,
                     "NC-00",
+                    null,
                     List.of()),
             new PayShieldBodySchema(
                     RESPONSE,
@@ -26,6 +27,7 @@ public final class PayShieldBodySchemas {
                     "00",
                     PENDING_CAPTURE,
                     "NC-00",
+                    null,
                     List.of(
                             new PayShieldBodySchema.Field(
                                     "lmkCheckValue", "LMK check value", 16, HEX),
@@ -33,12 +35,16 @@ public final class PayShieldBodySchemas {
                                     "firmwareVersion", "Firmware version", 9, PRINTABLE_ASCII))));
 
     static {
+        validate(SCHEMAS);
+    }
+
+    static void validate(List<PayShieldBodySchema> schemas) {
         Set<String> keys = new HashSet<>();
-        for (PayShieldBodySchema schema : SCHEMAS) {
+        for (PayShieldBodySchema schema : schemas) {
             String key = schema.direction() + ":" + schema.code() + ":"
                     + schema.errorCode() + ":" + schema.bodyLength();
             if (!keys.add(key)) {
-                throw new IllegalStateException("Duplicate payShield body schema: " + key);
+                throw new IllegalStateException("Duplicate or ambiguous payShield body schema: " + key);
             }
         }
     }

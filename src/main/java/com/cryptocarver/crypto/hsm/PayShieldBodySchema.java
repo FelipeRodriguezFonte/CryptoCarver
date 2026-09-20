@@ -2,6 +2,8 @@ package com.cryptocarver.crypto.hsm;
 
 import java.util.List;
 
+import static com.cryptocarver.crypto.hsm.PayShieldBodySchema.EvidenceStatus.VERIFIED;
+
 /** Declarative description of one exact command or response body shape. */
 public record PayShieldBodySchema(
         Direction direction,
@@ -9,6 +11,7 @@ public record PayShieldBodySchema(
         String errorCode,
         EvidenceStatus evidenceStatus,
         String evidenceId,
+        byte[] capturedBody,
         List<Field> fields) {
 
     public enum Direction {
@@ -77,7 +80,16 @@ public record PayShieldBodySchema(
         if (evidenceId == null || evidenceId.isBlank()) {
             throw new IllegalArgumentException("evidence id must not be blank");
         }
+        capturedBody = capturedBody == null ? null : capturedBody.clone();
+        if (evidenceStatus == VERIFIED && capturedBody == null) {
+            throw new IllegalArgumentException("verified schemas must include a captured body");
+        }
         fields = List.copyOf(fields);
+    }
+
+    @Override
+    public byte[] capturedBody() {
+        return capturedBody == null ? null : capturedBody.clone();
     }
 
     public int bodyLength() {
