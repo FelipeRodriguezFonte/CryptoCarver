@@ -36,7 +36,7 @@ import javax.crypto.spec.SecretKeySpec;
  * its result, which is what made the variant byte readable at all rather than
  * something to be inferred from ciphertext.</p>
  *
- * <p>Six variants of the table are known (00, 01, 02, 06, 07 and 08) and the rest are not. There is no
+ * <p>Nine variants of the table are known (00 to 08) and the rest are not. There is no
  * arithmetic linking {@code 01 -> 28} to {@code 07 -> 18}, so the missing ones
  * cannot be derived — only read off the tool. {@link #variant} refuses a code
  * it has not seen rather than passing the KM through unchanged, because
@@ -52,6 +52,9 @@ public final class SafeNetKmOperations {
         variant("00", 0x00, "DPK");
         variant("01", 0x28, "PPK");
         variant("02", 0x24, "MPK");
+        variant("03", 0x44, "KIS");
+        variant("04", 0x88, "KIR");
+        variant("05", 0x22, "KTM");
         variant("06", 0x20, "CSCK");
         variant("07", 0x18, "KPV, DT");
         variant("08", 0x14, "KPVV");

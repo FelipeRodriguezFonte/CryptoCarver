@@ -102,6 +102,39 @@ class SafeNetKmOperationsTest {
         }
     }
 
+    /** Double-length vectors for the last three variants, captured 2026-09-20. */
+    private static final String[][] DOUBLE = {
+        // format, variant, KM applied, encrypted, decoded, decoded KCV
+        {"11", "03", "45670123CDEF89ABC4C4C4C4C4C4C4C4BA98FEDC32107654",
+            "AEB566B8AA186BDC0D595BDEE360DCEE", "7A8D73E15A0501C2749B07CEB2025738", "2A730A"},
+        {"13", "03", "45670123CDEF89ABC4C4C4C4C4C4C4C4BA98FEDC32107654",
+            "AEB566B8AA186BDC483D2ABF51FE3FCB", "7A8D73E15A0501C275B842A93BA99AD7", "34AE5A"},
+        {"11", "04", "89ABCDEF01234567080808080808080876543210FEDCBA98",
+            "4778C35B089BAC0C18286CA6852FA1B8", "47568DA4CA039A25CA0812973BD1418E", "726CA0"},
+        {"13", "04", "89ABCDEF01234567080808080808080876543210FEDCBA98",
+            "4778C35B089BAC0CF2B727DB277E29E4", "47568DA4CA039A25CB2B57F0B27A8C61", "EF8E62"},
+        {"11", "05", "23016745AB89EFCDA2A2A2A2A2A2A2A2DCFE98BA54761032",
+            "AB85316887C5FF3E3B810E2F1D168634", "4F09BAE8BDF70E2A8AC2BBA55B43C16F", "FAFD3F"},
+        {"13", "05", "23016745AB89EFCDA2A2A2A2A2A2A2A2DCFE98BA54761032",
+            "AB85316887C5FF3E2D527ED4B574C50E", "4F09BAE8BDF70E2A8BE1FEC2D2E80C80", "6467A5"},
+    };
+
+    @Test
+    void variantsThreeToFiveAreReproducedInBothDoubleLengthFormats() {
+        for (String[] v : DOUBLE) {
+            String id = v[0] + "/" + v[1];
+            WrappedKey wrapped = SafeNetKmOperations.encrypt(KEY, KM, v[0], v[1]);
+
+            assertEquals(v[2], SafeNetKmOperations.applyVariant(KM, v[1]), id);
+            assertEquals(v[3], wrapped.cryptogram(), id);
+            assertEquals("11" + v[0] + v[3], wrapped.hostStoredKey(), id);
+
+            WrappedKey decoded = SafeNetKmOperations.decrypt(KEY, KM, v[0], v[1]);
+            assertEquals(v[4], decoded.cryptogram(), id);
+            assertEquals(v[5], decoded.checkValue(), id);
+        }
+    }
+
     @Test
     void aKeyOfTheWrongLengthForTheFormatIsRefused() {
         assertThrows(IllegalArgumentException.class, () -> SafeNetKmOperations.encrypt(KEY, KM, "12", "02"));
@@ -155,7 +188,7 @@ class SafeNetKmOperationsTest {
     @Test
     void anUnknownVariantIsRefusedRatherThanTreatedAsNoVariant() {
         IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
-                () -> SafeNetKmOperations.encrypt(KEY, KM, "13", "03"));
+                () -> SafeNetKmOperations.encrypt(KEY, KM, "13", "09"));
 
         assertTrue(thrown.getMessage().contains("table and not a formula"), thrown.getMessage());
         assertNotEquals(SafeNetKmOperations.applyVariant(KM, "00"),
@@ -172,7 +205,10 @@ class SafeNetKmOperationsTest {
 
     @Test
     void theVariantTableHoldsOnlyWhatWasSeen() {
-        assertEquals(6, SafeNetKmOperations.variants().size());
+        assertEquals(9, SafeNetKmOperations.variants().size());
+        assertEquals(0x44, SafeNetKmOperations.variant("03").constant());
+        assertEquals(0x88, SafeNetKmOperations.variant("04").constant());
+        assertEquals(0x22, SafeNetKmOperations.variant("05").constant());
         assertEquals(0x24, SafeNetKmOperations.variant("02").constant());
         assertEquals(0x20, SafeNetKmOperations.variant("06").constant());
         assertEquals(0x14, SafeNetKmOperations.variant("08").constant());

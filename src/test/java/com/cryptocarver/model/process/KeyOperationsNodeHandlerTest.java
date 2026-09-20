@@ -234,7 +234,7 @@ class KeyOperationsNodeHandlerTest {
         assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
 
         enc.configuration.put("format", "11");
-        enc.configuration.put("variant", "03");
+        enc.configuration.put("variant", "09");
         assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
     }
 
