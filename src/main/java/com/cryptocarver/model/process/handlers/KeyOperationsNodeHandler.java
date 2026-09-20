@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.KeyDerivation;
 import com.cryptocarver.crypto.KeyMaterialInspector;
 import com.cryptocarver.crypto.KeyOperations;
 import com.cryptocarver.crypto.KeyWrapOperations;
+import com.cryptocarver.crypto.SafeNetKmOperations;
 import com.cryptocarver.crypto.TR31Operations;
 import com.cryptocarver.crypto.icsf.IcsfTokenParser;
 import com.cryptocarver.crypto.icsf.IcsfTokenReport;
@@ -55,6 +56,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             "AES_KEYWRAP_3394", "AES_UNWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_5649",
             "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE",
             "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
+            "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT",
             "KEYPAIR_GENERATE", "KEY_MATERIAL_INSPECT", "RSA_KEYPAIR_GENERATE");
 
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
@@ -90,6 +92,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "ATALLA_AKB_WRAP" -> List.of(optionalPort("mfk", HEX), optionalPort("key", HEX), optionalPort("header", TEXT), optionalPort("padding", HEX));
             case "ATALLA_AKB_UNWRAP" -> List.of(optionalPort("mfk", HEX), optionalPort("keyBlock", TEXT));
             case "ATALLA_AKB_PARSE_HEADER" -> List.of(optionalPort("header", TEXT));
+            case "SAFENET_KM_ENCRYPT" -> List.of(optionalPort("km", HEX), optionalPort("key", HEX));
+            case "SAFENET_KM_DECRYPT" -> List.of(optionalPort("km", HEX), optionalPort("cryptogram", HEX));
             case "ICSF_TOKEN_PARSE" -> List.of(new PortDefinition("token", HEX, false));
             case "KEY_MATERIAL_INSPECT" -> List.of(optionalPort("key", BINARY));
             default -> List.of();
@@ -107,7 +111,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "KEY_SPLIT_XOR" -> Representation.HEX_COMPONENTS;
             case "TR31_WRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT",
                     "ATALLA_AKB_WRAP", "ATALLA_AKB_PARSE_HEADER" -> Representation.TEXT_UTF8;
-            case "TR31_UNWRAP", "ATALLA_AKB_UNWRAP" -> Representation.HEX;
+            case "TR31_UNWRAP", "ATALLA_AKB_UNWRAP",
+                    "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT" -> Representation.HEX;
             case "AES_KEYWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_3394", "AES_UNWRAP_5649",
                     "KDF_HKDF", "KDF_SP800_108", "KDF_X963", "KDF_SCRYPT", "KDF_ARGON2",
                     "KEYPAIR_GENERATE", "RSA_KEYPAIR_GENERATE" -> Representation.BINARY;
@@ -118,7 +123,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
     @Override
     public void validateConfiguration(ProcessDefinition.Node node) {
         String type = node.type.toUpperCase(Locale.ROOT);
-        for (String field : List.of("key", "kek", "keyData", "ikm", "sharedSecret", "password", "salt", "token", "mfk", "padding")) {
+        for (String field : List.of("key", "kek", "keyData", "ikm", "sharedSecret", "password", "salt", "token", "mfk", "padding", "km", "cryptogram")) {
             validateConfiguredHex(node, field);
         }
         switch (type) {
@@ -180,6 +185,16 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             }
             case "ATALLA_AKB_UNWRAP" -> { requireInput(node, "mfk"); requireInput(node, "keyBlock"); }
             case "ATALLA_AKB_PARSE_HEADER" -> requireInput(node, "header");
+            case "SAFENET_KM_ENCRYPT" -> {
+                requireInput(node, "km"); requireInput(node, "key");
+                oneOf(node, "format", List.of("11", "13"));
+                oneOf(node, "variant", List.of("00", "01", "07"));
+            }
+            case "SAFENET_KM_DECRYPT" -> {
+                requireInput(node, "km"); requireInput(node, "cryptogram");
+                oneOf(node, "format", List.of("11", "13"));
+                oneOf(node, "variant", List.of("00", "01", "07"));
+            }
             case "ICSF_TOKEN_PARSE" -> requireInput(node, "token");
             case "AES_KEYWRAP_3394", "AES_KEYWRAP_5649" -> { requireInput(node, "kek"); requireInput(node, "keyData"); validateConfiguredAesLengths(node); }
             case "AES_UNWRAP_3394", "AES_UNWRAP_5649" -> { requireInput(node, "kek"); requireInput(node, "wrapped"); }
@@ -229,6 +244,12 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 case "ATALLA_AKB_UNWRAP" -> FlowValue.hex(AtallaAkbOperations.unwrap(stringBytes(inputs, node, "mfk"),
                         stringBytes(inputs, node, "keyBlock")).clearKey().getBytes(StandardCharsets.UTF_8));
                 case "ATALLA_AKB_PARSE_HEADER" -> text(AtallaAkbHeader.decode(setting(node, "header", "").isBlank() && inputs.containsKey("header") ? inputs.get("header").render().trim().split(",")[0] : setting(node, "header", "1PUNE000").split(",")[0]));
+                case "SAFENET_KM_ENCRYPT" -> FlowValue.hex(SafeNetKmOperations.encrypt(
+                        stringBytes(inputs, node, "key"), stringBytes(inputs, node, "km"),
+                        setting(node, "format", "11"), setting(node, "variant", "00")).cryptogram().getBytes(StandardCharsets.UTF_8));
+                case "SAFENET_KM_DECRYPT" -> FlowValue.hex(SafeNetKmOperations.decrypt(
+                        stringBytes(inputs, node, "cryptogram"), stringBytes(inputs, node, "km"),
+                        setting(node, "format", "11"), setting(node, "variant", "00")).cryptogram().getBytes(StandardCharsets.UTF_8));
                 case "ICSF_TOKEN_PARSE" -> parseToken(node, inputs.get("token"));
                 case "KEYPAIR_GENERATE", "RSA_KEYPAIR_GENERATE" -> binary(generateKeyPair(node).getPrivate().getEncoded());
                 case "KEY_MATERIAL_INSPECT" -> text(KeyMaterialInspector.describeKey(decodeKey(node, bytes(node, inputs, "key"))));
@@ -505,6 +526,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 List.of(secret("kek", "module.process.param.kek"), secret("wrapped", "module.process.param.wrappedMaterial"))));
         result.addAll(tr31Descriptors());
         result.addAll(atallaDescriptors());
+        result.addAll(safeNetDescriptors());
         result.add(new NodeDescriptor("ICSF_TOKEN_PARSE", "Key Operations", "module.process.type.key.icsfParse", "module.process.desc.key.icsfParse", "🔬",
                 List.of(combo("origin", "module.process.param.origin", List.of("inferir", "kds-crudo", "key-record-read"), "inferir"), secret("token", "module.process.param.tokenMaterial"))));
         result.add(new NodeDescriptor("KEYPAIR_GENERATE", "Key Operations", "module.process.type.keypairGenerate", "module.process.desc.keypairGenerate", "🗝",
@@ -557,4 +579,18 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 List.of(new NodeParameter("header", "module.process.param.atallaHeader", ParameterKind.TEXT, "1PUNE000"))));
         return list;
     }
+
+    private static List<NodeDescriptor> safeNetDescriptors() {
+        List<NodeDescriptor> list = new ArrayList<>();
+        list.add(new NodeDescriptor("SAFENET_KM_ENCRYPT", "Key Material", "module.process.type.key.safeNetKmEncrypt", "module.process.desc.key.safeNetKmEncrypt", "📦",
+                List.of(secret("km", "module.process.param.safeNetKm"), secret("key", "module.process.param.keyMaterial"),
+                        combo("format", "module.process.param.safeNetFormat", List.of("11", "13"), "11"),
+                        combo("variant", "module.process.param.safeNetVariant", List.of("00", "01", "07"), "00"))));
+        list.add(new NodeDescriptor("SAFENET_KM_DECRYPT", "Key Material", "module.process.type.key.safeNetKmDecrypt", "module.process.desc.key.safeNetKmDecrypt", "📦",
+                List.of(secret("km", "module.process.param.safeNetKm"), secret("cryptogram", "module.process.param.wrappedMaterial"),
+                        combo("format", "module.process.param.safeNetFormat", List.of("11", "13"), "11"),
+                        combo("variant", "module.process.param.safeNetVariant", List.of("00", "01", "07"), "00"))));
+        return list;
+    }
 }
+

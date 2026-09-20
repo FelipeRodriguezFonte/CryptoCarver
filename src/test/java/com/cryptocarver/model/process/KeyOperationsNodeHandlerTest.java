@@ -127,6 +127,20 @@ class KeyOperationsNodeHandlerTest {
         ProcessDefinition.Node akbParse = node("ATALLA_AKB_PARSE_HEADER");
         assertEquals(AtallaAkbHeader.decode(atallaHdr), HANDLER.execute(akbParse, Map.of("header", FlowValue.text(atallaBlock, StandardCharsets.UTF_8)), null).render());
 
+        String safeNetKm = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
+        String safeNetKey = "0123456789ABCDEFFEDCBA9876543210";
+        String safeNetCrypto = "968F5C677725C7C4E31E3E4C7ACA58B9";
+
+        ProcessDefinition.Node snEnc = node("SAFENET_KM_ENCRYPT");
+        snEnc.configuration.put("format", "11");
+        snEnc.configuration.put("variant", "00");
+        assertEquals(safeNetCrypto, HANDLER.execute(snEnc, Map.of("km", hexString(safeNetKm), "key", hexString(safeNetKey)), null).render());
+
+        ProcessDefinition.Node snDec = node("SAFENET_KM_DECRYPT");
+        snDec.configuration.put("format", "11");
+        snDec.configuration.put("variant", "00");
+        assertEquals(safeNetKey, HANDLER.execute(snDec, Map.of("km", hexString(safeNetKm), "cryptogram", hexString(safeNetCrypto)), null).render());
+
         ProcessDefinition.Node pair = node("KEYPAIR_GENERATE"); pair.configuration.put("algorithm", "EdDSA");
         assertTrue(HANDLER.execute(pair, Map.of(), null).bytes().length > 0);
         ProcessDefinition.Node inspect = node("KEY_MATERIAL_INSPECT"); inspect.configuration.put("algorithm", "AES");
@@ -141,6 +155,7 @@ class KeyOperationsNodeHandlerTest {
                 "AES_KEYWRAP_3394", "AES_UNWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_5649",
                 "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER",
                 "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
+                "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT",
                 "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT");
         for (String type : types) {
             ProcessDefinition definition = new ProcessDefinition();
@@ -185,6 +200,20 @@ class KeyOperationsNodeHandlerTest {
         definition.nodes.add(input); definition.nodes.add(selectNode);
         definition.connections.add(new ProcessDefinition.Connection("input", "select", "components"));
         assertThrows(IllegalArgumentException.class, () -> ProcessEngine.validate(definition));
+    }
+
+    @Test
+    void safeNetValidationRejectsInvalidFormatOrVariant() {
+        ProcessDefinition.Node enc = node("SAFENET_KM_ENCRYPT");
+        enc.configuration.put("km", "0123456789ABCDEF8080808080808080FEDCBA9876543210");
+        enc.configuration.put("key", "0123456789ABCDEFFEDCBA9876543210");
+        enc.configuration.put("format", "99");
+        enc.configuration.put("variant", "00");
+        assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
+
+        enc.configuration.put("format", "11");
+        enc.configuration.put("variant", "02");
+        assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
     }
 
     private static ProcessDefinition.Node node(String type) {
