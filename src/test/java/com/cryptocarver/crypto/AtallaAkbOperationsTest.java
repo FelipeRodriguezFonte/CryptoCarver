@@ -259,6 +259,19 @@ class AtallaAkbOperationsTest {
         assertTrue(thrown.getMessage().contains("initialisation vector"), thrown.getMessage());
     }
 
+    /** BP-Tools 21.06, 2026-09-20: a 24-byte key, which is the case the padding rule only inferred. */
+    @Test
+    void aTripleLengthKeyMatchesBpToolsAndCarriesNoPadding() {
+        String key = "00112233445566778899AABBCCDDEEFF0123456789ABCDEF";
+        String block = "1PUNE000,23AE722410BC25C24BB6AD0C900A16F085927D34A8C06EB0,DA3BB9004654010D";
+
+        AtallaAkbOperations.Unwrapped unwrapped = AtallaAkbOperations.unwrap(MFK, block);
+
+        assertTrue(unwrapped.authentic());
+        assertEquals(key, unwrapped.clearKey());
+        assertEquals(block, AtallaAkbOperations.wrap(MFK, "1PUNE000", key));
+    }
+
     @Test
     void aTruncatedMacIsRejected() {
         assertThrows(IllegalArgumentException.class,
@@ -272,13 +285,13 @@ class AtallaAkbOperationsTest {
     }
 
     @Test
-    void theReportNamesWhatIsNotKnown() {
+    void theReportDecodesTheHeader() {
         String report = AtallaAkbOperations.describe(AtallaAkbOperations.unwrap(MFK, BLOCK));
 
         assertTrue(report.contains("MATCHES"), report);
         assertTrue(report.contains(KEY), report);
-        assertTrue(report.contains("not decoded"),
-                "the header's field layout is unknown and the report has to say so");
+        assertTrue(report.contains("Key usage: PIN Encryption Key"), report);
+        assertTrue(report.contains("Exportability: Exportable under a trusted key"), report);
     }
 
     @Test

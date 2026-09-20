@@ -660,6 +660,58 @@
                 </VBox>
             </TitledPane>
 
+            <TitledPane text="🏷 Atalla Key Block (AKB)">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="An AKB is header, key under the MFK, MAC. The 8-character header says what the key may be used for, and it is also the CBC initialisation vector, so changing one character changes the whole block. Pick a working-key template or choose each header byte; the meaning of every byte is listed below (Utimaco AJ560-9004A). The tables are advisory: the block is built whatever the header says." wrapText="true" styleClass="form-label"/>
+                    <Label text="Working-key template (table 2-9):" styleClass="form-label"/>
+                    <ComboBox fx:id="atallaTemplateCombo" maxWidth="Infinity"/>
+                    <GridPane hgap="8" vgap="4">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="160" prefWidth="160"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="B0 · Version" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla0Combo" maxWidth="Infinity" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="B1 · Key usage" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla1Combo" maxWidth="Infinity" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="B2 · Algorithm" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla2Combo" maxWidth="Infinity" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <Label text="B3 · Mode of use" styleClass="form-label" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla3Combo" maxWidth="Infinity" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                        <Label text="B4 · Exportability" styleClass="form-label" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla4Combo" maxWidth="Infinity" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                        <Label text="B5 · Reserved" styleClass="form-label" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla5Combo" maxWidth="Infinity" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                        <Label text="B6 · Special handling" styleClass="form-label" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla6Combo" maxWidth="Infinity" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+                        <Label text="B7 · Other information" styleClass="form-label" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="atalla7Combo" maxWidth="Infinity" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+                    </GridPane>
+                    <Label text="Header (8 characters):" styleClass="form-label"/>
+                    <TextField fx:id="atallaHeaderField" promptText="1PUNE000" maxWidth="Infinity"
+                               styleClass="monospace-field,form-field"/>
+                    <TextArea fx:id="atallaMeaningArea" prefHeight="150" editable="false"
+                              styleClass="result-area,monospace-field"/>
+                    <Label text="MFK (2key = 32 hex, 3key = 48 hex):" styleClass="form-label"/>
+                    <TextField fx:id="atallaMfkField" promptText="0123456789ABCDEF8080808080808080FEDCBA9876543210"
+                               maxWidth="Infinity" styleClass="monospace-field,form-field"/>
+                    <Label text="Key to protect (16, 32 or 48 hex):" styleClass="form-label"/>
+                    <TextField fx:id="atallaKeyField" promptText="00112233445566778899AABBCCDDEEFF0123456789ABCDEF"
+                               maxWidth="Infinity" styleClass="monospace-field,form-field"/>
+                    <Label text="AKB (header,key,MAC) to unwrap:" styleClass="form-label"/>
+                    <TextArea fx:id="atallaBlockArea" prefHeight="60" wrapText="true"
+                              promptText="1PUNE000,B17A04DC...,4FFC0BC8BCC1980E" styleClass="monospace-field"/>
+                    <HBox spacing="8">
+                        <Button text="Generate AKB" onAction="#handleAtallaGenerate"
+                                styleClass="action-button,primary-action"/>
+                        <Button text="Unwrap AKB" onAction="#handleAtallaUnwrap" styleClass="secondary-button"/>
+                        <Button text="Load Example" onAction="#handleAtallaExample" styleClass="secondary-button"/>
+                    </HBox>
+                    <TextArea fx:id="atallaResultArea" prefHeight="240" editable="false"
+                              styleClass="result-area,monospace-field"/>
+                </VBox>
+            </TitledPane>
+
             <TitledPane text="🔁 RSA Key Exchange">
                 <VBox styleClass="ux-inline-1684f00703" spacing="6">
                     <TabPane tabClosingPolicy="UNAVAILABLE">
