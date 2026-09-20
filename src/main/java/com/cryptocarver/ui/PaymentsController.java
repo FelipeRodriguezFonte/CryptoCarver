@@ -9,6 +9,7 @@ import com.cryptocarver.crypto.hsm.PayShieldErrorCatalog;
 import com.cryptocarver.crypto.hsm.PayShieldMessage;
 import com.cryptocarver.crypto.hsm.PayShieldMessageCodec;
 import com.cryptocarver.crypto.hsm.PayShieldResponse;
+import com.cryptocarver.crypto.iso8583.Iso8583Operations;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
@@ -22,6 +23,9 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 import java.util.Optional;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Controller for Payments tab
@@ -75,6 +79,14 @@ public class PaymentsController {
     @FXML private TextArea hsmHostResultArea;
 
     private static final String SUPPLIED_NC_RESPONSE = "0000ND007B44AC1DDEE2A94B0007-E000";
+
+    // ISO 8583 message workbench. The UI delegates parsing, field definitions,
+    // bitmap handling and enrichment to the typed core codec.
+    @FXML private ComboBox<String> iso8583ProfileCombo;
+    @FXML private ComboBox<String> iso8583BitmapEncodingCombo;
+    @FXML private ComboBox<String> iso8583LengthEncodingCombo;
+    @FXML private TextArea iso8583MessageArea;
+    @FXML private TextArea iso8583ReportArea;
 
     // CVV controls
     @FXML private TextField cvkAField;
@@ -487,6 +499,7 @@ public class PaymentsController {
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(paymentsContainer, ModuleTextCatalog.payments());
+        initializeIso8583Controls();
         initialize(null,
                 pinField, panFieldEncode, pinBlockField, panFieldDecode,
                 pinBlockFormatCombo, pinBlockFormatDecodeCombo, pinBlockResultArea,
@@ -522,6 +535,115 @@ public class PaymentsController {
                     encPinBlockFieldDecode == null ? null : encPinBlockFieldDecode::setText);
             bindResult(paymentsResultPanel, ibm3624ResultArea, "IBM 3624 PIN", null);
         }
+    }
+
+    private void initializeIso8583Controls() {
+        if (iso8583ProfileCombo != null) {
+            iso8583ProfileCombo.getItems().setAll("ISO 8583:1987", "ISO 8583:1993");
+            iso8583ProfileCombo.getSelectionModel().selectFirst();
+        }
+        if (iso8583BitmapEncodingCombo != null) {
+            iso8583BitmapEncodingCombo.getItems().setAll("Binary", "Hexadecimal ASCII");
+            iso8583BitmapEncodingCombo.getSelectionModel().selectFirst();
+        }
+        if (iso8583LengthEncodingCombo != null) {
+            iso8583LengthEncodingCombo.getItems().setAll("ASCII", "BCD");
+            iso8583LengthEncodingCombo.getSelectionModel().selectFirst();
+        }
+    }
+
+    @FXML
+    public void handleParseIso8583() {
+        runIso8583Operation("parse");
+    }
+
+    @FXML
+    public void handleBuildIso8583() {
+        runIso8583Operation("build");
+    }
+
+    private void runIso8583Operation(String operation) {
+        if (iso8583MessageArea == null || iso8583ReportArea == null) return;
+        String input = iso8583MessageArea.getText() == null ? "" : iso8583MessageArea.getText().trim();
+        if (input.isEmpty()) {
+            iso8583ReportArea.setText(t("module.payments.iso8583.emptyMessage"));
+            return;
+        }
+        try {
+            Iso8583Operations.Profile profile = iso8583Profile();
+            String report;
+            if ("parse".equals(operation)) {
+                Iso8583Operations.Message parsed = parseIso8583(input, profile);
+                report = parsed.report();
+            } else {
+                BuiltIso8583 built = buildIso8583(input, profile);
+                byte[] rebuilt = Iso8583Operations.build(built.mti(), built.values(), profile);
+                report = "Built message (" + profile.bitmapEncoding() + ", " + profile.lengthEncoding() + "):\n"
+                        + formatIsoOutput(rebuilt, profile);
+            }
+            iso8583ReportArea.setText(report);
+            updateStatus(t("module.payments.iso8583.completed", operation));
+        } catch (Exception e) {
+            LOG.debug("ISO 8583 {} failed", operation, e);
+            iso8583ReportArea.setText(t("module.payments.iso8583.error", e.getMessage()));
+        }
+    }
+
+    private Iso8583Operations.Profile iso8583Profile() {
+        Iso8583Operations.Version version = "ISO 8583:1993".equals(iso8583ProfileCombo.getValue())
+                ? Iso8583Operations.Version.ISO_1993 : Iso8583Operations.Version.ISO_1987;
+        Iso8583Operations.BitmapEncoding bitmap = "Hexadecimal ASCII".equals(iso8583BitmapEncodingCombo.getValue())
+                ? Iso8583Operations.BitmapEncoding.ASCII_HEX : Iso8583Operations.BitmapEncoding.BINARY;
+        Iso8583Operations.LengthEncoding length = "BCD".equals(iso8583LengthEncodingCombo.getValue())
+                ? Iso8583Operations.LengthEncoding.BCD : Iso8583Operations.LengthEncoding.ASCII;
+        return new Iso8583Operations.Profile(version, bitmap, length, false);
+    }
+
+    private static Iso8583Operations.Message parseIso8583(String input, Iso8583Operations.Profile profile) {
+        if (profile.bitmapEncoding() == Iso8583Operations.BitmapEncoding.BINARY) {
+            return Iso8583Operations.parseBinary(hexToBytes(input), profile);
+        }
+        return Iso8583Operations.parseAsciiHex(input.replaceAll("\\s+", ""), profile);
+    }
+
+    private record BuiltIso8583(String mti, Map<Integer, String> values) { }
+
+    /** Build input is MTI on the first line followed by one decimal field per line, e.g. 3=000000. */
+    private static BuiltIso8583 buildIso8583(String input, Iso8583Operations.Profile profile) {
+        String[] lines = input.lines().map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
+        if (lines.length > 1 && lines[0].matches("\\d{4}")) {
+            Map<Integer, String> fields = new LinkedHashMap<>();
+            for (int i = 1; i < lines.length; i++) {
+                int equals = lines[i].indexOf('=');
+                if (equals < 1) throw new IllegalArgumentException("build lines must use field=value");
+                int number = Integer.parseInt(lines[i].substring(0, equals).trim());
+                fields.put(number, lines[i].substring(equals + 1).trim());
+            }
+            return new BuiltIso8583(lines[0], fields);
+        }
+        Iso8583Operations.Message parsed = parseIso8583(input, profile);
+        Map<Integer, String> values = new LinkedHashMap<>();
+        parsed.fields().forEach((n, field) -> values.put(n, field.value()));
+        return new BuiltIso8583(parsed.mti().value(), values);
+    }
+
+    private static String formatIsoOutput(byte[] bytes, Iso8583Operations.Profile profile) {
+        if (profile.bitmapEncoding() == Iso8583Operations.BitmapEncoding.ASCII_HEX) {
+            return new String(bytes, java.nio.charset.StandardCharsets.US_ASCII);
+        }
+        StringBuilder out = new StringBuilder();
+        for (byte b : bytes) out.append(String.format(java.util.Locale.ROOT, "%02X", b & 0xff));
+        return out.toString();
+    }
+
+    private static byte[] hexToBytes(String value) {
+        String hex = value.replaceAll("\\s+", "");
+        if (!hex.matches("(?i)[0-9a-f]+") || (hex.length() & 1) != 0) {
+            throw new IllegalArgumentException("binary input must be an even-length hexadecimal message");
+        }
+        byte[] result = new byte[hex.length() / 2];
+        for (int i = 0; i < result.length; i++) result[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+        return result;
     }
 
     /**
@@ -716,7 +838,14 @@ public class PaymentsController {
                 "Format 4 (ISO-4)",
                 "ANSI X9.8",
                 "IBM 3624",
-                "VISA-1");
+                "VISA-1",
+                "VISA-2",
+                "VISA-3",
+                "VISA-4",
+                "ECI-1",
+                "ECI-2 (no PAN binding)",
+                "ECI-3 (no PAN binding)",
+                "ECI-4");
         pinBlockFormatCombo.getSelectionModel().selectFirst();
 
         pinBlockFormatDecodeCombo.getItems().addAll(pinBlockFormatCombo.getItems());
@@ -742,6 +871,9 @@ public class PaymentsController {
         macAlgorithmCombo.getItems().addAll(
                 "Retail MAC (ISO 9797-1 Alg 3)",
                 "CBC-MAC (ISO 9797-1 Alg 1)",
+                "ISO-9797-1-ALG2",
+                "ISO-9797-1-ALG4",
+                "ISO-9797-1-ALG6",
                 "CMAC (ISO 9797-1 Alg 5)",
                 "HMAC-SHA256",
                 "AS2805.4 (1985)");

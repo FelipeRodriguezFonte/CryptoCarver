@@ -263,6 +263,8 @@ public final class UiNavigationRegistry {
                 "CVV Operations", "CVV Generation");
         add(routes, new Route(Module.PAYMENTS, "payShield Host Command Bank"),
                 "payShield Host Command Bank");
+        add(routes, new Route(Module.PAYMENTS, "ISO 8583 Message Inspector"),
+                "ISO 8583 Message Inspector", "ISO8583", "ISO 8583", "ISO 8583 parser");
         add(routes, new Route(Module.PAYMENTS, "Encrypted PIN Blocks"),
                 "Encrypted PIN Block Operations", "Encrypted PIN Block Encoding", "Encrypted PIN Block Decoding",
                 "Encrypted PIN Block Encoded", "Encrypted PIN Block Decoded");

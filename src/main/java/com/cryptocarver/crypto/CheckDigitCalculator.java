@@ -13,6 +13,7 @@ public class CheckDigitCalculator {
      */
     public static final List<String> SUPPORTED_ALGORITHMS = Arrays.asList(
             "Luhn (Mod 10)",
+            "AMEX SE (Luhn/Mod 10)",
             "Verhoeff",
             "Damm"
     );
@@ -35,6 +36,7 @@ public class CheckDigitCalculator {
 
         switch (algorithm) {
             case "Luhn (Mod 10)":
+            case "AMEX SE (Luhn/Mod 10)":
                 return calculateLuhn(digits);
             case "Verhoeff":
                 return calculateVerhoeff(digits);

@@ -48,6 +48,22 @@ public class PaymentOperations {
                 return encodePinBlockIBM3624(pin, pan);
             case "VISA-1":
                 return encodePinBlockVISA1(pin, pan);
+            case "VISA-2":
+                return encodePinBlockVISA2(pin, pan);
+            case "VISA-3":
+                return encodePinBlockVISA3(pin, pan);
+            case "ECI-1":
+                return encodePinBlockISO0(pin, pan);
+            case "ECI-2":
+            case "ECI-2 (no PAN binding)":
+                return encodePinBlockECI2(pin);
+            case "ECI-3":
+            case "ECI-3 (no PAN binding)":
+                return encodePinBlockECI3(pin);
+            case "ECI-4":
+                return encodePinBlockISO1(pin, pan);
+            case "VISA-4":
+                return encodePinBlockISO0(pin, pan);
             default:
                 return encodePinBlockISO0(pin, pan); // Default to ISO-0
         }
@@ -79,6 +95,22 @@ public class PaymentOperations {
                 return decodePinBlockIBM3624(pinBlock, pan);
             case "VISA-1":
                 return decodePinBlockVISA1(pinBlock, pan);
+            case "VISA-2":
+                return decodePinBlockVISA2(pinBlock, pan);
+            case "VISA-3":
+                return decodePinBlockVISA3(pinBlock, pan);
+            case "ECI-1":
+                return decodePinBlockISO0(pinBlock, pan);
+            case "ECI-2":
+            case "ECI-2 (no PAN binding)":
+                return decodePinBlockECI2(pinBlock);
+            case "ECI-3":
+            case "ECI-3 (no PAN binding)":
+                return decodePinBlockECI3(pinBlock);
+            case "ECI-4":
+                return decodePinBlockISO1(pinBlock, pan);
+            case "VISA-4":
+                return decodePinBlockISO0(pinBlock, pan);
             default:
                 return decodePinBlockISO0(pinBlock, pan); // Default to ISO-0
         }
@@ -484,6 +516,107 @@ public class PaymentOperations {
         return decodePinBlockISO0(pinBlock, pan);
     }
 
+    /**
+     * Visa format 2.  This is the legacy Visa clear PIN block described by the
+     * public XFS4IoT pin-pad contract and IBM's PIN profile documentation: a
+     * one-nibble length (4..6), the PIN, zero fill to six digits, then one
+     * decimal pad digit repeated to the end of the 8-byte block.  It does not
+     * bind the block to a PAN.
+     */
+    private static String encodePinBlockVISA2(String pin, String ignoredPan) {
+        requirePin(pin, 4, 6);
+        StringBuilder block = new StringBuilder(16);
+        block.append(Integer.toHexString(pin.length())).append(pin);
+        while (block.length() < 7) block.append('0');
+        // The compact API has no pad parameter.  Use the public Visa example's
+        // decimal pad (5); callers needing another pad should use an HSM/API
+        // that exposes Visa's PIN-profile pad-digit parameter.
+        while (block.length() < 16) block.append('5');
+        return block.toString().toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static String decodePinBlockVISA2(String pinBlock, String ignoredPan) {
+        String block = normalizeLegacyBlock(pinBlock);
+        int length = Character.digit(block.charAt(0), 16);
+        if (length < 4 || length > 6)
+            throw new IllegalArgumentException("VISA-2 PIN length must be 4..6");
+        String pin = block.substring(1, 1 + length);
+        requirePin(pin, 4, 6);
+        // Visa-2 uses decimal padding, and all padding nibbles must agree.
+        char pad = block.charAt(7);
+        if (pad < '0' || pad > '9')
+            throw new IllegalArgumentException("VISA-2 padding must be decimal");
+        for (int i = 7; i < block.length(); i++)
+            if (block.charAt(i) != pad)
+                throw new IllegalArgumentException("VISA-2 padding is inconsistent");
+        return pin;
+    }
+
+    /** Visa format 3: PIN, F delimiter, then a repeated hexadecimal pad. */
+    private static String encodePinBlockVISA3(String pin, String ignoredPan) {
+        requirePin(pin, 4, 12);
+        return (pin + "F" + "5".repeat(15 - pin.length())).toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static String decodePinBlockVISA3(String pinBlock, String ignoredPan) {
+        String block = normalizeLegacyBlock(pinBlock);
+        int delimiter = block.indexOf('F', 4);
+        if (delimiter < 4 || delimiter > 12)
+            throw new IllegalArgumentException("VISA-3 delimiter is missing or out of range");
+        String pin = block.substring(0, delimiter);
+        requirePin(pin, 4, 12);
+        char pad = delimiter + 1 < block.length() ? block.charAt(delimiter + 1) : '0';
+        for (int i = delimiter + 1; i < block.length(); i++)
+            if (block.charAt(i) != pad)
+                throw new IllegalArgumentException("VISA-3 padding is inconsistent");
+        return pin;
+    }
+
+    /** ECI-2 is the fixed four-digit, left-justified no-PAN form. */
+    private static String encodePinBlockECI2(String pin) {
+        requirePin(pin, 4, 4);
+        return (pin + "F".repeat(12)).toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static String decodePinBlockECI2(String pinBlock) {
+        String block = normalizeLegacyBlock(pinBlock);
+        String pin = block.substring(0, 4);
+        requirePin(pin, 4, 4);
+        if (!block.substring(4).equals("F".repeat(12)))
+            throw new IllegalArgumentException("ECI-2 padding is invalid");
+        return pin;
+    }
+
+    /** ECI-3 is the length-prefixed 4..6 digit no-PAN form. */
+    private static String encodePinBlockECI3(String pin) {
+        requirePin(pin, 4, 6);
+        return (Integer.toHexString(pin.length()) + pin + "F".repeat(15 - pin.length()))
+                .toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static String decodePinBlockECI3(String pinBlock) {
+        String block = normalizeLegacyBlock(pinBlock);
+        int length = Character.digit(block.charAt(0), 16);
+        if (length < 4 || length > 6)
+            throw new IllegalArgumentException("ECI-3 PIN length must be 4..6");
+        String pin = block.substring(1, 1 + length);
+        requirePin(pin, 4, 6);
+        if (!block.substring(1 + length).equals("F".repeat(15 - length)))
+            throw new IllegalArgumentException("ECI-3 padding is invalid");
+        return pin;
+    }
+
+    private static String normalizeLegacyBlock(String pinBlock) {
+        if (pinBlock == null || !pinBlock.matches("[0-9A-Fa-f]{16}"))
+            throw new IllegalArgumentException("PIN block must contain exactly 16 hexadecimal digits");
+        return pinBlock.toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static void requirePin(String pin, int min, int max) {
+        if (pin == null || pin.length() < min || pin.length() > max || !pin.matches("[0-9]+"))
+            throw new IllegalArgumentException("PIN must contain " + min + ".." + max + " decimal digits");
+    }
+
     // ==================== CVV OPERATIONS ====================
 
     /**
@@ -697,6 +830,10 @@ public class PaymentOperations {
                 return generateCMAC(keyBytes, dataBytes);
             case "HMAC-SHA256":
                 return generateHMAC(keyBytes, dataBytes);
+            case "ISO-9797-1-ALG2":
+            case "ISO-9797-1-ALG4":
+            case "ISO-9797-1-ALG6":
+                return DataConverter.bytesToHex(MACOperations.generate(dataBytes, keyBytes, algorithm));
             default:
                 return generateRetailMAC(keyBytes, dataBytes);
         }
@@ -837,6 +974,17 @@ public class PaymentOperations {
         result.append("Source PIN Block: ").append(pinBlock).append("\n");
         result.append("PAN: ").append(pan).append("\n\n");
 
+        if (doesNotBindPan(sourceFormat) || doesNotBindPan(targetFormat)) {
+            result.append("WARNING: ");
+            if (doesNotBindPan(sourceFormat))
+                result.append(sourceFormat).append(" does not bind the PIN block to the PAN");
+            if (doesNotBindPan(sourceFormat) && doesNotBindPan(targetFormat))
+                result.append("; ");
+            if (doesNotBindPan(targetFormat))
+                result.append(targetFormat).append(" does not bind the PIN block to the PAN");
+            result.append(". This permits PIN-block relocation between accounts.\n\n");
+        }
+
         // Decode
         String pin = decodePinBlock(pinBlock, pan, sourceFormat);
         result.append("Extracted PIN: ").append(pin).append("\n");
@@ -852,6 +1000,17 @@ public class PaymentOperations {
         result.append("Target Binary: ").append(hexToBinary(translatedBlock)).append("\n");
 
         return result.toString();
+    }
+
+    private static boolean doesNotBindPan(String format) {
+        if (format == null) return false;
+        return switch (format) {
+            case "Format 1 (ISO-1)", "ISO 1 (ANSI X9.8)", "Format 2 (ISO-2)",
+                    "ISO 2 (No PAN)", "ECI-2", "ECI-2 (no PAN binding)", "ECI-3",
+                    "ECI-3 (no PAN binding)", "ECI-4", "VISA-2", "VISA-3",
+                    "IBM 3624" -> true;
+            default -> false;
+        };
     }
 
     // ==================== PVV (PIN VERIFICATION VALUE) ====================

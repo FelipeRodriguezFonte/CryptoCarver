@@ -238,6 +238,13 @@
                      <Button text="Decimal → COMP-3" onAction="#handleEncodeComp3" styleClass="secondary-button"/>
                      <Button text="COMP-3 → Decimal" onAction="#handleDecodeComp3" styleClass="secondary-button"/>
                  </FlowPane>
+                 <HBox spacing="8" alignment="CENTER_LEFT">
+                     <Label text="Bit shift:" styleClass="form-label"/>
+                     <TextField fx:id="bitShiftBitsField" text="1" prefWidth="60" styleClass="form-field"/>
+                     <Button text="Shift left" onAction="#handleShiftLeft" styleClass="secondary-button"/>
+                     <Button text="Shift right" onAction="#handleShiftRight" styleClass="secondary-button"/>
+                     <Button text="Extract trace hex" onAction="#handleExtractTraceHex" styleClass="secondary-button"/>
+                 </HBox>
 
                  <TextArea fx:id="manualOutputArea" prefRowCount="3" editable="false" wrapText="true" styleClass="result-area,monospace-field"/>
             </VBox>

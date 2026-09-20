@@ -84,6 +84,14 @@ class CodecRegistryTest {
     }
 
     @Test
+    void testBase94RoundTripPreservesLeadingZeroesAndRejectsWhitespace() {
+        Codec codec = CodecRegistry.getInstance().getCodec(ByteFormat.BASE94);
+        byte[] input = {0, 0, 1, 2, (byte) 0xFF};
+        assertArrayEquals(input, codec.decode(codec.encode(input)));
+        assertThrows(CodecException.class, () -> codec.decode("! hello"));
+    }
+
+    @Test
     void testBase58Check() {
         byte[] input = { 1, 2, 3 };
         String enc = registry.encode(input, ByteFormat.BASE58_CHECK);

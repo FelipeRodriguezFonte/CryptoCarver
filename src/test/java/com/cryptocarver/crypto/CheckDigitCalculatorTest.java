@@ -24,6 +24,12 @@ class CheckDigitCalculatorTest {
     }
 
     @Test
+    void amexSeUsesThePublishedMod10CardNumberRule() {
+        assertEquals(5, CheckDigitCalculator.calculateCheckDigit("37828224631000", "AMEX SE (Luhn/Mod 10)"));
+        assertTrue(CheckDigitCalculator.validateCheckDigit("378282246310005", "AMEX SE (Luhn/Mod 10)"));
+    }
+
+    @Test
     void testVerhoeffCheckDigit() {
         String data = "12345";
         int checkDigit = CheckDigitCalculator.calculateCheckDigit(data, "Verhoeff");

@@ -6,10 +6,12 @@ import com.cryptocarver.crypto.HashOperations;
 import com.cryptocarver.crypto.ModularArithmetic;
 import com.cryptocarver.crypto.UUIDGenerator;
 import com.cryptocarver.crypto.ByteStatistics;
+import com.cryptocarver.crypto.BitShifter;
 import com.cryptocarver.crypto.HexInspector;
 import com.cryptocarver.crypto.StreamingFileTools;
 import com.cryptocarver.crypto.CompressionCodec;
 import com.cryptocarver.crypto.CharsetInspector;
+import com.cryptocarver.crypto.TraceHexExtractor;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.util.DataConverter;
@@ -100,6 +102,7 @@ public class GenericController {
     @FXML private ComboBox<String> ebcdicCodePageCombo;
     @FXML private ComboBox<String> endianWordSizeCombo;
     @FXML private ComboBox<String> compressionFormatCombo;
+    @FXML private TextField bitShiftBitsField;
 
     @FXML private TextField checkDigitInput;
     @FXML private TextField checkDigitOutput;
@@ -617,6 +620,26 @@ public class GenericController {
     @FXML public void handleDecodeBcd() { convertPackedDecimal(manualInputArea.getText(), false, false, manualOutputArea); }
     @FXML public void handleEncodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, true, manualOutputArea); }
     @FXML public void handleDecodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
+    @FXML public void handleShiftLeft() { shiftManualBits(true); }
+    @FXML public void handleShiftRight() { shiftManualBits(false); }
+    @FXML public void handleExtractTraceHex() {
+        try {
+            TraceHexExtractor.Extraction result = TraceHexExtractor.extract(manualInputArea.getText());
+            manualOutputArea.setText(result.hex());
+            if (statusReporter != null) statusReporter.updateStatus("Extracted " + result.byteCount() + " trace bytes");
+        } catch (IllegalArgumentException e) {
+            manualOutputArea.setText("Error: " + e.getMessage());
+        }
+    }
+    private void shiftManualBits(boolean left) {
+        try {
+            int bits = Integer.parseInt(bitShiftBitsField == null ? "1" : bitShiftBitsField.getText().trim());
+            byte[] input = DataConverter.hexToBytes(manualInputArea.getText().replaceAll("\\s+", ""));
+            manualOutputArea.setText(DataConverter.bytesToHex(left ? BitShifter.left(input, bits) : BitShifter.right(input, bits)));
+        } catch (IllegalArgumentException e) {
+            manualOutputArea.setText("Error: " + e.getMessage());
+        }
+    }
     @FXML public void handleLaunchProcessDesigner() {
         if (statusReporter instanceof ModernMainController modern) {
             modern.navigateTo("Process Designer");
@@ -684,13 +707,13 @@ public class GenericController {
             batchExportFormatCombo.setValue("CSV");
         }
         if (manualInputFormatCombo != null) {
-            manualInputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
+            manualInputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Base94", "Binary", "Decimal");
             manualInputFormatCombo.setValue("Text (UTF-8)");
             manualInputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
         }
         if (manualOutputFormatCombo != null) {
-            manualOutputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Binary", "Decimal");
+            manualOutputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Base94", "Binary", "Decimal");
             manualOutputFormatCombo.setValue("Text (UTF-8)");
             manualOutputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
@@ -698,6 +721,7 @@ public class GenericController {
         if (hashAlgorithmCombo != null) {
             hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
             hashAlgorithmCombo.getItems().add("CRC32");
+            for (HashOperations.Crc32Variant variant : HashOperations.Crc32Variant.values()) hashAlgorithmCombo.getItems().add(variant.displayName());
             hashAlgorithmCombo.setValue("SHA-256");
         }
         if (checkDigitAlgorithmCombo != null) {
@@ -1091,6 +1115,7 @@ public class GenericController {
         this.hashAlgorithmCombo = combo;
         hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
         hashAlgorithmCombo.getItems().add("CRC32");
+        for (HashOperations.Crc32Variant variant : HashOperations.Crc32Variant.values()) hashAlgorithmCombo.getItems().add(variant.displayName());
         hashAlgorithmCombo.setValue("SHA-256");
     }
 

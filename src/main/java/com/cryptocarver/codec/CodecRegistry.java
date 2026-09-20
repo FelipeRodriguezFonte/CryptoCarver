@@ -15,6 +15,7 @@ public class CodecRegistry {
         codecs.put(ByteFormat.BASE64_URL, new Base64UrlCodec());
         codecs.put(ByteFormat.BASE32, new Base32Codec());
         codecs.put(ByteFormat.BASE58, new Base58Codec());
+        codecs.put(ByteFormat.BASE94, new Base94Codec());
         codecs.put(ByteFormat.BASE58_CHECK, new Base58CheckCodec());
         codecs.put(ByteFormat.BINARY, new BinaryCodec());
         codecs.put(ByteFormat.DECIMAL, new DecimalCodec());

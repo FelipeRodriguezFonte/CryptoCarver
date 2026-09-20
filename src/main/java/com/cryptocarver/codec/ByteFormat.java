@@ -6,6 +6,7 @@ public enum ByteFormat {
     BASE64_URL("Base64URL"),
     BASE32("Base32"),
     BASE58("Base58"),
+    BASE94("Base94"),
     BASE58_CHECK("Base58Check"),
     BINARY("Binary"),
     DECIMAL("Decimal"),

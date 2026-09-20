@@ -26,6 +26,9 @@ public class HashOperations {
      */
     public static final List<String> SUPPORTED_ALGORITHMS = Arrays.asList(
             "MD5",
+            "MD4",
+            "WHIRLPOOL",
+            "TIGER-192",
             "SHA-1",
             "SHA-224",
             "SHA-256",
@@ -51,6 +54,9 @@ public class HashOperations {
         // Special handling for CRC32
         if (algorithm.equalsIgnoreCase("CRC32")) {
             return calculateCRC32(data);
+        }
+        if (algorithm != null && algorithm.toUpperCase(java.util.Locale.ROOT).startsWith("CRC-32/")) {
+            return calculateCrc32(data, Crc32Variant.fromDisplayName(algorithm));
         }
 
         // Normalize algorithm name
@@ -82,6 +88,58 @@ public class HashOperations {
     }
 
     /**
+     * Parameterised CRC-32 variants, expressed as width-32 normal polynomials.
+     * Values follow the published CRC catalogue convention: poly, init,
+     * refin/refout and xorout.  This explicit form prevents a label such as
+     * "CRC32" from silently selecting the wrong wire checksum.
+     */
+    public enum Crc32Variant {
+        ISO_HDLC("CRC-32/ISO-HDLC", 0x04C11DB7, 0xFFFFFFFF, true, true, 0xFFFFFFFF),
+        BZIP2("CRC-32/BZIP2", 0x04C11DB7, 0xFFFFFFFF, false, false, 0xFFFFFFFF),
+        MPEG2("CRC-32/MPEG-2", 0x04C11DB7, 0xFFFFFFFF, false, false, 0x00000000),
+        POSIX("CRC-32/POSIX", 0x04C11DB7, 0x00000000, false, false, 0xFFFFFFFF),
+        JAMCRC("CRC-32/JAMCRC", 0x04C11DB7, 0xFFFFFFFF, true, true, 0x00000000),
+        CASTAGNOLI("CRC-32/ISCSI", 0x1EDC6F41, 0xFFFFFFFF, true, true, 0xFFFFFFFF);
+
+        private final String displayName;
+        private final int polynomial, initial, xorOut;
+        private final boolean reflectInput, reflectOutput;
+
+        Crc32Variant(String displayName, int polynomial, int initial,
+                     boolean reflectInput, boolean reflectOutput, int xorOut) {
+            this.displayName = displayName;
+            this.polynomial = polynomial;
+            this.initial = initial;
+            this.reflectInput = reflectInput;
+            this.reflectOutput = reflectOutput;
+            this.xorOut = xorOut;
+        }
+
+        public String displayName() { return displayName; }
+        static Crc32Variant fromDisplayName(String value) {
+            return Arrays.stream(values()).filter(v -> v.displayName.equalsIgnoreCase(value))
+                    .findFirst().orElseThrow(() -> new IllegalArgumentException("Unsupported CRC-32 variant: " + value));
+        }
+    }
+
+    /** Calculates a named CRC-32 variant and returns its conventional big-endian checksum bytes. */
+    public static byte[] calculateCrc32(byte[] data, Crc32Variant variant) {
+        if (data == null || variant == null) throw new IllegalArgumentException("CRC data and variant are required");
+        int crc = variant.initial;
+        for (byte input : data) {
+            int value = input & 0xFF;
+            if (variant.reflectInput) value = Integer.reverse(value) >>> 24;
+            crc ^= value << 24;
+            for (int bit = 0; bit < 8; bit++) {
+                crc = (crc & 0x80000000) != 0 ? (crc << 1) ^ variant.polynomial : crc << 1;
+            }
+        }
+        if (variant.reflectOutput) crc = Integer.reverse(crc);
+        crc ^= variant.xorOut;
+        return new byte[] { (byte) (crc >>> 24), (byte) (crc >>> 16), (byte) (crc >>> 8), (byte) crc };
+    }
+
+    /**
      * Normalize algorithm name for Java/BouncyCastle
      *
      * @param algorithm User-provided algorithm name
@@ -107,6 +165,8 @@ public class HashOperations {
                 return "SHA3-256";
             case "SHA3512":
                 return "SHA3-512";
+            case "TIGER192":
+                return "TIGER";
             default:
                 return algorithm;
         }
@@ -136,6 +196,7 @@ public class HashOperations {
         // Check against supported list
         return SUPPORTED_ALGORITHMS.stream()
                 .anyMatch(algo -> algo.equalsIgnoreCase(algorithm))
-                || algorithm.equalsIgnoreCase("CRC32");
+                || algorithm.equalsIgnoreCase("CRC32")
+                || Arrays.stream(Crc32Variant.values()).anyMatch(v -> v.displayName().equalsIgnoreCase(algorithm));
     }
 }

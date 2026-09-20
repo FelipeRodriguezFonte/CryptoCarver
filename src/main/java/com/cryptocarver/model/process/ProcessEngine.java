@@ -26,6 +26,7 @@ public final class ProcessEngine {
         new EnvelopeSignatureNodeHandler(),
         new PaymentOperationsNodeHandler(),
         new HsmHostCommandNodeHandler(),
+        new Iso8583NodeHandler(),
         new KeyOperationsNodeHandler(),
         new KeyMaterialNodeHandler(),
         new AdvancedCryptoNodeHandler(),
