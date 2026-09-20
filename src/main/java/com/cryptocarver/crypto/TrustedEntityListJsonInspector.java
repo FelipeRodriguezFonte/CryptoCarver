@@ -38,10 +38,14 @@ public final class TrustedEntityListJsonInspector {
                 JsonObject entity = object(entityElement, "TrustedEntitiesList item");
                 only(entity, "TrustedEntityInformation", "TrustedEntityServices");
                 JsonObject entityInfo = requiredObject(entity, "TrustedEntityInformation");
+                only(entityInfo, "TEName", "TETradeName", "TEAddress", "TEInformationURI", "TEInformationExtensions");
                 String provider = firstValue(requiredArray(entityInfo, "TEName"));
                 for (JsonElement serviceElement : requiredArray(entity, "TrustedEntityServices")) {
                     JsonObject service = object(serviceElement, "TrustedEntityServices item"); only(service, "ServiceInformation", "ServiceHistory");
                     JsonObject si = requiredObject(service, "ServiceInformation");
+                    only(si, "ServiceName", "ServiceDigitalIdentity", "ServiceTypeIdentifier", "ServiceStatus",
+                            "StatusStartingTime", "SchemeServiceDefinitionURI", "ServiceSupplyPoints",
+                            "ServiceDefinitionURI", "ServiceInformationExtensions");
                     String name = firstValue(requiredArray(si, "ServiceName"));
                     requiredArray(si, "ServiceDigitalIdentity");
                     services.add(new Service(provider, name, optionalString(si, "ServiceTypeIdentifier"),
