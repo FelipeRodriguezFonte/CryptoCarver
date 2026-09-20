@@ -141,6 +141,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 🪪 | SCA / OpenID4VP | `op_wallet_sca` | EXPERIMENTAL | HIGH | `SCA / OpenID4VP` | SCA, PSD2, TS12, dynamic linking, OpenID4VP, transaction data |
 | 🪪 | SD-JWT VC | `op_wallet_sdjwt` | EXPERIMENTAL | HIGH | `SD-JWT VC` | SD-JWT, selective disclosure, EUDI, wallet, PID, key binding |
 | 🪪 | Status List | `op_wallet_status_list` | EXPERIMENTAL | LOW | `Status List` | status list, revocation, EUDI, wallet |
+| 🪪 | Trusted Entity List JSON | `op_wallet_trusted_entity_list_json` | EXPERIMENTAL | LOW | `Trusted Entity List JSON` | trusted entity list, LoTE, TS 119 602, JSON, eIDAS |
 | 🪪 | Trusted List | `op_wallet_trusted_list` | EXPERIMENTAL | LOW | `Trusted List` | trusted list, LOTL, TSL, TS 119 612, eIDAS |
 | 🪪 | eIDAS Certificate Profiles | `op_wallet_eidas_cert` | EXPERIMENTAL | LOW | `eIDAS Certificate Profiles` | qcStatements, QWAC, QSealC, PSD2, TS 119 412-6, TS 119 411-8 |
 | 🪪 | mdoc / mDL | `op_wallet_mdoc` | EXPERIMENTAL | HIGH | `mdoc / mDL` | mdoc, mDL, 18013-5, MSO, EUDI, wallet |
@@ -247,6 +248,7 @@ name means a private key in one node and a public key in another.
 | CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |
 | eIDAS certificate profiles | `EIDAS_CERT_INSPECT` |
 | Trusted Lists (TS 119 612) | `TRUSTED_LIST_INSPECT`, `TRUSTED_LIST_VERIFY`, `TRUSTED_LIST_FIND_CERT` |
+| Trusted Entity Lists JSON (TS 119 602) | `TRUSTED_ENTITY_LIST_JSON_INSPECT` |
 | mdoc / mDL (ISO/IEC 18013-5) | `MDOC_ISSUE`, `MDOC_VERIFY`, `MDOC_INSPECT` |
 | SCA with the wallet (TS12) and OpenID4VP | `SCA_TRANSACTION_DATA`, `SCA_VERIFY`, `OID4VP_INSPECT` |
 | AdES validation (EN 319 102-1, report per TS 119 102-2) | `ADES_VALIDATE` |
