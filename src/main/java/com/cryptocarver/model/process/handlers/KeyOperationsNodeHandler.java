@@ -1,6 +1,8 @@
 package com.cryptocarver.model.process.handlers;
 
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
+import com.cryptocarver.crypto.AtallaAkbHeader;
+import com.cryptocarver.crypto.AtallaAkbOperations;
 import com.cryptocarver.crypto.KeyDerivation;
 import com.cryptocarver.crypto.KeyMaterialInspector;
 import com.cryptocarver.crypto.KeyOperations;
@@ -52,6 +54,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             "KDF_HKDF", "KDF_SP800_108", "KDF_X963", "KDF_SCRYPT", "KDF_ARGON2",
             "AES_KEYWRAP_3394", "AES_UNWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_5649",
             "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE",
+            "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
             "KEYPAIR_GENERATE", "KEY_MATERIAL_INSPECT", "RSA_KEYPAIR_GENERATE");
 
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
@@ -84,6 +87,9 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "TR31_WRAP" -> List.of(optionalPort("kbpk", HEX), optionalPort("key", HEX));
             case "TR31_UNWRAP" -> List.of(optionalPort("kbpk", HEX), new PortDefinition("keyBlock", TEXT, false));
             case "TR31_PARSE_HEADER" -> List.of(new PortDefinition("keyBlock", TEXT, false));
+            case "ATALLA_AKB_WRAP" -> List.of(optionalPort("mfk", HEX), optionalPort("key", HEX), optionalPort("header", TEXT), optionalPort("padding", HEX));
+            case "ATALLA_AKB_UNWRAP" -> List.of(optionalPort("mfk", HEX), optionalPort("keyBlock", TEXT));
+            case "ATALLA_AKB_PARSE_HEADER" -> List.of(optionalPort("header", TEXT));
             case "ICSF_TOKEN_PARSE" -> List.of(new PortDefinition("token", HEX, false));
             case "KEY_MATERIAL_INSPECT" -> List.of(optionalPort("key", BINARY));
             default -> List.of();
@@ -99,8 +105,9 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
         return switch (node.type.toUpperCase(Locale.ROOT)) {
             case "KCV", "KEY_COMBINE_XOR", "COMPONENT_SELECT", "PARITY_ADJUST", "PARITY_CHECK" -> Representation.HEX;
             case "KEY_SPLIT_XOR" -> Representation.HEX_COMPONENTS;
-            case "TR31_WRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT" -> Representation.TEXT_UTF8;
-            case "TR31_UNWRAP" -> Representation.HEX;
+            case "TR31_WRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT",
+                    "ATALLA_AKB_WRAP", "ATALLA_AKB_PARSE_HEADER" -> Representation.TEXT_UTF8;
+            case "TR31_UNWRAP", "ATALLA_AKB_UNWRAP" -> Representation.HEX;
             case "AES_KEYWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_3394", "AES_UNWRAP_5649",
                     "KDF_HKDF", "KDF_SP800_108", "KDF_X963", "KDF_SCRYPT", "KDF_ARGON2",
                     "KEYPAIR_GENERATE", "RSA_KEYPAIR_GENERATE" -> Representation.BINARY;
@@ -111,7 +118,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
     @Override
     public void validateConfiguration(ProcessDefinition.Node node) {
         String type = node.type.toUpperCase(Locale.ROOT);
-        for (String field : List.of("key", "kek", "keyData", "ikm", "sharedSecret", "password", "salt", "token")) {
+        for (String field : List.of("key", "kek", "keyData", "ikm", "sharedSecret", "password", "salt", "token", "mfk", "padding")) {
             validateConfiguredHex(node, field);
         }
         switch (type) {
@@ -164,6 +171,15 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             }
             case "TR31_UNWRAP" -> { requireInput(node, "kbpk"); requireInput(node, "keyBlock"); }
             case "TR31_PARSE_HEADER" -> requireInput(node, "keyBlock");
+            case "ATALLA_AKB_WRAP" -> {
+                requireInput(node, "mfk"); requireInput(node, "key");
+                String hdr = node.configuration.get("header");
+                if (hdr != null && !hdr.isBlank() && hdr.trim().length() != 8) {
+                    throw new IllegalArgumentException("Invalid AKB header length");
+                }
+            }
+            case "ATALLA_AKB_UNWRAP" -> { requireInput(node, "mfk"); requireInput(node, "keyBlock"); }
+            case "ATALLA_AKB_PARSE_HEADER" -> requireInput(node, "header");
             case "ICSF_TOKEN_PARSE" -> requireInput(node, "token");
             case "AES_KEYWRAP_3394", "AES_KEYWRAP_5649" -> { requireInput(node, "kek"); requireInput(node, "keyData"); validateConfiguredAesLengths(node); }
             case "AES_UNWRAP_3394", "AES_UNWRAP_5649" -> { requireInput(node, "kek"); requireInput(node, "wrapped"); }
@@ -207,6 +223,12 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 case "TR31_UNWRAP" -> FlowValue.hex(TR31Operations.unwrapKey(stringBytes(inputs, node, "kbpk"), stringBytes(inputs, node, "keyBlock"))
                         .getBytes(StandardCharsets.UTF_8));
                 case "TR31_PARSE_HEADER" -> text(TR31Operations.parseHeader(stringBytes(inputs, node, "keyBlock")));
+                case "ATALLA_AKB_WRAP" -> text(AtallaAkbOperations.wrap(stringBytes(inputs, node, "mfk"),
+                        setting(node, "header", "1PUNE000"), stringBytes(inputs, node, "key"),
+                        setting(node, "padding", "").isBlank() && !inputs.containsKey("padding") ? null : stringBytes(inputs, node, "padding")));
+                case "ATALLA_AKB_UNWRAP" -> FlowValue.hex(AtallaAkbOperations.unwrap(stringBytes(inputs, node, "mfk"),
+                        stringBytes(inputs, node, "keyBlock")).clearKey().getBytes(StandardCharsets.UTF_8));
+                case "ATALLA_AKB_PARSE_HEADER" -> text(AtallaAkbHeader.decode(setting(node, "header", "").isBlank() && inputs.containsKey("header") ? inputs.get("header").render().trim().split(",")[0] : setting(node, "header", "1PUNE000").split(",")[0]));
                 case "ICSF_TOKEN_PARSE" -> parseToken(node, inputs.get("token"));
                 case "KEYPAIR_GENERATE", "RSA_KEYPAIR_GENERATE" -> binary(generateKeyPair(node).getPrivate().getEncoded());
                 case "KEY_MATERIAL_INSPECT" -> text(KeyMaterialInspector.describeKey(decodeKey(node, bytes(node, inputs, "key"))));
@@ -482,6 +504,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
         result.add(new NodeDescriptor("AES_UNWRAP_5649", "Key Operations", "module.process.type.key.unwrap5649", "module.process.desc.key.unwrap5649", "📦",
                 List.of(secret("kek", "module.process.param.kek"), secret("wrapped", "module.process.param.wrappedMaterial"))));
         result.addAll(tr31Descriptors());
+        result.addAll(atallaDescriptors());
         result.add(new NodeDescriptor("ICSF_TOKEN_PARSE", "Key Operations", "module.process.type.key.icsfParse", "module.process.desc.key.icsfParse", "🔬",
                 List.of(combo("origin", "module.process.param.origin", List.of("inferir", "kds-crudo", "key-record-read"), "inferir"), secret("token", "module.process.param.tokenMaterial"))));
         result.add(new NodeDescriptor("KEYPAIR_GENERATE", "Key Operations", "module.process.type.keypairGenerate", "module.process.desc.keypairGenerate", "🗝",
@@ -515,10 +538,23 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
 
     private static List<NodeDescriptor> tr31Descriptors() {
         List<NodeDescriptor> list = new ArrayList<>();
-        list.add(new NodeDescriptor("TR31_WRAP", "Key Operations", "module.process.type.key.tr31Wrap", "module.process.desc.key.tr31Wrap", "📦",
+        list.add(new NodeDescriptor("TR31_WRAP", "Key Material", "module.process.type.key.tr31Wrap", "module.process.desc.key.tr31Wrap", "📦",
                 List.of(secret("kbpk", "module.process.param.kbpk"), secret("key", "module.process.param.keyMaterial"), new NodeParameter("usage", "module.process.param.tr31Usage", ParameterKind.TEXT, "P0"), combo("version", "module.process.param.tr31Version", List.of("A", "B", "C", "D"), "B"), new NodeParameter("algorithm", "module.process.param.tr31Algorithm", ParameterKind.TEXT, "T"), new NodeParameter("mode", "module.process.param.tr31Mode", ParameterKind.TEXT, "E"), new NodeParameter("exportability", "module.process.param.tr31Exportability", ParameterKind.TEXT, "N"))));
-        list.add(new NodeDescriptor("TR31_UNWRAP", "Key Operations", "module.process.type.key.tr31Unwrap", "module.process.desc.key.tr31Unwrap", "📦", List.of(secret("kbpk", "module.process.param.kbpk"), secret("keyBlock", "module.process.param.keyBlock"))));
-        list.add(new NodeDescriptor("TR31_PARSE_HEADER", "Key Operations", "module.process.type.key.tr31ParseHeader", "module.process.desc.key.tr31ParseHeader", "🔎", List.of(secret("keyBlock", "module.process.param.keyBlock"))));
+        list.add(new NodeDescriptor("TR31_UNWRAP", "Key Material", "module.process.type.key.tr31Unwrap", "module.process.desc.key.tr31Unwrap", "📦", List.of(secret("kbpk", "module.process.param.kbpk"), secret("keyBlock", "module.process.param.keyBlock"))));
+        list.add(new NodeDescriptor("TR31_PARSE_HEADER", "Key Material", "module.process.type.key.tr31ParseHeader", "module.process.desc.key.tr31ParseHeader", "🔎", List.of(secret("keyBlock", "module.process.param.keyBlock"))));
+        return list;
+    }
+
+    private static List<NodeDescriptor> atallaDescriptors() {
+        List<NodeDescriptor> list = new ArrayList<>();
+        list.add(new NodeDescriptor("ATALLA_AKB_WRAP", "Key Material", "module.process.type.key.atallaAkbWrap", "module.process.desc.key.atallaAkbWrap", "📦",
+                List.of(secret("mfk", "module.process.param.atallaMfk"), secret("key", "module.process.param.keyMaterial"),
+                        new NodeParameter("header", "module.process.param.atallaHeader", ParameterKind.TEXT, "1PUNE000"),
+                        new NodeParameter("padding", "module.process.param.atallaPadding", ParameterKind.TEXT, ""))));
+        list.add(new NodeDescriptor("ATALLA_AKB_UNWRAP", "Key Material", "module.process.type.key.atallaAkbUnwrap", "module.process.desc.key.atallaAkbUnwrap", "📦",
+                List.of(secret("mfk", "module.process.param.atallaMfk"), secret("keyBlock", "module.process.param.keyBlock"))));
+        list.add(new NodeDescriptor("ATALLA_AKB_PARSE_HEADER", "Key Material", "module.process.type.key.atallaAkbParseHeader", "module.process.desc.key.atallaAkbParseHeader", "🔎",
+                List.of(new NodeParameter("header", "module.process.param.atallaHeader", ParameterKind.TEXT, "1PUNE000"))));
         return list;
     }
 }

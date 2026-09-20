@@ -1,6 +1,8 @@
 package com.cryptocarver.model.process;
 
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
+import com.cryptocarver.crypto.AtallaAkbHeader;
+import com.cryptocarver.crypto.AtallaAkbOperations;
 import com.cryptocarver.crypto.KeyDerivation;
 import com.cryptocarver.crypto.KeyMaterialInspector;
 import com.cryptocarver.crypto.KeyOperations;
@@ -108,6 +110,23 @@ class KeyOperationsNodeHandlerTest {
         assertEquals(IcsfTokenReport.renderText(IcsfTokenParser.parse(token, Origin.INFER), Origin.INFER, token),
                 HANDLER.execute(icsf, Map.of("token", hex(token)), null).render());
 
+        String atallaMfk = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
+        String atallaKey = "0123456789ABCDEFFEDCBA9876543210";
+        String atallaHdr = "1PUNE000";
+        String atallaPad = "4444444444444444";
+        String atallaBlock = "1PUNE000,B17A04DCF500DD5F7474C10ACC68D47AC2D2A4CD7948C008,4FFC0BC8BCC1980E";
+
+        ProcessDefinition.Node akbWrap = node("ATALLA_AKB_WRAP");
+        akbWrap.configuration.put("header", atallaHdr);
+        akbWrap.configuration.put("padding", atallaPad);
+        assertEquals(atallaBlock, HANDLER.execute(akbWrap, Map.of("mfk", hexString(atallaMfk), "key", hexString(atallaKey)), null).render());
+
+        ProcessDefinition.Node akbUnwrap = node("ATALLA_AKB_UNWRAP");
+        assertEquals(atallaKey, HANDLER.execute(akbUnwrap, Map.of("mfk", hexString(atallaMfk), "keyBlock", FlowValue.text(atallaBlock, StandardCharsets.UTF_8)), null).render());
+
+        ProcessDefinition.Node akbParse = node("ATALLA_AKB_PARSE_HEADER");
+        assertEquals(AtallaAkbHeader.decode(atallaHdr), HANDLER.execute(akbParse, Map.of("header", FlowValue.text(atallaBlock, StandardCharsets.UTF_8)), null).render());
+
         ProcessDefinition.Node pair = node("KEYPAIR_GENERATE"); pair.configuration.put("algorithm", "EdDSA");
         assertTrue(HANDLER.execute(pair, Map.of(), null).bytes().length > 0);
         ProcessDefinition.Node inspect = node("KEY_MATERIAL_INSPECT"); inspect.configuration.put("algorithm", "AES");
@@ -120,7 +139,9 @@ class KeyOperationsNodeHandlerTest {
         List<String> types = List.of("KCV", "KEY_SPLIT_XOR", "KEY_COMBINE_XOR", "PARITY_ADJUST", "PARITY_CHECK",
                 "KDF_HKDF", "KDF_SP800_108", "KDF_X963", "KDF_SCRYPT", "KDF_ARGON2",
                 "AES_KEYWRAP_3394", "AES_UNWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_5649",
-                "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT");
+                "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER",
+                "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
+                "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT");
         for (String type : types) {
             ProcessDefinition definition = new ProcessDefinition();
             definition.nodes.add(new ProcessDefinition.Node("n", type, type, 0, 0));
