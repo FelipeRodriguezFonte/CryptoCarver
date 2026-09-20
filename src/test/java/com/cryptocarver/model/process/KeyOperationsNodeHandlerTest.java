@@ -234,8 +234,36 @@ class KeyOperationsNodeHandlerTest {
         assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
 
         enc.configuration.put("format", "11");
-        enc.configuration.put("variant", "02");
+        enc.configuration.put("variant", "03");
         assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
+    }
+
+    @Test
+    void safeNetNodesReproduceTheTripleLengthVectors() throws Exception {
+        String km = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
+        String key = "0123456789ABCDEFFEDCBA98765432100123456788ABCDEE";
+        String[][] vectors = {
+            {"12", "02", "72F8F4F863BB42305C28B3C897AF15DACFD0909359B3B555"},
+            {"12", "06", "E7ECA228ED775FAC1F418AD575C370DBA48057B618ED44B4"},
+            {"12", "08", "0F15CFAFE694B0058FED6DA3BCA8D59E5951AF3CD83EF0A7"},
+            {"14", "06", "E7ECA228ED775FACC37345A4566432880C37BC5D99C933D7"},
+        };
+        for (String[] v : vectors) {
+            ProcessDefinition.Node enc = node("SAFENET_KM_ENCRYPT");
+            enc.configuration.put("format", v[0]);
+            enc.configuration.put("variant", v[1]);
+            enc.configuration.put("km", km);
+            enc.configuration.put("key", key);
+            HANDLER.validateConfiguration(enc);
+            enc.configuration.remove("km");
+            enc.configuration.remove("key");
+            assertEquals(v[2], HANDLER.execute(enc, Map.of("km", hexString(km), "key", hexString(key)), null).render());
+
+            ProcessDefinition.Node dec = node("SAFENET_KM_DECRYPT");
+            dec.configuration.put("format", v[0]);
+            dec.configuration.put("variant", v[1]);
+            assertEquals(key, HANDLER.execute(dec, Map.of("km", hexString(km), "cryptogram", hexString(v[2])), null).render());
+        }
     }
 
     @Test

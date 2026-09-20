@@ -192,13 +192,13 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "ATALLA_AKB_PARSE_HEADER" -> requireInput(node, "header");
             case "SAFENET_KM_ENCRYPT" -> {
                 requireInput(node, "km"); requireInput(node, "key");
-                oneOf(node, "format", List.of("11", "13"));
-                oneOf(node, "variant", List.of("00", "01", "07"));
+                oneOf(node, "format", SAFENET_FORMATS);
+                oneOf(node, "variant", SAFENET_VARIANTS);
             }
             case "SAFENET_KM_DECRYPT" -> {
                 requireInput(node, "km"); requireInput(node, "cryptogram");
-                oneOf(node, "format", List.of("11", "13"));
-                oneOf(node, "variant", List.of("00", "01", "07"));
+                oneOf(node, "format", SAFENET_FORMATS);
+                oneOf(node, "variant", SAFENET_VARIANTS);
             }
             case "FUTUREX_MFK_ENCRYPT" -> {
                 requireInput(node, "mfk"); requireInput(node, "key");
@@ -600,16 +600,21 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
         return list;
     }
 
+    /** What SafeNetKmOperations has a captured vector for; the node offers exactly that. */
+    private static final List<String> SAFENET_FORMATS = List.of("11", "12", "13", "14");
+    private static final List<String> SAFENET_VARIANTS = List.copyOf(
+            new java.util.TreeSet<>(SafeNetKmOperations.variants().keySet()));
+
     private static List<NodeDescriptor> safeNetDescriptors() {
         List<NodeDescriptor> list = new ArrayList<>();
         list.add(new NodeDescriptor("SAFENET_KM_ENCRYPT", "Key Material", "module.process.type.key.safeNetKmEncrypt", "module.process.desc.key.safeNetKmEncrypt", "📦",
                 List.of(secret("km", "module.process.param.safeNetKm"), secret("key", "module.process.param.keyMaterial"),
-                        combo("format", "module.process.param.safeNetFormat", List.of("11", "13"), "11"),
-                        combo("variant", "module.process.param.safeNetVariant", List.of("00", "01", "07"), "00"))));
+                        combo("format", "module.process.param.safeNetFormat", SAFENET_FORMATS, "11"),
+                        combo("variant", "module.process.param.safeNetVariant", SAFENET_VARIANTS, "00"))));
         list.add(new NodeDescriptor("SAFENET_KM_DECRYPT", "Key Material", "module.process.type.key.safeNetKmDecrypt", "module.process.desc.key.safeNetKmDecrypt", "📦",
                 List.of(secret("km", "module.process.param.safeNetKm"), secret("cryptogram", "module.process.param.wrappedMaterial"),
-                        combo("format", "module.process.param.safeNetFormat", List.of("11", "13"), "11"),
-                        combo("variant", "module.process.param.safeNetVariant", List.of("00", "01", "07"), "00"))));
+                        combo("format", "module.process.param.safeNetFormat", SAFENET_FORMATS, "11"),
+                        combo("variant", "module.process.param.safeNetVariant", SAFENET_VARIANTS, "00"))));
         return list;
     }
 
