@@ -422,11 +422,13 @@ versión de la herramienta:
 - M0, M2, M4 y M6: algoritmo/modo, IV, relleno, clave de test, datos exactos y
   MAC/cifrado resultante, incluyendo un caso en el límite de bloque.
 
-Para **secure messaging EMV**, una ficha separada para Visa y Mastercard debe
-incluir versión/perfil exactos, MK-SMI/MK-SMC de test, PAN/PSN, ATC, APDU
-completa, datos claros, entrada exacta al MAC, clave de sesión derivada, bloque
-rellenado, PIN cifrado y MAC final. Hace falta un segundo caso que cambie sólo
-la cabecera APDU para demostrar qué bytes autentica el perfil.
+Para **secure messaging EMV**, la campaña reproducible está en
+`docs/CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_SECURE_MESSAGING.md`: fichas separadas
+para Visa CSK y Mastercard SKD con versión/perfil exactos, MK-SMI/MK-SMC de
+test, PAN/PSN, ATC, APDU completa, datos claros, entrada exacta al MAC, clave de
+sesión derivada, bloque rellenado, PIN cifrado y MAC final. Incluye un segundo
+caso que cambia sólo la cabecera APDU para demostrar qué bytes autentica el
+perfil.
 
 Para **HCE/tokenización**, la campaña reproducible está en
 `docs/CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md`: fichas independientes para Visa

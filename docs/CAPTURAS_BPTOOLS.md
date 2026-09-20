@@ -180,19 +180,10 @@ todo lo demás por defecto, y otra vez los intermedios.
 
 ## 7. Secure messaging EMV (ChatGPT, hueco 3)
 
-La diferencia entre Visa y Mastercard está en el relleno, la derivación de
-sesión y qué entra en el MAC. Un vector de cada uno, con los mismos datos, hace
-visible la diferencia.
-
-Cryptographic Calculator → EMV → Secure Messaging / Script:
-
-- IMK: `0123456789ABCDEFFEDCBA9876543210`
-- Tarjeta: PAN y seq de la casa, ATC `0001`
-- Script: un PIN change con PIN `1234`
-- Una captura con perfil **Visa (CSK)** y otra con perfil **Mastercard (SKD)**
-
-Necesito: el comando cifrado completo, la clave de sesión, el MAC, y el bloque
-antes de cifrar si lo enseña.
+La campaña reproducible, con perfiles Visa CSK y Mastercard SKD separados y
+un segundo caso que cambia sólo la cabecera APDU, está en
+[`CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_SECURE_MESSAGING.md`](CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_SECURE_MESSAGING.md).
+Esta sección queda como índice de prioridad.
 
 ## 8. MAC y bloques de PIN (Luna)
 
