@@ -3,6 +3,7 @@ package com.cryptocarver.model.process.handlers;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.AtallaAkbHeader;
 import com.cryptocarver.crypto.AtallaAkbOperations;
+import com.cryptocarver.crypto.FuturexMfkOperations;
 import com.cryptocarver.crypto.KeyDerivation;
 import com.cryptocarver.crypto.KeyMaterialInspector;
 import com.cryptocarver.crypto.KeyOperations;
@@ -57,6 +58,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE",
             "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
             "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT",
+            "FUTUREX_MFK_ENCRYPT", "FUTUREX_MFK_DECRYPT",
             "KEYPAIR_GENERATE", "KEY_MATERIAL_INSPECT", "RSA_KEYPAIR_GENERATE");
 
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
@@ -94,6 +96,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "ATALLA_AKB_PARSE_HEADER" -> List.of(optionalPort("header", TEXT));
             case "SAFENET_KM_ENCRYPT" -> List.of(optionalPort("km", HEX), optionalPort("key", HEX));
             case "SAFENET_KM_DECRYPT" -> List.of(optionalPort("km", HEX), optionalPort("cryptogram", HEX));
+            case "FUTUREX_MFK_ENCRYPT" -> List.of(optionalPort("mfk", HEX), optionalPort("key", HEX));
+            case "FUTUREX_MFK_DECRYPT" -> List.of(optionalPort("mfk", HEX), optionalPort("cryptogram", HEX));
             case "ICSF_TOKEN_PARSE" -> List.of(new PortDefinition("token", HEX, false));
             case "KEY_MATERIAL_INSPECT" -> List.of(optionalPort("key", BINARY));
             default -> List.of();
@@ -112,7 +116,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "TR31_WRAP", "TR31_PARSE_HEADER", "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT",
                     "ATALLA_AKB_WRAP", "ATALLA_AKB_PARSE_HEADER" -> Representation.TEXT_UTF8;
             case "TR31_UNWRAP", "ATALLA_AKB_UNWRAP",
-                    "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT" -> Representation.HEX;
+                    "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT",
+                    "FUTUREX_MFK_ENCRYPT", "FUTUREX_MFK_DECRYPT" -> Representation.HEX;
             case "AES_KEYWRAP_3394", "AES_KEYWRAP_5649", "AES_UNWRAP_3394", "AES_UNWRAP_5649",
                     "KDF_HKDF", "KDF_SP800_108", "KDF_X963", "KDF_SCRYPT", "KDF_ARGON2",
                     "KEYPAIR_GENERATE", "RSA_KEYPAIR_GENERATE" -> Representation.BINARY;
@@ -195,6 +200,14 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 oneOf(node, "format", List.of("11", "13"));
                 oneOf(node, "variant", List.of("00", "01", "07"));
             }
+            case "FUTUREX_MFK_ENCRYPT" -> {
+                requireInput(node, "mfk"); requireInput(node, "key");
+                integer(node, "modifier", 0, 0, 4);
+            }
+            case "FUTUREX_MFK_DECRYPT" -> {
+                requireInput(node, "mfk"); requireInput(node, "cryptogram");
+                integer(node, "modifier", 0, 0, 4);
+            }
             case "ICSF_TOKEN_PARSE" -> requireInput(node, "token");
             case "AES_KEYWRAP_3394", "AES_KEYWRAP_5649" -> { requireInput(node, "kek"); requireInput(node, "keyData"); validateConfiguredAesLengths(node); }
             case "AES_UNWRAP_3394", "AES_UNWRAP_5649" -> { requireInput(node, "kek"); requireInput(node, "wrapped"); }
@@ -250,6 +263,12 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                 case "SAFENET_KM_DECRYPT" -> FlowValue.hex(SafeNetKmOperations.decrypt(
                         stringBytes(inputs, node, "cryptogram"), stringBytes(inputs, node, "km"),
                         setting(node, "format", "11"), setting(node, "variant", "00")).cryptogram().getBytes(StandardCharsets.UTF_8));
+                case "FUTUREX_MFK_ENCRYPT" -> FlowValue.hex(FuturexMfkOperations.encrypt(
+                        stringBytes(inputs, node, "key"), stringBytes(inputs, node, "mfk"),
+                        integer(node, "modifier", 0, 0, 4)).cryptogram().getBytes(StandardCharsets.UTF_8));
+                case "FUTUREX_MFK_DECRYPT" -> FlowValue.hex(FuturexMfkOperations.decrypt(
+                        stringBytes(inputs, node, "cryptogram"), stringBytes(inputs, node, "mfk"),
+                        integer(node, "modifier", 0, 0, 4)).cryptogram().getBytes(StandardCharsets.UTF_8));
                 case "ICSF_TOKEN_PARSE" -> parseToken(node, inputs.get("token"));
                 case "KEYPAIR_GENERATE", "RSA_KEYPAIR_GENERATE" -> binary(generateKeyPair(node).getPrivate().getEncoded());
                 case "KEY_MATERIAL_INSPECT" -> text(KeyMaterialInspector.describeKey(decodeKey(node, bytes(node, inputs, "key"))));
@@ -527,6 +546,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
         result.addAll(tr31Descriptors());
         result.addAll(atallaDescriptors());
         result.addAll(safeNetDescriptors());
+        result.addAll(futurexDescriptors());
         result.add(new NodeDescriptor("ICSF_TOKEN_PARSE", "Key Operations", "module.process.type.key.icsfParse", "module.process.desc.key.icsfParse", "🔬",
                 List.of(combo("origin", "module.process.param.origin", List.of("inferir", "kds-crudo", "key-record-read"), "inferir"), secret("token", "module.process.param.tokenMaterial"))));
         result.add(new NodeDescriptor("KEYPAIR_GENERATE", "Key Operations", "module.process.type.keypairGenerate", "module.process.desc.keypairGenerate", "🗝",
@@ -592,5 +612,17 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
                         combo("variant", "module.process.param.safeNetVariant", List.of("00", "01", "07"), "00"))));
         return list;
     }
+
+    private static List<NodeDescriptor> futurexDescriptors() {
+        List<NodeDescriptor> list = new ArrayList<>();
+        list.add(new NodeDescriptor("FUTUREX_MFK_ENCRYPT", "Key Material", "module.process.type.key.futurexMfkEncrypt", "module.process.desc.key.futurexMfkEncrypt", "📦",
+                List.of(secret("mfk", "module.process.param.futurexMfk"), secret("key", "module.process.param.keyMaterial"),
+                        combo("modifier", "module.process.param.futurexModifier", List.of("0", "1", "2", "3", "4"), "0"))));
+        list.add(new NodeDescriptor("FUTUREX_MFK_DECRYPT", "Key Material", "module.process.type.key.futurexMfkDecrypt", "module.process.desc.key.futurexMfkDecrypt", "📦",
+                List.of(secret("mfk", "module.process.param.futurexMfk"), secret("cryptogram", "module.process.param.wrappedMaterial"),
+                        combo("modifier", "module.process.param.futurexModifier", List.of("0", "1", "2", "3", "4"), "0"))));
+        return list;
+    }
 }
+
 

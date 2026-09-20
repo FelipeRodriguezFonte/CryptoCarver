@@ -141,6 +141,27 @@ class KeyOperationsNodeHandlerTest {
         snDec.configuration.put("variant", "00");
         assertEquals(safeNetKey, HANDLER.execute(snDec, Map.of("km", hexString(safeNetKm), "cryptogram", hexString(safeNetCrypto)), null).render());
 
+        String futurexMfk = "D2DE5CD9110F4CAB11111111111111110123456789ABCDEF";
+        String futurexKey = "0123456789ABCDEFFEDCBA9876543210";
+        String futurexCrypto0 = "F0700DDBFB49DDD5A3280E65263A6EED";
+        String futurexCrypto4 = "C6CA6CCD5C517A0F0511740BB7ED1860";
+
+        ProcessDefinition.Node fxEnc0 = node("FUTUREX_MFK_ENCRYPT");
+        fxEnc0.configuration.put("modifier", "0");
+        assertEquals(futurexCrypto0, HANDLER.execute(fxEnc0, Map.of("mfk", hexString(futurexMfk), "key", hexString(futurexKey)), null).render());
+
+        ProcessDefinition.Node fxDec0 = node("FUTUREX_MFK_DECRYPT");
+        fxDec0.configuration.put("modifier", "0");
+        assertEquals(futurexKey, HANDLER.execute(fxDec0, Map.of("mfk", hexString(futurexMfk), "cryptogram", hexString(futurexCrypto0)), null).render());
+
+        ProcessDefinition.Node fxEnc4 = node("FUTUREX_MFK_ENCRYPT");
+        fxEnc4.configuration.put("modifier", "4");
+        assertEquals(futurexCrypto4, HANDLER.execute(fxEnc4, Map.of("mfk", hexString(futurexMfk), "key", hexString(futurexKey)), null).render());
+
+        ProcessDefinition.Node fxDec4 = node("FUTUREX_MFK_DECRYPT");
+        fxDec4.configuration.put("modifier", "4");
+        assertEquals(futurexKey, HANDLER.execute(fxDec4, Map.of("mfk", hexString(futurexMfk), "cryptogram", hexString(futurexCrypto4)), null).render());
+
         ProcessDefinition.Node pair = node("KEYPAIR_GENERATE"); pair.configuration.put("algorithm", "EdDSA");
         assertTrue(HANDLER.execute(pair, Map.of(), null).bytes().length > 0);
         ProcessDefinition.Node inspect = node("KEY_MATERIAL_INSPECT"); inspect.configuration.put("algorithm", "AES");
@@ -156,6 +177,7 @@ class KeyOperationsNodeHandlerTest {
                 "TR31_WRAP", "TR31_UNWRAP", "TR31_PARSE_HEADER",
                 "ATALLA_AKB_WRAP", "ATALLA_AKB_UNWRAP", "ATALLA_AKB_PARSE_HEADER",
                 "SAFENET_KM_ENCRYPT", "SAFENET_KM_DECRYPT",
+                "FUTUREX_MFK_ENCRYPT", "FUTUREX_MFK_DECRYPT",
                 "ICSF_TOKEN_PARSE", "KEY_MATERIAL_INSPECT");
         for (String type : types) {
             ProcessDefinition definition = new ProcessDefinition();
@@ -213,6 +235,21 @@ class KeyOperationsNodeHandlerTest {
 
         enc.configuration.put("format", "11");
         enc.configuration.put("variant", "02");
+        assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
+    }
+
+    @Test
+    void futurexValidationRejectsInvalidModifier() {
+        ProcessDefinition.Node enc = node("FUTUREX_MFK_ENCRYPT");
+        enc.configuration.put("mfk", "D2DE5CD9110F4CAB11111111111111110123456789ABCDEF");
+        enc.configuration.put("key", "0123456789ABCDEFFEDCBA9876543210");
+        enc.configuration.put("modifier", "5");
+        assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
+
+        enc.configuration.put("modifier", "-1");
+        assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
+
+        enc.configuration.put("modifier", "notANumber");
         assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
     }
 

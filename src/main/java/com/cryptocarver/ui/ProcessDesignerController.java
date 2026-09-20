@@ -1836,6 +1836,7 @@ public class ProcessDesignerController {
                 || "TR31_UNWRAP".equals(type) || "TR31_WRAP".equals(type) || "ICSF_TOKEN_PARSE".equals(type)
                 || "ATALLA_AKB_WRAP".equals(type) || "ATALLA_AKB_UNWRAP".equals(type)
                 || "SAFENET_KM_ENCRYPT".equals(type) || "SAFENET_KM_DECRYPT".equals(type)
+                || "FUTUREX_MFK_ENCRYPT".equals(type) || "FUTUREX_MFK_DECRYPT".equals(type)
                 || "KEYPAIR_GENERATE".equals(type)
                 || "PQC_KEYPAIR_GENERATE".equals(type) || "PQC_KEM_DECAPSULATE".equals(type)
                 || "PIN_BLOCK_ENCODE".equals(type) || "PIN_BLOCK_DECODE".equals(type) || "PIN_BLOCK_TRANSLATE".equals(type)
