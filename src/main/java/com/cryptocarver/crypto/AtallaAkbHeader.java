@@ -1,6 +1,8 @@
 package com.cryptocarver.crypto;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -89,7 +91,107 @@ public final class AtallaAkbHeader {
         VERSION, USAGE, ALGORITHM, MODE, EXPORT, RESERVED, SPECIAL, OTHER
     };
 
+    /** One selectable value of one header byte. */
+    public record Option(char code, String label) {
+        @Override
+        public String toString() {
+            return code + " — " + label;
+        }
+    }
+
+    /** A working-key header from table 2-9 of the migration guide. */
+    public record Template(String name, String header) {
+        @Override
+        public String toString() {
+            return name + "  (" + header + ")";
+        }
+    }
+
+    private static final String[][] TEMPLATE_ROWS = {
+        {"Master File Key (MFK)", "1KDDN0M0"},
+        {"Key Encryption Key / ZMK / LMK / TMK (KEK)", "1KDNE000"},
+        {"KEK, encrypt only (export)", "1KDEE000"},
+        {"KEK, decrypt only (import)", "1KDDE000"},
+        {"PIN Encryption Key (KPE / TPK / ZPK)", "1PUNE000"},
+        {"PIN Encryption Key, DES (KPE-DES)", "1PDNE000"},
+        {"KPE, encrypt only", "1PUEE000"},
+        {"KPE, decrypt only", "1PUDE000"},
+        {"ATM Communication Key (KC)", "1cDNE000"},
+        {"Communication Key, encrypt only", "1cDEE000"},
+        {"Communication Key, decrypt only", "1cDDE000"},
+        {"PIN Encrypt and MAC (KC)", "1cDNE00B"},
+        {"ATM A-Key, IBM 3624 (KATM)", "1K3NE000"},
+        {"ATM Master Key, IBM 3624 (KM)", "1A3NE000"},
+        {"ATM Master Key, IBM 4731 (KM)", "1A7NE000"},
+        {"ATM Master Key (AMK)", "1ADNE000"},
+        {"Data Encryption Key (KD)", "1DDNE000"},
+        {"KD, encrypt only", "1DDEE000"},
+        {"KD, decrypt only", "1DDDE000"},
+        {"Message Authentication Key (KMAC / TAK / ZAK)", "1MDNE000"},
+        {"KMAC, generate only", "1MDGE000"},
+        {"KMAC, verify only", "1MDVE000"},
+        {"KMAC used in Challenge/Response", "1MDNE00C"},
+        {"KC used to encrypt IBM 4731 PIN block", "1c7NE000"},
+        {"American Express Card Security Code (KCSC)", "1mXNE000"},
+        {"CVV/CVC Key (KCVV)", "1CDNE000"},
+        {"KCVV, generate only", "1CDGE000"},
+        {"KCVV, verify only", "1CDVE000"},
+        {"PIN Verification Key (KPV)", "1VUNE000"},
+        {"KPV, generate only", "1VUGE000"},
+        {"KPV, verify only", "1VUVE000"},
+        {"PIN Verification Key, IBM 3624", "1V3NE000"},
+        {"Visa PIN Verification Key pair", "1VVNE000"},
+        {"PIN Verification Key, Atalla BiLevel", "1VBNE000"},
+        {"PIN Verification Key, NCR", "1VNNE000"},
+        {"PIN Verification Key, Atalla 2x2", "1VaNE000"},
+        {"SecureID Card Seed Encryption Key (KCSE)", "1V0NE000"},
+        {"Bank ID & Comparison Id, Identikey (BID)", "1VINE000"},
+        {"MF-PAC-MK", "1mFNE00p"},
+        {"MF-MAC-MK", "1mFNE00m"},
+        {"Diebold Number Table row (DNT)", "1ndNE000"},
+        {"Burroughs Number Table (BNT)", "1nuNE000"},
+        {"Decimalization/Conversion Table", "1nCNE000"},
+        {"Initialization Vector or MAB (IV)", "1IDNE000"},
+        {"Control Vector for MAC derivation (CV-MAC)", "1IDNE00M"},
+        {"Control Vector for KPE derivation (CV-PAC)", "1IDNE00P"},
+        {"Derivation Key (KDREV)", "1dDNE000"},
+        {"Master Key (KGK / MK)", "1mZNE000"},
+        {"MAC Terminal Master Key (MAC-MK-SL)", "1mFNE00M"},
+        {"Visa Stored Value Card Master Key (VSVCMK)", "1mVNE000"},
+        {"Issuer Master Key, Application Cryptogram (IMK-AC)", "1mENE000"},
+        {"ICC Intermediate Master Key (IMK)", "1miNE000"},
+        {"Issuer Master Key, Message Integrity (IMK-MAC)", "1mENE00M"},
+        {"Issuer Master Key, Message Confidentiality (IMK-ENC)", "1mENE00E"},
+        {"Terminal PAC Master Key (PAC-MK)", "1mFNE00P"},
+        {"Token Key type 1", "1TDNE001"},
+        {"Token Key type 2", "1TDNE002"},
+        {"Token Key type 3", "1TDNE003"},
+        {"Token Key type 4", "1TDNE004"},
+        {"PTK", "1PUEE000"},
+        {"Import KEK (command 11B)", "1KDNE0I0"},
+    };
+
     private AtallaAkbHeader() {
+    }
+
+    /** The values the migration guide allows for one header byte, in table order. */
+    public static List<Option> options(int byteIndex) {
+        List<Option> out = new ArrayList<>();
+        TABLES[byteIndex].forEach((code, label) -> out.add(new Option(code, label)));
+        return out;
+    }
+
+    public static String byteName(int byteIndex) {
+        return BYTE_NAMES[byteIndex];
+    }
+
+    /** The working-key headers of table 2-9, ready to fill the eight selectors. */
+    public static List<Template> templates() {
+        List<Template> out = new ArrayList<>();
+        for (String[] row : TEMPLATE_ROWS) {
+            out.add(new Template(row[0], row[1]));
+        }
+        return out;
     }
 
     /** One line per header byte: {@code B1 'P' Key usage: PIN Encryption Key}. */

@@ -463,6 +463,7 @@ public class KeysController {
         moduleI18n = ModuleI18n.bind(keysRoot, ModuleTextCatalog.keys());
         initializeRsaKexControls();
         initializeThalesControls();
+        initializeAtalla();
         initialize(null, keyTypeCombo, forceOddParityCheck, generatedKeyField, keyInputField, validationResultArea,
                 numComponentsCombo, keyToSplitField, componentResultsArea,
                 component1Field, component2Field, component3Field, component4Field, component5Field);
@@ -6730,5 +6731,153 @@ public class KeysController {
         if (keyBlockInputArea != null) keyBlockInputArea.setText(BP_TOOLS_KEY_BLOCK);
         if (keyBlockLmkField != null) keyBlockLmkField.setText(KEY_BLOCK_TEST_LMK);
         if (keyBlockResultArea != null) keyBlockResultArea.setText(t("module.keys.keyBlock.exampleLoaded"));
+    }
+
+    // =====================================================================
+    // Atalla Key Block — Utimaco AJ560-9004A
+    // =====================================================================
+
+    @FXML private ComboBox<AtallaAkbHeader.Template> atallaTemplateCombo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla0Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla1Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla2Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla3Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla4Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla5Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla6Combo;
+    @FXML private ComboBox<AtallaAkbHeader.Option> atalla7Combo;
+    @FXML private TextField atallaHeaderField;
+    @FXML private TextArea atallaMeaningArea;
+    @FXML private TextField atallaMfkField;
+    @FXML private TextField atallaKeyField;
+    @FXML private TextArea atallaBlockArea;
+    @FXML private TextArea atallaResultArea;
+
+    private boolean atallaSyncing;
+
+    private List<ComboBox<AtallaAkbHeader.Option>> atallaCombos() {
+        return Arrays.asList(atalla0Combo, atalla1Combo, atalla2Combo, atalla3Combo,
+                atalla4Combo, atalla5Combo, atalla6Combo, atalla7Combo);
+    }
+
+    private void initializeAtalla() {
+        if (atallaHeaderField == null || atalla0Combo == null) {
+            return;
+        }
+        List<ComboBox<AtallaAkbHeader.Option>> combos = atallaCombos();
+        for (int at = 0; at < combos.size(); at++) {
+            combos.get(at).getItems().setAll(AtallaAkbHeader.options(at));
+            combos.get(at).valueProperty().addListener((obs, old, now) -> atallaHeaderFromCombos());
+        }
+        if (atallaTemplateCombo != null) {
+            atallaTemplateCombo.getItems().setAll(AtallaAkbHeader.templates());
+            atallaTemplateCombo.valueProperty().addListener((obs, old, now) -> {
+                if (now != null) {
+                    atallaHeaderField.setText(now.header());
+                }
+            });
+        }
+        atallaHeaderField.textProperty().addListener((obs, old, now) -> atallaCombosFromHeader(now));
+        atallaHeaderField.setText("1PUNE000");
+    }
+
+    private void atallaHeaderFromCombos() {
+        if (atallaSyncing) {
+            return;
+        }
+        String current = atallaHeaderField.getText() == null ? "" : atallaHeaderField.getText();
+        StringBuilder header = new StringBuilder();
+        List<ComboBox<AtallaAkbHeader.Option>> combos = atallaCombos();
+        for (int at = 0; at < combos.size(); at++) {
+            AtallaAkbHeader.Option option = combos.get(at).getValue();
+            header.append(option != null ? option.code() : at < current.length() ? current.charAt(at) : '0');
+        }
+        atallaSyncing = true;
+        try {
+            atallaHeaderField.setText(header.toString());
+        } finally {
+            atallaSyncing = false;
+        }
+        atallaExplainHeader(header.toString());
+    }
+
+    private void atallaCombosFromHeader(String header) {
+        if (!atallaSyncing) {
+            atallaSyncing = true;
+            try {
+                List<ComboBox<AtallaAkbHeader.Option>> combos = atallaCombos();
+                for (int at = 0; at < combos.size(); at++) {
+                    AtallaAkbHeader.Option match = null;
+                    if (header != null && header.length() == AtallaAkbOperations.HEADER_LENGTH) {
+                        for (AtallaAkbHeader.Option option : combos.get(at).getItems()) {
+                            if (option.code() == header.charAt(at)) {
+                                match = option;
+                                break;
+                            }
+                        }
+                    }
+                    combos.get(at).setValue(match);
+                }
+            } finally {
+                atallaSyncing = false;
+            }
+        }
+        atallaExplainHeader(header);
+    }
+
+    private void atallaExplainHeader(String header) {
+        if (atallaMeaningArea == null) {
+            return;
+        }
+        if (header == null || header.length() != AtallaAkbOperations.HEADER_LENGTH) {
+            atallaMeaningArea.setText("The header is " + AtallaAkbOperations.HEADER_LENGTH + " characters.");
+            return;
+        }
+        atallaMeaningArea.setText(AtallaAkbHeader.decode(header));
+    }
+
+    @FXML
+    public void handleAtallaGenerate() {
+        try {
+            String header = thalesText(atallaHeaderField);
+            String block = AtallaAkbOperations.wrap(thalesText(atallaMfkField), header, thalesText(atallaKeyField));
+            String report = "AKB: " + block + "\n\n" + AtallaAkbOperations.describe(
+                    AtallaAkbOperations.unwrap(thalesText(atallaMfkField), block));
+            atallaPublish("Atalla AKB Generate", report);
+        } catch (Exception e) {
+            if (atallaResultArea != null) atallaResultArea.setText("Error: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleAtallaUnwrap() {
+        try {
+            String text = thalesText(atallaBlockArea);
+            AtallaAkbOperations.Unwrapped unwrapped = AtallaAkbOperations.unwrap(thalesText(atallaMfkField), text);
+            atallaHeaderField.setText(unwrapped.akb().header());
+            atallaPublish("Atalla AKB Unwrap", AtallaAkbOperations.describe(unwrapped));
+        } catch (Exception e) {
+            if (atallaResultArea != null) atallaResultArea.setText("Error: " + e.getMessage());
+        }
+    }
+
+    /** The BP-Tools 21.06 vector for a 24-byte key, pinned in AtallaAkbOperationsTest. */
+    @FXML
+    public void handleAtallaExample() {
+        atallaHeaderField.setText("1PUNE000");
+        atallaMfkField.setText(KEY_BLOCK_TEST_LMK);
+        atallaKeyField.setText("00112233445566778899AABBCCDDEEFF0123456789ABCDEF");
+        atallaBlockArea.setText("1PUNE000,23AE722410BC25C24BB6AD0C900A16F085927D34A8C06EB0,DA3BB9004654010D");
+        if (atallaResultArea != null) atallaResultArea.setText("Example loaded: BP-Tools 21.06 vector.");
+    }
+
+    private void atallaPublish(String operation, String report) {
+        if (atallaResultArea != null) atallaResultArea.setText(report);
+        if (mainController != null) {
+            mainController.publish(OperationResult.forOperation(operation)
+                    .output(report.getBytes(StandardCharsets.UTF_8))
+                    .status("Atalla Key Block")
+                    .build());
+        }
     }
 }
