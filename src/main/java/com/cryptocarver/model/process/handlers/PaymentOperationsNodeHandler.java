@@ -534,18 +534,21 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 textParam("checkValue", "module.process.param.payment.checkValue", ""))));
         result.add(descriptor("THALES_KCV", "thalesKcv", "thalesKcv", params(
                 secret("clearKey", "module.process.param.payment.clearKey"))));
-        result.add(descriptor("THALES_KEY_BLOCK_PARSE", "thalesKeyBlockParse", "thalesKeyBlockParse", params(
-                secret("keyBlock", "module.process.param.payment.keyBlock"))));
-        result.add(descriptor("THALES_KEY_BLOCK_HEADER", "thalesKeyBlockHeader", "thalesKeyBlockHeader", params(
-                combo("versionId", "module.process.param.payment.versionId", KEY_BLOCK_VERSIONS, "0"),
-                textParam("keyUsage", "module.process.param.payment.keyBlockUsage", "K0"),
-                textParam("algorithm", "module.process.param.payment.keyBlockAlgorithm", "T"),
-                textParam("modeOfUse", "module.process.param.payment.modeOfUse", "N"),
-                textParam("keyVersionNumber", "module.process.param.payment.keyVersionNumber", "00"),
-                textParam("exportability", "module.process.param.payment.exportability", "N"),
-                number("optionalBlockCount", "module.process.param.payment.optionalBlockCount", "0"),
-                textParam("lmkId", "module.process.param.payment.lmkId", "00"),
-                number("payloadCharacters", "module.process.param.payment.payloadCharacters", "56"))));
+        result.add(new NodeDescriptor("THALES_KEY_BLOCK_PARSE", "Key Material",
+                "module.process.type.payment.thalesKeyBlockParse", "module.process.desc.payment.thalesKeyBlockParse", "🧱",
+                params(secret("keyBlock", "module.process.param.payment.keyBlock"))));
+        result.add(new NodeDescriptor("THALES_KEY_BLOCK_HEADER", "Key Material",
+                "module.process.type.payment.thalesKeyBlockHeader", "module.process.desc.payment.thalesKeyBlockHeader", "🧱",
+                params(
+                        combo("versionId", "module.process.param.payment.versionId", KEY_BLOCK_VERSIONS, "0"),
+                        textParam("keyUsage", "module.process.param.payment.keyBlockUsage", "K0"),
+                        textParam("algorithm", "module.process.param.payment.keyBlockAlgorithm", "T"),
+                        textParam("modeOfUse", "module.process.param.payment.modeOfUse", "N"),
+                        textParam("keyVersionNumber", "module.process.param.payment.keyVersionNumber", "00"),
+                        textParam("exportability", "module.process.param.payment.exportability", "N"),
+                        number("optionalBlockCount", "module.process.param.payment.optionalBlockCount", "0"),
+                        textParam("lmkId", "module.process.param.payment.lmkId", "00"),
+                        number("payloadCharacters", "module.process.param.payment.payloadCharacters", "56"))));
         return result;
     }
 
