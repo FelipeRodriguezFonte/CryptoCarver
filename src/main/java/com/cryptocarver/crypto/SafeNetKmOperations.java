@@ -36,7 +36,7 @@ import javax.crypto.spec.SecretKeySpec;
  * its result, which is what made the variant byte readable at all rather than
  * something to be inferred from ciphertext.</p>
  *
- * <p>Three variants of the table are known and the rest are not. There is no
+ * <p>Six variants of the table are known (00, 01, 02, 06, 07 and 08) and the rest are not. There is no
  * arithmetic linking {@code 01 -> 28} to {@code 07 -> 18}, so the missing ones
  * cannot be derived — only read off the tool. {@link #variant} refuses a code
  * it has not seen rather than passing the KM through unchanged, because
@@ -51,7 +51,10 @@ public final class SafeNetKmOperations {
     static {
         variant("00", 0x00, "DPK");
         variant("01", 0x28, "PPK");
+        variant("02", 0x24, "MPK");
+        variant("06", 0x20, "CSCK");
         variant("07", 0x18, "KPV, DT");
+        variant("08", 0x14, "KPVV");
     }
 
     private static void variant(String code, int constant, String name) {
@@ -68,18 +71,36 @@ public final class SafeNetKmOperations {
     /** How a key is enciphered under the KM. */
     public enum KeyFormat {
         /** {@code 11} — double-length TDES, ECB. */
-        DOUBLE_ECB("11", "Double-length DES3 (ECB Encrypted)", false),
+        DOUBLE_ECB("11", "Double-length DES3 (ECB Encrypted)", false, "11", 16),
+        /** {@code 12} — triple-length TDES, ECB. */
+        TRIPLE_ECB("12", "Triple-length DES3 (ECB Encrypted)", false, "19", 24),
         /** {@code 13} — double-length TDES, CBC with a zero IV. */
-        DOUBLE_CBC("13", "Double-length DES3 (CBC Encrypted)", true);
+        DOUBLE_CBC("13", "Double-length DES3 (CBC Encrypted)", true, "11", 16),
+        /** {@code 14} — triple-length TDES, CBC with a zero IV. */
+        TRIPLE_CBC("14", "Triple-length DES3 (CBC Encrypted)", true, "19", 24);
 
         private final String code;
         private final String description;
         private final boolean chained;
+        private final String hostPrefix;
+        private final int keyBytes;
 
-        KeyFormat(String code, String description, boolean chained) {
+        KeyFormat(String code, String description, boolean chained, String hostPrefix, int keyBytes) {
             this.code = code;
             this.description = description;
             this.chained = chained;
+            this.hostPrefix = hostPrefix;
+            this.keyBytes = keyBytes;
+        }
+
+        /** The two characters a host stores in front of the format code. */
+        public String hostPrefix() {
+            return hostPrefix;
+        }
+
+        /** The clear key length this format is for. */
+        public int keyBytes() {
+            return keyBytes;
         }
 
         public String code() {
@@ -101,8 +122,9 @@ public final class SafeNetKmOperations {
                 }
             }
             throw new IllegalArgumentException("Key format '" + code + "' has not been verified "
-                    + "against a vector. The two that have are 11 (ECB) and 13 (CBC); the "
-                    + "single- and triple-length formats need a capture of their own");
+                    + "against a vector. The ones that have are 11 and 13 (double-length, ECB "
+                    + "and CBC) and 12 and 14 (triple-length, ECB and CBC); the single-length "
+                    + "formats need a capture of their own");
         }
     }
 
@@ -144,6 +166,7 @@ public final class SafeNetKmOperations {
         KeyFormat format = KeyFormat.of(formatCode);
         Variant used = variant(variantCode);
         byte[] key = keyBytes(clearKey);
+        requireKeyLength(format, key.length);
         byte[] applied = bytes(applyVariant(km, variantCode));
 
         byte[] wrapped = format.chained()
@@ -159,6 +182,7 @@ public final class SafeNetKmOperations {
         KeyFormat format = KeyFormat.of(formatCode);
         Variant used = variant(variantCode);
         byte[] wrapped = keyBytes(cryptogram);
+        requireKeyLength(format, wrapped.length);
         byte[] applied = bytes(applyVariant(km, variantCode));
 
         String clear = hex(format.chained()
@@ -168,21 +192,23 @@ public final class SafeNetKmOperations {
     }
 
     /**
-     * The form a host stores: {@code 11}, then the format code, then the
+     * The form a host stores: two characters, then the format code, then the
      * cryptogram.
      *
-     * <p>Two formats have been seen and both carry the same leading {@code 11},
-     * which is what this reads as a fixed prefix. It is two data points. A
-     * third format would settle it, and until then a host key whose first two
-     * characters are not {@code 11} should be treated as unrecognised rather
-     * than misparsed.</p>
+     * <p>The leading two characters were {@code 11} on both double-length
+     * formats and {@code 19} on both triple-length ones, which is how they are
+     * read here: a property of the format. Whether they encode the key length
+     * or something that merely correlates with it is not established, because
+     * the two lengths never varied independently of the format. A host key
+     * whose first two characters are neither should be treated as unrecognised
+     * rather than misparsed.</p>
      *
      * <p>The variant is <b>not</b> in there. Whatever the key is for has to
      * travel some other way, which is a real interoperability hazard and not a
      * quirk of this bench.</p>
      */
     public static String hostStored(KeyFormat format, String cryptogram) {
-        return "11" + format.code() + normalizeHex(cryptogram, "cryptogram");
+        return format.hostPrefix() + format.code() + normalizeHex(cryptogram, "cryptogram");
     }
 
     public static String describe(WrappedKey wrapped, String km) {
@@ -215,6 +241,13 @@ public final class SafeNetKmOperations {
                     + "(16 or 24 bytes), not " + key.length);
         }
         return key;
+    }
+
+    private static void requireKeyLength(KeyFormat format, int actual) {
+        if (actual != format.keyBytes()) {
+            throw new IllegalArgumentException("Format " + format.code() + " is for a "
+                    + format.keyBytes() + "-byte key, not " + actual);
+        }
     }
 
     private static byte[] keyBytes(String value) {
