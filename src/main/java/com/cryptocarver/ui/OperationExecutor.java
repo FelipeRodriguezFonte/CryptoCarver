@@ -325,6 +325,17 @@ public class OperationExecutor {
             final Throwable finalError = error;
             final boolean finalCancelled = cancelled;
 
+            synchronized (OperationExecutor.this) {
+                if (delayFuture != null) {
+                    delayFuture.cancel(false);
+                    delayFuture = null;
+                }
+                if (timerFuture != null) {
+                    timerFuture.cancel(false);
+                    timerFuture = null;
+                }
+            }
+
             Platform.runLater(() -> finishExecution(executionId, finalResult, finalError, finalCancelled, onSuccess, onFailure, onCancelled));
         });
     }
