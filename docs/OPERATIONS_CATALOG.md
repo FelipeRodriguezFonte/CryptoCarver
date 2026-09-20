@@ -119,6 +119,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | 💳 | EMV Operations | `op_pay_emv_ops` | STABLE | HIGH | `EMV Operations` | - |
 | 🔍 | EMV TLV Inspector | `op_pay_emv_tlv` | STABLE | LOW | `EMV TLV Inspector` | EMV |
 | 🔒 | Encrypted PIN Blocks | `op_pay_enc_pin` | STABLE | HIGH | `Encrypted PIN Blocks` | - |
+| 📨 | ISO 8583 Message Inspector | `op_pay_iso8583` | EXPERIMENTAL | HIGH | `ISO 8583 Message Inspector` | ISO8583, ISO 8583, ISO 8583 parser |
 | 🔢 | PIN Generation | `op_pay_pin_gen` | STABLE | HIGH | `PIN Generation` | - |
 | 💳 | Thales Key Block | `op_pay_thales_key_block` | EXPERIMENTAL | LOW | `Thales Key Block` | Thales Key Block, key scheme S, key usage, optional header block |
 | 💳 | Thales Variant LMK | `op_pay_thales_lmk` | EXPERIMENTAL | HIGH | `Thales Variant LMK` | Thales, payShield, LMK, variant, key type code, key scheme |
@@ -207,6 +208,10 @@ The two certificate-signing operations of EMV Book 2 produce three data objects 
 `FlowValue`, so they live in the EMV module's bench rather than here. Everything that
 yields a single value — the static data, the two signatures, and every verification
 report — is a node.
+
+| ISO 8583 | `ISO8583_PARSE`, `ISO8583_BUILD` |
+
+ISO 8583 nodes are profile-driven laboratory tooling for the documented ISO 8583:1987 and :1993 field dictionaries. PAN, track data, PIN blocks and whole messages are transient and never persisted in `.cfprocess.json`.
 
 `KEY_SPLIT_XOR` emits `HEX_COMPONENTS`, limited to equal-length components and at most five;
 only `KEY_COMBINE_XOR.components` and `COMPONENT_SELECT.components` accept it.

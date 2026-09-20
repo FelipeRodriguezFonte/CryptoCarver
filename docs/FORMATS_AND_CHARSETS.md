@@ -13,6 +13,7 @@ una clave, una firma o datos cifrados.
 | Base64URL | Alfabeto URL seguro (`-`, `_`), sin padding para salida. Adecuado para JOSE. |
 | Base32 | RFC 4648 Base32. |
 | Base58 | Alfabeto Base58, sin caracteres ambiguos. |
+| Base94 | Caracteres imprimibles ASCII de `!` a `~`; conserva los bytes cero iniciales. |
 | Base58Check | Base58 con checksum; útil para representaciones tipo Bitcoin. |
 | Binary | Bits `0`/`1`, agrupados opcionalmente por espacios. |
 | Decimal | Bytes decimales separados por espacio, coma o salto de línea. |
