@@ -10,6 +10,7 @@ import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.crypto.OpenId4VpInspector;
 import com.cryptocarver.crypto.TrustedListInspector;
+import com.cryptocarver.crypto.TrustedEntityListJsonInspector;
 import com.cryptocarver.crypto.Ts12ScaOperations;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
@@ -62,6 +63,7 @@ public class WalletController implements Initializable {
     @FXML private VBox statusListSection;
     @FXML private VBox eidasCertSection;
     @FXML private VBox trustedListSection;
+    @FXML private TextArea trustedEntityListJsonArea;
     @FXML private VBox cborSection;
     @FXML private VBox scaSection;
     @FXML private VBox adesSection;
@@ -543,6 +545,18 @@ public class WalletController implements Initializable {
         } catch (Exception e) {
             fail(e, "trustedListXmlArea", "trusted list inspect");
         }
+    }
+
+    @FXML
+    private void handleTrustedEntityListJsonInspect() {
+        try {
+            String json = textOf(trustedEntityListJsonArea);
+            if (isBlank(json)) { showValidation("A TS 119 602 JSON list is required", "trustedEntityListJsonArea"); return; }
+            String report = TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8), Locale.getDefault());
+            trustedListOutputArea.setText(report);
+            updateStatus(t("module.wallet.status.inspected"));
+            publish("Trusted Entity List JSON Inspect", report);
+        } catch (Exception e) { fail(e, "trustedEntityListJsonArea", "trusted entity list JSON inspect"); }
     }
 
     @FXML

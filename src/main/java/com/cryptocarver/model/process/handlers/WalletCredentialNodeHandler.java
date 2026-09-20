@@ -9,6 +9,7 @@ import com.cryptocarver.crypto.OpenId4VpInspector;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.crypto.TrustedListInspector;
+import com.cryptocarver.crypto.TrustedEntityListJsonInspector;
 import com.cryptocarver.crypto.Ts12ScaOperations;
 import com.cryptocarver.model.process.*;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -39,6 +40,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             "CBOR_INSPECT", "CBOR_TO_JSON", "CBOR_FROM_JSON",
             "EIDAS_CERT_INSPECT",
             "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY", "TRUSTED_LIST_FIND_CERT",
+            "TRUSTED_ENTITY_LIST_JSON_INSPECT",
             "MDOC_ISSUE", "MDOC_VERIFY", "MDOC_INSPECT",
             "SCA_TRANSACTION_DATA", "SCA_VERIFY", "OID4VP_INSPECT",
             "ADES_VALIDATE");
@@ -101,6 +103,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 descriptor("TRUSTED_LIST_INSPECT", "trustedListInspect", List.of()),
                 descriptor("TRUSTED_LIST_VERIFY", "trustedListVerify", List.of()),
                 descriptor("TRUSTED_LIST_FIND_CERT", "trustedListFindCert", List.of()),
+                descriptor("TRUSTED_ENTITY_LIST_JSON_INSPECT", "trustedEntityListJsonInspect", List.of()),
                 descriptor("MDOC_ISSUE", "mdocIssue", List.of(
                         text("docType", MdocOperations.MDL_DOCTYPE),
                         combo("digestAlgorithm", MDOC_DIGESTS, "SHA-256"),
@@ -142,6 +145,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "CBOR_FROM_JSON" -> List.of(port("json", any, true));
             case "EIDAS_CERT_INSPECT" -> List.of(port("certificate", any, true));
             case "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY" -> List.of(port("trustedList", any, true));
+            case "TRUSTED_ENTITY_LIST_JSON_INSPECT" -> List.of(port("trustedEntityListJson", any, true));
             case "TRUSTED_LIST_FIND_CERT" -> List.of(port("trustedList", any, true), port("certificate", any, true));
             case "MDOC_ISSUE" -> List.of(port("claims", any, true), port("key", any, false));
             case "MDOC_VERIFY", "MDOC_INSPECT" -> List.of(port("mdoc", any, true));
@@ -211,7 +215,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "ADES_VALIDATE" -> supplied(node, "fileName");
             case "SDJWT_INSPECT", "STATUS_LIST_DESCRIBE", "CBOR_TO_JSON", "CBOR_FROM_JSON",
                  "EIDAS_CERT_INSPECT", "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY",
-                 "TRUSTED_LIST_FIND_CERT", "MDOC_INSPECT" -> { }
+                 "TRUSTED_LIST_FIND_CERT", "TRUSTED_ENTITY_LIST_JSON_INSPECT", "MDOC_INSPECT" -> { }
             default -> throw new IllegalArgumentException("Unsupported wallet node: " + node.type);
         }
     }
@@ -290,6 +294,8 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
 
             case "TRUSTED_LIST_INSPECT" -> text(TrustedListInspector.describe(
                     bytes(inputs, "trustedList"), Locale.getDefault()));
+            case "TRUSTED_ENTITY_LIST_JSON_INSPECT" -> text(TrustedEntityListJsonInspector.describe(
+                    bytes(inputs, "trustedEntityListJson"), Locale.getDefault()));
 
             case "TRUSTED_LIST_VERIFY" -> {
                 TrustedListInspector.SignatureResult result =

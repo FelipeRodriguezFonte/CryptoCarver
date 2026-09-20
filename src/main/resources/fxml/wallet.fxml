@@ -199,6 +199,9 @@
                 <Button text="Inspect" onAction="#handleTrustedListInspect" styleClass="action-button"/>
                 <Button text="Verify signature" onAction="#handleTrustedListVerify" styleClass="secondary-button"/>
             </HBox>
+            <Label text="Trusted Entity List (TS 119 602 JSON):" styleClass="form-label"/>
+            <TextArea fx:id="trustedEntityListJsonArea" prefHeight="120" wrapText="true" promptText="Paste the TS 119 602 JSON"/>
+            <Button text="Inspect JSON" onAction="#handleTrustedEntityListJsonInspect" styleClass="action-button" maxWidth="220"/>
             <Label text="Certificate to look up (PEM, optional):" styleClass="form-label"/>
             <TextArea fx:id="trustedListCertArea" prefHeight="80" wrapText="true" promptText="-----BEGIN CERTIFICATE-----"/>
             <Button text="Find certificate" onAction="#handleTrustedListFind" styleClass="action-button" maxWidth="220"/>

@@ -39,6 +39,7 @@ public class OperationRegistry {
         register(new OperationDescriptor("op_wallet_status_list", "Status List", "Wallet", "Issue and resolve Token Status Lists", "\uD83E\uDEAA", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.LOW, "Status List", Arrays.asList("status list", "revocation", "EUDI", "wallet")));
         register(new OperationDescriptor("op_wallet_eidas_cert", "eIDAS Certificate Profiles", "Wallet", "Read a certificate against the eIDAS and wallet certificate profiles", "\uD83E\uDEAA", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.LOW, "eIDAS Certificate Profiles", Arrays.asList("qcStatements", "QWAC", "QSealC", "PSD2", "TS 119 412-6", "TS 119 411-8")));
         register(new OperationDescriptor("op_wallet_trusted_list", "Trusted List", "Wallet", "Read a TS 119 612 Trusted List and look a certificate up in it", "\uD83E\uDEAA", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.LOW, "Trusted List", Arrays.asList("trusted list", "LOTL", "TSL", "TS 119 612", "eIDAS")));
+        register(new OperationDescriptor("op_wallet_trusted_entity_list_json", "Trusted Entity List JSON", "Wallet", "Read a TS 119 602 JSON List of Trusted Entities", "\uD83E\uDEAA", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.LOW, "Trusted Entity List JSON", Arrays.asList("trusted entity list", "LoTE", "TS 119 602", "JSON", "eIDAS")));
         register(new OperationDescriptor("op_wallet_cbor", "CBOR Inspector", "Wallet", "Browse CBOR as a tree or diagnostic notation, following tag 24", "\uD83E\uDEAA", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.NONE, "CBOR Inspector", Arrays.asList("CBOR", "RFC 8949", "diagnostic notation", "tag 24")));
 
         register(new OperationDescriptor("op_wallet_sca", "SCA / OpenID4VP", "Wallet", "PSD2 dynamic linking with the wallet (TS12) and OpenID4VP request inspection", "\uD83E\uDEAA", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "SCA / OpenID4VP", Arrays.asList("SCA", "PSD2", "TS12", "dynamic linking", "OpenID4VP", "transaction data")));
@@ -295,6 +296,7 @@ public class OperationRegistry {
         sb.append("| CBOR (RFC 8949) | `CBOR_INSPECT`, `CBOR_TO_JSON`, `CBOR_FROM_JSON` |\n");
         sb.append("| eIDAS certificate profiles | `EIDAS_CERT_INSPECT` |\n");
         sb.append("| Trusted Lists (TS 119 612) | `TRUSTED_LIST_INSPECT`, `TRUSTED_LIST_VERIFY`, `TRUSTED_LIST_FIND_CERT` |\n");
+        sb.append("| Trusted Entity Lists JSON (TS 119 602) | `TRUSTED_ENTITY_LIST_JSON_INSPECT` |\n");
         sb.append("| mdoc / mDL (ISO/IEC 18013-5) | `MDOC_ISSUE`, `MDOC_VERIFY`, `MDOC_INSPECT` |\n");
         sb.append("| SCA with the wallet (TS12) and OpenID4VP | `SCA_TRANSACTION_DATA`, `SCA_VERIFY`, `OID4VP_INSPECT` |\n");
         sb.append("| AdES validation (EN 319 102-1, report per TS 119 102-2) | `ADES_VALIDATE` |\n\n");
