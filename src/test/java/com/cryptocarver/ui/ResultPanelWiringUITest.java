@@ -115,8 +115,9 @@ class ResultPanelWiringUITest {
 
     @Test
     void anActionNobodyWiredIsNotOffered() throws Exception {
+        com.cryptocarver.service.I18nService i18n = com.cryptocarver.service.I18nService.getInstance();
         List<String> offered = fx(() -> labels(new ResultPanel()));
-        assertEquals(List.of("Copiar"), offered,
+        assertEquals(List.of(i18n.text("resultPanel.action.copy")), offered,
                 "Only Copy works without a shell, so it is the only action a bare panel shows");
 
         List<String> wired = fx(() -> {
@@ -125,7 +126,13 @@ class ResultPanelWiringUITest {
             panel.setChainHandler(value -> { });
             return labels(panel);
         });
-        assertEquals(List.of("Copiar", "Shelf", "Ampliar", "Guardar", "Usar como entrada"), wired);
+        assertEquals(List.of(
+                i18n.text("resultPanel.action.copy"),
+                i18n.text("resultPanel.action.shelf"),
+                i18n.text("resultPanel.action.expand"),
+                i18n.text("resultPanel.action.saveStep"),
+                i18n.text("resultPanel.action.chain")
+        ), wired);
     }
 
     @Test
@@ -194,6 +201,40 @@ class ResultPanelWiringUITest {
             }
         }
         return found;
+    }
+
+    @Test
+    void hotReloadUpdatesResultPanelLabelsDynamically() throws Exception {
+        com.cryptocarver.service.I18nService service = com.cryptocarver.service.I18nService.getInstance();
+        try {
+            service.setPreference(com.cryptocarver.model.LanguagePreference.EN);
+            ResultPanel panel = fx(() -> {
+                ResultPanel p = new ResultPanel();
+                p.connectTo(() -> null);
+                p.setChainHandler(v -> { });
+                p.setResult(publicResult("test".getBytes(StandardCharsets.UTF_8)),
+                        SecretVisibilityProfile.FULL_LAB, ResultPanel.Status.SUCCESS, 1);
+                return p;
+            });
+
+            assertEquals(List.of("Copy", "Shelf", "Expand", "Save", "Use as input"), fx(() -> labels(panel)));
+
+            fx(() -> {
+                service.setPreference(com.cryptocarver.model.LanguagePreference.ES);
+                return null;
+            });
+
+            assertEquals(List.of("Copiar", "Shelf", "Ampliar", "Guardar", "Usar como entrada"), fx(() -> labels(panel)));
+
+            fx(() -> {
+                service.setPreference(com.cryptocarver.model.LanguagePreference.EN);
+                return null;
+            });
+
+            assertEquals(List.of("Copy", "Shelf", "Expand", "Save", "Use as input"), fx(() -> labels(panel)));
+        } finally {
+            service.setPreference(com.cryptocarver.model.LanguagePreference.EN);
+        }
     }
 
     private static List<String> labels(ResultPanel panel) {
