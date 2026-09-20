@@ -644,13 +644,9 @@ public class GenericController {
         }
         localeChangeListener = locale -> {
             if (batchStatusLabel == null) return;
-            Runnable refresh = () -> {
-                if (activeBatchTask != null && activeBatchTask.isRunning()) {
-                    batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
-                }
-            };
-            if (javafx.application.Platform.isFxApplicationThread()) refresh.run();
-            else javafx.application.Platform.runLater(refresh);
+            if (activeBatchTask != null && activeBatchTask.isRunning()) {
+                batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
+            }
         };
         com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         if (batchInputFormatCombo != null) {

@@ -88,15 +88,10 @@ public class ClipboardShelfController {
         moduleI18n = ModuleI18n.bind(clipboardShelfRoot, ModuleTextCatalog.clipboardShelf());
         localeChangeListener = locale -> {
             if (disposed) return;
-            Runnable refreshAction = () -> {
-                if (disposed) return;
-                pinnedFilterCombo.getItems().setAll(t("module.shelf.allPinned"), t("module.shelf.pinnedOnly"), t("module.shelf.unpinnedOnly"));
-                pinnedFilterCombo.setValue(t("module.shelf.allPinned"));
-                populateUseInMenu();
-                refresh();
-            };
-            if (javafx.application.Platform.isFxApplicationThread()) refreshAction.run();
-            else javafx.application.Platform.runLater(refreshAction);
+            pinnedFilterCombo.getItems().setAll(t("module.shelf.allPinned"), t("module.shelf.pinnedOnly"), t("module.shelf.unpinnedOnly"));
+            pinnedFilterCombo.setValue(t("module.shelf.allPinned"));
+            populateUseInMenu();
+            refresh();
         };
         I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         manager = ClipboardShelfManager.getInstance();

@@ -136,18 +136,14 @@ public class ProcessDesignerController {
     @FXML public void initialize() {
         moduleI18n = ModuleI18n.bind(processDesignerRoot, ModuleTextCatalog.processDesigner());
         localeChangeListener = locale -> {
-            Runnable refresh = () -> {
-                if (processStatusLabel != null && (processStatusLabel.getText() == null || processStatusLabel.getText().isBlank())) {
-                    processStatusLabel.setText(t("status.ready"));
-                }
-                if (executionStatusTable != null) {
-                    executionStatusTable.setPlaceholder(new Label(t("module.process.executionPlaceholder")));
-                }
-                updateSelectionUi();
-                buildPalette();
-            };
-            if (javafx.application.Platform.isFxApplicationThread()) refresh.run();
-            else javafx.application.Platform.runLater(refresh);
+            if (processStatusLabel != null && (processStatusLabel.getText() == null || processStatusLabel.getText().isBlank())) {
+                processStatusLabel.setText(t("status.ready"));
+            }
+            if (executionStatusTable != null) {
+                executionStatusTable.setPlaceholder(new Label(t("module.process.executionPlaceholder")));
+            }
+            updateSelectionUi();
+            buildPalette();
         };
         I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         configureExecutionStatusTable();

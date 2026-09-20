@@ -22,6 +22,21 @@ This document details the root causes identified and resolved for intermittent/f
   I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
   ```
 
+### 2b. Superseded: dispatching every locale listener to the FX thread
+
+Wrapping each controller's locale listener in `Platform.runLater` was tried and reverted. With
+controllers that outlive their test (the shared `I18nService` keeps them reachable until GC), every
+language reset queued a full refresh per leaked controller on the FX thread, which starved later live
+UI classes (`Ux21LiveUITest`, `Ux22ValidationLiveUITest`) into 15 s timeouts. `main` already holds
+listeners strongly per controller and refreshes them on the calling thread; that stays.
+
+### 2c. FX toolkit dying between test classes
+
+Each UI test class starts the toolkit itself, and by default JavaFX exits when the last window closes.
+A class that hides its stage (`Ux22ValidationLiveUITest`) left the next one (`Ux21LiveUITest`) with no
+Application Thread, so it timed out, but only in that order. `JavaFxImplicitExitExtension`
+(auto-registered like `DeterministicLanguageExtension`) turns implicit exit off before every class.
+
 ### 3. Weak Reference Eviction Mid-Test in Test Fixtures
 - **Issue**: In `Ux16AccessibilityLiveUITest`, the return value of `ModuleI18n.bind(...)` was dropped. Because `I18nService` holds listeners weakly, the listener became eligible for garbage collection immediately.
 - **Consequence**: Whether a language switch took effect depended entirely on whether GC had run between registration and assertion, causing non-deterministic assertions (`expected <Aplicar> but was <Apply>`).

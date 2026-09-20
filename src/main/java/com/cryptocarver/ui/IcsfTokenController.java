@@ -114,6 +114,8 @@ public final class IcsfTokenController {
         icsfTokenSummaryTable.setPlaceholder(new Label(t("icsf.token.noAnalysis",
                 "Paste a key token and press Analyze.")));
 
+        // Binding the pane, not the inner box: ModuleI18n reaches the content through
+        // TitledPane.getContent(), so one binding covers the title and everything below it.
         i18nBinding = ModuleI18n.bind(icsfTokenPane, ModuleTextCatalog.icsf());
         localeChangeListener = locale -> refreshLocalizedRuntimeText();
         I18nService.getInstance().addLocaleChangeListener(localeChangeListener);

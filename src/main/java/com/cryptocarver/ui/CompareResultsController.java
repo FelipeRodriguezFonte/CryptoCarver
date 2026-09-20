@@ -60,7 +60,6 @@ public class CompareResultsController {
     private ClipboardEntry entry2;
     private SecretVisibilityProfile profile;
 
-
     private String t(String key, Object... args) {
         return I18nService.getInstance().text(key, args);
     }
