@@ -224,7 +224,7 @@ public class WalletController implements Initializable {
             show(statusListSection);
         } else if (sectionName.startsWith("eIDAS Certificate")) {
             show(eidasCertSection);
-        } else if (sectionName.startsWith("Trusted List")) {
+        } else if (sectionName.startsWith("Trusted List") || sectionName.startsWith("Trusted Entity List")) {
             show(trustedListSection);
         } else if (sectionName.startsWith("CBOR")) {
             show(cborSection);
@@ -796,7 +796,7 @@ public class WalletController implements Initializable {
                 statusListStatusesArea, statusListKeyArea, statusListOutputArea,
                 statusListTokenArea, statusListVerifyKeyArea, statusListResolveOutputArea,
                 eidasCertArea, eidasCertOutputArea,
-                trustedListXmlArea, trustedListCertArea, trustedListOutputArea,
+                trustedListXmlArea, trustedEntityListJsonArea, trustedListCertArea, trustedListOutputArea,
                 cborInputArea, cborOutputArea, cborJsonArea, cborFromJsonOutputArea,
                 scaPayloadArea, scaEntryArea, scaPresentationArea, scaTransactionDataArea,
                 scaIssuerKeyArea, scaHolderKeyArea, scaOutputArea,

@@ -757,6 +757,8 @@ public final class ModuleTextCatalog {
         map.put("Token Status List", "module.wallet.statusListTitle");
         map.put("eIDAS certificate profiles", "module.wallet.eidasCertTitle");
         map.put("Trusted List", "module.wallet.trustedListTitle");
+        map.put("Trusted Entity List (TS 119 602 JSON):", "module.wallet.trustedEntityListJsonLabel");
+        map.put("Inspect JSON", "module.wallet.trustedEntityListJsonInspect");
         map.put("CBOR", "module.wallet.cborTitle");
         map.put("Issue", "module.wallet.issue");
         map.put("Present", "module.wallet.present");
