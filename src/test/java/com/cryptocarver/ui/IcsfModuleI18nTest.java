@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.icsf.TokenFamily;
 import com.cryptocarver.crypto.icsf.IcsfVocabulary;
 import com.cryptocarver.model.LanguagePreference;
 import com.cryptocarver.service.I18nService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -29,6 +30,11 @@ class IcsfModuleI18nTest {
 
     private static final List<LanguagePreference> LANGUAGES =
             List.of(LanguagePreference.EN, LanguagePreference.ES);
+
+    @AfterEach
+    void resetLanguage() {
+        I18nService.getInstance().setPreference(LanguagePreference.EN);
+    }
 
     private static String text(LanguagePreference language, String key) {
         I18nService.getInstance().setPreference(language);

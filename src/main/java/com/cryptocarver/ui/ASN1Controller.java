@@ -47,6 +47,7 @@ public class ASN1Controller {
 
     private byte[] asn1LastParsedData;
 
+
     public void init(StatusReporter reporter) {
         this.reporter = reporter;
         initializeASN1();
