@@ -60,10 +60,9 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * <h2>What is still not known</h2>
  *
- * <p><b>The header's fields.</b> {@code 1PUNE000} parses here as eight
- * characters with a version digit in front, and no further meaning is claimed,
- * because no source for the field table has been verified. Guessing at it would
- * produce a validator that rejects good blocks.</p>
+ * <p><b>The header's fields</b> are decoded by {@link AtallaAkbHeader} from
+ * Utimaco's migration guide AJ560-9004A. The decoding is informational and
+ * never rejects a block, because the vendor's tool builds any header.</p>
  *
  * <p><b>The triple-length case.</b> Two vectors fix the padding rule: the key
  * field is always 24 bytes, and the spare room is filled with one repeated
@@ -318,15 +317,11 @@ public final class AtallaAkbOperations {
             report.append("\nThe key above came out of the block, but the MAC does not match, so\n");
             report.append("either the MFK is wrong or the block was altered. Do not trust the key.\n");
         }
-        report.append("\nHeader bytes\n");
-        for (int at = 0; at < HEADER_LENGTH; at++) {
-            report.append("  B").append(at).append(" : '").append(akb.header().charAt(at)).append("'\n");
+        report.append("\nHeader bytes (Utimaco AJ560-9004A, tables 2-1 to 2-8)\n");
+        report.append(AtallaAkbHeader.decode(akb.header()));
+        if (akb.header().charAt(5) != '0') {
+            report.append("  B5 must be 0; the vendor's tool flags it as INVALID but still builds the block.\n");
         }
-        report.append("\nThe header's field layout is not decoded. Atalla has not published it and\n");
-        report.append("no source for it has been verified, so this bench reports the header as the\n");
-        report.append("eight characters it is rather than inventing meanings for them. They are\n");
-        report.append("numbered B0 to B7 above because that is how the vendor's own tool names\n");
-        report.append("them when it rejects one, so a complaint about \"B5\" can be located.\n");
         return report.toString();
     }
 
