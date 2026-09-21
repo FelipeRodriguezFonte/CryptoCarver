@@ -73,6 +73,16 @@ public final class ModuleTextCatalog {
         map.put("Asymmetric Cipher (RSA)", "module.cipher.asymmetric");
         map.put("Input data", "module.common.inputData");
         map.put("Output result", "module.common.outputResult");
+        map.put("Copy", "resultPanel.action.copy");
+        map.put("Copy result", "resultPanel.action.copy.accessibleText");
+        map.put("Shelf", "resultPanel.action.shelf");
+        map.put("Add result to Shelf", "resultPanel.action.shelf.accessibleText");
+        map.put("Expand", "resultPanel.action.expand");
+        map.put("Expand result", "resultPanel.action.expand.accessibleText");
+        map.put("Save", "resultPanel.action.saveStep");
+        map.put("Save step", "resultPanel.action.saveStep.accessibleText");
+        map.put("Use as input", "resultPanel.action.chain");
+        map.put("Use result as input", "resultPanel.action.chain.accessibleText");
         return map;
     }
 

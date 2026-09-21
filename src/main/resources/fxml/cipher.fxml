@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import com.cryptocarver.ui.ResultPanel?>
 
 <VBox fx:id="cipherRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cryptocarver.ui.CipherController"
@@ -27,11 +26,16 @@
                 <Label text="Output result" styleClass="cipher-io-label"/>
                 <TextArea fx:id="cipherOutputArea" prefHeight="160" editable="false" wrapText="true"
                           VBox.vgrow="ALWAYS" styleClass="cipher-io-area,cipher-output-area,cipher-monospace"/>
+                <FlowPane hgap="6" vgap="6" alignment="CENTER_RIGHT" styleClass="cipher-output-actions">
+                    <Button fx:id="cipherCopyResultButton" text="Copy" accessibleText="Copy result" onAction="#handleCopyCipherResult" styleClass="secondary-button"/>
+                    <Button fx:id="cipherShelfResultButton" text="Shelf" accessibleText="Add result to Shelf" onAction="#handleShelfCipherResult" styleClass="secondary-button"/>
+                    <Button fx:id="cipherExpandResultButton" text="Expand" accessibleText="Expand result" onAction="#handleExpandCipherResult" styleClass="secondary-button"/>
+                    <Button fx:id="cipherSaveResultButton" text="Save" accessibleText="Save step" onAction="#handleSaveCipherResult" styleClass="secondary-button"/>
+                    <Button fx:id="cipherUseResultButton" text="Use as input" accessibleText="Use result as input" onAction="#handleUseCipherResultAsInput" styleClass="secondary-button"/>
+                </FlowPane>
             </VBox>
         </GridPane>
     </VBox>
-
-    <ResultPanel fx:id="cipherResultPanel"/>
 
     <Accordion styleClass="cipher-accordion">
         <panes>

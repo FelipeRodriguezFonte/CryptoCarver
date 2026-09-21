@@ -63,7 +63,11 @@ public class CipherController {
 
     @FXML private TextArea cipherInputArea;
     @FXML private TextArea cipherOutputArea;
-    @FXML private ResultPanel cipherResultPanel;
+    @FXML private Button cipherCopyResultButton;
+    @FXML private Button cipherShelfResultButton;
+    @FXML private Button cipherExpandResultButton;
+    @FXML private Button cipherSaveResultButton;
+    @FXML private Button cipherUseResultButton;
     private ComboBox<String> cipherInputFormatCombo;
     private ComboBox<String> outputFormatCombo;
     private StatusReporter statusReporter;
@@ -224,22 +228,37 @@ public class CipherController {
 
         refreshCipherTemplateCombo();
         updateModeAndAlgorithmVisibility();
-        if (cipherOutputArea != null && cipherResultPanel != null) {
-            cipherOutputArea.textProperty().addListener((obs, oldValue, value) ->
-                    updateCipherResultPanel(value));
-            cipherResultPanel.connectTo(() -> statusReporter);
-            if (cipherInputArea != null) {
-                cipherResultPanel.setChainHandler(cipherInputArea::setText);
-            }
-            updateCipherResultPanel(cipherOutputArea.getText());
+    }
+
+    @FXML
+    private void handleCopyCipherResult() {
+        if (statusReporter != null) {
+            statusReporter.copyCurrentResult();
+        } else {
+            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+            content.putString(cipherOutputArea.getText());
+            javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
         }
     }
 
-    private void updateCipherResultPanel(String value) {
-        boolean hasResult = value != null && !value.isBlank();
-        cipherResultPanel.setVisible(hasResult);
-        cipherResultPanel.setManaged(hasResult);
-        cipherResultPanel.showText("Cipher", value);
+    @FXML
+    private void handleShelfCipherResult() {
+        if (statusReporter != null) statusReporter.addCurrentResultToShelf();
+    }
+
+    @FXML
+    private void handleExpandCipherResult() {
+        if (statusReporter != null) statusReporter.expandCurrentResult();
+    }
+
+    @FXML
+    private void handleSaveCipherResult() {
+        if (statusReporter != null) statusReporter.saveCurrentResultAsSessionStep();
+    }
+
+    @FXML
+    private void handleUseCipherResultAsInput() {
+        cipherInputArea.setText(cipherOutputArea.getText());
     }
 
     @FXML
