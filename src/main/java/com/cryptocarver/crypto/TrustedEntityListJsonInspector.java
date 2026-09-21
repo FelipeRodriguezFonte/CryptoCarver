@@ -24,8 +24,7 @@ public final class TrustedEntityListJsonInspector {
                           String status, String statusStartingTime, List<String> qualifiers) { }
     public record SchemeInformation(int version, long sequenceNumber, String operatorName,
                                     String issueDate, String nextUpdate) { }
-    public record TrustedEntityList(SchemeInformation scheme, List<Service> services,
-                                    boolean signaturePresent) { }
+    public record TrustedEntityList(SchemeInformation scheme, List<Service> services) { }
     private TrustedEntityListJsonInspector() { }
 
     public static TrustedEntityList parse(byte[] json) {
@@ -52,7 +51,7 @@ public final class TrustedEntityListJsonInspector {
                             extensions(si.get("ServiceInformationExtensions"))));
                 }
             }
-            return new TrustedEntityList(scheme, List.copyOf(services), false);
+            return new TrustedEntityList(scheme, List.copyOf(services));
         } catch (IllegalArgumentException e) { throw e; }
         catch (Exception e) { throw new IllegalArgumentException("Invalid TS 119 602 JSON: " + e.getMessage(), e); }
     }
