@@ -81,10 +81,29 @@ public final class TrustedEntityListJsonInspector {
                 .append("\n  status since: ").append(s.statusStartingTime()).append('\n'); for (String q : s.qualifiers()) out.append("  qualifier: ").append(q).append('\n'); }
         out.append("\nsignature: not verified (TS 119 602 requires JAdES; no JAdES validation policy is configured locally)\n"); return out.toString();
     }
-    private static JsonArray optionalArray(JsonObject o,String n){ return o.has(n)&&o.get(n).isJsonArray()?o.getAsJsonArray(n):null; }
-    private static String optionalString(JsonObject o,String n){ return o.has(n)&&o.get(n).isJsonPrimitive()&&o.get(n).getAsJsonPrimitive().isString()?o.get(n).getAsString():null; }
-    private static int requiredInt(JsonObject o,String n){ try{return o.get(n).getAsInt();}catch(Exception e){throw new IllegalArgumentException("Invalid TS 119 602 JSON: missing required integer '"+n+"'");} }
-    private static long requiredLong(JsonObject o,String n){ try{return o.get(n).getAsLong();}catch(Exception e){throw new IllegalArgumentException("Invalid TS 119 602 JSON: missing required integer '"+n+"'");} }
-    private static String firstValue(JsonArray values){ return values.get(0).getAsJsonObject().get("value").getAsString(); }
-    private static List<String> extensions(JsonElement e){ if(e==null||!e.isJsonArray()) return List.of(); List<String> r=new ArrayList<>(); for(JsonElement x:e.getAsJsonArray())r.add(x.toString()); return List.copyOf(r); }
+    private static JsonArray optionalArray(JsonObject object, String name) {
+        return object.has(name) && object.get(name).isJsonArray()
+                ? object.getAsJsonArray(name) : null;
+    }
+
+    private static String optionalString(JsonObject object, String name) {
+        return object.has(name) && object.get(name).isJsonPrimitive()
+                && object.get(name).getAsJsonPrimitive().isString()
+                ? object.get(name).getAsString() : null;
+    }
+
+    private static String firstValue(JsonArray values) {
+        return values.get(0).getAsJsonObject().get("value").getAsString();
+    }
+
+    private static List<String> extensions(JsonElement element) {
+        if (element == null || !element.isJsonArray()) {
+            return List.of();
+        }
+        List<String> values = new ArrayList<>();
+        for (JsonElement value : element.getAsJsonArray()) {
+            values.add(value.toString());
+        }
+        return List.copyOf(values);
+    }
 }
