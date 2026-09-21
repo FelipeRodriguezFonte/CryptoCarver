@@ -4,6 +4,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +18,8 @@ import java.util.Locale;
 
 /** Local reader for the JSON binding in ETSI TS 119 602 V1.1.1, Annex A. */
 public final class TrustedEntityListJsonInspector {
+    private static final ObjectMapper JACKSON = new ObjectMapper();
+    private static final JsonSchema ETSI_SCHEMA = loadSchema();
     public record Service(String providerName, String serviceName, String typeIdentifier,
                           String status, String statusStartingTime, List<String> qualifiers) { }
     public record SchemeInformation(int version, long sequenceNumber, String operatorName,
@@ -21,6 +30,7 @@ public final class TrustedEntityListJsonInspector {
 
     public static TrustedEntityList parse(byte[] json) {
         try {
+            validateAgainstEtsiSchema(json);
             JsonObject root = JsonParser.parseString(new String(json, StandardCharsets.UTF_8)).getAsJsonObject();
             only(root, "LoTE"); JsonObject lote = requiredObject(root, "LoTE");
             only(lote, "ListAndSchemeInformation", "TrustedEntitiesList");
@@ -49,7 +59,7 @@ public final class TrustedEntityListJsonInspector {
                             "StatusStartingTime", "SchemeServiceDefinitionURI", "ServiceSupplyPoints",
                             "ServiceDefinitionURI", "ServiceInformationExtensions");
                     String name = firstValue(requiredArray(si, "ServiceName"));
-                    validateDigitalIdentities(requiredArray(si, "ServiceDigitalIdentity"));
+                    validateDigitalIdentities(requiredObject(si, "ServiceDigitalIdentity"));
                     services.add(new Service(provider, name, optionalString(si, "ServiceTypeIdentifier"),
                             optionalString(si, "ServiceStatus"), optionalString(si, "StatusStartingTime"),
                             extensions(si.get("ServiceInformationExtensions"))));
@@ -58,6 +68,22 @@ public final class TrustedEntityListJsonInspector {
             return new TrustedEntityList(scheme, List.copyOf(services), false);
         } catch (IllegalArgumentException e) { throw e; }
         catch (Exception e) { throw new IllegalArgumentException("Invalid TS 119 602 JSON: " + e.getMessage(), e); }
+    }
+    private static JsonSchema loadSchema() {
+        try (InputStream in = TrustedEntityListJsonInspector.class.getResourceAsStream(
+                "/schemas/etsi-ts-119602-v1.1.1.json")) {
+            if (in == null) throw new IllegalStateException("ETSI TS 119 602 JSON Schema resource is missing");
+            return JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(in);
+        } catch (Exception e) { throw new ExceptionInInitializerError(e); }
+    }
+    private static void validateAgainstEtsiSchema(byte[] json) throws Exception {
+        JsonNode node = JACKSON.readTree(json);
+        if (node == null) throw new IllegalArgumentException("Invalid TS 119 602 JSON: empty input");
+        java.util.Set<ValidationMessage> violations = ETSI_SCHEMA.validate(node);
+        if (!violations.isEmpty()) {
+            String detail = violations.stream().map(ValidationMessage::getMessage).sorted().findFirst().orElse("schema violation");
+            throw new IllegalArgumentException("Invalid TS 119 602 JSON: " + detail);
+        }
     }
     public static String describe(byte[] json, Locale locale) {
         TrustedEntityList list = parse(json); StringBuilder out = new StringBuilder();
@@ -81,7 +107,7 @@ public final class TrustedEntityListJsonInspector {
     private static String firstValue(JsonArray a){ for (JsonElement item : a) { JsonObject v=object(item,"multilingual string"); only(v,"lang","value"); String lang=requiredString(v,"lang"); if (!lang.equals(lang.toLowerCase(Locale.ROOT))) throw new IllegalArgumentException("Invalid TS 119 602 JSON: language tag must be lower case"); String s=requiredString(v,"value"); if (!s.isBlank()) return s; } throw new IllegalArgumentException("Invalid TS 119 602 JSON: multilingual string requires a non-empty 'value'"); }
     private static void validatePointers(JsonArray pointers) { for (JsonElement item : pointers) { JsonObject p=object(item,"multilingual URI"); only(p,"lang","uriValue"); requiredString(p,"lang"); requireUri(requiredString(p,"uriValue"), "uriValue"); } }
     private static void validateAddress(JsonObject address, String postal, String electronic) { only(address,postal,electronic); JsonArray postals=requiredArray(address,postal); requiredArray(address,electronic); for(JsonElement item:postals){ JsonObject p=object(item,"postal address"); requiredString(p,"lang"); requiredString(p,"Country"); } }
-    private static void validateDigitalIdentities(JsonArray identities) { for(JsonElement item:identities) { JsonObject identity=object(item,"digital identity"); only(identity,"X509Certificate","X509SubjectName","PublicKeyValue","X509SKI","OtherId"); if(identity.keySet().isEmpty()) throw new IllegalArgumentException("Invalid TS 119 602 JSON: ServiceDigitalIdentity item must identify the service"); } }
+    private static void validateDigitalIdentities(JsonObject identity) { only(identity,"X509Certificates","X509SubjectNames","PublicKeyValues","X509SKIs","OtherIds"); if(identity.keySet().isEmpty()) throw new IllegalArgumentException("Invalid TS 119 602 JSON: ServiceDigitalIdentity must identify the service"); }
     private static void requireUri(String value,String field) { try { java.net.URI uri=new java.net.URI(value); if(!uri.isAbsolute()) throw new IllegalArgumentException(); } catch(Exception e) { throw new IllegalArgumentException("Invalid TS 119 602 JSON: '"+field+"' must be an absolute URI"); } }
     private static List<String> extensions(JsonElement e){ if(e==null||!e.isJsonArray()) return List.of(); List<String> r=new ArrayList<>(); for(JsonElement x:e.getAsJsonArray())r.add(x.toString()); return List.copyOf(r); }
 }

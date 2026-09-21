@@ -101,6 +101,12 @@
             <artifactId>gson</artifactId>
             <version>2.11.0</version>
         </dependency>
+        <!-- ETSI TS 119 602 Annex A is published as a JSON Schema draft-07. -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.0.87</version>
+        </dependency>
 
         <!-- Nimbus JOSE + JWT -->
         <dependency>
