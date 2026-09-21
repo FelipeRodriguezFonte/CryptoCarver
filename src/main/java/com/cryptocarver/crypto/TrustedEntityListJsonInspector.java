@@ -40,6 +40,8 @@ public final class TrustedEntityListJsonInspector {
                 JsonObject entityInfo = requiredObject(entity, "TrustedEntityInformation");
                 only(entityInfo, "TEName", "TETradeName", "TEAddress", "TEInformationURI", "TEInformationExtensions");
                 String provider = firstValue(requiredArray(entityInfo, "TEName"));
+                validateAddress(requiredObject(entityInfo, "TEAddress"), "TEPostalAddress", "TEElectronicAddress");
+                validatePointers(requiredArray(entityInfo, "TEInformationURI"));
                 for (JsonElement serviceElement : requiredArray(entity, "TrustedEntityServices")) {
                     JsonObject service = object(serviceElement, "TrustedEntityServices item"); only(service, "ServiceInformation", "ServiceHistory");
                     JsonObject si = requiredObject(service, "ServiceInformation");
@@ -47,7 +49,7 @@ public final class TrustedEntityListJsonInspector {
                             "StatusStartingTime", "SchemeServiceDefinitionURI", "ServiceSupplyPoints",
                             "ServiceDefinitionURI", "ServiceInformationExtensions");
                     String name = firstValue(requiredArray(si, "ServiceName"));
-                    requiredArray(si, "ServiceDigitalIdentity");
+                    validateDigitalIdentities(requiredArray(si, "ServiceDigitalIdentity"));
                     services.add(new Service(provider, name, optionalString(si, "ServiceTypeIdentifier"),
                             optionalString(si, "ServiceStatus"), optionalString(si, "StatusStartingTime"),
                             extensions(si.get("ServiceInformationExtensions"))));
@@ -76,6 +78,10 @@ public final class TrustedEntityListJsonInspector {
     private static String optionalString(JsonObject o,String n){ return o.has(n)&&o.get(n).isJsonPrimitive()&&o.get(n).getAsJsonPrimitive().isString()?o.get(n).getAsString():null; }
     private static int requiredInt(JsonObject o,String n){ try{return o.get(n).getAsInt();}catch(Exception e){throw new IllegalArgumentException("Invalid TS 119 602 JSON: missing required integer '"+n+"'");} }
     private static long requiredLong(JsonObject o,String n){ try{return o.get(n).getAsLong();}catch(Exception e){throw new IllegalArgumentException("Invalid TS 119 602 JSON: missing required integer '"+n+"'");} }
-    private static String firstValue(JsonArray a){ JsonObject v=object(a.get(0),"multilingual string"); String s=optionalString(v,"value"); if(s==null) throw new IllegalArgumentException("Invalid TS 119 602 JSON: multilingual string requires 'value'"); return s; }
+    private static String firstValue(JsonArray a){ for (JsonElement item : a) { JsonObject v=object(item,"multilingual string"); only(v,"lang","value"); String lang=requiredString(v,"lang"); if (!lang.equals(lang.toLowerCase(Locale.ROOT))) throw new IllegalArgumentException("Invalid TS 119 602 JSON: language tag must be lower case"); String s=requiredString(v,"value"); if (!s.isBlank()) return s; } throw new IllegalArgumentException("Invalid TS 119 602 JSON: multilingual string requires a non-empty 'value'"); }
+    private static void validatePointers(JsonArray pointers) { for (JsonElement item : pointers) { JsonObject p=object(item,"multilingual URI"); only(p,"lang","uriValue"); requiredString(p,"lang"); requireUri(requiredString(p,"uriValue"), "uriValue"); } }
+    private static void validateAddress(JsonObject address, String postal, String electronic) { only(address,postal,electronic); JsonArray postals=requiredArray(address,postal); requiredArray(address,electronic); for(JsonElement item:postals){ JsonObject p=object(item,"postal address"); requiredString(p,"lang"); requiredString(p,"Country"); } }
+    private static void validateDigitalIdentities(JsonArray identities) { for(JsonElement item:identities) { JsonObject identity=object(item,"digital identity"); only(identity,"X509Certificate","X509SubjectName","PublicKeyValue","X509SKI","OtherId"); if(identity.keySet().isEmpty()) throw new IllegalArgumentException("Invalid TS 119 602 JSON: ServiceDigitalIdentity item must identify the service"); } }
+    private static void requireUri(String value,String field) { try { java.net.URI uri=new java.net.URI(value); if(!uri.isAbsolute()) throw new IllegalArgumentException(); } catch(Exception e) { throw new IllegalArgumentException("Invalid TS 119 602 JSON: '"+field+"' must be an absolute URI"); } }
     private static List<String> extensions(JsonElement e){ if(e==null||!e.isJsonArray()) return List.of(); List<String> r=new ArrayList<>(); for(JsonElement x:e.getAsJsonArray())r.add(x.toString()); return List.copyOf(r); }
 }
