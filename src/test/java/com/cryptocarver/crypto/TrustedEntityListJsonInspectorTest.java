@@ -1,6 +1,8 @@
 package com.cryptocarver.crypto;
 
 import static org.junit.jupiter.api.Assertions.*;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,33 @@ class TrustedEntityListJsonInspectorTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> TrustedEntityListJsonInspector.parse(malformed.getBytes(StandardCharsets.UTF_8)));
         assertTrue(error.getMessage().contains("TEAddress"));
+    }
+    @Test void readsSeveralEntitiesAndServices() {
+        JsonObject root = JsonParser.parseString(validJson()).getAsJsonObject();
+        var entities = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList");
+        JsonObject first = entities.get(0).getAsJsonObject();
+        first.getAsJsonArray("TrustedEntityServices").add(first.getAsJsonArray("TrustedEntityServices").get(0).deepCopy());
+        JsonObject second = first.deepCopy();
+        second.getAsJsonObject("TrustedEntityInformation").getAsJsonArray("TEName").get(0).getAsJsonObject().addProperty("value", "Second provider");
+        entities.add(second);
+        var list = TrustedEntityListJsonInspector.parse(root.toString().getBytes(StandardCharsets.UTF_8));
+        assertEquals(4, list.services().size());
+        assertEquals("Second provider", list.services().get(2).providerName());
+    }
+    @Test void acceptsListWithoutTrustedEntities() {
+        String listOnly = validJson().replaceFirst(",\"TrustedEntitiesList\":\\[.*", "}}");
+        assertTrue(TrustedEntityListJsonInspector.parse(listOnly.getBytes(StandardCharsets.UTF_8)).services().isEmpty());
+    }
+    @Test void rejectsInvalidNextUpdateWithItsPath() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
+                TrustedEntityListJsonInspector.parse(validJson().replace("2025-12-01T00:00:00Z", "not-a-date")
+                        .getBytes(StandardCharsets.UTF_8)));
+        assertTrue(error.getMessage().contains("NextUpdate"));
+    }
+    @Test void acceptsSchemaValidOptionalFields() {
+        String withOptionals = validJson().replace("\"NextUpdate\":\"2025-12-01T00:00:00Z\"",
+                "\"LoTEType\":\"https://example.test/type\",\"SchemeTerritory\":\"ES\",\"NextUpdate\":\"2025-12-01T00:00:00Z\"");
+        assertDoesNotThrow(() -> TrustedEntityListJsonInspector.parse(withOptionals.getBytes(StandardCharsets.UTF_8)));
     }
     private static String validJson() {
         return LIST.replace("\"OtherIds\":[{\"OtherId\":\"provider-1\"}]", "\"OtherIds\":[\"provider-1\"]");
