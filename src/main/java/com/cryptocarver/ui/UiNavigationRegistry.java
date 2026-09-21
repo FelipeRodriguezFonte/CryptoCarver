@@ -149,6 +149,8 @@ public final class UiNavigationRegistry {
                 "Thales Variant LMK", "Variant LMK");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "Thales Key Block"),
                 "Thales Key Block");
+        add(routes, new Route(Module.KEYS_SYMMETRIC, "Atalla Key Block (AKB)"),
+                "Atalla Key Block (AKB)", "Atalla Key Block", "AKB");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "RSA Key Exchange"), "RSA Key Exchange");
         add(routes, new Route(Module.KEYS_SYMMETRIC, "TR-34 Key Distribution"), "TR-34 Key Distribution");
 

@@ -68,6 +68,29 @@ class SidePanelTest {
         });
     }
 
+    @Test
+    void symmetricKeysSidebarLinksToThalesAndAtallaPanes() throws Exception {
+        runOnFxThread(() -> {
+            SidePanel panel = new SidePanel();
+            AtomicReference<String> selected = new AtomicReference<>();
+            panel.setOnItemSelected(selected::set);
+            panel.updateContent(NavigationRail.Section.KEYS);
+            TreeView<?> tree = getTree(panel);
+            TreeItem<?> symmetric = tree.getRoot().getChildren().get(0);
+
+            for (String title : new String[]{"Thales Variant LMK", "Thales Key Block", "Atalla Key Block (AKB)"}) {
+                TreeItem<?> item = symmetric.getChildren().stream()
+                        .filter(child -> title.equals(child.getValue().toString()))
+                        .findFirst().orElseThrow();
+                @SuppressWarnings("rawtypes") TreeView rawTree = tree;
+                rawTree.getSelectionModel().select(rawTree.getRow(item));
+                assertEquals(title, selected.get());
+                assertEquals(UiNavigationRegistry.Module.KEYS_SYMMETRIC,
+                        UiNavigationRegistry.resolve(selected.get()).orElseThrow().module());
+            }
+        });
+    }
+
     private static boolean containsLabel(TreeItem<?> item, String label) {
         if (item == null) return false;
         if (item.getValue() != null && label.equals(item.getValue().toString())) return true;

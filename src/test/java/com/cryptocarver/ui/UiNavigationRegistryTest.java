@@ -27,6 +27,8 @@ class UiNavigationRegistryTest {
                 UiNavigationRegistry.resolve("CMS Verify"));
         assertEquals(UiNavigationRegistry.resolve("OpenPGP (GPG Compatible)"),
                 UiNavigationRegistry.resolve("GPG"));
+        assertEquals(UiNavigationRegistry.resolve("Atalla Key Block (AKB)"),
+                UiNavigationRegistry.resolve("AKB"));
     }
 
     @Test

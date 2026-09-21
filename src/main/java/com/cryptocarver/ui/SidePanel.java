@@ -431,6 +431,9 @@ public class SidePanel extends VBox {
                 .collect(Collectors.toList());
 
         for (OperationDescriptor op : keysOps) {
+            if ("op_keys_atalla_akb".equals(op.getId())) {
+                continue;
+            }
             if (op.getId().startsWith("op_keys_rsa") || op.getId().startsWith("op_keys_ecdsa") ||
                 op.getId().startsWith("op_keys_dsa") || op.getId().startsWith("op_keys_eddsa") ||
                 op.getId().startsWith("op_keys_compare")) {
@@ -442,6 +445,16 @@ public class SidePanel extends VBox {
                 symmetric.getChildren().add(new TreeItem<>(new OperationNode(op)));
             }
         }
+
+        // The Thales tools also appear under Payments. Reuse their descriptors here
+        // so the symmetric-key sidebar links to the existing panes without duplicating
+        // operation IDs or changing the Payments navigation.
+        for (String id : List.of("op_pay_thales_lmk", "op_pay_thales_key_block")) {
+            OperationRegistry.getInstance().getById(id)
+                    .ifPresent(op -> symmetric.getChildren().add(new TreeItem<>(new OperationNode(op))));
+        }
+        OperationRegistry.getInstance().getById("op_keys_atalla_akb")
+                .ifPresent(op -> symmetric.getChildren().add(new TreeItem<>(new OperationNode(op))));
 
         rootItem.getChildren().addAll(symmetric, asymmetric, tools);
     }

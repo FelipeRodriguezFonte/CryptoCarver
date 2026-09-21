@@ -169,6 +169,25 @@ class IcsfNavigationUITest {
     }
 
     @Test
+    void symmetricSidebarDestinationsOpenTheRequestedKeyBlockPanes() throws Exception {
+        Fixture fixture = openKeysWithATallPaneExpanded();
+        try {
+            for (String operation : new String[]{
+                    "Thales Variant LMK", "Thales Key Block", "Atalla Key Block (AKB)"}) {
+                fixture.navigate(operation);
+                onFxThread(() -> {
+                    TitledPane expanded = symmetricAccordion(fixture.root).getExpandedPane();
+                    assertNotNull(expanded, operation + " did not open a symmetric pane");
+                    assertTrue(ModulePaneMatcher.matches(expanded, operation, ModuleTextCatalog.keys()),
+                            operation + " opened " + expanded.getText());
+                });
+            }
+        } finally {
+            fixture.close();
+        }
+    }
+
+    @Test
     void navigatingToTheIcsfTokenPaneBringsItIntoView() throws Exception {
         Fixture fixture = openKeysWithATallPaneExpanded();
         try {

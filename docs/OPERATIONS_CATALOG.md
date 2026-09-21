@@ -88,6 +88,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 | Icon | Title | ID | Status | Risk | Navigation Path | Aliases |
 |------|-------|----|--------|------|-----------------|---------|
 | 🎁 | AES Key Wrap | `op_keys_wrap` | STABLE | HIGH | `AES Key Wrap` | RFC 3394 |
+| 🏷 | Atalla Key Block (AKB) | `op_keys_atalla_akb` | EXPERIMENTAL | HIGH | `Atalla Key Block (AKB)` | Atalla, AKB, Atalla Key Block |
 | ⚖ | Compare Public / Private Key | `op_keys_compare` | STABLE | HIGH | `Compare Public / Private Key` | - |
 | 🗝 | DSA Key Generation | `op_keys_dsa` | STABLE | HIGH | `DSA Key Generation` | - |
 | 🗝 | ECDSA Key Generation | `op_keys_ecdsa` | STABLE | HIGH | `ECDSA Key Generation` | - |
