@@ -226,12 +226,20 @@ public class CipherController {
         updateModeAndAlgorithmVisibility();
         if (cipherOutputArea != null && cipherResultPanel != null) {
             cipherOutputArea.textProperty().addListener((obs, oldValue, value) ->
-                    cipherResultPanel.showText("Cipher", value));
+                    updateCipherResultPanel(value));
             cipherResultPanel.connectTo(() -> statusReporter);
             if (cipherInputArea != null) {
                 cipherResultPanel.setChainHandler(cipherInputArea::setText);
             }
+            updateCipherResultPanel(cipherOutputArea.getText());
         }
+    }
+
+    private void updateCipherResultPanel(String value) {
+        boolean hasResult = value != null && !value.isBlank();
+        cipherResultPanel.setVisible(hasResult);
+        cipherResultPanel.setManaged(hasResult);
+        cipherResultPanel.showText("Cipher", value);
     }
 
     @FXML
