@@ -61,6 +61,8 @@ public final class ModuleTextCatalog {
     public static Map<String, String> cipher() {
         Map<String, String> map = common();
         map.put("Data Encryption & Decryption", "module.cipher.title");
+        map.put("Templates", "module.cipher.templatesCompact");
+        map.put("Configure the key and parameters, then encrypt or decrypt using the fixed action bar.", "module.cipher.workspaceHelp");
         map.put("🔒 Symmetric Cipher (AES, DES, etc.)", "module.cipher.symmetric");
         map.put("Algorithm & Mode", "module.cipher.algorithmMode");
         map.put("Key Source", "module.cipher.keySource");

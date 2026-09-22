@@ -84,6 +84,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private VBox mainContentArea;
     @FXML
     private ScrollPane mainScrollPane;
+    @FXML private VBox cipherActionDock;
     @FXML
     private VBox contentContainer;
     @FXML private ModuleHost keysContainer;
@@ -1004,6 +1005,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (cipherContainerController == null) cipherContainerController = ensureModule(cipherContainer, CipherController.class);
         if (cipherContainerController != null) {
             cipherController = cipherContainerController;
+            if (cipherActionDock != null && cipherActionDock.getChildren().isEmpty()) {
+                cipherActionDock.getChildren().setAll(cipherController.detachSymmetricActions());
+                cipherController.getOutputArea().textProperty().addListener((obs, oldText, newText) -> {
+                    if (newText != null && !newText.isBlank()) revealCipherEditor(cipherController.getOutputArea());
+                });
+                cipherActionDock.visibleProperty().bind(cipherContainer.visibleProperty()
+                        .and(cipherController.symmetricWorkspaceProperty()));
+                cipherActionDock.managedProperty().bind(cipherActionDock.visibleProperty());
+            }
             cipherController.initModern(this, inputFormatCombo, outputFormatCombo,
                     () -> keysController == null ? null : keysController.getLastGeneratedKeyPair());
         }
@@ -2127,12 +2137,39 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return null;
     }
 
+    /** Bring a newly produced result (or reused input) into view on compact layouts. */
+    void revealCipherEditor(Node editor) {
+        Platform.runLater(() -> {
+            if (!cipherContainer.isVisible() || !cipherController.symmetricWorkspaceProperty().get()
+                    || editor.getScene() == null) return;
+            contentContainer.applyCss();
+            contentContainer.layout();
+            javafx.geometry.Bounds bounds = editor.localToScene(editor.getBoundsInLocal());
+            javafx.geometry.Bounds viewport = mainScrollPane.localToScene(mainScrollPane.getBoundsInLocal());
+            if (bounds.getMinY() >= viewport.getMinY() && bounds.getMaxY() <= viewport.getMaxY()) return;
+            double height = contentContainer.getBoundsInLocal().getHeight() - mainScrollPane.getViewportBounds().getHeight();
+            if (height > 0) {
+                double top = contentContainer.localToScene(contentContainer.getBoundsInLocal()).getMinY();
+                mainScrollPane.setVvalue(Math.max(0, Math.min(1, (bounds.getMinY() - top - 12) / height)));
+            }
+        });
+    }
+
     private void expandCipherAccordionPane(String itemName) {
+        boolean symmetric = itemName.contains("Symmetric") || itemName.contains("AES")
+                || itemName.contains("DES") || itemName.contains("Padding");
+        if (cipherController != null) cipherController.showSymmetricWorkspace(symmetric);
+        if (symmetric) {
+            mainScrollPane.setVvalue(0);
+            return;
+        }
         Accordion accordion = moduleAccordion(cipherContainer);
 
         if (accordion != null) {
             String targetPane = "";
-            if (itemName.contains("File Cipher")) {
+            if (itemName.contains("Format-Preserving")) {
+                targetPane = "Format-Preserving";
+            } else if (itemName.contains("File Cipher")) {
                 targetPane = "File Cipher";
             } else if (itemName.contains("OpenPGP") || itemName.contains("GPG")) {
                 targetPane = "OpenPGP";

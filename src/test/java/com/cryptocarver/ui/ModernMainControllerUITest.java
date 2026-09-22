@@ -144,6 +144,78 @@ class ModernMainControllerUITest {
     }
 
     @Test
+    void symmetricWorkspaceKeepsActionsVisibleAndPreservesOtherRoutes() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                javafx.scene.layout.Region root = loader.load();
+                javafx.scene.Scene scene = new javafx.scene.Scene(root, 1600, 1000);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                ModernMainController controller = loader.getController();
+                controller.navigateTo("Symmetric Ciphers");
+                CipherController cipher = getField(controller, "cipherContainerController");
+                VBox dock = getField(controller, "cipherActionDock");
+                javafx.scene.control.ScrollPane scroll = getField(controller, "mainScrollPane");
+                VBox config = getField(cipher, "symmetricConfig");
+                VBox io = getField(cipher, "cipherIoCard");
+                javafx.scene.control.Accordion accordion = getField(cipher, "cipherAccordion");
+                root.resize(1600, 1000);
+                root.applyCss();
+                root.layout();
+                root.layout();
+                assertTrue(dock.isVisible());
+                assertFalse(accordion.isManaged());
+                assertTrue(config.isManaged());
+                Node encrypt = dock.lookup("#symmetricEncryptButton");
+                assertNotNull(encrypt);
+                double actionY = encrypt.localToScene(encrypt.getBoundsInLocal()).getMinY();
+                scroll.setVvalue(1);
+                root.layout();
+                assertEquals(actionY, encrypt.localToScene(encrypt.getBoundsInLocal()).getMinY(), 0.1,
+                        "Execution must remain in place while the form scrolls");
+                assertTrue(encrypt.localToScene(encrypt.getBoundsInLocal()).getMaxY() <= scene.getHeight());
+                javafx.scene.layout.GridPane workbench = getField(cipher, "cipherWorkbench");
+                workbench.resize(1000, workbench.getHeight());
+                assertEquals(1, javafx.scene.layout.GridPane.getColumnIndex(io));
+                workbench.resize(550, workbench.getHeight());
+                assertEquals(0, javafx.scene.layout.GridPane.getColumnIndex(io));
+                assertEquals(1, javafx.scene.layout.GridPane.getRowIndex(io));
+                for (String route : java.util.List.of("File Cipher (Streaming)", "Asymmetric Ciphers", "Format-Preserving Encryption")) {
+                    controller.navigateTo(route);
+                    assertFalse(dock.isVisible(), route);
+                    assertFalse(config.isManaged(), route);
+                    assertTrue(accordion.isVisible(), route);
+                    assertNotNull(accordion.getExpandedPane(), route);
+                }
+                controller.navigateTo("Hashing");
+                assertFalse(dock.isVisible());
+                controller.navigateTo("Symmetric Ciphers");
+                assertTrue(dock.isVisible());
+                assertEquals(0, scroll.getVvalue());
+
+                if (Boolean.getBoolean("cipher.ux.snapshot")) {
+                    for (int width : new int[]{1600, 1100}) {
+                        root.resize(width, 1000);
+                        root.applyCss();
+                        root.layout();
+                        root.layout();
+                        scroll.setVvalue(0);
+                        javafx.scene.image.WritableImage image = root.snapshot(null, null);
+                        java.awt.image.BufferedImage png = new java.awt.image.BufferedImage(
+                                (int) image.getWidth(), (int) image.getHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                        for (int y = 0; y < png.getHeight(); y++) {
+                            for (int x = 0; x < png.getWidth(); x++) png.setRGB(x, y, image.getPixelReader().getArgb(x, y));
+                        }
+                        javax.imageio.ImageIO.write(png, "png", new java.io.File("target/cipher-ux-" + width + ".png"));
+                    }
+                }
+            } catch (Exception exception) {
+                throw new RuntimeException(exception);
+            }
+        });
+    }
+
+    @Test
     void testCmsUiPkcs11Toggle() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
@@ -2249,10 +2321,8 @@ class ModernMainControllerUITest {
         CipherController cipher = getField(controller, "cipherContainerController");
         javafx.scene.Node cipherRoot = getField(controller, "cipherContainer");
         assertNotNull(cipherRoot);
-        // Find form-group-box elements in Symmetric Cipher titled pane
-        javafx.scene.control.Accordion accordion = UiTestNodes.accordionIn(cipherRoot);
-        javafx.scene.control.TitledPane symmetricPane = accordion.getPanes().get(0);
-        javafx.scene.layout.VBox contentVBox = (javafx.scene.layout.VBox) symmetricPane.getContent();
+        // The symmetric workspace is directly accessible, outside the other modes' accordion.
+        javafx.scene.layout.VBox contentVBox = getField(cipher, "symmetricConfig");
         boolean hasFormGroup = contentVBox.getChildren().stream()
                 .anyMatch(node -> node.getStyleClass().contains("form-group-box"));
         assertTrue(hasFormGroup, "Symmetric Cipher should contain form-group-box containers");

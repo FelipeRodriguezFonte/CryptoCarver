@@ -60,6 +60,60 @@ public class CipherController {
 
     @FXML private VBox cipherRoot;
     private ModuleI18n.Binding moduleI18n;
+    @FXML private javafx.scene.layout.GridPane cipherWorkbench;
+    @FXML private VBox symmetricConfig;
+    @FXML private VBox cipherIoCard;
+    @FXML private javafx.scene.layout.GridPane cipherIoGrid;
+    @FXML private javafx.scene.control.Accordion cipherAccordion;
+    @FXML private javafx.scene.layout.FlowPane symmetricActions;
+    private final javafx.beans.property.BooleanProperty symmetricWorkspace =
+            new javafx.beans.property.SimpleBooleanProperty(true);
+
+    public javafx.beans.property.ReadOnlyBooleanProperty symmetricWorkspaceProperty() {
+        return symmetricWorkspace;
+    }
+
+    public javafx.scene.layout.FlowPane detachSymmetricActions() {
+        cipherRoot.getChildren().remove(symmetricActions);
+        return symmetricActions;
+    }
+
+    public void showSymmetricWorkspace(boolean active) {
+        symmetricWorkspace.set(active);
+        symmetricConfig.setVisible(active);
+        symmetricConfig.setManaged(active);
+        cipherAccordion.setVisible(!active);
+        cipherAccordion.setManaged(!active);
+        javafx.scene.layout.ColumnConstraints inputColumn = new javafx.scene.layout.ColumnConstraints();
+        inputColumn.setPercentWidth(active ? 100 : 50);
+        cipherIoGrid.getColumnConstraints().setAll(inputColumn);
+        if (!active) {
+            javafx.scene.layout.ColumnConstraints outputColumn = new javafx.scene.layout.ColumnConstraints();
+            outputColumn.setPercentWidth(50);
+            cipherIoGrid.getColumnConstraints().add(outputColumn);
+        }
+        javafx.scene.layout.GridPane.setConstraints(cipherIoGrid.getChildren().get(1), active ? 0 : 1, active ? 1 : 0);
+        layoutCipherWorkbench();
+    }
+
+    private void layoutCipherWorkbench() {
+        boolean wide = symmetricWorkspace.get() && cipherWorkbench.getWidth() >= 740;
+        javafx.scene.layout.ColumnConstraints first = new javafx.scene.layout.ColumnConstraints();
+        first.setPercentWidth(wide ? 48 : 100);
+        first.setMinWidth(0);
+        cipherWorkbench.getColumnConstraints().setAll(first);
+        if (wide) {
+            javafx.scene.layout.ColumnConstraints second = new javafx.scene.layout.ColumnConstraints();
+            second.setPercentWidth(52);
+            second.setMinWidth(0);
+            cipherWorkbench.getColumnConstraints().add(second);
+        }
+        javafx.scene.layout.GridPane.setConstraints(symmetricConfig, 0, 0);
+        javafx.scene.layout.GridPane.setConstraints(cipherIoCard, wide ? 1 : 0,
+                wide || !symmetricWorkspace.get() ? 0 : 1);
+        javafx.scene.layout.GridPane.setValignment(cipherIoCard, javafx.geometry.VPos.TOP);
+    }
+
 
     @FXML private TextArea cipherInputArea;
     @FXML private TextArea cipherOutputArea;
@@ -226,6 +280,15 @@ public class CipherController {
         IngestionUIHelper.bindField(privateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
         IngestionUIHelper.bindField(cipherInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64);
 
+        symmetricActions.visibleProperty().bind(symmetricWorkspace);
+        symmetricActions.managedProperty().bind(symmetricActions.visibleProperty());
+        cipherWorkbench.widthProperty().addListener((obs, before, after) -> layoutCipherWorkbench());
+        // Hide the whole row, including badges and spacing, when a mode does not use it.
+        for (javafx.scene.Node field : java.util.List.of(ivContainer, gcmTagField, aadField)) {
+            field.getParent().visibleProperty().bind(field.visibleProperty());
+            field.getParent().managedProperty().bind(field.visibleProperty());
+        }
+        showSymmetricWorkspace(true);
         refreshCipherTemplateCombo();
         updateModeAndAlgorithmVisibility();
     }
@@ -259,6 +322,7 @@ public class CipherController {
     @FXML
     private void handleUseCipherResultAsInput() {
         cipherInputArea.setText(cipherOutputArea.getText());
+        if (statusReporter instanceof ModernMainController modern) modern.revealCipherEditor(cipherInputArea);
     }
 
     @FXML

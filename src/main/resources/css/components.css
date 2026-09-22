@@ -1563,10 +1563,6 @@
     -fx-effect: dropshadow(gaussian, -cc-alpha-05, 8, 0.12, 0, 2);
 }
 
-.cipher-io-grid {
-    -fx-min-height: 150;
-}
-
 .cipher-io-column {
     -fx-min-width: 0;
 }
@@ -3137,3 +3133,16 @@
 .ux-inline-feea8737f0 {
     -fx-text-fill: -cc-inline-666; -fx-font-size: 9px;
 }
+
+/* Symmetric workbench: persistent actions outside the application's scroll area. */
+.symmetric-fixed-actions {
+    -fx-padding: 12 20;
+    -fx-hgap: 10;
+    -fx-vgap: 6;
+    -fx-alignment: center-right;
+    -fx-background-color: -cc-bg-surface;
+    -fx-border-color: -cc-border;
+    -fx-border-width: 1 0 0 0;
+}
+.symmetric-config .form-group-box { -fx-padding: 10; -fx-spacing: 8; }
+.symmetric-config .form-group-title { -fx-padding: 0 0 4 0; }

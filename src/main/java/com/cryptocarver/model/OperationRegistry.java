@@ -16,6 +16,7 @@ public class OperationRegistry {
     private OperationRegistry() {
         // Cipher -> Symmetric
         register(new OperationDescriptor("op_sym_ciphers", "Symmetric Ciphers", "Cipher", "Encrypt/Decrypt with symmetric keys", "🔒", OperationDescriptor.Status.STABLE, OperationDescriptor.SecretRisk.HIGH, "Symmetric Ciphers", Arrays.asList("AES", "DES", "3DES")));
+        register(new OperationDescriptor("op_fpe", "Format-Preserving Encryption", "Cipher", "Encrypt/decrypt text while preserving its alphabet and length", "🔢", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "Format-Preserving Encryption", Arrays.asList("FF1", "FF3-1", "FPE")));
         register(new OperationDescriptor("op_sym_file", "File Cipher (Streaming)", "Cipher", "Encrypt/Decrypt files", "📄", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "File Cipher (Streaming)", Collections.emptyList()));
         register(new OperationDescriptor("op_openpgp", "OpenPGP (GPG Compatible)", "Cipher", "Encrypt/decrypt and sign ASCII-armored OpenPGP data", "🔐", OperationDescriptor.Status.EXPERIMENTAL, OperationDescriptor.SecretRisk.HIGH, "OpenPGP (GPG Compatible)", Arrays.asList("GPG", "PGP")));
         // Cipher -> Asymmetric

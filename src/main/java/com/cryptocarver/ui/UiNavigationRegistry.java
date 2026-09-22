@@ -240,6 +240,7 @@ public final class UiNavigationRegistry {
         add(routes, new Route(Module.CIPHER, "Symmetric Cipher"),
                 "Symmetric Ciphers", "AES Encryption", "DES/3DES Encryption", "Symmetric Encryption",
                 "Modes & Padding", "Symmetric Encrypt", "Symmetric Decrypt");
+        add(routes, new Route(Module.CIPHER, "Format-Preserving"), "Format-Preserving Encryption");
         add(routes, new Route(Module.CIPHER, "File Cipher"), "File Cipher (Streaming)");
         add(routes, new Route(Module.CIPHER, "OpenPGP"), "OpenPGP (GPG Compatible)", "OpenPGP", "GPG");
         add(routes, new Route(Module.CIPHER, "Asymmetric Cipher"),

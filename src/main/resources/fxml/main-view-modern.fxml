@@ -374,6 +374,7 @@
 
                     </VBox>
                 </ScrollPane>
+                <VBox fx:id="cipherActionDock" managed="false" visible="false"/>
             </VBox>
 
                 <!-- Inspector Panel (right, collapsible) -->
