@@ -3,6 +3,8 @@ package com.cryptocarver.ui;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.OperationSessionLog;
+import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
@@ -98,6 +100,77 @@ class SessionTrailUITest {
         assertTrue(exported.contains("00112233445566778899AABBCCDDEEFF"));
         assertTrue(exported.contains("MESSAGE-IN-THE-SCREEN"));
         assertTrue(exported.contains("UNSAFE CLEAR-TEXT"));
+    }
+
+    @Test
+    void inspectorNavigatesSavedOperationsAndReturnsToNewResult() throws Exception {
+        SecretVisibilityProfile previousProfile = AppSettings.getInstance().getSecretVisibilityProfile();
+        try {
+            runAndWait(() -> {
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
+                try {
+                    FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                    loader.load();
+                    ModernMainController controller = loader.getController();
+                    controller.navigateTo("MAC");
+                    controller.publish(OperationResult.forOperation("First operation")
+                            .output(new byte[]{1})
+                            .detail(OperationDetail.sensitiveDetail("Marker", "FIRST-SECRET"))
+                            .build());
+                    controller.saveCurrentResultAsSessionStep("First step", "");
+                    controller.publish(OperationResult.forOperation("Second operation")
+                            .output(new byte[]{1, 2, 3})
+                            .detail(OperationDetail.publicDetail("Marker", "SECOND"))
+                            .build());
+                    controller.saveCurrentResultAsSessionStep("Second step", "");
+
+                    Button previous = field(controller, "inspectorPreviousSessionStepButton");
+                    Button next = field(controller, "inspectorNextSessionStepButton");
+                    Label position = field(controller, "sessionTrailPositionLabel");
+                    Label operation = field(controller, "operationLabel");
+                    Label outputBytes = field(controller, "outputBytesLabel");
+                    assertTrue(position.getText().contains("2/2"));
+                    assertEquals("Second operation", operation.getText());
+                    assertEquals("3", outputBytes.getText());
+                    assertFalse(previous.isDisabled());
+                    assertTrue(next.isDisabled());
+
+                    previous.fire();
+                    assertTrue(position.getText().contains("1/2"));
+                    assertEquals("First operation", operation.getText());
+                    assertEquals("1", outputBytes.getText());
+                    assertTrue(previous.isDisabled());
+                    assertTrue(inspectorText(field(controller, "inspectorDetailsContainer")).contains("***MASKED***"));
+                    assertFalse(inspectorText(field(controller, "inspectorDetailsContainer")).contains("FIRST-SECRET"));
+
+                    next.fire();
+                    assertEquals("Second operation", operation.getText());
+                    controller.publish(OperationResult.forOperation("Current operation")
+                            .output(new byte[]{4, 5}).build());
+                    assertEquals("Current operation", operation.getText());
+                    previous.fire();
+                    assertEquals("Second operation", operation.getText());
+                    next.fire();
+                    assertEquals("Current operation", operation.getText());
+                } catch (Exception exception) {
+                    throw new AssertionError(exception);
+                }
+            });
+        } finally {
+            runAndWait(() -> AppSettings.getInstance().setSecretVisibilityProfile(previousProfile));
+        }
+    }
+
+    private static String inspectorText(javafx.scene.layout.VBox container) {
+        StringBuilder text = new StringBuilder();
+        for (javafx.scene.Node row : container.getChildren()) {
+            if (row instanceof javafx.scene.layout.VBox box) {
+                for (javafx.scene.Node child : box.getChildren()) {
+                    if (child instanceof Label label) text.append(label.getText());
+                }
+            }
+        }
+        return text.toString();
     }
 
     @SuppressWarnings("unchecked")

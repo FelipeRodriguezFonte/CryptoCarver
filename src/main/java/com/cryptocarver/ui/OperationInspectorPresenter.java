@@ -3,6 +3,7 @@ package com.cryptocarver.ui;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationDescriptor;
 import com.cryptocarver.model.OperationRegistry;
+import com.cryptocarver.model.SessionOperationStep;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
@@ -28,10 +29,19 @@ final class OperationInspectorPresenter {
     }
 
     void present(String operation, byte[] input, byte[] output, List<OperationDetail> details) {
+        present(operation, byteCount(input), byteCount(output), details);
+    }
+
+    void presentSavedStep(SessionOperationStep step, List<OperationDetail> details) {
+        present(step.getOperation(), step.isInputPresent() ? String.valueOf(step.getInputLength()) : "-",
+                step.isOutputPresent() ? String.valueOf(step.getOutputLength()) : "-", details);
+    }
+
+    private void present(String operation, String inputCount, String outputCount, List<OperationDetail> details) {
         String operationName = operation == null ? "" : operation;
         if (operationLabel != null) operationLabel.setText(operationName);
-        if (inputBytesLabel != null) inputBytesLabel.setText(byteCount(input));
-        if (outputBytesLabel != null) outputBytesLabel.setText(byteCount(output));
+        if (inputBytesLabel != null) inputBytesLabel.setText(inputCount);
+        if (outputBytesLabel != null) outputBytesLabel.setText(outputCount);
 
         if (operationName.contains("Key Generation") || operationName.contains("Key Sharing")) {
             if (inputBytesLabel != null) inputBytesLabel.setText("-");

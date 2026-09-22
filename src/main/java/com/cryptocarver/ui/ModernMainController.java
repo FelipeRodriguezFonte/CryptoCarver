@@ -143,6 +143,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label inspectorSessionTrailTitle;
     @FXML private Button inspectorAddSessionStepButton;
     @FXML private Button inspectorExportSessionTrailButton;
+    @FXML private HBox sessionTrailNavigation;
+    @FXML private Button inspectorPreviousSessionStepButton;
+    @FXML private Button inspectorNextSessionStepButton;
+    @FXML private Label sessionTrailPositionLabel;
     @FXML
     private ModuleHost historyView;
     @FXML
@@ -216,6 +220,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private com.cryptocarver.model.SavedSessionsManager savedSessionsManager;
     private com.cryptocarver.model.OperationSessionLog operationSessionLog =
             new com.cryptocarver.model.OperationSessionLog();
+    private int selectedSessionStepIndex = -1;
+    private boolean unsavedInspectorResult;
     private String currentActiveOperation = "Dashboard"; // Defaul
     private boolean processDesignerWorkspace;
     private boolean sidePanelVisibleBeforeProcessDesigner;
@@ -765,6 +771,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (inspectorExportSessionTrailButton != null) {
             inspectorExportSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.exportTitle"));
         }
+        setAccessibleText(inspectorPreviousSessionStepButton, "sessionTrail.previousStep");
+        setAccessibleText(inspectorNextSessionStepButton, "sessionTrail.nextStep");
+        refreshSessionTrailNavigation();
         setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
         setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
         if (inputFormatCombo != null) {
@@ -1531,6 +1540,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             details = java.util.List.of(com.cryptocarver.model.OperationDetail.sensitiveDetail(
                     "Legacy details", item.getDetails()));
         }
+        return visibleOperationDetails(details);
+    }
+
+    private java.util.List<com.cryptocarver.model.OperationDetail> visibleOperationDetails(
+            java.util.List<com.cryptocarver.model.OperationDetail> details) {
         com.cryptocarver.model.SecretVisibilityProfile visibility =
                 com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
         return details.stream().filter(java.util.Objects::nonNull).map(detail -> {
@@ -2604,7 +2618,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         lastPublishedOperation = result.getOperation();
         lastPublishedResultSnapshot = result;
+        selectedSessionStepIndex = -1;
+        unsavedInspectorResult = true;
         updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails());
+        refreshSessionTrailNavigation();
         addToHistory(result.getOperation(), detailsForHistory(result),
                 effectiveNavigationTarget(result.getOperation(), currentActiveOperation));
         if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) {
@@ -2664,6 +2681,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void clearPublishedResultSnapshot() {
         lastPublishedOperation = "";
         lastPublishedResultSnapshot = null;
+        selectedSessionStepIndex = -1;
+        unsavedInspectorResult = false;
+        refreshSessionTrailNavigation();
         resultAreaTracker.clearSelection();
         if (resultSummaryBar != null) {
             resultSummaryBar.setManaged(false);
@@ -3739,9 +3759,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
                 operationSessionLog = loadedLog == null
                         ? new com.cryptocarver.model.OperationSessionLog() : loadedLog;
-                refreshSessionTrailUI();
                 // Switch to the relevant view contex
                 handleItemSelected(session.getOperation());
+                refreshSessionTrailUI();
+                if (!operationSessionLog.isEmpty()) showSessionStep(operationSessionLog.size() - 1);
                 updateStatus("Loaded session: " + session.getName());
             });
 
@@ -3773,6 +3794,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
         updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
         refreshStatusBarContext();
         if (keysController != null) {
@@ -3784,6 +3806,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleVisibilityMasked() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+        if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
         updateStatus("Visibility set to MASKED (Classroom/Demo)");
         refreshStatusBarContext();
         if (keysController != null) {
@@ -3795,6 +3818,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleVisibilityRedacted() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+        if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
         updateStatus("Visibility set to REDACTED (Strict/Production)");
         refreshStatusBarContext();
         if (keysController != null) {
@@ -3885,7 +3909,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                         .toList();
         com.cryptocarver.model.SessionOperationStep step = operationSessionLog.add(
                 lastPublishedResultSnapshot, title, tags, captureClearTextTrailParameters());
+        unsavedInspectorResult = false;
         refreshSessionTrailUI();
+        showSessionStep(operationSessionLog.size() - 1);
         if (inspectorPanel != null && !inspectorPanel.isVisible()) {
             inspectorPanel.setVisible(true);
             inspectorPanel.setManaged(true);
@@ -3917,6 +3943,65 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
         if (inspectorExportSessionTrailButton != null) {
             inspectorExportSessionTrailButton.setDisable(count == 0);
+        }
+        refreshSessionTrailNavigation();
+    }
+
+    private void refreshSessionTrailNavigation() {
+        int count = operationSessionLog == null ? 0 : operationSessionLog.size();
+        if (selectedSessionStepIndex >= count) selectedSessionStepIndex = -1;
+        if (sessionTrailNavigation != null) {
+            sessionTrailNavigation.setVisible(count > 0);
+            sessionTrailNavigation.setManaged(count > 0);
+        }
+        if (inspectorPreviousSessionStepButton != null) {
+            inspectorPreviousSessionStepButton.setDisable(count == 0 || selectedSessionStepIndex == 0);
+        }
+        if (inspectorNextSessionStepButton != null) {
+            inspectorNextSessionStepButton.setDisable(count == 0 || selectedSessionStepIndex < 0
+                    || (selectedSessionStepIndex == count - 1 && !unsavedInspectorResult));
+        }
+        if (sessionTrailPositionLabel != null) {
+            if (selectedSessionStepIndex >= 0) {
+                com.cryptocarver.model.SessionOperationStep step =
+                        operationSessionLog.getSteps().get(selectedSessionStepIndex);
+                sessionTrailPositionLabel.setText(i18n.text("sessionTrail.position",
+                        selectedSessionStepIndex + 1, count, step.getTitle()));
+                sessionTrailPositionLabel.setTooltip(new Tooltip(step.getTitle()));
+            } else {
+                sessionTrailPositionLabel.setText(i18n.text(lastPublishedResultSnapshot == null
+                        ? "sessionTrail.selectStep" : "sessionTrail.currentResult"));
+                sessionTrailPositionLabel.setTooltip(null);
+            }
+        }
+    }
+
+    private void showSessionStep(int index) {
+        java.util.List<com.cryptocarver.model.SessionOperationStep> steps = operationSessionLog.getSteps();
+        if (index < 0 || index >= steps.size()) return;
+        selectedSessionStepIndex = index;
+        com.cryptocarver.model.SessionOperationStep step = steps.get(index);
+        inspectorPresenter().presentSavedStep(step, visibleOperationDetails(step.getDetails()));
+        refreshSessionTrailNavigation();
+    }
+
+    @FXML
+    private void handlePreviousSessionStep() {
+        showSessionStep(selectedSessionStepIndex < 0
+                ? operationSessionLog.size() - 1 : selectedSessionStepIndex - 1);
+    }
+
+    @FXML
+    private void handleNextSessionStep() {
+        if (selectedSessionStepIndex < 0) return;
+        if (selectedSessionStepIndex < operationSessionLog.size() - 1) {
+            showSessionStep(selectedSessionStepIndex + 1);
+        } else if (unsavedInspectorResult && lastPublishedResultSnapshot != null) {
+            selectedSessionStepIndex = -1;
+            inspectorPresenter().present(lastPublishedResultSnapshot.getOperation(),
+                    lastPublishedResultSnapshot.getInput(), lastPublishedResultSnapshot.getOutput(),
+                    lastPublishedResultSnapshot.getDetails());
+            refreshSessionTrailNavigation();
         }
     }
 
@@ -3959,6 +4044,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 new Label(i18n.text("sessionTrail.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
                 .filter(ButtonType.OK::equals).isPresent()) {
             operationSessionLog.clear();
+            selectedSessionStepIndex = -1;
+            if (lastPublishedResultSnapshot != null) {
+                inspectorPresenter().present(lastPublishedResultSnapshot.getOperation(),
+                        lastPublishedResultSnapshot.getInput(), lastPublishedResultSnapshot.getOutput(),
+                        lastPublishedResultSnapshot.getDetails());
+            } else {
+                updateInspector(currentActiveOperation);
+            }
             refreshSessionTrailUI();
             updateStatus(i18n.text("sessionTrail.cleared"));
         }

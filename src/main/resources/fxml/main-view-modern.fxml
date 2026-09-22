@@ -387,13 +387,19 @@
                     <Button styleClass="ux-inline-ab6e31d870" fx:id="inspectorToggleButton" text="✕" onAction="#handleToggleInspector" accessibleText="Close the Inspector panel"/>
                 </HBox>
 
-                <!-- Compact session actions; operation details already live in History. -->
+                <!-- Session actions and navigation. -->
                 <HBox spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header">
                     <Label fx:id="inspectorSessionTrailTitle" text="Session log" styleClass="inspector-section-title"/>
                     <Label styleClass="ux-inline-cb001c4862" fx:id="sessionTrailCountLabel" text="0"/>
                     <Region HBox.hgrow="ALWAYS"/>
                     <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorAddSessionStepButton" text="Add" onAction="#handleSaveCurrentResultAsSessionStep" disable="true" accessibleText="Add the current operation to the session log"/>
                     <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorExportSessionTrailButton" text="Export" onAction="#handleExportSessionTrail" disable="true" accessibleText="Export the session log as text"/>
+                </HBox>
+
+                <HBox fx:id="sessionTrailNavigation" spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header" managed="false" visible="false">
+                    <Button fx:id="inspectorPreviousSessionStepButton" styleClass="ux-inline-7c4e63cc14" text="‹" onAction="#handlePreviousSessionStep" accessibleText="Previous session step"/>
+                    <Label fx:id="sessionTrailPositionLabel" text="" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="inspector-section-title"/>
+                    <Button fx:id="inspectorNextSessionStepButton" styleClass="ux-inline-7c4e63cc14" text="›" onAction="#handleNextSessionStep" accessibleText="Next session step"/>
                 </HBox>
 
                 <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" VBox.vgrow="ALWAYS">
