@@ -778,7 +778,9 @@ public class JOSEController implements Initializable {
                 return;
             }
             // Security Warning for Symmetric Keys in JWKS
-            if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
+            if ((alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir"))
+                    && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                    != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
                 String warningText = "You are adding a SYMMETRIC key (Secret) to this JWK Set.\n\n" +
                         "If you publish this JWKS file publicly (e.g. at .well-known/jwks.json), ANYONE will be able to read your secret key and forge tokens.\n\n"
                         + "Are you sure you want to proceed?";

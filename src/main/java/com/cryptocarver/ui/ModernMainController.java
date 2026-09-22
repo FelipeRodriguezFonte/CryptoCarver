@@ -3847,16 +3847,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         form.add(titleField, 1, 0);
         form.add(new Label(i18n.text("sessionTrail.tags")), 0, 1);
         form.add(tagsField, 1, 1);
-        form.add(unsafeWarning, 0, 2, 2, 1);
-        form.add(unsafeConfirmation, 0, 3, 2, 1);
+        boolean fullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        if (!fullLab) {
+            form.add(unsafeWarning, 0, 2, 2, 1);
+            form.add(unsafeConfirmation, 0, 3, 2, 1);
+        }
         GridPane.setHgrow(titleField, Priority.ALWAYS);
         GridPane.setHgrow(tagsField, Priority.ALWAYS);
         dialog.getDialogPane().setContent(form);
         dialog.getDialogPane().setMinWidth(480);
 
         Node saveNode = dialog.getDialogPane().lookupButton(saveButton);
-        saveNode.disableProperty().bind(javafx.beans.binding.Bindings.or(
-                titleField.textProperty().isEmpty(), unsafeConfirmation.selectedProperty().not()));
+        if (fullLab) {
+            saveNode.disableProperty().bind(titleField.textProperty().isEmpty());
+        } else {
+            saveNode.disableProperty().bind(javafx.beans.binding.Bindings.or(
+                    titleField.textProperty().isEmpty(), unsafeConfirmation.selectedProperty().not()));
+        }
         Platform.runLater(titleField::requestFocus);
 
         Optional<ButtonType> selected = dialog.showAndWait();
@@ -3890,7 +3898,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /**
      * Captures the active operation's controls without applying the History
      * redaction policy. This is intentionally unsafe and is called only after
-     * the clear-text confirmation in the Save Step dialog.
+     * the Save Step dialog.
      */
     private java.util.Map<String, Object> captureClearTextTrailParameters() {
         try {
@@ -4016,10 +4024,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
         }
 
+        boolean fullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        String plainOption = fullLab ? "Plain JSON" : "Plain JSON — unsafe";
         ChoiceDialog<String> modeDialog = new ChoiceDialog<>("Encrypted (.ccconfig)",
-                "Encrypted (.ccconfig)", "Plain JSON — unsafe");
+                "Encrypted (.ccconfig)", plainOption);
         modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
-        modeDialog.setHeaderText("This configuration may contain keys, passwords, PINs or payloads.");
+        modeDialog.setHeaderText(fullLab ? "Export screen configuration"
+                : "This configuration may contain keys, passwords, PINs or payloads.");
         modeDialog.setContentText("Protection:");
         java.util.Optional<String> mode = modeDialog.showAndWait();
         if (mode.isEmpty()) return;
@@ -4030,7 +4042,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             java.util.Optional<char[]> selected = promptConfigurationPassword(true);
             if (selected.isEmpty()) return;
             password = selected.get();
-        } else {
+        } else if (!fullLab) {
             if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
                     "Unsafe Plain Configuration", "Secrets will not be encrypted",
                     new Label("The exported JSON can contain raw cryptographic keys and sensitive input. Continue?"),
@@ -4056,9 +4068,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     : com.cryptocarver.model.ScreenConfigurationCodec.encodePlain(configuration);
             com.cryptocarver.model.ScreenConfigurationFiles.writeAtomic(file.toPath(), document);
             updateStatus("Screen configuration exported: " + file.getName());
-            showInfo("Configuration Exported", encrypted
-                    ? "Encrypted configuration saved. Share its password separately."
-                    : "Plain configuration saved. Treat the file as sensitive material.");
+            if (!fullLab || encrypted) {
+                showInfo("Configuration Exported", encrypted
+                        ? "Encrypted configuration saved. Share its password separately."
+                        : "Plain configuration saved. Treat the file as sensitive material.");
+            }
         } catch (Exception e) {
             showError("Configuration Export", e.getMessage());
         } finally {

@@ -6320,22 +6320,15 @@ public class KeysController {
             return;
         }
 
-        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
-                keyLabTable.getScene().getWindow(), "Warning: Reveal Secret Key",
-                "Are you sure you want to reveal raw secret key bytes?",
-                new Label("Warning: Exporting or displaying cleartext key material violates production security standards. Only proceed in isolated lab environments."),
-                ButtonType.CANCEL, ButtonType.OK);
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                byte[] keyBytes = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().revealExportableKeyForFullLab(km.getId());
-                if (keyBytes != null) {
-                    keyLabDetailValueField.setText(com.cryptocarver.util.DataConverter.bytesToHex(keyBytes).toUpperCase());
-                } else {
-                    keyLabDetailValueField.setText("[No raw key material available / Opaque key]");
-                }
-            } catch (Exception e) {
-                showError("Security Restriction", e.getMessage());
+        try {
+            byte[] keyBytes = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().revealExportableKeyForFullLab(km.getId());
+            if (keyBytes != null) {
+                keyLabDetailValueField.setText(com.cryptocarver.util.DataConverter.bytesToHex(keyBytes).toUpperCase());
+            } else {
+                keyLabDetailValueField.setText("[No raw key material available / Opaque key]");
             }
+        } catch (Exception e) {
+            showError("Security Restriction", e.getMessage());
         }
     }
 

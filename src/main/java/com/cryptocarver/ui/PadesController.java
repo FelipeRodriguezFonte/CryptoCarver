@@ -357,7 +357,10 @@ public final class PadesController {
                 return;
             }
             DirectoryChooser chooser = new DirectoryChooser();
-            chooser.setTitle("Choose empty output location for PAdES DSS reports (contains certificate PII)");
+            boolean fullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                    == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+            chooser.setTitle(fullLab ? "Choose empty output location for PAdES DSS reports"
+                    : "Choose empty output location for PAdES DSS reports (contains certificate PII)");
             File directory = chooser.showDialog(owner());
             if (directory == null) return;
             writeNewReport(directory, "pades-simple-report.xml", lastValidation.xmlSimpleReport());
@@ -369,7 +372,7 @@ public final class PadesController {
                     .detail("Privacy", "Certificate PII may be included")
                     .status(t("module.pades.feedback.statusReports")).build());
             padesResultArea.appendText("\n\nDSS reports saved to: " + directory.getAbsolutePath()
-                    + "\nWarning: the XML files may contain certificate PII.");
+                    + (fullLab ? "" : "\nWarning: the XML files may contain certificate PII."));
         } catch (Exception error) {
             showError("PAdES reports export", t("module.pades.feedback.operation", "PAdES reports export", error.getMessage()));
         }

@@ -462,7 +462,10 @@ public class XMLSignatureController {
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
             alert.setTitle("Save Diagnostic Reports");
             alert.setHeaderText("XAdES verification generated detailed XML reports.");
-            alert.setContentText("Do you want to save the Simple, Detailed, and ETSI reports? WARNING: These reports may contain Personal Identifiable Information (PII) from certificates.");
+            alert.setContentText(com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                    == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
+                    ? "Do you want to save the Simple, Detailed, and ETSI reports?"
+                    : "Do you want to save the Simple, Detailed, and ETSI reports? WARNING: These reports may contain Personal Identifiable Information (PII) from certificates.");
             java.util.Optional<javafx.scene.control.ButtonType> opt = alert.showAndWait();
             if (opt.isPresent() && opt.get() == javafx.scene.control.ButtonType.OK) {
                 javafx.stage.DirectoryChooser dc = new javafx.stage.DirectoryChooser();
