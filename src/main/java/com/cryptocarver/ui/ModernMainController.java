@@ -3872,9 +3872,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
         }
 
+        boolean fullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
+                == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(i18n.text("sessionTrail.dialogTitle"));
-        dialog.setHeaderText(i18n.text("sessionTrail.dialogHeader"));
+        if (!fullLab) dialog.setHeaderText(i18n.text("sessionTrail.dialogHeader"));
         ButtonType saveButton = new ButtonType(i18n.text("sessionTrail.saveStep"),
                 ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
@@ -3895,8 +3897,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         form.add(titleField, 1, 0);
         form.add(new Label(i18n.text("sessionTrail.tags")), 0, 1);
         form.add(tagsField, 1, 1);
-        boolean fullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
-                == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
         if (!fullLab) {
             form.add(unsafeWarning, 0, 2, 2, 1);
             form.add(unsafeConfirmation, 0, 3, 2, 1);
