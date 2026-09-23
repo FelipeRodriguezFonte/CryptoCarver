@@ -161,6 +161,34 @@ class SessionTrailUITest {
         }
     }
 
+    @Test
+    void clearOutputKeepsTheCurrentInput() throws Exception {
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                loader.load();
+                ModernMainController controller = loader.getController();
+                controller.navigateTo("MAC");
+                AuthenticationController authentication = field(controller, "authenticationContainerController");
+                TextArea input = field(authentication, "authInputArea");
+                TextArea output = field(authentication, "authOutputArea");
+                input.setText("KEEP-THIS-INPUT");
+                output.setText("REMOVE-THIS-OUTPUT");
+                controller.publish(OperationResult.forOperation("Calculate MAC")
+                        .output("REMOVE-THIS-OUTPUT".getBytes(StandardCharsets.UTF_8)).build());
+
+                javafx.scene.control.MenuItem clearOutput = field(controller, "clearOutputMenuItem");
+                clearOutput.fire();
+
+                assertEquals("KEEP-THIS-INPUT", input.getText());
+                assertEquals("", output.getText());
+                assertNull(field(controller, "lastPublishedResultSnapshot"));
+            } catch (Exception exception) {
+                throw new AssertionError(exception);
+            }
+        });
+    }
+
     private static String inspectorText(javafx.scene.layout.VBox container) {
         StringBuilder text = new StringBuilder();
         for (javafx.scene.Node row : container.getChildren()) {

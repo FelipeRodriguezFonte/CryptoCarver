@@ -52,6 +52,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private static final Logger LOG = LoggerFactory.getLogger(ModernMainController.class);
     private final ExpandedTextViewer expandedTextViewer = new ExpandedTextViewer();
+    private final ExpandedTextViewer sessionStepViewer = new ExpandedTextViewer();
     private final DialogService dialogService = new DialogService();
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
@@ -146,6 +147,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private HBox sessionTrailNavigation;
     @FXML private Button inspectorPreviousSessionStepButton;
     @FXML private Button inspectorNextSessionStepButton;
+    @FXML private Button inspectorOpenSessionStepButton;
     @FXML private Label sessionTrailPositionLabel;
     @FXML
     private ModuleHost historyView;
@@ -765,14 +767,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(resultSaveStepButton, "sessionTrail.saveStep");
         setAccessibleText(resultSaveStepButton, "a11y.sessionTrailSaveStep");
         setText(inspectorSessionTrailTitle, "sessionTrail.title");
-        setText(inspectorAddSessionStepButton, "sessionTrail.addShort");
-        setText(inspectorExportSessionTrailButton, "sessionTrail.exportTxt");
+        setText(inspectorAddSessionStepButton, "sessionTrail.addCurrent");
+        setText(inspectorExportSessionTrailButton, "sessionTrail.exportAll");
         setAccessibleText(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
         if (inspectorExportSessionTrailButton != null) {
             inspectorExportSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.exportTitle"));
         }
         setAccessibleText(inspectorPreviousSessionStepButton, "sessionTrail.previousStep");
         setAccessibleText(inspectorNextSessionStepButton, "sessionTrail.nextStep");
+        setText(inspectorOpenSessionStepButton, "sessionTrail.viewData");
+        setAccessibleText(inspectorOpenSessionStepButton, "sessionTrail.viewData");
         refreshSessionTrailNavigation();
         setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
         setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
@@ -2357,8 +2361,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleClearOutput() {
-        // Reuse clear input logic for now (Clear All)
-        handleClearInput();
+        ResultAreaTracker.clearVisibleOutputs(contentContainer);
+        clearPublishedResultSnapshot();
+        updateInspector(currentActiveOperation);
         updateStatus(i18n.text("status.outputCleared"));
     }
 
@@ -3751,20 +3756,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             infoBox.getChildren().addAll(nameLabel, detailsLabel);
             HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
 
-            Button loadButton = new Button("Load");
+            Button loadButton = new Button(i18n.text("savedSessions.previewAndLoad"));
             loadButton.getStyleClass().add("action-button");
             loadButton.setStyle("-fx-font-size: 11px; -fx-padding: 5 10;");
-            loadButton.setOnAction(e -> {
-                restoreUIState(session.getUiState());
-                com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
-                operationSessionLog = loadedLog == null
-                        ? new com.cryptocarver.model.OperationSessionLog() : loadedLog;
-                // Switch to the relevant view contex
-                handleItemSelected(session.getOperation());
-                refreshSessionTrailUI();
-                if (!operationSessionLog.isEmpty()) showSessionStep(operationSessionLog.size() - 1);
-                updateStatus("Loaded session: " + session.getName());
-            });
+            loadButton.setOnAction(e -> previewAndLoadSavedSession(session));
 
             Button deleteButton = new Button("Delete");
             deleteButton.getStyleClass().add("secondary-button");
@@ -3791,9 +3786,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         updateContentSubtitle("Load or manage your saved workspaces");
     }
 
+    private void previewAndLoadSavedSession(com.cryptocarver.model.SavedSession session) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(i18n.text("savedSessions.previewTitle"));
+        dialog.setHeaderText(session.getName());
+        if (windowOf(mainPane) != null) dialog.initOwner(windowOf(mainPane));
+        ButtonType load = new ButtonType(i18n.text("savedSessions.load"), ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(load, ButtonType.CANCEL);
+        TextArea preview = new TextArea(SessionTrailViewFormatter.preview(session, i18n));
+        preview.setEditable(false);
+        preview.setWrapText(true);
+        preview.setPrefSize(560, 340);
+        Label replacementNote = new Label(i18n.text("savedSessions.replacesCurrent"));
+        replacementNote.setWrapText(true);
+        dialog.getDialogPane().setContent(new VBox(8, replacementNote, preview));
+        if (dialog.showAndWait().orElse(ButtonType.CANCEL) != load) return;
+
+        restoreUIState(session.getUiState());
+        com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
+        operationSessionLog = loadedLog == null
+                ? new com.cryptocarver.model.OperationSessionLog() : loadedLog;
+        handleItemSelected(session.getOperation());
+        refreshSessionTrailUI();
+        if (!operationSessionLog.isEmpty()) showSessionStep(operationSessionLog.size() - 1);
+        updateStatus(i18n.text("savedSessions.loaded", session.getName()));
+    }
+
     @FXML
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        sessionStepViewer.hide();
         if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
         updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
         refreshStatusBarContext();
@@ -3806,6 +3828,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleVisibilityMasked() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+        sessionStepViewer.hide();
         if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
         updateStatus("Visibility set to MASKED (Classroom/Demo)");
         refreshStatusBarContext();
@@ -3818,6 +3841,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private void handleVisibilityRedacted() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+        sessionStepViewer.hide();
         if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
         updateStatus("Visibility set to REDACTED (Strict/Production)");
         refreshStatusBarContext();
@@ -3961,6 +3985,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             inspectorNextSessionStepButton.setDisable(count == 0 || selectedSessionStepIndex < 0
                     || (selectedSessionStepIndex == count - 1 && !unsavedInspectorResult));
         }
+        if (inspectorOpenSessionStepButton != null) {
+            inspectorOpenSessionStepButton.setDisable(selectedSessionStepIndex < 0);
+        }
         if (sessionTrailPositionLabel != null) {
             if (selectedSessionStepIndex >= 0) {
                 com.cryptocarver.model.SessionOperationStep step =
@@ -4003,6 +4030,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     lastPublishedResultSnapshot.getDetails());
             refreshSessionTrailNavigation();
         }
+    }
+
+    @FXML
+    private void handleOpenSelectedSessionStep() {
+        if (selectedSessionStepIndex < 0 || selectedSessionStepIndex >= operationSessionLog.size()) return;
+        com.cryptocarver.model.SessionOperationStep step =
+                operationSessionLog.getSteps().get(selectedSessionStepIndex);
+        sessionStepViewer.show(windowOf(mainPane), i18n.text("sessionTrail.viewStepTitle", step.getTitle()),
+                SessionTrailViewFormatter.step(step,
+                        com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile(), i18n));
     }
 
     @FXML

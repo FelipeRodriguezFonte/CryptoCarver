@@ -1,8 +1,12 @@
 package com.cryptocarver.ui;
 
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TabPane;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -107,6 +111,36 @@ final class ResultAreaTracker {
     void clearSelection() {
         focused = null;
         updated = null;
+    }
+
+    /** Clears visible, read-only result controls without touching inputs or parameters. */
+    static int clearVisibleOutputs(Node root) {
+        if (root == null || !root.isVisible()) return 0;
+        int cleared = 0;
+        if (root instanceof TextInputControl control && !control.isEditable()
+                && !control.getText().isEmpty()) {
+            String id = control.getId();
+            if (id != null) {
+                String name = id.toLowerCase(Locale.ROOT);
+                if (name.contains("output") || name.contains("result") || name.contains("report")
+                        || name.contains("generatedkey")) {
+                    control.clear();
+                    cleared++;
+                }
+            }
+        }
+        if (root instanceof TitledPane pane && pane.getContent() != null) {
+            if (pane.isExpanded()) cleared += clearVisibleOutputs(pane.getContent());
+        } else if (root instanceof ScrollPane pane && pane.getContent() != null) {
+            cleared += clearVisibleOutputs(pane.getContent());
+        } else if (root instanceof TabPane tabs) {
+            if (tabs.getSelectionModel().getSelectedItem() != null) {
+                cleared += clearVisibleOutputs(tabs.getSelectionModel().getSelectedItem().getContent());
+            }
+        } else if (root instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) cleared += clearVisibleOutputs(child);
+        }
+        return cleared;
     }
 
     static boolean isKeyPairResultArea(TextArea area) {

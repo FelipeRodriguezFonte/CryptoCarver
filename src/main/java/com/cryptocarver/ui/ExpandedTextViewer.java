@@ -62,6 +62,10 @@ final class ExpandedTextViewer {
         stage.requestFocus();
     }
 
+    void hide() {
+        if (stage != null) stage.hide();
+    }
+
     private void createStage(Window owner) {
         contentArea = new TextArea();
         contentArea.setEditable(false);
