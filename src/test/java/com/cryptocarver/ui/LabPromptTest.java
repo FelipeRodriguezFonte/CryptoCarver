@@ -10,7 +10,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,6 +40,18 @@ class LabPromptTest {
         settings.setSecretVisibilityProfile(SecretVisibilityProfile.MASKED);
         assertFalse(AppSettings.isFullLab());
         assertTrue(prompt.shouldShow(), prompt.name());
+    }
+
+    @Test
+    void destructiveAndReplacingActionsAlwaysRequireConfirmation() {
+        Set<String> alwaysConfirm = Set.of(
+                "KEY_DELETE", "TOKEN_CERTIFICATE_UPDATE", "FILE_OVERWRITE",
+                "HISTORY_CLEAR", "SESSION_TRAIL_CLEAR", "TEMPLATE_DELETE",
+                "SESSION_LOAD", "CONFIGURATION_IMPORT", "RECIPE_LOAD");
+        Set<String> profileDependent = Arrays.stream(LabPrompt.values())
+                .map(Enum::name).collect(Collectors.toSet());
+        assertTrue(alwaysConfirm.stream().noneMatch(profileDependent::contains),
+                "Destructive confirmation must not depend on FULL_LAB: " + profileDependent);
     }
 
     @Test
