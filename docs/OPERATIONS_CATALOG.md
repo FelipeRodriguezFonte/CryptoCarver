@@ -45,6 +45,7 @@ This document is generated automatically from `OperationRegistry`. Do not edit m
 |------|-------|----|--------|------|-----------------|---------|
 | 🔑 | Asymmetric Ciphers | `op_asym_ciphers` | STABLE | HIGH | `Asymmetric Ciphers` | RSA |
 | 📄 | File Cipher (Streaming) | `op_sym_file` | EXPERIMENTAL | HIGH | `File Cipher (Streaming)` | - |
+| 🔢 | Format-Preserving Encryption | `op_fpe` | EXPERIMENTAL | HIGH | `Format-Preserving Encryption` | FF1, FF3-1, FPE |
 | 🔐 | OpenPGP (GPG Compatible) | `op_openpgp` | EXPERIMENTAL | HIGH | `OpenPGP (GPG Compatible)` | GPG, PGP |
 | 🔒 | Symmetric Ciphers | `op_sym_ciphers` | STABLE | HIGH | `Symmetric Ciphers` | AES, DES, 3DES |
 
