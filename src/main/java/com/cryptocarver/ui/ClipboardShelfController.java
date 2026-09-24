@@ -385,8 +385,16 @@ public class ClipboardShelfController {
 
         detailsArea.setText(sb.toString());
 
-        warningLabel.setVisible(isSensitive && LabPrompt.SHELF_SENSITIVE.shouldShow());
-        if (isSensitive && LabPrompt.SHELF_SENSITIVE.shouldShow()) {
+        boolean sessionOnlyNote = entry.isSessionOnlyPrivateKey() && AppSettings.isFullLab();
+        boolean sensitiveWarning = isSensitive && LabPrompt.SHELF_SENSITIVE.shouldShow();
+        warningLabel.setGraphic(null);
+        warningLabel.getStyleClass().remove("ux-inline-caeb0c280b");
+        warningLabel.getStyleClass().remove("shelf-session-note");
+        warningLabel.getStyleClass().add(sessionOnlyNote ? "shelf-session-note" : "ux-inline-caeb0c280b");
+        warningLabel.setVisible(sessionOnlyNote || sensitiveWarning);
+        if (sessionOnlyNote) {
+            warningLabel.setText("Private key — session only. In memory only; disappears when the application closes.");
+        } else if (sensitiveWarning) {
             warningLabel.setText(entry.isSessionOnlyPrivateKey()
                 ? "🔒 Private key — session only is blocked by the active visibility policy."
                 : "⚠️ Sensitive data (Masked/Redacted)");

@@ -269,8 +269,7 @@ public class GenericController {
             if (inputPath.isEmpty() || outputPath.isEmpty()) return;
 
             boolean isTestMode = "true".equals(System.getProperty("test.mode"));
-            if (!isTestMode && LabPrompt.FILE_OVERWRITE.shouldShow()
-                    && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
+            if (!isTestMode && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
                 javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
                 confirm.setTitle("Overwrite existing file?");
                 confirm.setHeaderText("The selected output file already exists.");

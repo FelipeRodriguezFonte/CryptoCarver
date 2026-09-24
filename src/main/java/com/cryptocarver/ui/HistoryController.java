@@ -512,7 +512,6 @@ public class HistoryController {
 
     private boolean confirmClearHistory() {
         if (historyManager == null || historyManager.getHistoryItems().isEmpty()) return true;
-        if (!LabPrompt.HISTORY_CLEAR.shouldShow()) return true;
         if (Boolean.getBoolean("test.mode")) return true;
         javafx.stage.Window owner = mainHistoryContainer == null || mainHistoryContainer.getScene() == null
                 ? null : mainHistoryContainer.getScene().getWindow();
@@ -765,8 +764,7 @@ public class HistoryController {
                     .append("\nVersion: ").append(recipe.version()).append("\nCreated: ").append(recipe.createdAt()).append("\n\nParameters:\n");
             resolvedParameters.forEach((key, value) -> preview.append(key).append(" = ").append(value).append('\n'));
 
-            if (LabPrompt.RECIPE_LOAD.shouldShow()
-                    && dialogService.show(Alert.AlertType.CONFIRMATION,
+            if (dialogService.show(Alert.AlertType.CONFIRMATION,
                     mainHistoryContainer == null || mainHistoryContainer.getScene() == null ? null : mainHistoryContainer.getScene().getWindow(),
                     "Load Operation Recipe", "Review recipe before restoring its state",
                     new Label(preview.toString()), ButtonType.CANCEL, ButtonType.OK)

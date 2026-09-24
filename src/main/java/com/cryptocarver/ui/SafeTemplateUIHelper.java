@@ -154,13 +154,11 @@ public final class SafeTemplateUIHelper {
 
         I18nService i18n = I18nService.getInstance();
         DialogService dialogs = new DialogService(i18n);
-        Optional<ButtonType> result = LabPrompt.TEMPLATE_DELETE.shouldShow()
-                ? dialogs.show(Alert.AlertType.CONFIRMATION, owner,
+        Optional<ButtonType> result = dialogs.show(Alert.AlertType.CONFIRMATION, owner,
                 i18n.text("dialog.template.delete.title"),
                 i18n.text("dialog.template.delete.header"),
                 new Label("Are you sure you want to delete personal template '" + template.getName() + "'?"),
-                ButtonType.NO, ButtonType.YES)
-                : Optional.of(ButtonType.YES);
+                ButtonType.NO, ButtonType.YES);
         if (result.isPresent() && result.get() == ButtonType.YES) {
             boolean deleted = PersonalTemplateStore.getInstance().deleteTemplate(template.getId());
             if (deleted) {

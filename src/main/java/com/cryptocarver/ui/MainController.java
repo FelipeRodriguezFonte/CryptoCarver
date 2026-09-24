@@ -1718,8 +1718,7 @@ public class MainController implements StatusReporter {
         alert.setHeaderText("Clear all operation history?");
         alert.setContentText("This action cannot be undone.");
 
-        (LabPrompt.HISTORY_CLEAR.shouldShow()
-                ? alert.showAndWait() : java.util.Optional.of(javafx.scene.control.ButtonType.OK)).ifPresent(response -> {
+        alert.showAndWait().ifPresent(response -> {
             if (response == javafx.scene.control.ButtonType.OK) {
                 com.cryptocarver.utils.OperationHistory.getInstance().clearHistory();
                 refreshHistoryTable();

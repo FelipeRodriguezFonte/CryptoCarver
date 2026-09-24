@@ -3018,6 +3018,10 @@
     -fx-text-fill: -cc-inline-e67e22;
 }
 
+.shelf-session-note {
+    -fx-text-fill: -cc-palette-29;
+}
+
 .ux-inline-cb001c4862 {
     -fx-text-fill: -cc-palette-29; -fx-font-size: 10px;
 }

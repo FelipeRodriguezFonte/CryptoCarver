@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import javafx.scene.text.TextFlow;
 import com.cryptocarver.model.AppDiagnostics;
+import com.cryptocarver.model.AppSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 // Attempt to use DataConverter if available, otherwise will rely on local helpers or standard libs
@@ -1180,7 +1181,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             updateStatus("Action blocked: only session-only private-key entries can be reused here.");
             return;
         }
-        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
+        if (!AppSettings.isFullLab()) {
             updateStatus("Action blocked: session-only private keys require FULL_LAB.");
             return;
         }
@@ -2046,7 +2047,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private boolean confirmClearHistory() {
-        if (!LabPrompt.HISTORY_CLEAR.shouldShow()) return true;
         return dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
                 i18n.text("module.history.clearTitle"), i18n.text("module.history.clearHeader"),
                 new Label(i18n.text("module.history.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
@@ -2533,7 +2533,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private boolean isShelfCaptureBlockedByVisibility(TextArea area) {
         com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
-        return !com.cryptocarver.model.AppSettings.isFullLab()
+        return !AppSettings.isFullLab()
                 && (classification == com.cryptocarver.model.OperationDetail.Classification.SECRET
                 || classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE);
     }
@@ -2564,7 +2564,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (visibility == com.cryptocarver.model.SecretVisibilityProfile.REDACTED) return "";
             if (visibility == com.cryptocarver.model.SecretVisibilityProfile.MASKED) return "***MASKED***";
         } else if (classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE
-                && !com.cryptocarver.model.AppSettings.isFullLab()) {
+                && !AppSettings.isFullLab()) {
             return "***MASKED***";
         }
         return area.getText();
@@ -2804,7 +2804,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                 || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
         if (requiresFullLab
-                && !com.cryptocarver.model.AppSettings.isFullLab()) {
+                && !AppSettings.isFullLab()) {
             updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
             return;
         }
@@ -2823,7 +2823,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
                     || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
             if (requiresFullLab
-                    && !com.cryptocarver.model.AppSettings.isFullLab()) {
+                    && !AppSettings.isFullLab()) {
                 updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
                 return;
             }
@@ -2865,7 +2865,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 && (ResultAreaTracker.isPrivateKeyResultArea(area) || isCompletePrivateKeyMaterial(text));
         if (cls == com.cryptocarver.model.OperationDetail.Classification.SECRET && privateKeyMaterial) {
             if (isCompletePrivateKeyMaterial(text)
-                    && com.cryptocarver.model.AppSettings.isFullLab()) {
+                    && AppSettings.isFullLab()) {
                 String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation()
                         : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
                 String algorithm = null;
@@ -3797,8 +3797,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         Label replacementNote = new Label(i18n.text("savedSessions.replacesCurrent"));
         replacementNote.setWrapText(true);
         dialog.getDialogPane().setContent(new VBox(8, replacementNote, preview));
-        if (LabPrompt.SESSION_LOAD.shouldShow()
-                && dialog.showAndWait().orElse(ButtonType.CANCEL) != load) return;
+        if (dialog.showAndWait().orElse(ButtonType.CANCEL) != load) return;
 
         restoreUIState(session.getUiState());
         com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
@@ -4073,7 +4072,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void handleClearSessionTrail() {
         if (operationSessionLog == null || operationSessionLog.isEmpty()) return;
-        if (!LabPrompt.SESSION_TRAIL_CLEAR.shouldShow() || dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+        if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
                 i18n.text("sessionTrail.title"), i18n.text("sessionTrail.clear"),
                 new Label(i18n.text("sessionTrail.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
                 .filter(ButtonType.OK::equals).isPresent()) {
@@ -4151,7 +4150,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
         }
 
-        boolean fullLab = com.cryptocarver.model.AppSettings.isFullLab();
+        boolean fullLab = AppSettings.isFullLab();
         String plainOption = fullLab ? i18n.text("dialog.configuration.unencryptedJson") : "Plain JSON — unsafe";
         ChoiceDialog<String> modeDialog = new ChoiceDialog<>("Encrypted (.ccconfig)",
                 "Encrypted (.ccconfig)", plainOption);
@@ -4230,8 +4229,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             } finally {
                 if (password != null) java.util.Arrays.fill(password, '\0');
             }
-            if (LabPrompt.CONFIGURATION_IMPORT.shouldShow()
-                    && dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
+            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
                     "Import Screen Configuration", "Review portable configuration",
                     new Label("Operation: " + configuration.operation()
                             + "\nModule: " + configuration.module()
