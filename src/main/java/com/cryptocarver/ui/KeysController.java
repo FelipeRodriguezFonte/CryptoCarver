@@ -1295,7 +1295,8 @@ public class KeysController {
 
             javafx.stage.Window owner = keysRoot == null || keysRoot.getScene() == null
                     ? null : keysRoot.getScene().getWindow();
-            boolean confirmed = dialogService.confirmDestructive(owner, "Confirm Token Update",
+            boolean confirmed = !LabPrompt.TOKEN_CERTIFICATE_UPDATE.shouldShow()
+                    || dialogService.confirmDestructive(owner, "Confirm Token Update",
                     "Updating certificate chain for alias: " + alias + "\n\nLeaf Subject: " + subject
                             + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size()
                             + "\n\nProceed with token modification?", "Update");
@@ -2158,7 +2159,7 @@ public class KeysController {
             return;
         }
         com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (profile != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
             updateStatus("Action blocked: Secret key cannot be copied in current visibility mode.");
             showInfo("Security Policy", "Copying key material is blocked under " + profile + " mode. Switch to FULL_LAB to copy secret keys.");
             return;
@@ -2184,8 +2185,7 @@ public class KeysController {
             updateStatus("No generated key summary available to copy.");
             return;
         }
-        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        String keyDisplay = (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB)
+        String keyDisplay = (com.cryptocarver.model.AppSettings.isFullLab())
                 ? currentGeneratedKeySummary.getRawKeyHex()
                 : "***MASKED***";
 
@@ -2212,8 +2212,7 @@ public class KeysController {
             updateStatus("No generated key available for validation.");
             return;
         }
-        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB && keyInputField != null) {
+        if (com.cryptocarver.model.AppSettings.isFullLab() && keyInputField != null) {
             keyInputField.setText(currentGeneratedKeySummary.getRawKeyHex());
         }
         if (validationPane != null) {
@@ -5539,7 +5538,7 @@ public class KeysController {
             return;
         }
         com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (profile != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
             updateStatus("Action blocked: Private key cannot be copied under " + profile + " profile.");
             showInfo("Security Policy", "Copying private key material is blocked under " + profile + " profile. Switch to FULL_LAB to copy private keys.");
             return;
@@ -5553,8 +5552,7 @@ public class KeysController {
             updateStatus("No asymmetric summary available to copy.");
             return;
         }
-        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        String privDisplay = (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB)
+        String privDisplay = (com.cryptocarver.model.AppSettings.isFullLab())
                 ? summary.getPrivateKeyPem()
                 : "***MASKED***";
 
@@ -5601,7 +5599,7 @@ public class KeysController {
             return;
         }
         com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (profile != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
             updateStatus("Action blocked: Exporting private key is blocked under " + profile + " profile.");
             showInfo("Security Policy", "Exporting private key files is blocked under " + profile + " profile. Switch to FULL_LAB to export private keys.");
             return;
@@ -5644,8 +5642,7 @@ public class KeysController {
         }
 
         if (material == AsymmetricShelfMaterial.PRIVATE) {
-            if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
-                    != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            if (!AppSettings.isFullLab()) {
                 updateStatus("Action blocked: private key material requires FULL_LAB.");
                 return;
             }
@@ -5990,7 +5987,7 @@ public class KeysController {
     }
 
     public void updateVisibilityControls() {
-        boolean isFullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        boolean isFullLab = AppSettings.isFullLab();
         if (rsaSendPrivateShelfBtn != null) rsaSendPrivateShelfBtn.setDisable(!isFullLab);
         if (ecdsaSendPrivateShelfBtn != null) ecdsaSendPrivateShelfBtn.setDisable(!isFullLab);
         if (dsaSendPrivateShelfBtn != null) dsaSendPrivateShelfBtn.setDisable(!isFullLab);
@@ -6076,7 +6073,7 @@ public class KeysController {
         keyLabDetailModifiedLabel.setText(sdf.format(new java.util.Date(km.getModified())));
         keyLabDetailStatusLabel.setText(km.getStatus() + (km.hasKeyMaterial() ? "" : " (Metadata-only)"));
 
-        boolean isFullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+        boolean isFullLab = AppSettings.isFullLab();
         boolean isExportable = km.getExportability() == com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE;
         keyLabRevealBtn.setDisable(!isFullLab || !isExportable);
 
@@ -6260,7 +6257,7 @@ public class KeysController {
 
     @FXML
     private void handleKeyLabImport() {
-        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!AppSettings.isFullLab()) {
             showError("Security Error", "Importing secret key material requires FULL_LAB visibility profile.");
             return;
         }
@@ -6315,7 +6312,7 @@ public class KeysController {
         KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
         if (km == null) return;
 
-        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!AppSettings.isFullLab()) {
             showError("Security Restriction", "Revealing key material is only allowed in FULL_LAB security profile.");
             return;
         }
@@ -6399,12 +6396,14 @@ public class KeysController {
 
         boolean willArchive = !"ARCHIVED".equalsIgnoreCase(km.getStatus());
         String actionText = willArchive ? "archive" : "restore";
-        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+        java.util.Optional<ButtonType> result = LabPrompt.KEY_ARCHIVE.shouldShow()
+                ? dialogService.show(Alert.AlertType.CONFIRMATION,
                 keyLabTable.getScene().getWindow(), "Confirm " + (willArchive ? "Archive" : "Restore"),
                 (willArchive ? "Archive" : "Restore") + " Key: " + km.getName(),
                 new Label("Are you sure you want to " + actionText + " this key? "
                         + (willArchive ? "Archived keys are hidden from standard operations but kept in history." : "This key will be active again.")),
-                ButtonType.CANCEL, ButtonType.OK);
+                ButtonType.CANCEL, ButtonType.OK)
+                : java.util.Optional.of(ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().archiveKey(km.getId());
             refreshKeyLabTable();
@@ -6421,10 +6420,12 @@ public class KeysController {
         KeyMaterial km = keyLabTable.getSelectionModel().getSelectedItem();
         if (km == null) return;
 
-        java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.CONFIRMATION,
+        java.util.Optional<ButtonType> result = LabPrompt.KEY_DELETE.shouldShow()
+                ? dialogService.show(Alert.AlertType.CONFIRMATION,
                 keyLabTable.getScene().getWindow(), "Confirm Deletion", "Delete Key: " + km.getName(),
                 new Label("Are you sure you want to permanently delete this key from the Lab? This action cannot be undone."),
-                ButtonType.CANCEL, ButtonType.OK);
+                ButtonType.CANCEL, ButtonType.OK)
+                : java.util.Optional.of(ButtonType.OK);
         if (result.isPresent() && result.get() == ButtonType.OK) {
             com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().deleteKey(km.getId());
             refreshKeyLabTable();

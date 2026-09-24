@@ -1101,8 +1101,7 @@ public class CipherController {
 
             // Security warning
             if (RecipeUIHelper.requiresSecurityWarning(recipe)
-                    && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
-                    != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+                    && LabPrompt.FILE_CIPHER_RECIPE.shouldShow()) {
                 dialogService.warning("Advertencia de Seguridad", "Exportando IV/Nonce o AAD\n\nEl archivo de receta contendrá el IV/Nonce o AAD.\n" +
                         "La clave secreta NUNCA se exportará.\n" +
                         "(Reusar un IV/Nonce con la misma clave en modo fichero o CBC compromete la seguridad).");

@@ -357,7 +357,7 @@ public class ClipboardShelfController {
         boolean isMasked = isSensitive && visibility == SecretVisibilityProfile.MASKED;
         boolean canCopy = !entry.isSessionOnlyPrivateKey() && !isRedacted && !isMasked;
         boolean canUse = entry.isSessionOnlyPrivateKey()
-                ? visibility == SecretVisibilityProfile.FULL_LAB
+                ? AppSettings.isFullLab()
                 : canCopy;
 
         StringBuilder sb = new StringBuilder();
@@ -385,15 +385,11 @@ public class ClipboardShelfController {
 
         detailsArea.setText(sb.toString());
 
-        warningLabel.setVisible(isSensitive);
-        if (isSensitive) {
+        warningLabel.setVisible(isSensitive && LabPrompt.SHELF_SENSITIVE.shouldShow());
+        if (isSensitive && LabPrompt.SHELF_SENSITIVE.shouldShow()) {
             warningLabel.setText(entry.isSessionOnlyPrivateKey()
-                ? (visibility == SecretVisibilityProfile.FULL_LAB
-                    ? "⚠️ Private key — session only. In memory only; disappears when the application closes."
-                    : "🔒 Private key — session only is blocked by the active visibility policy.")
-                : (visibility == SecretVisibilityProfile.FULL_LAB
-                    ? "⚠️ Sensitive data displayed (Unsafe Lab mode)"
-                    : "⚠️ Sensitive data (Masked/Redacted)"));
+                ? "🔒 Private key — session only is blocked by the active visibility policy."
+                : "⚠️ Sensitive data (Masked/Redacted)");
         }
 
         setActionAvailability(pinBtn, true, entry.isPinned() ? "Unpin entry" : "Pin entry", "Select one entry to pin or unpin");
@@ -612,7 +608,7 @@ public class ClipboardShelfController {
         useInMenu.getItems().clear();
 
         if (selected != null && selected.isSessionOnlyPrivateKey()) {
-            if (AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB) return;
+            if (!AppSettings.isFullLab()) return;
             MenuItem workbench = new MenuItem("Use in Key & Certificate Workbench");
             workbench.setOnAction(e -> useInTarget("KEY_CERTIFICATE_WORKBENCH", "KEY_CERTIFICATE_WORKBENCH"));
             useInMenu.getItems().add(workbench);
@@ -667,7 +663,7 @@ public class ClipboardShelfController {
 
         if (entry.isSessionOnlyPrivateKey()) {
             if (!"KEY_CERTIFICATE_WORKBENCH".equals(targetType)
-                    || AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB) {
+                    || !AppSettings.isFullLab()) {
                 navigator.updateStatus("Action blocked: session-only private keys require FULL_LAB.");
                 return;
             }

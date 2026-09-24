@@ -111,7 +111,7 @@ public class ClipboardShelfManager {
      * sole manager entry point for temporary private-key Shelf material.
      */
     public synchronized ClipboardEntry addSessionOnlyPrivateKey(String value, String sourceOperation, String algorithm) {
-        if (AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB) {
+        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
             return null;
         }
         if (isPrivateMaterialPlaceholder(value)) {
@@ -125,7 +125,7 @@ public class ClipboardShelfManager {
     /** Adds an already-created session-only entry without touching persistence. */
     public synchronized ClipboardEntry addSessionOnlyPrivateKey(ClipboardEntry entry) {
         if (entry == null || !entry.isSessionOnlyPrivateKey()
-                || AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB
+                || !com.cryptocarver.model.AppSettings.isFullLab()
                 || isPrivateMaterialPlaceholder(entry.getValue())) {
             return null;
         }

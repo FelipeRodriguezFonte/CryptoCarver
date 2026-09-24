@@ -269,7 +269,8 @@ public class GenericController {
             if (inputPath.isEmpty() || outputPath.isEmpty()) return;
 
             boolean isTestMode = "true".equals(System.getProperty("test.mode"));
-            if (!isTestMode && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
+            if (!isTestMode && LabPrompt.FILE_OVERWRITE.shouldShow()
+                    && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
                 javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
                 confirm.setTitle("Overwrite existing file?");
                 confirm.setHeaderText("The selected output file already exists.");
@@ -408,7 +409,8 @@ public class GenericController {
                 com.cryptocarver.crypto.LineRecordCipher.validateAlgorithmAndKey(alg, key);
                 com.cryptocarver.crypto.LineRecordCipher.validateIvAndAad(alg, iv, aad);
 
-                if (isEncrypt && "AES-256-CBC".equals(alg) && iv != null) {
+                if (isEncrypt && "AES-256-CBC".equals(alg) && iv != null
+                        && LabPrompt.CBC_IV_REUSE.shouldShow()) {
                     javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
                     confirm.setTitle("CBC IV Reuse");
                     confirm.setHeaderText("Security Warning: Static IV in CBC mode");

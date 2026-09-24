@@ -225,7 +225,7 @@ public class KeyCertificateWorkbenchController {
     boolean canLoadFromShelf(ClipboardEntry selected) {
         if (selected == null) return false;
         if (selected.getClassification() == com.cryptocarver.model.OperationDetail.Classification.SECRET
-            && com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            && !AppSettings.isFullLab()) {
             return false;
         }
         return true;
@@ -233,8 +233,7 @@ public class KeyCertificateWorkbenchController {
 
     /** Loads a validated session-only private key without publishing its value. */
     void loadSessionOnlyPrivateKey(String value) {
-        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
-                != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!AppSettings.isFullLab()) {
             return;
         }
         if (value == null || value.isBlank()) return;
@@ -497,7 +496,7 @@ public class KeyCertificateWorkbenchController {
         boolean isSecret = (currentOutputClassification == OperationDetail.Classification.SECRET);
         if (isSecret) {
             com.cryptocarver.model.SecretVisibilityProfile vis = AppSettings.getInstance().getSecretVisibilityProfile();
-            if (vis != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            if (!AppSettings.isFullLab()) {
                 if (statusReporter != null) {
                     statusReporter.showError("Security Policy", "Cannot copy SECRET material while environment is " + vis);
                 }
@@ -529,8 +528,7 @@ public class KeyCertificateWorkbenchController {
 
         ShelfMaterial material = resolution.material();
         if (material.privateMaterial()) {
-            if (AppSettings.getInstance().getSecretVisibilityProfile()
-                    != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            if (!AppSettings.isFullLab()) {
                 if (statusReporter != null) {
                     statusReporter.updateStatus("Action blocked: private key material requires FULL_LAB.");
                 }

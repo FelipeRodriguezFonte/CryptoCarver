@@ -48,7 +48,7 @@ public class SimulatedHsmProvider {
         if (km.getExportability() == KeyExportability.NON_EXPORTABLE) {
             throw new SecurityException("Cannot reveal NON_EXPORTABLE key material");
         }
-        if (com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
             throw new SecurityException("Revealing key material is only allowed in FULL_LAB visibility profile");
         }
         Key key = km.getKey();

@@ -72,6 +72,10 @@ public final class AppSettings {
         return data.secretVisibility == null ? SecretVisibilityProfile.FULL_LAB : data.secretVisibility;
     }
 
+    public static boolean isFullLab() {
+        return getInstance().getSecretVisibilityProfile() == SecretVisibilityProfile.FULL_LAB;
+    }
+
     public synchronized void setSecretVisibilityProfile(SecretVisibilityProfile visibility) {
         data.secretVisibility = visibility == null ? SecretVisibilityProfile.FULL_LAB : visibility;
         save();

@@ -357,8 +357,7 @@ public final class PadesController {
                 return;
             }
             DirectoryChooser chooser = new DirectoryChooser();
-            boolean fullLab = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()
-                    == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB;
+            boolean fullLab = !LabPrompt.PADES_PII.shouldShow();
             chooser.setTitle(fullLab ? "Choose empty output location for PAdES DSS reports"
                     : "Choose empty output location for PAdES DSS reports (contains certificate PII)");
             File directory = chooser.showDialog(owner());

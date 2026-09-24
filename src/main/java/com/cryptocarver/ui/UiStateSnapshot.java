@@ -93,7 +93,7 @@ public final class UiStateSnapshot {
 
     /** True unless the user has selected the FULL_LAB profile in the Security menu. */
     private static boolean redactsHistorySecrets() {
-        return AppSettings.getInstance().getSecretVisibilityProfile() != SecretVisibilityProfile.FULL_LAB;
+        return !AppSettings.isFullLab();
     }
 
     /**
