@@ -1,5 +1,7 @@
 package com.cryptocarver.crypto.hsm;
 
+import com.cryptocarver.model.AppSettings;
+
 import java.security.Key;
 import java.util.Collections;
 import java.util.Map;
@@ -48,7 +50,7 @@ public class SimulatedHsmProvider {
         if (km.getExportability() == KeyExportability.NON_EXPORTABLE) {
             throw new SecurityException("Cannot reveal NON_EXPORTABLE key material");
         }
-        if (!com.cryptocarver.model.AppSettings.isFullLab()) {
+        if (!AppSettings.isFullLab()) {
             throw new SecurityException("Revealing key material is only allowed in FULL_LAB visibility profile");
         }
         Key key = km.getKey();
