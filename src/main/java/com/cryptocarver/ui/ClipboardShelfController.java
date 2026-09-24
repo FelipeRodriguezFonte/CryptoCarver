@@ -396,8 +396,8 @@ public class ClipboardShelfController {
             warningLabel.setText(t("module.shelf.sessionOnlyNote"));
         } else if (sensitiveWarning) {
             warningLabel.setText(entry.isSessionOnlyPrivateKey()
-                ? "🔒 Private key — session only is blocked by the active visibility policy."
-                : "⚠️ Sensitive data (Masked/Redacted)");
+                ? t("module.shelf.sessionOnlyBlocked")
+                : t("module.shelf.sensitiveMaskedWarning"));
         }
 
         setActionAvailability(pinBtn, true, entry.isPinned() ? "Unpin entry" : "Pin entry", "Select one entry to pin or unpin");

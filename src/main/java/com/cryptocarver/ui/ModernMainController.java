@@ -4151,18 +4151,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         boolean fullLab = AppSettings.isFullLab();
+        String encryptedOption = i18n.text("dialog.configuration.encryptedOption");
         String plainOption = fullLab ? i18n.text("dialog.configuration.unencryptedJson")
                 : i18n.text("dialog.configuration.plainJsonUnsafe");
-        ChoiceDialog<String> modeDialog = new ChoiceDialog<>("Encrypted (.ccconfig)",
-                "Encrypted (.ccconfig)", plainOption);
+        ChoiceDialog<String> modeDialog = new ChoiceDialog<>(encryptedOption,
+                encryptedOption, plainOption);
         modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
         modeDialog.setHeaderText(fullLab ? i18n.text("dialog.configuration.exportHeader")
-                : "This configuration may contain keys, passwords, PINs or payloads.");
-        modeDialog.setContentText("Protection:");
+                : i18n.text("dialog.configuration.sensitiveHeader"));
+        modeDialog.setContentText(i18n.text("dialog.configuration.protectionPrompt"));
         java.util.Optional<String> mode = modeDialog.showAndWait();
         if (mode.isEmpty()) return;
 
-        boolean encrypted = mode.get().startsWith("Encrypted");
+        boolean encrypted = isEncryptedConfigurationOption(mode.get(), encryptedOption);
         char[] password = null;
         if (encrypted) {
             java.util.Optional<char[]> selected = promptConfigurationPassword(true);
@@ -4170,8 +4171,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             password = selected.get();
         } else if (LabPrompt.CONFIGURATION_EXPORT.shouldShow()) {
             if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
-                    "Unsafe Plain Configuration", "Secrets will not be encrypted",
-                    new Label("The exported JSON can contain raw cryptographic keys and sensitive input. Continue?"),
+                    i18n.text("dialog.configuration.unsafePlainTitle"),
+                    i18n.text("dialog.configuration.unsafePlainHeader"),
+                    new Label(i18n.text("dialog.configuration.unsafePlainMessage")),
                     ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         }
 
@@ -4204,6 +4206,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         } finally {
             if (password != null) java.util.Arrays.fill(password, '\0');
         }
+    }
+
+    static boolean isEncryptedConfigurationOption(String selectedOption, String encryptedOption) {
+        return encryptedOption.equals(selectedOption);
     }
 
     @FXML
