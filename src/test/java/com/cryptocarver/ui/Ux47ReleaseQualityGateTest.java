@@ -88,9 +88,12 @@ class Ux47ReleaseQualityGateTest {
     }
 
     @Test
-    void spanishBundleMatchesBaseAndPreservesPlaceholders() throws Exception {
+    void localizedBundlesCoverBaseAndSpanishPreservesPlaceholders() throws Exception {
         Properties base = load("/i18n/messages.properties");
+        Properties english = load("/i18n/messages_en.properties");
         Properties spanish = load("/i18n/messages_es.properties");
+        Set<String> missingEnglish = new HashSet<>(base.stringPropertyNames());
+        missingEnglish.removeAll(english.stringPropertyNames());
         Set<String> missing = new HashSet<>();
         Set<String> extra = new HashSet<>();
         for (String key : base.stringPropertyNames()) {
@@ -104,7 +107,8 @@ class Ux47ReleaseQualityGateTest {
         for (String key : spanish.stringPropertyNames()) {
             if (!base.containsKey(key)) extra.add(key);
         }
-        assertTrue(missing.isEmpty(), "Spanish bundle keys missing from base: " + missing);
+        assertTrue(missingEnglish.isEmpty(), "Base keys missing from English bundle: " + missingEnglish);
+        assertTrue(missing.isEmpty(), "Base keys missing from Spanish bundle: " + missing);
         assertTrue(extra.isEmpty(), "Spanish bundle has unknown keys: " + extra);
     }
 
