@@ -460,11 +460,11 @@ public class XMLSignatureController {
 
             // Prompt to save detailed reports
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Save Diagnostic Reports");
-            alert.setHeaderText("XAdES verification generated detailed XML reports.");
+            alert.setTitle(t("module.xml.reportSaveTitle"));
+            alert.setHeaderText(t("module.xml.reportSaveHeader"));
             alert.setContentText(AppSettings.isFullLab()
-                    ? "Do you want to save the Simple, Detailed, and ETSI reports?"
-                    : "Do you want to save the Simple, Detailed, and ETSI reports? WARNING: These reports may contain Personal Identifiable Information (PII) from certificates.");
+                    ? t("module.xml.reportSavePrompt")
+                    : t("module.xml.reportSavePromptSensitive"));
             java.util.Optional<javafx.scene.control.ButtonType> opt = LabPrompt.XML_REPORT_EXPORT.shouldShow()
                     ? alert.showAndWait()
                     : java.util.Optional.of(javafx.scene.control.ButtonType.OK);

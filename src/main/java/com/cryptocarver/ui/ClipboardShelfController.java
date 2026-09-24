@@ -393,7 +393,7 @@ public class ClipboardShelfController {
         warningLabel.getStyleClass().add(sessionOnlyNote ? "shelf-session-note" : "ux-inline-caeb0c280b");
         warningLabel.setVisible(sessionOnlyNote || sensitiveWarning);
         if (sessionOnlyNote) {
-            warningLabel.setText("Private key — session only. In memory only; disappears when the application closes.");
+            warningLabel.setText(t("module.shelf.sessionOnlyNote"));
         } else if (sensitiveWarning) {
             warningLabel.setText(entry.isSessionOnlyPrivateKey()
                 ? "🔒 Private key — session only is blocked by the active visibility policy."

@@ -6321,7 +6321,7 @@ public class KeysController {
             if (keyBytes != null) {
                 keyLabDetailValueField.setText(com.cryptocarver.util.DataConverter.bytesToHex(keyBytes).toUpperCase());
             } else {
-                keyLabDetailValueField.setText("[No raw key material available / Opaque key]");
+                keyLabDetailValueField.setText(t("module.keys.noRawKeyMaterial"));
             }
         } catch (Exception e) {
             showError("Security Restriction", e.getMessage());

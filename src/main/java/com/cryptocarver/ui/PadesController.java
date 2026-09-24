@@ -358,8 +358,8 @@ public final class PadesController {
             }
             DirectoryChooser chooser = new DirectoryChooser();
             boolean fullLab = !LabPrompt.PADES_PII.shouldShow();
-            chooser.setTitle(fullLab ? "Choose empty output location for PAdES DSS reports"
-                    : "Choose empty output location for PAdES DSS reports (contains certificate PII)");
+            chooser.setTitle(fullLab ? t("module.pades.reportFolderTitle")
+                    : t("module.pades.reportFolderTitleSensitive"));
             File directory = chooser.showDialog(owner());
             if (directory == null) return;
             writeNewReport(directory, "pades-simple-report.xml", lastValidation.xmlSimpleReport());

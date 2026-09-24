@@ -4151,11 +4151,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
 
         boolean fullLab = AppSettings.isFullLab();
-        String plainOption = fullLab ? i18n.text("dialog.configuration.unencryptedJson") : "Plain JSON — unsafe";
+        String plainOption = fullLab ? i18n.text("dialog.configuration.unencryptedJson")
+                : i18n.text("dialog.configuration.plainJsonUnsafe");
         ChoiceDialog<String> modeDialog = new ChoiceDialog<>("Encrypted (.ccconfig)",
                 "Encrypted (.ccconfig)", plainOption);
         modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
-        modeDialog.setHeaderText(fullLab ? "Export screen configuration"
+        modeDialog.setHeaderText(fullLab ? i18n.text("dialog.configuration.exportHeader")
                 : "This configuration may contain keys, passwords, PINs or payloads.");
         modeDialog.setContentText("Protection:");
         java.util.Optional<String> mode = modeDialog.showAndWait();
