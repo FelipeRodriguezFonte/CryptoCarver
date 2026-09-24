@@ -175,8 +175,44 @@ public final class I18nService {
         return "es".equalsIgnoreCase(system.getLanguage()) ? Locale.forLanguageTag("es") : Locale.ENGLISH;
     }
 
+    /**
+     * Runs the listeners on the FX thread, waiting for them to finish.
+     *
+     * <p>Listeners relabel live controls. Run from any other thread they raced the FX pulse
+     * and corrupted {@code VirtualFlow} ({@code AssertionError} in {@code addToPile}), which
+     * is what made {@code IcsfModuleI18nTest} fail now and then. Waiting keeps the old
+     * contract: when {@code setPreference} returns, every screen already shows the new
+     * language. Without a running toolkit (headless tests, early startup) they run inline.</p>
+     */
     private void notifyListeners() {
         Locale changedLocale = getLocale();
+        if (javafx.application.Platform.isFxApplicationThread()) {
+            dispatch(changedLocale);
+            return;
+        }
+        java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+        try {
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    dispatch(changedLocale);
+                } finally {
+                    done.countDown();
+                }
+            });
+        } catch (IllegalStateException toolkitNotRunning) {
+            dispatch(changedLocale);
+            return;
+        }
+        try {
+            if (!done.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                LOG.warn("Localization listeners still running after 10 s (locale={})", changedLocale.toLanguageTag());
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void dispatch(Locale changedLocale) {
         listeners.removeIf(reference -> reference.get() == null);
         for (WeakReference<Consumer<Locale>> reference : listeners) {
             Consumer<Locale> listener = reference.get();
