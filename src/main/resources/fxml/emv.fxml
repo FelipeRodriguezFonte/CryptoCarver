@@ -194,6 +194,90 @@
                 </VBox>
             </TitledPane>
 
+            <!-- ISSUER SCRIPT SECURE MESSAGING -->
+            <TitledPane text="🔐 Secure Messaging (Issuer Script)">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Session keys, the enciphered PIN of a PIN change command and the command MAC, Mastercard or Visa. Each step fills the fields of the next; all of them stay editable." wrapText="true" styleClass="form-label"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Scheme:" styleClass="form-label"/>
+                        <ComboBox fx:id="smSchemeCombo" prefWidth="180" styleClass="form-field"/>
+                        <Button text="Load Example" onAction="#handleSmLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    </HBox>
+
+                    <Label text="1. Card and session keys" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="170" prefWidth="170"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="MK-SMI (Mastercard):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smMkSmiField" promptText="Issuer MAC master key, 16 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="MK-SMC (Mastercard):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smMkSmcField" promptText="Issuer encryption master key, 16 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="PAN/SqNr (Mastercard):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smPanSeqField" promptText="16 digits of PAN and sequence number" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="UDK MAC (SMI):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smUdkSmiField" promptText="Card MAC key, 16 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="UDK ENC (SMC):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smUdkSmcField" promptText="Card encryption key, 16 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smAcField" promptText="Application cryptogram, 8 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Command nr (Mastercard):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smCommandNumberField" promptText="0" maxWidth="Infinity"
+                                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smAtcField" promptText="2 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="SK MAC:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smSkMacField" promptText="Filled by Derive Session Keys" maxWidth="Infinity"
+                                   GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="SK ENC:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smSkEncField" promptText="Filled by Derive Session Keys" maxWidth="Infinity"
+                                   GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Derive Session Keys" onAction="#handleSmDeriveSessionKeys" styleClass="action-button,primary-action" maxWidth="190"/>
+
+                    <Label text="2. PIN change data" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="170" prefWidth="170"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="New PIN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <PasswordField fx:id="smPinField" promptText="4 to 12 digits" maxWidth="Infinity"
+                                       GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="UDK A (Visa):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smUdkAField" promptText="Card key the Visa PIN block is bound to, 16 bytes" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Encipher PIN" onAction="#handleSmEncipherPin" styleClass="action-button,primary-action" maxWidth="190"/>
+
+                    <Label text="3. Command MAC" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="170" prefWidth="170"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="CLA INS P1 P2 Lc:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smHeaderField" promptText="5 bytes, e.g. 8424000210" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Command data:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="smDataField" promptText="Filled by Encipher PIN" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Generate MAC" onAction="#handleSmGenerateMac" styleClass="action-button,primary-action" maxWidth="190"/>
+
+                    <TextArea fx:id="smResultArea" prefHeight="150" editable="false" wrapText="true"
+                              styleClass="result-area,monospace-field" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
             <!-- TRACK 2 DATA -->
             <TitledPane text="🎞 Track 2 Data">
                 <VBox spacing="12" styleClass="module-pane-content">

@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.EmvTlv;
 
 import com.cryptocarver.crypto.EMVOperations;
 import com.cryptocarver.crypto.EmvOdaOperations;
+import com.cryptocarver.crypto.EmvSecureMessaging;
 import com.cryptocarver.model.OperationResult;
 
 import javafx.fxml.FXML;
@@ -160,12 +161,27 @@ public class EMVController {
     @FXML private ComboBox<String> arqcPaddingMethodCombo;
     @FXML private TextField propAuthDataField;
 
+    // Issuer-script secure messaging
+    @FXML private ComboBox<String> smSchemeCombo;
+    @FXML private TextField smMkSmiField, smMkSmcField, smPanSeqField, smUdkSmiField, smUdkSmcField;
+    @FXML private TextField smAcField, smCommandNumberField, smAtcField, smSkMacField, smSkEncField;
+    @FXML private PasswordField smPinField;
+    @FXML private TextField smUdkAField, smHeaderField, smDataField;
+    @FXML private TextArea smResultArea;
+
+    static final String SM_MASTERCARD = "Mastercard";
+    static final String SM_VISA = "Visa";
+
     @FXML
     private void initialize() {
         moduleI18n = ModuleI18n.bind(emvContainer, ModuleTextCatalog.emv());
         atcField = emvAtcField;
         setupARQCPaddingMethods();
         setupARPCMethods();
+        if (smSchemeCombo != null) {
+            smSchemeCombo.getItems().setAll(SM_MASTERCARD, SM_VISA);
+            smSchemeCombo.getSelectionModel().selectFirst();
+        }
     }
 
     public void init(StatusReporter reporter) {
@@ -332,6 +348,138 @@ public class EMVController {
             sessionKeyResultArea.setText(t("module.emv.error.generate", e.getMessage()));
             sessionKeyResultArea.setVisible(true);
             sessionKeyResultArea.setManaged(true);
+        }
+    }
+
+    // ============================================================================
+    // ISSUER-SCRIPT SECURE MESSAGING (all cryptography in EmvSecureMessaging)
+    // ============================================================================
+
+    private boolean smVisa() {
+        return smSchemeCombo != null && SM_VISA.equals(smSchemeCombo.getValue());
+    }
+
+    private static String smText(TextInputControl field) {
+        return field == null || field.getText() == null ? "" : field.getText().replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private void smShow(String text) {
+        smResultArea.setText(text);
+        smResultArea.setVisible(true);
+        smResultArea.setManaged(true);
+    }
+
+    private void smPublish(String operation, String report, java.util.List<com.cryptocarver.model.OperationDetail> details) {
+        if (mainController == null) return;
+        mainController.publish(OperationResult.forOperation(operation)
+                .output(report.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                .status(t("module.emv.sm.status")).build());
+    }
+
+    /** Fills every field with the worked example the external tool ships for the selected scheme. */
+    public void handleSmLoadExample() {
+        if (smVisa()) {
+            smMkSmiField.clear(); smMkSmcField.clear(); smPanSeqField.clear();
+            smUdkSmiField.setText("94E3194C02105E3B153438D562D5A49D");
+            smUdkSmcField.setText("94E3194C02105E3B153438D562D5A49D");
+            smAcField.setText("EFB5340A1BF07421");
+            smCommandNumberField.clear();
+            smAtcField.setText("0003");
+            smUdkAField.setText("64C8621A76A2EA9EF23D5749FE1A64F1");
+            smHeaderField.setText("8424000218");
+        } else {
+            smMkSmiField.setText("862F13DF807A13B9D9AEAEC885FE7CA4");
+            smMkSmcField.setText("BF89B32308CDADDC04B952C7DF0715E0");
+            smPanSeqField.setText("7430100000157500");
+            smUdkSmiField.clear(); smUdkSmcField.clear();
+            smAcField.setText("51DB71A5DCC47F8A");
+            smCommandNumberField.setText("1");
+            smAtcField.setText("0010");
+            smUdkAField.clear();
+            smHeaderField.setText("8424000210");
+        }
+        smPinField.setText("4222");
+        smSkMacField.clear(); smSkEncField.clear(); smDataField.clear();
+        smShow(t("module.emv.sm.exampleLoaded", smSchemeCombo.getValue()));
+    }
+
+    public void handleSmDeriveSessionKeys() {
+        try {
+            StringBuilder report = new StringBuilder();
+            String skMac;
+            String skEnc;
+            if (smVisa()) {
+                String atc = smText(smAtcField);
+                skMac = EmvSecureMessaging.visaSessionKey(smText(smUdkSmiField), atc);
+                skEnc = EmvSecureMessaging.visaSessionKey(smText(smUdkSmcField), atc);
+                report.append("Visa: session key = UDK with ATC ").append(atc)
+                        .append(" XORed into the left half and its complement into the right\n");
+            } else {
+                if (!smText(smMkSmiField).isEmpty() || !smText(smMkSmcField).isEmpty()) {
+                    String panSeq = smText(smPanSeqField);
+                    smUdkSmiField.setText(EmvSecureMessaging.mastercardUdk(smText(smMkSmiField), panSeq));
+                    smUdkSmcField.setText(EmvSecureMessaging.mastercardUdk(smText(smMkSmcField), panSeq));
+                    report.append("UDK-SMI: ").append(smUdkSmiField.getText()).append('\n')
+                            .append("UDK-SMC: ").append(smUdkSmcField.getText()).append("   (EMV option A, odd parity)\n");
+                }
+                String commandText = smText(smCommandNumberField);
+                int command;
+                try {
+                    command = commandText.isEmpty() ? 0 : Integer.parseInt(commandText);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException(t("module.emv.sm.commandInvalid"));
+                }
+                if (command < 0) throw new IllegalArgumentException(t("module.emv.sm.commandInvalid"));
+                String ac = smText(smAcField);
+                skMac = EmvSecureMessaging.mastercardSessionKey(smText(smUdkSmiField), ac, command);
+                skEnc = EmvSecureMessaging.mastercardSessionKey(smText(smUdkSmcField), ac, command);
+                report.append("Mastercard SKD: R = AC + ").append(command).append('\n');
+            }
+            smSkMacField.setText(skMac);
+            smSkEncField.setText(skEnc);
+            report.append("SK MAC: ").append(skMac).append('\n').append("SK ENC: ").append(skEnc).append('\n');
+            smShow(report.toString());
+            smPublish("Secure Messaging Session Keys", report.toString(), java.util.List.of(
+                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
+                    com.cryptocarver.model.OperationDetail.secretDetail("SK MAC", skMac),
+                    com.cryptocarver.model.OperationDetail.secretDetail("SK ENC", skEnc)));
+        } catch (Exception e) {
+            smShow(t("module.emv.sm.error", e.getMessage()));
+        }
+    }
+
+    public void handleSmEncipherPin() {
+        try {
+            String pin = smPinField.getText() == null ? "" : smPinField.getText().trim();
+            if (!pin.matches("\\d{4,12}")) throw new IllegalArgumentException(t("module.emv.sm.pinInvalid"));
+            String encrypted = smVisa()
+                    ? EmvSecureMessaging.visaEncryptedPin(smText(smSkEncField), smText(smUdkAField), pin)
+                    : EmvSecureMessaging.mastercardEncryptedPin(smText(smSkEncField), pin);
+            smDataField.setText(encrypted);
+            String report = (smVisa() ? "Visa PIN data (08 || PIN block XOR UDK A || 80..), TDES ECB\n"
+                    : "Mastercard ISO format 2 PIN block, TDES ECB\n") + "Enciphered PIN: " + encrypted + '\n';
+            smShow(report);
+            // The PIN itself is never published.
+            smPublish("Secure Messaging PIN", report, java.util.List.of(
+                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
+                    com.cryptocarver.model.OperationDetail.publicDetail("Enciphered PIN", encrypted)));
+        } catch (Exception e) {
+            smShow(t("module.emv.sm.error", e.getMessage()));
+        }
+    }
+
+    public void handleSmGenerateMac() {
+        try {
+            String mac = EmvSecureMessaging.commandMac(smText(smSkMacField), smText(smHeaderField), smText(smAtcField),
+                    smText(smAcField), smText(smDataField));
+            String command = smText(smHeaderField) + smText(smDataField) + mac.substring(0, 8);
+            String report = "MAC (ISO 9797-1 alg. 3): " + mac + '\n' + "Command with 4-byte MAC: " + command + '\n';
+            smShow(report);
+            smPublish("Secure Messaging MAC", report, java.util.List.of(
+                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
+                    com.cryptocarver.model.OperationDetail.publicDetail("MAC", mac)));
+        } catch (Exception e) {
+            smShow(t("module.emv.sm.error", e.getMessage()));
         }
     }
 

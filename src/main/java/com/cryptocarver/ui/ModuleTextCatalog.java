@@ -1083,6 +1083,39 @@ public final class ModuleTextCatalog {
 
     public static Map<String, String> emv() {
         Map<String, String> map = common();
+        map.put("🔐 Secure Messaging (Issuer Script)", "module.emv.sm.title");
+        map.put("Session keys, the enciphered PIN of a PIN change command and the command MAC, Mastercard or Visa. Each step fills the fields of the next; all of them stay editable.", "module.emv.sm.help");
+        map.put("Scheme:", "module.emv.sm.scheme");
+        map.put("Load Example", "module.emv.sm.loadExample");
+        map.put("1. Card and session keys", "module.emv.sm.step1");
+        map.put("MK-SMI (Mastercard):", "module.emv.sm.mkSmi");
+        map.put("MK-SMC (Mastercard):", "module.emv.sm.mkSmc");
+        map.put("PAN/SqNr (Mastercard):", "module.emv.sm.panSeq");
+        map.put("UDK MAC (SMI):", "module.emv.sm.udkSmi");
+        map.put("UDK ENC (SMC):", "module.emv.sm.udkSmc");
+        map.put("Command nr (Mastercard):", "module.emv.sm.commandNumber");
+        map.put("SK MAC:", "module.emv.sm.skMac");
+        map.put("SK ENC:", "module.emv.sm.skEnc");
+        map.put("Derive Session Keys", "module.emv.sm.deriveSessionKeys");
+        map.put("2. PIN change data", "module.emv.sm.step2");
+        map.put("New PIN:", "module.emv.sm.newPin");
+        map.put("UDK A (Visa):", "module.emv.sm.udkA");
+        map.put("Encipher PIN", "module.emv.sm.encipherPin");
+        map.put("3. Command MAC", "module.emv.sm.step3");
+        map.put("CLA INS P1 P2 Lc:", "module.emv.sm.header");
+        map.put("Command data:", "module.emv.sm.data");
+        map.put("Generate MAC", "module.emv.sm.generateMac");
+        map.put("Issuer MAC master key, 16 bytes", "module.emv.sm.prompt.mkSmi");
+        map.put("Issuer encryption master key, 16 bytes", "module.emv.sm.prompt.mkSmc");
+        map.put("16 digits of PAN and sequence number", "module.emv.sm.prompt.panSeq");
+        map.put("Card MAC key, 16 bytes", "module.emv.sm.prompt.udkSmi");
+        map.put("Card encryption key, 16 bytes", "module.emv.sm.prompt.udkSmc");
+        map.put("Application cryptogram, 8 bytes", "module.emv.sm.prompt.ac");
+        map.put("Filled by Derive Session Keys", "module.emv.sm.prompt.sessionKey");
+        map.put("4 to 12 digits", "module.emv.sm.prompt.pin");
+        map.put("Card key the Visa PIN block is bound to, 16 bytes", "module.emv.sm.prompt.udkA");
+        map.put("5 bytes, e.g. 8424000210", "module.emv.sm.prompt.header");
+        map.put("Filled by Encipher PIN", "module.emv.sm.prompt.data");
         map.put("🧾 Offline Data Authentication (SDA/DDA/CDA)",
                 "module.emv.oda.title");
         map.put("Each key is recovered from the certificate above it: the CA key opens tag 90, the issuer key it yields opens tag 9F46, and the ICC key that yields checks the dynamic signature. The static data is part of the ICC certificate's own hash, so an AFL assembled wrongly fails while recovering the key, not where anyone looks for it. SDA proves an issuer signed this data once and nothing about the card in front of you.",
