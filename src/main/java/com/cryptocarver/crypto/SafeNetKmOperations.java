@@ -73,6 +73,11 @@ public final class SafeNetKmOperations {
 
     /** How a key is enciphered under the KM. */
     public enum KeyFormat {
+        /**
+         * {@code 10} — single-length DES, ECB, under the first 8 bytes of the KM
+         * (variant applied). Host prefix {@code 09}. Captured 2026-09-25.
+         */
+        SINGLE_ECB("10", "Single-length DES (ECB Encrypted)", false, "09", 8),
         /** {@code 11} — double-length TDES, ECB. */
         DOUBLE_ECB("11", "Double-length DES3 (ECB Encrypted)", false, "11", 16),
         /** {@code 12} — triple-length TDES, ECB. */
@@ -125,9 +130,8 @@ public final class SafeNetKmOperations {
                 }
             }
             throw new IllegalArgumentException("Key format '" + code + "' has not been verified "
-                    + "against a vector. The ones that have are 11 and 13 (double-length, ECB "
-                    + "and CBC) and 12 and 14 (triple-length, ECB and CBC); the single-length "
-                    + "formats need a capture of their own");
+                    + "against a vector. The ones that have are 10 (single-length, ECB), 11 and "
+                    + "13 (double-length, ECB and CBC) and 12 and 14 (triple-length, ECB and CBC)");
         }
     }
 
@@ -170,7 +174,7 @@ public final class SafeNetKmOperations {
         Variant used = variant(variantCode);
         byte[] key = keyBytes(clearKey);
         requireKeyLength(format, key.length);
-        byte[] applied = bytes(applyVariant(km, variantCode));
+        byte[] applied = underKm(format, applyVariant(km, variantCode));
 
         byte[] wrapped = format.chained()
                 ? cipher(applied, new byte[8], key, true)
@@ -186,7 +190,7 @@ public final class SafeNetKmOperations {
         Variant used = variant(variantCode);
         byte[] wrapped = keyBytes(cryptogram);
         requireKeyLength(format, wrapped.length);
-        byte[] applied = bytes(applyVariant(km, variantCode));
+        byte[] applied = underKm(format, applyVariant(km, variantCode));
 
         String clear = hex(format.chained()
                 ? cipher(applied, new byte[8], wrapped, false)
@@ -244,6 +248,12 @@ public final class SafeNetKmOperations {
                     + "(16 or 24 bytes), not " + key.length);
         }
         return key;
+    }
+
+    /** A single-length key goes under single DES with the KM's first 8 bytes; the rest under the whole KM. */
+    private static byte[] underKm(KeyFormat format, String appliedKm) {
+        byte[] applied = bytes(appliedKm);
+        return format.keyBytes() == 8 ? java.util.Arrays.copyOf(applied, 8) : applied;
     }
 
     private static void requireKeyLength(KeyFormat format, int actual) {

@@ -17,14 +17,15 @@ import javax.crypto.spec.SecretKeySpec;
  * part</b> of the MFK.</p>
  *
  * <pre>
- *   modifier 0 -> 00          modifier 3 -> 18
- *   modifier 1 -> 08          modifier 4 -> 20
- *   modifier 2 -> 10
+ *   modifier 0 -> 00          modifier 4 -> 20
+ *   modifier 1 -> 08          modifier 5 -> 28
+ *   modifier 2 -> 10          modifier 6 -> 30
+ *   modifier 3 -> 18
  * </pre>
  *
  * <p>That is the modifier shifted left three bits, which is a pleasant thing to
  * discover and a dangerous thing to assume. It is verified for modifiers 0 to
- * 4 and no further, so {@link #encrypt} refuses a higher one by name rather
+ * 6 (5 and 6 captured 2026-09-25) and no further, so {@link #encrypt} refuses a higher one by name rather
  * than extrapolating; see the note on that method.</p>
  *
  * <h2>Where this came from</h2>
@@ -42,7 +43,7 @@ import javax.crypto.spec.SecretKeySpec;
 public final class FuturexMfkOperations {
 
     /** The highest modifier an actual vector exists for. */
-    public static final int VERIFIED_MODIFIERS = 4;
+    public static final int VERIFIED_MODIFIERS = 6;
 
     private FuturexMfkOperations() {
     }

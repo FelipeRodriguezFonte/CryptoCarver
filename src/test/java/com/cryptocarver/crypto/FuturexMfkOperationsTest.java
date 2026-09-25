@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Source: an external tool, Futurex Keys
  * Encryption/Decoding, captured 2026-09-19 — the same key under the same MFK,
- * once for each of the modifiers 0 to 4.</p>
+ * once for each of the modifiers 0 to 4; modifiers 5 and 6 on 2026-09-25.</p>
  */
 class FuturexMfkOperationsTest {
 
@@ -25,6 +25,9 @@ class FuturexMfkOperationsTest {
         "2CDF6713C9F803984F4BEA1D4D722BEC",
         "B0F6A8F20743633D46F0961A03878480",
         "C6CA6CCD5C517A0F0511740BB7ED1860",
+        // Modifiers 5 and 6, captured 2026-09-25.
+        "00B3F28359E799BED5B17C73A31CD80B",
+        "41B6B78C97C28807A8BF0C56BC437807",
     };
 
     @Test
@@ -75,14 +78,14 @@ class FuturexMfkOperationsTest {
     }
 
     /**
-     * The rule would extrapolate to modifier 5 without complaint. It is
+     * The rule would extrapolate to modifier 7 without complaint. It is
      * refused, because a guess about key separation is the one guess this
      * bench has already paid for twice.
      */
     @Test
     void anUnverifiedModifierIsRefusedByNumber() {
         IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
-                () -> FuturexMfkOperations.encrypt(KEY, MFK, 5));
+                () -> FuturexMfkOperations.encrypt(KEY, MFK, 7));
 
         assertTrue(thrown.getMessage().contains("verified against a vector"), thrown.getMessage());
     }

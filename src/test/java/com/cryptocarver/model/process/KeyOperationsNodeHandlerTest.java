@@ -271,7 +271,7 @@ class KeyOperationsNodeHandlerTest {
         ProcessDefinition.Node enc = node("FUTUREX_MFK_ENCRYPT");
         enc.configuration.put("mfk", "D2DE5CD9110F4CAB11111111111111110123456789ABCDEF");
         enc.configuration.put("key", "0123456789ABCDEFFEDCBA9876543210");
-        enc.configuration.put("modifier", "5");
+        enc.configuration.put("modifier", "7");
         assertThrows(IllegalArgumentException.class, () -> HANDLER.validateConfiguration(enc));
 
         enc.configuration.put("modifier", "-1");

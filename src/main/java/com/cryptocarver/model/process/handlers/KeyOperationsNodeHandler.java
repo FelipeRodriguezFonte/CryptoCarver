@@ -603,7 +603,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
     }
 
     /** What SafeNetKmOperations has a captured vector for; the node offers exactly that. */
-    private static final List<String> SAFENET_FORMATS = List.of("11", "12", "13", "14");
+    private static final List<String> SAFENET_FORMATS = List.of("10", "11", "12", "13", "14");
     private static final List<String> SAFENET_VARIANTS = List.copyOf(
             new java.util.TreeSet<>(SafeNetKmOperations.variants().keySet()));
 
@@ -624,10 +624,10 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
         List<NodeDescriptor> list = new ArrayList<>();
         list.add(new NodeDescriptor("FUTUREX_MFK_ENCRYPT", "Key Material", "module.process.type.key.futurexMfkEncrypt", "module.process.desc.key.futurexMfkEncrypt", "📦",
                 List.of(secret("mfk", "module.process.param.futurexMfk"), secret("key", "module.process.param.keyMaterial"),
-                        combo("modifier", "module.process.param.futurexModifier", List.of("0", "1", "2", "3", "4"), "0"))));
+                        combo("modifier", "module.process.param.futurexModifier", List.of("0", "1", "2", "3", "4", "5", "6"), "0"))));
         list.add(new NodeDescriptor("FUTUREX_MFK_DECRYPT", "Key Material", "module.process.type.key.futurexMfkDecrypt", "module.process.desc.key.futurexMfkDecrypt", "📦",
                 List.of(secret("mfk", "module.process.param.futurexMfk"), secret("cryptogram", "module.process.param.wrappedMaterial"),
-                        combo("modifier", "module.process.param.futurexModifier", List.of("0", "1", "2", "3", "4"), "0"))));
+                        combo("modifier", "module.process.param.futurexModifier", List.of("0", "1", "2", "3", "4", "5", "6"), "0"))));
         return list;
     }
 }

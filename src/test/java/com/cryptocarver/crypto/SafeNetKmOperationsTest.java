@@ -195,10 +195,26 @@ class SafeNetKmOperationsTest {
                 SafeNetKmOperations.applyVariant(KM, "01"));
     }
 
+    /**
+     * Format 10, single-length DES, captured 2026-09-25: single DES under the first 8 bytes
+     * of the KM with the variant applied (KM1 XOR 28 for variant 01), host prefix 09.
+     */
+    @Test
+    void singleLengthFormat10MatchesTheCaptures() {
+        SafeNetKmOperations.WrappedKey dpk = SafeNetKmOperations.encrypt("0123456789ABCDEF", KM, "10", "00");
+        assertEquals("56CC09E7CFDC4CEF", dpk.cryptogram());
+        assertEquals("091056CC09E7CFDC4CEF", dpk.hostStoredKey());
+        SafeNetKmOperations.WrappedKey ppk = SafeNetKmOperations.encrypt("0123456789ABCDEF", KM, "10", "01");
+        assertEquals("AF2F54601B23FE9D", ppk.cryptogram());
+        assertEquals("0910AF2F54601B23FE9D", ppk.hostStoredKey());
+        assertEquals("0123456789ABCDEF",
+                SafeNetKmOperations.decrypt("AF2F54601B23FE9D", KM, "10", "01").cryptogram());
+    }
+
     @Test
     void anUnverifiedKeyFormatIsRefused() {
         IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
-                () -> SafeNetKmOperations.encrypt(KEY, KM, "10", "00"));
+                () -> SafeNetKmOperations.encrypt(KEY, KM, "15", "00"));
 
         assertTrue(thrown.getMessage().contains("has not been verified"), thrown.getMessage());
     }
