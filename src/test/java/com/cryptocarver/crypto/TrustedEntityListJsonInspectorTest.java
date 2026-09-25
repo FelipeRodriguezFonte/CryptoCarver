@@ -78,15 +78,28 @@ class TrustedEntityListJsonInspectorTest {
         assertFalse(throughCa.contains("signature: invalid"), throughCa);
     }
     @Test void keepsListAndSignatureWhenProfileAssessmentThrows() {
+        String report = TrustedEntityListJsonInspector.describe(
+                profileJson("EUPubEAAProvidersList").getBytes(StandardCharsets.UTF_8),
+                Locale.ENGLISH, null, null, (payload, compact, signed, locale) -> {
+                    throw new IllegalStateException("profile evaluator failed");
+                });
+        assertTrue(report.contains("Example provider / Wallet service"), report);
+        assertTrue(report.contains("profile: not evaluated (profile evaluator failed)"), report);
+        assertTrue(report.contains("signature: no signature present"), report);
+    }
+    @Test void describeRejectsMalformedStatusStartingTimeBySchema() {
         JsonObject root = JsonParser.parseString(profileJson("EUPubEAAProvidersList")).getAsJsonObject();
         root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0).getAsJsonObject()
                 .getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
                 .getAsJsonObject("ServiceInformation")
                 .addProperty("StatusStartingTime", "not-a-date");
-        String report = TrustedEntityListJsonInspector.describe(root.toString().getBytes(StandardCharsets.UTF_8), Locale.ENGLISH);
-        assertTrue(report.contains("Example provider / Wallet service"), report);
-        assertTrue(report.contains("profile: not evaluated ("), report);
-        assertTrue(report.contains("signature: no signature present"), report);
+        byte[] malformed = root.toString().getBytes(StandardCharsets.UTF_8);
+        IllegalArgumentException fromParse = assertThrows(IllegalArgumentException.class,
+                () -> TrustedEntityListJsonInspector.parse(malformed));
+        IllegalArgumentException fromDescribe = assertThrows(IllegalArgumentException.class,
+                () -> TrustedEntityListJsonInspector.describe(malformed, Locale.ENGLISH));
+        assertEquals(fromParse.getMessage(), fromDescribe.getMessage());
+        assertTrue(fromDescribe.getMessage().contains("StatusStartingTime"), fromDescribe.getMessage());
     }
     @Test void acceptsGeneralJsonSerializationWhenOneSignerMatchesAnchor() throws Exception {
         Signer trusted = signer("Trusted");
