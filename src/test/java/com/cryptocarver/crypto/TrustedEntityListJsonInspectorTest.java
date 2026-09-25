@@ -19,6 +19,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Locale;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -63,6 +65,28 @@ class TrustedEntityListJsonInspectorTest {
                 .contains("signature: invalid"));
         assertTrue(TrustedEntityListJsonInspector.describe(compact.getBytes(StandardCharsets.UTF_8), Locale.ENGLISH)
                 .contains("signature: not verified (no trust anchor provided)"));
+    }
+    @Test void distinguishesIndeterminateCaValidationFromInvalidSignature() throws Exception {
+        Signer ca = caSigner("Test CA");
+        Signer issued = issuedSigner("Issued signer", ca);
+        byte[] signed = signed(validJson(), issued).getBytes(StandardCharsets.UTF_8);
+        String direct = TrustedEntityListJsonInspector.describe(signed, Locale.ENGLISH, issued.certificate());
+        String throughCa = TrustedEntityListJsonInspector.describe(signed, Locale.ENGLISH, ca.certificate());
+        assertTrue(direct.contains("signature: valid (signer:"), direct);
+        assertTrue(throughCa.contains("signature: indeterminate (CERTIFICATE_CHAIN_GENERAL_FAILURE;"), throughCa);
+        assertTrue(throughCa.contains("cryptographic integrity is not the problem"), throughCa);
+        assertFalse(throughCa.contains("signature: invalid"), throughCa);
+    }
+    @Test void keepsListAndSignatureWhenProfileAssessmentThrows() {
+        JsonObject root = JsonParser.parseString(profileJson("EUPubEAAProvidersList")).getAsJsonObject();
+        root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0).getAsJsonObject()
+                .getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
+                .getAsJsonObject("ServiceInformation")
+                .addProperty("StatusStartingTime", "not-a-date");
+        String report = TrustedEntityListJsonInspector.describe(root.toString().getBytes(StandardCharsets.UTF_8), Locale.ENGLISH);
+        assertTrue(report.contains("Example provider / Wallet service"), report);
+        assertTrue(report.contains("profile: not evaluated ("), report);
+        assertTrue(report.contains("signature: no signature present"), report);
     }
     @Test void acceptsGeneralJsonSerializationWhenOneSignerMatchesAnchor() throws Exception {
         Signer trusted = signer("Trusted");
@@ -258,6 +282,35 @@ class TrustedEntityListJsonInspectorTest {
                 new JcaX509v3CertificateBuilder(subject, BigInteger.valueOf(Math.abs(System.nanoTime())),
                         Date.from(now.minus(1, ChronoUnit.DAYS)), Date.from(now.plus(1, ChronoUnit.DAYS)),
                         subject, keys.getPublic()).build(new JcaContentSignerBuilder("SHA256withRSA").build(keys.getPrivate())));
+        return new Signer(keys, certificate);
+    }
+    private static Signer issuedSigner(String name, Signer ca) throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        KeyPair keys = generator.generateKeyPair();
+        Instant now = Instant.now();
+        X500Name issuer = X500Name.getInstance(ca.certificate().getSubjectX500Principal().getEncoded());
+        X500Name subject = new X500Name("CN=" + name + ",C=ES");
+        var builder = new JcaX509v3CertificateBuilder(issuer, BigInteger.valueOf(Math.abs(System.nanoTime())),
+                Date.from(now.minus(1, ChronoUnit.DAYS)), Date.from(now.plus(1, ChronoUnit.DAYS)),
+                subject, keys.getPublic());
+        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
+        X509Certificate certificate = new JcaX509CertificateConverter().getCertificate(
+                builder.build(new JcaContentSignerBuilder("SHA256withRSA").build(ca.keys().getPrivate())));
+        return new Signer(keys, certificate);
+    }
+    private static Signer caSigner(String name) throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        KeyPair keys = generator.generateKeyPair();
+        X500Name subject = new X500Name("CN=" + name + ",C=ES");
+        Instant now = Instant.now();
+        var builder = new JcaX509v3CertificateBuilder(subject, BigInteger.valueOf(Math.abs(System.nanoTime())),
+                Date.from(now.minus(1, ChronoUnit.DAYS)), Date.from(now.plus(1, ChronoUnit.DAYS)),
+                subject, keys.getPublic());
+        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
+        X509Certificate certificate = new JcaX509CertificateConverter().getCertificate(
+                builder.build(new JcaContentSignerBuilder("SHA256withRSA").build(keys.getPrivate())));
         return new Signer(keys, certificate);
     }
     private static String signed(String payload, Signer signer) throws Exception {

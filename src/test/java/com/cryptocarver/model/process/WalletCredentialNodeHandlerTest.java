@@ -4,6 +4,9 @@ import com.cryptocarver.crypto.CborInspector;
 import com.cryptocarver.crypto.SdJwtOperations;
 import com.cryptocarver.crypto.StatusListOperations;
 import com.cryptocarver.model.process.handlers.WalletCredentialNodeHandler;
+import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.service.I18nService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import org.junit.jupiter.api.Test;
@@ -17,6 +20,7 @@ import java.security.spec.ECGenParameterSpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -48,6 +52,26 @@ class WalletCredentialNodeHandlerTest {
         assertThrows(IllegalArgumentException.class, () -> handler.execute(inspect,
                 Map.of("trustedEntityListJson", source,
                         "certificateToFind", FlowValue.binary(new byte[]{1, 2, 3})), null));
+    }
+
+    @Test
+    void trustedEntityListReportUsesAppLanguageRatherThanJvmDefault() throws Exception {
+        Locale previousDefault = Locale.getDefault();
+        LanguagePreference previousPreference = AppSettings.getInstance().getLanguagePreference();
+        try {
+            Locale.setDefault(Locale.ENGLISH);
+            I18nService.getInstance().setPreference(LanguagePreference.ES);
+            String list = "{\"LoTE\":{\"ListAndSchemeInformation\":{\"LoTEVersionIdentifier\":1,"
+                    + "\"LoTESequenceNumber\":1,\"SchemeOperatorName\":[{\"lang\":\"en\",\"value\":\"Lab\"}],"
+                    + "\"ListIssueDateTime\":\"2025-11-01T00:00:00Z\",\"NextUpdate\":\"2025-12-01T00:00:00Z\"}}}";
+            String report = handler.execute(node("TRUSTED_ENTITY_LIST_JSON_INSPECT"),
+                    Map.of("trustedEntityListJson", FlowValue.text(list, StandardCharsets.UTF_8)), null).render();
+            assertTrue(report.contains("firma: no hay firma"), report);
+            assertTrue(report.contains("perfil:"), report);
+        } finally {
+            I18nService.getInstance().setPreference(previousPreference);
+            Locale.setDefault(previousDefault);
+        }
     }
 
     private static final String CLAIMS = """
