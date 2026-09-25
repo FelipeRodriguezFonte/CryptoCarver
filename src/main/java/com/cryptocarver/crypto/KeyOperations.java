@@ -169,18 +169,12 @@ public class KeyOperations {
     }
 
     /**
-     * Calculate KCV - IBM method
+     * Calculate KCV - IBM method. <b>Unverified.</b>
      *
-     * NOTE: IBM KCV algorithm varies by implementation and HSM vendor.
-     * This implementation uses standard 3DES-EDE encryption of zero block
-     * and returns the first 2 bytes, which matches some IBM implementations
-     * but may differ from external tools that use a proprietary CKCV method.
-     *
-     * For 8-byte keys: Single DES encryption
-     * For 16/24-byte keys: 3DES-EDE encryption
-     * Returns: First 2 bytes (16 bits) of encrypted result
-     *
-     * Reference: IBM CCA (Controlled Cryptographic Access) documentation
+     * <p>First 2 bytes of E_K(0) (DES for 8-byte keys, TDES otherwise). This is a guess:
+     * six captures from an external tool (KcvCaptureTest) do not match it, nor any other
+     * deterministic construction tried. IBM CCA's Key_Test derives its verification
+     * pattern from a random number, which may be why.</p>
      */
     public static byte[] calculateKCV_IBM(byte[] key) throws Exception {
         byte[] zeroBlock = new byte[8];
@@ -245,9 +239,11 @@ public class KeyOperations {
     }
 
     /**
-     * Calculate KCV - ATALLA R method
-     * Uses first 8 bytes of key only, then takes bytes 0 and 5 of encrypted block
-     * For AES keys, not applicable
+     * Calculate KCV - ATALLA R method. <b>Unverified.</b>
+     *
+     * <p>Bytes 0 and 5 of DES(K1, 0), a guess from a single early sample. Six captures
+     * from an external tool (KcvCaptureTest) do not match it, nor any other construction
+     * tried.</p>
      */
     public static byte[] calculateKCV_ATALLA_R(byte[] key) throws Exception {
         // ATALLA R method only makes sense for DES/3DES keys
