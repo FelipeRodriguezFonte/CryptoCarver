@@ -28,7 +28,7 @@ class PaymentOperationsNodeHandlerTest {
 
     @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
-        assertEquals(36, PaymentOperationsNodeHandler.TYPES.size());
+        assertEquals(40, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {
             assertNotNull(HANDLER.descriptors().stream().filter(d -> d.type().equals(type)).findFirst().orElse(null), type);
         }
@@ -106,6 +106,39 @@ class PaymentOperationsNodeHandlerTest {
         assertEquals(track2, HANDLER.execute(node("TRACK2_ENCODE"), Map.of("pan", text(PAN), "expiry", text("2512"),
                 "serviceCode", text("101"), "discretionary", text("1234")), null).render());
         assertEquals(PaymentOperations.parseTrack2(track2), HANDLER.execute(node("TRACK2_PARSE"), Map.of("track2", text(track2)), null).render());
+    }
+
+    /** The nodes chain the external tool's secure messaging examples end to end (see EmvSecureMessagingTest). */
+    @Test
+    void secureMessagingNodesReproduceBothSchemes() throws Exception {
+        ProcessDefinition.Node card = node("EMV_SM_CARD_KEY");
+        String udkSmi = HANDLER.execute(card, Map.of("smMk", hex("862F13DF807A13B9D9AEAEC885FE7CA4"), "smPanSeq", text("7430100000157500")), null).render();
+        assertEquals("AEB0F198A498E067C4E63D94A770A80E", udkSmi);
+
+        ProcessDefinition.Node mcSession = node("EMV_SM_SESSION_KEY");
+        mcSession.configuration.put("smScheme", "MASTERCARD");
+        mcSession.configuration.put("smCommandNumber", "1");
+        String skSmi = HANDLER.execute(mcSession, Map.of("smUdk", hex(udkSmi), "smAc", hex("51DB71A5DCC47F8A")), null).render();
+        assertEquals("E46C87DD5AC1177FCCE8F7A1C56A40C6", skSmi);
+
+        ProcessDefinition.Node mcPin = node("EMV_SM_PIN");
+        mcPin.configuration.put("smScheme", "MASTERCARD");
+        assertEquals("2EC06BD5D6AEEBBC", HANDLER.execute(mcPin,
+                Map.of("sk", hex("EA4F899B89521FC70B9A6E6DC44AD2A8"), "pin", text("4222")), null).render());
+
+        assertEquals("AC4E7EB35196E310", HANDLER.execute(node("EMV_SM_MAC"), Map.of("sk", hex(skSmi),
+                "smHeader", hex("8424000210"), "atc", hex("0010"), "smAc", hex("51DB71A5DCC47F8A"),
+                "smData", hex("2EC06BD5D6AEEBBC")), null).render());
+
+        ProcessDefinition.Node visaSession = node("EMV_SM_SESSION_KEY");
+        visaSession.configuration.put("smScheme", "VISA");
+        String visaSk = HANDLER.execute(visaSession, Map.of("smUdk", hex("94E3194C02105E3B153438D562D5A49D"), "atc", hex("0003")), null).render();
+        assertEquals("94E3194C02105E38153438D562D55B61", visaSk);
+
+        ProcessDefinition.Node visaPin = node("EMV_SM_PIN");
+        visaPin.configuration.put("smScheme", "VISA");
+        assertEquals("B3511E3333BF9DC56E1EDF6458BB52B6", HANDLER.execute(visaPin, Map.of("sk", hex(visaSk), "pin", text("4222"),
+                "smUdkEnc", hex("64C8621A76A2EA9EF23D5749FE1A64F1")), null).render());
     }
 
     @Test

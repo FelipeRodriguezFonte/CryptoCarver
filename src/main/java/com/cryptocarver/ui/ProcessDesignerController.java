@@ -1844,6 +1844,7 @@ public class ProcessDesignerController {
                 || "IBM3624_OFFSET".equals(type) || "DUKPT_TDES_DERIVE".equals(type) || "DUKPT_AES_DERIVE".equals(type)
                 || "DUKPT_PIN_CRYPT".equals(type) || "EMV_ICC_MASTER_KEY".equals(type) || "EMV_SESSION_KEY".equals(type)
                 || "EMV_ARQC_GENERATE".equals(type) || "EMV_ARPC".equals(type) || "EMV_TLV_PARSE".equals(type)
+                || "EMV_SM_CARD_KEY".equals(type) || "EMV_SM_SESSION_KEY".equals(type)
                 || "TRACK2_ENCODE".equals(type) || "TRACK2_PARSE".equals(type);
     }
 

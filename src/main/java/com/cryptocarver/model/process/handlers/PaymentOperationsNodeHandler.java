@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.AesDukpt;
 import com.cryptocarver.crypto.CheckDigitCalculator;
 import com.cryptocarver.crypto.DukptKsn;
 import com.cryptocarver.crypto.EMVOperations;
+import com.cryptocarver.crypto.EmvSecureMessaging;
 import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.PaymentOperations;
@@ -36,6 +37,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "PVV_GENERATE", "PVV_VERIFY", "IBM3624_OFFSET",
             "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
             "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARQC_VERIFY", "EMV_ARPC",
+            "EMV_SM_CARD_KEY", "EMV_SM_SESSION_KEY", "EMV_SM_PIN", "EMV_SM_MAC",
             "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
             "EMV_ODA_STATIC_DATA", "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY",
             "EMV_ODA_VERIFY_SDA", "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
@@ -44,6 +46,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "THALES_LMK_LOOKUP", "THALES_KCV",
             "THALES_KEY_BLOCK_PARSE", "THALES_KEY_BLOCK_HEADER");
 
+    private static final List<String> SM_SCHEMES = List.of("MASTERCARD", "VISA");
     private static final Set<Representation> TEXT = Set.of(Representation.TEXT_UTF8);
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
     private static final List<String> PIN_FORMATS = List.of(
@@ -84,6 +87,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_ARQC_GENERATE" -> List.of(hexPort("sk"), hexPort("transactionData"));
             case "EMV_ARQC_VERIFY" -> List.of(hexPort("sk"), hexPort("arqc"), hexPort("transactionData"));
             case "EMV_ARPC" -> List.of(hexPort("sk"), hexPort("arqc"), textPort("arc"), hexPort("csu"));
+            case "EMV_SM_CARD_KEY" -> List.of(hexPort("smMk"), textPort("smPanSeq"));
+            case "EMV_SM_SESSION_KEY" -> List.of(hexPort("smUdk"), hexPort("smAc"), hexPort("atc"));
+            case "EMV_SM_PIN" -> List.of(hexPort("sk"), textPort("pin"), hexPort("smUdkEnc"));
+            case "EMV_SM_MAC" -> List.of(hexPort("sk"), hexPort("smHeader"), hexPort("atc"), hexPort("smAc"), hexPort("smData"));
             case "EMV_TLV_PARSE" -> List.of(hexPort("input"));
             case "TRACK2_ENCODE" -> List.of(textPort("pan"), textPort("expiry"), textPort("serviceCode"), textPort("discretionary"));
             case "TRACK2_PARSE" -> List.of(textPort("track2"));
@@ -122,6 +129,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         return switch (node.type.toUpperCase(Locale.ROOT)) {
             case "PIN_BLOCK_ENCODE", "PIN_BLOCK_TRANSLATE", "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
                     "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARPC",
+                    "EMV_SM_CARD_KEY", "EMV_SM_SESSION_KEY", "EMV_SM_PIN", "EMV_SM_MAC",
                     "EMV_ODA_STATIC_DATA", "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD",
                     "THALES_LMK_ENCRYPT", "THALES_LMK_DECRYPT", "THALES_KCV" -> Representation.HEX;
             case "PIN_BLOCK_DECODE", "CVV_GENERATE", "CVV_VERIFY", "DCVV_GENERATE", "DCVV_VERIFY", "PVV_GENERATE", "PVV_VERIFY",
@@ -138,6 +146,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     public void validateConfiguration(ProcessDefinition.Node node) {
         String type = node.type.toUpperCase(Locale.ROOT);
         for (String key : List.of("cvkA", "cvkB", "pvk", "decTable", "ipek", "bdk", "ksn", "pinBlock", "imk", "mkac", "atc", "un", "sk", "arqc", "csu", "transactionData",
+                "smMk", "smUdk", "smUdkEnc", "smAc", "smHeader", "smData",
                 "certificate", "remainder", "keyExponent", "caModulus", "caExponent", "issuerModulus", "issuerExponent",
                 "iccModulus", "iccExponent", "issuerPrivateExponent", "iccPrivateExponent", "staticData", "aip",
                 "sdaTagList", "ssad", "sdad", "terminalData", "unpredictableNumber", "cid", "dataAuthenticationCode",
@@ -174,6 +183,17 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_SESSION_KEY" -> { require(node, "mkac"); require(node, "atc"); require(node, "un"); hexLength(node, "atc", 2); hexLength(node, "un", 4); }
             case "EMV_ARQC_GENERATE" -> { require(node, "sk"); require(node, "transactionData"); positive(node, "paddingMethod", 1, 2); }
             case "EMV_ARQC_VERIFY" -> { require(node, "sk"); require(node, "arqc"); require(node, "transactionData"); hexLength(node, "arqc", 8); positive(node, "paddingMethod", 1, 2); }
+            case "EMV_SM_CARD_KEY" -> { require(node, "smMk"); require(node, "smPanSeq"); decimal(node, "smPanSeq", 16, 16); }
+            case "EMV_SM_SESSION_KEY" -> {
+                require(node, "smUdk"); oneOf(node, "smScheme", SM_SCHEMES);
+                if ("VISA".equalsIgnoreCase(setting(node, "smScheme", "MASTERCARD"))) { require(node, "atc"); hexLength(node, "atc", 2); }
+                else { require(node, "smAc"); hexLength(node, "smAc", 8); positive(node, "smCommandNumber", 0, 255); }
+            }
+            case "EMV_SM_PIN" -> {
+                require(node, "sk"); require(node, "pin"); decimal(node, "pin", 4, 12); oneOf(node, "smScheme", SM_SCHEMES);
+                if ("VISA".equalsIgnoreCase(setting(node, "smScheme", "MASTERCARD"))) require(node, "smUdkEnc");
+            }
+            case "EMV_SM_MAC" -> { require(node, "sk"); require(node, "smHeader"); require(node, "atc"); require(node, "smAc"); hexLength(node, "smHeader", 5); hexLength(node, "atc", 2); hexLength(node, "smAc", 8); }
             case "EMV_ARPC" -> { require(node, "sk"); require(node, "arqc"); oneOf(node, "method", List.of("1", "2")); if ("1".equals(setting(node, "method", "1"))) require(node, "arc"); }
             case "EMV_TLV_PARSE" -> require(node, "input");
             case "TRACK2_ENCODE" -> { require(node, "pan"); require(node, "expiry"); require(node, "serviceCode"); pan(node, "pan"); decimal(node, "expiry", 4, 4); decimal(node, "serviceCode", 3, 3); }
@@ -236,6 +256,16 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 case "EMV_ARPC" -> hex("1".equals(setting(node, "method", "1"))
                         ? EMVOperations.generateARPC_Method1(hexText(node, inputs, "sk"), hexText(node, inputs, "arqc"), text(node, inputs, "arc"))
                         : EMVOperations.generateARPC_Method2(hexText(node, inputs, "sk"), hexText(node, inputs, "arqc"), csuOrDefault(hexTextOptional(node, inputs, "csu"))));
+                case "EMV_SM_CARD_KEY" -> hex(EmvSecureMessaging.mastercardUdk(hexText(node, inputs, "smMk"), text(node, inputs, "smPanSeq")));
+                case "EMV_SM_SESSION_KEY" -> hex("VISA".equalsIgnoreCase(setting(node, "smScheme", "MASTERCARD"))
+                        ? EmvSecureMessaging.visaSessionKey(hexText(node, inputs, "smUdk"), hexText(node, inputs, "atc"))
+                        : EmvSecureMessaging.mastercardSessionKey(hexText(node, inputs, "smUdk"), hexText(node, inputs, "smAc"),
+                                integer(node, "smCommandNumber", 0, 0, 255)));
+                case "EMV_SM_PIN" -> hex("VISA".equalsIgnoreCase(setting(node, "smScheme", "MASTERCARD"))
+                        ? EmvSecureMessaging.visaEncryptedPin(hexText(node, inputs, "sk"), hexText(node, inputs, "smUdkEnc"), text(node, inputs, "pin"))
+                        : EmvSecureMessaging.mastercardEncryptedPin(hexText(node, inputs, "sk"), text(node, inputs, "pin")));
+                case "EMV_SM_MAC" -> hex(EmvSecureMessaging.commandMac(hexText(node, inputs, "sk"), hexText(node, inputs, "smHeader"),
+                        hexText(node, inputs, "atc"), hexText(node, inputs, "smAc"), hexTextOptional(node, inputs, "smData")));
                 case "EMV_TLV_PARSE" -> text(EmvTlv.transactionSummary(EmvTlv.analyze(hexText(node, inputs, "input"))));
                 case "TRACK2_ENCODE" -> text(PaymentOperations.encodeTrack2(text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), textOptional(node, inputs, "discretionary")));
                 case "TRACK2_PARSE" -> text(PaymentOperations.parseTrack2(text(node, inputs, "track2")));
@@ -468,6 +498,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         result.add(descriptor("EMV_SESSION_KEY", "emvSessionKey", "emvSessionKey", params(secret("mkac", "module.process.param.payment.mkac"), secret("atc", "module.process.param.payment.atc"), secret("un", "module.process.param.payment.un"))));
         result.add(descriptor("EMV_ARQC_GENERATE", "emvArqcGenerate", "emvArqcGenerate", params(secret("sk", "module.process.param.payment.sk"), secret("transactionData", "module.process.param.payment.transactionData"), combo("paddingMethod", "module.process.param.payment.paddingMethod", List.of("1", "2"), "2"))));
         result.add(descriptor("EMV_ARQC_VERIFY", "emvArqcVerify", "emvArqcVerify", params(secret("sk", "module.process.param.payment.sk"), secret("arqc", "module.process.param.payment.arqc"), secret("transactionData", "module.process.param.payment.transactionData"), combo("paddingMethod", "module.process.param.payment.paddingMethod", List.of("1", "2"), "2"))));
+        result.add(descriptor("EMV_SM_CARD_KEY", "emvSmCardKey", "emvSmCardKey", params(secret("smMk", "module.process.param.payment.smMk"), textParam("smPanSeq", "module.process.param.payment.smPanSeq", ""))));
+        result.add(descriptor("EMV_SM_SESSION_KEY", "emvSmSessionKey", "emvSmSessionKey", params(combo("smScheme", "module.process.param.payment.smScheme", SM_SCHEMES, "MASTERCARD"), secret("smUdk", "module.process.param.payment.smUdk"), secret("smAc", "module.process.param.payment.smAc"), number("smCommandNumber", "module.process.param.payment.smCommandNumber", "0"), secret("atc", "module.process.param.payment.atc"))));
+        result.add(descriptor("EMV_SM_PIN", "emvSmPin", "emvSmPin", params(combo("smScheme", "module.process.param.payment.smScheme", SM_SCHEMES, "MASTERCARD"), secret("sk", "module.process.param.payment.sk"), secret("pin", "module.process.param.payment.pin"), secret("smUdkEnc", "module.process.param.payment.smUdkEnc"))));
+        result.add(descriptor("EMV_SM_MAC", "emvSmMac", "emvSmMac", params(secret("sk", "module.process.param.payment.sk"), textParam("smHeader", "module.process.param.payment.smHeader", ""), secret("atc", "module.process.param.payment.atc"), secret("smAc", "module.process.param.payment.smAc"), textParam("smData", "module.process.param.payment.smData", ""))));
         result.add(descriptor("EMV_ARPC", "emvArpc", "emvArpc", params(secret("sk", "module.process.param.payment.sk"), secret("arqc", "module.process.param.payment.arqc"), secret("arc", "module.process.param.payment.arc"), secret("csu", "module.process.param.payment.csu"), combo("method", "module.process.param.payment.method", List.of("1", "2"), "1"))));
         result.add(descriptor("EMV_TLV_PARSE", "emvTlvParse", "emvTlvParse", params(secret("input", "module.process.param.payment.emvData"))));
         result.add(descriptor("TRACK2_ENCODE", "track2Encode", "track2Encode", params(secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), secret("discretionary", "module.process.param.payment.discretionary"))));
