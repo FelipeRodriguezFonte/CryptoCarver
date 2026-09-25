@@ -68,7 +68,7 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
     private static final Set<Representation> HEX_OR_BINARY = Set.of(Representation.HEX, Representation.BINARY);
     private static final List<String> DIGESTS = List.of("SHA-1", "SHA-256", "SHA-512");
     private static final List<String> KCV_METHODS = List.of(
-            "VISA", "IBM", "ATALLA", "ATALLA_R", "FUTUREX", "CMAC", "AES", "SHA256", "FULL_ZERO_BLOCK");
+            "VISA", "IBM", "ATALLA", "ATALLA_R", "FUTUREX", "CMAC", "AES", "SHA256", "CKCV_TDEA", "CKCV_AES", "FULL_ZERO_BLOCK");
 
     @Override
     public Set<String> supportedTypes() { return TYPES; }
@@ -320,6 +320,8 @@ public final class KeyOperationsNodeHandler implements ProcessNodeHandler {
             case "CMAC" -> KeyOperations.calculateKCV_CMAC(key);
             case "AES" -> KeyOperations.calculateKCV_AES(key);
             case "SHA256" -> KeyOperations.calculateKCV_SHA256(key);
+            case "CKCV_TDEA" -> KeyOperations.calculateCKCV_TDEA(key);
+            case "CKCV_AES" -> KeyOperations.calculateCKCV_AES(key);
             case "FULL_ZERO_BLOCK" -> KeyOperations.calculateFullZeroBlockKCV(key, setting(node, "algorithm", "AES"));
             default -> throw new IllegalArgumentException("Unsupported KCV method");
         };

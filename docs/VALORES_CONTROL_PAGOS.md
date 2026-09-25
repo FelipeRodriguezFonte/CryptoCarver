@@ -121,24 +121,32 @@ AES-CMAC:
 `KeyOperations.calculateKCV_CMAC` hace el mismo truncado, así que el KCV CMAC
 de una clave AES-256 sale mal.
 
-## Cerrado con la captura de KCV del 25-09-2026
+## Cerrado con las capturas de KCV del 25-09-2026
 
-Una clave doble generada por la herramienta externa (`KcvCaptureTest`):
+Nueve claves generadas por la herramienta externa (`KcvCaptureTest`): cuatro
+dobles y cinco de 256 bits, con paridad ninguna, impar y par.
 
-- La herramienta muestra la clave con paridad impar ya forzada y calcula sobre
-  ella los KCV de la familia DES. Los KCV de AES, CMAC y SHA-256 los calcula
-  sobre la clave **antes** de ajustar la paridad; se recuperó probando las 2^16
-  variantes del bit de paridad, y esa clave reproduce los tres a la vez.
-- **KCV CMAC**: AES-CMAC sobre entrada vacía (`024C7C`), como hace el código.
-  Sobre un bloque cero daría `2D69B7`.
-- **CKCV (AES)**: AES-CMAC sobre 16 bytes cero, 5 bytes. **CKCV (TDEA)**:
-  TDES-CMAC sobre 8 bytes cero, 5 bytes. La app no los ofrece todavía.
-- **KCV FUTUREX**: TDES de la clave entera sobre `0123456789ABCDEF`, 2 bytes
-  (`AF7B`). El código tomaba los bytes 2 y 4 de DES(K1, 0), una suposición
-  sacada de una sola muestra; corregido.
-- **KCV IBM** (`677A`) y **ATALLA R** (`6523`): ninguna construcción probada los
-  reproduce (E(0), E(0123456789ABCDEF), mitades y variantes de clave,
-  MDC-2/MDC-4, hashes). Siguen sin verificar; hacen falta más capturas.
+- **Familia DES** (VISA/ATALLA, FUTUREX, CKCV TDEA): se calcula sobre la clave
+  que muestra la herramienta. Las cuatro dobles coinciden.
+- **Familia AES** (AES, SHA-256, CMAC, CKCV AES): la herramienta la calcula
+  sobre otra clave, por dos motivos que son suyos y no de la norma:
+  - usa la clave **antes** de forzar la paridad (recuperada probando las
+    variantes del bit de paridad; una sola reproduce los cuatro valores);
+  - con claves de 256 bits usa solo los **primeros 24 bytes**, como AES-192.
+    Las generadas sin paridad lo confirman directamente.
+
+  Con esa clave, los ocho casos coinciden. CryptoCarver calcula sobre la clave
+  entera que recibe.
+- **KCV CMAC**: AES-CMAC sobre entrada vacía, como hace el código.
+- **CKCV (TDEA)** y **CKCV (AES)**: CMAC sobre un bloque de ceros, 5 bytes
+  (ANSI X9.24-1:2017). Añadidos a la app (validación de claves y nodo KCV).
+- **KCV FUTUREX**: TDES de la clave entera sobre `0123456789ABCDEF`, 2 bytes.
+  El código tomaba los bytes 2 y 4 de DES(K1, 0); corregido.
+- **KCV IBM** y **ATALLA R**: cuatro muestras (`677A`/`6523`, `FF6E`/`D6E3`,
+  `E0FE`/`7846`, `8FA8`/`1E7A`) y ninguna construcción probada las reproduce:
+  cifrado y descifrado de bloques fijos con la clave, sus mitades y variantes,
+  selección de bytes y de nibbles, MDC-2/MDC-4, CMAC y hashes. Siguen sin
+  verificar.
 
 ## Cruzado después
 
@@ -163,5 +171,5 @@ Con las constantes de arriba:
    session key `38F14068B3EA57C194F8E3A20D51E3E6`. Se espera `54DB2625`.
 2. **PIN Blocks → ISO 4**, con PAN de 13 y de 19 dígitos, y la clave AES128.
 3. **Visa dCVV** con PAN, caducidad 2512 y ATC `0001`.
-4. **KCV IBM y ATALLA R** de dos o tres claves más, a ser posible una simple
-   (8 bytes) y la doble `0123456789ABCDEFFEDCBA9876543210`.
+4. **KCV IBM y ATALLA R** de claves conocidas: una simple (8 bytes), la doble
+   `0123456789ABCDEFFEDCBA9876543210` y la doble `0101010101010101FEFEFEFEFEFEFEFE`.

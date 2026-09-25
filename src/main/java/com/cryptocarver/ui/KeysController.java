@@ -2314,6 +2314,21 @@ public class KeysController {
                 result.append("KCV (CMAC):     Error - ").append(e.getMessage()).append("\n");
             }
 
+            if (key.length == 16 || key.length == 24) {
+                try {
+                    result.append("CKCV (TDEA):    ").append(DataConverter.bytesToHex(KeyOperations.calculateCKCV_TDEA(key))).append("\n");
+                } catch (Exception e) {
+                    result.append("CKCV (TDEA):    Error - ").append(e.getMessage()).append("\n");
+                }
+            }
+            if (key.length == 16 || key.length == 24 || key.length == 32) {
+                try {
+                    result.append("CKCV (AES):     ").append(DataConverter.bytesToHex(KeyOperations.calculateCKCV_AES(key))).append("\n");
+                } catch (Exception e) {
+                    result.append("CKCV (AES):     Error - ").append(e.getMessage()).append("\n");
+                }
+            }
+
             // Only calculate AES KCV for AES keys
             if (key.length == 16 || key.length == 24 || key.length == 32) {
                 try {

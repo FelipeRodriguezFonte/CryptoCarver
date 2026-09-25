@@ -331,6 +331,37 @@ public class KeyOperations {
     }
 
     /**
+     * CMAC-based KCV for TDES keys (ANSI X9.24-1:2017): TDES-CMAC over one block
+     * of zeros, leftmost 5 bytes. Matches the external tool's "CKCV (TDEA)".
+     */
+    public static byte[] calculateCKCV_TDEA(byte[] key) {
+        if (key.length != 16 && key.length != 24) {
+            throw new IllegalArgumentException("CKCV (TDEA) requires a 16 or 24-byte TDES key");
+        }
+        return ckcv(new org.bouncycastle.crypto.engines.DESedeEngine(), key, 8);
+    }
+
+    /**
+     * CMAC-based KCV for AES keys (ANSI X9.24-1:2017): AES-CMAC over one block
+     * of zeros, leftmost 5 bytes. Matches the external tool's "CKCV (AES)".
+     */
+    public static byte[] calculateCKCV_AES(byte[] key) {
+        if (key.length != 16 && key.length != 24 && key.length != 32) {
+            throw new IllegalArgumentException("CKCV (AES) requires a 16, 24 or 32-byte AES key");
+        }
+        return ckcv(new org.bouncycastle.crypto.engines.AESEngine(), key, 16);
+    }
+
+    private static byte[] ckcv(org.bouncycastle.crypto.BlockCipher engine, byte[] key, int blockSize) {
+        org.bouncycastle.crypto.macs.CMac cmac = new org.bouncycastle.crypto.macs.CMac(engine);
+        cmac.init(new org.bouncycastle.crypto.params.KeyParameter(key));
+        cmac.update(new byte[blockSize], 0, blockSize);
+        byte[] out = new byte[cmac.getMacSize()];
+        cmac.doFinal(out, 0);
+        return java.util.Arrays.copyOf(out, 5);
+    }
+
+    /**
      * Calculate KCV - AES method
      * AES encryption of 16 zero bytes, first 3 bytes by default
      */
