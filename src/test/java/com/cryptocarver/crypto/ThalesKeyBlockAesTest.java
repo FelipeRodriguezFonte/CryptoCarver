@@ -164,15 +164,31 @@ class ThalesKeyBlockAesTest {
         assertTrue(unwrapped.authentic());
     }
 
+    /**
+     * A 128-bit KBPK, captured 2026-09-25: one CMAC block per derived key. The tool prints
+     * KBEK 6479FE6B7C473786456D2A92EA5BBA7E and KBAK 85FA1011B33779965E094EAEB8C49955.
+     */
+    @Test
+    void anAes128KbpkDerivesAndUnwrapsAsTheToolDoes() {
+        String kbpk = "000102030405060708090A0B0C0D0E0F";
+        assertEquals("6479FE6B7C473786456D2A92EA5BBA7E", ThalesKeyBlockOperations.aesEncryptionKey(kbpk));
+        assertEquals("85FA1011B33779965E094EAEB8C49955", ThalesKeyBlockOperations.aesAuthenticationKey(kbpk));
+        Unwrapped unwrapped = ThalesKeyBlockOperations.unwrap(kbpk, "10096B0AN00E0002"
+                + "B829452CE34F31C1E0E138D18A1B989FB1607AEB04124EB0526B37E20BDCD064"
+                + "5256C9BD0C962C97");
+        assertEquals("0D6B02388AC8EF491902342C5B0EDAD5", unwrapped.clearKey());
+        assertTrue(unwrapped.authentic());
+    }
+
     // =====================================================================
-    // The other KBPK lengths, which have no vector
+    // The 192-bit KBPK, which has no vector
     // =====================================================================
 
     /**
      * A 256-bit KBPK needs two CMAC blocks; a 128-bit one needs a single block
-     * and a different algorithm code in the derivation data. Only the 256-bit
-     * case was captured, so this asserts the shape rather than the value, and
-     * says so.
+     * and a different algorithm code in the derivation data. Both are captured
+     * above; the 192-bit case is not, so this asserts the shape rather than the
+     * value, and says so.
      */
     @Test
     void shorterKeyBlockLmksDeriveKeysOfTheirOwnLength() {
