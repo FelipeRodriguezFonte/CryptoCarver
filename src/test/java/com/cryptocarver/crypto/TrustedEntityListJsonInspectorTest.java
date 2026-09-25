@@ -63,6 +63,35 @@ class TrustedEntityListJsonInspectorTest {
         assertTrue(TrustedEntityListJsonInspector.describe(compact.getBytes(StandardCharsets.UTF_8), Locale.ENGLISH)
                 .contains("signature: not verified (no trust anchor provided)"));
     }
+    @Test void findsExactCertificateAndReportsCurrentStatus() throws Exception {
+        Signer present = signer("Present");
+        Signer absent = signer("Absent");
+        String list = withServiceCertificate(validJson(), present.certificate());
+        byte[] input = list.getBytes(StandardCharsets.UTF_8);
+        var matches = TrustedEntityListJsonInspector.findCertificate(input, present.certificate());
+        assertEquals(1, matches.size());
+        assertEquals("Example provider", matches.get(0).providerName());
+        assertEquals("Wallet service", matches.get(0).serviceName());
+        assertEquals("https://example.test/granted", matches.get(0).status());
+        assertEquals("2025-11-01T00:00:00Z", matches.get(0).statusStartingTime());
+        assertTrue(TrustedEntityListJsonInspector.findCertificate(input, absent.certificate()).isEmpty());
+        assertEquals(present.certificate(), TrustedEntityListJsonInspector.readCertificate(present.certificate().getEncoded()));
+        String pem = "-----BEGIN CERTIFICATE-----\n" + java.util.Base64.getMimeEncoder(64, new byte[]{'\n'})
+                .encodeToString(present.certificate().getEncoded()) + "\n-----END CERTIFICATE-----\n";
+        assertEquals(present.certificate(), TrustedEntityListJsonInspector.readCertificate(pem.getBytes(StandardCharsets.US_ASCII)));
+        String report = TrustedEntityListJsonInspector.describe(input, Locale.ENGLISH, null, present.certificate());
+        assertTrue(report.contains("certificate matches: 1"), report);
+        assertTrue(report.contains("Example provider / Wallet service — status: https://example.test/granted; since: 2025-11-01T00:00:00Z"), report);
+    }
+    @Test void reportsCertificateWithNonGrantedStatus() throws Exception {
+        Signer present = signer("Suspended");
+        String list = withServiceCertificate(validJson().replace("/granted", "/withdrawn"), present.certificate());
+        String report = TrustedEntityListJsonInspector.describe(list.getBytes(StandardCharsets.UTF_8),
+                Locale.ENGLISH, null, present.certificate());
+        assertTrue(report.contains("status: https://example.test/withdrawn"), report);
+        assertEquals("https://example.test/withdrawn", TrustedEntityListJsonInspector
+                .findCertificate(list.getBytes(StandardCharsets.UTF_8), present.certificate()).get(0).status());
+    }
     @Test void rejectsMalformedListWithClearMessage() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> TrustedEntityListJsonInspector.parse("{\"LoTE\":{}}".getBytes(StandardCharsets.UTF_8)));
         assertTrue(error.getMessage().contains("ListAndSchemeInformation"));
@@ -119,11 +148,15 @@ class TrustedEntityListJsonInspectorTest {
     private static String signed(String payload, Signer signer) throws Exception {
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                 .x509CertChain(java.util.List.of(Base64.encode(signer.certificate().getEncoded())))
-                .customParam("x5t#256", com.nimbusds.jose.util.Base64URL.encode(
-                        java.security.MessageDigest.getInstance("SHA-256").digest(signer.certificate().getEncoded())).toString())
+                .x509CertSHA256Thumbprint(com.nimbusds.jose.util.Base64URL.encode(
+                        java.security.MessageDigest.getInstance("SHA-256").digest(signer.certificate().getEncoded())))
                 .customParam("iat", Instant.now().getEpochSecond()).build();
         JWSObject jws = new JWSObject(header, new Payload(payload));
         jws.sign(new RSASSASigner(signer.keys().getPrivate()));
         return jws.serialize();
+    }
+    private static String withServiceCertificate(String list, X509Certificate certificate) throws Exception {
+        return list.replace("\"OtherIds\":[\"provider-1\"]", "\"X509Certificates\":[{\"val\":\""
+                + java.util.Base64.getEncoder().encodeToString(certificate.getEncoded()) + "\"}]");
     }
 }

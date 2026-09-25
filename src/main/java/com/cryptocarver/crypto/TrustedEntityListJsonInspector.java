@@ -20,7 +20,9 @@ import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -118,6 +120,11 @@ public final class TrustedEntityListJsonInspector {
     }
 
     public static String describe(byte[] json, Locale locale, X509Certificate trustAnchor) {
+        return describe(json, locale, trustAnchor, null);
+    }
+
+    public static String describe(byte[] json, Locale locale, X509Certificate trustAnchor,
+                                  X509Certificate certificateToFind) {
         Envelope envelope = envelope(json);
         TrustedEntityList list = parse(envelope.payload()); StringBuilder out = new StringBuilder();
         out.append("ETSI TS 119 602 JSON\noperator: ").append(list.scheme.operatorName())
@@ -127,7 +134,59 @@ public final class TrustedEntityListJsonInspector {
                 .append("\n  type: ").append(s.typeIdentifier()).append("\n  status: ").append(s.status())
                 .append("\n  status since: ").append(s.statusStartingTime()).append('\n'); for (String q : s.qualifiers()) out.append("  qualifier: ").append(q).append('\n'); }
         out.append("\nsignature: ").append(signatureStatus(envelope, trustAnchor)).append('\n');
+        if (certificateToFind != null) {
+            List<Service> matches = findCertificate(envelope.payload(), certificateToFind);
+            out.append("certificate matches: ").append(matches.size()).append('\n');
+            for (Service match : matches) {
+                out.append("  ").append(match.providerName()).append(" / ").append(match.serviceName())
+                        .append(" — status: ").append(match.status())
+                        .append("; since: ").append(match.statusStartingTime()).append('\n');
+            }
+        }
         return out.toString();
+    }
+
+    /** Compares the complete DER certificate in current service identities (TS 119 602, §6.6.3.1). */
+    public static List<Service> findCertificate(byte[] listJson, X509Certificate certificate) {
+        if (certificate == null) throw new IllegalArgumentException("A certificate is required");
+        byte[] payload = envelope(listJson).payload();
+        TrustedEntityList list = parse(payload);
+        JsonArray entities = JsonParser.parseString(new String(payload, StandardCharsets.UTF_8))
+                .getAsJsonObject().getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList");
+        if (entities == null) return List.of();
+        List<Service> matches = new ArrayList<>();
+        int index = 0;
+        for (JsonElement entityElement : entities) {
+            for (JsonElement serviceElement : entityElement.getAsJsonObject().getAsJsonArray("TrustedEntityServices")) {
+                JsonObject info = serviceElement.getAsJsonObject().getAsJsonObject("ServiceInformation");
+                JsonArray certificates = optionalArray(info.getAsJsonObject("ServiceDigitalIdentity"), "X509Certificates");
+                if (certificates != null) for (JsonElement item : certificates) {
+                    try {
+                        byte[] listedDer = Base64.getDecoder().decode(item.getAsJsonObject().get("val").getAsString());
+                        if (java.util.Arrays.equals(listedDer, encoded(certificate))) {
+                            matches.add(list.services().get(index));
+                            break;
+                        }
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException("Invalid X509Certificates value", e);
+                    } catch (java.security.cert.CertificateEncodingException e) {
+                        throw new IllegalArgumentException("Cannot encode comparison certificate", e);
+                    }
+                }
+                index++;
+            }
+        }
+        return List.copyOf(matches);
+    }
+
+    /** Reads an X.509 certificate in PEM or DER form. */
+    public static X509Certificate readCertificate(byte[] pemOrDer) {
+        try {
+            return (X509Certificate) CertificateFactory.getInstance("X.509")
+                    .generateCertificate(new ByteArrayInputStream(pemOrDer));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid X.509 certificate", e);
+        }
     }
 
     private static String signatureStatus(Envelope envelope, X509Certificate trustAnchor) {
