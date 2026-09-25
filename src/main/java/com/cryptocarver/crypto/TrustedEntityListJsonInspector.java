@@ -133,6 +133,11 @@ public final class TrustedEntityListJsonInspector {
         for (Service s : list.services()) { out.append("\n").append(s.providerName()).append(" / ").append(s.serviceName())
                 .append("\n  type: ").append(s.typeIdentifier()).append("\n  status: ").append(s.status())
                 .append("\n  status since: ").append(s.statusStartingTime()).append('\n'); for (String q : s.qualifiers()) out.append("  qualifier: ").append(q).append('\n'); }
+        TrustedEntityListProfileValidator.Assessment profile = TrustedEntityListProfileValidator.assess(
+                envelope.payload(), envelope.compact(), envelope.signature() != null);
+        out.append("\nprofile: ").append(profile.profile()).append('\n');
+        if (profile.unmetRequirements().isEmpty()) out.append("profile requirements: satisfied\n");
+        else for (String unmet : profile.unmetRequirements()) out.append("profile unmet: ").append(unmet).append('\n');
         out.append("\nsignature: ").append(signatureStatus(envelope, trustAnchor)).append('\n');
         if (certificateToFind != null) {
             List<Service> matches = findCertificate(envelope.payload(), certificateToFind);

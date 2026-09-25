@@ -92,6 +92,49 @@ class TrustedEntityListJsonInspectorTest {
         assertEquals("https://example.test/withdrawn", TrustedEntityListJsonInspector
                 .findCertificate(list.getBytes(StandardCharsets.UTF_8), present.certificate()).get(0).status());
     }
+    @Test void detectsAllSixProfilesAndChecksTheirLocalRules() {
+        String[] types = {"EUPIDProvidersList", "EUWalletProvidersList", "EUWRPACProvidersList",
+                "EUWRPRCProvidersList", "EUPubEAAProvidersList", "EURegistrarsAndRegistersList"};
+        String[] clauses = {"D", "E", "F", "G", "H", "I"};
+        for (int i = 0; i < types.length; i++) {
+            byte[] payload = profileJson(types[i]).getBytes(StandardCharsets.UTF_8);
+            assertDoesNotThrow(() -> TrustedEntityListJsonInspector.parse(payload));
+            var assessment = TrustedEntityListProfileValidator.assess(payload, true, true);
+            assertTrue(assessment.profile().contains("Annex " + clauses[i]), assessment.toString());
+            assertTrue(assessment.unmetRequirements().isEmpty(), assessment.toString());
+            assertTrue(TrustedEntityListJsonInspector.describe(payload, Locale.ENGLISH)
+                    .contains("profile: " + types[i] + " (Annex " + clauses[i] + ")"));
+        }
+    }
+    @Test void reportsSpecificUnmetProfileRulesAndSerialization() {
+        JsonObject root = JsonParser.parseString(profileJson("EUWalletProvidersList")).getAsJsonObject();
+        JsonObject info = root.getAsJsonObject("LoTE").getAsJsonObject("ListAndSchemeInformation");
+        info.addProperty("SchemeTerritory", "ES");
+        info.addProperty("NextUpdate", "2027-01-01T00:00:00Z");
+        JsonObject service = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0)
+                .getAsJsonObject().getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
+                .getAsJsonObject("ServiceInformation");
+        service.addProperty("ServiceStatus", "https://example.test/granted");
+        byte[] payload = root.toString().getBytes(StandardCharsets.UTF_8);
+        var unmet = TrustedEntityListProfileValidator.assess(payload, false, true).unmetRequirements();
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("SchemeTerritory")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("NextUpdate")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("ServiceStatus")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("compact serialization")), unmet.toString());
+    }
+    @Test void publicEaaRequiresHistoricalPeriodAndRecognizedStatus() {
+        JsonObject root = JsonParser.parseString(profileJson("EUPubEAAProvidersList")).getAsJsonObject();
+        JsonObject info = root.getAsJsonObject("LoTE").getAsJsonObject("ListAndSchemeInformation");
+        info.addProperty("HistoricalInformationPeriod", 1);
+        JsonObject service = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0)
+                .getAsJsonObject().getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
+                .getAsJsonObject("ServiceInformation");
+        service.addProperty("ServiceStatus", "https://example.test/other");
+        var unmet = TrustedEntityListProfileValidator.assess(root.toString().getBytes(StandardCharsets.UTF_8), true, true)
+                .unmetRequirements();
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("65535")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("notified or withdrawn")), unmet.toString());
+    }
     @Test void rejectsMalformedListWithClearMessage() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> TrustedEntityListJsonInspector.parse("{\"LoTE\":{}}".getBytes(StandardCharsets.UTF_8)));
         assertTrue(error.getMessage().contains("ListAndSchemeInformation"));
@@ -158,5 +201,50 @@ class TrustedEntityListJsonInspectorTest {
     private static String withServiceCertificate(String list, X509Certificate certificate) throws Exception {
         return list.replace("\"OtherIds\":[\"provider-1\"]", "\"X509Certificates\":[{\"val\":\""
                 + java.util.Base64.getEncoder().encodeToString(certificate.getEncoded()) + "\"}]");
+    }
+    private static String profileJson(String type) {
+        JsonObject root = JsonParser.parseString(validJson()).getAsJsonObject();
+        JsonObject info = root.getAsJsonObject("LoTE").getAsJsonObject("ListAndSchemeInformation");
+        info.addProperty("LoTEType", "http://uri.etsi.org/19602/LoTEType/" + type);
+        info.addProperty("SchemeTerritory", "EU");
+        String[] roots = switch (type) {
+            case "EUPIDProvidersList" -> new String[]{"PIDProvidersList", "PIDProviders", "PID"};
+            case "EUWalletProvidersList" -> new String[]{"WalletProvidersList", "WalletProvidersList", "WalletSolution"};
+            case "EUWRPACProvidersList" -> new String[]{"WRPACProvidersList", "WRPACProvidersList", "WRPAC"};
+            case "EUWRPRCProvidersList" -> new String[]{"WRPRCProvidersList", "WRPRCProvidersList", "WRPRC"};
+            case "EUPubEAAProvidersList" -> new String[]{"PubEAAProvidersList", "PubEAAProvidersList", "PubEAA"};
+            default -> new String[]{"RegistrarsAndRegistersList", "RegistrarsAndRegistersList", "Register"};
+        };
+        info.addProperty("StatusDeterminationApproach", "http://uri.etsi.org/19602/" + roots[0] + "/StatusDetn/EU");
+        JsonObject rules = new JsonObject();
+        rules.addProperty("lang", "en");
+        rules.addProperty("uriValue", "http://uri.etsi.org/19602/" + roots[1] + "/schemerules/EU");
+        com.google.gson.JsonArray ruleList = new com.google.gson.JsonArray();
+        ruleList.add(rules);
+        info.add("SchemeTypeCommunityRules", ruleList);
+        JsonObject service = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0)
+                .getAsJsonObject().getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
+                .getAsJsonObject("ServiceInformation");
+        service.addProperty("ServiceTypeIdentifier", "http://uri.etsi.org/19602/SvcType/" + roots[2]
+                + ("Register".equals(roots[2]) ? "" : "/Issuance"));
+        if ("EUPubEAAProvidersList".equals(type)) {
+            info.addProperty("HistoricalInformationPeriod", 65535);
+            service.addProperty("ServiceStatus", "http://uri.etsi.org/19602/PubEAAProvidersList/SvcStatus/notified");
+        } else {
+            service.remove("ServiceStatus");
+            service.remove("StatusStartingTime");
+            JsonObject identity = service.getAsJsonObject("ServiceDigitalIdentity");
+            com.google.gson.JsonArray certificates = new com.google.gson.JsonArray();
+            JsonObject certificate = new JsonObject(); certificate.addProperty("val", "AA=="); certificates.add(certificate);
+            identity.add("X509Certificates", certificates);
+        }
+        if ("EURegistrarsAndRegistersList".equals(type)) {
+            com.google.gson.JsonArray points = new com.google.gson.JsonArray();
+            JsonObject point = new JsonObject();
+            point.addProperty("uriValue", "https://example.test/register");
+            points.add(point);
+            service.add("ServiceSupplyPoints", points);
+        }
+        return root.toString();
     }
 }
