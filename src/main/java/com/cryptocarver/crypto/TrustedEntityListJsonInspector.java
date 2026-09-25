@@ -73,12 +73,9 @@ public final class TrustedEntityListJsonInspector {
     }
 
     public static TrustedEntityList parse(byte[] json) {
-        return parse(json, false);
-    }
-    private static TrustedEntityList parse(byte[] json, boolean reportMode) {
         try {
             json = envelope(json).payload();
-            validateAgainstEtsiSchema(json, reportMode);
+            validateAgainstEtsiSchema(json);
             JsonObject root = JsonParser.parseString(new String(json, StandardCharsets.UTF_8)).getAsJsonObject();
             JsonObject lote = root.getAsJsonObject("LoTE");
             JsonObject info = lote.getAsJsonObject("ListAndSchemeInformation");
@@ -111,17 +108,10 @@ public final class TrustedEntityListJsonInspector {
             return JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(in);
         } catch (Exception e) { throw new ExceptionInInitializerError(e); }
     }
-    private static void validateAgainstEtsiSchema(byte[] json, boolean reportMode) throws Exception {
+    private static void validateAgainstEtsiSchema(byte[] json) throws Exception {
         JsonNode node = JACKSON.readTree(json);
         if (node == null) throw new IllegalArgumentException("Invalid TS 119 602 JSON: empty input");
         java.util.Set<ValidationMessage> violations = ETSI_SCHEMA.validate(node);
-        if (reportMode) {
-            // Preserve the list view so the profile checker can report its date parsing failure.
-            violations = violations.stream().filter(violation ->
-                    !violation.getMessage().contains("StatusStartingTime:")
-                            || !violation.getMessage().contains("invalid date-time"))
-                    .collect(java.util.stream.Collectors.toSet());
-        }
         if (!violations.isEmpty()) {
             String detail = violations.stream().map(ValidationMessage::getMessage).sorted().findFirst().orElse("schema violation");
             throw new IllegalArgumentException("Invalid TS 119 602 JSON: " + detail);
@@ -137,8 +127,19 @@ public final class TrustedEntityListJsonInspector {
 
     public static String describe(byte[] json, Locale locale, X509Certificate trustAnchor,
                                   X509Certificate certificateToFind) {
+        return describe(json, locale, trustAnchor, certificateToFind, TrustedEntityListProfileValidator::assess);
+    }
+
+    @FunctionalInterface
+    interface ProfileAssessor {
+        TrustedEntityListProfileValidator.Assessment assess(byte[] payload, boolean compact,
+                boolean signed, Locale locale);
+    }
+
+    static String describe(byte[] json, Locale locale, X509Certificate trustAnchor,
+                           X509Certificate certificateToFind, ProfileAssessor profileAssessor) {
         Envelope envelope = envelope(json);
-        TrustedEntityList list = parse(envelope.payload(), true); StringBuilder out = new StringBuilder();
+        TrustedEntityList list = parse(envelope.payload()); StringBuilder out = new StringBuilder();
         out.append("ETSI TS 119 602 JSON\noperator: ").append(list.scheme.operatorName())
                 .append("\nversion: ").append(list.scheme.version()).append("\nsequence: ").append(list.scheme.sequenceNumber())
                 .append("\nissued: ").append(list.scheme.issueDate()).append("\nnext update: ").append(list.scheme.nextUpdate()).append('\n');
@@ -147,7 +148,7 @@ public final class TrustedEntityListJsonInspector {
                 .append("\n  status since: ").append(s.statusStartingTime()).append('\n'); for (String q : s.qualifiers()) out.append("  qualifier: ").append(q).append('\n'); }
         TrustedEntityListProfileValidator.Assessment profile = null;
         try {
-            profile = TrustedEntityListProfileValidator.assess(
+            profile = profileAssessor.assess(
                     envelope.payload(), envelope.compact(), envelope.signature() != null, locale);
             out.append('\n').append(reportText(locale, "profile", profile.profile())).append('\n');
             if (!profile.evaluated()) out.append(reportText(locale, "profileNotEvaluated")).append('\n');
