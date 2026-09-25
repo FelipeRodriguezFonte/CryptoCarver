@@ -202,6 +202,23 @@ class PaymentControlValuesTest {
                 "38F14068B3EA57C194F8E3A20D51E3E6", "A8DB2B65F9C821F1", "00820000"));
     }
 
+    /**
+     * External tool captures, 2026-09-25 (Card Validation, dCVV). MDK
+     * 0123456789ABCDEF0123456789ABCDEF, PAN 4111111111111111: card key by EMV option A
+     * with PSN 00, then the CVV algorithm over ATC || PAN[4..], expiry and service code.
+     */
+    @org.junit.jupiter.params.ParameterizedTest(name = "exp {0}, sc {1}, ATC {2} -> {3}")
+    @org.junit.jupiter.params.provider.CsvSource({
+            "1225, 001, 0001, 938",
+            "1225, 001, 0002, 488",
+            "1225, 001, 0010, 634",
+            "1225, 101, 0010, 970",
+            "1226, 101, 0010, 282",
+    })
+    void dcvvMatchesTheExternalToolCaptures(String expiry, String serviceCode, String atc, String dcvv) throws Exception {
+        assertEquals(dcvv, PaymentOperations.generateDCVV(CVK_A, CVK_A, PAN, "00", expiry, serviceCode, atc));
+    }
+
     // ---- ISO 9564-1 format 4 ----
 
     /** Cross-checked: the PAN field opens with the PAN length minus 12, not a fixed 4. */

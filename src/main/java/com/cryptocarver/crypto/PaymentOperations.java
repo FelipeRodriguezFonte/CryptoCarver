@@ -591,100 +591,32 @@ public class PaymentOperations {
     }
 
     /**
-     * Generates a Dynamic CVV (dCVV) for Contactless transactions (Visa Mode A).
-     * Data Block: PAN + PAN Sequence Number + Expiry Date + ATC (3 digits)
+     * Generates a Visa dynamic CVV (dCVV) for contactless magnetic-stripe-data transactions.
+     *
+     * <p>The card key is derived from the issuer MDK (CVK A || CVK B) with EMV option A
+     * over PAN and PAN sequence number. The data are those of the CVV with the ATC
+     * overlaid on the leftmost digits of the PAN (US 8387866 B2): ATC || PAN[4..],
+     * expiry and service code, zero-padded on the right. Five external tool captures
+     * pin it (PaymentControlValuesTest).</p>
      */
-    public static String generateDCVV(String cvkA, String cvkB, String pan, String panSeq, String expiryDate,
-            String atc) {
-        try {
-            // Data Block Construction
-            // Note: ATC should be truncated/padded to 3 digits?
-            // Based on reverse engineering: Use first 3 digits of ATC string.
-            String atcToken = atc;
-            if (atcToken.length() > 3) {
-                atcToken = atcToken.substring(0, 3);
-            }
-
-            // Allow override of PAN Seq, default to "0" if empty
-            if (panSeq == null || panSeq.isEmpty()) {
-                panSeq = "0";
-            }
-
-            // Construct Data Block: PAN + PanSeq + Expiry + ATC
-            String data = pan + panSeq + expiryDate + atcToken;
-
-            // Pad to 32 hex digits (16 bytes) with trailing zeros
-            StringBuilder paddedData = new StringBuilder(data);
-            while (paddedData.length() < 32) {
-                paddedData.append("0");
-            }
-            // Ensure exactly 32 chars
-            String blockString = paddedData.toString().substring(0, 32);
-
-            byte[] blockBytes = DataConverter.hexToBytes(blockString);
-
-            // Block 1: First 8 bytes
-            byte[] block1 = new byte[8];
-            System.arraycopy(blockBytes, 0, block1, 0, 8);
-
-            // Block 2: Next 8 bytes
-            byte[] block2 = new byte[8];
-            System.arraycopy(blockBytes, 8, block2, 0, 8);
-
-            // Key A and B
-            byte[] keyA = DataConverter.hexToBytes(cvkA);
-            byte[] keyB = DataConverter.hexToBytes(cvkB);
-
-            // Step 1: Encrypt Block 1 with Key A (DES)
-            org.bouncycastle.crypto.engines.DESEngine desEngine = new org.bouncycastle.crypto.engines.DESEngine();
-            desEngine.init(true, new org.bouncycastle.crypto.params.KeyParameter(keyA));
-            byte[] step1Result = new byte[8];
-            desEngine.processBlock(block1, 0, step1Result, 0);
-
-            // Step 2: XOR result with Block 2
-            byte[] xorResult = new byte[8];
-            for (int i = 0; i < 8; i++) {
-                xorResult[i] = (byte) (step1Result[i] ^ block2[i]);
-            }
-
-            // Step 3: Encrypt result with Key A then Decrypt with Key B then Encrypt with
-            // Key A (3DES)
-            // But standard CVV uses 3DES EDE with K1=A, K2=B, K3=A
-            byte[] key3Des = new byte[24];
-            System.arraycopy(keyA, 0, key3Des, 0, 8);
-            System.arraycopy(keyB, 0, key3Des, 8, 8);
-            System.arraycopy(keyA, 0, key3Des, 16, 8);
-
-            org.bouncycastle.crypto.engines.DESedeEngine tdesEngine = new org.bouncycastle.crypto.engines.DESedeEngine();
-            tdesEngine.init(true, new org.bouncycastle.crypto.params.KeyParameter(key3Des));
-            byte[] step3Result = new byte[8];
-            tdesEngine.processBlock(xorResult, 0, step3Result, 0);
-
-            // Step 4: Extract digits
-            String hexResult = DataConverter.bytesToHex(step3Result).toUpperCase();
-            StringBuilder digits = new StringBuilder();
-            for (char c : hexResult.toCharArray()) {
-                if (Character.isDigit(c)) {
-                    digits.append(c);
-                }
-            }
-
-            // Return first 3 digits
-            if (digits.length() < 3)
-                return "ERR";
-            return digits.toString().substring(0, 3);
-
-        } catch (Exception e) {
-            LOG.error("Payment cryptography operation failed", e);
-            return "ERR";
+    public static String generateDCVV(String mdkA, String mdkB, String pan, String panSeq, String expiryDate,
+            String serviceCode, String atc) throws Exception {
+        if (atc == null || !atc.matches("[0-9A-Fa-f]{1,4}")) {
+            throw new IllegalArgumentException("ATC must be 1 to 4 hexadecimal digits");
         }
+        if (pan == null || !pan.matches("\\d{13,19}")) {
+            throw new IllegalArgumentException("PAN must be 13 to 19 digits");
+        }
+        String paddedAtc = "0".repeat(4 - atc.length()) + atc.toUpperCase();
+        String psn = panSeq == null || panSeq.isBlank() ? "00" : panSeq;
+        String udk = EMVOperations.deriveICCMasterKey(mdkA + mdkB, pan, psn);
+        return generateCVV(udk.substring(0, 16), udk.substring(16, 32), paddedAtc + pan.substring(4), expiryDate, serviceCode);
     }
 
-    public static boolean verifyDCVV(String cvkA, String cvkB, String pan, String panSeq, String expiryDate, String atc,
-            String inputCvv) {
+    public static boolean verifyDCVV(String mdkA, String mdkB, String pan, String panSeq, String expiryDate,
+            String serviceCode, String atc, String inputCvv) {
         try {
-            String calculated = generateDCVV(cvkA, cvkB, pan, panSeq, expiryDate, atc);
-            return calculated.equals(inputCvv);
+            return generateDCVV(mdkA, mdkB, pan, panSeq, expiryDate, serviceCode, atc).equals(inputCvv);
         } catch (Exception e) {
             return false;
         }
@@ -733,25 +665,17 @@ public class PaymentOperations {
         cipher3DES.init(Cipher.ENCRYPT_MODE, keyFull);
         result = cipher3DES.doFinal(result);
 
-        // Step 4: Decimalize - extract only digits 0-9 from hex result
-        String hexResult = DataConverter.bytesToHex(result);
+        // Step 4: Decimalize - the digits 0-9 left to right, then, if fewer than three,
+        // the letters A-F left to right, each minus 10
+        String hexResult = DataConverter.bytesToHex(result).toUpperCase();
         StringBuilder digits = new StringBuilder();
         for (char c : hexResult.toCharArray()) {
-            if (Character.isDigit(c)) {
-                digits.append(c);
-                if (digits.length() == 3) {
-                    break;
-                }
-            }
+            if (Character.isDigit(c)) digits.append(c);
         }
-
-        // If we don't have 3 digits, this shouldn't happen in practice,
-        // but handle it by padding with zeros
-        while (digits.length() < 3) {
-            digits.append("0");
+        for (char c : hexResult.toCharArray()) {
+            if (!Character.isDigit(c)) digits.append((char) ('0' + (c - 'A')));
         }
-
-        return digits.toString();
+        return digits.substring(0, 3);
     }
 
     // ==================== MAC OPERATIONS ====================

@@ -1069,7 +1069,7 @@ public final class ModuleTextCatalog {
         map.put("Error: expiry date must use YYMM format (4 digits).", "module.payments.error.expiryInvalid");
         map.put("Error: service code must contain exactly 3 digits.", "module.payments.error.serviceCodeInvalid");
         map.put("Error: ATC is required for dCVV.", "module.payments.error.atcRequired");
-        map.put("Error: ATC must contain 1–3 digits for dCVV.", "module.payments.error.atcInvalid");
+        map.put("Error: ATC must contain 1–4 hexadecimal digits for dCVV.", "module.payments.error.atcInvalid");
         map.put("Error: MAC key and data are required.", "module.payments.error.macRequired");
         map.put("Error: MAC key must be exactly 32 hexadecimal characters (16 bytes).", "module.payments.error.macKeyInvalid");
         map.put("Error: MAC data must be hexadecimal.", "module.payments.error.macDataHex");

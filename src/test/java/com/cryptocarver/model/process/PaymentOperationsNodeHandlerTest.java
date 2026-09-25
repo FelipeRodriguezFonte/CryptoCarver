@@ -50,8 +50,8 @@ class PaymentOperationsNodeHandlerTest {
         assertEquals(cvv, HANDLER.execute(node("CVV_GENERATE"), cvvInputs, null).render());
         assertEquals("true", HANDLER.execute(node("CVV_VERIFY"), with(cvvInputs, "inputCvv", text(cvv)), null).render());
 
-        Map<String, FlowValue> dcvvInputs = with(cvvInputs, "panSeq", text("0"), "atc", text("001"));
-        String dcvv = PaymentOperations.generateDCVV(CVK_A, CVK_B, PAN, "0", "2512", "001");
+        Map<String, FlowValue> dcvvInputs = with(cvvInputs, "panSeq", text("00"), "atc", text("0001"));
+        String dcvv = PaymentOperations.generateDCVV(CVK_A, CVK_B, PAN, "00", "2512", "101", "0001");
         assertEquals(dcvv, HANDLER.execute(node("DCVV_GENERATE"), dcvvInputs, null).render());
         assertEquals("true", HANDLER.execute(node("DCVV_VERIFY"), with(dcvvInputs, "inputCvv", text(dcvv)), null).render());
 

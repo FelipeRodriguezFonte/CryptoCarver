@@ -165,8 +165,8 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
   herramienta da `54DB2625` seguido del CSU (formato de la etiqueta 91). Se
   introdujo la clave de sesión `38F14068…E3E6`; el registro de la herramienta
   imprime otra (`0D382020…C76B`), que no interviene en el cálculo.
-- **dCVV** (25-09-2026), sin resolver. CVK `0123456789ABCDEF0123456789ABCDEF`,
-  PAN `4111111111111111`; la herramienta usa caducidad, código de servicio y ATC:
+- **dCVV** (25-09-2026), resuelto con cinco capturas. MDK
+  `0123456789ABCDEF0123456789ABCDEF`, PAN `4111111111111111`:
 
   | Caducidad | Código de servicio | ATC | dCVV |
   |---|---|---|---|
@@ -176,11 +176,13 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
   | 1225 | 101 | 0010 | 970 |
   | 1226 | 101 | 0010 | 282 |
 
-  Ninguna construcción probada reproduce las cinco: el algoritmo CVV con esos
-  datos en cualquier orden y relleno, con la clave tal cual o derivada por
-  tarjeta (opción A, PSN 00/01/vacío, con y sin paridad), con claves de sesión
-  por ATC, ATC en hexadecimal o decimal, y cualquier posición de la salida
-  decimalizada. El código actual (`generateDCVV`) tampoco.
+  Construcción (patente de Visa US 8387866 B2): clave de tarjeta derivada de la
+  MDK con EMV opción A y PSN `00`; datos del CVV con el ATC superpuesto a los 4
+  primeros dígitos del PAN (`ATC || PAN[4..]`), caducidad tal cual y código de
+  servicio, rellenos con ceros a la derecha; algoritmo CVV. El código anterior
+  no usaba la clave derivada ni el código de servicio y truncaba el ATC;
+  corregido. También se completó la decimalización del CVV, que no convertía
+  las letras A–F cuando faltaban dígitos.
 
 ## Cruzado después
 
@@ -201,7 +203,5 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
 
 Con las constantes de arriba:
 
-1. **dCVV**: el texto de ayuda de la pantalla (botón «i») y el CVV normal
-   con los mismos datos.
-2. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
+1. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
    `0123456789ABCDEF` y `0000000000000000`.

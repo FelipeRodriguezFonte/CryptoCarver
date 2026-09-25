@@ -1101,12 +1101,12 @@ public class PaymentsController {
                     cvvResultArea.setText(t("module.payments.error.atcRequired"));
                     return;
                 }
-                if (!atc.matches("\\d{1,3}")) {
+                if (!atc.matches("[0-9A-Fa-f]{1,4}")) {
                     cvvResultArea.setText(t("module.payments.error.atcInvalid"));
                     return;
                 }
-                // Use PAN Sequence Number "0" constant as determined by debug match
-                cvv = PaymentOperations.generateDCVV(cvkA, cvkB, pan, "0", expiry, atc);
+                // CVK A || CVK B is the issuer MDK; the card key is derived with PSN 00.
+                cvv = PaymentOperations.generateDCVV(cvkA, cvkB, pan, "00", expiry, serviceCode, atc);
             } else { // Standard CVV, CVV2, iCVV
                 if (cvvType != null && cvvType.contains("iCVV")) {
                     // iCVV always uses 999 for calculation, regardless of magnetic stripe service
@@ -1228,12 +1228,12 @@ public class PaymentsController {
                         cvvResultArea.setText(t("module.payments.error.atcRequired"));
                         return;
                     }
-                    if (!atc.matches("\\d{1,3}")) {
+                    if (!atc.matches("[0-9A-Fa-f]{1,4}")) {
                         cvvResultArea.setText(t("module.payments.error.atcInvalid"));
                         return;
                     }
-                    isValid = PaymentOperations.verifyDCVV(cvkA, cvkB, pan, "0", expiry, atc, inputCvv);
-                    calculated = PaymentOperations.generateDCVV(cvkA, cvkB, pan, "0", expiry, atc);
+                    isValid = PaymentOperations.verifyDCVV(cvkA, cvkB, pan, "00", expiry, serviceCode, atc, inputCvv);
+                    calculated = PaymentOperations.generateDCVV(cvkA, cvkB, pan, "00", expiry, serviceCode, atc);
 
                 } else {
                     String serviceCodeForCalc = serviceCode;

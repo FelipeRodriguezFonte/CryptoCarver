@@ -71,8 +71,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "PIN_BLOCK_TRANSLATE" -> List.of(hexPort("pinBlock"), textPort("pan"));
             case "CVV_GENERATE" -> List.of(hexPort("cvkA"), hexPort("cvkB"), textPort("pan"), textPort("expiry"), textPort("serviceCode"));
             case "CVV_VERIFY" -> List.of(hexPort("cvkA"), hexPort("cvkB"), textPort("pan"), textPort("expiry"), textPort("serviceCode"), textPort("inputCvv"));
-            case "DCVV_GENERATE" -> List.of(hexPort("cvkA"), hexPort("cvkB"), textPort("pan"), textPort("panSeq"), textPort("expiry"), textPort("atc"));
-            case "DCVV_VERIFY" -> List.of(hexPort("cvkA"), hexPort("cvkB"), textPort("pan"), textPort("panSeq"), textPort("expiry"), textPort("atc"), textPort("inputCvv"));
+            case "DCVV_GENERATE" -> List.of(hexPort("cvkA"), hexPort("cvkB"), textPort("pan"), textPort("panSeq"), textPort("expiry"), textPort("serviceCode"), textPort("atc"));
+            case "DCVV_VERIFY" -> List.of(hexPort("cvkA"), hexPort("cvkB"), textPort("pan"), textPort("panSeq"), textPort("expiry"), textPort("serviceCode"), textPort("atc"), textPort("inputCvv"));
             case "PVV_GENERATE" -> List.of(textPort("pin"), textPort("pan"), hexPort("pvk"), textPort("pvki"));
             case "PVV_VERIFY" -> List.of(textPort("pin"), textPort("pan"), hexPort("pvk"), textPort("pvki"), textPort("pvv"));
             case "IBM3624_OFFSET" -> List.of(textPort("pin"), textPort("pan"), hexPort("pvk"), hexPort("decTable"));
@@ -204,7 +204,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         hexLength(node, "cvkA", 8); hexLength(node, "cvkB", 8); pan(node, "pan"); decimal(node, "expiry", 4, 4); decimal(node, "serviceCode", 3, 3);
     }
     private static void commonDcvv(ProcessDefinition.Node node) {
-        commonCvv(node); require(node, "panSeq"); require(node, "atc"); decimal(node, "panSeq", 1, 2); decimal(node, "atc", 1, 16);
+        commonCvv(node); require(node, "panSeq"); require(node, "atc"); decimal(node, "panSeq", 1, 2); hexDigits(node, "atc", 1, 4);
     }
     private static void commonPvv(ProcessDefinition.Node node) {
         require(node, "pin"); require(node, "pan"); require(node, "pvk"); require(node, "pvki");
@@ -221,8 +221,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 case "PIN_BLOCK_TRANSLATE" -> hex(PaymentOperations.translatePinBlock(hexText(node, inputs, "pinBlock"), text(node, inputs, "pan"), setting(node, "sourceFormat", PIN_FORMATS.get(0)), setting(node, "targetFormat", PIN_FORMATS.get(0))));
                 case "CVV_GENERATE" -> text(PaymentOperations.generateCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode")));
                 case "CVV_VERIFY" -> text(Boolean.toString(PaymentOperations.verifyCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "inputCvv"))));
-                case "DCVV_GENERATE" -> text(PaymentOperations.generateDCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "panSeq"), text(node, inputs, "expiry"), text(node, inputs, "atc")));
-                case "DCVV_VERIFY" -> text(Boolean.toString(PaymentOperations.verifyDCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "panSeq"), text(node, inputs, "expiry"), text(node, inputs, "atc"), text(node, inputs, "inputCvv"))));
+                case "DCVV_GENERATE" -> text(PaymentOperations.generateDCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "panSeq"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "atc")));
+                case "DCVV_VERIFY" -> text(Boolean.toString(PaymentOperations.verifyDCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "panSeq"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "atc"), text(node, inputs, "inputCvv"))));
                 case "PVV_GENERATE" -> text(PaymentOperations.generatePVV(text(node, inputs, "pin"), text(node, inputs, "pan"), hexText(node, inputs, "pvk"), text(node, inputs, "pvki"), integer(node, "pvvLength", 4, 4, 6)));
                 case "PVV_VERIFY" -> text(Boolean.toString(PaymentOperations.verifyPVV(text(node, inputs, "pin"), text(node, inputs, "pan"), hexText(node, inputs, "pvk"), text(node, inputs, "pvki"), text(node, inputs, "pvv"), integer(node, "pvvLength", 4, 4, 6))));
                 case "IBM3624_OFFSET" -> text(PaymentOperations.generateIBM3624Offset(text(node, inputs, "pin"), text(node, inputs, "pan"), hexText(node, inputs, "pvk"), hexText(node, inputs, "decTable")));
@@ -396,6 +396,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     private static void decimal(ProcessDefinition.Node node, String key, int min, int max) {
         if (node.configuration.containsKey(key) && !decimalValue(node.configuration.get(key), min, max)) throw new IllegalArgumentException("Invalid decimal payment input");
     }
+    private static void hexDigits(ProcessDefinition.Node node, String key, int min, int max) {
+        if (node.configuration.containsKey(key) && !node.configuration.get(key).matches("[0-9A-Fa-f]{" + min + "," + max + "}"))
+            throw new IllegalArgumentException("Invalid hexadecimal payment input");
+    }
     private static void pan(ProcessDefinition.Node node, String key) {
         if (!node.configuration.containsKey(key)) return;
         String value = node.configuration.get(key);
@@ -452,8 +456,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         result.add(descriptor("PIN_BLOCK_TRANSLATE", "pinBlockTranslate", "pinBlockTranslate", params(secret("pinBlock", "module.process.param.payment.pinBlock"), secret("pan", "module.process.param.payment.pan"), combo("sourceFormat", "module.process.param.payment.sourceFormat", PIN_FORMATS, PIN_FORMATS.get(0)), combo("targetFormat", "module.process.param.payment.targetFormat", PIN_FORMATS, PIN_FORMATS.get(0)))));
         result.add(descriptor("CVV_GENERATE", "cvvGenerate", "cvvGenerate", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""))));
         result.add(descriptor("CVV_VERIFY", "cvvVerify", "cvvVerify", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), secret("inputCvv", "module.process.param.payment.cvv"))));
-        result.add(descriptor("DCVV_GENERATE", "dcvvGenerate", "dcvvGenerate", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("panSeq", "module.process.param.payment.panSeq", "0"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("atc", "module.process.param.payment.atc", ""))));
-        result.add(descriptor("DCVV_VERIFY", "dcvvVerify", "dcvvVerify", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("panSeq", "module.process.param.payment.panSeq", "0"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("atc", "module.process.param.payment.atc", ""), secret("inputCvv", "module.process.param.payment.cvv"))));
+        result.add(descriptor("DCVV_GENERATE", "dcvvGenerate", "dcvvGenerate", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("panSeq", "module.process.param.payment.panSeq", "00"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), textParam("atc", "module.process.param.payment.atc", ""))));
+        result.add(descriptor("DCVV_VERIFY", "dcvvVerify", "dcvvVerify", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("panSeq", "module.process.param.payment.panSeq", "00"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), textParam("atc", "module.process.param.payment.atc", ""), secret("inputCvv", "module.process.param.payment.cvv"))));
         result.add(descriptor("PVV_GENERATE", "pvvGenerate", "pvvGenerate", params(secret("pin", "module.process.param.payment.pin"), secret("pan", "module.process.param.payment.pan"), secret("pvk", "module.process.param.payment.pvk"), textParam("pvki", "module.process.param.payment.pvki", "0"), number("pvvLength", "module.process.param.payment.pvvLength", "4"))));
         result.add(descriptor("PVV_VERIFY", "pvvVerify", "pvvVerify", params(secret("pin", "module.process.param.payment.pin"), secret("pan", "module.process.param.payment.pan"), secret("pvk", "module.process.param.payment.pvk"), textParam("pvki", "module.process.param.payment.pvki", "0"), secret("pvv", "module.process.param.payment.pvv"), number("pvvLength", "module.process.param.payment.pvvLength", "4"))));
         result.add(descriptor("IBM3624_OFFSET", "ibm3624Offset", "ibm3624Offset", params(secret("pin", "module.process.param.payment.pin"), secret("pan", "module.process.param.payment.pan"), secret("pvk", "module.process.param.payment.pvk"), secret("decTable", "module.process.param.payment.decTable"))));
