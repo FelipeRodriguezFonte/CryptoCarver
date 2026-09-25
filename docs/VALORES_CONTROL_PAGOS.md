@@ -151,6 +151,14 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
   variantes, vectores de control de IBM CCA, selección de bytes y de nibbles,
   MDC-2/MDC-4, CRC-16, CMAC y hashes. Siguen sin verificar.
 
+## Confirmado con captura
+
+- **ISO-4 AES** (25-09-2026): clave `00112233445566778899AABBCCDDEEFF`, PAN de
+  18 dígitos `432198765432109870`, campo PIN `441234AAAAAAAAAA146C6601F4A8035C`.
+  Campo PAN `6432…`, intermedios A `2938DEEA…` y B `4D0AC76D…`, bloque
+  `88E33C3ACF404F234F10F889C364E377`. Coincide con el arreglo del campo PAN y
+  del cifrado.
+
 ## Cruzado después
 
 - **MAC ISO 9797-1 alg 2 y 4**, relleno 1 y 2, con K2: `6095F103D29D763B`,
@@ -172,7 +180,7 @@ Con las constantes de arriba:
 
 1. **EMV → ARPC**, método 2, con ARQC `A8DB2B65F9C821F1`, CSU `00820000`,
    session key `38F14068B3EA57C194F8E3A20D51E3E6`. Se espera `54DB2625`.
-2. **PIN Blocks → ISO 4**, con PAN de 13 y de 19 dígitos, y la clave AES128.
+2. **PIN Blocks → ISO 4** con PAN de 13 dígitos (el de 18 ya está confirmado).
 3. **Visa dCVV** con PAN, caducidad 2512 y ATC `0001`.
 4. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
    `0123456789ABCDEF` y `0000000000000000`.

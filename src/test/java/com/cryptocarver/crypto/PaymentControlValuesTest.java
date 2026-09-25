@@ -218,6 +218,19 @@ class PaymentControlValuesTest {
         assertEquals("1234", PaymentOperations.decipherPinBlockISO4(DataConverter.hexToBytes(AES128), hex(fresh), PAN));
     }
 
+    /**
+     * External tool capture, 2026-09-25: AES ISO-4 with an 18-digit PAN, so the PAN field
+     * opens with 6. The tool prints intermediate A = 2938DEEA32E4E3888BB452555DE9FFEB and
+     * B = 4D0AC76D57A7C2810CB452555DE9FFEB for PIN field 441234AAAAAAAAAA146C6601F4A8035C.
+     */
+    @Test
+    void iso4MatchesTheExternalToolCapture() {
+        String pan = "432198765432109870";
+        assertEquals("64321987654321098700000000000000", PaymentOperations.panFieldISO4(pan));
+        assertEquals("1234", PaymentOperations.decipherPinBlockISO4(
+                DataConverter.hexToBytes("00112233445566778899AABBCCDDEEFF"), "88E33C3ACF404F234F10F889C364E377", pan));
+    }
+
     // ---- CMAC ----
 
     /** Cross-checked: TDES-CMAC over the whole double-length key, not AES-CMAC with it. */
