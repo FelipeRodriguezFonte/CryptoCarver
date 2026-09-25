@@ -32,6 +32,27 @@ No usar claves ni PAN de producción. Si la herramienta no muestra uno de esos
 intermedios, conservar la captura y anotar expresamente la ausencia: no se
 reconstruye ni se infiere fuera de ella.
 
+## Resultado (25-09-2026) — resuelto con los ejemplos de la herramienta
+
+Ruta real: EMV → Secure Messaging → MasterCard / Visa, tres pestañas (Session
+key, PIN, MAC) con un ejemplo precargado coherente entre ellas. Se capturaron
+con sus valores por defecto y `EmvSecureMessaging` reproduce todos los pasos
+(`EmvSecureMessagingTest`).
+
+- **Mastercard**: UDK por opción A desde MK y PAN/SqNr (16 dígitos), paridad
+  impar; clave de sesión SKD sobre R = AC + nº de comando, tercer byte `F0`
+  (izquierda) y `0F` (derecha), sin paridad; PIN en formato ISO 2 cifrado en
+  TDES-ECB. El comando 2 descartó «AC XOR n».
+- **Visa**: clave de sesión = UDK con el ATC en XOR en los dos últimos bytes de
+  la mitad izquierda y su complemento en los de la derecha; PIN en formato 0
+  combinado en XOR con `00000000` y los 4 últimos bytes de UDK-A, enviado como
+  `08` || bloque || `80…`, TDES-ECB.
+- **MAC** (los dos): ISO 9797-1 alg. 3, relleno 2, sobre `CLA INS P1 P2 Lc`,
+  ATC, AC y datos del comando.
+
+La cobertura de la cabecera en el MAC queda fijada por los propios ejemplos:
+entra entera.
+
 ## Constantes de la campaña
 
 | Identificador | Valor |
