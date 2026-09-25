@@ -319,55 +319,28 @@ public class EMVOperations {
     }
 
     /**
-     * Generate ARPC Method 2 (EMV 4.3 specification)
-     * ARPC = Encrypt(ARC || Proprietary Authentication Data)
+     * Generate ARPC Method 2 (EMV 4.3 Book 2, A1.2.2).
      *
-     * @param sk  Session Key (16 bytes hex)
-     * @param arc Authorization Response Code (2 chars alphanumeric)
-     * @param csu Card Status Update (4 bytes hex, optional)
-     * @return ARPC (16 hex characters)
+     * <p>ARPC = MAC over ARQC || CSU || Proprietary Authentication Data, using the AC
+     * session key, ISO 9797-1 MAC algorithm 3 with padding method 2, truncated to its
+     * leftmost 4 bytes. The ARC does not take part; the card receives it separately.</p>
+     *
+     * @param sk   Session Key (16 bytes hex)
+     * @param arqc ARQC from card (8 bytes hex)
+     * @param csu  Card Status Update (4 bytes hex)
+     * @return ARPC (8 hex characters)
      */
-    public static String generateARPC_Method2(String sk, String arc, String csu) throws Exception {
-        byte[] skBytes = DataConverter.hexToBytes(sk);
+    public static String generateARPC_Method2(String sk, String arqc, String csu) throws Exception {
+        return generateARPC_Method2(sk, arqc, csu, "");
+    }
 
-        // Build 8-byte data: ARC (ASCII HEX) + CSU (4 bytes) + padding
-        // Convert ARC characters to their Hex representation (EMV uses ASCII values for
-        // Tag 8A in input to crypto)
-        String arcHex = DataConverter.bytesToHex(arc.getBytes(StandardCharsets.US_ASCII));
-
-        String data = arcHex;
-        if (csu != null && !csu.isEmpty()) {
-            data += csu;
-        }
-
-        // Pad to 8 bytes (16 hex chars)
-        while (data.length() < 16) {
-            data += "00";
-        }
-
-        // Truncate if too long (though assuming correct input sizes)
-        if (data.length() > 16) {
-            data = data.substring(0, 16);
-        }
-
-        byte[] dataBytes = DataConverter.hexToBytes(data);
-
-        // Handle 16-byte vs 24-byte key for Java DESede
-        byte[] tdesKey = new byte[24];
-        if (skBytes.length == 16) {
-            System.arraycopy(skBytes, 0, tdesKey, 0, 16);
-            System.arraycopy(skBytes, 0, tdesKey, 16, 8);
-        } else {
-            tdesKey = skBytes;
-        }
-
-        // Encrypt with Session Key
-        SecretKeySpec key = new SecretKeySpec(tdesKey, "DESede");
-        Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, key);
-
-        byte[] arpc = cipher.doFinal(dataBytes);
-        return DataConverter.bytesToHex(arpc).toUpperCase();
+    /** As {@link #generateARPC_Method2(String, String, String)}, with up to 8 bytes of Proprietary Authentication Data. */
+    public static String generateARPC_Method2(String sk, String arqc, String csu, String proprietaryAuthData) throws Exception {
+        arqc = normalizeHex(arqc, "ARQC", 8);
+        csu = normalizeHex(csu, "CSU", 4);
+        String pad = proprietaryAuthData == null ? "" : normalizeHex(proprietaryAuthData, "Proprietary Authentication Data", -1);
+        if (pad.length() > 16) throw new IllegalArgumentException("Proprietary Authentication Data must be at most 8 bytes");
+        return generateARQC(sk, arqc + csu + pad, 2).substring(0, 8);
     }
 
     /**

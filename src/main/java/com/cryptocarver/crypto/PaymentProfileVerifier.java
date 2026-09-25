@@ -239,7 +239,23 @@ public class PaymentProfileVerifier {
             if (pin != null && pin.length() > 12) throw new IllegalArgumentException("PIN length must be <= 12");
             if (format.contains("0") && (pan == null || pan.length() < 12)) throw new IllegalArgumentException("Format 0 requires PAN");
 
-            if (p.getInputs().containsKey("pinBlock") && key != null && p.getOutputs().containsKey("pin")) {
+            boolean iso4 = format.replace("ISO ", "").replace("ISO-", "").trim().equals("4");
+            if (iso4 && key != null) {
+                // Format 4 is AES with the PAN bound between two encryptions, not TDES over a clear block.
+                byte[] keyBytes = DataConverter.hexToBytes(key);
+                if (p.getInputs().containsKey("pinBlock") && p.getOutputs().containsKey("pin")) {
+                    if (!p.getOutput("pin").equals(PaymentOperations.decipherPinBlockISO4(keyBytes, p.getInput("pinBlock"), pan))) {
+                        throw new Exception("Decoded PIN mismatch");
+                    }
+                }
+                // The random PIN-field padding makes an ISO-4 block unrepeatable, so an
+                // expected enciphered block cannot be recomputed; decipher it instead.
+                else if (p.getOutputs().containsKey("pinBlock")) {
+                    if (!pin.equals(PaymentOperations.decipherPinBlockISO4(keyBytes, p.getOutput("pinBlock"), pan))) {
+                        throw new Exception("PIN block mismatch");
+                    }
+                }
+            } else if (p.getInputs().containsKey("pinBlock") && key != null && p.getOutputs().containsKey("pin")) {
                 // Test decryption instead
                 byte[] keyBytes = DataConverter.hexToBytes(key);
                 byte[] encBytes = DataConverter.hexToBytes(p.getInput("pinBlock"));

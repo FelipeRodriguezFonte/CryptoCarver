@@ -174,7 +174,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_SESSION_KEY" -> { require(node, "mkac"); require(node, "atc"); require(node, "un"); hexLength(node, "atc", 2); hexLength(node, "un", 4); }
             case "EMV_ARQC_GENERATE" -> { require(node, "sk"); require(node, "transactionData"); positive(node, "paddingMethod", 1, 2); }
             case "EMV_ARQC_VERIFY" -> { require(node, "sk"); require(node, "arqc"); require(node, "transactionData"); hexLength(node, "arqc", 8); positive(node, "paddingMethod", 1, 2); }
-            case "EMV_ARPC" -> { require(node, "sk"); require(node, "arc"); oneOf(node, "method", List.of("1", "2")); if ("1".equals(setting(node, "method", "1"))) require(node, "arqc"); }
+            case "EMV_ARPC" -> { require(node, "sk"); require(node, "arqc"); oneOf(node, "method", List.of("1", "2")); if ("1".equals(setting(node, "method", "1"))) require(node, "arc"); }
             case "EMV_TLV_PARSE" -> require(node, "input");
             case "TRACK2_ENCODE" -> { require(node, "pan"); require(node, "expiry"); require(node, "serviceCode"); pan(node, "pan"); decimal(node, "expiry", 4, 4); decimal(node, "serviceCode", 3, 3); }
             case "TRACK2_PARSE" -> require(node, "track2");
@@ -235,7 +235,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 case "EMV_ARQC_VERIFY" -> text(Boolean.toString(EMVOperations.verifyARQC(hexText(node, inputs, "sk"), hexText(node, inputs, "arqc"), hexText(node, inputs, "transactionData"), integer(node, "paddingMethod", 2, 1, 2))));
                 case "EMV_ARPC" -> hex("1".equals(setting(node, "method", "1"))
                         ? EMVOperations.generateARPC_Method1(hexText(node, inputs, "sk"), hexText(node, inputs, "arqc"), text(node, inputs, "arc"))
-                        : EMVOperations.generateARPC_Method2(hexText(node, inputs, "sk"), text(node, inputs, "arc"), hexTextOptional(node, inputs, "csu")));
+                        : EMVOperations.generateARPC_Method2(hexText(node, inputs, "sk"), hexText(node, inputs, "arqc"), csuOrDefault(hexTextOptional(node, inputs, "csu"))));
                 case "EMV_TLV_PARSE" -> text(EmvTlv.transactionSummary(EmvTlv.analyze(hexText(node, inputs, "input"))));
                 case "TRACK2_ENCODE" -> text(PaymentOperations.encodeTrack2(text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), textOptional(node, inputs, "discretionary")));
                 case "TRACK2_PARSE" -> text(PaymentOperations.parseTrack2(text(node, inputs, "track2")));
@@ -349,6 +349,10 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         String configured = node.configuration.get(name);
         if (configured == null || configured.isBlank()) throw new IllegalArgumentException("Missing required payment input");
         return configured.trim();
+    }
+    /** ARPC method 2 always carries a 4-byte CSU; an absent one means no update. */
+    private static String csuOrDefault(String csu) {
+        return csu == null || csu.isBlank() ? "00000000" : csu;
     }
     private static String hexTextOptional(ProcessDefinition.Node node, Map<String, FlowValue> inputs, String name) {
         if (!inputs.containsKey(name) && !node.configuration.containsKey(name)) return "";

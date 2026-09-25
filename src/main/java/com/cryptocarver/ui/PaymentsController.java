@@ -874,7 +874,8 @@ public class PaymentsController {
                 "ISO-9797-1-ALG2",
                 "ISO-9797-1-ALG4",
                 "ISO-9797-1-ALG6",
-                "CMAC (ISO 9797-1 Alg 5)",
+                "CMAC-TDES (ISO 9797-1 Alg 5)",
+                "CMAC-AES (ISO 9797-1 Alg 5)",
                 "HMAC-SHA256",
                 "AS2805.4 (1985)");
         macAlgorithmCombo.getSelectionModel().selectFirst();
@@ -918,34 +919,12 @@ public class PaymentsController {
             boolean isISO4 = format.contains("ISO 4") || format.contains("ISO-4");
 
             if (isISO4) {
+                // Format 4 has no PIN block in clear: without the AES key the two
+                // fields are the result, and the PIN field is what gets enciphered.
                 String[] iso4Result = PaymentOperations.encodePinBlockISO4WithClear(pin, pan);
                 clearPinField = iso4Result[0];
-                pinBlock = iso4Result[1]; // XOR result (not shown in clear section)
-
-                // Calculate PAN Block Clear for ISO-4
-                // Structure: [M][PAN digits][PAD zeros][Trailing zeros]
-                // M = PAN_length - 12
-                // PAD zeros = pad to 19 digits total (PAN + PAD)
-                // Trailing zeros = always 12 zeros
-                StringBuilder panBlockBuilder = new StringBuilder();
-
-                // M (1 nibble)
-                int m = pan.length() - 12;
-                panBlockBuilder.append(Integer.toHexString(m).toUpperCase());
-
-                // PAN digits (all digits)
-                panBlockBuilder.append(pan);
-
-                // PAD zeros (to reach 19 digits total)
-                int padZeros = 19 - pan.length();
-                for (int i = 0; i < padZeros; i++) {
-                    panBlockBuilder.append("0");
-                }
-
-                // Trailing zeros (always 12)
-                panBlockBuilder.append("000000000000");
-
-                clearPanBlock = panBlockBuilder.toString();
+                clearPanBlock = iso4Result[1];
+                pinBlock = clearPinField;
             } else {
                 pinBlock = PaymentOperations.encodePinBlock(pin, pan, format);
             }
@@ -1780,6 +1759,10 @@ public class PaymentsController {
     // ENCRYPTED PIN BLOCK OPERATIONS (Generic)
     // ============================================================
 
+    private static boolean isIso4(String format) {
+        return format != null && (format.contains("ISO-4") || format.contains("ISO 4"));
+    }
+
     public void handleEncodeEncryptedPinBlock() {
         try {
             if (encPinField == null || encPanFieldEncode == null || encResultArea == null) {
@@ -1815,12 +1798,14 @@ public class PaymentsController {
             if (!keyHex.isEmpty()) {
                 try {
                     byte[] key = DataConverter.hexToBytes(keyHex);
-                    byte[] clearBytes = DataConverter.hexToBytes(clearPinBlock);
-
-                    // Encrypt with TDES
-                    byte[] encrypted = PaymentOperations.encryptDesEcb(clearBytes, key);
-
-                    publishedBlock = DataConverter.bytesToHex(encrypted).toUpperCase();
+                    if (isIso4(format)) {
+                        // Format 4 is AES and binds the PAN between two encryptions.
+                        publishedBlock = PaymentOperations.encipherPinBlockISO4(key, pin, pan);
+                    } else {
+                        byte[] clearBytes = DataConverter.hexToBytes(clearPinBlock);
+                        byte[] encrypted = PaymentOperations.encryptDesEcb(clearBytes, key);
+                        publishedBlock = DataConverter.bytesToHex(encrypted).toUpperCase();
+                    }
                     result += "\n\n" + t("module.payments.result.encryptedPinBlock") + "\n" + publishedBlock;
                 } catch (Exception e) {
                     result += "\n\nEncryption Error: " + e.getMessage();
@@ -1835,7 +1820,7 @@ public class PaymentsController {
             details.put("Format", format);
             details.put("PAN", maskPan(pan));
             details.put("PIN", "[not persisted]");
-            details.put("Protected", keyHex.isEmpty() ? "No key supplied" : "TDES ECB");
+            details.put("Protected", keyHex.isEmpty() ? "No key supplied" : isIso4(format) ? "AES (ISO 9564-1 format 4)" : "TDES ECB");
             mainController.publish(OperationResult.forOperation("Encode Encrypted PIN Block")
                     .output(DataConverter.hexToBytes(publishedBlock)).details(details)
                     .status(t("module.payments.status.success")).build());
@@ -1866,6 +1851,30 @@ public class PaymentsController {
             }
 
             String clearPinBlockHex = pinBlockHex;
+
+            if (isIso4(format) && !keyHex.isEmpty()) {
+                String pin;
+                try {
+                    pin = PaymentOperations.decipherPinBlockISO4(DataConverter.hexToBytes(keyHex), pinBlockHex, pan);
+                } catch (Exception e) {
+                    showError(t("module.payments.error.decryptionTitle"), t("module.payments.error.operation", t("module.payments.operation.encryptedPinBlock"), e.getMessage()));
+                    return;
+                }
+                encResultArea.setText(t("module.payments.result.format") + " " + format + "\n\n"
+                        + t("module.payments.result.decodedPinLine") + " " + pin);
+                encResultArea.setManaged(true);
+                encResultArea.setVisible(true);
+                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
+                details.put("Format", format);
+                details.put("PAN", maskPan(pan));
+                details.put("PIN", "[not persisted]");
+                details.put("Protected", "AES (ISO 9564-1 format 4)");
+                mainController.publish(OperationResult.forOperation("Decode Encrypted PIN Block")
+                        .input(DataConverter.hexToBytes(pinBlockHex))
+                        .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                        .status(t("module.payments.status.success")).build());
+                return;
+            }
 
             // 1. Decrypt if key provided
             if (!keyHex.isEmpty()) {

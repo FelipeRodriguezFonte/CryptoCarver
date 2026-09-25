@@ -56,7 +56,19 @@ CVK A/B `0123456789ABCDEF` / `FEDCBA9876543210`.
 | ARQC, relleno 1 / 2 | CDOL de 37 bytes (ver test) | `E8499E593250A030` / `A8DB2B65F9C821F1` | cruzado |
 | ARPC método 1 | ARC `00` | `ADCB085B842E0A9D` | cruzado |
 
-## Discrepancias: bugs reales
+## Discrepancias: bugs reales (corregidos)
+
+Los cuatro están corregidos y sus valores de referencia fijados en
+`PaymentControlValuesTest`. Las tablas muestran el valor que daba Java antes
+del arreglo.
+
+- ARPC método 2: `EMVOperations.generateARPC_Method2(sk, arqc, csu)` calcula el
+  MAC de A1.2.2. Pantalla y nodo piden ahora el ARQC; el ARC solo lo usa el método 1.
+- ISO-4: el campo PAN sale de `PinBlock.encodePanFieldIso4`. Sin clave, Pagos
+  muestra el campo PIN y el campo PAN; con clave AES cifra el bloque completo.
+  Sin clave no se puede descodificar un bloque cifrado, y ahora lo dice.
+- CMAC: Pagos ofrece `CMAC-TDES` y `CMAC-AES` y usa la clave entera. El KCV
+  CMAC ya no trunca AES-192/256.
 
 ### 1. ARPC método 2 — incorrecto
 

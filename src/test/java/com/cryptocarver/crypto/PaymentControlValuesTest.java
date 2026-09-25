@@ -180,4 +180,47 @@ class PaymentControlValuesTest {
         assertEquals("A8DB2B65F9C821F1", arqc);
         assertEquals("ADCB085B842E0A9D", EMVOperations.generateARPC_Method1(sk, arqc, "00"));
     }
+
+    /** Cross-checked: ARPC method 2 (EMV Book 2 A1.2.2), MAC over ARQC || CSU, 4 bytes. */
+    @Test
+    void emvArpcMethod2() throws Exception {
+        assertEquals("54DB2625", EMVOperations.generateARPC_Method2(
+                "38F14068B3EA57C194F8E3A20D51E3E6", "A8DB2B65F9C821F1", "00820000"));
+    }
+
+    // ---- ISO 9564-1 format 4 ----
+
+    /** Cross-checked: the PAN field opens with the PAN length minus 12, not a fixed 4. */
+    @Test
+    void iso4PanFieldTracksPanLength() {
+        assertEquals("44111111111111111000000000000000", PaymentOperations.panFieldISO4(PAN));
+        assertEquals("14111111111111000000000000000000", PaymentOperations.panFieldISO4("4111111111111"));
+        assertEquals("74111111111111111113000000000000", PaymentOperations.panFieldISO4("4111111111111111113"));
+    }
+
+    /** Cross-checked: E_K(E_K(PIN field) XOR PAN field) with AES-128, padding fixed to 0123456789ABCDEF. */
+    @Test
+    void iso4EncipheredBlockDecipheresToThePin() {
+        assertEquals("1234", PaymentOperations.decipherPinBlockISO4(
+                DataConverter.hexToBytes(AES128), "70487881E82D3F1EF3A87678147EDAA7", PAN));
+        byte[] fresh = DataConverter.hexToBytes(PaymentOperations.encipherPinBlockISO4(DataConverter.hexToBytes(AES128), "1234", PAN));
+        assertEquals("1234", PaymentOperations.decipherPinBlockISO4(DataConverter.hexToBytes(AES128), hex(fresh), PAN));
+    }
+
+    // ---- CMAC ----
+
+    /** Cross-checked: TDES-CMAC over the whole double-length key, not AES-CMAC with it. */
+    @Test
+    void tdesCmac() throws Exception {
+        assertEquals("339F7934", PaymentOperations.generateMAC(K2, HELLO, "CMAC-TDES (ISO 9797-1 Alg 5)"));
+        assertEquals("BF170E40", PaymentOperations.generateMAC(AES128, HELLO, "CMAC-AES (ISO 9797-1 Alg 5)"));
+    }
+
+    /** Published: NIST SP 800-38B / RFC 4493 AES-256 example, empty message. The key is not truncated. */
+    @Test
+    void cmacKcvUsesTheWholeAes256Key() throws Exception {
+        byte[] aes256 = DataConverter.hexToBytes(
+                "603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
+        assertEquals("028962", hex(KeyOperations.calculateKCV_CMAC(aes256)));
+    }
 }

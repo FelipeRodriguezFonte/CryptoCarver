@@ -595,13 +595,13 @@ public class EMVController {
                 arpc = EMVOperations.generateARPC_Method1(sk, arqc, arc);
 
             } else {
-                result.append("Method: Method 2 (CSU Method)\n");
+                result.append("Method: Method 2 (ARPC = MAC(ARQC || CSU), 4 bytes)\n");
                 result.append("─────────────────────────────\n");
                 result.append("Session Key: ").append(sk).append("\n");
-                result.append("ARC: ").append(arc).append("\n");
+                result.append("ARQC: ").append(arqc).append("\n");
                 result.append("CSU: ").append(csu.isEmpty() ? "00000000" : csu).append("\n\n");
 
-                arpc = EMVOperations.generateARPC_Method2(sk, arc, csu.isEmpty() ? "00000000" : csu);
+                arpc = EMVOperations.generateARPC_Method2(sk, arqc, csu.isEmpty() ? "00000000" : csu);
             }
 
             result.append("➜ ARPC: ").append(arpc).append("\n\n");

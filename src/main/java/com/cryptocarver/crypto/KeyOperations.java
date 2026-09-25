@@ -300,10 +300,9 @@ public class KeyOperations {
     public static byte[] calculateKCV_CMAC(byte[] key, int kcvLength) throws Exception {
         byte[] aesKey;
 
-        if (key.length >= 16) {
-            // Use first 16 bytes
-            aesKey = new byte[16];
-            System.arraycopy(key, 0, aesKey, 0, 16);
+        if (key.length == 16 || key.length == 24 || key.length == 32) {
+            // The whole key: truncating AES-192/256 to 128 bits gave the KCV of another key.
+            aesKey = key.clone();
         } else if (key.length == 8) {
             // Single DES - duplicate to make 16 bytes
             aesKey = new byte[16];

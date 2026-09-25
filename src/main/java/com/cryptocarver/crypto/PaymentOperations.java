@@ -336,109 +336,51 @@ public class PaymentOperations {
     }
 
     /**
-     * Encode PIN block ISO-4 and return both clear field and result
-     * Returns: [0] = clear PIN field, [1] = PIN block (after XOR)
+     * PAN field for ISO 9564-1 format 4: the first nibble is the PAN length minus 12,
+     * then the PAN (left-padded with zeros to 12 digits), right-padded with zeros to 32.
+     */
+    public static String panFieldISO4(String pan) {
+        return DataConverter.bytesToHex(com.cryptocarver.pin.PinBlock.encodePanFieldIso4(pan)).toUpperCase();
+    }
+
+    /**
+     * Encode PIN block ISO-4 and return both clear fields.
+     * Returns: [0] = clear PIN field, [1] = clear PAN field. Format 4 has no
+     * PIN-block-in-clear: the PAN field only enters after the first AES
+     * encryption, so without a key these two fields are all there is to show.
      */
     public static String[] encodePinBlockISO4WithClear(String pin, String pan) throws Exception {
-        // Generate clear PIN field
-        String clearPinBlock = generateClearPinFieldISO4(pin);
+        return new String[] { generateClearPinFieldISO4(pin), panFieldISO4(pan) };
+    }
 
-        // Build PAN block
-        StringBuilder panBlock = new StringBuilder();
-        panBlock.append("4");
-        panBlock.append(pan);
-        while (panBlock.length() < 32) {
-            panBlock.append("0");
-        }
+    /** Enciphers an ISO-4 PIN block: E_K(E_K(PIN field) XOR PAN field), AES (ISO 9564-1:2017, 9.4). */
+    public static String encipherPinBlockISO4(byte[] aesKey, String pin, String pan) {
+        return DataConverter.bytesToHex(com.cryptocarver.pin.PinBlock.encipherPinblockIso4(aesKey, pin, pan)).toUpperCase();
+    }
 
-        // XOR
-        byte[] clearBytes = DataConverter.hexToBytes(clearPinBlock);
-        byte[] panBytes = DataConverter.hexToBytes(panBlock.substring(0, 32));
-
-        byte[] result = new byte[16];
-        for (int i = 0; i < 16; i++) {
-            result[i] = (byte) (clearBytes[i] ^ panBytes[i]);
-        }
-
-        String pinBlockResult = DataConverter.bytesToHex(result);
-
-        return new String[] { clearPinBlock, pinBlockResult };
+    /** Reverses {@link #encipherPinBlockISO4} and returns the PIN. */
+    public static String decipherPinBlockISO4(byte[] aesKey, String pinBlock, String pan) {
+        return com.cryptocarver.pin.PinBlock.decipherPinblockIso4(aesKey, DataConverter.hexToBytes(pinBlock), pan);
     }
 
     /**
-     * ISO Format 4 (ISO 9564-1:2002 Format 4)
-     * Structure: 4L PPPP PPPP RRRR RRRR RRRR RRRR (32 hex chars = 16 bytes before
-     * XOR)
-     * Uses random padding and XOR with PAN
-     * Designed for use with AES (128-bit block)
+     * ISO Format 4 without a key: the clear PIN field, which is what gets enciphered.
+     * The full block needs the AES key ({@link #encipherPinBlockISO4}).
      */
     private static String encodePinBlockISO4(String pin, String pan) throws Exception {
-        // Generate clear PIN field
-        String clearPinBlock = generateClearPinFieldISO4(pin);
-
-        // Build PAN block: "4" + PAN (padded to 32 hex chars)
-        StringBuilder panBlock = new StringBuilder();
-        panBlock.append("4");
-        panBlock.append(pan);
-        while (panBlock.length() < 32) {
-            panBlock.append("0");
-        }
-
-        // XOR clear PIN block with PAN block
-        byte[] clearBytes = DataConverter.hexToBytes(clearPinBlock);
-        byte[] panBytes = DataConverter.hexToBytes(panBlock.substring(0, 32));
-
-        byte[] result = new byte[16];
-        for (int i = 0; i < 16; i++) {
-            result[i] = (byte) (clearBytes[i] ^ panBytes[i]);
-        }
-
-        return DataConverter.bytesToHex(result);
+        return generateClearPinFieldISO4(pin);
     }
 
     /**
-     * Decode ISO Format 4
+     * Decode ISO Format 4 from its clear PIN field. An enciphered block cannot be
+     * decoded without the AES key, and XOR with the PAN field alone does not undo it.
      */
     private static String decodePinBlockISO4(String pinBlock, String pan) throws Exception {
-        // Determine PAN block bytes
-        byte[] panBytes;
-        if (pan.length() == 32) {
-            // Assume input IS the PAN Block (as requested by user)
-            panBytes = DataConverter.hexToBytes(pan);
-        } else {
-            // Construct PAN Block from PAN
-            StringBuilder panBlock = new StringBuilder();
-            panBlock.append("4");
-            panBlock.append(pan);
-            while (panBlock.length() < 32) {
-                panBlock.append("0");
-            }
-            panBytes = DataConverter.hexToBytes(panBlock.substring(0, 32));
+        if (!pinBlock.startsWith("4")) {
+            throw new IllegalArgumentException("ISO-4 blocks are AES-enciphered: provide the clear PIN field"
+                    + " (starting with 4) or decipher it with the AES key");
         }
-
-        // Check if input is already a Clear PIN Block (Heuristic for ISO-4)
-        // ISO-4 Clear Block must start with '4'.
-        // Encoded ISO-4 Block must start with '0' (because 4^4 = 0).
-        // If input starts with '4', we assume it's already clear and skip XOR.
-        byte[] clearBlock;
-        if (pinBlock.startsWith("4")) {
-            clearBlock = DataConverter.hexToBytes(pinBlock);
-        } else {
-            // XOR with PAN block
-            byte[] pinBlockBytes = DataConverter.hexToBytes(pinBlock);
-            clearBlock = new byte[16];
-            for (int i = 0; i < 16; i++) {
-                clearBlock[i] = (byte) (pinBlockBytes[i] ^ panBytes[i]);
-            }
-        }
-
-        String clearPinBlock = DataConverter.bytesToHex(clearBlock);
-
-        // Extract PIN
-        int pinLength = Integer.parseInt(clearPinBlock.substring(1, 2), 16);
-        String pin = clearPinBlock.substring(2, 2 + pinLength);
-
-        return pin;
+        return com.cryptocarver.pin.PinBlock.decodePinFieldIso4(DataConverter.hexToBytes(pinBlock));
     }
 
     /**
@@ -826,8 +768,11 @@ public class PaymentOperations {
                 return generateRetailMAC(keyBytes, dataBytes);
             case "CBC-MAC (ISO 9797-1 Alg 1)":
                 return generateCBCMAC(keyBytes, dataBytes);
-            case "CMAC (ISO 9797-1 Alg 5)":
-                return generateCMAC(keyBytes, dataBytes);
+            case "CMAC-TDES (ISO 9797-1 Alg 5)":
+                return generateCMAC(keyBytes, dataBytes, false);
+            case "CMAC-AES (ISO 9797-1 Alg 5)":
+            case "CMAC (ISO 9797-1 Alg 5)": // label saved before the cipher was explicit; it always meant AES
+                return generateCMAC(keyBytes, dataBytes, true);
             case "HMAC-SHA256":
                 return generateHMAC(keyBytes, dataBytes);
             case "ISO-9797-1-ALG2":
@@ -894,17 +839,22 @@ public class PaymentOperations {
     }
 
     /**
-     * CMAC (ISO 9797-1 Algorithm 5)
+     * CMAC (ISO 9797-1 Algorithm 5 / NIST SP 800-38B) with the whole key: AES-128/192/256
+     * or two- and three-key TDES. A 16-byte key is valid for both ciphers, so the caller
+     * has to say which one; guessing is how a TDES key ended up computing an AES-CMAC.
      */
-    private static String generateCMAC(byte[] key, byte[] data) throws Exception {
-        // Use first 16 bytes as AES key
-        byte[] aesKey = new byte[16];
-        System.arraycopy(key, 0, aesKey, 0, 16);
-
-        Mac mac = Mac.getInstance("AESCMAC", "BC");
-        SecretKeySpec keySpec = new SecretKeySpec(aesKey, "AES");
-        mac.init(keySpec);
-        byte[] result = mac.doFinal(data);
+    private static String generateCMAC(byte[] key, byte[] data, boolean aes) throws Exception {
+        if (aes && key.length != 16 && key.length != 24 && key.length != 32)
+            throw new IllegalArgumentException("CMAC-AES requires a 16, 24 or 32-byte key. Actual: " + key.length);
+        if (!aes && key.length != 16 && key.length != 24)
+            throw new IllegalArgumentException("CMAC-TDES requires a 16 or 24-byte key. Actual: " + key.length);
+        org.bouncycastle.crypto.macs.CMac cmac = new org.bouncycastle.crypto.macs.CMac(aes
+                ? new org.bouncycastle.crypto.engines.AESEngine()
+                : new org.bouncycastle.crypto.engines.DESedeEngine());
+        cmac.init(new org.bouncycastle.crypto.params.KeyParameter(key));
+        cmac.update(data, 0, data.length);
+        byte[] result = new byte[cmac.getMacSize()];
+        cmac.doFinal(result, 0);
 
         // Return first 4 bytes (8 hex chars)
         return DataConverter.bytesToHex(result).substring(0, 8);
