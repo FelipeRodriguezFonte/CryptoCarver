@@ -165,11 +165,22 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
   herramienta da `54DB2625` seguido del CSU (formato de la etiqueta 91). Se
   introdujo la clave de sesión `38F14068…E3E6`; el registro de la herramienta
   imprime otra (`0D382020…C76B`), que no interviene en el cálculo.
-- **dCVV** (25-09-2026): CVK `0123456789ABCDEF0123456789ABCDEF`, PAN
-  `4111111111111111`, caducidad `1225`, código de servicio `001`, ATC `0001`
-  → `938`. Ninguna disposición obvia de los datos (la del código, la de CVV con
-  el ATC, con UDK derivada) lo reproduce, y con 3 dígitos una sola muestra no
-  basta para distinguir entre las que coinciden por azar.
+- **dCVV** (25-09-2026), sin resolver. CVK `0123456789ABCDEF0123456789ABCDEF`,
+  PAN `4111111111111111`; la herramienta usa caducidad, código de servicio y ATC:
+
+  | Caducidad | Código de servicio | ATC | dCVV |
+  |---|---|---|---|
+  | 1225 | 001 | 0001 | 938 |
+  | 1225 | 001 | 0002 | 488 |
+  | 1225 | 001 | 0010 | 634 |
+  | 1225 | 101 | 0010 | 970 |
+  | 1226 | 101 | 0010 | 282 |
+
+  Ninguna construcción probada reproduce las cinco: el algoritmo CVV con esos
+  datos en cualquier orden y relleno, con la clave tal cual o derivada por
+  tarjeta (opción A, PSN 00/01/vacío, con y sin paridad), con claves de sesión
+  por ATC, ATC en hexadecimal o decimal, y cualquier posición de la salida
+  decimalizada. El código actual (`generateDCVV`) tampoco.
 
 ## Cruzado después
 
@@ -190,8 +201,7 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
 
 Con las constantes de arriba:
 
-1. **dCVV**: la misma captura cambiando un solo dato cada vez: ATC `0002`,
-   ATC `0010`, código de servicio `101`, caducidad `1226`; y el CVV normal con
-   los mismos datos.
+1. **dCVV**: el texto de ayuda de la pantalla (botón «i») y el CVV normal
+   con los mismos datos.
 2. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
    `0123456789ABCDEF` y `0000000000000000`.
