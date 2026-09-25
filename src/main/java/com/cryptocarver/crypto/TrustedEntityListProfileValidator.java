@@ -83,7 +83,12 @@ public final class TrustedEntityListProfileValidator {
         }
         JsonArray entities = lote.getAsJsonArray("TrustedEntitiesList");
         if (entities != null) for (JsonElement entity : entities) {
-            String provider = firstValue(entity.getAsJsonObject().getAsJsonObject("TrustedEntityInformation").getAsJsonArray("TEName"));
+            JsonObject providerInfo = entity.getAsJsonObject().getAsJsonObject("TrustedEntityInformation");
+            String provider = firstValue(providerInfo.getAsJsonArray("TEName"));
+            JsonArray electronicAddresses = providerInfo.getAsJsonObject("TEAddress")
+                    .getAsJsonArray("TEElectronicAddress");
+            if (!hasUriPrefix(electronicAddresses, "mailto:") || !hasUriPrefix(electronicAddresses, "tel:"))
+                unmet.add(servicesClause + " " + provider + ": TEAddress needs contact email and phone");
             for (JsonElement serviceElement : entity.getAsJsonObject().getAsJsonArray("TrustedEntityServices")) {
                 JsonObject service = serviceElement.getAsJsonObject().getAsJsonObject("ServiceInformation");
                 String name = firstValue(service.getAsJsonArray("ServiceName"));
@@ -108,6 +113,17 @@ public final class TrustedEntityListProfileValidator {
                 }
                 if (profile == Profile.REGISTRARS && service.getAsJsonArray("ServiceSupplyPoints") == null)
                     unmet.add(prefix + "ServiceSupplyPoints is required");
+                if (profile == Profile.PUB_EAA) {
+                    JsonArray history = serviceElement.getAsJsonObject().getAsJsonArray("ServiceHistory");
+                    if (history != null) for (JsonElement historyElement : history) {
+                        JsonObject historicalIdentity = historyElement.getAsJsonObject()
+                                .getAsJsonObject("ServiceDigitalIdentity");
+                        if (historicalIdentity.getAsJsonArray("X509SKIs") == null)
+                            unmet.add(prefix + "historical ServiceDigitalIdentity needs X509SKIs");
+                        if (historicalIdentity.has("X509Certificates"))
+                            unmet.add(prefix + "historical ServiceDigitalIdentity must omit X509Certificates");
+                    }
+                }
             }
         }
         if (!signed) unmet.add(profile.clause + ".4: compact JAdES Baseline B signature is required");
@@ -124,6 +140,14 @@ public final class TrustedEntityListProfileValidator {
     private static boolean hasUri(JsonArray values, String uri) {
         if (values == null) return false;
         for (JsonElement value : values) if (uri.equals(string(value.getAsJsonObject(), "uriValue"))) return true;
+        return false;
+    }
+    private static boolean hasUriPrefix(JsonArray values, String prefix) {
+        if (values == null) return false;
+        for (JsonElement value : values) {
+            String uri = string(value.getAsJsonObject(), "uriValue");
+            if (uri != null && uri.regionMatches(true, 0, prefix, 0, prefix.length())) return true;
+        }
         return false;
     }
     private static String firstValue(JsonArray values) {

@@ -135,6 +135,30 @@ class TrustedEntityListJsonInspectorTest {
         assertTrue(unmet.stream().anyMatch(s -> s.contains("65535")), unmet.toString());
         assertTrue(unmet.stream().anyMatch(s -> s.contains("notified or withdrawn")), unmet.toString());
     }
+    @Test void profilesRequireProviderContactAndPublicEaaHistoryIdentifiers() {
+        JsonObject root = JsonParser.parseString(profileJson("EUPubEAAProvidersList")).getAsJsonObject();
+        JsonObject entity = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList")
+                .get(0).getAsJsonObject();
+        JsonObject provider = entity.getAsJsonObject("TrustedEntityInformation");
+        provider.getAsJsonObject("TEAddress").getAsJsonArray("TEElectronicAddress").remove(1);
+        JsonObject service = entity.getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject();
+        JsonObject history = new JsonObject();
+        history.add("ServiceName", service.getAsJsonObject("ServiceInformation").get("ServiceName").deepCopy());
+        JsonObject identity = new JsonObject();
+        com.google.gson.JsonArray certificates = new com.google.gson.JsonArray();
+        JsonObject certificate = new JsonObject(); certificate.addProperty("val", "AA=="); certificates.add(certificate);
+        identity.add("X509Certificates", certificates);
+        history.add("ServiceDigitalIdentity", identity);
+        history.addProperty("ServiceStatus", "http://uri.etsi.org/19602/PubEAAProvidersList/SvcStatus/withdrawn");
+        history.addProperty("StatusStartingTime", "2025-10-01T00:00:00Z");
+        com.google.gson.JsonArray historyItems = new com.google.gson.JsonArray(); historyItems.add(history);
+        service.add("ServiceHistory", historyItems);
+        var unmet = TrustedEntityListProfileValidator.assess(root.toString().getBytes(StandardCharsets.UTF_8), true, true)
+                .unmetRequirements();
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("contact email and phone")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("needs X509SKIs")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("must omit X509Certificates")), unmet.toString());
+    }
     @Test void rejectsMalformedListWithClearMessage() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> TrustedEntityListJsonInspector.parse("{\"LoTE\":{}}".getBytes(StandardCharsets.UTF_8)));
         assertTrue(error.getMessage().contains("ListAndSchemeInformation"));
@@ -225,6 +249,11 @@ class TrustedEntityListJsonInspectorTest {
         JsonObject service = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0)
                 .getAsJsonObject().getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
                 .getAsJsonObject("ServiceInformation");
+        JsonObject provider = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList")
+                .get(0).getAsJsonObject().getAsJsonObject("TrustedEntityInformation");
+        JsonObject phone = new JsonObject(); phone.addProperty("lang", "en");
+        phone.addProperty("uriValue", "tel:+34910000000");
+        provider.getAsJsonObject("TEAddress").getAsJsonArray("TEElectronicAddress").add(phone);
         service.addProperty("ServiceTypeIdentifier", "http://uri.etsi.org/19602/SvcType/" + roots[2]
                 + ("Register".equals(roots[2]) ? "" : "/Issuance"));
         if ("EUPubEAAProvidersList".equals(type)) {
