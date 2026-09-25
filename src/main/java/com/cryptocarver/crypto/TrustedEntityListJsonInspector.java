@@ -73,9 +73,12 @@ public final class TrustedEntityListJsonInspector {
     }
 
     public static TrustedEntityList parse(byte[] json) {
+        return parse(json, false);
+    }
+    private static TrustedEntityList parse(byte[] json, boolean reportMode) {
         try {
             json = envelope(json).payload();
-            validateAgainstEtsiSchema(json);
+            validateAgainstEtsiSchema(json, reportMode);
             JsonObject root = JsonParser.parseString(new String(json, StandardCharsets.UTF_8)).getAsJsonObject();
             JsonObject lote = root.getAsJsonObject("LoTE");
             JsonObject info = lote.getAsJsonObject("ListAndSchemeInformation");
@@ -108,10 +111,17 @@ public final class TrustedEntityListJsonInspector {
             return JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(in);
         } catch (Exception e) { throw new ExceptionInInitializerError(e); }
     }
-    private static void validateAgainstEtsiSchema(byte[] json) throws Exception {
+    private static void validateAgainstEtsiSchema(byte[] json, boolean reportMode) throws Exception {
         JsonNode node = JACKSON.readTree(json);
         if (node == null) throw new IllegalArgumentException("Invalid TS 119 602 JSON: empty input");
         java.util.Set<ValidationMessage> violations = ETSI_SCHEMA.validate(node);
+        if (reportMode) {
+            // Preserve the list view so the profile checker can report its date parsing failure.
+            violations = violations.stream().filter(violation ->
+                    !violation.getMessage().contains("StatusStartingTime:")
+                            || !violation.getMessage().contains("invalid date-time"))
+                    .collect(java.util.stream.Collectors.toSet());
+        }
         if (!violations.isEmpty()) {
             String detail = violations.stream().map(ValidationMessage::getMessage).sorted().findFirst().orElse("schema violation");
             throw new IllegalArgumentException("Invalid TS 119 602 JSON: " + detail);
@@ -128,27 +138,35 @@ public final class TrustedEntityListJsonInspector {
     public static String describe(byte[] json, Locale locale, X509Certificate trustAnchor,
                                   X509Certificate certificateToFind) {
         Envelope envelope = envelope(json);
-        TrustedEntityList list = parse(envelope.payload()); StringBuilder out = new StringBuilder();
+        TrustedEntityList list = parse(envelope.payload(), true); StringBuilder out = new StringBuilder();
         out.append("ETSI TS 119 602 JSON\noperator: ").append(list.scheme.operatorName())
                 .append("\nversion: ").append(list.scheme.version()).append("\nsequence: ").append(list.scheme.sequenceNumber())
                 .append("\nissued: ").append(list.scheme.issueDate()).append("\nnext update: ").append(list.scheme.nextUpdate()).append('\n');
         for (Service s : list.services()) { out.append("\n").append(s.providerName()).append(" / ").append(s.serviceName())
                 .append("\n  type: ").append(s.typeIdentifier()).append("\n  status: ").append(s.status())
                 .append("\n  status since: ").append(s.statusStartingTime()).append('\n'); for (String q : s.qualifiers()) out.append("  qualifier: ").append(q).append('\n'); }
-        TrustedEntityListProfileValidator.Assessment profile = TrustedEntityListProfileValidator.assess(
-                envelope.payload(), envelope.compact(), envelope.signature() != null, locale);
-        out.append('\n').append(reportText(locale, "profile", profile.profile())).append('\n');
-        if (!profile.evaluated()) out.append(reportText(locale, "profileNotEvaluated")).append('\n');
-        else if (profile.unmetRequirements().isEmpty()) out.append(reportText(locale, "profileSatisfied")).append('\n');
-        else for (String unmet : profile.unmetRequirements())
-            out.append(reportText(locale, "profileUnmet", unmet)).append('\n');
+        TrustedEntityListProfileValidator.Assessment profile = null;
+        try {
+            profile = TrustedEntityListProfileValidator.assess(
+                    envelope.payload(), envelope.compact(), envelope.signature() != null, locale);
+            out.append('\n').append(reportText(locale, "profile", profile.profile())).append('\n');
+            if (!profile.evaluated()) out.append(reportText(locale, "profileNotEvaluated")).append('\n');
+            else if (profile.unmetRequirements().isEmpty()) out.append(reportText(locale, "profileSatisfied")).append('\n');
+            else for (String unmet : profile.unmetRequirements())
+                out.append(reportText(locale, "profileUnmet", unmet)).append('\n');
+        } catch (Exception e) {
+            String reason = e.getMessage() == null || e.getMessage().isBlank()
+                    ? e.getClass().getSimpleName() : e.getMessage();
+            out.append('\n').append(reportText(locale, "profile",
+                    reportText(locale, "profileNotEvaluatedReason", reason))).append('\n');
+        }
         out.append('\n').append(reportText(locale, "signature", signatureStatus(envelope, trustAnchor, locale))).append('\n');
         if (certificateToFind != null) {
             List<Service> matches = findCertificate(envelope.payload(), certificateToFind);
             out.append(reportText(locale, "certificateMatches", matches.size())).append('\n');
             for (Service match : matches) {
                 String currentStatus = match.status() == null
-                        ? reportText(locale, profile.statusImpliedByListing()
+                        ? reportText(locale, profile != null && profile.statusImpliedByListing()
                                 ? "statusImplicit" : "statusUnspecified") : match.status();
                 String since = match.statusStartingTime() == null
                         ? reportText(locale, "sinceUnspecified") : match.statusStartingTime();
@@ -220,17 +238,23 @@ public final class TrustedEntityListJsonInspector {
             if (simple.getSignatureIdList().isEmpty())
                 return reportText(locale, "signatureInvalid", reportText(locale, "signatureMissingInJws"));
             String failure = reportText(locale, "signatureSignerMismatch");
+            String indeterminate = null;
             for (String id : simple.getSignatureIdList()) {
+                var signature = validator.getSignatureById(id);
+                var signer = signature == null ? null : signature.getSigningCertificateToken();
+                if (signer == null || !potentiallyAnchored(signer.getCertificate(), trustAnchor)) continue;
+                if (simple.getIndication(id) == Indication.INDETERMINATE) {
+                    indeterminate = String.valueOf(simple.getSubIndication(id));
+                    continue;
+                }
                 if (simple.getIndication(id) != Indication.TOTAL_PASSED) {
                     failure = simple.getIndication(id) + ": " + simple.getSubIndication(id);
                     continue;
                 }
-                var signature = validator.getSignatureById(id);
-                var signer = signature == null ? null : signature.getSigningCertificateToken();
-                if (signer != null && java.util.Arrays.equals(signer.getEncoded(), encoded(trustAnchor))) {
-                    return reportText(locale, "signatureValid", trustAnchor.getSubjectX500Principal().getName());
-                }
+                return reportText(locale, "signatureValid", signer.getCertificate().getSubjectX500Principal().getName());
             }
+            if (indeterminate != null && failure.equals(reportText(locale, "signatureSignerMismatch")))
+                return reportText(locale, "signatureIndeterminate", indeterminate);
             return reportText(locale, "signatureInvalid", failure);
         } catch (Exception e) {
             return reportText(locale, "signatureInvalid", e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -246,6 +270,16 @@ public final class TrustedEntityListJsonInspector {
 
     private static byte[] encoded(X509Certificate certificate) throws java.security.cert.CertificateEncodingException {
         return certificate.getEncoded();
+    }
+    private static boolean potentiallyAnchored(X509Certificate signer, X509Certificate anchor) throws Exception {
+        if (java.util.Arrays.equals(encoded(signer), encoded(anchor))) return true;
+        if (!signer.getIssuerX500Principal().equals(anchor.getSubjectX500Principal())) return false;
+        try {
+            signer.verify(anchor.getPublicKey());
+            return true;
+        } catch (java.security.GeneralSecurityException e) {
+            return false;
+        }
     }
     private static JsonArray optionalArray(JsonObject object, String name) {
         return object.has(name) && object.get(name).isJsonArray()

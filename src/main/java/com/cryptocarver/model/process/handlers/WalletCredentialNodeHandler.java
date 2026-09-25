@@ -12,6 +12,7 @@ import com.cryptocarver.crypto.TrustedListInspector;
 import com.cryptocarver.crypto.TrustedEntityListJsonInspector;
 import com.cryptocarver.crypto.Ts12ScaOperations;
 import com.cryptocarver.model.process.*;
+import com.cryptocarver.service.I18nService;
 import com.nimbusds.jose.JWSAlgorithm;
 
 import java.nio.charset.StandardCharsets;
@@ -266,7 +267,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             }
 
             case "SDJWT_INSPECT" -> text(SdJwtOperations.describe(
-                    string(inputs, "presentation"), Locale.getDefault()));
+                    string(inputs, "presentation"), I18nService.getInstance().getLocale()));
 
             case "STATUS_LIST_RESOLVE" -> {
                 StatusListOperations.StatusLookup lookup = StatusListOperations.resolve(
@@ -293,12 +294,12 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "CBOR_FROM_JSON" -> FlowValue.binary(CborInspector.fromJson(string(inputs, "json")));
 
             case "EIDAS_CERT_INSPECT" -> text(EidasCertificateInspector.describe(
-                    certificate(bytes(inputs, "certificate")), Locale.getDefault()));
+                    certificate(bytes(inputs, "certificate")), I18nService.getInstance().getLocale()));
 
             case "TRUSTED_LIST_INSPECT" -> text(TrustedListInspector.describe(
-                    bytes(inputs, "trustedList"), Locale.getDefault()));
+                    bytes(inputs, "trustedList"), I18nService.getInstance().getLocale()));
             case "TRUSTED_ENTITY_LIST_JSON_INSPECT" -> text(TrustedEntityListJsonInspector.describe(
-                    bytes(inputs, "trustedEntityListJson"), Locale.getDefault(),
+                    bytes(inputs, "trustedEntityListJson"), I18nService.getInstance().getLocale(),
                     optionalCertificate(inputs, "listSignerCertificate"),
                     optionalCertificate(inputs, "certificateToFind")));
 
@@ -335,10 +336,10 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "MDOC_VERIFY" -> text(MdocOperations.describe(
                     bytes(inputs, "mdoc"),
                     JOSEService.requireEcPublicKey(JWSAlgorithm.ES256, value(node, "issuerPublicKey", "")),
-                    java.time.Instant.now(), Locale.getDefault()));
+                    java.time.Instant.now(), I18nService.getInstance().getLocale()));
 
             case "MDOC_INSPECT" -> text(MdocOperations.describe(
-                    bytes(inputs, "mdoc"), null, java.time.Instant.now(), Locale.getDefault()));
+                    bytes(inputs, "mdoc"), null, java.time.Instant.now(), I18nService.getInstance().getLocale()));
 
             case "ADES_VALIDATE" -> {
                 AdesValidationOperations.Result result = AdesValidationOperations.validate(
@@ -348,7 +349,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 // other rather than both, because they go to different places.
                 yield text(Boolean.parseBoolean(value(node, "etsiReport", "false"))
                         ? result.etsiValidationReportXml()
-                        : AdesValidationOperations.describe(result, Locale.getDefault()));
+                        : AdesValidationOperations.describe(result, I18nService.getInstance().getLocale()));
             }
 
             case "SCA_TRANSACTION_DATA" -> text(Ts12ScaOperations.encodeTransactionData(
@@ -370,7 +371,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                         blankToNull(value(node, "audience", "")),
                         blankToNull(value(node, "nonce", "")),
                         blankToNull(value(node, "responseMode", "")));
-                yield text(Ts12ScaOperations.describe(report, Locale.getDefault()));
+                yield text(Ts12ScaOperations.describe(report, I18nService.getInstance().getLocale()));
             }
 
             case "OID4VP_INSPECT" -> {
@@ -378,7 +379,7 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
                 yield text(OpenId4VpInspector.describe(string(inputs, "request"),
                         blankToNull(key) == null ? null : JOSEService.createVerifier(
                                 JWSAlgorithm.parse(value(node, "algorithm", "ES256")), key),
-                        Locale.getDefault()));
+                        I18nService.getInstance().getLocale()));
             }
 
             case "TRUSTED_LIST_FIND_CERT" -> {

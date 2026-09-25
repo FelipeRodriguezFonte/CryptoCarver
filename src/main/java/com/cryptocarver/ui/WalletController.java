@@ -13,6 +13,7 @@ import com.cryptocarver.crypto.TrustedListInspector;
 import com.cryptocarver.crypto.TrustedEntityListJsonInspector;
 import com.cryptocarver.crypto.Ts12ScaOperations;
 import com.cryptocarver.model.OperationResult;
+import com.cryptocarver.service.I18nService;
 import com.cryptocarver.util.DataConverter;
 import com.nimbusds.jose.JWSAlgorithm;
 
@@ -367,7 +368,7 @@ public class WalletController implements Initializable {
         try {
             String serialized = textOf(sdJwtInspectInputArea);
             if (isBlank(serialized)) { showValidation(t("module.wallet.sdJwtRequired"), "sdJwtInspectInputArea"); return; }
-            String report = SdJwtOperations.describe(serialized, Locale.getDefault());
+            String report = SdJwtOperations.describe(serialized, I18nService.getInstance().getLocale());
             sdJwtInspectOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("SD-JWT Inspect", report);
@@ -437,7 +438,7 @@ public class WalletController implements Initializable {
             }
             PublicKey key = isBlank(issuerKey) ? null : AsymmetricKeyOperations.importPublicKeyPEMAuto(issuerKey);
             String report = MdocOperations.describe(CborInspector.parseHex(hex), key,
-                    Instant.now(), Locale.getDefault());
+                    Instant.now(), I18nService.getInstance().getLocale());
             mdocVerifyOutputArea.setText(report);
             updateStatus(t("module.wallet.status.verified"));
             publish(requireIssuerKey ? "mdoc Verify" : "mdoc Inspect", report);
@@ -524,7 +525,7 @@ public class WalletController implements Initializable {
         try {
             String pem = textOf(eidasCertArea);
             if (isBlank(pem)) { showValidation(t("module.wallet.certificateRequired"), "eidasCertArea"); return; }
-            String report = EidasCertificateInspector.describe(parseCertificate(pem), Locale.getDefault());
+            String report = EidasCertificateInspector.describe(parseCertificate(pem), I18nService.getInstance().getLocale());
             eidasCertOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("eIDAS Certificate Inspect", report);
@@ -540,7 +541,7 @@ public class WalletController implements Initializable {
         try {
             byte[] xml = trustedListXml();
             if (xml == null) return;
-            String report = TrustedListInspector.describe(xml, Locale.getDefault());
+            String report = TrustedListInspector.describe(xml, I18nService.getInstance().getLocale());
             trustedListOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("Trusted List Inspect", report);
@@ -557,7 +558,7 @@ public class WalletController implements Initializable {
             String signer = textOf(trustedEntityListSignerCertArea);
             String search = textOf(trustedEntityListSearchCertArea);
             String report = TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8),
-                    Locale.getDefault(), signer.isBlank() ? null : parseCertificate(signer),
+                    I18nService.getInstance().getLocale(), signer.isBlank() ? null : parseCertificate(signer),
                     search.isBlank() ? null : parseCertificate(search));
             trustedListOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
@@ -722,7 +723,7 @@ public class WalletController implements Initializable {
                     blankToNull(textOf(scaNonceField)),
                     blankToNull(textOf(scaResponseModeField)));
 
-            String text = Ts12ScaOperations.describe(report, Locale.getDefault());
+            String text = Ts12ScaOperations.describe(report, I18nService.getInstance().getLocale());
             scaOutputArea.setText(text);
             updateStatus(t("module.wallet.status.verified"));
             publish("SCA Verify", text, "Dynamic link", report.acceptable() ? "holds" : "does not hold");
@@ -740,7 +741,7 @@ public class WalletController implements Initializable {
             String report = OpenId4VpInspector.describe(request,
                     isBlank(key) ? null
                             : JOSEService.createVerifier(JWSAlgorithm.parse(valueOf(sdJwtAlgoCombo, "ES256")), key),
-                    Locale.getDefault());
+                    I18nService.getInstance().getLocale());
             oid4vpOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("OpenID4VP Request Inspect", report);
@@ -769,7 +770,7 @@ public class WalletController implements Initializable {
                     decodeDocument(document), textOf(adesFileNameField), null, null);
             String text = etsiReport
                     ? result.etsiValidationReportXml()
-                    : AdesValidationOperations.describe(result, Locale.getDefault());
+                    : AdesValidationOperations.describe(result, I18nService.getInstance().getLocale());
             adesOutputArea.setText(text);
             updateStatus(t("module.wallet.status.verified"));
             publish(etsiReport ? "AdES ETSI Report" : "AdES Validate", text,
