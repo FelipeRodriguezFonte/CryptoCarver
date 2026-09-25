@@ -36,6 +36,7 @@ class TrustedEntityListJsonInspectorTest {
     @Test void describesUnsignedListAsUnsigned() {
         String report = TrustedEntityListJsonInspector.describe(validJson().getBytes(StandardCharsets.UTF_8), Locale.ENGLISH);
         assertTrue(report.contains("Wallet service")); assertTrue(report.contains("signature: no signature present"));
+        assertTrue(report.contains("local profile checks: not evaluated"));
     }
     @Test void verifiesCompactAndJsonJadesWithExplicitSigner() throws Exception {
         Signer signer = signer("Signer");
@@ -62,6 +63,21 @@ class TrustedEntityListJsonInspectorTest {
                 .contains("signature: invalid"));
         assertTrue(TrustedEntityListJsonInspector.describe(compact.getBytes(StandardCharsets.UTF_8), Locale.ENGLISH)
                 .contains("signature: not verified (no trust anchor provided)"));
+    }
+    @Test void acceptsGeneralJsonSerializationWhenOneSignerMatchesAnchor() throws Exception {
+        Signer trusted = signer("Trusted");
+        Signer other = signer("Other");
+        String[] first = signed(validJson(), trusted).split("\\.");
+        String[] second = signed(validJson(), other).split("\\.");
+        String general = "{\"payload\":\"" + first[1] + "\",\"signatures\":["
+                + "{\"protected\":\"" + second[0] + "\",\"signature\":\"" + second[2] + "\"},"
+                + "{\"protected\":\"" + first[0] + "\",\"signature\":\"" + first[2] + "\"}]}";
+        String report = TrustedEntityListJsonInspector.describe(general.getBytes(StandardCharsets.UTF_8),
+                Locale.ENGLISH, trusted.certificate());
+        assertTrue(report.contains("signature: valid (signer:"), report);
+        String spanish = TrustedEntityListJsonInspector.describe(general.getBytes(StandardCharsets.UTF_8),
+                Locale.forLanguageTag("es"), trusted.certificate());
+        assertTrue(spanish.contains("firma: válida (firmante:"), spanish);
     }
     @Test void findsExactCertificateAndReportsCurrentStatus() throws Exception {
         Signer present = signer("Present");
@@ -91,6 +107,15 @@ class TrustedEntityListJsonInspectorTest {
         assertTrue(report.contains("status: https://example.test/withdrawn"), report);
         assertEquals("https://example.test/withdrawn", TrustedEntityListJsonInspector
                 .findCertificate(list.getBytes(StandardCharsets.UTF_8), present.certificate()).get(0).status());
+    }
+    @Test void explainsStatusImpliedByAProfileWithNoStatusField() throws Exception {
+        Signer listed = signer("Listed PID");
+        String list = profileJson("EUPIDProvidersList").replace("AA==",
+                java.util.Base64.getEncoder().encodeToString(listed.certificate().getEncoded()));
+        String report = TrustedEntityListJsonInspector.describe(list.getBytes(StandardCharsets.UTF_8),
+                Locale.ENGLISH, null, listed.certificate());
+        assertTrue(report.contains("status: approved by inclusion in the current list"), report);
+        assertTrue(report.contains("since: not specified (current list only)"), report);
     }
     @Test void detectsAllSixProfilesAndChecksTheirLocalRules() {
         String[] types = {"EUPIDProvidersList", "EUWalletProvidersList", "EUWRPACProvidersList",
@@ -158,6 +183,29 @@ class TrustedEntityListJsonInspectorTest {
         assertTrue(unmet.stream().anyMatch(s -> s.contains("contact email and phone")), unmet.toString());
         assertTrue(unmet.stream().anyMatch(s -> s.contains("needs X509SKIs")), unmet.toString());
         assertTrue(unmet.stream().anyMatch(s -> s.contains("must omit X509Certificates")), unmet.toString());
+    }
+    @Test void publicEaaChecksCertificateIdentityAndStatusDate() throws Exception {
+        JsonObject root = JsonParser.parseString(profileJson("EUPubEAAProvidersList")).getAsJsonObject();
+        JsonObject info = root.getAsJsonObject("LoTE").getAsJsonObject("ListAndSchemeInformation");
+        info.remove("SchemeInformationURI");
+        JsonObject service = root.getAsJsonObject("LoTE").getAsJsonArray("TrustedEntitiesList").get(0)
+                .getAsJsonObject().getAsJsonArray("TrustedEntityServices").get(0).getAsJsonObject()
+                .getAsJsonObject("ServiceInformation");
+        service.addProperty("StatusStartingTime", "2025-10-31T00:00:00Z");
+        com.google.gson.JsonArray certificates = new com.google.gson.JsonArray();
+        for (String name : java.util.List.of("First", "Second")) {
+            JsonObject item = new JsonObject();
+            item.addProperty("val", java.util.Base64.getEncoder()
+                    .encodeToString(signer(name).certificate().getEncoded()));
+            certificates.add(item);
+        }
+        service.getAsJsonObject("ServiceDigitalIdentity").add("X509Certificates", certificates);
+        var unmet = TrustedEntityListProfileValidator.assess(root.toString().getBytes(StandardCharsets.UTF_8), true, true)
+                .unmetRequirements();
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("SchemeInformationURI")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("StatusStartingTime cannot precede")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("organizationName must equal TEName")), unmet.toString());
+        assertTrue(unmet.stream().anyMatch(s -> s.contains("share a public key and subject")), unmet.toString());
     }
     @Test void rejectsMalformedListWithClearMessage() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> TrustedEntityListJsonInspector.parse("{\"LoTE\":{}}".getBytes(StandardCharsets.UTF_8)));
@@ -231,6 +279,10 @@ class TrustedEntityListJsonInspectorTest {
         JsonObject info = root.getAsJsonObject("LoTE").getAsJsonObject("ListAndSchemeInformation");
         info.addProperty("LoTEType", "http://uri.etsi.org/19602/LoTEType/" + type);
         info.addProperty("SchemeTerritory", "EU");
+        JsonObject information = new JsonObject(); information.addProperty("lang", "en");
+        information.addProperty("uriValue", "https://example.test/scheme");
+        com.google.gson.JsonArray informationUris = new com.google.gson.JsonArray(); informationUris.add(information);
+        info.add("SchemeInformationURI", informationUris);
         String[] roots = switch (type) {
             case "EUPIDProvidersList" -> new String[]{"PIDProvidersList", "PIDProviders", "PID"};
             case "EUWalletProvidersList" -> new String[]{"WalletProvidersList", "WalletProvidersList", "WalletSolution"};

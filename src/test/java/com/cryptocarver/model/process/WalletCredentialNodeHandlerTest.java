@@ -24,6 +24,32 @@ class WalletCredentialNodeHandlerTest {
 
     private final WalletCredentialNodeHandler handler = new WalletCredentialNodeHandler();
 
+    @Test
+    void trustedEntityListJsonNodeExposesOptionalCertificates() throws Exception {
+        ProcessDefinition.Node inspect = node("TRUSTED_ENTITY_LIST_JSON_INSPECT");
+        var ports = handler.inputPorts(inspect);
+        assertEquals(3, ports.size());
+        assertEquals("trustedEntityListJson", ports.get(0).name());
+        assertTrue(ports.get(0).required());
+        assertEquals("listSignerCertificate", ports.get(1).name());
+        assertFalse(ports.get(1).required());
+        assertEquals("certificateToFind", ports.get(2).name());
+        assertFalse(ports.get(2).required());
+
+        String list = "{\"LoTE\":{\"ListAndSchemeInformation\":{\"LoTEVersionIdentifier\":1,"
+                + "\"LoTESequenceNumber\":1,\"SchemeOperatorName\":[{\"lang\":\"en\",\"value\":\"Lab\"}],"
+                + "\"ListIssueDateTime\":\"2025-11-01T00:00:00Z\",\"NextUpdate\":\"2025-12-01T00:00:00Z\"}}}";
+        var source = FlowValue.text(list, StandardCharsets.UTF_8);
+        String report = handler.execute(inspect, Map.of("trustedEntityListJson", source), null).render();
+        assertTrue(report.contains("signature: no signature present"), report);
+        assertThrows(IllegalArgumentException.class, () -> handler.execute(inspect,
+                Map.of("trustedEntityListJson", source,
+                        "listSignerCertificate", FlowValue.binary(new byte[]{1, 2, 3})), null));
+        assertThrows(IllegalArgumentException.class, () -> handler.execute(inspect,
+                Map.of("trustedEntityListJson", source,
+                        "certificateToFind", FlowValue.binary(new byte[]{1, 2, 3})), null));
+    }
+
     private static final String CLAIMS = """
             {"iss":"https://issuer.lab.invalid","sub":"u1","given_name":"John","family_name":"Doe"}""";
 
