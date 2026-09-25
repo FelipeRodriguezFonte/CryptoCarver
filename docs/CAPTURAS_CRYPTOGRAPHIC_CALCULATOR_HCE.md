@@ -89,6 +89,33 @@ demuestra exactamente qué resultados dependen del UN.
 Duplicar `MC-CVC3-00` y cambiar sólo ATC de `0001` a `0002`. No cambiar UN ni
 pistas. Devolver los mismos intermedios.
 
+### Resultado (25-09-2026) — aparcado
+
+Pantalla real: Payments → Card Validation → MasterCard dynamic CVC3. Un solo
+campo «Track 1/2 Data» en hexadecimal, con relleno ISO/IEC 7816-4 método 2
+obligatorio (múltiplo de 16).
+
+| Pista | UN | ATC | CVC3 |
+|---|---|---|---|
+| track 2 `4111…000F` + `8000000000` | 00000000 | 0001 | 19882 |
+| track 1 (ASCII en hex) + `8000000000` | 00000000 | 0001 | 17781 |
+| track 2 | 00000001 | 0002 | 19882 |
+| track 2 | 12345678 | FFFF | 19882 |
+
+- La clave derivada (`31089464674C73EC851A6E0737029D19`, KCV `9595`) es la
+  clave de tarjeta EMV opción A que ya calcula el código, con paridad impar.
+- **La herramienta ignora UN y ATC al generar**: el CVC3 no cambia. No sirve
+  como referencia del CVC3 dinámico real, que cifra IVCVC3 || UN || ATC.
+- Ninguna construcción probada reproduce 19882/17781 (IVCVC3 por CBC-MAC DES,
+  TDES o ISO 9797-1 alg. 3, con y sin relleno, bytes izquierdos o derechos;
+  CVC3 como cifrado de IVCVC3 con UN y ATC a cero, en decimal de 2 bytes).
+- La pestaña Validate trae un ejemplo precargado (IMK
+  `01234567899876543210012345678998`, PAN `5413123456784808`, ATC `005E`,
+  CVC3 `587`) con los campos descolocados; no se ha podido usar.
+
+Hace falta otra fuente (un HSM o una especificación con vector) antes de
+implementar el CVC3.
+
 ## 2. Mastercard PIN-CVC3
 
 Ruta esperada: la opción **PIN-CVC3** de la misma familia Mastercard. No usar el
