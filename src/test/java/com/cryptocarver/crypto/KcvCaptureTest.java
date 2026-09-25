@@ -24,9 +24,11 @@ import org.junit.jupiter.params.provider.CsvSource;
  * computes on the whole key it is given.</p>
  *
  * <p>The same captures show KCV (IBM) and KCV (ATALLA R) for four double-length keys
- * (677A/6523, FF6E/D6E3, E0FE/7846, 8FA8/1E7A). Nothing tried reproduces them
+ * (677A/6523, FF6E/D6E3, E0FE/7846, 8FA8/1E7A) and for the two validated
+ * keys above (F9AE/CBBE, B85B/46A5). Nothing tried reproduces them
  * (E and D of fixed blocks under the key, its halves and variants, byte and nibble
- * selections, MDC-2/MDC-4, CMACs, hashes), so they are not pinned.</p>
+ * selections, key variants and IBM CCA control vectors, MDC-2/MDC-4, CRC-16,
+ * CMACs, hashes), so they are not pinned.</p>
  */
 class KcvCaptureTest {
 
@@ -41,6 +43,7 @@ class KcvCaptureTest {
             "69C752BD4D131DCD70D5E958D510298D, A9CDD6, B3B7, 552B6748CF", // none
             "313152858C79AB1CEF5832A129BA98B9, BCA65A, 04AA, 4EC8ECF337", // odd
             "5C3F0A0506E2BB8E88BE1414057790D2, 54A0E5, 6214, 8D718AA1C1", // even
+            "0123456789ABCDEFFEDCBA9876543210, 08D7B4, 1A4D, 0A82458664", // key validation, classic test key
     })
     void desFamily(String key, String visa, String futurex, String ckcvTdea) throws Exception {
         byte[] k = DataConverter.hexToBytes(key);
@@ -48,6 +51,14 @@ class KcvCaptureTest {
         assertEquals(visa, hex(KeyOperations.calculateKCV_ATALLA(k)));
         assertEquals(futurex, hex(KeyOperations.calculateKCV_FUTUREX(k)));
         assertEquals(ckcvTdea, hex(KeyOperations.calculateCKCV_TDEA(k)));
+    }
+
+    /** Two weak DES halves: the tool prints VISA and FUTUREX but CKCV (TDEA) N/A; this bench computes all three. */
+    @org.junit.jupiter.api.Test
+    void weakDesKeyStillHasVisaAndFuturexKcvs() throws Exception {
+        byte[] k = DataConverter.hexToBytes("0101010101010101FEFEFEFEFEFEFEFE");
+        assertEquals("9295B5", hex(KeyOperations.calculateKCV_VISA(k)));
+        assertEquals("1069", hex(KeyOperations.calculateKCV_FUTUREX(k)));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -61,6 +72,8 @@ class KcvCaptureTest {
             "79AD7A2D6A958528BB4B99226A8BCF8B3EC90D196B866A41,             B56E89, 953918, 40E3B4, BB5C7B474E", // 256 none, first 24
             "E950E773F39E6A1E3287B5C53B9E046B86EE18DA1D722C10,             33AE6D, F517B4, 9DB0D2, 44F10A0FC8", // 256 odd, first 24 before parity
             "757AAA224E825ECA057F3663B97149EAFABBA2593C49695B,             DEEFFF, 845AC4, AEBC67, F015B2B6A7", // 256 even, first 24 before parity
+            "0123456789ABCDEFFEDCBA9876543210,                             D5C825, 411D3F, 37BA90, 2090A67375", // key validation: as given
+            "0101010101010101FEFEFEFEFEFEFEFE,                             354A19, 86DECA, C19136, 08066AB4C2", // key validation: as given
     })
     void aesFamily(String key, String aes, String sha256, String cmac, String ckcvAes) throws Exception {
         byte[] k = DataConverter.hexToBytes(key);

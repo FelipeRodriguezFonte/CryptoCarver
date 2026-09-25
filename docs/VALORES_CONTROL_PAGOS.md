@@ -123,8 +123,10 @@ de una clave AES-256 sale mal.
 
 ## Cerrado con las capturas de KCV del 25-09-2026
 
-Nueve claves generadas por la herramienta externa (`KcvCaptureTest`): cuatro
-dobles y cinco de 256 bits, con paridad ninguna, impar y par.
+Nueve claves generadas por la herramienta externa y dos validadas con ella,
+`0123456789ABCDEFFEDCBA9876543210` y `0101010101010101FEFEFEFEFEFEFEFE`
+(`KcvCaptureTest`). En validación la herramienta calcula todo sobre la clave
+tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
 
 - **Familia DES** (VISA/ATALLA, FUTUREX, CKCV TDEA): se calcula sobre la clave
   que muestra la herramienta. Las cuatro dobles coinciden.
@@ -142,11 +144,12 @@ dobles y cinco de 256 bits, con paridad ninguna, impar y par.
   (ANSI X9.24-1:2017). Añadidos a la app (validación de claves y nodo KCV).
 - **KCV FUTUREX**: TDES de la clave entera sobre `0123456789ABCDEF`, 2 bytes.
   El código tomaba los bytes 2 y 4 de DES(K1, 0); corregido.
-- **KCV IBM** y **ATALLA R**: cuatro muestras (`677A`/`6523`, `FF6E`/`D6E3`,
-  `E0FE`/`7846`, `8FA8`/`1E7A`) y ninguna construcción probada las reproduce:
-  cifrado y descifrado de bloques fijos con la clave, sus mitades y variantes,
-  selección de bytes y de nibbles, MDC-2/MDC-4, CMAC y hashes. Siguen sin
-  verificar.
+- **KCV IBM** y **ATALLA R**: seis muestras (`677A`/`6523`, `FF6E`/`D6E3`,
+  `E0FE`/`7846`, `8FA8`/`1E7A`, `F9AE`/`CBBE` con la clave de test clásica,
+  `B85B`/`46A5` con la de mitades débiles) y ninguna construcción probada las
+  reproduce: cifrado y descifrado de bloques fijos con la clave, sus mitades y
+  variantes, vectores de control de IBM CCA, selección de bytes y de nibbles,
+  MDC-2/MDC-4, CRC-16, CMAC y hashes. Siguen sin verificar.
 
 ## Cruzado después
 
@@ -171,5 +174,5 @@ Con las constantes de arriba:
    session key `38F14068B3EA57C194F8E3A20D51E3E6`. Se espera `54DB2625`.
 2. **PIN Blocks → ISO 4**, con PAN de 13 y de 19 dígitos, y la clave AES128.
 3. **Visa dCVV** con PAN, caducidad 2512 y ATC `0001`.
-4. **KCV IBM y ATALLA R** de claves conocidas: una simple (8 bytes), la doble
-   `0123456789ABCDEFFEDCBA9876543210` y la doble `0101010101010101FEFEFEFEFEFEFEFE`.
+4. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
+   `0123456789ABCDEF` y `0000000000000000`.
