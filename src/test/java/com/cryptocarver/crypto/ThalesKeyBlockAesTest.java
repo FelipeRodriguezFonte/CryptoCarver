@@ -154,6 +154,16 @@ class ThalesKeyBlockAesTest {
         assertTrue(unwrapped.authentic());
     }
 
+    /** The same key and header captured again on 2026-09-25: new random padding, same key recovered. */
+    @Test
+    void aRecaptureWithFreshPaddingUnwrapsToTheSameKey() {
+        Unwrapped unwrapped = ThalesKeyBlockOperations.unwrap(KBPK, "10096B0AN00E0002"
+                + "1DFDC97FED3ACD531E0F85F811B10D870535D249B6F4C505567C1BB503FDC70E"
+                + "2123CA085D3430C8");
+        assertEquals("0D6B02388AC8EF491902342C5B0EDAD5", unwrapped.clearKey());
+        assertTrue(unwrapped.authentic());
+    }
+
     // =====================================================================
     // The other KBPK lengths, which have no vector
     // =====================================================================
