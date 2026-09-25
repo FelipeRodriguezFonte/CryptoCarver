@@ -627,7 +627,7 @@ public class ProcessDesignerController {
             String repsStr = (port.acceptedRepresentations() == null || port.acceptedRepresentations().isEmpty())
                     ? "any"
                     : port.acceptedRepresentations().stream().map(Enum::name).collect(Collectors.joining(", "));
-            Tooltip.install(inHandle, new Tooltip(port.name() + " (" + repsStr + ")"));
+            Tooltip.install(inHandle, new Tooltip(portLabel(port.name()) + " (" + repsStr + ")"));
 
             inHandle.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
                 if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
@@ -644,11 +644,11 @@ public class ProcessDesignerController {
             inputPortHandles.add(inHandle);
 
             if (ports.size() > 1) {
-                Label portLabel = new Label("• " + port.name());
-                portLabel.setStyle("-fx-text-fill: #aaa; -fx-font-size: 9px;");
-                portLabel.setTranslateX(-44);
-                portLabel.setTranslateY(yOffset);
-                view.getChildren().add(portLabel);
+                Label inputLabel = new Label("• " + portLabel(port.name()));
+                inputLabel.setStyle("-fx-text-fill: #aaa; -fx-font-size: 9px;");
+                inputLabel.setTranslateX(-44);
+                inputLabel.setTranslateY(yOffset);
+                view.getChildren().add(inputLabel);
             }
         }
 
@@ -938,7 +938,7 @@ public class ProcessDesignerController {
         if (workflowCanvas != null && workflowCanvas.getScene() != null && workflowCanvas.getScene().getWindow() != null) {
             ContextMenu menu = new ContextMenu();
             for (ProcessNodeHandler.PortDefinition port : available) {
-                MenuItem item = new MenuItem(t("module.process.connectToPort", port.name()));
+                MenuItem item = new MenuItem(t("module.process.connectToPort", portLabel(port.name())));
                 item.setOnAction(ev -> completeConnectionDragToPort(from, to, port.name()));
                 menu.getItems().add(item);
             }
@@ -1120,7 +1120,7 @@ public class ProcessDesignerController {
                         connectMenuButton.getItems().clear();
                         connectMenuButton.setText("Connect " + nodeLabel(pair.get(0)) + " to...");
                         for (com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition port : availablePorts) {
-                            javafx.scene.control.MenuItem item = new javafx.scene.control.MenuItem("Connect to " + port.name());
+                            javafx.scene.control.MenuItem item = new javafx.scene.control.MenuItem("Connect to " + portLabel(port.name()));
                             item.setOnAction(e -> connectToPort(port.name()));
                             connectMenuButton.getItems().add(item);
                         }
@@ -1892,5 +1892,11 @@ public class ProcessDesignerController {
         } catch (Exception ignored) {
             return key;
         }
+    }
+
+    private String portLabel(String name) {
+        String key = "module.process.port." + name;
+        java.util.ResourceBundle bundle = I18nService.getInstance().getBundle();
+        return bundle != null && bundle.containsKey(key) ? t(key) : name;
     }
 }

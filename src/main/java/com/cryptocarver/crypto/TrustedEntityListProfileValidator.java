@@ -6,10 +6,17 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
+import java.util.ResourceBundle;
+import java.text.MessageFormat;
 import java.util.Set;
+import javax.naming.ldap.LdapName;
 
 /**
  * Checks locally decidable profile requirements in ETSI TS 119 602 V1.1.1,
@@ -20,7 +27,8 @@ import java.util.Set;
 public final class TrustedEntityListProfileValidator {
     private static final String ROOT = "http://uri.etsi.org/19602/";
 
-    public record Assessment(String profile, List<String> unmetRequirements) { }
+    public record Assessment(String profile, boolean evaluated, boolean statusImpliedByListing,
+                             List<String> unmetRequirements) { }
 
     private enum Profile {
         PID("EUPIDProvidersList", "D", "PIDProvidersList", "PIDProviders", "PID"),
@@ -47,39 +55,47 @@ public final class TrustedEntityListProfileValidator {
     private TrustedEntityListProfileValidator() { }
 
     public static Assessment assess(byte[] validatedPayload, boolean compactSignature, boolean signed) {
+        return assess(validatedPayload, compactSignature, signed, Locale.ENGLISH);
+    }
+
+    public static Assessment assess(byte[] validatedPayload, boolean compactSignature, boolean signed, Locale locale) {
         JsonObject lote = JsonParser.parseString(new String(validatedPayload, StandardCharsets.UTF_8))
                 .getAsJsonObject().getAsJsonObject("LoTE");
         JsonObject info = lote.getAsJsonObject("ListAndSchemeInformation");
         String type = string(info, "LoTEType");
         Profile profile = Profile.fromType(type);
-        if (profile == null) return new Assessment(type == null ? "unspecified" : "unrecognized (" + type + ")", List.of());
+        if (profile == null) return new Assessment(type == null
+                ? label(locale, "profileUnspecified") : label(locale, "profileUnrecognized", type),
+                false, false, List.of());
         List<String> unmet = new ArrayList<>();
         String scheme = profile.clause + ".2";
         String servicesClause = profile.clause + ".3";
         if (info.get("LoTEVersionIdentifier").getAsInt() != 1)
-            unmet.add(scheme + ": LoTEVersionIdentifier must be 1");
+            unmet.add(label(locale, "rule.version", scheme));
         if (!"EU".equals(string(info, "SchemeTerritory")))
-            unmet.add(scheme + ": SchemeTerritory must be EU");
+            unmet.add(label(locale, "rule.territory", scheme));
         if (profile.statusRoot != null && !(ROOT + profile.statusRoot + "/StatusDetn/EU")
                 .equals(string(info, "StatusDeterminationApproach")))
-            unmet.add(scheme + ": StatusDeterminationApproach has the wrong URI");
+            unmet.add(label(locale, "rule.statusApproach", scheme));
         if (!hasUri(info.getAsJsonArray("SchemeTypeCommunityRules"), ROOT + profile.rulesRoot + "/schemerules/EU"))
-            unmet.add(scheme + ": SchemeTypeCommunityRules lacks the required URI");
+            unmet.add(label(locale, "rule.schemeRules", scheme));
+        if (info.getAsJsonArray("SchemeInformationURI") == null)
+            unmet.add(label(locale, "rule.schemeInfoUri", scheme));
         if (profile == Profile.PUB_EAA) {
             if (intValue(info, "HistoricalInformationPeriod") != 65535)
-                unmet.add(scheme + ": HistoricalInformationPeriod must be 65535");
+                unmet.add(label(locale, "rule.historyPeriod65535", scheme));
             if (info.has("PointersToOtherLoTE"))
-                unmet.add(scheme + ": PointersToOtherLoTE must be absent");
+                unmet.add(label(locale, "rule.pointersAbsent", scheme));
         } else if (info.has("HistoricalInformationPeriod")) {
-            unmet.add(scheme + ": HistoricalInformationPeriod must be absent");
+            unmet.add(label(locale, "rule.historyPeriodAbsent", scheme));
         }
         try {
             OffsetDateTime issued = OffsetDateTime.parse(string(info, "ListIssueDateTime"));
             OffsetDateTime next = OffsetDateTime.parse(string(info, "NextUpdate"));
             if (!next.isAfter(issued) || next.isAfter(issued.plusMonths(6)))
-                unmet.add(scheme + ": NextUpdate must be within six months after ListIssueDateTime");
+                unmet.add(label(locale, "rule.nextUpdate", scheme));
         } catch (RuntimeException e) {
-            unmet.add(scheme + ": invalid ListIssueDateTime or NextUpdate");
+            unmet.add(label(locale, "rule.invalidDates", scheme));
         }
         JsonArray entities = lote.getAsJsonArray("TrustedEntitiesList");
         if (entities != null) for (JsonElement entity : entities) {
@@ -88,7 +104,7 @@ public final class TrustedEntityListProfileValidator {
             JsonArray electronicAddresses = providerInfo.getAsJsonObject("TEAddress")
                     .getAsJsonArray("TEElectronicAddress");
             if (!hasUriPrefix(electronicAddresses, "mailto:") || !hasUriPrefix(electronicAddresses, "tel:"))
-                unmet.add(servicesClause + " " + provider + ": TEAddress needs contact email and phone");
+                unmet.add(label(locale, "rule.contact", servicesClause + " " + provider + ": "));
             for (JsonElement serviceElement : entity.getAsJsonObject().getAsJsonArray("TrustedEntityServices")) {
                 JsonObject service = serviceElement.getAsJsonObject().getAsJsonObject("ServiceInformation");
                 String name = firstValue(service.getAsJsonArray("ServiceName"));
@@ -98,37 +114,79 @@ public final class TrustedEntityListProfileValidator {
                         ? Set.of(ROOT + "SvcType/Register")
                         : Set.of(ROOT + "SvcType/" + profile.serviceRoot + "/Issuance",
                                  ROOT + "SvcType/" + profile.serviceRoot + "/Revocation");
-                if (kind == null || !allowed.contains(kind)) unmet.add(prefix + "ServiceTypeIdentifier is not permitted");
+                if (kind == null || !allowed.contains(kind)) unmet.add(label(locale, "rule.serviceType", prefix));
                 if (profile != Profile.PUB_EAA) {
                     JsonObject identity = service.getAsJsonObject("ServiceDigitalIdentity");
                     if (identity.getAsJsonArray("X509Certificates") == null)
-                        unmet.add(prefix + "ServiceDigitalIdentity needs X509Certificates");
-                    if (service.has("ServiceStatus")) unmet.add(prefix + "ServiceStatus must be absent");
-                    if (service.has("StatusStartingTime")) unmet.add(prefix + "StatusStartingTime must be absent");
+                        unmet.add(label(locale, "rule.identityCerts", prefix));
+                    if (service.has("ServiceStatus")) unmet.add(label(locale, "rule.statusAbsent", prefix));
+                    if (service.has("StatusStartingTime")) unmet.add(label(locale, "rule.statusSinceAbsent", prefix));
                 } else {
                     String status = string(service, "ServiceStatus");
                     if (status == null || !Set.of(ROOT + "PubEAAProvidersList/SvcStatus/notified",
                             ROOT + "PubEAAProvidersList/SvcStatus/withdrawn").contains(status))
-                        unmet.add(prefix + "ServiceStatus must be notified or withdrawn");
+                        unmet.add(label(locale, "rule.publicEaaStatus", prefix));
+                    JsonArray certificates = service.getAsJsonObject("ServiceDigitalIdentity")
+                            .getAsJsonArray("X509Certificates");
+                    checkPublicEaaCertificates(certificates, provider, prefix, locale, unmet);
+                    String since = string(service, "StatusStartingTime");
+                    if (since != null && OffsetDateTime.parse(since).isBefore(
+                            OffsetDateTime.parse(string(info, "ListIssueDateTime"))))
+                        unmet.add(label(locale, "rule.publicEaaStatusSince", prefix));
                 }
                 if (profile == Profile.REGISTRARS && service.getAsJsonArray("ServiceSupplyPoints") == null)
-                    unmet.add(prefix + "ServiceSupplyPoints is required");
+                    unmet.add(label(locale, "rule.supplyPoint", prefix));
                 if (profile == Profile.PUB_EAA) {
                     JsonArray history = serviceElement.getAsJsonObject().getAsJsonArray("ServiceHistory");
                     if (history != null) for (JsonElement historyElement : history) {
                         JsonObject historicalIdentity = historyElement.getAsJsonObject()
                                 .getAsJsonObject("ServiceDigitalIdentity");
                         if (historicalIdentity.getAsJsonArray("X509SKIs") == null)
-                            unmet.add(prefix + "historical ServiceDigitalIdentity needs X509SKIs");
+                            unmet.add(label(locale, "rule.historySki", prefix));
                         if (historicalIdentity.has("X509Certificates"))
-                            unmet.add(prefix + "historical ServiceDigitalIdentity must omit X509Certificates");
+                            unmet.add(label(locale, "rule.historyCertAbsent", prefix));
                     }
                 }
             }
         }
-        if (!signed) unmet.add(profile.clause + ".4: compact JAdES Baseline B signature is required");
-        else if (!compactSignature) unmet.add(profile.clause + ".4: JAdES must use compact serialization");
-        return new Assessment(profile.type + " (Annex " + profile.clause + ")", List.copyOf(unmet));
+        if (!signed) unmet.add(label(locale, "rule.signatureRequired", profile.clause + ".4"));
+        else if (!compactSignature) unmet.add(label(locale, "rule.compactRequired", profile.clause + ".4"));
+        return new Assessment(label(locale, "profileAnnex", profile.type, profile.clause),
+                true, profile != Profile.PUB_EAA, List.copyOf(unmet));
+    }
+
+    private static String label(Locale locale, String key, Object... args) {
+        Locale selected = locale == null ? Locale.ENGLISH : locale;
+        String pattern = ResourceBundle.getBundle("i18n.messages", selected)
+                .getString("module.wallet.ts119602." + key);
+        return new MessageFormat(pattern, selected).format(args);
+    }
+
+    private static void checkPublicEaaCertificates(JsonArray certificates, String provider,
+                                                    String prefix, Locale locale, List<String> unmet) {
+        if (certificates == null) return;
+        X509Certificate first = null;
+        for (JsonElement value : certificates) {
+            try {
+                byte[] der = Base64.getDecoder().decode(value.getAsJsonObject().get("val").getAsString());
+                X509Certificate current = TrustedEntityListJsonInspector.readCertificate(der);
+                if (!provider.equals(organizationName(current)))
+                    unmet.add(label(locale, "rule.publicEaaOrganization", prefix));
+                if (first != null && (!Arrays.equals(first.getPublicKey().getEncoded(),
+                        current.getPublicKey().getEncoded()) || !first.getSubjectX500Principal()
+                        .equals(current.getSubjectX500Principal())))
+                    unmet.add(label(locale, "rule.publicEaaCertConsistency", prefix));
+                if (first == null) first = current;
+            } catch (Exception e) {
+                unmet.add(label(locale, "rule.publicEaaInvalidCertificate", prefix));
+            }
+        }
+    }
+
+    private static String organizationName(X509Certificate certificate) throws Exception {
+        for (var part : new LdapName(certificate.getSubjectX500Principal().getName("RFC2253")).getRdns())
+            if ("O".equalsIgnoreCase(part.getType())) return part.getValue().toString();
+        return null;
     }
 
     private static String string(JsonObject object, String key) {

@@ -770,6 +770,9 @@ public final class ModuleTextCatalog {
         map.put("eIDAS certificate profiles", "module.wallet.eidasCertTitle");
         map.put("Trusted List", "module.wallet.trustedListTitle");
         map.put("Trusted Entity List (TS 119 602 JSON):", "module.wallet.trustedEntityListJsonLabel");
+        map.put("Paste the TS 119 602 JSON or compact JAdES", "module.wallet.trustedEntityListJsonPrompt");
+        map.put("List signer certificate (PEM or Base64 DER, optional):", "module.wallet.trustedEntityListSignerCertLabel");
+        map.put("Certificate to find in this JSON list (PEM or Base64 DER, optional):", "module.wallet.trustedEntityListSearchCertLabel");
         map.put("Inspect JSON", "module.wallet.trustedEntityListJsonInspect");
         map.put("CBOR", "module.wallet.cborTitle");
         map.put("Issue", "module.wallet.issue");

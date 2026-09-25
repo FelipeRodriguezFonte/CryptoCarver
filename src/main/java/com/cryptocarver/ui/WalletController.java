@@ -64,6 +64,8 @@ public class WalletController implements Initializable {
     @FXML private VBox eidasCertSection;
     @FXML private VBox trustedListSection;
     @FXML private TextArea trustedEntityListJsonArea;
+    @FXML private TextArea trustedEntityListSignerCertArea;
+    @FXML private TextArea trustedEntityListSearchCertArea;
     @FXML private VBox cborSection;
     @FXML private VBox scaSection;
     @FXML private VBox adesSection;
@@ -551,8 +553,12 @@ public class WalletController implements Initializable {
     private void handleTrustedEntityListJsonInspect() {
         try {
             String json = textOf(trustedEntityListJsonArea);
-            if (isBlank(json)) { showValidation("A TS 119 602 JSON list is required", "trustedEntityListJsonArea"); return; }
-            String report = TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8), Locale.getDefault());
+            if (isBlank(json)) { showValidation(t("module.wallet.trustedEntityListRequired"), "trustedEntityListJsonArea"); return; }
+            String signer = textOf(trustedEntityListSignerCertArea);
+            String search = textOf(trustedEntityListSearchCertArea);
+            String report = TrustedEntityListJsonInspector.describe(json.getBytes(StandardCharsets.UTF_8),
+                    Locale.getDefault(), signer.isBlank() ? null : parseCertificate(signer),
+                    search.isBlank() ? null : parseCertificate(search));
             trustedListOutputArea.setText(report);
             updateStatus(t("module.wallet.status.inspected"));
             publish("Trusted Entity List JSON Inspect", report);
@@ -796,7 +802,8 @@ public class WalletController implements Initializable {
                 statusListStatusesArea, statusListKeyArea, statusListOutputArea,
                 statusListTokenArea, statusListVerifyKeyArea, statusListResolveOutputArea,
                 eidasCertArea, eidasCertOutputArea,
-                trustedListXmlArea, trustedEntityListJsonArea, trustedListCertArea, trustedListOutputArea,
+                trustedListXmlArea, trustedEntityListJsonArea, trustedEntityListSignerCertArea,
+                trustedEntityListSearchCertArea, trustedListCertArea, trustedListOutputArea,
                 cborInputArea, cborOutputArea, cborJsonArea, cborFromJsonOutputArea,
                 scaPayloadArea, scaEntryArea, scaPresentationArea, scaTransactionDataArea,
                 scaIssuerKeyArea, scaHolderKeyArea, scaOutputArea,

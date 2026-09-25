@@ -145,7 +145,10 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "CBOR_FROM_JSON" -> List.of(port("json", any, true));
             case "EIDAS_CERT_INSPECT" -> List.of(port("certificate", any, true));
             case "TRUSTED_LIST_INSPECT", "TRUSTED_LIST_VERIFY" -> List.of(port("trustedList", any, true));
-            case "TRUSTED_ENTITY_LIST_JSON_INSPECT" -> List.of(port("trustedEntityListJson", any, true));
+            case "TRUSTED_ENTITY_LIST_JSON_INSPECT" -> List.of(
+                    port("trustedEntityListJson", any, true),
+                    port("listSignerCertificate", any, false),
+                    port("certificateToFind", any, false));
             case "TRUSTED_LIST_FIND_CERT" -> List.of(port("trustedList", any, true), port("certificate", any, true));
             case "MDOC_ISSUE" -> List.of(port("claims", any, true), port("key", any, false));
             case "MDOC_VERIFY", "MDOC_INSPECT" -> List.of(port("mdoc", any, true));
@@ -295,7 +298,9 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
             case "TRUSTED_LIST_INSPECT" -> text(TrustedListInspector.describe(
                     bytes(inputs, "trustedList"), Locale.getDefault()));
             case "TRUSTED_ENTITY_LIST_JSON_INSPECT" -> text(TrustedEntityListJsonInspector.describe(
-                    bytes(inputs, "trustedEntityListJson"), Locale.getDefault()));
+                    bytes(inputs, "trustedEntityListJson"), Locale.getDefault(),
+                    optionalCertificate(inputs, "listSignerCertificate"),
+                    optionalCertificate(inputs, "certificateToFind")));
 
             case "TRUSTED_LIST_VERIFY" -> {
                 TrustedListInspector.SignatureResult result =
@@ -495,6 +500,12 @@ public final class WalletCredentialNodeHandler implements ProcessNodeHandler {
         return (java.security.cert.X509Certificate) java.security.cert.CertificateFactory
                 .getInstance("X.509")
                 .generateCertificate(new java.io.ByteArrayInputStream(material));
+    }
+
+    private static java.security.cert.X509Certificate optionalCertificate(Map<String, FlowValue> inputs,
+                                                                           String name) {
+        FlowValue input = inputs.get(name);
+        return input == null ? null : TrustedEntityListJsonInspector.readCertificate(input.bytes());
     }
 
     private static SdJwtOperations.HashAlgorithm hashAlgorithm(ProcessDefinition.Node node) {

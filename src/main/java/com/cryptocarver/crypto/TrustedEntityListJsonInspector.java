@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.ResourceBundle;
+import java.text.MessageFormat;
 
 /**
  * Local reader for the JSON binding in ETSI TS 119 602 V1.1.1, Annex A.
@@ -134,18 +136,24 @@ public final class TrustedEntityListJsonInspector {
                 .append("\n  type: ").append(s.typeIdentifier()).append("\n  status: ").append(s.status())
                 .append("\n  status since: ").append(s.statusStartingTime()).append('\n'); for (String q : s.qualifiers()) out.append("  qualifier: ").append(q).append('\n'); }
         TrustedEntityListProfileValidator.Assessment profile = TrustedEntityListProfileValidator.assess(
-                envelope.payload(), envelope.compact(), envelope.signature() != null);
-        out.append("\nprofile: ").append(profile.profile()).append('\n');
-        if (profile.unmetRequirements().isEmpty()) out.append("profile requirements: satisfied\n");
-        else for (String unmet : profile.unmetRequirements()) out.append("profile unmet: ").append(unmet).append('\n');
-        out.append("\nsignature: ").append(signatureStatus(envelope, trustAnchor)).append('\n');
+                envelope.payload(), envelope.compact(), envelope.signature() != null, locale);
+        out.append('\n').append(reportText(locale, "profile", profile.profile())).append('\n');
+        if (!profile.evaluated()) out.append(reportText(locale, "profileNotEvaluated")).append('\n');
+        else if (profile.unmetRequirements().isEmpty()) out.append(reportText(locale, "profileSatisfied")).append('\n');
+        else for (String unmet : profile.unmetRequirements())
+            out.append(reportText(locale, "profileUnmet", unmet)).append('\n');
+        out.append('\n').append(reportText(locale, "signature", signatureStatus(envelope, trustAnchor, locale))).append('\n');
         if (certificateToFind != null) {
             List<Service> matches = findCertificate(envelope.payload(), certificateToFind);
-            out.append("certificate matches: ").append(matches.size()).append('\n');
+            out.append(reportText(locale, "certificateMatches", matches.size())).append('\n');
             for (Service match : matches) {
-                out.append("  ").append(match.providerName()).append(" / ").append(match.serviceName())
-                        .append(" — status: ").append(match.status())
-                        .append("; since: ").append(match.statusStartingTime()).append('\n');
+                String currentStatus = match.status() == null
+                        ? reportText(locale, profile.statusImpliedByListing()
+                                ? "statusImplicit" : "statusUnspecified") : match.status();
+                String since = match.statusStartingTime() == null
+                        ? reportText(locale, "sinceUnspecified") : match.statusStartingTime();
+                out.append(reportText(locale, "certificateMatch", match.providerName(), match.serviceName(),
+                        currentStatus, since)).append('\n');
             }
         }
         return out.toString();
@@ -194,9 +202,9 @@ public final class TrustedEntityListJsonInspector {
         }
     }
 
-    private static String signatureStatus(Envelope envelope, X509Certificate trustAnchor) {
-        if (envelope.signature() == null) return "no signature present";
-        if (trustAnchor == null) return "not verified (no trust anchor provided)";
+    private static String signatureStatus(Envelope envelope, X509Certificate trustAnchor, Locale locale) {
+        if (envelope.signature() == null) return reportText(locale, "signatureAbsent");
+        if (trustAnchor == null) return reportText(locale, "signatureUnverified");
         try {
             CommonTrustedCertificateSource trusted = new CommonTrustedCertificateSource();
             trusted.addCertificate(new CertificateToken(trustAnchor));
@@ -209,19 +217,31 @@ public final class TrustedEntityListJsonInspector {
             validator.setSigningCertificateSource(trusted);
             Reports reports = validator.validateDocument();
             var simple = reports.getSimpleReport();
-            if (simple.getSignatureIdList().size() != 1) return "invalid (expected exactly one signature)";
-            String id = simple.getSignatureIdList().get(0);
-            if (simple.getIndication(id) != Indication.TOTAL_PASSED) {
-                return "invalid (" + simple.getIndication(id) + ": " + simple.getSubIndication(id) + ")";
+            if (simple.getSignatureIdList().isEmpty())
+                return reportText(locale, "signatureInvalid", reportText(locale, "signatureMissingInJws"));
+            String failure = reportText(locale, "signatureSignerMismatch");
+            for (String id : simple.getSignatureIdList()) {
+                if (simple.getIndication(id) != Indication.TOTAL_PASSED) {
+                    failure = simple.getIndication(id) + ": " + simple.getSubIndication(id);
+                    continue;
+                }
+                var signature = validator.getSignatureById(id);
+                var signer = signature == null ? null : signature.getSigningCertificateToken();
+                if (signer != null && java.util.Arrays.equals(signer.getEncoded(), encoded(trustAnchor))) {
+                    return reportText(locale, "signatureValid", trustAnchor.getSubjectX500Principal().getName());
+                }
             }
-            var signer = validator.getSignatures().get(0).getSigningCertificateToken();
-            if (signer == null || !java.util.Arrays.equals(signer.getEncoded(), encoded(trustAnchor))) {
-                return "invalid (signer does not match trust anchor)";
-            }
-            return "valid (signer: " + trustAnchor.getSubjectX500Principal().getName() + ")";
+            return reportText(locale, "signatureInvalid", failure);
         } catch (Exception e) {
-            return "invalid (" + e.getClass().getSimpleName() + ": " + e.getMessage() + ")";
+            return reportText(locale, "signatureInvalid", e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    private static String reportText(Locale locale, String key, Object... args) {
+        Locale selected = locale == null ? Locale.ENGLISH : locale;
+        String pattern = ResourceBundle.getBundle("i18n.messages", selected)
+                .getString("module.wallet.ts119602." + key);
+        return new MessageFormat(pattern, selected).format(args);
     }
 
     private static byte[] encoded(X509Certificate certificate) throws java.security.cert.CertificateEncodingException {
