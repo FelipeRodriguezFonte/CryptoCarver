@@ -193,6 +193,27 @@ de uno meramente mostrado.
 
 ## 4. Visa LUK
 
+### Resultado (25-09-2026) — resuelto
+
+Pantalla real: EMV → HCE → Visa, pestañas UDK, LUK key, MSD y qVSDC con un
+ejemplo precargado. Se capturaron sus valores por defecto; el fabricante publica
+un segundo ejemplo (UDK `C8B5…D30B`, año `0`, horas `5702`, contador `01` → LUK
+`3EA7…43BC`, MSD `675`). `VisaHceOperations` reproduce ambos
+(`VisaHceOperationsTest`) y hay nodos `VISA_HCE_*`.
+
+- **UDK**: opción A desde la MDK con PAN||PSN, paridad impar.
+- **LUK**: TDES(UDK) sobre `1` || Y HHHH CC con relleno `80` (mitad izquierda)
+  y sobre `2` || Y HHHH CC (derecha). La herramienta usa el año tal cual lo
+  recibe (acepta `26`, 2 dígitos, aunque la norma es el último dígito).
+- **MSD**: el ATC sustituye los 4 primeros dígitos del tipo de dispositivo;
+  TDES con la LUK; decimalización de CVV; 3 dígitos.
+- **qVSDC**: ISO 9797-1 alg. 3, relleno 2, con la LUK sobre datos del terminal
+  (9F02 9F03 9F1A 95 5F2A 9A 9C 9F37) y del chip (82 9F36 CVR).
+
+La herramienta se cerró sola una vez al cambiar de pestaña; al reabrirla el
+campo «Hourly Counter» venía vacío y hay que rellenarlo.
+
+
 Ruta esperada: **EMV / Contactless / Visa → LUK**.
 
 ### `VISA-LUK-00`

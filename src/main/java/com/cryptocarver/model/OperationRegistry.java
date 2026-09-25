@@ -256,6 +256,7 @@ public class OperationRegistry {
         sb.append("| DUKPT | `DUKPT_TDES_DERIVE`, `DUKPT_AES_DERIVE`, `DUKPT_PIN_CRYPT` |\n");
         sb.append("| EMV | `EMV_ICC_MASTER_KEY`, `EMV_SESSION_KEY`, `EMV_ARQC_GENERATE`, `EMV_ARQC_VERIFY`, `EMV_ARPC`, `EMV_TLV_PARSE` |\n");
         sb.append("| EMV secure messaging | `EMV_SM_CARD_KEY`, `EMV_SM_SESSION_KEY`, `EMV_SM_PIN`, `EMV_SM_MAC` |\n");
+        sb.append("| Visa HCE | `VISA_HCE_LUK`, `VISA_HCE_MSD`, `VISA_HCE_QVSDC` |\n");
         sb.append("| Track 2 | `TRACK2_ENCODE`, `TRACK2_PARSE` |\n");
         sb.append("| EMV offline data authentication | `EMV_ODA_STATIC_DATA`, `EMV_ODA_RECOVER_ISSUER_KEY`, `EMV_ODA_RECOVER_ICC_KEY`, `EMV_ODA_VERIFY_SDA`, `EMV_ODA_VERIFY_DDA`, `EMV_ODA_VERIFY_CDA`, `EMV_ODA_SIGN_SSAD`, `EMV_ODA_SIGN_SDAD` |\n");
         sb.append("| Thales variant LMK | `THALES_LMK_ENCRYPT`, `THALES_LMK_DECRYPT`, `THALES_LMK_DESCRIBE`, `THALES_LMK_LOOKUP`, `THALES_KCV` |\n");

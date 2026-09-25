@@ -10,6 +10,7 @@ import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.PaymentOperations;
 import com.cryptocarver.crypto.ThalesKeyBlockOperations;
 import com.cryptocarver.crypto.ThalesLmkOperations;
+import com.cryptocarver.crypto.VisaHceOperations;
 import com.cryptocarver.model.process.ExecutionContext;
 import com.cryptocarver.model.process.FlowValue;
 import com.cryptocarver.model.process.NodeCatalog;
@@ -38,6 +39,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
             "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARQC_VERIFY", "EMV_ARPC",
             "EMV_SM_CARD_KEY", "EMV_SM_SESSION_KEY", "EMV_SM_PIN", "EMV_SM_MAC",
+            "VISA_HCE_LUK", "VISA_HCE_MSD", "VISA_HCE_QVSDC",
             "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
             "EMV_ODA_STATIC_DATA", "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY",
             "EMV_ODA_VERIFY_SDA", "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
@@ -91,6 +93,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "EMV_SM_SESSION_KEY" -> List.of(hexPort("smUdk"), hexPort("smAc"), hexPort("atc"));
             case "EMV_SM_PIN" -> List.of(hexPort("sk"), textPort("pin"), hexPort("smUdkEnc"));
             case "EMV_SM_MAC" -> List.of(hexPort("sk"), hexPort("smHeader"), hexPort("atc"), hexPort("smAc"), hexPort("smData"));
+            case "VISA_HCE_LUK" -> List.of(hexPort("smUdk"));
+            case "VISA_HCE_MSD" -> List.of(hexPort("luk"), hexPort("atc"), hexPort("deviceType"));
+            case "VISA_HCE_QVSDC" -> List.of(hexPort("luk"), hexPort("terminalData"), hexPort("iccData"));
             case "EMV_TLV_PARSE" -> List.of(hexPort("input"));
             case "TRACK2_ENCODE" -> List.of(textPort("pan"), textPort("expiry"), textPort("serviceCode"), textPort("discretionary"));
             case "TRACK2_PARSE" -> List.of(textPort("track2"));
@@ -130,10 +135,11 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "PIN_BLOCK_ENCODE", "PIN_BLOCK_TRANSLATE", "DUKPT_TDES_DERIVE", "DUKPT_AES_DERIVE", "DUKPT_PIN_CRYPT",
                     "EMV_ICC_MASTER_KEY", "EMV_SESSION_KEY", "EMV_ARQC_GENERATE", "EMV_ARPC",
                     "EMV_SM_CARD_KEY", "EMV_SM_SESSION_KEY", "EMV_SM_PIN", "EMV_SM_MAC",
+                    "VISA_HCE_LUK", "VISA_HCE_QVSDC",
                     "EMV_ODA_STATIC_DATA", "EMV_ODA_SIGN_SSAD", "EMV_ODA_SIGN_SDAD",
                     "THALES_LMK_ENCRYPT", "THALES_LMK_DECRYPT", "THALES_KCV" -> Representation.HEX;
             case "PIN_BLOCK_DECODE", "CVV_GENERATE", "CVV_VERIFY", "DCVV_GENERATE", "DCVV_VERIFY", "PVV_GENERATE", "PVV_VERIFY",
-                    "IBM3624_OFFSET", "EMV_ARQC_VERIFY", "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
+                    "IBM3624_OFFSET", "EMV_ARQC_VERIFY", "VISA_HCE_MSD", "EMV_TLV_PARSE", "TRACK2_ENCODE", "TRACK2_PARSE",
                     "EMV_ODA_RECOVER_ISSUER_KEY", "EMV_ODA_RECOVER_ICC_KEY", "EMV_ODA_VERIFY_SDA",
                     "EMV_ODA_VERIFY_DDA", "EMV_ODA_VERIFY_CDA",
                     "THALES_LMK_DESCRIBE", "THALES_LMK_LOOKUP",
@@ -146,7 +152,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     public void validateConfiguration(ProcessDefinition.Node node) {
         String type = node.type.toUpperCase(Locale.ROOT);
         for (String key : List.of("cvkA", "cvkB", "pvk", "decTable", "ipek", "bdk", "ksn", "pinBlock", "imk", "mkac", "atc", "un", "sk", "arqc", "csu", "transactionData",
-                "smMk", "smUdk", "smUdkEnc", "smAc", "smHeader", "smData",
+                "smMk", "smUdk", "smUdkEnc", "smAc", "smHeader", "smData", "luk", "deviceType", "terminalData", "iccData",
                 "certificate", "remainder", "keyExponent", "caModulus", "caExponent", "issuerModulus", "issuerExponent",
                 "iccModulus", "iccExponent", "issuerPrivateExponent", "iccPrivateExponent", "staticData", "aip",
                 "sdaTagList", "ssad", "sdad", "terminalData", "unpredictableNumber", "cid", "dataAuthenticationCode",
@@ -193,6 +199,12 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 require(node, "sk"); require(node, "pin"); decimal(node, "pin", 4, 12); oneOf(node, "smScheme", SM_SCHEMES);
                 if ("VISA".equalsIgnoreCase(setting(node, "smScheme", "MASTERCARD"))) require(node, "smUdkEnc");
             }
+            case "VISA_HCE_LUK" -> {
+                require(node, "smUdk"); require(node, "hceYear"); require(node, "hceHours"); require(node, "hceCounter");
+                decimal(node, "hceYear", 1, 2); decimal(node, "hceHours", 4, 4); decimal(node, "hceCounter", 2, 2);
+            }
+            case "VISA_HCE_MSD" -> { require(node, "luk"); require(node, "atc"); require(node, "deviceType"); hexLength(node, "atc", 2); hexLength(node, "deviceType", 8); }
+            case "VISA_HCE_QVSDC" -> { require(node, "luk"); require(node, "terminalData"); require(node, "iccData"); }
             case "EMV_SM_MAC" -> { require(node, "sk"); require(node, "smHeader"); require(node, "atc"); require(node, "smAc"); hexLength(node, "smHeader", 5); hexLength(node, "atc", 2); hexLength(node, "smAc", 8); }
             case "EMV_ARPC" -> { require(node, "sk"); require(node, "arqc"); oneOf(node, "method", List.of("1", "2")); if ("1".equals(setting(node, "method", "1"))) require(node, "arc"); }
             case "EMV_TLV_PARSE" -> require(node, "input");
@@ -266,6 +278,12 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                         : EmvSecureMessaging.mastercardEncryptedPin(hexText(node, inputs, "sk"), text(node, inputs, "pin")));
                 case "EMV_SM_MAC" -> hex(EmvSecureMessaging.commandMac(hexText(node, inputs, "sk"), hexText(node, inputs, "smHeader"),
                         hexText(node, inputs, "atc"), hexText(node, inputs, "smAc"), hexTextOptional(node, inputs, "smData")));
+                case "VISA_HCE_LUK" -> hex(VisaHceOperations.limitedUseKey(hexText(node, inputs, "smUdk"),
+                        setting(node, "hceYear", ""), setting(node, "hceHours", ""), setting(node, "hceCounter", "")));
+                case "VISA_HCE_MSD" -> text(VisaHceOperations.msdVerificationValue(hexText(node, inputs, "luk"),
+                        hexText(node, inputs, "atc"), hexText(node, inputs, "deviceType")));
+                case "VISA_HCE_QVSDC" -> hex(VisaHceOperations.qvsdcCryptogram(hexText(node, inputs, "luk"),
+                        hexText(node, inputs, "terminalData"), hexText(node, inputs, "iccData")));
                 case "EMV_TLV_PARSE" -> text(EmvTlv.transactionSummary(EmvTlv.analyze(hexText(node, inputs, "input"))));
                 case "TRACK2_ENCODE" -> text(PaymentOperations.encodeTrack2(text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), textOptional(node, inputs, "discretionary")));
                 case "TRACK2_PARSE" -> text(PaymentOperations.parseTrack2(text(node, inputs, "track2")));
@@ -502,6 +520,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         result.add(descriptor("EMV_SM_SESSION_KEY", "emvSmSessionKey", "emvSmSessionKey", params(combo("smScheme", "module.process.param.payment.smScheme", SM_SCHEMES, "MASTERCARD"), secret("smUdk", "module.process.param.payment.smUdk"), secret("smAc", "module.process.param.payment.smAc"), number("smCommandNumber", "module.process.param.payment.smCommandNumber", "0"), secret("atc", "module.process.param.payment.atc"))));
         result.add(descriptor("EMV_SM_PIN", "emvSmPin", "emvSmPin", params(combo("smScheme", "module.process.param.payment.smScheme", SM_SCHEMES, "MASTERCARD"), secret("sk", "module.process.param.payment.sk"), secret("pin", "module.process.param.payment.pin"), secret("smUdkEnc", "module.process.param.payment.smUdkEnc"))));
         result.add(descriptor("EMV_SM_MAC", "emvSmMac", "emvSmMac", params(secret("sk", "module.process.param.payment.sk"), textParam("smHeader", "module.process.param.payment.smHeader", ""), secret("atc", "module.process.param.payment.atc"), secret("smAc", "module.process.param.payment.smAc"), textParam("smData", "module.process.param.payment.smData", ""))));
+        result.add(descriptor("VISA_HCE_LUK", "visaHceLuk", "visaHceLuk", params(secret("smUdk", "module.process.param.payment.smUdk"), textParam("hceYear", "module.process.param.payment.hceYear", ""), textParam("hceHours", "module.process.param.payment.hceHours", ""), textParam("hceCounter", "module.process.param.payment.hceCounter", "01"))));
+        result.add(descriptor("VISA_HCE_MSD", "visaHceMsd", "visaHceMsd", params(secret("luk", "module.process.param.payment.luk"), secret("atc", "module.process.param.payment.atc"), textParam("deviceType", "module.process.param.payment.deviceType", ""))));
+        result.add(descriptor("VISA_HCE_QVSDC", "visaHceQvsdc", "visaHceQvsdc", params(secret("luk", "module.process.param.payment.luk"), textParam("terminalData", "module.process.param.payment.terminalData", ""), textParam("iccData", "module.process.param.payment.iccData", ""))));
         result.add(descriptor("EMV_ARPC", "emvArpc", "emvArpc", params(secret("sk", "module.process.param.payment.sk"), secret("arqc", "module.process.param.payment.arqc"), secret("arc", "module.process.param.payment.arc"), secret("csu", "module.process.param.payment.csu"), combo("method", "module.process.param.payment.method", List.of("1", "2"), "1"))));
         result.add(descriptor("EMV_TLV_PARSE", "emvTlvParse", "emvTlvParse", params(secret("input", "module.process.param.payment.emvData"))));
         result.add(descriptor("TRACK2_ENCODE", "track2Encode", "track2Encode", params(secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), secret("discretionary", "module.process.param.payment.discretionary"))));

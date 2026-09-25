@@ -28,7 +28,7 @@ class PaymentOperationsNodeHandlerTest {
 
     @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
-        assertEquals(40, PaymentOperationsNodeHandler.TYPES.size());
+        assertEquals(43, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {
             assertNotNull(HANDLER.descriptors().stream().filter(d -> d.type().equals(type)).findFirst().orElse(null), type);
         }
@@ -139,6 +139,22 @@ class PaymentOperationsNodeHandlerTest {
         visaPin.configuration.put("smScheme", "VISA");
         assertEquals("B3511E3333BF9DC56E1EDF6458BB52B6", HANDLER.execute(visaPin, Map.of("sk", hex(visaSk), "pin", text("4222"),
                 "smUdkEnc", hex("64C8621A76A2EA9EF23D5749FE1A64F1")), null).render());
+    }
+
+    /** The Visa HCE nodes chain the external tool's example: LUK, then MSD and qVSDC (see VisaHceOperationsTest). */
+    @Test
+    void visaHceNodesReproduceTheExample() throws Exception {
+        ProcessDefinition.Node luk = node("VISA_HCE_LUK");
+        luk.configuration.put("hceYear", "26");
+        luk.configuration.put("hceHours", "6431");
+        luk.configuration.put("hceCounter", "01");
+        String lukValue = HANDLER.execute(luk, Map.of("smUdk", hex("94E3194C02105E3B153438D562D5A49D")), null).render();
+        assertEquals("D144CA8CBB4BD463C8EDD5761BF1770E", lukValue);
+        assertEquals("634", HANDLER.execute(node("VISA_HCE_MSD"), Map.of("luk", hex(lukValue), "atc", hex("0001"),
+                "deviceType", hex("AAAA000000000001")), null).render());
+        assertEquals("42A0254F47679C5A", HANDLER.execute(node("VISA_HCE_QVSDC"), Map.of("luk", hex(lukValue),
+                "terminalData", hex("0000000010000000000000000710000000000007101302050030901B6A"),
+                "iccData", hex("3C00005503A4A082")), null).render());
     }
 
     @Test
