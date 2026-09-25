@@ -164,6 +164,11 @@
         <!-- SD-DSS (Digital Signature Services) for XML Security -->
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-jades</artifactId>
+            <version>${dss.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-xades</artifactId>
             <version>${dss.version}</version>
         </dependency>
