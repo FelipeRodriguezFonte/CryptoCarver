@@ -180,6 +180,38 @@ class ThalesKeyBlockAesTest {
         assertTrue(unwrapped.authentic());
     }
 
+    /**
+     * Optional blocks, captured 2026-09-25 under the 128-bit KBPK above: KS and 05 as
+     * entered, and a PB block the tool required to bring them to a multiple of 16 (it
+     * rejects 34 characters). The MAC covers the whole header, optional blocks included.
+     */
+    @Test
+    void optionalBlocksAreReadAndAuthenticatedAsTheToolWroteThem() {
+        String header = "10144B0AN00E0302KS1800604B120F9292800000050APRUEBAPB0E0000000000";
+        String block = header + "ED26CD2A54F790C20D4A4FBBF4EC7DD94EA8A1D5505CF4D8FE41FFD5D7C014C4"
+                + "7C00BBB98D5C9207";
+
+        ThalesKeyBlockOperations.KeyBlock parsed = ThalesKeyBlockOperations.parse(block);
+        assertEquals(3, parsed.optionalBlocks().size());
+        assertEquals("KS", parsed.optionalBlocks().get(0).id());
+        assertEquals("00604B120F9292800000", parsed.optionalBlocks().get(0).data());
+        assertEquals("PRUEBA", parsed.optionalBlocks().get(1).data());
+        assertEquals("PB", parsed.optionalBlocks().get(2).id());
+        assertTrue(parsed.findings().stream().noneMatch(f -> "ERROR".equals(f.severity())), parsed.findings().toString());
+
+        Unwrapped unwrapped = ThalesKeyBlockOperations.unwrap("000102030405060708090A0B0C0D0E0F", block);
+        assertEquals("0D6B02388AC8EF491902342C5B0EDAD5", unwrapped.clearKey());
+        assertTrue(unwrapped.authentic());
+        assertEquals(block, ThalesKeyBlockOperations.wrap("000102030405060708090A0B0C0D0E0F", header,
+                unwrapped.clearKey(), unwrapped.padding()));
+
+        // Without the PB block the optional blocks total 34 characters; the tool refuses it and so does wrap.
+        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class, () -> ThalesKeyBlockOperations.wrap(
+                "000102030405060708090A0B0C0D0E0F", "10130B0AN00E0202KS1800604B120F9292800000050APRUEBA",
+                unwrapped.clearKey(), unwrapped.padding()));
+        assertTrue(refused.getMessage().contains("multiple"), refused.getMessage());
+    }
+
     // =====================================================================
     // The 192-bit KBPK, which has no vector
     // =====================================================================

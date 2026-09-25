@@ -961,14 +961,16 @@ public final class ThalesKeyBlockOperations {
     /**
      * Wraps a key under a 3DES Key Block LMK.
      *
+     * @param header  the 16-character header, followed by its optional blocks
+     *                (clause 8.5.2) when it declares any
      * @param padding the random padding of clause 8.6, supplied so a test can
      *                be reproducible; {@code null} draws it from a secure
      *                random, which is what a real personalisation does
      */
     public static String wrap(String kbpk, String header, String clearKey, String padding) {
         String head = normalizeAscii(header);
-        if (head.length() != HEADER_LENGTH) {
-            throw new IllegalArgumentException("The header is " + HEADER_LENGTH + " characters");
+        if (head.length() < HEADER_LENGTH) {
+            throw new IllegalArgumentException("The header is at least " + HEADER_LENGTH + " characters");
         }
         VersionId version = VersionId.of(head.charAt(0));
         byte[] key = bytes(normalizeHex(clearKey, "clear key"));
@@ -1001,7 +1003,17 @@ public final class ThalesKeyBlockOperations {
 
         byte[] encrypted = encipher(version, kbpk, head, plain, true);
         String authenticator = authenticator(version, kbpk, head, hex(encrypted));
-        return head + hex(encrypted) + authenticator;
+        String block = head + hex(encrypted) + authenticator;
+        if (head.length() > HEADER_LENGTH) {
+            // Optional blocks bring their own rules (count, lengths, total a multiple of the
+            // cipher block); the parser already enforces them, so a block it rejects is not returned.
+            for (Finding finding : parse(block).findings()) {
+                if (ERROR.equals(finding.severity())) {
+                    throw new IllegalArgumentException(finding.clause() + ": " + finding.message());
+                }
+            }
+        }
+        return block;
     }
 
     /**
