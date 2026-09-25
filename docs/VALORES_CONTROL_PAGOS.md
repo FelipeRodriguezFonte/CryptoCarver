@@ -159,6 +159,18 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
   `88E33C3ACF404F234F10F889C364E377`. Coincide con el arreglo del campo PAN y
   del cifrado.
 
+- **ISO-4, PAN de 13 dígitos** (25-09-2026): `4000123456789` da el campo PAN
+  `14000123456789000000000000000000`.
+- **ARPC método 2** (25-09-2026): ARQC `A8DB2B65F9C821F1`, CSU `00820000`; la
+  herramienta da `54DB2625` seguido del CSU (formato de la etiqueta 91). La
+  clave de sesión que imprime (`0D382020…C76B`) no es la que produce ese valor
+  (`38F14068…E3E6`); pendiente de aclarar qué clave se introdujo.
+- **dCVV** (25-09-2026): CVK `0123456789ABCDEF0123456789ABCDEF`, PAN
+  `4111111111111111`, caducidad `1225`, código de servicio `001`, ATC `0001`
+  → `938`. Ninguna disposición obvia de los datos (la del código, la de CVV con
+  el ATC, con UDK derivada) lo reproduce, y con 3 dígitos una sola muestra no
+  basta para distinguir entre las que coinciden por azar.
+
 ## Cruzado después
 
 - **MAC ISO 9797-1 alg 2 y 4**, relleno 1 y 2, con K2: `6095F103D29D763B`,
@@ -178,9 +190,8 @@ tal cual. Con la segunda (dos mitades DES débiles) da CKCV (TDEA) N/A.
 
 Con las constantes de arriba:
 
-1. **EMV → ARPC**, método 2, con ARQC `A8DB2B65F9C821F1`, CSU `00820000`,
-   session key `38F14068B3EA57C194F8E3A20D51E3E6`. Se espera `54DB2625`.
-2. **PIN Blocks → ISO 4** con PAN de 13 dígitos (el de 18 ya está confirmado).
-3. **Visa dCVV** con PAN, caducidad 2512 y ATC `0001`.
-4. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
+1. **dCVV**: la misma captura cambiando un solo dato cada vez: ATC `0002`,
+   ATC `0010`, código de servicio `101`, caducidad `1226`; y el CVV normal con
+   los mismos datos.
+2. **KCV IBM y ATALLA R** de una clave simple (8 bytes), p. ej.
    `0123456789ABCDEF` y `0000000000000000`.

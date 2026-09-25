@@ -192,7 +192,10 @@ class PaymentControlValuesTest {
         assertEquals("ADCB085B842E0A9D", EMVOperations.generateARPC_Method1(sk, arqc, "00"));
     }
 
-    /** Cross-checked: ARPC method 2 (EMV Book 2 A1.2.2), MAC over ARQC || CSU, 4 bytes. */
+    /**
+     * Cross-checked, and confirmed by an external tool capture (2026-09-25), which prints
+     * 54DB2625 followed by the CSU 00820000 (the Tag 91 layout ARPC || CSU).
+     */
     @Test
     void emvArpcMethod2() throws Exception {
         assertEquals("54DB2625", EMVOperations.generateARPC_Method2(
@@ -207,6 +210,8 @@ class PaymentControlValuesTest {
         assertEquals("44111111111111111000000000000000", PaymentOperations.panFieldISO4(PAN));
         assertEquals("14111111111111000000000000000000", PaymentOperations.panFieldISO4("4111111111111"));
         assertEquals("74111111111111111113000000000000", PaymentOperations.panFieldISO4("4111111111111111113"));
+        // External tool capture, 2026-09-25: clear PAN block for a 13-digit PAN.
+        assertEquals("14000123456789000000000000000000", PaymentOperations.panFieldISO4("4000123456789"));
     }
 
     /** Cross-checked: E_K(E_K(PIN field) XOR PAN field) with AES-128, padding fixed to 0123456789ABCDEF. */
