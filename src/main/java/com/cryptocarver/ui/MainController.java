@@ -1874,7 +1874,7 @@ public class MainController implements StatusReporter {
     private void handleAbout() {
         String about =
                 "Advanced Cryptographic Tool\n\n" +
-                        "A modern evolution of BP-Tools with enhanced features:\n" +
+                        "A cryptographic workbench featuring:\n" +
                         "• Multiple cipher algorithms (DES, 3DES, AES, RSA)\n" +
                         "• Advanced padding standards\n" +
                         "• KeyStore management\n" +

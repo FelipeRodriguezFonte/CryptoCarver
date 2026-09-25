@@ -84,7 +84,7 @@ public class EMVOperations {
 
         byte[] rightHalf = cipher.doFinal(divDataInv);
 
-        // Return concatenated key (16 bytes) - Raw (matches BP Tools "None forced")
+        // Return concatenated key (16 bytes) - Raw (matches the external tool "None forced")
         return (DataConverter.bytesToHex(leftHalf) + DataConverter.bytesToHex(rightHalf)).toUpperCase();
     }
 
@@ -152,7 +152,7 @@ public class EMVOperations {
 
         byte[] rightHalf = cipher.doFinal(DataConverter.hexToBytes(rStrRight));
 
-        // Return with Parity Adjustment (matches BP Tools output)
+        // Return with Parity Adjustment (matches the external tool output)
         return (DataConverter.bytesToHex(adjustParity(leftHalf)) + DataConverter.bytesToHex(adjustParity(rightHalf)))
                 .toUpperCase();
     }
@@ -233,7 +233,7 @@ public class EMVOperations {
 
     /**
      * Build transaction data for ARQC from EMV fields
-     * Structure matches observed BP Tools CDOL1:
+     * Structure matches the CDOL1 observed in the external tool:
      * Amount (6) + Amount Other (6) + Country (2) + TVR (5) + Currency (2) + Date
      * (3) + Type (1) + UN (4)
      *

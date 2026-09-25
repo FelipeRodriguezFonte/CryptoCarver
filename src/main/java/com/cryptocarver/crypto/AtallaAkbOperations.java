@@ -29,8 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
  * secondary sources described it, no two of them the same, and a wrapper that
  * agrees with its own unwrapper proves nothing at all.</p>
  *
- * <p>It was settled instead by asking EFTLab's BP-Tools Cryptographic
- * Calculator 21.06 — the tool this bench chases parity with — to protect a
+ * <p>It was settled instead by asking an external tool to protect a
  * known key under a known MFK, and then recovering the construction from that
  * one input/output pair. Every step below was confirmed against it:</p>
  *

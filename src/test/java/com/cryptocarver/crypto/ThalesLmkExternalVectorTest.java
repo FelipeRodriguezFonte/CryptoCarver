@@ -18,13 +18,13 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * get it wrong as well, each in a different byte. So these vectors are not
  * decoration — they are the only evidence that is not paper.</p>
  *
- * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Thales Keys
+ * <p>Source: an external tool, Thales Keys
  * Encryption/Decoding, captured 2026-09-19. The tool's own LMK pair 00-01 was
  * used, and its Variant dropdown selects the LMK variant directly rather than
  * through a key type code; here the same thing is reached through key types
  * {@code 100} and {@code 200}, whose leading digit is the variant.</p>
  */
-class ThalesLmkBpToolsVectorTest {
+class ThalesLmkExternalVectorTest {
 
     /** The tool's built-in LMK pair 00-01. */
     private static final Lmk LMK = Lmk.of("01010101010101017902CD1FD36EF8BA");

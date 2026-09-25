@@ -296,7 +296,7 @@ public class MACOperations {
 
     /**
      * Generate Retail MAC (ISO 9797-1 Algorithm 3)
-     * Note: BP-Tools "Retail MAC" with "Finalize: None" is actually just CBC-MAC
+     * Note: the external tool "Retail MAC" with "Finalize: None" is actually just CBC-MAC
      * For compatibility, we implement CBC-MAC here
      */
     private static byte[] generateRetailMAC(byte[] data, byte[] key, String algorithm) throws Exception {
@@ -617,9 +617,9 @@ public class MACOperations {
 
             // Retail MAC
             case "Retail-MAC-DES":
-                return "Retail-MAC-DES - CBC-MAC with DES (BP-Tools compatible, banking standard)";
+                return "Retail-MAC-DES - CBC-MAC with DES (banking standard)";
             case "Retail-MAC-3DES":
-                return "Retail-MAC-3DES - CBC-MAC with 3DES (BP-Tools compatible, banking standard). Note: This is CBC-MAC, not ISO 9797-1 Algorithm 3 with decrypt/encrypt steps.";
+                return "Retail-MAC-3DES - CBC-MAC with 3DES (banking standard). Note: This is CBC-MAC, not ISO 9797-1 Algorithm 3 with decrypt/encrypt steps.";
 
             default:
                 return "Unknown algorithm";

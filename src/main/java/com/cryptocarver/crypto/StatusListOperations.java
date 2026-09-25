@@ -25,8 +25,7 @@ import java.util.Base64;
  * being checked.
  *
  * <p>The EUDI wallet's Architecture and Reference Framework names this as the
- * revocation mechanism, alongside SD-JWT VC and mdoc as credential formats; see
- * {@code docs/PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md}.</p>
+ * revocation mechanism, alongside SD-JWT VC and mdoc as credential formats.</p>
  *
  * <h2>Two details worth spelling out</h2>
  * <ul>

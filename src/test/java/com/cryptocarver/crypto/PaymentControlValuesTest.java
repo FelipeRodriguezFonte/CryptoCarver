@@ -124,6 +124,17 @@ class PaymentControlValuesTest {
         assertEquals("BF170E40", PaymentOperations.generateMAC(AES128, HELLO, "CMAC (ISO 9797-1 Alg 5)"));
     }
 
+    /** Cross-checked: ISO/IEC 9797-1 Algorithm 2 (EMAC) and 4 (MacDES), K || K', padding 1 and 2. */
+    @Test
+    void iso9797Algorithms2And4() throws Exception {
+        byte[] key = DataConverter.hexToBytes(K2);
+        byte[] data = DataConverter.hexToBytes(HELLO);
+        assertEquals("6095F103D29D763B", hex(MACOperations.generateISO9797Alg2(data, key, 1, 64)));
+        assertEquals("8E0F10E4E8EF75B6", hex(MACOperations.generateISO9797Alg2(data, key, 2, 64)));
+        assertEquals("B7C3774D7101150B", hex(MACOperations.generateISO9797Alg4(data, key, 1, 64)));
+        assertEquals("B6E74442CF5607FA", hex(MACOperations.generateISO9797Alg4(data, key, 2, 64)));
+    }
+
     /** Published: X9.19 example, "Now is the time for all ". */
     @Test
     void x919PublishedExample() throws Exception {

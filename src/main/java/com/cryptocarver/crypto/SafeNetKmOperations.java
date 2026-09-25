@@ -31,7 +31,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * <h2>Where this came from, and what is missing</h2>
  *
- * <p>From EFTLab's BP-Tools Cryptographic Calculator 21.06, captured
+ * <p>From an external tool, captured
  * 2026-09-19. The tool prints the KM with the variant already applied beside
  * its result, which is what made the variant byte readable at all rather than
  * something to be inferred from ciphertext.</p>

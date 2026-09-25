@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Futurex keys under an MFK, against five captured vectors.
  *
- * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Futurex Keys
+ * <p>Source: an external tool, Futurex Keys
  * Encryption/Decoding, captured 2026-09-19 — the same key under the same MFK,
  * once for each of the modifiers 0 to 4.</p>
  */

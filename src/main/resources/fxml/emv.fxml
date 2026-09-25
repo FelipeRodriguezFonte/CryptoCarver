@@ -110,7 +110,7 @@
                         <TextField fx:id="countryField" promptText="0724 (ES)" maxWidth="Infinity"
                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <!-- ATC Field retained for UI context but excluded from default BP-Tools structure unless user adds it to Raw Data -->
+                        <!-- ATC Field retained for UI context but excluded from the default external tool structure unless user adds it to Raw Data -->
                         <Label text="ATC (Info):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
                         <TextField fx:id="atcARQCField" promptText="0001" maxWidth="Infinity"
                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of the payShield manual says only "a variant of the LMK" for both. Guessing
  * at a key derivation function is not a thing one does.</p>
  *
- * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Thales Key Block,
+ * <p>Source: an external tool, Thales Key Block,
  * captured 2026-09-19. The tool prints the derived KBEK and KBAK beside the
  * block, which is the whole reason this is now known.</p>
  */

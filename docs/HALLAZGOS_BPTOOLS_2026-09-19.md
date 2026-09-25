@@ -127,7 +127,7 @@ el esquema U aplica `A6` a la parte izquierda y **`5A` a la derecha**. Una
 implementación que use `A6` en las dos acierta el primer bloque y falla el
 segundo, que es exactamente el error que un chequeo a mano no ve.
 
-Fijado en `ThalesLmkBpToolsVectorTest`.
+Fijado en `ThalesLmkExternalVectorTest`.
 
 ## 4. Futurex — resuelto
 

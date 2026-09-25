@@ -328,7 +328,7 @@ public class MACController {
                 defaultValue = "4";  // 4 bytes (banking standard)
                 break;
             case "CBC-MAC-3DES":
-                defaultValue = "4";  // 4 bytes (banking standard, BP-Tools style)
+                defaultValue = "4";  // 4 bytes (banking standard)
                 break;
             case "CBC-MAC-AES":
                 defaultValue = "8";  // 8 bytes

@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * SafeNet keys under a KM, against three captured vectors.
  *
- * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, SafeNet Keys
+ * <p>Source: an external tool, SafeNet Keys
  * Encryption/Decoding, captured 2026-09-19: format 11 with variant 00, and
  * format 13 with variants 01 and 07. Captured 2026-09-20: the triple-length
  * formats 12 (ECB) and 14 (CBC) with variants 02, 06 and 08.</p>

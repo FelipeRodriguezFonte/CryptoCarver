@@ -33,8 +33,7 @@ import java.util.Set;
  * SD-JWT — Selective Disclosure for JSON Web Tokens, <b>RFC 9901</b> (published
  * 19 November 2025), plus the SD-JWT VC profile on top of it. This is the
  * credential format of the European Digital Identity Wallet, so it is the piece
- * the December 2026 deadline actually rests on; see
- * {@code docs/PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md}.
+ * the December 2026 deadline actually rests on.
  *
  * <p>The mechanism is "salted hashes". For every claim the Issuer wants to make
  * selectively disclosable it does <em>not</em> put the cleartext in the signed

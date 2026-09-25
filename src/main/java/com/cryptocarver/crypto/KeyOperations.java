@@ -174,7 +174,7 @@ public class KeyOperations {
      * NOTE: IBM KCV algorithm varies by implementation and HSM vendor.
      * This implementation uses standard 3DES-EDE encryption of zero block
      * and returns the first 2 bytes, which matches some IBM implementations
-     * but may differ from BP-Tools which appears to use a proprietary CKCV method.
+     * but may differ from external tools that use a proprietary CKCV method.
      *
      * For 8-byte keys: Single DES encryption
      * For 16/24-byte keys: 3DES-EDE encryption
@@ -220,19 +220,28 @@ public class KeyOperations {
     }
 
     /**
-     * Calculate KCV - FUTUREX method
-     * Uses first 8 bytes of key only, then takes bytes 2 and 4 of encrypted block
-     * For AES keys, not applicable
+     * Calculate KCV - FUTUREX method: the whole DES/TDES key encrypts the block
+     * 0123456789ABCDEF and the first 2 bytes are kept. Taken from an external tool
+     * capture (KcvCaptureTest); the previous "bytes 2 and 4 of E(K1, 0)" was a guess
+     * from one sample and did not reproduce it.
      */
     public static byte[] calculateKCV_FUTUREX(byte[] key) throws Exception {
-        // FUTUREX method only makes sense for DES/3DES keys
-        if (key.length > 24) {
-            throw new UnsupportedOperationException("FUTUREX KCV not applicable to AES-256 keys");
+        if (key.length != 8 && key.length != 16 && key.length != 24) {
+            throw new UnsupportedOperationException("FUTUREX KCV applies to DES/TDES keys only");
         }
-        // Use only first 8 bytes for FUTUREX method
-        byte[] key8 = getFirst8Bytes(key);
-        byte[] encrypted = encryptZeroBlockWith8ByteKey(key8);
-        return new byte[]{encrypted[2], encrypted[4]};
+        byte[] tdesKey = key.length == 16 ? concat(key, java.util.Arrays.copyOf(key, 8))
+                : key.length == 8 ? concat(concat(key, key), key) : key;
+        Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding", "BC");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(tdesKey, "DESede"));
+        byte[] encrypted = cipher.doFinal(new byte[] {
+                0x01, 0x23, 0x45, 0x67, (byte) 0x89, (byte) 0xAB, (byte) 0xCD, (byte) 0xEF });
+        return java.util.Arrays.copyOf(encrypted, 2);
+    }
+
+    private static byte[] concat(byte[] a, byte[] b) {
+        byte[] out = java.util.Arrays.copyOf(a, a.length + b.length);
+        System.arraycopy(b, 0, out, a.length, b.length);
+        return out;
     }
 
     /**
@@ -290,8 +299,8 @@ public class KeyOperations {
 
     /**
      * Calculate KCV - CMAC method (AES-CMAC)
-     * BP-Tools uses CMAC with EMPTY INPUT (not 16 zeros)
-     * This is a key discovery - most implementations use zeros, but BP-Tools uses empty buffer
+     * External tools use CMAC over the EMPTY INPUT (not 16 zeros)
+     * Most implementations use a zero block; external tools use the empty input
      */
     public static byte[] calculateKCV_CMAC(byte[] key) throws Exception {
         return calculateKCV_CMAC(key, 3);
@@ -312,7 +321,7 @@ public class KeyOperations {
             throw new IllegalArgumentException("Invalid key length for CMAC: " + key.length);
         }
 
-        // BP-Tools uses CMAC of EMPTY INPUT
+        // CMAC of the EMPTY INPUT, as external tools compute it
         Mac mac = Mac.getInstance("AESCMAC", "BC");
         SecretKeySpec keySpec = new SecretKeySpec(aesKey, "AES");
         mac.init(keySpec);

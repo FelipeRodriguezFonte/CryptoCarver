@@ -121,17 +121,39 @@ AES-CMAC:
 `KeyOperations.calculateKCV_CMAC` hace el mismo truncado, así que el KCV CMAC
 de una clave AES-256 sale mal.
 
+## Cerrado con la captura de KCV del 25-09-2026
+
+Una clave doble generada por la herramienta externa (`KcvCaptureTest`):
+
+- La herramienta muestra la clave con paridad impar ya forzada y calcula sobre
+  ella los KCV de la familia DES. Los KCV de AES, CMAC y SHA-256 los calcula
+  sobre la clave **antes** de ajustar la paridad; se recuperó probando las 2^16
+  variantes del bit de paridad, y esa clave reproduce los tres a la vez.
+- **KCV CMAC**: AES-CMAC sobre entrada vacía (`024C7C`), como hace el código.
+  Sobre un bloque cero daría `2D69B7`.
+- **CKCV (AES)**: AES-CMAC sobre 16 bytes cero, 5 bytes. **CKCV (TDEA)**:
+  TDES-CMAC sobre 8 bytes cero, 5 bytes. La app no los ofrece todavía.
+- **KCV FUTUREX**: TDES de la clave entera sobre `0123456789ABCDEF`, 2 bytes
+  (`AF7B`). El código tomaba los bytes 2 y 4 de DES(K1, 0), una suposición
+  sacada de una sola muestra; corregido.
+- **KCV IBM** (`677A`) y **ATALLA R** (`6523`): ninguna construcción probada los
+  reproduce (E(0), E(0123456789ABCDEF), mitades y variantes de clave,
+  MDC-2/MDC-4, hashes). Siguen sin verificar; hacen falta más capturas.
+
+## Cruzado después
+
+- **MAC ISO 9797-1 alg 2 y 4**, relleno 1 y 2, con K2: `6095F103D29D763B`,
+  `8E0F10E4E8EF75B6`, `B7C3774D7101150B`, `B6E74442CF5607FA`. Coinciden.
+
 ## Sin verificar (falta fuente)
 
 - **dCVV**: `generateDCVV` concatena PAN + PSN + caducidad + los 3 primeros
   caracteres del ATC. No tengo fuente pública fiable del formato Visa, y
   truncar el ATC por la izquierda es sospechoso. Necesita una captura de la herramienta externa.
-- **KCV CMAC con entrada vacía**: el código dice que la herramienta externa lo calcula así,
-  pero no hay captura en el repositorio. Con AES128 da `97DD6E` (con entrada
-  vacía) frente a `BE7ED6` (sobre un bloque cero).
 - **Datos de validación IBM 3624** (`0000` + 12 dígitos del PAN): es una
   convención del emisor. payShield usa un campo propio con relleno `N`.
-- **MAC ISO 9797-1 alg 2/4/6**: no se cruzaron en esta tanda.
+- **MAC ISO 9797-1 alg 6**: la derivación de claves de la segunda instancia
+  (K y K' complementadas) es la del código; no hay fuente que la confirme.
 
 ## Capturas de la herramienta externa que cerrarían lo pendiente
 
@@ -141,4 +163,5 @@ Con las constantes de arriba:
    session key `38F14068B3EA57C194F8E3A20D51E3E6`. Se espera `54DB2625`.
 2. **PIN Blocks → ISO 4**, con PAN de 13 y de 19 dígitos, y la clave AES128.
 3. **Visa dCVV** con PAN, caducidad 2512 y ATC `0001`.
-4. **KCV** de la clave AES128 en modo CMAC.
+4. **KCV IBM y ATALLA R** de dos o tres claves más, a ser posible una simple
+   (8 bytes) y la doble `0123456789ABCDEFFEDCBA9876543210`.

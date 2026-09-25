@@ -55,8 +55,7 @@ import java.util.Set;
  * for AES. Neither gap can be closed by reasoning, and guessing produces blocks
  * that look perfect and that no HSM accepts.</p>
  *
- * <p>Both were settled by generating a key block with EFTLab's BP-Tools
- * Cryptographic Calculator 21.06, under the 3DES Key Block test LMK that the
+ * <p>Both were settled by generating a key block with an external tool, under the 3DES Key Block test LMK that the
  * manual publishes in clause 8.8.1, and reading back what it derived:</p>
  *
  * <ul>

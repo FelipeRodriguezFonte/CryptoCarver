@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Atalla Key Blocks, against the one vector that exists.
  *
- * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Atalla HSM Keys
+ * <p>Source: an external tool, Atalla HSM Keys
  * Encryption/Decoding, captured 2026-09-19. Atalla has never published the
  * algorithm; this vector is the whole of the evidence, so the tests below are
  * written to fail loudly rather than to agree with themselves.</p>
@@ -72,7 +72,7 @@ class AtallaAkbOperationsTest {
      * <b>single</b>-length key under a different MFK, read back through the
      * tool's AKB Decode tab.
      *
-     * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Atalla HSM
+     * <p>Source: an external tool, Atalla HSM
      * Keys, AKB Decode, captured 2026-09-19.</p>
      */
     @Test
@@ -135,7 +135,7 @@ class AtallaAkbOperationsTest {
      * vector: nothing else about the input changes, and the whole key field
      * and the MAC change with it.
      *
-     * <p>Source: EFTLab BP-Tools Cryptographic Calculator 21.06, captured
+     * <p>Source: an external tool, captured
      * 2026-09-19.</p>
      */
     @Test
@@ -259,9 +259,9 @@ class AtallaAkbOperationsTest {
         assertTrue(thrown.getMessage().contains("initialisation vector"), thrown.getMessage());
     }
 
-    /** BP-Tools 21.06, 2026-09-20: a 24-byte key, which is the case the padding rule only inferred. */
+    /** External tool, 2026-09-20: a 24-byte key, which is the case the padding rule only inferred. */
     @Test
-    void aTripleLengthKeyMatchesBpToolsAndCarriesNoPadding() {
+    void aTripleLengthKeyMatchesTheCaptureAndCarriesNoPadding() {
         String key = "00112233445566778899AABBCCDDEEFF0123456789ABCDEF";
         String block = "1PUNE000,23AE722410BC25C24BB6AD0C900A16F085927D34A8C06EB0,DA3BB9004654010D";
 

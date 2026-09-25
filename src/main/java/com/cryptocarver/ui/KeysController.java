@@ -6670,7 +6670,7 @@ public class KeysController {
      *  72 characters it declares. */
     /** payShield manual clause 8.8.1: the published 3DES Key Block test LMK. */
     private static final String KEY_BLOCK_TEST_LMK = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
-    /** A real block under that LMK, generated with BP-Tools and pinned in the tests. */
+    /** A real block under that LMK, generated with an external tool and pinned in the tests. */
     private static final String BP_TOOLS_KEY_BLOCK =
             "S00072B0TN00E000256A37F894FD49E61DD3FA27FDE8919D07F7AA966F8BF39AB31D00034";
 
@@ -6696,7 +6696,7 @@ public class KeysController {
     /**
      * Unwraps with the Key Block LMK, which the manual never explains how to
      * turn into the encryption and MAC keys. The derivation here was taken from
-     * BP-Tools and is pinned by a test; see ThalesKeyBlockOperations.
+     * the external tool and is pinned by a test; see ThalesKeyBlockOperations.
      */
     @FXML
     public void handleKeyBlockUnwrap() {
@@ -6852,14 +6852,14 @@ public class KeysController {
         }
     }
 
-    /** The BP-Tools 21.06 vector for a 24-byte key, pinned in AtallaAkbOperationsTest. */
+    /** The external tool vector for a 24-byte key, pinned in AtallaAkbOperationsTest. */
     @FXML
     public void handleAtallaExample() {
         atallaHeaderField.setText("1PUNE000");
         atallaMfkField.setText(KEY_BLOCK_TEST_LMK);
         atallaKeyField.setText("00112233445566778899AABBCCDDEEFF0123456789ABCDEF");
         atallaBlockArea.setText("1PUNE000,23AE722410BC25C24BB6AD0C900A16F085927D34A8C06EB0,DA3BB9004654010D");
-        if (atallaResultArea != null) atallaResultArea.setText("Example loaded: BP-Tools 21.06 vector.");
+        if (atallaResultArea != null) atallaResultArea.setText("Example loaded: external tool vector.");
     }
 
     private void atallaPublish(String operation, String report) {

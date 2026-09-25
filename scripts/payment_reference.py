@@ -96,6 +96,18 @@ out["mac.alg3.pad1"] = hx(alg3(K2, pad1(MSG)))
 out["mac.alg3.pad2"] = hx(alg3(K2, pad2(MSG)))
 out["mac.alg1.tdes.pad1"] = hx(alg1_tdes(K2, pad1(MSG)))
 out["mac.alg1.tdes.pad2"] = hx(alg1_tdes(K2, pad2(MSG)))
+# ISO/IEC 9797-1:1999, 7.2 (Alg 2, EMAC) and 7.4 (Alg 4, MacDES) with K || K' = K2.
+def alg2(k, d):
+    return des(k[8:16]).encrypt(cbcmac_des(k[:8], d))
+def alg4(k, d):
+    kpp = xor(k[8:16], H("F0F0F0F0F0F0F0F0"))  # K'': alternate 4-bit substrings of K' complemented
+    h = des(kpp).encrypt(des(k[:8]).encrypt(d[:8]))
+    for i in range(8, len(d), 8): h = des(k[:8]).encrypt(xor(h, d[i:i+8]))
+    return des(k[8:16]).encrypt(h)
+out["mac.alg2.pad1"] = hx(alg2(K2, pad1(MSG)))
+out["mac.alg2.pad2"] = hx(alg2(K2, pad2(MSG)))
+out["mac.alg4.pad1"] = hx(alg4(K2, pad1(MSG)))
+out["mac.alg4.pad2"] = hx(alg4(K2, pad2(MSG)))
 c = CMAC.new(K2 + K2[:8], ciphermod=DES3); c.update(MSG); out["mac.cmac.tdes"] = hx(c.digest())
 c = CMAC.new(AES128, ciphermod=AES); c.update(MSG); out["mac.cmac.aes"] = hx(c.digest())
 

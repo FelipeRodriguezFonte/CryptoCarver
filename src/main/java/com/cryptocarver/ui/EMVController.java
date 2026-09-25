@@ -368,7 +368,7 @@ public class EMVController {
                 txData = rawData;
                 atc = atcARQCField.getText().trim(); // Still read for history/info
             } else {
-                // Construct from Individual Fields (BP Tools Structure)
+                // Construct from Individual Fields (external tool structure)
                 amount = amountField.getText().trim().replaceAll("\\s+", "");
                 amountOther = amountOtherField != null ? amountOtherField.getText().trim().replaceAll("\\s+", "")
                         : "";
@@ -424,7 +424,7 @@ public class EMVController {
                 }
                 result.append("Total Input for MAC:\n").append(txData).append("\n\n");
             } else {
-                result.append("Transaction Data (BP-Tools Structure):\n");
+                result.append("Transaction Data (external tool structure):\n");
                 result.append("─────────────────\n");
                 result.append("Amount: ").append(amount).append("\n");
                 result.append("Amount Other: ")

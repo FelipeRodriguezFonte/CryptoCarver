@@ -30,7 +30,7 @@ import javax.crypto.spec.SecretKeySpec;
  * <h2>Where this came from</h2>
  *
  * <p>Not from Futurex. The scheme was recovered from five input/output pairs
- * produced by EFTLab's BP-Tools Cryptographic Calculator 21.06, captured
+ * produced by an external tool, captured
  * 2026-09-19: one key under one MFK, once per modifier. Five cryptograms of the
  * same key under the same MFK isolate the modifier and nothing else, which is
  * why they were asked for that way.</p>
@@ -72,7 +72,7 @@ public final class FuturexMfkOperations {
      * above would extrapolate to them without complaint, and it may well be
      * right — but "it may well be right" is how this bench got the Thales
      * variant scheme wrong twice, and lifting the limit costs one screenshot
-     * of the Cryptographic Calculator with the modifier dropdown moved one
+     * of the external tool with the modifier dropdown moved one
      * notch further.</p>
      */
     public static WrappedKey encrypt(String clearKey, String mfk, int modifier) {
