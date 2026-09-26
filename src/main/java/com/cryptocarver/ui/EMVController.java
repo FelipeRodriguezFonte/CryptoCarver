@@ -5,6 +5,9 @@ import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.EMVOperations;
 import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvSecureMessaging;
+import com.cryptocarver.crypto.VisaHceOperations;
+import com.cryptocarver.crypto.MastercardDataStorage;
+import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 
 import javafx.fxml.FXML;
@@ -168,6 +171,16 @@ public class EMVController {
     @FXML private PasswordField smPinField;
     @FXML private TextField smUdkAField, smHeaderField, smDataField;
     @FXML private TextArea smResultArea;
+
+    // Visa cloud payments and Mastercard Integrated Data Storage
+    @FXML private TextField hceUdkField, hceYearField, hceHoursField, hceCounterField;
+    @FXML private TextField hceMsdLukField, hceMsdAtcField, hceDeviceTypeField;
+    @FXML private TextField hceQvsdcLukField, hceAmountField, hceOtherAmountField, hceCountryField;
+    @FXML private TextField hceTvrField, hceCurrencyField, hceDateField, hceTypeField, hceUnField;
+    @FXML private TextField hceAipField, hceQvsdcAtcField, hceCvrField;
+    @FXML private TextArea hceResultArea;
+    @FXML private TextField dsIdField, dsOperatorIdField, dsInputField;
+    @FXML private TextArea dsResultArea;
 
     static final String SM_MASTERCARD = "Mastercard";
     static final String SM_VISA = "Visa";
@@ -481,6 +494,125 @@ public class EMVController {
         } catch (Exception e) {
             smShow(t("module.emv.sm.error", e.getMessage()));
         }
+    }
+
+    // The controller validates field shape and delegates all EMV calculations.
+    private String emvHex(TextField field, String labelKey, int bytes) {
+        String value = smText(field);
+        if (!value.matches("[0-9A-F]{" + (bytes * 2) + "}"))
+            throw new IllegalArgumentException(t("module.emv.hce.hexLength", t(labelKey), bytes));
+        return value;
+    }
+
+    private String emvDsId() {
+        String value = smText(dsIdField);
+        if (!value.matches("[0-9A-F]{12,}") || value.length() % 2 != 0)
+            throw new IllegalArgumentException(t("module.emv.ds.idInvalid"));
+        return value;
+    }
+
+    private void emvShow(TextArea area, String text) {
+        area.setText(text);
+        area.setVisible(true);
+        area.setManaged(true);
+    }
+
+    private void emvPublish(String operationKey, String statusKey, String value,
+                            boolean secret, java.util.List<OperationDetail> details) {
+        if (mainController == null) return;
+        mainController.publish(OperationResult.forOperation(t(operationKey))
+                .output(value.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        secret ? OperationDetail.Classification.SECRET : OperationDetail.Classification.PUBLIC)
+                .details(details).status(t(statusKey)).build());
+    }
+
+    public void handleHceLoadExample() {
+        hceUdkField.setText("94E3194C02105E3B153438D562D5A49D");
+        hceYearField.setText("26"); hceHoursField.setText("6431"); hceCounterField.setText("01");
+        hceMsdLukField.clear(); hceQvsdcLukField.clear();
+        hceMsdAtcField.setText("0001"); hceDeviceTypeField.setText("AAAA000000000001");
+        hceAmountField.setText("000000001000"); hceOtherAmountField.setText("000000000000");
+        hceCountryField.setText("0710"); hceTvrField.setText("0000000000");
+        hceCurrencyField.setText("0710"); hceDateField.setText("130205");
+        hceTypeField.setText("00"); hceUnField.setText("30901B6A");
+        hceAipField.setText("3C00"); hceQvsdcAtcField.setText("0055");
+        hceCvrField.setText("03A4A082");
+        emvShow(hceResultArea, t("module.emv.hce.exampleLoaded"));
+    }
+
+    public void handleHceLuk() {
+        try {
+            String udk = emvHex(hceUdkField, "module.emv.hce.udk", 16);
+            String year = smText(hceYearField), hours = smText(hceHoursField), counter = smText(hceCounterField);
+            if (!year.matches("\\d{1,2}")) throw new IllegalArgumentException(t("module.emv.hce.yearInvalid"));
+            if (!hours.matches("\\d{4}")) throw new IllegalArgumentException(t("module.emv.hce.hoursInvalid"));
+            if (!counter.matches("\\d{2}")) throw new IllegalArgumentException(t("module.emv.hce.counterInvalid"));
+            String luk = VisaHceOperations.limitedUseKey(udk, year, hours, counter);
+            hceMsdLukField.setText(luk); hceQvsdcLukField.setText(luk);
+            emvShow(hceResultArea, t("module.emv.hce.lukResult", luk));
+            emvPublish("module.emv.hce.lukAction", "module.emv.hce.status", luk, true,
+                    java.util.List.of(OperationDetail.secretDetail("UDK", udk), OperationDetail.secretDetail("LUK", luk)));
+        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
+    }
+
+    public void handleHceMsd() {
+        try {
+            String luk = emvHex(hceMsdLukField, "module.emv.hce.luk", 16);
+            String atc = emvHex(hceMsdAtcField, "module.emv.hce.atc", 2);
+            String device = emvHex(hceDeviceTypeField, "module.emv.hce.deviceType", 8);
+            String value = VisaHceOperations.msdVerificationValue(luk, atc, device);
+            emvShow(hceResultArea, t("module.emv.hce.msdResult", value));
+            emvPublish("module.emv.hce.msdAction", "module.emv.hce.status", value, false,
+                    java.util.List.of(OperationDetail.secretDetail("LUK", luk), OperationDetail.publicDetail("MSD", value)));
+        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
+    }
+
+    public void handleHceQvsdc() {
+        try {
+            String luk = emvHex(hceQvsdcLukField, "module.emv.hce.luk", 16);
+            String terminal = emvHex(hceAmountField, "module.emv.hce.amount", 6)
+                    + emvHex(hceOtherAmountField, "module.emv.hce.otherAmount", 6)
+                    + emvHex(hceCountryField, "module.emv.hce.country", 2)
+                    + emvHex(hceTvrField, "module.emv.hce.tvr", 5)
+                    + emvHex(hceCurrencyField, "module.emv.hce.currency", 2)
+                    + emvHex(hceDateField, "module.emv.hce.date", 3)
+                    + emvHex(hceTypeField, "module.emv.hce.type", 1)
+                    + emvHex(hceUnField, "module.emv.hce.un", 4);
+            String chip = emvHex(hceAipField, "module.emv.hce.aip", 2)
+                    + emvHex(hceQvsdcAtcField, "module.emv.hce.atc", 2)
+                    + emvHex(hceCvrField, "module.emv.hce.cvr", 4);
+            String value = VisaHceOperations.qvsdcCryptogram(luk, terminal, chip);
+            emvShow(hceResultArea, t("module.emv.hce.qvsdcResult", value));
+            emvPublish("module.emv.hce.qvsdcAction", "module.emv.hce.status", value, false,
+                    java.util.List.of(OperationDetail.secretDetail("LUK", luk), OperationDetail.publicDetail("qVSDC", value)));
+        } catch (Exception e) { emvShow(hceResultArea, t("module.emv.hce.error", e.getMessage())); }
+    }
+
+    public void handleDsLoadExample() {
+        dsIdField.setText("5168624300900697"); dsOperatorIdField.setText("8199829983998499");
+        dsInputField.setText("1223344556677889");
+        emvShow(dsResultArea, t("module.emv.ds.exampleLoaded"));
+    }
+
+    public void handleDsDspk() {
+        try {
+            String value = MastercardDataStorage.partialKey(emvDsId());
+            emvShow(dsResultArea, t("module.emv.ds.dspkResult", value));
+            emvPublish("module.emv.ds.dspkAction", "module.emv.ds.status", value, true,
+                    java.util.List.of(OperationDetail.secretDetail("DSPK", value)));
+        } catch (Exception e) { emvShow(dsResultArea, t("module.emv.ds.error", e.getMessage())); }
+    }
+
+    public void handleDsDigest() {
+        try {
+            String id = emvDsId();
+            String oid = emvHex(dsOperatorIdField, "module.emv.ds.operatorId", 8);
+            String input = emvHex(dsInputField, "module.emv.ds.input", 8);
+            String value = MastercardDataStorage.owhf2(id, oid, input);
+            emvShow(dsResultArea, t("module.emv.ds.digestResult", value));
+            emvPublish("module.emv.ds.digestAction", "module.emv.ds.status", value, false,
+                    java.util.List.of(OperationDetail.publicDetail("Digest", value)));
+        } catch (Exception e) { emvShow(dsResultArea, t("module.emv.ds.error", e.getMessage())); }
     }
 
     // ============================================================================

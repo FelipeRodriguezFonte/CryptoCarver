@@ -278,6 +278,120 @@
                 </VBox>
             </TitledPane>
 
+            <!-- VISA HCE -->
+            <TitledPane text="📱 Visa HCE">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Derive a limited-use key, then calculate MSD and qVSDC values. Each result remains editable in the next step." wrapText="true" styleClass="form-label"/>
+                    <Button text="Load Example" onAction="#handleHceLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <Label text="1. Limited-use key (LUK)" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="UDK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceUdkField" promptText="16 bytes of card key in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Year:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceYearField" promptText="1 or 2 decimal digits" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Hours since January 1:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceHoursField" promptText="4 decimal digits" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Hourly counter:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceCounterField" promptText="2 decimal digits" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Derive LUK" onAction="#handleHceLuk" styleClass="action-button,primary-action"/>
+                    <Label text="2. MSD verification value" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="LUK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceMsdLukField" promptText="16-byte LUK in hex; filled by step 1" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceMsdAtcField" promptText="2 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Device type:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceDeviceTypeField" promptText="8 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Calculate MSD" onAction="#handleHceMsd" styleClass="action-button,primary-action"/>
+                    <Label text="3. qVSDC cryptogram" styleClass="form-label"/>
+                    <Label text="Terminal data" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="LUK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceQvsdcLukField" promptText="16-byte LUK in hex; filled by step 1" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="9F02 Amount:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceAmountField" promptText="6 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="9F03 Other amount:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceOtherAmountField" promptText="6 bytes in hex (other amount)" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="9F1A Terminal country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceCountryField" promptText="2 bytes in hex (country)" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="95 TVR:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceTvrField" promptText="5 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="5F2A Transaction currency:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceCurrencyField" promptText="2 bytes in hex (currency)" maxWidth="Infinity"
+                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="9A Transaction date:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceDateField" promptText="3 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="9C Transaction type:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceTypeField" promptText="1 byte in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="9F37 Unpredictable number:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceUnField" promptText="4 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Label text="Chip data" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="82 AIP:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceAipField" promptText="2 bytes in hex (AIP)" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceQvsdcAtcField" promptText="2 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="CVR:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="hceCvrField" promptText="4 bytes in hex (CVR)" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Calculate qVSDC" onAction="#handleHceQvsdc" styleClass="action-button,primary-action"/>
+                    <TextArea fx:id="hceResultArea" prefHeight="100" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
+            <!-- MASTERCARD DATA STORAGE -->
+            <TitledPane text="💾 Mastercard Data Storage">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Derive the DS partial key and calculate its OWHF2 digest." wrapText="true" styleClass="form-label"/>
+                    <Button text="Load Example" onAction="#handleDsLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <Label text="1. DS partial key (DSPK)" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="DS ID:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsIdField" promptText="At least 6 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Derive DSPK" onAction="#handleDsDspk" styleClass="action-button,primary-action"/>
+                    <Label text="2. Digest (OWHF2)" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="Operator ID:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsOperatorIdField" promptText="8-byte operator ID in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="DS input:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsInputField" promptText="8-byte DS input in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Calculate digest" onAction="#handleDsDigest" styleClass="action-button,primary-action"/>
+                    <TextArea fx:id="dsResultArea" prefHeight="100" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
             <!-- TRACK 2 DATA -->
             <TitledPane text="🎞 Track 2 Data">
                 <VBox spacing="12" styleClass="module-pane-content">
