@@ -310,16 +310,23 @@ ICC Dynamic Number y CAP, un segundo caso cambia sólo `UN.0` por `UN.1`.
 
 `HCE-INDEX-00` sólo pudo verificarse parcialmente: la ventana principal indica
 versión `21.06` y muestra los menús superiores `Main`, `Generic`, `Cipher`,
-`Keys`, `Payments`, `EMV` y `Development`. La interfaz de control de la máquina
-virtual no entregó las teclas a la ventana, incluso tras darle foco desde su
-barra de título. Por ello no se pudieron abrir los submenús de `Payments` y
-`EMV` ni confirmar los nombres de las operaciones. No se guardó una imagen de
-la ventana porque su título identifica al fabricante.
+`Keys`, `Payments`, `EMV` y `Development`. Con el foco cedido por el usuario se
+abrió `Payments → Card Validation`: su submenú contiene `CWVs`, `AMEX CSCs` y
+`MasterCard dynamic CVC3`. La pestaña `AMEX CSCs` se abrió una vez, pero al
+cerrarse el menú el control de teclado de la máquina virtual dejó de responder.
+No se abrió `EMV` ni se verificaron sus submenús. No se guardó una imagen de la
+ventana porque su título identifica al fabricante.
+
+`AMEX CSCs` mostró la pestaña `Generate`, versiones `CSC ver. 1` y `CSC ver. 2`,
+y estos valores precargados: CSC Key `0123456789ABCDEFFEDCBA9876543210` (32),
+PAN `371234567890123` (15), Exp. date `9912` (4) y Service Code `702` (3).
+Los cuatro tipos visibles de `Verification Value Type` estaban deshabilitados.
+No se cambió ni calculó ningún valor de campaña.
 
 | Caso | Entradas previstas | Pantalla y resultado observados | Estado |
 |---|---|---|---|
-| `AMEX-CSC1-00` | `K.TDES2`, `PAN`, `EXPIRY`, `SERVICE_CODE=201` y `000` | No se abrió la operación; sin campos, intermedios ni CSC observados | Sin captura; no implementable |
-| `AMEX-CSC2-00` | Los mismos dos valores de `SERVICE_CODE` | No se abrió la operación; sin campos, intermedios ni CSC observados | Sin captura; no implementable |
+| `AMEX-CSC1-00` | `K.TDES2`, `PAN`, `EXPIRY`, `SERVICE_CODE=201` y `000` | Se abrió el formulario con sus valores precargados; no se introdujeron los valores de campaña ni se observó CSC o intermedios | Captura incompleta; no implementable |
+| `AMEX-CSC2-00` | Los mismos dos valores de `SERVICE_CODE` | Se vio el selector de versión; no se calculó ni se observó CSC o intermedios | Captura incompleta; no implementable |
 | `ICC-DYNAMIC-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1` | No se abrió la operación; sin campos, claves, bloques ni número dinámico observados | Sin captura; no implementable |
 | `MC-CAP-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1`; `PIN` si se solicita | No se abrió la operación; sin campos, claves, bloques ni resultado observados | Sin captura; no implementable |
 
