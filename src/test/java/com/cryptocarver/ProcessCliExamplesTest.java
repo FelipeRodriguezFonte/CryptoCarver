@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.InputStream;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -91,5 +92,70 @@ class ProcessCliExamplesTest {
             Files.deleteIfExists(process);
             Files.deleteIfExists(target.getParent());
         }
+    }
+
+    @Test void visaBatchCsvContinuesAfterInvalidRowAndMasksSecrets() {
+        StringWriter output = new StringWriter(), error = new StringWriter();
+        int code = CryptoCarverCli.run(new String[] {"run-process", ROOT + "visa-hce.json", "--batch", ROOT + "visa-hce.csv", "--output", "csv"},
+                new PrintWriter(output), new PrintWriter(error));
+        assertEquals(CryptoCarverCli.EXIT_OPERATION_FAILED, code, error.toString());
+        String csv = output.toString();
+        assertTrue(csv.contains("row,status,error"), csv);
+        assertTrue(csv.split("\n", 2)[0].contains("\"msd.output\""), csv);
+        assertTrue(csv.contains("1,ok"), csv);
+        assertTrue(csv.contains("2,ok"), csv);
+        assertTrue(csv.contains("3,error"), csv);
+        assertTrue(csv.contains("node msd, port atc"), csv);
+        assertTrue(csv.contains("•••• (length 32)"), csv);
+        assertFalse(csv.contains("D144CA8CBB4BD463C8EDD5761BF1770E"), csv);
+        assertFalse(csv.contains("94E3194C02105E3B153438D562D5A49D"), csv);
+    }
+
+    @Test void processBatchJsonlCanRevealSecretsAndCombinesGlobalSet() {
+        StringWriter output = new StringWriter(), error = new StringWriter();
+        int code = CryptoCarverCli.run(new String[] {"run-process", ROOT + "emv-secure-messaging.json", "--batch", ROOT + "emv-secure-messaging.csv",
+                "--output", "jsonl", "--set", "session.smScheme=MASTERCARD", "--reveal-secrets"},
+                new PrintWriter(output), new PrintWriter(error));
+        assertEquals(0, code, error.toString());
+        assertTrue(output.toString().contains("\"row\":1"), output.toString());
+        assertTrue(output.toString().contains("card.output"), output.toString());
+        assertTrue(output.toString().contains("AEB0F198A498E067C4E63D94A770A80E"), output.toString());
+        assertTrue(output.toString().contains("AC4E7EB35196E310"), output.toString());
+    }
+
+    @Test void processBatchRejectsUnknownColumnBeforeRunning() throws Exception {
+        StringWriter output = new StringWriter(), error = new StringWriter();
+        Path file = Files.createTempFile("unknown-process-column", ".csv");
+        try {
+            Files.writeString(file, "missing.value\nx\n");
+            int code = CryptoCarverCli.run(new String[] {"run-process", ROOT + "visa-hce.json", "--batch", file.toString()},
+                    new PrintWriter(output), new PrintWriter(error));
+            assertEquals(CryptoCarverCli.EXIT_INVALID_ARGS, code);
+            assertTrue(error.toString().contains("Unknown batch column"), error.toString());
+            assertEquals("", output.toString());
+        } finally { Files.deleteIfExists(file); }
+    }
+
+    @Test void processBatchReadsStandardInput() throws Exception {
+        InputStream previous = System.in;
+        StringWriter output = new StringWriter(), error = new StringWriter();
+        try {
+            System.setIn(new java.io.ByteArrayInputStream("luk.smUdk,msd.atc\n94E3194C02105E3B153438D562D5A49D,0001\n".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            int code = CryptoCarverCli.run(new String[] {"run-process", ROOT + "visa-hce.json", "--batch", "-", "--format", "csv", "--output", "jsonl"},
+                    new PrintWriter(output), new PrintWriter(error));
+            assertEquals(0, code, error.toString() + "\n" + output);
+            assertTrue(output.toString().contains("\"row\":1"), output.toString());
+            assertTrue(output.toString().contains("msd.output"), output.toString());
+        } finally {
+            System.setIn(previous);
+        }
+    }
+
+    @Test void processFormatsRequireBatch() {
+        StringWriter error = new StringWriter();
+        assertEquals(CryptoCarverCli.EXIT_INVALID_ARGS,
+                CryptoCarverCli.run(new String[] {"run-process", ROOT + "visa-hce.json", "--output", "csv"},
+                        new PrintWriter(new StringWriter()), new PrintWriter(error)));
+        assertTrue(error.toString().contains("require --batch"), error.toString());
     }
 }

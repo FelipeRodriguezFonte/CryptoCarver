@@ -83,7 +83,7 @@ public final class CryptoCarverCli {
         String cmd = args[0];
         java.util.Set<String> allowedFlags = new java.util.HashSet<>(List.of("--json"));
         if ("batch".equals(cmd)) allowedFlags.addAll(List.of("--format", "--output", "--column"));
-        if ("run-process".equals(cmd)) allowedFlags.addAll(List.of("--set", "--reveal-secrets"));
+        if ("run-process".equals(cmd)) allowedFlags.addAll(List.of("--set", "--batch", "--format", "--output", "--reveal-secrets"));
         if ("serve".equals(cmd)) allowedFlags.add("--port");
         if ("icsf-token".equals(cmd)) allowedFlags.add("--provenance");
         if ("icsf-batch".equals(cmd)) {
@@ -187,32 +187,21 @@ public final class CryptoCarverCli {
 
     private static int runProcess(String[] args, PrintWriter out, PrintWriter err, boolean json) throws IOException {
         String file = requireArgument(args, 1);
-        ProcessDefinition definition = ProcessDefinitionCodec.deserialize(Files.readString(Path.of(file), StandardCharsets.UTF_8));
+        String processJson = Files.readString(Path.of(file), StandardCharsets.UTF_8);
+        String batchFile = option(args, "--batch");
+        if (batchFile != null) return runProcessBatch(args, processJson, batchFile, out, err, json);
+        if (option(args, "--format") != null || option(args, "--output") != null) {
+            throw new IllegalArgumentException("--format and --output require --batch");
+        }
+        ProcessDefinition definition = ProcessDefinitionCodec.deserialize(processJson);
         if (definition.nodes == null || definition.connections == null) {
             throw new IllegalArgumentException("Process requires nodes and connections");
         }
-        for (int i = 2; i < args.length; i++) {
-            if (!"--set".equals(args[i])) continue;
-            String assignment = args[++i];
-            int dot = assignment.indexOf('.');
-            int equals = assignment.indexOf('=', dot + 1);
-            if (dot <= 0 || equals <= dot + 1) throw new IllegalArgumentException("Expected --set node.param=value");
-            String id = assignment.substring(0, dot);
-            String parameter = assignment.substring(dot + 1, equals);
-            ProcessDefinition.Node node = definition.nodes.stream().filter(n -> id.equals(n.id)).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Unknown node in --set: " + id));
-            boolean known = NodeCatalog.allDescriptors().stream().filter(d -> d.type().equalsIgnoreCase(node.type))
-                    .flatMap(d -> d.parameters().stream()).anyMatch(p -> p.key().equals(parameter));
-            if (!known && !node.configuration.containsKey(parameter)) {
-                throw new IllegalArgumentException("Unknown parameter " + id + "." + parameter);
-            }
-            node.configuration.put(parameter, assignment.substring(equals + 1));
-        }
-        for (ProcessDefinition.Node node : definition.nodes) {
-            if ("FILE_OUTPUT".equalsIgnoreCase(node.type)) {
-                error(err, "node " + node.id + ", port output: file writing is disabled in run-process", json);
-                return EXIT_OPERATION_FAILED;
-            }
+        applyProcessOverrides(definition, setAssignments(args));
+        String fileOutput = fileOutputNode(definition);
+        if (fileOutput != null) {
+            error(err, "node " + fileOutput + ", port output: file writing is disabled in run-process", json);
+            return EXIT_OPERATION_FAILED;
         }
         try {
             ProcessEngine.validate(definition);
@@ -221,21 +210,15 @@ public final class CryptoCarverCli {
             error(err, "Validation failed: " + location + ": " + e.getMessage(), json);
             return EXIT_OPERATION_FAILED;
         }
-        java.util.List<NodeExecutionEvent> events = new java.util.ArrayList<>();
-        Map<String, String> values;
-        try {
-            values = ProcessEngine.executeAndRender(definition,
-                    new ExecutionContext(FileWritePolicy.FAIL_IF_EXISTS, events::add));
-        } catch (Exception e) {
-            String node = events.stream().filter(v -> v.state() == NodeExecutionState.ERROR)
-                    .map(NodeExecutionEvent::nodeId).findFirst().orElse("workflow");
-            error(err, "Execution failed: node " + node + ", port output: " + e.getMessage(), json);
+        ProcessRunResult run = executeProcess(definition);
+        if (run.error() != null) {
+            error(err, run.error(), json);
             return EXIT_OPERATION_FAILED;
         }
         boolean reveal = contains(args, "--reveal-secrets");
         java.util.List<Map<String, Object>> outputs = new java.util.ArrayList<>();
         for (ProcessDefinition.Node node : definition.nodes) {
-            String value = values.get(node.id);
+            String value = run.values().get(node.id);
             if (value == null) continue;
             boolean masked = !reveal && SecretOutputPolicy.isSecretMaterialOutput(node.type);
             String shown = masked ? "•••• (length " + value.length() + ")" : value;
@@ -250,6 +233,144 @@ public final class CryptoCarverCli {
         if (json) out.println(new Gson().toJson(Map.of("outputs", outputs)));
         out.flush();
         return EXIT_SUCCESS;
+    }
+
+    private record ProcessRunResult(Map<String, String> values, String error) { }
+
+    private static Map<String, String> setAssignments(String[] args) {
+        Map<String, String> assignments = new java.util.LinkedHashMap<>();
+        for (int i = 2; i < args.length; i++) {
+            if (!"--set".equals(args[i])) continue;
+            String value = args[++i];
+            int dot = value.indexOf('.');
+            int equals = value.indexOf('=', dot + 1);
+            if (dot <= 0 || equals <= dot + 1) throw new IllegalArgumentException("Expected --set node.param=value");
+            assignments.put(value.substring(0, equals), value.substring(equals + 1));
+        }
+        return assignments;
+    }
+
+    private static void applyProcessOverrides(ProcessDefinition definition, Map<String, String> overrides) {
+        for (Map.Entry<String, String> override : overrides.entrySet()) {
+            int dot = override.getKey().indexOf('.');
+            if (dot <= 0) throw new IllegalArgumentException("Expected --set node.param=value");
+            String id = override.getKey().substring(0, dot);
+            String parameter = override.getKey().substring(dot + 1);
+            ProcessDefinition.Node node = definition.nodes.stream().filter(n -> id.equals(n.id)).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown node in --set: " + id));
+            boolean known = NodeCatalog.getDescriptor(node.type).stream()
+                    .flatMap(d -> d.parameters().stream()).anyMatch(p -> p.key().equals(parameter));
+            if (!known && !node.configuration.containsKey(parameter)) {
+                throw new IllegalArgumentException("Unknown parameter " + id + "." + parameter);
+            }
+            node.configuration.put(parameter, override.getValue());
+        }
+    }
+
+    private static String fileOutputNode(ProcessDefinition definition) {
+        return definition.nodes.stream().filter(node -> "FILE_OUTPUT".equalsIgnoreCase(node.type))
+                .map(node -> node.id).findFirst().orElse(null);
+    }
+
+    private static ProcessRunResult executeProcess(ProcessDefinition definition) {
+        java.util.List<NodeExecutionEvent> events = new java.util.ArrayList<>();
+        try {
+            Map<String, String> values = ProcessEngine.executeAndRender(definition,
+                    new ExecutionContext(FileWritePolicy.FAIL_IF_EXISTS, events::add));
+            return new ProcessRunResult(values, null);
+        } catch (Exception e) {
+            String node = events.stream().filter(v -> v.state() == NodeExecutionState.ERROR)
+                    .map(NodeExecutionEvent::nodeId).findFirst().orElse("workflow");
+            return new ProcessRunResult(Map.of(), "Execution failed: node " + node + ", port output: " + e.getMessage());
+        }
+    }
+
+    private static int runProcessBatch(String[] args, String processJson, String batchFile,
+                                       PrintWriter out, PrintWriter err, boolean json) throws IOException {
+        String inputFormat = option(args, "--format");
+        String outputFormat = option(args, "--output");
+        if (inputFormat == null) inputFormat = batchFile.toLowerCase(java.util.Locale.ROOT).endsWith(".csv") || "-".equals(batchFile) ? "csv" : "jsonl";
+        if (outputFormat == null) outputFormat = "jsonl";
+        if (!("csv".equals(inputFormat) || "jsonl".equals(inputFormat))
+                || !("csv".equals(outputFormat) || "jsonl".equals(outputFormat))) {
+            throw new IllegalArgumentException("Formats must be csv or jsonl");
+        }
+        List<Map<String, String>> rows;
+        java.io.Reader reader = "-".equals(batchFile)
+                ? new java.io.InputStreamReader(System.in, StandardCharsets.UTF_8)
+                : Files.newBufferedReader(Path.of(batchFile), StandardCharsets.UTF_8);
+        ProcessDefinition base = ProcessDefinitionCodec.deserialize(processJson);
+        if (base.nodes == null || base.connections == null) throw new IllegalArgumentException("Process requires nodes and connections");
+        rows = "csv".equals(inputFormat)
+                ? BatchInputCodec.parseProcessCsv(reader, BatchInputCodec.MAX_ROWS,
+                        header -> header.forEach(name -> validateProcessParameter(base, name)))
+                : BatchInputCodec.parseProcessJsonLines(reader, BatchInputCodec.MAX_ROWS);
+        String fileOutput = fileOutputNode(base);
+        if (fileOutput != null) throw new IllegalArgumentException("node " + fileOutput + ", port output: file writing is disabled in run-process");
+        Map<String, String> global = new java.util.LinkedHashMap<>();
+        global.putAll(setAssignments(args));
+        for (Map<String, String> row : rows) {
+            for (String header : row.keySet()) validateProcessParameter(base, header);
+        }
+        for (String key : global.keySet()) validateProcessParameter(base, key);
+        BatchRunner.Report report = BatchRunner.run(rows, (rowNumber, row) -> {
+            ProcessDefinition copy = ProcessDefinitionCodec.deserialize(processJson);
+            Map<String, String> valuesToApply = new java.util.LinkedHashMap<>(global);
+            valuesToApply.putAll(row);
+            try { applyProcessOverrides(copy, valuesToApply); }
+            catch (IllegalArgumentException e) { throw new IllegalArgumentException("node " + parameterNode(valuesToApply.keySet(), e.getMessage()) + ", port configuration: " + e.getMessage(), e); }
+            try { ProcessEngine.validate(copy); }
+            catch (Exception e) { throw new IllegalArgumentException("Validation failed: " + batchValidationLocation(copy, row, e) + ": " + e.getMessage(), e); }
+            ProcessRunResult result = executeProcess(copy);
+            if (result.error() != null) throw new IllegalArgumentException(result.error());
+            Map<String, String> outputs = new java.util.LinkedHashMap<>();
+            boolean reveal = contains(args, "--reveal-secrets");
+            for (ProcessDefinition.Node node : copy.nodes) {
+                String value = result.values().get(node.id);
+                if (value != null) outputs.put(node.id + ".output", !reveal && SecretOutputPolicy.isSecretMaterialOutput(node.type)
+                        ? "•••• (length " + value.length() + ")" : value);
+            }
+            return outputs;
+        }, () -> false);
+        report = new BatchRunner.Report(report.results().stream()
+                .map(result -> new BatchRunner.RowResult(result.rowNumber(), Map.of(), result.output(), result.error()))
+                .toList(), report.cancelled());
+        if ("csv".equals(outputFormat)) out.print(BatchOutputCodec.toProcessCsv(report));
+        else out.print(BatchOutputCodec.toJsonLines(report));
+        out.flush();
+        return report.failed() == 0 ? EXIT_SUCCESS : EXIT_OPERATION_FAILED;
+    }
+
+    private static void validateProcessParameter(ProcessDefinition definition, String header) {
+        int dot = header.indexOf('.');
+        if (dot <= 0 || dot == header.length() - 1 || header.indexOf('.', dot + 1) >= 0) {
+            throw new IllegalArgumentException("Unknown batch column: " + header);
+        }
+        String id = header.substring(0, dot), parameter = header.substring(dot + 1);
+        ProcessDefinition.Node node = definition.nodes.stream().filter(n -> id.equals(n.id)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown batch column: " + header));
+        boolean known = NodeCatalog.getDescriptor(node.type).stream().flatMap(d -> d.parameters().stream())
+                .anyMatch(p -> p.key().equals(parameter));
+        if (!known && (node.configuration == null || !node.configuration.containsKey(parameter))) {
+            throw new IllegalArgumentException("Unknown batch column: " + header);
+        }
+    }
+
+    private static String batchValidationLocation(ProcessDefinition definition, Map<String, String> row, Exception failure) {
+        String location = validationLocation(definition, failure);
+        if (!location.endsWith(", port configuration")) return location;
+        for (String key : row.keySet()) {
+            int dot = key.indexOf('.');
+            if (dot > 0 && location.equals("node " + key.substring(0, dot) + ", port configuration")) {
+                return "node " + key.substring(0, dot) + ", port " + key.substring(dot + 1);
+            }
+        }
+        return location;
+    }
+
+    private static String parameterNode(java.util.Set<String> keys, String message) {
+        for (String key : keys) if (message != null && message.contains(key)) return key.substring(0, key.indexOf('.'));
+        return "unknown";
     }
 
     private static String validationLocation(ProcessDefinition definition, Exception failure) {
@@ -463,7 +584,7 @@ public final class CryptoCarverCli {
         out.println("CryptoCarver CLI (local laboratory operations)");
         out.println("  sha256|base64url-encode|base64url-decode|compress-gzip|decompress-gzip|inspect-asn1|inspect-tlv|hmac-sha256 <value> [--json]");
         out.println("  batch <operation> <file> [--format csv|jsonl] [--output csv|jsonl] [--column name]");
-        out.println("  run-process <file.json> [--set node.param=value ...] [--json] [--reveal-secrets]");
+        out.println("  run-process <file.json> [--set node.param=value ...] [--batch file|-> [--format csv|jsonl] [--output csv|jsonl]] [--json] [--reveal-secrets]");
         out.println("  icsf-token <hex> [--provenance kds-crudo|key-record-read|inferir] [--json]");
         out.println("  icsf-batch <file|-> [--format auto|linea|dos-filas] [--provenance ...] [--detail]");
         out.println("             [--txt PATH [--no-detail]] [--csv PATH [--sep ;]] [--json-out PATH]");

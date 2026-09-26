@@ -96,6 +96,24 @@ public class KeyCertificateFormatServiceTest {
     }
 
     @Test
+    public void testEdDsaJwkPublicRoundTrip() throws Exception {
+        for (String algorithm : new String[] { "Ed25519", "Ed448" }) {
+            KeyPair pair = KeyPairGenerator.getInstance(algorithm, "BC").generateKeyPair();
+            var key = service.detect(pair.getPublic().getEncoded(), null);
+            String jwk = service.convert(key, "JWK", SecretVisibilityProfile.FULL_LAB);
+            assertTrue(jwk.contains("\"kty\":\"OKP\""));
+            assertTrue(jwk.contains("\"crv\":\"" + algorithm + "\""));
+
+            var imported = service.detect(jwk.getBytes(java.nio.charset.StandardCharsets.UTF_8), null);
+            String pem = service.convert(imported, "PEM", SecretVisibilityProfile.FULL_LAB);
+            assertTrue(pem.contains("BEGIN PUBLIC KEY"));
+            assertArrayEquals(pair.getPublic().getEncoded(), java.util.Base64.getMimeDecoder().decode(
+                    pem.replace("-----BEGIN PUBLIC KEY-----", "")
+                            .replace("-----END PUBLIC KEY-----", "")));
+        }
+    }
+
+    @Test
     public void testValidatePairValid() throws Exception {
         boolean valid = service.validatePair(rsaPair.getPublic().getEncoded(), rsaPair.getPrivate().getEncoded());
         assertTrue(valid);

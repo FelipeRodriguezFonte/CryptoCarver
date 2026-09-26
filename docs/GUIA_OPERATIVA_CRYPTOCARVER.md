@@ -93,6 +93,15 @@ java -jar target/cryptocarver-<version>.jar --cli run-process docs/examples/proc
 La forma general es `run-process <fichero.json> [--set nodo.param=valor ...] [--json] [--reveal-secrets]`.
 El comando muestra `nodo.output` para cada nodo; las salidas clasificadas como secretas se muestran como `••••` con su longitud. `--reveal-secrets` muestra los valores completos. Los secretos no se guardan en el JSON y deben proporcionarse al ejecutar; evite dejar claves reales en el historial de la terminal. El comando rechaza nodos de escritura de archivos.
 
+Para ejecutar el mismo proceso con varias entradas, use `--batch` con un CSV o JSONL. Cada columna debe llamarse `nodo.parametro` y sustituye ese parámetro en su fila, igual que `--set`. Los `--set` adicionales se aplican a todas las filas. Una columna desconocida invalida la cabecera antes de ejecutar. Los errores de una fila se registran y el resto continúa; la salida incluye el número de fila, las salidas `nodo.output` y un campo de error. El código de salida es 3 si alguna fila falla, o 0 si todas terminan bien. La política de secretos y el rechazo de nodos de escritura de archivos son los mismos que en el modo individual.
+
+```bash
+java -jar target/cryptocarver-<version>.jar --cli run-process docs/examples/processes/visa-hce.json \
+  --batch docs/examples/processes/visa-hce.csv --format csv --output jsonl
+```
+
+La forma general es `run-process <fichero.json> --batch <fichero|-> [--format csv|jsonl] [--output csv|jsonl] [--set nodo.param=valor ...] [--reveal-secrets]`. El guion `-` lee de la entrada estándar. `--reveal-secrets` también muestra valores secretos en la salida del lote; úselo solo cuando proceda.
+
 Hay tres procesos de ejemplo en `docs/examples/processes/`, verificados con vectores conocidos:
 
 - `mc-data-storage.json`: `MC_DS_PARTIAL_KEY`, `MC_DS_DIGEST` y `MC_DS_SUMMARY`; requiere `--set summary.un=11223344`.

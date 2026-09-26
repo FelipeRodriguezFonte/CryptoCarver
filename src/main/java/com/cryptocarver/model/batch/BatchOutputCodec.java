@@ -25,13 +25,22 @@ public final class BatchOutputCodec {
     }
 
     public static String toCsv(BatchRunner.Report report) {
+        return toCsv(report, true);
+    }
+
+    /** Process reports already name outputs as node.output and omit their inputs. */
+    public static String toProcessCsv(BatchRunner.Report report) {
+        return toCsv(report, false);
+    }
+
+    private static String toCsv(BatchRunner.Report report, boolean prefixOutputKeys) {
         if (report == null || report.cancelled()) return "";
         if (report.results().isEmpty()) return "row,status,error\n";
         Set<String> inputKeys = new LinkedHashSet<>(), outputKeys = new LinkedHashSet<>();
         report.results().forEach(row -> { inputKeys.addAll(row.input().keySet()); outputKeys.addAll(row.output().keySet()); });
         StringBuilder output = new StringBuilder("row,status,error");
         inputKeys.forEach(key -> output.append(',').append(escape("input_" + key)));
-        outputKeys.forEach(key -> output.append(',').append(escape("output_" + key)));
+        outputKeys.forEach(key -> output.append(',').append(escape(prefixOutputKeys ? "output_" + key : key)));
         output.append('\n');
         for (BatchRunner.RowResult row : report.results()) {
             output.append(row.rowNumber()).append(',').append(row.succeeded() ? "ok" : "error").append(',').append(escape(row.error()));

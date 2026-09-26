@@ -61,13 +61,34 @@ public final class BatchInputCodec {
     public static List<Map<String, String>> parseCsv(String csv, int limit) { return parseCsv(new StringReader(csv == null ? "" : csv), limit); }
 
     public static List<Map<String, String>> parseCsv(Reader reader, int limit) {
+        return parseCsv(reader, limit, false);
+    }
+
+    /** Parses workflow parameter columns; callers must validate every name against that process. */
+    public static List<Map<String, String>> parseProcessCsv(Reader reader, int limit) {
+        return parseProcessCsv(reader, limit, null);
+    }
+
+    /** Parses process parameters and validates the header as soon as it is read. */
+    public static List<Map<String, String>> parseProcessCsv(Reader reader, int limit,
+            java.util.function.Consumer<List<String>> headerValidator) {
+        return parseCsv(reader, limit, true, headerValidator);
+    }
+
+    private static List<Map<String, String>> parseCsv(Reader reader, int limit, boolean processParameters) {
+        return parseCsv(reader, limit, processParameters, null);
+    }
+
+    private static List<Map<String, String>> parseCsv(Reader reader, int limit, boolean processParameters,
+            java.util.function.Consumer<List<String>> headerValidator) {
         try {
             Reader safeReader = new BoundedReader(reader, MAX_TOTAL_CHARS);
             if (!safeReader.markSupported()) safeReader = new BufferedReader(safeReader);
             List<List<String>> records = parseDelimited(safeReader, limit + 1);
             if (records.isEmpty()) return List.of();
             List<String> header = records.remove(0);
-            validateHeader(header);
+            validateHeader(header, processParameters);
+            if (headerValidator != null) headerValidator.accept(List.copyOf(header));
             List<Map<String, String>> rows = new ArrayList<>();
             for (List<String> record : records) {
                 if (record.size() == 1 && record.get(0).isEmpty()) continue;
@@ -87,6 +108,15 @@ public final class BatchInputCodec {
     public static List<Map<String, String>> parseJsonLines(String jsonl, int limit) { return parseJsonLines(new StringReader(jsonl == null ? "" : jsonl), limit); }
 
     public static List<Map<String, String>> parseJsonLines(Reader reader, int limit) {
+        return parseJsonLines(reader, limit, false);
+    }
+
+    /** Parses workflow parameter fields; callers must validate every name against that process. */
+    public static List<Map<String, String>> parseProcessJsonLines(Reader reader, int limit) {
+        return parseJsonLines(reader, limit, true);
+    }
+
+    private static List<Map<String, String>> parseJsonLines(Reader reader, int limit, boolean processParameters) {
         List<Map<String, String>> rows = new ArrayList<>();
         Gson gson = new Gson();
         Type mapType = new TypeToken<Map<String, Object>>() { }.getType();
@@ -105,7 +135,7 @@ public final class BatchInputCodec {
                 for (Map.Entry<String, Object> entry : raw.entrySet()) {
                     String key = entry.getKey() == null ? "" : entry.getKey().trim();
                     if (key.isEmpty()) throw new IllegalArgumentException("JSONL line " + lineNumber + " contains an empty field name");
-                    validateSafeFieldName(key, "JSONL line " + lineNumber);
+                    if (!processParameters) validateSafeFieldName(key, "JSONL line " + lineNumber);
                     if (entry.getValue() instanceof Map || entry.getValue() instanceof List) throw new IllegalArgumentException("JSONL line " + lineNumber + " field " + key + " must be scalar");
                     row.put(key, validateCell(entry.getValue() == null ? "" : String.valueOf(entry.getValue())));
                 }
@@ -117,13 +147,13 @@ public final class BatchInputCodec {
         return List.copyOf(rows);
     }
 
-    private static void validateHeader(List<String> header) {
+    private static void validateHeader(List<String> header, boolean processParameters) {
         if (header.isEmpty() || header.stream().allMatch(String::isBlank)) throw new IllegalArgumentException("CSV header is required");
         java.util.Set<String> seen = new java.util.HashSet<>();
         for (String name : header) {
             if (name == null || name.isBlank()) throw new IllegalArgumentException("CSV header contains an empty field name");
             if (!seen.add(name)) throw new IllegalArgumentException("CSV header contains duplicate field: " + name);
-            validateSafeFieldName(name, "CSV header");
+            if (!processParameters) validateSafeFieldName(name, "CSV header");
         }
     }
 

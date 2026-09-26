@@ -1,92 +1,51 @@
-# Mejoras de funcionalidad — CryptoCarver (análisis 2026-08-03)
+# Mejoras de funcionalidad — estado contrastado con código y tests
 
-Basado en `docs/CRYPTOCARVER_ROADMAP_EVOLUCION.md`, el README y grep directo sobre `src/main/java`. No incluye UX/interfaz (ver `docs/MEJORAS_UX.md`).
+Revisión del 26 de septiembre de 2026. «Hecho» significa que se localizaron una clase y un test que cubre la capacidad indicada. «Parcial» conserva el trabajo pendiente; la presencia de una API sin test específico no acredita por sí sola un perfil completo.
 
-## 1. Validación de revocación real (OCSP/CRL) fuera de XAdES
+## 1. Validación de revocación real (OCSP/CRL) fuera de XAdES — parcial
 
-**Estado:** solo el flujo XAdES consulta OCSP en vivo (`OnlineOCSPSource`, `XMLSignatureOperations.java:351`). PAdES, CMS y el generador de cadenas de certificados construyen sin consulta de red:
-- `PadesOperations.java:189` — comentario explícito: "No CRL/OCSP URL is fetched".
-- `CertificateGenerator.java:828` — cadena construida "without OCSP/CRLDP network lookups".
+`RevocationValidationService` configura fuentes OCSP/CRL locales y en línea de forma explícita (`RevocationValidationServiceTest`). `PadesOperations` ya ofrece validación con revocación en línea y exige evidencia local o consulta en línea para firmar LT/LTA. `PadesOperationsTest` cubre Baseline-B y la validación sin revocación, pero no demuestra una firma LT/LTA con evidencia; por ello no se da por cerrada esa parte. Sigue pendiente acreditar con tests la integración equivalente en el diagnóstico de cadenas y CMS.
 
-Es decisión deliberada de laboratorio, pero crea inconsistencia entre módulos de firma y limita el uso como validador realista.
+## 2. PKCS#11/HSM real — perfiles de proveedor — hecho
 
-**Qué hacer:** extender el cliente OCSP/CRL ya usado en XAdES a PAdES (Baseline-T/LTV) y al módulo de certificados/CMS, como opción explícita ("validar revocación en línea") que el usuario active — no por defecto, para no romper el modo laboratorio.
+`Pkcs11LibraryInventoryService` enumera slots, tokens y mecanismos sin PIN (`Pkcs11LibraryInventoryServiceTest`). `Pkcs11ProfileRepository` guarda perfiles sin credenciales (`Pkcs11ProfileRepositoryTest`). `Pkcs11LibraryDiagnosticService` diagnostica la biblioteca nativa (`Pkcs11LibraryDiagnosticServiceTest`). `XMLSignatureOperations.signXAdESWithPkcs11` conecta el token con XAdES (`SoftHsmIntegrationTest`; requiere el entorno de integración para ejecutarse).
 
-## 2. PKCS#11/HSM real — perfiles de proveedor
+## 3. EMV Option B — pendiente
 
-**Estado:** integración vía SunPKCS11/SoftHSM existe pero incompleta (README, roadmap línea 324): falta enumeración de mecanismos/slots, perfiles de proveedor sin depender del PIN, diagnóstico de biblioteca nativa, e integración con XAdES.
+Continúa sin implementación ni vectores públicos incorporados. Mantener el requisito de vectores verificables antes de añadir la derivación.
 
-**Qué hacer:**
-- Listar slots y mecanismos disponibles de la librería PKCS#11 cargada antes de pedir el PIN.
-- Perfiles de proveedor reutilizables (nombre de librería, parámetros) guardables sin credenciales.
-- Diagnóstico de carga de la librería nativa con mensaje claro si falla (arquitectura, permisos, ruta).
-- Conectar las claves del HSM como firmante disponible en el flujo XAdES.
+## 4. TR-31 — cobertura por lotes y matriz de versiones — parcial
 
-## 3. EMV Option B
+`TR31Operations` analiza bloques opcionales y versiones A/B/C/D; `TR31OperationsTest` comprueba análisis, errores, normalización y casos de matriz. Falta acreditar la cobertura completa de cada bloque opcional por versión. `BatchOperationCatalog` no incluye importación/exportación TR-31 por lotes.
 
-**Estado:** ausente en código (solo Option A implementado); el roadmap lo deja fuera "hasta contar con vectores públicos fiables" (línea 84).
+## 5. PAdES y ASiC — perfiles avanzados — parcial
 
-**Qué hacer:** implementar derivación de claves de sesión EMV Option B cuando se disponga de vectores de test públicos verificables (NIST/EMVCo/pyemv); no implementar sin vectores, para no introducir una implementación no verificable en un módulo de pagos.
+`PadesOperations` contiene Baseline-LT/LTA con evidencia de revocación local o en línea y sello de archivo para LTA, pero falta un test específico de generación y validación LT/LTA. `AsicOperations` implementa contenedores ASiC con CAdES; siguen pendientes XAdES dentro del contenedor, revocación y LTV. `PadesOperationsTest` cubre Baseline-B; por ello no se marca el punto completo como hecho.
 
-## 4. TR-31 — cobertura por lotes y matriz de versiones
+## 6. WSS-Security — integración con Process Designer — parcial
 
-**Estado:** faltan bloques opcionales completos y la matriz de versiones de header A/B/C/D; sin importación/exportación por lotes (roadmap Fase 7, líneas 441-448).
+`WssNodeHandler` expone firma y cifrado SOAP como nodos y `ProcessEngine` lo registra (`WssNodeHandlerTest`). La integración de nodos está hecha. Sigue pendiente documentar el recorrido manual de verificación con un cliente SOAP externo.
 
-**Qué hacer:**
-- Completar soporte de todos los campos opcionales de header por versión (A, B, C, D).
-- Añadir importación/exportación por lotes (CSV/JSONL) reutilizando el motor de Batch Runner ya existente.
+## 7. Huecos puntuales — hecho para los casos citados
 
-## 5. PAdES y ASiC — perfiles avanzados
+- Carga PQC desde PEM/DER: hecha en `PostQuantumController` (`PostQuantumControllerTest`).
+- Previsualización manual de CEK JWE: hecha para los algoritmos admitidos por `JWEManualCekRecovery` (`JweManualCekRecoveryTest`); otros algoritmos siguen fuera de su inventario.
+- Conversión JWK OKP Ed25519/Ed448: hecha en `KeyCertificateFormatService` (`KeyCertificateFormatServiceTest`, ida y vuelta JWK/PEM para ambas curvas).
 
-**Estado (roadmap líneas 382-383):**
-- PAdES Baseline-B/T: falta OCSP, LTV completo y política de confianza avanzada.
-- ASiC-S/ASiC-E: falta XAdES, revocación, perfiles avanzados y LTV.
+## 8. Batch Runner — catálogo limitado — parcial
 
-**Qué hacer:** una vez resuelto el punto 1 (OCSP real), extender PAdES a Baseline-LT/LTA con archivo de revocación embebido; añadir soporte XAdES dentro de contenedores ASiC.
+`BatchOperationCatalog` ya incluye hashes, conversiones de formatos y dígitos de control, con cobertura en `BatchOperationCatalogTest`; la antigua descripción «solo SHA-256 y Base64URL» está desfasada. Queda ampliar el catálogo a otras operaciones deterministas aptas para lote.
 
-## 6. WSS-Security — integración con Process Designer
+`run-process --batch` permite aplicar columnas `nodo.parametro` a procesos guardados, con una ejecución y un resultado por fila; véase `CryptoCarverCli` y los tests del modo lote.
 
-**Estado:** el módulo WSS no está conectado al Process Designer (roadmap línea 398); falta también recorrido manual validado con SoapUI/ReadyAPI (líneas 86, 397).
+## 9. API REST local — pendiente de ampliación
 
-**Qué hacer:** exponer las operaciones WSS (firma/cifrado de mensajes SOAP) como nodos del Process Designer para poder encadenarlas con otras operaciones; documentar un recorrido de verificación con un cliente SOAP real.
+`LocalApiServer` continúa limitado a `/v1/sha256` y a codificación/decodificación Base64URL (`LocalApiServerTest`). No cubre todavía el catálogo batch; conserva el acceso por loopback.
 
-## 7. Huecos puntuales ya señalizados en código
+## 10. Exportación de informes PKI — pendiente
 
-- `PostQuantumController.java:417` — carga de clave PQC desde fichero no implementada.
-- `JOSEController.java:1318` — previsualización manual de CEK no soportada para ciertos algoritmos JWE.
-- `KeyCertificateFormatService.java:588,615` — conversión JWK OKP (Ed25519/Ed448) no soportada.
+Hay diagnósticos en `EidasCertificateInspector` (`EidasCertificateInspectorTest`) e informes específicos de CMS en `CmsInspectionReport` (`CmsInspectionReportTest`), pero no se ha localizado un exportador Markdown/PDF del diagnóstico de cadena completo.
 
-**Qué hacer:** cerrar estos tres antes de abordar bloques nuevos — son casos concretos y acotados, no rediseños.
+## 11. AES DUKPT — hecho
 
-## 8. Batch Runner — catálogo limitado
-
-**Estado:** el motor de batch solo cubre SHA-256 y Base64URL (roadmap línea 540), pese a que la app soporta muchas más operaciones deterministas.
-
-**Qué hacer:** ampliar el catálogo de operaciones batch a todas las operaciones deterministas sin estado de sesión (hashing, MAC con clave explícita, conversión de formatos, dígitos de control), reutilizando el registro de operaciones ya existente.
-
-## 9. API REST local — cobertura mínima
-
-**Estado:** solo 3 endpoints deterministas sin claves (roadmap líneas 552-557), pendiente de ampliación explícita.
-
-**Qué hacer:** ampliar a las mismas operaciones que ya cubre la CLI/Batch (deterministas, sin claves ni cifrado), manteniendo la restricción de solo-loopback.
-
-## 10. Exportación de informes PKI
-
-**Estado:** listada como pendiente (roadmap línea 349); ya existen linter X.509 y diagnóstico de cadena que podrían alimentar un informe.
-
-**Qué hacer:** exportar a Markdown/PDF el resultado del diagnóstico de cadena de certificados (linter X.509, validez, KeyUsage, revocación si se activa el punto 1) para uso en auditorías.
-
-## 11. Nota — el roadmap está desactualizado en un punto
-
-AES DUKPT aparece como pendiente en el roadmap (Fase 7) pero **ya está implementado y expuesto en UI** (`AesDukpt.java`, `PaymentsController.java`). Actualizar `CRYPTOCARVER_ROADMAP_EVOLUCION.md` para no reabrir trabajo ya hecho.
-
----
-
-### Prioridad sugerida
-1. Punto 7 (huecos puntuales) — acotados, cierran deuda visible sin abrir alcance nuevo.
-2. Punto 1 (OCSP/CRL real) — desbloquea los puntos 5 y 10; es la pieza de mayor apalancamiento.
-3. Punto 2 (PKCS#11 perfiles) — alto valor para el público de pagos/PKI del proyecto.
-4. Puntos 4, 8, 9 — ampliaciones de cobertura ya diseñadas, sin riesgo arquitectónico.
-5. Punto 3 (EMV Option B) — bloqueado por disponibilidad de vectores públicos, no por esfuerzo.
-6. Punto 6 (WSS + Process Designer) — depende de que el Process Designer esté estable.
-7. Punto 11 — trivial, hacerlo de paso.
+`AesDukpt` implementa la derivación y operaciones; `PaymentsController` las expone en UI (`AesDukptTest`). La entrada pendiente del roadmap debe actualizarse para no reabrir esta funcionalidad.
