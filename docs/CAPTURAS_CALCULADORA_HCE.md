@@ -430,8 +430,31 @@ construcciones habituales no reproducen `08746`/`2908`/`854`.
   en orden de MSB a LSB (25 bits: `0000000000000010101101001`).
 - `Token` = ese número binario en decimal: `1385`.
 
-Queda por confirmar con otro vector cómo trata el IAF la ausencia del PSN
-(IAF sin el bit `40`).
+**CAP con IAF `00`** (captura de Claude, 26-09-2026, 14:48). Mismo ejemplo
+precargado cambiando solo IAF a `00`:
+
+```text
+Token data:        8000015AC19AC9FE1360F306010A03A41000
+IPB data:          00007FFFFF00000000000000000000208000
+Compressed data:   0000001010110101100000110
+Token:             355078
+```
+
+Sin el bit `40` del IAF no se incluye el PSN, y el IPB (18 bytes) ya
+mide lo mismo que los datos del token, así que no se rellena. Fijado en
+`MastercardIccDynamicNumberTest.capturedCapTokenWithoutPanSequenceNumber`.
+
+**AMEX CSC con el PAN del ejemplo precargado** (captura de Claude, 26-09-2026).
+Clave `0123456789ABCDEFFEDCBA9876543210`, PAN `371234567890123`, caducidad
+`9912`, código de servicio `702`. El panel solo imprime entradas y resultados.
+
+| Versión | Tipo | CSC-5 | CSC-4 | CSC-3 |
+|---|---|---|---|---|
+| CSC ver. 1 | — | `61247` | `8720` | `552` |
+| CSC ver. 2 | `CSC` | `21334` | `5068` | `221` |
+
+Con este PAN la versión 2 sí calcula; con `411111111111111` lanzaba una
+excepción. Sigue sin haber intermedios, así que AMEX CSC no se implementa.
 
 ## Criterio de aceptación
 

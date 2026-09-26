@@ -200,3 +200,15 @@ Una captura cierra un formato sólo cuando permite guardar en un test:
 
 Un pantallazo recortado al resultado o una trama sin inputs sirve para explorar,
 pero no se incorporará como vector externo.
+
+## Resultado del intento del 26-09-2026 (Claude)
+
+La consola HSM externa (versión 21.06) solo envía comandos por TCP a un HSM
+o emulador externo; no trae emulador propio. Su único perfil, `Default`, apunta
+a `127.0.0.1:9999`, con timeout de 1 s, cabecera `00000000` y trailer
+desactivado. Al enviar `NO - HSM Status` (modo `00`), la consola respondió
+«connection check failed». En esta máquina no hay nada escuchando, así que
+**no se ha capturado ninguna respuesta** y ningún ID de esta lista queda
+cerrado. Para cerrarlos hace falta un payShield real o un emulador de
+terceros de procedencia conocida. Una respuesta de un simulador propio no
+cuenta como vector externo.

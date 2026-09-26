@@ -438,7 +438,7 @@
             <!-- CAP TOKEN -->
             <TitledPane text="CAP Token">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Compress token data using the IPB. IAF bit 40 must be set to include the PAN sequence number." wrapText="true" styleClass="form-label"/>
+                    <Label text="Compresses token data with the IPB. The PAN sequence number is included only when IAF bit 40 is set." wrapText="true" styleClass="form-label"/>
                     <Button text="Load Example" onAction="#handleCapLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>

@@ -38,12 +38,12 @@ public final class MastercardIccDynamicNumber {
         return hex(tdes(key, input)).substring(0, 4);
     }
 
-    /** Compresses token bits selected by IPB. IAF bit 40 (0x40) is required. */
+    /** Compresses token bits selected by IPB. The PAN sequence number is included only when IAF bit 40 (0x40) is set. */
     public static CapResult capToken(String ipb, String iaf, String panSn, String cid, String atc, String ac, String iad) {
         byte[] ipbBytes = bytes(ipb, "IPB");
         byte[] iafBytes = bytes(iaf, "IAF");
         if (iafBytes.length != 1) throw new IllegalArgumentException("IAF must be 1 byte");
-        if ((iafBytes[0] & 0x40) == 0) throw new IllegalArgumentException("IAF bit 40 is not set; PAN sequence number inclusion is unconfirmed");
+        boolean includePsn = (iafBytes[0] & 0x40) != 0;
         byte[] psn = bytes(panSn, "PAN sequence number");
         byte[] cardId = bytes(cid, "CID");
         byte[] counter = bytes(atc, "ATC");
@@ -54,7 +54,8 @@ public final class MastercardIccDynamicNumber {
         if (counter.length != 2) throw new IllegalArgumentException("ATC must be 2 bytes");
         if (cryptogram.length != 8) throw new IllegalArgumentException("AC must be 8 bytes");
         if (issuerData.length == 0) throw new IllegalArgumentException("IAD must not be empty");
-        byte[] tokenBytes = concat(psn, cardId, counter, cryptogram, issuerData);
+        byte[] tokenBytes = includePsn ? concat(psn, cardId, counter, cryptogram, issuerData)
+                : concat(cardId, counter, cryptogram, issuerData);
         if (ipbBytes.length > tokenBytes.length) throw new IllegalArgumentException("IPB cannot be longer than token data");
         byte[] padded = new byte[tokenBytes.length];
         System.arraycopy(ipbBytes, 0, padded, 0, ipbBytes.length);
