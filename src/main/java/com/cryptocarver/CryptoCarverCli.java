@@ -301,10 +301,12 @@ public final class CryptoCarverCli {
                 : Files.newBufferedReader(Path.of(batchFile), StandardCharsets.UTF_8);
         ProcessDefinition base = ProcessDefinitionCodec.deserialize(processJson);
         if (base.nodes == null || base.connections == null) throw new IllegalArgumentException("Process requires nodes and connections");
-        rows = "csv".equals(inputFormat)
-                ? BatchInputCodec.parseProcessCsv(reader, BatchInputCodec.MAX_ROWS,
-                        header -> header.forEach(name -> validateProcessParameter(base, name)))
-                : BatchInputCodec.parseProcessJsonLines(reader, BatchInputCodec.MAX_ROWS);
+        try (java.io.Reader input = reader) {
+            rows = "csv".equals(inputFormat)
+                    ? BatchInputCodec.parseProcessCsv(input, BatchInputCodec.MAX_ROWS,
+                            header -> header.forEach(name -> validateProcessParameter(base, name)))
+                    : BatchInputCodec.parseProcessJsonLines(input, BatchInputCodec.MAX_ROWS);
+        }
         String fileOutput = fileOutputNode(base);
         if (fileOutput != null) throw new IllegalArgumentException("node " + fileOutput + ", port output: file writing is disabled in run-process");
         Map<String, String> global = new java.util.LinkedHashMap<>();
