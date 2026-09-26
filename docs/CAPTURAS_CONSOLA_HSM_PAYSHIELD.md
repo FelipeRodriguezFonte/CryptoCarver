@@ -212,3 +212,85 @@ desactivado. Al enviar `NO - HSM Status` (modo `00`), la consola respondió
 cerrado. Para cerrarlos hace falta un payShield real o un emulador de
 terceros de procedencia conocida. Una respuesta de un simulador propio no
 cuenta como vector externo.
+
+## Capturas contra un simulador de terceros (26-09-2026, Claude)
+
+**Montaje.** La consola HSM externa (21.06), en la máquina virtual, envió los
+comandos a un simulador payShield 10K de código abierto que corría en el Mac:
+el de PayProbe, commit `bbb28a48`, con licencia PolyForm Noncommercial. Su
+código no se incorpora al repositorio; aquí solo se registran las tramas. La
+conexión pasó por un proxy TCP local que guardó los bytes exactos.
+
+Configuración:
+- Consola: cabecera `00000000` (8 caracteres, su valor por defecto), sin trailer
+  y con prefijo TCP de 2 bytes big-endian.
+- Simulador: `header_bytes` 8, LMK de test `0123456789ABCDEFFEDCBA9876543210`,
+  firmware `0007-E000` y `variant_lmk` desactivado.
+
+**Qué vale como evidencia y qué no:**
+- Las **peticiones** las construyó la consola HSM externa con los valores de
+  ejemplo de su formulario. Son evidencia externa de cómo arma cada comando.
+- Las **respuestas** son del simulador, no de un payShield. Sus claves van
+  cifradas con una sola LMK fija y no con el esquema de variantes real, así que
+  no sirven como vector de un equipo real. Lo que sí aporta es comprobar si la
+  consola parsea esa respuesta con los mismos campos que espera
+  `PayShieldBodySchemas`.
+
+Tramas literales (prefijo TCP en hexadecimal y después el mensaje ASCII; `→`
+petición, `←` respuesta):
+
+```text
+→ 000C 00000000NO00
+← 0020 00000000NP001101280007-E00000000
+→ 000F 00000000A00000U
+← 0033 00000000A100UF95168C4319FCCC3F9577272B7FDF14E36CBAB
+→ 002E 00000000BU001U294E6024662EB037097C4C8D5CEEA6ED
+← 0012 00000000BV00BB7158
+→ 0061 00000000EEU8AC91C79495A9FC3021AE502DDEDD9800000FFFFFFFF0409541092192939C3DE67FC7B2B2B07006859718N
+← 000C 00000000EF30
+→ 0043 00000000CWUEB0F2056EDC79C4BFB52B5B4D3E68D881234567890123456;1510109
+← 000F 00000000CX00079
+→ 0046 00000000CYUEB0F2056EDC79C4BFB52B5B4D3E68D886841234567890123456;1510109
+← 000C 00000000CZ01
+→ 0046 00000000CYUEB0F2056EDC79C4BFB52B5B4D3E68D880791234567890123456;1510109
+← 000C 00000000CZ00
+→ 007B 00000000CAU8EEB4727D594D80799EE7394B5B33DC9UA045EA2A914D7A950C3052AFCF151261129BBBE380C3E5D2400101987654321098;987654321098
+← 000C 00000000CB15
+→ 007B 00000000CCU00DEB679DB51D99B53A78112D755769BUA045EA2A914D7A950C3052AFCF151261129BBBE380C3E5D2400101987654321098;987654321098
+← 000C 00000000CD15
+→ 0103 00000000M601031003U0D48F907F0DC6B8E7CD333317595FCC600CC02107238000102C000111670343010001006660000000000000000000912065731000092155726091206703400393138303030303230343030303133303039373334202020203032390301000000000020202020202020200000000000000000020000000000
+← 000C 00000000M715
+→ 000A 00000000NC
+← 0025 00000000ND0008D7B4FB629D08850007-E000
+→ 0050 00000000A6000U1BF1879107A29B475E07CB594A8D67A4XB38BBEBCEE6C5A5484393BBCC4F0D9F8U
+← 0033 00000000A700UA987CC2719103EB11FCA7463273B2A6ED6A020
+→ 0050 00000000A8002UBB839220AE2F70A754F05D356107D6E3U98DCBCBB630FF4831E05A912D1B042C8U
+← 000C 00000000A930
+```
+
+Cómo parseó la consola cada respuesta:
+
+| Comando | Respuesta | Campos que muestra la consola | Resultado |
+|---|---|---|---|
+| `NO` | `NP00` | I/O buffer `1`, Ethernet `1`, sockets `01`, firmware `280007-E0`, DSP `0`, DSP firmware `0000` | La consola avisa de «Parsing error. Parsed end of message: 32»: la respuesta del simulador no tiene la forma que ella espera |
+| `NC` | `ND00` | LMK check `08D7B4FB629D0885` (16), firmware `0007-E000` (9) | Coincide con el esquema `ND` de `PayShieldBodySchemas` |
+| `A0` modo 0, tipo `000`, esquema `U` | `A100` | clave `UF95168C4319FCCC3F9577272B7FDF14E`, KCV `36CBAB` | Parseada sin error |
+| `BU` tipo `00`, longitud `1` | `BV00` | KCV `BB7158` | Parseada sin error |
+| `CW` | `CX00` | CVV `079` | Parseada sin error |
+| `CY` con CVV `684` / `079` | `CZ01` / `CZ00` | error `01` «CVV failed verification» / `00` | Parseada sin error |
+| `A6` tipo `000`, esquema `U` | `A700` | clave `UA987CC2719103EB11FCA7463273B2A6E`, KCV `D6A020` | Parseada sin error |
+| `CA`, `CC` | `CB15`, `CD15` | error `15` | El simulador rechaza el campo «Destination PAN» que añade la consola tras `;` |
+| `M6` | `M715` | error `15` | El simulador no acepta la petición de la consola |
+| `A8`, `EE` | `A930`, `EF30` | error `30` | Comandos no implementados en el simulador |
+
+**Cruce con la criptografía de CryptoCarver** (claves descifradas con la LMK de
+test del simulador, en 3DES ECB):
+- NC: 3DES(LMK, 0) = `08D7B4FB629D0885`, el «LMK check» devuelto.
+- A0: clave en claro `AD910110291FE6349DA438A1E6203E40`, KCV `36CBAB`, coincide.
+- BU: clave en claro `52664598B1734B56665BF777B66E0923`, KCV `BB7158`, coincide.
+- CW: CVK en claro `1696CECE6555717F07873F6AD8F46726`; con PAN
+  `1234567890123456`, caducidad `1510` y código de servicio `109`,
+  `PaymentOperations.generateCVV` da `079`, el mismo CVV que devolvió el
+  simulador.
+
+La consola se ha dejado como estaba: `127.0.0.1:9999`, timeout 1 s y sin debug.
