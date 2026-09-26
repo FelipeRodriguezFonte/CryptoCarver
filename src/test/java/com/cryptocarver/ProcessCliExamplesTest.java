@@ -60,6 +60,7 @@ class ProcessCliExamplesTest {
         assertTrue(SecretOutputPolicy.isSecretMaterialOutput("EMV_SM_CARD_KEY"));
         assertFalse(SecretOutputPolicy.isSecretMaterialOutput("VISA_HCE_MSD"));
         assertFalse(SecretOutputPolicy.isSecretMaterialOutput("EMV_SM_MAC"));
+        assertFalse(SecretOutputPolicy.isSecretMaterialOutput("MC_ICC_DYNAMIC_NUMBER"));
     }
 
     @Test void validationErrorIdentifiesNodePortAndCause() {

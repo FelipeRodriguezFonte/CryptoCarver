@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvSecureMessaging;
 import com.cryptocarver.crypto.VisaHceOperations;
 import com.cryptocarver.crypto.MastercardDataStorage;
+import com.cryptocarver.crypto.MastercardIccDynamicNumber;
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 
@@ -182,6 +183,10 @@ public class EMVController {
     @FXML private TextField dsIdField, dsOperatorIdField, dsInputField;
     @FXML private TextField dsSummary1Field, dsAmountField, dsCurrencyField, dsRcpField, dsGacField, dsDsUnField, dsUnField;
     @FXML private TextArea dsResultArea;
+    @FXML private TextField dnMkField, dnPanField, dnAtcField, dnUnField;
+    @FXML private TextArea dnResultArea;
+    @FXML private TextField capIpbField, capIafField, capPanSnField, capCidField, capAtcField, capAcField, capIadField;
+    @FXML private TextArea capResultArea;
 
     static final String SM_MASTERCARD = "Mastercard";
     static final String SM_VISA = "Visa";
@@ -632,6 +637,44 @@ public class EMVController {
             emvPublish("module.emv.ds.summaryAction", "module.emv.ds.status", value, false,
                     java.util.List.of(OperationDetail.publicDetail("DS Summary", value)));
         } catch (Exception e) { emvShow(dsResultArea, t("module.emv.ds.error", e.getMessage())); }
+    }
+
+    public void handleIccDnLoadExample() {
+        dnMkField.setText("0123456789ABCDEFFEDCBA9876543210"); dnPanField.setText("4111111111111111");
+        dnAtcField.setText("0001"); dnUnField.setText("00000000");
+        emvShow(dnResultArea, t("module.emv.iccDn.exampleLoaded"));
+    }
+
+    public void handleIccDnCalculate() {
+        try {
+            String sk = MastercardIccDynamicNumber.sessionKey(dnMkField.getText(), dnPanField.getText());
+            String dn = MastercardIccDynamicNumber.dynamicNumber(sk, dnAtcField.getText(), dnUnField.getText());
+            emvShow(dnResultArea, t("module.emv.iccDn.result", dn));
+            emvPublish("module.emv.iccDn.action", "module.emv.iccDn.status", dn, false,
+                    java.util.List.of(OperationDetail.publicDetail("Dynamic number", dn)));
+        } catch (Exception e) { emvShow(dnResultArea, t("module.emv.iccDn.error", e.getMessage())); }
+    }
+
+    public void handleCapLoadExample() {
+        capIpbField.setText("00007FFFFF00000000000000000000208000"); capIafField.setText("40");
+        capPanSnField.setText("00"); capCidField.setText("80"); capAtcField.setText("0001");
+        capAcField.setText("5AC19AC9FE1360F3"); capIadField.setText("06010A03A41000");
+        emvShow(capResultArea, t("module.emv.cap.exampleLoaded"));
+    }
+
+    public void handleCapCalculate() {
+        try {
+            MastercardIccDynamicNumber.CapResult cap = MastercardIccDynamicNumber.capToken(capIpbField.getText(),
+                    capIafField.getText(), capPanSnField.getText(), capCidField.getText(), capAtcField.getText(),
+                    capAcField.getText(), capIadField.getText());
+            String report = t("module.emv.cap.result", cap.tokenData(), cap.paddedIpb(), cap.compressedBits(), cap.token());
+            emvShow(capResultArea, report);
+            emvPublish("module.emv.cap.action", "module.emv.cap.status", cap.token(), false,
+                    java.util.List.of(OperationDetail.publicDetail("Token data", cap.tokenData()),
+                            OperationDetail.publicDetail("IPB data", cap.paddedIpb()),
+                            OperationDetail.publicDetail("Compressed data", cap.compressedBits()),
+                            OperationDetail.publicDetail("Token", cap.token())));
+        } catch (Exception e) { emvShow(capResultArea, t("module.emv.cap.error", e.getMessage())); }
     }
 
     // ============================================================================

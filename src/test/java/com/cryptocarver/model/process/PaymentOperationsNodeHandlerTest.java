@@ -77,7 +77,7 @@ class PaymentOperationsNodeHandlerTest {
 
     @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
-        assertEquals(46, PaymentOperationsNodeHandler.TYPES.size());
+        assertEquals(48, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {
             assertNotNull(HANDLER.descriptors().stream().filter(d -> d.type().equals(type)).findFirst().orElse(null), type);
         }
@@ -203,6 +203,20 @@ class PaymentOperationsNodeHandlerTest {
         summary.configuration.put("dsGac", "02");
         assertEquals("80D66F2CFC670881", HANDLER.execute(summary, Map.of("dsId", hex("5168624300900697"),
                 "dsSummary1", hex("1223344556677889"), "dsUn", hex("99887766"), "un", hex("11223344")), null).render());
+    }
+
+    @Test
+    void mastercardDynamicNumberAndCapNodesReturnCapturedResults() throws Exception {
+        ProcessDefinition.Node dn = node("MC_ICC_DYNAMIC_NUMBER");
+        dn.configuration.put("panField16", "4111111111111111");
+        assertEquals("6AB2", HANDLER.execute(dn, Map.of("mkDn", hex("0123456789ABCDEFFEDCBA9876543210"),
+                "atc", hex("0001"), "un", hex("00000000")), null).render());
+        ProcessDefinition.Node cap = node("MC_CAP_TOKEN");
+        String output = HANDLER.execute(cap, Map.of("ipb", hex("00007FFFFF00000000000000000000208000"), "iaf", hex("40"),
+                "panSn", hex("00"), "cid", hex("80"), "atc", hex("0001"), "ac", hex("5AC19AC9FE1360F3"),
+                "iad", hex("06010A03A41000")), null).render();
+        assertTrue(output.contains("Token: 1385"));
+        assertTrue(output.contains("Compressed data: 0000000000000010101101001"));
     }
 
     /** The Visa HCE nodes chain the external tool's example: LUK, then MSD and qVSDC (see VisaHceOperationsTest). */

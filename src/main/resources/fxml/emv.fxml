@@ -418,6 +418,43 @@
                 </VBox>
             </TitledPane>
 
+            <!-- ICC DYNAMIC NUMBER -->
+            <TitledPane text="ICC Dynamic Number">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Calculate the Mastercard ICC Dynamic Number from MK-DN, PAN/PSN, ATC and UN." wrapText="true" styleClass="form-label"/>
+                    <Button text="Load Example" onAction="#handleIccDnLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="MK-DN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/><PasswordField fx:id="dnMkField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="PAN field (16 digits):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="dnPanField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="dnAtcField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="UN:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="dnUnField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Calculate dynamic number" onAction="#handleIccDnCalculate" styleClass="action-button,primary-action"/>
+                    <TextArea fx:id="dnResultArea" prefHeight="80" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
+            <!-- CAP TOKEN -->
+            <TitledPane text="CAP Token">
+                <VBox spacing="12" styleClass="module-pane-content">
+                    <Label text="Compress token data using the IPB. IAF bit 40 must be set to include the PAN sequence number." wrapText="true" styleClass="form-label"/>
+                    <Button text="Load Example" onAction="#handleCapLoadExample" styleClass="secondary-button" maxWidth="140"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="IPB:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capIpbField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="IAF:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capIafField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="PAN sequence number:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capPanSnField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="CID:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capCidField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capAtcField" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capAcField" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="IAD:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capIadField" GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Calculate CAP token" onAction="#handleCapCalculate" styleClass="action-button,primary-action"/>
+                    <TextArea fx:id="capResultArea" prefHeight="130" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
+                </VBox>
+            </TitledPane>
+
             <!-- TRACK 2 DATA -->
             <TitledPane text="🎞 Track 2 Data">
                 <VBox spacing="12" styleClass="module-pane-content">

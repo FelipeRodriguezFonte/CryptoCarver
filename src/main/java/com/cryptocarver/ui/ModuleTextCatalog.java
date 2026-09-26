@@ -1174,6 +1174,12 @@ public final class ModuleTextCatalog {
         map.put("2 bytes in hex (AIP)", "module.emv.hce.prompt.aip");
         map.put("4 bytes in hex (CVR)", "module.emv.hce.prompt.cvr");
         map.put("💾 Mastercard Data Storage", "module.emv.ds.title");
+        map.put("ICC Dynamic Number", "module.emv.iccDn.title");
+        map.put("Calculate the Mastercard ICC Dynamic Number from MK-DN, PAN/PSN, ATC and UN.", "module.emv.iccDn.help");
+        map.put("Calculate dynamic number", "module.emv.iccDn.action");
+        map.put("CAP Token", "module.emv.cap.title");
+        map.put("Compress token data using the IPB. IAF bit 40 must be set to include the PAN sequence number.", "module.emv.cap.help");
+        map.put("Calculate CAP token", "module.emv.cap.action");
                 map.put("1. DS partial key (DSPK)", "module.emv.ds.step1");
         map.put("2. Digest (OWHF2)", "module.emv.ds.step2");
         map.put("DS ID:", "module.emv.ds.id");
