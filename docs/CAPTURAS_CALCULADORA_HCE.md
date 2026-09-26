@@ -306,6 +306,27 @@ confirma que la versión instalada ofrece la operación:
 Para AMEX, una segunda pareja cambia sólo `SERVICE_CODE` de `201` a `000`. Para
 ICC Dynamic Number y CAP, un segundo caso cambia sólo `UN.0` por `UN.1`.
 
+### Resultados (26-09-2026) — captura bloqueada
+
+`HCE-INDEX-00` sólo pudo verificarse parcialmente: la ventana principal indica
+versión `21.06` y muestra los menús superiores `Main`, `Generic`, `Cipher`,
+`Keys`, `Payments`, `EMV` y `Development`. La interfaz de control de la máquina
+virtual no entregó las teclas a la ventana, incluso tras darle foco desde su
+barra de título. Por ello no se pudieron abrir los submenús de `Payments` y
+`EMV` ni confirmar los nombres de las operaciones. No se guardó una imagen de
+la ventana porque su título identifica al fabricante.
+
+| Caso | Entradas previstas | Pantalla y resultado observados | Estado |
+|---|---|---|---|
+| `AMEX-CSC1-00` | `K.TDES2`, `PAN`, `EXPIRY`, `SERVICE_CODE=201` y `000` | No se abrió la operación; sin campos, intermedios ni CSC observados | Sin captura; no implementable |
+| `AMEX-CSC2-00` | Los mismos dos valores de `SERVICE_CODE` | No se abrió la operación; sin campos, intermedios ni CSC observados | Sin captura; no implementable |
+| `ICC-DYNAMIC-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1` | No se abrió la operación; sin campos, claves, bloques ni número dinámico observados | Sin captura; no implementable |
+| `MC-CAP-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1`; `PIN` si se solicita | No se abrió la operación; sin campos, claves, bloques ni resultado observados | Sin captura; no implementable |
+
+No hay vector que permita deducir el formato de entrada, la derivación de
+claves o el cálculo de ninguna de estas operaciones. Quedan pendientes también
+las variaciones de una sola entrada exigidas por la campaña.
+
 ## Criterio de aceptación
 
 Una ficha sólo se convierte en vector de test cuando permite escribir, sin
