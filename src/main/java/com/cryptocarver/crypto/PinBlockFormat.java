@@ -16,18 +16,20 @@ public enum PinBlockFormat {
     VISA1("VISA-1", Set.of(), true, false, Specs.IBM, false),
     VISA2("VISA-2", Set.of(), false, false, Specs.IBM, false),
     VISA3("VISA-3", Set.of(), false, false, Specs.IBM, false),
-    VISA4("VISA-4", Set.of(), true, false, Specs.IBM, true),
-    ECI1("ECI-1", Set.of(), true, false, Specs.IBM, true),
+    VISA4("VISA-4", Set.of(), true, false, Specs.CAPTURED, false),
+    ECI1("ECI-1", Set.of(), true, false, Specs.CAPTURED, false),
     ECI2("ECI-2 (no PAN binding)", Set.of("ECI-2"), false, false, Specs.IBM, false),
     ECI3("ECI-3 (no PAN binding)", Set.of("ECI-3"), false, false, Specs.IBM, false),
-    ECI4("ECI-4", Set.of(), false, true, Specs.IBM, true),
+    ECI4("ECI-4", Set.of(), false, true, Specs.CAPTURED, false),
     DOCUTEL("Docutel (Format 02)", Set.of("Docutel"), false, true, Specs.LEGACY, false),
     DIEBOLD("Diebold (Format 03)", Set.of("Diebold"), false, false, Specs.LEGACY, false),
-    PLUS("Plus Network (Format 04)", Set.of("Plus Network", "PLUS"), true, false, Specs.LEGACY, false);
+    PLUS("Plus Network (Format 04)", Set.of("Plus Network", "PLUS"), true, false, Specs.LEGACY, false),
+    EUROPAY("Europay/MasterCard (Pay Now & Pay Later)", Set.of("Europay/MasterCard", "Pay Now & Pay Later"), true, false, Specs.CAPTURED, false);
 
     private static final class Specs {
         private static final String ISO = "ISO 9564-1; https://www.ibm.com/docs/en/zos/3.1.0?topic=profile-pin-block-format";
         private static final String IBM = "IBM PIN profile; https://www.ibm.com/docs/en/zos/3.1.0?topic=profile-pin-block-format";
+        private static final String CAPTURED = "Checked against external tool captures; see docs/CAPTURAS_PIN_BLOCKS_HEREDADOS.md";
         private static final String LEGACY = "payShield Host Programmer's Manual (1270A542-038 v3.5), PIN block formats 02-04, pp. 171-172";
     }
 

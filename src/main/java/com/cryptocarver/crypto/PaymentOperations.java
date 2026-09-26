@@ -33,7 +33,7 @@ public class PaymentOperations {
             java.util.function.IntSupplier decimalPaddingDigit) throws Exception {
         PinBlockFormat selected = PinBlockFormat.fromName(format);
         return switch (selected) {
-            case ISO0, ANSI, VISA1, ECI1, VISA4 -> encodePinBlockISO0(pin, pan);
+            case ISO0, ANSI, VISA1, ECI1 -> encodePinBlockISO0(pin, pan);
             case ISO1, ECI4 -> encodePinBlockISO1(pin, pan);
             case ISO2 -> encodePinBlockISO2(pin, pan);
             case ISO3 -> encodePinBlockISO3(pin, pan);
@@ -45,7 +45,8 @@ public class PaymentOperations {
             case ECI3 -> encodePinBlockECI3(pin);
             case DOCUTEL -> encodePinBlockDocutel(pin, decimalPaddingDigit);
             case DIEBOLD -> encodePinBlockDiebold(pin);
-            case PLUS -> encodePinBlockPlus(pin, pan);
+            case PLUS, VISA4 -> encodePinBlockPlus(pin, pan);
+            case EUROPAY -> encodePinBlockEuropay(pin, pan);
         };
     }
 
@@ -53,7 +54,7 @@ public class PaymentOperations {
     public static String decodePinBlock(String pinBlock, String pan, String format) throws Exception {
         PinBlockFormat selected = PinBlockFormat.fromName(format);
         return switch (selected) {
-            case ISO0, ANSI, VISA1, ECI1, VISA4 -> decodePinBlockISO0(pinBlock, pan);
+            case ISO0, ANSI, VISA1, ECI1 -> decodePinBlockISO0(pinBlock, pan);
             case ISO1, ECI4 -> decodePinBlockISO1(pinBlock, pan);
             case ISO2 -> decodePinBlockISO2(pinBlock, pan);
             case ISO3 -> decodePinBlockISO3(pinBlock, pan);
@@ -65,7 +66,8 @@ public class PaymentOperations {
             case ECI3 -> decodePinBlockECI3(pinBlock);
             case DOCUTEL -> decodePinBlockDocutel(pinBlock);
             case DIEBOLD -> decodePinBlockDiebold(pinBlock);
-            case PLUS -> decodePinBlockPlus(pinBlock, pan);
+            case PLUS, VISA4 -> decodePinBlockPlus(pinBlock, pan);
+            case EUROPAY -> decodePinBlockEuropay(pinBlock, pan);
         };
     }
 
@@ -477,8 +479,7 @@ public class PaymentOperations {
         String block = normalizeLegacyBlock(pinBlock);
         String pin = block.substring(0, 4);
         requirePin(pin, 4, 4);
-        if (!block.substring(4).equals("F".repeat(12)))
-            throw new IllegalArgumentException("ECI-2 padding is invalid");
+        // Encoders fill with F, but the external tool fills with random hex; any padding is accepted.
         return pin;
     }
 
@@ -496,8 +497,7 @@ public class PaymentOperations {
             throw new IllegalArgumentException("ECI-3 PIN length must be 4..6");
         String pin = block.substring(1, 1 + length);
         requirePin(pin, 4, 6);
-        if (!block.substring(1 + length).equals("F".repeat(15 - length)))
-            throw new IllegalArgumentException("ECI-3 padding is invalid");
+        // Encoders fill with F, but the external tool fills with random hex; any padding is accepted.
         return pin;
     }
 
@@ -571,6 +571,24 @@ public class PaymentOperations {
                 || !field.substring(2 + length).equals("F".repeat(14 - length)))
             throw new IllegalArgumentException("Plus Network PIN block has invalid length or padding (expected 4..12)");
         String pin = field.substring(2, 2 + length);
+        requirePin(pin, 4, 12);
+        return pin;
+    }
+
+    /**
+     * Europay/MasterCard "Pay Now & Pay Later": ISO-0 with control nibble 2 instead of 0.
+     * Checked against external tool captures (docs/CAPTURAS_PIN_BLOCKS_HEREDADOS.md).
+     */
+    private static String encodePinBlockEuropay(String pin, String pan) throws Exception {
+        requirePin(pin, 4, 12);
+        String iso0 = encodePinBlockISO0(pin, pan);
+        return Integer.toHexString(Character.digit(iso0.charAt(0), 16) ^ 2).toUpperCase(java.util.Locale.ROOT) + iso0.substring(1);
+    }
+
+    private static String decodePinBlockEuropay(String pinBlock, String pan) throws Exception {
+        String block = normalizeLegacyBlock(pinBlock);
+        if (block.charAt(0) != '2') throw new IllegalArgumentException("Europay/MasterCard PIN block must start with control nibble 2");
+        String pin = decodePinBlockISO0("0" + block.substring(1), pan);
         requirePin(pin, 4, 12);
         return pin;
     }
