@@ -379,7 +379,7 @@ El incremento no añade CAdES como etiqueta comercial. Abre CMS/PKCS#7 y muestra
 #### CMS/CAdES/PAdES/ASiC
 
 - Completar CAdES Baseline B/T/LT/LTA reutilizando DSS.
-- [~] PAdES Baseline-B/T para PDF de laboratorio con firma PKCS#12 o PKCS#11, TSA RFC 3161 opcional, firma visible de texto, inspector estructural y validación DSS con truststore/CRL local. Pendiente: OCSP, LTV completo y política de confianza avanzada.
+- [~] PAdES Baseline-B/T/LT/LTA para PDF de laboratorio con firma PKCS#12 o PKCS#11, TSA RFC 3161, firma visible de texto, inspector estructural y validación DSS; `PadesLtLtaOfflineTest` verifica evidencia CRL/OCSP local y sello de archivo sin red. Siguen pendientes la política de confianza avanzada y su ciclo LTV fuera del perfil acreditado.
 - [~] ASiC-S y ASiC-E/CAdES-BES: creación e inspección de uno o varios payloads, con manifiesto SHA-256, firma local PKCS#12 o PKCS#11 y validación PKIX opcional contra truststore local de la firma CAdES. Pendiente: XAdES, revocación, perfiles avanzados y LTV.
 - Firma detached de grandes archivos por streaming.
 - Timestamp RFC 3161 independiente para cualquier hash o fichero.

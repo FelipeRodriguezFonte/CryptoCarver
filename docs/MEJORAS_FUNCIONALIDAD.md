@@ -2,9 +2,9 @@
 
 Revisión del 26 de septiembre de 2026. «Hecho» significa que se localizaron una clase y un test que cubre la capacidad indicada. «Parcial» conserva el trabajo pendiente; la presencia de una API sin test específico no acredita por sí sola un perfil completo.
 
-## 1. Validación de revocación real (OCSP/CRL) fuera de XAdES — parcial
+## 1. Validación de revocación real (OCSP/CRL) fuera de XAdES — hecho
 
-`RevocationValidationService` configura fuentes OCSP/CRL locales y en línea de forma explícita (`RevocationValidationServiceTest`). `PadesOperations` ya ofrece validación con revocación en línea y exige evidencia local o consulta en línea para firmar LT/LTA. `PadesOperationsTest` cubre Baseline-B y la validación sin revocación, pero no demuestra una firma LT/LTA con evidencia; por ello no se da por cerrada esa parte. Sigue pendiente acreditar con tests la integración equivalente en el diagnóstico de cadenas y CMS.
+`RevocationValidationService` configura fuentes OCSP/CRL locales y en línea de forma explícita (`RevocationValidationServiceTest`). `PadesLtLtaOfflineTest` genera PKI, CRL y OCSP buenos/revocados en el propio test, valida PAdES-T con OCSP local y PAdES-LT/LTA con CRL local, y comprueba que un firmante revocado se marca como tal. También verifica CRL good/revoked en `CertificateGenerator.validateCertificateChain` y en `CmsInspector`; el modo online queda desactivado en estas pruebas. No se atribuye aquí cobertura a XAdES.
 
 ## 2. PKCS#11/HSM real — perfiles de proveedor — hecho
 
@@ -20,7 +20,7 @@ Continúa sin implementación ni vectores públicos incorporados. Mantener el re
 
 ## 5. PAdES y ASiC — perfiles avanzados — parcial
 
-`PadesOperations` contiene Baseline-LT/LTA con evidencia de revocación local o en línea y sello de archivo para LTA, pero falta un test específico de generación y validación LT/LTA. `AsicOperations` implementa contenedores ASiC con CAdES; siguen pendientes XAdES dentro del contenedor, revocación y LTV. `PadesOperationsTest` cubre Baseline-B; por ello no se marca el punto completo como hecho.
+`PadesLtLtaOfflineTest` acredita Baseline-T con sello de firma RFC 3161, Baseline-LT con DSS, certificados y CRL local, y Baseline-LTA con sello de archivo validado criptográficamente. Prueba también Baseline-T/LT/LTA mediante conexión de token PKCS#12. `AsicOperations` implementa contenedores ASiC con CAdES; siguen pendientes XAdES dentro del contenedor, revocación y LTV, por lo que el punto permanece parcial.
 
 ## 6. WSS-Security — integración con Process Designer — parcial
 

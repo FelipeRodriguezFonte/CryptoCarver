@@ -349,8 +349,13 @@ public class CmsInspector {
             if (detachedContent != null) validator.setDetachedContents(
                     List.of(new InMemoryDocument(detachedContent, "content")));
             Reports reports = validator.validateDocument();
-            return RevocationValidationService.classifyDssReport(online, !localCrls.isEmpty(),
+            RevocationValidationService.Result result = RevocationValidationService.classifyDssReport(online, !localCrls.isEmpty(),
                     reports.getXmlDetailedReport(), endpoints, List.of());
+            if (result.status() == RevocationValidationService.Status.UNKNOWN && !localCrls.isEmpty()) {
+                RevocationValidationService.Result local = classifyCmsLocalCrls(derBytes, localCrls, endpoints);
+                if (local != null) return local;
+            }
+            return result;
         } catch (Exception | LinkageError failure) {
             RevocationValidationService.Status status = online
                     ? RevocationValidationService.Status.INDETERMINATE
@@ -359,6 +364,41 @@ public class CmsInspector {
                     localCrls == null || localCrls.isEmpty()
                             ? RevocationValidationService.Evidence.NONE : RevocationValidationService.Evidence.LOCAL,
                     endpoints, List.of(failure.getMessage() == null ? "Revocation validation did not complete" : failure.getMessage()));
+        }
+    }
+
+    private RevocationValidationService.Result classifyCmsLocalCrls(byte[] cmsBytes, List<DSSDocument> evidence,
+                                                                      List<String> endpoints) {
+        try {
+            CMSSignedData cms = new CMSSignedData(cmsBytes);
+            JcaX509CertificateConverter converter = new JcaX509CertificateConverter().setProvider("BC");
+            List<X509Certificate> certificates = new ArrayList<>();
+            for (X509CertificateHolder holder : cms.getCertificates().getMatches(null)) certificates.add(converter.getCertificate(holder));
+            List<X509CRL> crls = new ArrayList<>();
+            CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            for (DSSDocument document : evidence) try (var input = document.openStream()) {
+                crls.add((X509CRL) factory.generateCRL(input));
+            }
+            boolean checked = false;
+            Date now = new Date();
+            for (X509Certificate certificate : certificates) {
+                if (certificate.getSubjectX500Principal().equals(certificate.getIssuerX500Principal())) continue;
+                X509CRL matching = crls.stream().filter(crl -> crl.getIssuerX500Principal().equals(certificate.getIssuerX500Principal()))
+                        .filter(crl -> !crl.getThisUpdate().after(now) && (crl.getNextUpdate() == null || !crl.getNextUpdate().before(now)))
+                        .findFirst().orElse(null);
+                if (matching == null) return null;
+                X509Certificate issuer = certificates.stream().filter(candidate -> candidate.getSubjectX500Principal()
+                        .equals(certificate.getIssuerX500Principal())).findFirst().orElse(null);
+                if (issuer == null) return null;
+                matching.verify(issuer.getPublicKey());
+                checked = true;
+                if (matching.isRevoked(certificate)) return new RevocationValidationService.Result(
+                        RevocationValidationService.Status.REVOKED, RevocationValidationService.Evidence.LOCAL, endpoints, List.of());
+            }
+            return checked ? new RevocationValidationService.Result(RevocationValidationService.Status.GOOD,
+                    RevocationValidationService.Evidence.LOCAL, endpoints, List.of()) : null;
+        } catch (Exception invalidEvidence) {
+            return null;
         }
     }
 

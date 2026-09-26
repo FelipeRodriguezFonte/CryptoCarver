@@ -10,7 +10,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.math.BigInteger;
 import java.util.Date;
 
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
@@ -179,42 +178,8 @@ class CMSOperationsTest {
     }
 
     private static TimestampFixture localTimestampResponse(byte[] data) throws Exception {
-        KeyPair tsaKeys = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-        long now = System.currentTimeMillis();
-        Date from = new Date(now - 60_000);
-        Date until = new Date(now + 86_400_000);
-        org.bouncycastle.asn1.x500.X500Name name = new org.bouncycastle.asn1.x500.X500Name("CN=Local Test TSA");
-        org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder certificateBuilder =
-                new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(name, BigInteger.ONE, from, until, name,
-                        tsaKeys.getPublic());
-        certificateBuilder.addExtension(org.bouncycastle.asn1.x509.Extension.extendedKeyUsage, true,
-                new org.bouncycastle.asn1.x509.ExtendedKeyUsage(
-                        org.bouncycastle.asn1.x509.KeyPurposeId.id_kp_timeStamping));
-        org.bouncycastle.cert.X509CertificateHolder certificate = certificateBuilder.build(
-                new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder("SHA256withRSA")
-                        .setProvider("BC").build(tsaKeys.getPrivate()));
-        org.bouncycastle.operator.DigestCalculator digestCalculator =
-                new org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder().setProvider("BC").build()
-                        .get(new org.bouncycastle.asn1.x509.AlgorithmIdentifier(
-                                org.bouncycastle.asn1.nist.NISTObjectIdentifiers.id_sha256));
-        org.bouncycastle.cms.SignerInfoGenerator signerInfo = new org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder(
-                new org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder().setProvider("BC").build())
-                .build(new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder("SHA256withRSA")
-                        .setProvider("BC").build(tsaKeys.getPrivate()), certificate);
-        org.bouncycastle.tsp.TimeStampTokenGenerator generator = new org.bouncycastle.tsp.TimeStampTokenGenerator(
-                signerInfo, digestCalculator, new org.bouncycastle.asn1.ASN1ObjectIdentifier("1.2.3.4.5"));
-        generator.addCertificates(new org.bouncycastle.util.CollectionStore<>(java.util.List.of(certificate)));
-        org.bouncycastle.tsp.TimeStampRequestGenerator requestGenerator =
-                new org.bouncycastle.tsp.TimeStampRequestGenerator();
-        requestGenerator.setCertReq(true);
-        org.bouncycastle.tsp.TimeStampRequest request = requestGenerator.generate(
-                org.bouncycastle.asn1.nist.NISTObjectIdentifiers.id_sha256,
-                java.security.MessageDigest.getInstance("SHA-256").digest(data));
-        byte[] response = new org.bouncycastle.tsp.TimeStampResponseGenerator(generator, org.bouncycastle.tsp.TSPAlgorithms.ALLOWED)
-                .generate(request, BigInteger.TEN, new Date()).getEncoded();
-        X509Certificate x509Certificate = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
-                .setProvider("BC").getCertificate(certificate);
-        return new TimestampFixture(response, x509Certificate);
+        LocalTimestampAuthority.GeneratedResponse response = LocalTimestampAuthority.forData(data);
+        return new TimestampFixture(response.response(), response.certificate());
     }
 
     private record TimestampFixture(byte[] response, X509Certificate certificate) { }

@@ -340,9 +340,9 @@ public final class PadesOperations {
     }
 
     /**
-     * Same validation flow with optional CRL files supplied locally by the
-     * user. No CRL/OCSP URL is fetched: evidence is parsed before use and
-     * passed to DSS as an offline source.
+     * Same validation flow with optional CRL and/or OCSP files supplied
+     * locally by the user. Online retrieval remains disabled unless the
+     * explicit online overload is selected.
      */
     public static PadesValidationResult validate(byte[] pdf, File trustStoreFile, char[] password,
                                                   List<File> localCrlFiles) throws Exception {
@@ -360,12 +360,13 @@ public final class PadesOperations {
             CommonCertificateVerifier verifier = new CommonCertificateVerifier();
             if (trustConfigured) verifier.setTrustedCertSources(loadTrustedCertificates(trustStoreFile, transientPassword));
             List<DSSDocument> localCrls = loadLocalCrlEvidence(localCrlFiles);
-            if (localCrlFiles != null && !localCrlFiles.isEmpty() && localCrls.isEmpty()) {
-                throw new IllegalArgumentException("No valid X.509 CRL evidence was provided");
+            List<DSSDocument> localOcsps = loadLocalOcspEvidence(localCrlFiles);
+            if (localCrlFiles != null && !localCrlFiles.isEmpty() && localCrls.isEmpty() && localOcsps.isEmpty()) {
+                throw new IllegalArgumentException("No valid X.509 CRL or OCSP evidence was provided");
             }
             java.util.List<String> endpoints = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
             RevocationValidationService.Configuration revocationConfiguration =
-                    new RevocationValidationService.Configuration(onlineRevocation, localCrls, endpoints::add);
+                    new RevocationValidationService.Configuration(onlineRevocation, localCrls, localOcsps, endpoints::add);
             RevocationValidationService.configure(verifier, revocationConfiguration);
 
             SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(new InMemoryDocument(pdf, "document.pdf"));
@@ -382,7 +383,7 @@ public final class PadesOperations {
                         ? RevocationValidationService.Status.REVOKED
                         : RevocationValidationService.Status.INDETERMINATE;
                 RevocationValidationService.Result failure = new RevocationValidationService.Result(
-                        failureStatus, localCrls.isEmpty() ? RevocationValidationService.Evidence.NONE
+                        failureStatus, localCrls.isEmpty() && localOcsps.isEmpty() ? RevocationValidationService.Evidence.NONE
                                 : RevocationValidationService.Evidence.LOCAL,
                         endpoints, List.of(message));
                 return new PadesValidationResult("--- PAdES Validation Report ---\n"
@@ -395,9 +396,9 @@ public final class PadesOperations {
             }
             String signatureId = reports.getSimpleReport().getFirstSignatureId();
             RevocationValidationService.Result revocation = RevocationValidationService.classifyLocalCrls(
-                    embeddedCertificates(pdf), localCrlFiles, endpoints);
+                    pdfCertificates(pdf), localCrlFiles, endpoints);
             if (revocation == null) {
-                revocation = revocationResult(onlineRevocation, localCrls, reports, endpoints);
+                revocation = revocationResult(onlineRevocation, !localCrls.isEmpty() || !localOcsps.isEmpty(), reports, endpoints);
             }
             String dssSignatureFormat = signatureId == null ? "not established"
                     : String.valueOf(reports.getSimpleReport().getSignatureFormat(signatureId));
@@ -430,6 +431,7 @@ public final class PadesOperations {
             EmbeddedEvidence embedded = inspectEmbeddedEvidence(pdf);
             int archiveTimestampCount = inspectSignatures(pdf).archiveTimestampCount();
             ArchiveTimestampAssessment archiveTimestamp = assessArchiveTimestamp(reports);
+            boolean archiveTimestampIntegrity = verifyArchiveTimestampIntegrity(pdf);
             boolean archiveTimestampDssValid = archiveTimestamp.dssPassed();
             boolean tsaChainTrusted = trustConfigured && archiveTimestamp.tsaChainTrusted();
             String effectiveProfile = dssLta && embedded.certificateCount() > 0
@@ -444,7 +446,7 @@ public final class PadesOperations {
                     .append(", OCSP=").append(embedded.ocspCount()).append("\n")
                     .append("Archive timestamp: ").append(archiveTimestampCount > 0 ? "present" : "absent")
                     .append(" (count=").append(archiveTimestampCount)
-                    .append(", RFC3161 integrity=").append(archiveTimestamp.cryptographicIntegrity() ? "VALID" : "INVALID")
+                    .append(", RFC3161 integrity=").append(archiveTimestampIntegrity ? "VALID" : "INVALID")
                     .append(", DSS validation=").append(archiveTimestampDssValid ? "PASSED" : "NOT PASSED")
                     .append(")\n")
                     .append("Signer DSS indication: ").append(signatureId == null ? "not established" : indication)
@@ -456,7 +458,7 @@ public final class PadesOperations {
                     .append("Effective profile: ").append(effectiveProfile).append("\n");
             if (!revocation.errors().isEmpty()) summary.append("Revocation errors: ").append(String.join("; ", revocation.errors())).append("\n");
             return new PadesValidationResult(summary.toString(), trustConfigured, localCrls.size(), onlineRevocation,
-                    revocation, archiveTimestampCount, archiveTimestamp.cryptographicIntegrity(), archiveTimestampDssValid,
+                    revocation, archiveTimestampCount, archiveTimestampIntegrity, archiveTimestampDssValid,
                     tsaChainTrusted, dssSignatureFormat, effectiveProfile,
                     reports.getXmlSimpleReport(), reports.getXmlDetailedReport(), reports.getXmlValidationReport());
         } finally {
@@ -464,8 +466,8 @@ public final class PadesOperations {
         }
     }
 
-    private static RevocationValidationService.Result revocationResult(boolean online, List<DSSDocument> localCrls, Reports reports, List<String> endpoints) {
-        return RevocationValidationService.classifyDssReport(online, !localCrls.isEmpty(),
+    private static RevocationValidationService.Result revocationResult(boolean online, boolean localEvidence, Reports reports, List<String> endpoints) {
+        return RevocationValidationService.classifyDssReport(online, localEvidence,
                 reports.getXmlDetailedReport(), endpoints, List.of());
     }
 
@@ -521,6 +523,31 @@ public final class PadesOperations {
     private record ArchiveTimestampAssessment(boolean present, boolean cryptographicIntegrity, boolean dssPassed,
                                               boolean tsaChainTrusted, String dssIndication, List<String> reports) { }
 
+    /** Verifies each RFC 3161 document timestamp directly, independent of TSA trust policy. */
+    private static boolean verifyArchiveTimestampIntegrity(byte[] pdf) {
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            for (PDSignature signature : document.getSignatureDictionaries()) {
+                if (!"DocTimeStamp".equals(signature.getCOSObject().getNameAsString(COSName.TYPE))) continue;
+                byte[] contents = signature.getContents(pdf);
+                org.bouncycastle.tsp.TimeStampToken token = new org.bouncycastle.tsp.TimeStampToken(
+                        new org.bouncycastle.cms.CMSSignedData(contents));
+                var signers = token.getCertificates().getMatches(token.getSID());
+                if (signers.isEmpty()) continue;
+                org.bouncycastle.cert.X509CertificateHolder certificate =
+                        (org.bouncycastle.cert.X509CertificateHolder) signers.iterator().next();
+                var verifier = new org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder()
+                        .setProvider("BC").build(certificate);
+                token.validate(verifier);
+                var imprint = token.getTimeStampInfo();
+                var calculator = new org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder()
+                        .setProvider("BC").build().get(imprint.getHashAlgorithm());
+                try (var output = calculator.getOutputStream()) { output.write(signature.getSignedContent(pdf)); }
+                if (java.security.MessageDigest.isEqual(calculator.getDigest(), imprint.getMessageImprintDigest())) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
+    }
+
     private static List<X509Certificate> embeddedCertificates(byte[] pdf) throws Exception {
         List<X509Certificate> result = new java.util.ArrayList<>();
         try (PDDocument document = Loader.loadPDF(pdf)) {
@@ -540,6 +567,25 @@ public final class PadesOperations {
             }
         }
         return result;
+    }
+
+    private static List<X509Certificate> pdfCertificates(byte[] pdf) throws Exception {
+        java.util.LinkedHashMap<String, X509Certificate> certificates = new java.util.LinkedHashMap<>();
+        for (X509Certificate certificate : embeddedCertificates(pdf)) certificates.put(
+                java.util.Base64.getEncoder().encodeToString(certificate.getEncoded()), certificate);
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            var converter = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter().setProvider("BC");
+            for (PDSignature signature : document.getSignatureDictionaries()) {
+                try {
+                    org.bouncycastle.cms.CMSSignedData cms = new org.bouncycastle.cms.CMSSignedData(signature.getContents(pdf));
+                    for (org.bouncycastle.cert.X509CertificateHolder holder : cms.getCertificates().getMatches(null)) {
+                        X509Certificate certificate = converter.getCertificate(holder);
+                        certificates.put(java.util.Base64.getEncoder().encodeToString(certificate.getEncoded()), certificate);
+                    }
+                } catch (Exception ignored) { }
+            }
+        }
+        return List.copyOf(certificates.values());
     }
 
     /**
