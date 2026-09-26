@@ -191,6 +191,26 @@ de uno meramente mostrado.
 
 ---
 
+## 3b. Mastercard Data Storage — resultado (26-09-2026)
+
+Pantalla real: EMV → Data Storage Partial Key → MasterCard, pestañas DSPK,
+DS Summary (OWHF1) y DS Digest (OWHF2), con ejemplo precargado.
+
+- **DSPK** y **OWHF2**: siguen EMV Book C-2 v2.6 §8.2 literalmente y reproducen
+  el ejemplo (DS ID `5168624300900697` → DSPK `66887C5600B47C5600B40CC2`; OID
+  `8199829983998499`, entrada `1223344556677889` → digest `659C8EBFAA816DB5`).
+  Implementados en `MastercardDataStorage` y nodos `MC_DS_*`.
+- **DS Summary (OWHF1)**: no está en Book C-2 (lo calcula la tarjeta). La
+  herramienta imprime los intermedios y todos cuadran con: X1 = DS Summary 1 ⊕
+  (`00000000` || 2 últimos bytes del importe || 2 últimos bytes del UN);
+  X2 = A || DS UN || 2 primeros bytes del UN; K1 = DSPKL || 2 bytes de UN,
+  K2 = DSPKR || otros 2; K3 = DES(K1)[X1] ⊕ X1; resumen = DES(K3)[DES⁻¹(K2)
+  [DES(K3)[X2]]] ⊕ X1 ⊕ X2 (`FC96571A6E95FFA4`). Pendiente: en el ejemplo UN y
+  DS UN son iguales (`11223344`) y A = `9840` mezcla el parámetro de control
+  (`80`), el indicador de GAC (`01`) y la moneda (`840`) de forma no aislable.
+  Falta una captura con UN ≠ DS UN, otro importe, RCP `40`, indicador `02` y
+  moneda `978` antes de implementarlo.
+
 ## 4. Visa LUK
 
 ### Resultado (25-09-2026) — resuelto
