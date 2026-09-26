@@ -60,6 +60,22 @@ class PaymentOperationsNodeHandlerTest {
     }
 
     @Test
+    void defaultPaddingSelectionKeepsHistoricalOutput() throws Exception {
+        ProcessDefinition.Node encode = node("PIN_BLOCK_ENCODE");
+        encode.configuration.put("format", "VISA-2");
+        encode.configuration.put("padding", "DEFAULT");
+        encode.configuration.put("pin", "1234");
+        HANDLER.validateConfiguration(encode);
+        assertEquals("4123400555555555", HANDLER.execute(encode,
+                Map.of("pin", text("1234")), null).render());
+        encode.configuration.put("format", "Format 0 (ISO-0)");
+        encode.configuration.put("pan", "4111111111111111");
+        HANDLER.validateConfiguration(encode);
+        assertEquals("041225EEEEEEEEEE", HANDLER.execute(encode,
+                Map.of("pin", text("1234")), null).render());
+    }
+
+    @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
         assertEquals(46, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {

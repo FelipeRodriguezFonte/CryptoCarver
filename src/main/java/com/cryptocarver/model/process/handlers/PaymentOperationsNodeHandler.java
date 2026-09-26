@@ -263,7 +263,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
 
     private static String optionalPadding(ProcessDefinition.Node node) {
         String padding = setting(node, "padding", "");
-        return padding.isBlank() ? null : padding;
+        return padding.isBlank() || padding.equals(com.cryptocarver.crypto.PinBlockPadding.DEFAULT) ? null : padding;
     }
 
     private static void validatePadding(ProcessDefinition.Node node, String formatKey) {
