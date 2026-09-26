@@ -817,11 +817,7 @@ public class PaymentsController {
 
         // Initialize Encrypted PIN Block Format Combo if available
         if (encPinBlockFormatCombo != null) {
-            encPinBlockFormatCombo.getItems().addAll(
-                    "Format 0 (ISO-0)",
-                    "Format 1 (ISO-1)",
-                    "Format 2 (ISO-2)",
-                    "Format 3 (ISO-3)");
+            encPinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
             encPinBlockFormatCombo.getSelectionModel().selectFirst();
         }
     }
@@ -830,22 +826,7 @@ public class PaymentsController {
         if (pinBlockFormatCombo == null || pinBlockFormatDecodeCombo == null) {
             return; // Safety check
         }
-        pinBlockFormatCombo.getItems().addAll(
-                "Format 0 (ISO-0)",
-                "Format 1 (ISO-1)",
-                "Format 2 (ISO-2)",
-                "Format 3 (ISO-3)",
-                "Format 4 (ISO-4)",
-                "ANSI X9.8",
-                "IBM 3624",
-                "VISA-1",
-                "VISA-2",
-                "VISA-3",
-                "VISA-4",
-                "ECI-1",
-                "ECI-2 (no PAN binding)",
-                "ECI-3 (no PAN binding)",
-                "ECI-4");
+        pinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
         pinBlockFormatCombo.getSelectionModel().selectFirst();
 
         pinBlockFormatDecodeCombo.getItems().addAll(pinBlockFormatCombo.getItems());
@@ -888,9 +869,10 @@ public class PaymentsController {
             String pin = pinField.getText().trim();
             String pan = panFieldEncode.getText().trim().replaceAll("\\s+", "");
             String format = pinBlockFormatCombo.getSelectionModel().getSelectedItem();
+            com.cryptocarver.crypto.PinBlockFormat selectedFormat = com.cryptocarver.crypto.PinBlockFormat.fromName(format);
 
             // Validate inputs
-            if (pin.isEmpty() || pan.isEmpty()) {
+            if (pin.isEmpty() || (selectedFormat.usesPan() && pan.isEmpty())) {
                 pinBlockResultArea.setText(t("module.payments.error.pinPanRequired"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
@@ -904,7 +886,7 @@ public class PaymentsController {
                 return;
             }
 
-            if (!pan.matches("\\d{13,19}")) {
+            if (!pan.isEmpty() && !pan.matches("\\d{13,19}")) {
                 pinBlockResultArea.setText(t("module.payments.error.panInvalid"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
@@ -971,9 +953,10 @@ public class PaymentsController {
             String pinBlock = pinBlockField.getText().trim().replaceAll("\\s+", "");
             String pan = panFieldDecode.getText().trim().replaceAll("\\s+", "");
             String format = pinBlockFormatDecodeCombo.getSelectionModel().getSelectedItem();
+            com.cryptocarver.crypto.PinBlockFormat selectedFormat = com.cryptocarver.crypto.PinBlockFormat.fromName(format);
 
             // Validate inputs
-            if (pinBlock.isEmpty() || pan.isEmpty()) {
+            if (pinBlock.isEmpty() || (selectedFormat.usesPan() && pan.isEmpty())) {
                 pinBlockResultArea.setText(t("module.payments.error.pinPanRequired"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
@@ -981,7 +964,7 @@ public class PaymentsController {
             }
 
             // Validate PIN block length based on format
-            boolean isISO4 = format != null && (format.contains("ISO-4") || format.contains("ISO 4"));
+            boolean isISO4 = selectedFormat == com.cryptocarver.crypto.PinBlockFormat.ISO4;
             int expectedLength = isISO4 ? 32 : 16;
 
             if (!pinBlock.matches("[0-9A-Fa-f]{" + expectedLength + "}")) {
@@ -996,7 +979,7 @@ public class PaymentsController {
             boolean isValidPan = pan.matches("\\d{13,19}");
             boolean isValidIso4PanBlock = isISO4 && pan.matches("[0-9A-Fa-f]{32}");
 
-            if (!isValidPan && !isValidIso4PanBlock) {
+            if ((selectedFormat.usesPan() || !pan.isEmpty()) && !isValidPan && !isValidIso4PanBlock) {
                 pinBlockResultArea.setText(t("module.payments.error.panInvalid"));
                 pinBlockResultArea.setManaged(true);
                 pinBlockResultArea.setVisible(true);
@@ -1407,18 +1390,12 @@ public class PaymentsController {
 
         // Setup combo boxes
         if (pinTransSourceFormatCombo != null) {
-            pinTransSourceFormatCombo.getItems().addAll(
-                    "Format 0 (ISO-0)", "Format 1 (ISO-1)", "Format 2 (ISO-2)",
-                    "Format 3 (ISO-3)", "Format 4 (ISO-4)", "ANSI X9.8",
-                    "IBM 3624", "VISA-1");
+            pinTransSourceFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
             pinTransSourceFormatCombo.getSelectionModel().selectFirst();
         }
 
         if (pinTransTargetFormatCombo != null) {
-            pinTransTargetFormatCombo.getItems().addAll(
-                    "Format 0 (ISO-0)", "Format 1 (ISO-1)", "Format 2 (ISO-2)",
-                    "Format 3 (ISO-3)", "Format 4 (ISO-4)", "ANSI X9.8",
-                    "IBM 3624", "VISA-1");
+            pinTransTargetFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
             pinTransTargetFormatCombo.getSelectionModel().select(1); // Default to Format 1
         }
 
@@ -1466,7 +1443,9 @@ public class PaymentsController {
             String sourceFormat = pinTransSourceFormatCombo.getValue();
             String targetFormat = pinTransTargetFormatCombo.getValue();
 
-            if (sourceBlock.isEmpty() || pan.isEmpty()) {
+            boolean needsPan = com.cryptocarver.crypto.PinBlockFormat.fromName(sourceFormat).usesPan()
+                    || com.cryptocarver.crypto.PinBlockFormat.fromName(targetFormat).usesPan();
+            if (sourceBlock.isEmpty() || (needsPan && pan.isEmpty())) {
                 pinTransResultArea.setText(t("module.payments.error.pinBlockPanRequired"));
                 return;
             }
@@ -1781,7 +1760,7 @@ public class PaymentsController {
                 return;
             }
             // Some formats might not need PAN, but mostly they do for XOR or binding
-            if (pan.isEmpty() && (format.contains("ISO-0") || format.contains("ISO-3"))) {
+            if (pan.isEmpty() && com.cryptocarver.crypto.PinBlockFormat.fromName(format).usesPan()) {
                 showError(t("module.payments.error.inputTitle"), t("module.payments.error.enterPanForFormat", format), "encPanFieldEncode");
                 return;
             }

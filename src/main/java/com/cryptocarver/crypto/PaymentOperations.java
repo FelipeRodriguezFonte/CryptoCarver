@@ -22,98 +22,51 @@ public class PaymentOperations {
 
     // ==================== PIN BLOCK OPERATIONS ====================
 
-    /**
-     * Encode PIN into PIN block format
-     */
+    /** Encode a PIN using a catalogued PIN-block format. */
     public static String encodePinBlock(String pin, String pan, String format) throws Exception {
-        switch (format) {
-            case "Format 0 (ISO-0)":
-            case "ISO 0 (ANSI X9.8)":
-                return encodePinBlockISO0(pin, pan);
-            case "Format 1 (ISO-1)":
-            case "ISO 1 (ANSI X9.8)":
-                return encodePinBlockISO1(pin, pan);
-            case "Format 2 (ISO-2)":
-            case "ISO 2 (No PAN)":
-                return encodePinBlockISO2(pin, pan);
-            case "Format 3 (ISO-3)":
-            case "ISO 3 (EMV)":
-                return encodePinBlockISO3(pin, pan);
-            case "Format 4 (ISO-4)":
-            case "ISO 4 (EMV 2000)":
-                return encodePinBlockISO4(pin, pan);
-            case "ANSI X9.8":
-                return encodePinBlockANSI(pin, pan);
-            case "IBM 3624":
-                return encodePinBlockIBM3624(pin, pan);
-            case "VISA-1":
-                return encodePinBlockVISA1(pin, pan);
-            case "VISA-2":
-                return encodePinBlockVISA2(pin, pan);
-            case "VISA-3":
-                return encodePinBlockVISA3(pin, pan);
-            case "ECI-1":
-                return encodePinBlockISO0(pin, pan);
-            case "ECI-2":
-            case "ECI-2 (no PAN binding)":
-                return encodePinBlockECI2(pin);
-            case "ECI-3":
-            case "ECI-3 (no PAN binding)":
-                return encodePinBlockECI3(pin);
-            case "ECI-4":
-                return encodePinBlockISO1(pin, pan);
-            case "VISA-4":
-                return encodePinBlockISO0(pin, pan);
-            default:
-                return encodePinBlockISO0(pin, pan); // Default to ISO-0
-        }
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        return encodePinBlock(pin, pan, format, () -> random.nextInt(10));
     }
 
-    /**
-     * Decode PIN from PIN block
-     */
+    /** Supplies decimal padding digits for formats that require them; intended for repeatable test vectors. */
+    public static String encodePinBlock(String pin, String pan, String format,
+            java.util.function.IntSupplier decimalPaddingDigit) throws Exception {
+        PinBlockFormat selected = PinBlockFormat.fromName(format);
+        return switch (selected) {
+            case ISO0, ANSI, VISA1, ECI1, VISA4 -> encodePinBlockISO0(pin, pan);
+            case ISO1, ECI4 -> encodePinBlockISO1(pin, pan);
+            case ISO2 -> encodePinBlockISO2(pin, pan);
+            case ISO3 -> encodePinBlockISO3(pin, pan);
+            case ISO4 -> encodePinBlockISO4(pin, pan);
+            case IBM3624 -> encodePinBlockIBM3624(pin, pan);
+            case VISA2 -> encodePinBlockVISA2(pin, pan);
+            case VISA3 -> encodePinBlockVISA3(pin, pan);
+            case ECI2 -> encodePinBlockECI2(pin);
+            case ECI3 -> encodePinBlockECI3(pin);
+            case DOCUTEL -> encodePinBlockDocutel(pin, decimalPaddingDigit);
+            case DIEBOLD -> encodePinBlockDiebold(pin);
+            case PLUS -> encodePinBlockPlus(pin, pan);
+        };
+    }
+
+    /** Decode a PIN using a catalogued PIN-block format. */
     public static String decodePinBlock(String pinBlock, String pan, String format) throws Exception {
-        switch (format) {
-            case "Format 0 (ISO-0)":
-            case "ISO 0 (ANSI X9.8)":
-                return decodePinBlockISO0(pinBlock, pan);
-            case "Format 1 (ISO-1)":
-            case "ISO 1 (ANSI X9.8)":
-                return decodePinBlockISO1(pinBlock, pan);
-            case "Format 2 (ISO-2)":
-            case "ISO 2 (No PAN)":
-                return decodePinBlockISO2(pinBlock, pan);
-            case "Format 3 (ISO-3)":
-            case "ISO 3 (EMV)":
-                return decodePinBlockISO3(pinBlock, pan);
-            case "Format 4 (ISO-4)":
-            case "ISO 4 (EMV 2000)":
-                return decodePinBlockISO4(pinBlock, pan);
-            case "ANSI X9.8":
-                return decodePinBlockANSI(pinBlock, pan);
-            case "IBM 3624":
-                return decodePinBlockIBM3624(pinBlock, pan);
-            case "VISA-1":
-                return decodePinBlockVISA1(pinBlock, pan);
-            case "VISA-2":
-                return decodePinBlockVISA2(pinBlock, pan);
-            case "VISA-3":
-                return decodePinBlockVISA3(pinBlock, pan);
-            case "ECI-1":
-                return decodePinBlockISO0(pinBlock, pan);
-            case "ECI-2":
-            case "ECI-2 (no PAN binding)":
-                return decodePinBlockECI2(pinBlock);
-            case "ECI-3":
-            case "ECI-3 (no PAN binding)":
-                return decodePinBlockECI3(pinBlock);
-            case "ECI-4":
-                return decodePinBlockISO1(pinBlock, pan);
-            case "VISA-4":
-                return decodePinBlockISO0(pinBlock, pan);
-            default:
-                return decodePinBlockISO0(pinBlock, pan); // Default to ISO-0
-        }
+        PinBlockFormat selected = PinBlockFormat.fromName(format);
+        return switch (selected) {
+            case ISO0, ANSI, VISA1, ECI1, VISA4 -> decodePinBlockISO0(pinBlock, pan);
+            case ISO1, ECI4 -> decodePinBlockISO1(pinBlock, pan);
+            case ISO2 -> decodePinBlockISO2(pinBlock, pan);
+            case ISO3 -> decodePinBlockISO3(pinBlock, pan);
+            case ISO4 -> decodePinBlockISO4(pinBlock, pan);
+            case IBM3624 -> decodePinBlockIBM3624(pinBlock, pan);
+            case VISA2 -> decodePinBlockVISA2(pinBlock, pan);
+            case VISA3 -> decodePinBlockVISA3(pinBlock, pan);
+            case ECI2 -> decodePinBlockECI2(pinBlock);
+            case ECI3 -> decodePinBlockECI3(pinBlock);
+            case DOCUTEL -> decodePinBlockDocutel(pinBlock);
+            case DIEBOLD -> decodePinBlockDiebold(pinBlock);
+            case PLUS -> decodePinBlockPlus(pinBlock, pan);
+        };
     }
 
     /**
@@ -546,6 +499,97 @@ public class PaymentOperations {
         if (!block.substring(1 + length).equals("F".repeat(15 - length)))
             throw new IllegalArgumentException("ECI-3 padding is invalid");
         return pin;
+    }
+
+    /**
+     * Docutel format 02: nibble 0 is PIN length (4..6); nibbles 1..6 are the PIN
+     * left-justified and zero-padded to six digits; nibbles 7..15 are nine
+     * user-supplied decimal pad digits. No PAN is involved.
+     * Source: Host Programmer's Manual v3.5, format 02, p. 171:
+     * https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5
+     */
+    private static String encodePinBlockDocutel(String pin, java.util.function.IntSupplier padding) {
+        requirePin(pin, 4, 6);
+        StringBuilder block = new StringBuilder(16).append(pin.length()).append(pin);
+        while (block.length() < 7) block.append('0');
+        while (block.length() < 16) {
+            int digit = padding.getAsInt();
+            if (digit < 0 || digit > 9) throw new IllegalArgumentException("Docutel padding digit must be 0..9");
+            block.append(digit);
+        }
+        return block.toString();
+    }
+
+    private static String decodePinBlockDocutel(String pinBlock) {
+        String block = normalizeLegacyBlock(pinBlock);
+        int length = Character.digit(block.charAt(0), 16);
+        if (length < 4 || length > 6) throw new IllegalArgumentException("Docutel PIN length must be 4..6");
+        String pin = block.substring(1, 1 + length);
+        requirePin(pin, 4, 6);
+        if (!block.substring(1 + length, 7).equals("0".repeat(6 - length)) || !block.substring(7).matches("[0-9]{9}"))
+            throw new IllegalArgumentException("Docutel zero fill or decimal padding is invalid");
+        return pin;
+    }
+
+    /**
+     * Diebold format 03: nibbles 0..L-1 contain 4..12 PIN digits; all remaining
+     * nibbles through position 15 are F. No PIN-length nibble or PAN is used.
+     * Source: Host Programmer's Manual v3.5, format 03, p. 171:
+     * https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5
+     */
+    private static String encodePinBlockDiebold(String pin) {
+        requirePin(pin, 4, 12);
+        return pin + "F".repeat(16 - pin.length());
+    }
+
+    private static String decodePinBlockDiebold(String pinBlock) {
+        String block = normalizeLegacyBlock(pinBlock);
+        int length = block.indexOf('F');
+        if (length < 4 || length > 12 || !block.substring(length).equals("F".repeat(16 - length)))
+            throw new IllegalArgumentException("Diebold PIN length must be 4..12 with F padding");
+        String pin = block.substring(0, length);
+        requirePin(pin, 4, 12);
+        return pin;
+    }
+
+    /**
+     * Plus Network format 04: PIN field is nibbles [0]=0, [1]=PIN length
+     * (4..12), [2..] PIN digits, then F to nibble 15. PAN field is four zero
+     * nibbles followed by the leftmost 12 digits of the PAN (excluding its
+     * check digit). The clear block is the nibble-wise XOR of those fields.
+     * Source: Host Programmer's Manual v3.5, format 04, p. 172:
+     * https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5
+     */
+    private static String encodePinBlockPlus(String pin, String pan) {
+        requirePin(pin, 4, 12);
+        String field = "0" + Integer.toHexString(pin.length()).toUpperCase(java.util.Locale.ROOT)
+                + pin + "F".repeat(14 - pin.length());
+        return xorPinFields(field, plusPanField(pan));
+    }
+
+    private static String decodePinBlockPlus(String pinBlock, String pan) {
+        String field = xorPinFields(normalizeLegacyBlock(pinBlock), plusPanField(pan));
+        int length = Character.digit(field.charAt(1), 16);
+        if (field.charAt(0) != '0' || length < 4 || length > 12
+                || !field.substring(2 + length).equals("F".repeat(14 - length)))
+            throw new IllegalArgumentException("Plus Network PIN block has invalid length or padding (expected 4..12)");
+        String pin = field.substring(2, 2 + length);
+        requirePin(pin, 4, 12);
+        return pin;
+    }
+
+    private static String plusPanField(String pan) {
+        if (pan == null || !pan.matches("[0-9]{13,19}"))
+            throw new IllegalArgumentException("Plus Network requires a 13..19 digit PAN including check digit");
+        return "0000" + pan.substring(0, 12);
+    }
+
+    private static String xorPinFields(String first, String second) {
+        byte[] a = DataConverter.hexToBytes(first);
+        byte[] b = DataConverter.hexToBytes(second);
+        byte[] result = new byte[8];
+        for (int i = 0; i < 8; i++) result[i] = (byte) (a[i] ^ b[i]);
+        return DataConverter.bytesToHex(result);
     }
 
     private static String normalizeLegacyBlock(String pinBlock) {

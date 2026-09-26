@@ -9,6 +9,7 @@ import com.cryptocarver.crypto.EmvOdaOperations;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.MastercardDataStorage;
 import com.cryptocarver.crypto.PaymentOperations;
+import com.cryptocarver.crypto.PinBlockFormat;
 import com.cryptocarver.crypto.ThalesKeyBlockOperations;
 import com.cryptocarver.crypto.ThalesLmkOperations;
 import com.cryptocarver.crypto.VisaHceOperations;
@@ -53,9 +54,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     private static final List<String> SM_SCHEMES = List.of("MASTERCARD", "VISA");
     private static final Set<Representation> TEXT = Set.of(Representation.TEXT_UTF8);
     private static final Set<Representation> HEX = Set.of(Representation.HEX);
-    private static final List<String> PIN_FORMATS = List.of(
-            "Format 0 (ISO-0)", "Format 1 (ISO-1)", "Format 2 (ISO-2)",
-            "Format 3 (ISO-3)", "Format 4 (ISO-4)");
+    private static final List<String> PIN_FORMATS = PinBlockFormat.displayNames();
     private static final List<String> TDES_USAGES = List.of("PIN_ENCRYPTION", "MAC_REQUEST", "MAC_RESPONSE", "DATA_ENCRYPTION");
     private static final List<String> AES_USAGES = List.of(
             "PIN_ENCRYPTION", "MAC_GENERATION", "MAC_VERIFICATION", "MAC_BOTH_WAYS",
@@ -166,15 +165,20 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         }
         switch (type) {
             case "PIN_BLOCK_ENCODE" -> {
-                require(node, "pin"); require(node, "pan");
-                decimal(node, "pin", 4, 12); pan(node, "pan"); oneOf(node, "format", PIN_FORMATS);
+                require(node, "pin"); pinFormat(node, "format");
+                if (PinBlockFormat.fromName(setting(node, "format", PIN_FORMATS.get(0))).usesPan()) require(node, "pan");
+                decimal(node, "pin", 4, 12); pan(node, "pan");
             }
             case "PIN_BLOCK_DECODE" -> {
-                require(node, "pinBlock"); require(node, "pan"); pan(node, "pan"); oneOf(node, "format", PIN_FORMATS); pinBlock(node, "pinBlock", setting(node, "format", PIN_FORMATS.get(0)));
+                require(node, "pinBlock"); pinFormat(node, "format");
+                if (PinBlockFormat.fromName(setting(node, "format", PIN_FORMATS.get(0))).usesPan()) require(node, "pan");
+                pan(node, "pan"); pinBlock(node, "pinBlock", setting(node, "format", PIN_FORMATS.get(0)));
             }
             case "PIN_BLOCK_TRANSLATE" -> {
-                require(node, "pinBlock"); require(node, "pan"); pan(node, "pan");
-                oneOf(node, "sourceFormat", PIN_FORMATS); oneOf(node, "targetFormat", PIN_FORMATS);
+                require(node, "pinBlock"); pan(node, "pan");
+                pinFormat(node, "sourceFormat"); pinFormat(node, "targetFormat");
+                if (PinBlockFormat.fromName(setting(node, "sourceFormat", PIN_FORMATS.get(0))).usesPan()
+                        || PinBlockFormat.fromName(setting(node, "targetFormat", PIN_FORMATS.get(0))).usesPan()) require(node, "pan");
                 pinBlock(node, "pinBlock", setting(node, "sourceFormat", PIN_FORMATS.get(0)));
             }
             case "CVV_GENERATE" -> { commonCvv(node); }
@@ -260,9 +264,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         try {
             String type = node.type.toUpperCase(Locale.ROOT);
             return switch (type) {
-                case "PIN_BLOCK_ENCODE" -> hex(PaymentOperations.encodePinBlock(text(node, inputs, "pin"), text(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0))));
-                case "PIN_BLOCK_DECODE" -> text(PaymentOperations.decodePinBlock(hexText(node, inputs, "pinBlock"), text(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0))));
-                case "PIN_BLOCK_TRANSLATE" -> hex(PaymentOperations.translatePinBlock(hexText(node, inputs, "pinBlock"), text(node, inputs, "pan"), setting(node, "sourceFormat", PIN_FORMATS.get(0)), setting(node, "targetFormat", PIN_FORMATS.get(0))));
+                case "PIN_BLOCK_ENCODE" -> hex(PaymentOperations.encodePinBlock(text(node, inputs, "pin"), textOptional(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0))));
+                case "PIN_BLOCK_DECODE" -> text(PaymentOperations.decodePinBlock(hexText(node, inputs, "pinBlock"), textOptional(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0))));
+                case "PIN_BLOCK_TRANSLATE" -> hex(PaymentOperations.translatePinBlock(hexText(node, inputs, "pinBlock"), textOptional(node, inputs, "pan"), setting(node, "sourceFormat", PIN_FORMATS.get(0)), setting(node, "targetFormat", PIN_FORMATS.get(0))));
                 case "CVV_GENERATE" -> text(PaymentOperations.generateCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode")));
                 case "CVV_VERIFY" -> text(Boolean.toString(PaymentOperations.verifyCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "inputCvv"))));
                 case "DCVV_GENERATE" -> text(PaymentOperations.generateDCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "panSeq"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "atc")));
@@ -459,6 +463,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     private static void oneOf(ProcessDefinition.Node node, String key, List<String> values) {
         String actual = setting(node, key, values.get(0)); if (values.stream().noneMatch(v -> v.equalsIgnoreCase(actual))) throw new IllegalArgumentException("Invalid payment option");
     }
+    private static void pinFormat(ProcessDefinition.Node node, String key) {
+        PinBlockFormat.fromName(setting(node, key, PIN_FORMATS.get(0)));
+    }
     private static void decimal(ProcessDefinition.Node node, String key, int min, int max) {
         if (node.configuration.containsKey(key) && !decimalValue(node.configuration.get(key), min, max)) throw new IllegalArgumentException("Invalid decimal payment input");
     }
@@ -501,7 +508,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         if (!node.configuration.containsKey(key)) return; if (node.configuration.get(key).length() != bytes * 2) throw new IllegalArgumentException("Invalid payment hexadecimal length");
     }
     private static void pinBlock(ProcessDefinition.Node node, String key, String format) {
-        if (!node.configuration.containsKey(key)) return; int expected = format.contains("Format 4") ? 32 : 16; hexLength(node, key, expected / 2);
+        if (!node.configuration.containsKey(key)) return;
+        int expected = PinBlockFormat.fromName(format) == PinBlockFormat.ISO4 ? 32 : 16;
+        hexLength(node, key, expected / 2);
     }
 
     private static NodeParameter secret(String key, String label) { return new NodeParameter(key, label, ParameterKind.PASSWORD, List.of(), "", true, null, null); }

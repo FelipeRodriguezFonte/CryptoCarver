@@ -40,8 +40,8 @@ class Iso8583PaymentsPaneTest {
     @Test
     void paymentsPanelExposesReviewedPaymentAlgorithms() throws Exception {
         String controller = Files.readString(Path.of("src/main/java/com/cryptocarver/ui/PaymentsController.java"));
-        assertTrue(controller.contains("VISA-2"));
-        assertTrue(controller.contains("ECI-2 (no PAN binding)"));
+        assertTrue(com.cryptocarver.crypto.PinBlockFormat.displayNames().contains("VISA-2"));
+        assertTrue(com.cryptocarver.crypto.PinBlockFormat.displayNames().contains("ECI-2 (no PAN binding)"));
         assertTrue(controller.contains("ISO-9797-1-ALG2"));
         assertTrue(controller.contains("ISO-9797-1-ALG4"));
         assertTrue(controller.contains("ISO-9797-1-ALG6"));

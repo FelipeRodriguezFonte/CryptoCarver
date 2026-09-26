@@ -5,6 +5,7 @@ import com.cryptocarver.crypto.EMVOperations;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.DukptKsn;
 import com.cryptocarver.crypto.PaymentOperations;
+import com.cryptocarver.crypto.PinBlockFormat;
 import com.cryptocarver.model.process.handlers.PaymentOperationsNodeHandler;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,23 @@ class PaymentOperationsNodeHandlerTest {
     private static final String CVK_B = "FEDCBA9876543210";
     private static final String PVK = "0123456789ABCDEFFEDCBA9876543210";
     private static final String SESSION_KEY = "0123456789ABCDEFFEDCBA9876543210";
+
+    @Test
+    void legacyPinFormatAppearsInAllThreeNodesAndExecutes() throws Exception {
+        for (String type : List.of("PIN_BLOCK_ENCODE", "PIN_BLOCK_DECODE", "PIN_BLOCK_TRANSLATE")) {
+            NodeDescriptor descriptor = HANDLER.descriptors().stream()
+                    .filter(d -> d.type().equals(type)).findFirst().orElseThrow();
+            assertTrue(descriptor.parameters().stream().anyMatch(p -> p.key().equals("format")
+                    || p.key().equals("sourceFormat") || p.key().equals("targetFormat")));
+            assertTrue(descriptor.parameters().stream()
+                    .filter(p -> p.key().equals("format") || p.key().equals("sourceFormat") || p.key().equals("targetFormat"))
+                    .allMatch(p -> p.options().equals(PinBlockFormat.displayNames())));
+        }
+        ProcessDefinition.Node encode = node("PIN_BLOCK_ENCODE");
+        encode.configuration.put("format", "Diebold (Format 03)");
+        assertEquals("1234FFFFFFFFFFFF", HANDLER.execute(encode,
+                Map.of("pin", text("1234")), null).render());
+    }
 
     @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
