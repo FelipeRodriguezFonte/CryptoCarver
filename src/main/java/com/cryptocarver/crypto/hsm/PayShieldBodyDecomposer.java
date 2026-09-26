@@ -52,20 +52,35 @@ public final class PayShieldBodyDecomposer {
      * being presented as if it were the captured one.
      */
     static Optional<Decomposition> decompose(PayShieldBodySchema schema, byte[] body) {
-        if (body.length != schema.bodyLength()) {
+        if (schema.bodyLength() >= 0 && body.length != schema.bodyLength()) {
             return Optional.empty();
         }
 
         List<DecodedField> decoded = new ArrayList<>();
         int offset = 0;
         for (PayShieldBodySchema.Field field : schema.fields()) {
-            String value = new String(body, offset, field.length(), StandardCharsets.US_ASCII);
-            if (!field.type().accepts(value)) {
-                return Optional.empty();
+            int length = field.length();
+            if (field.type() == PayShieldBodySchema.FieldType.SCHEME_KEY) {
+                if (offset >= body.length) return Optional.empty();
+                char scheme = (char) body[offset];
+                length = switch (scheme) {
+                    case 'U', 'X' -> 33;
+                    case 'T', 'Y' -> 49;
+                    case 'Z' -> 17;
+                    default -> throw new IllegalArgumentException("Unknown payShield key scheme: " + scheme);
+                };
+            } else if (field.type() == PayShieldBodySchema.FieldType.UNTIL_SEMICOLON) {
+                int end = offset;
+                while (end < body.length && body[end] != ';') end++;
+                if (end == body.length) return Optional.empty();
+                length = end - offset;
             }
+            if (offset + length > body.length) return Optional.empty();
+            String value = new String(body, offset, length, StandardCharsets.US_ASCII);
+            if (!field.type().accepts(value)) return Optional.empty();
             decoded.add(new DecodedField(field, value));
-            offset += field.length();
+            offset += length;
         }
-        return Optional.of(new Decomposition(schema, decoded));
+        return offset == body.length ? Optional.of(new Decomposition(schema, decoded)) : Optional.empty();
     }
 }

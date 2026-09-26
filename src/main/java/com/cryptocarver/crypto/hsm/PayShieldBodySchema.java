@@ -2,8 +2,6 @@ package com.cryptocarver.crypto.hsm;
 
 import java.util.List;
 
-import static com.cryptocarver.crypto.hsm.PayShieldBodySchema.EvidenceStatus.VERIFIED;
-
 /** Declarative description of one exact command or response body shape. */
 public record PayShieldBodySchema(
         Direction direction,
@@ -21,6 +19,8 @@ public record PayShieldBodySchema(
 
     public enum EvidenceStatus {
         PENDING_CAPTURE,
+        EXTERNAL_REQUEST,
+        THIRD_PARTY_SIMULATOR,
         VERIFIED
     }
 
@@ -42,6 +42,20 @@ public record PayShieldBodySchema(
             boolean accepts(String value) {
                 return value.matches("[0-9]*");
             }
+        },
+        SCHEME_KEY {
+            @Override boolean accepts(String value) {
+                return value.matches("[UX][0-9A-Fa-f]{32}|[TY][0-9A-Fa-f]{48}|Z[0-9A-Fa-f]{16}");
+            }
+        },
+        UNTIL_SEMICOLON {
+            @Override boolean accepts(String value) {
+                return !value.isEmpty() && value.indexOf(';') < 0
+                        && value.chars().allMatch(character -> character >= 0x20 && character <= 0x7e);
+            }
+        },
+        SEMICOLON {
+            @Override boolean accepts(String value) { return value.equals(";"); }
         };
 
         abstract boolean accepts(String value);
@@ -55,8 +69,9 @@ public record PayShieldBodySchema(
             if (displayName == null || displayName.isBlank()) {
                 throw new IllegalArgumentException("field display name must not be blank");
             }
-            if (length < 1) {
-                throw new IllegalArgumentException("field length must be positive");
+            if (length < 0 || (length == 0 && type != FieldType.SCHEME_KEY
+                    && type != FieldType.UNTIL_SEMICOLON)) {
+                throw new IllegalArgumentException("field length must be positive, or zero for variable fields");
             }
             if (type == null) {
                 throw new IllegalArgumentException("field type must not be null");
@@ -81,8 +96,8 @@ public record PayShieldBodySchema(
             throw new IllegalArgumentException("evidence id must not be blank");
         }
         capturedBody = capturedBody == null ? null : capturedBody.clone();
-        if (evidenceStatus == VERIFIED && capturedBody == null) {
-            throw new IllegalArgumentException("verified schemas must include a captured body");
+        if (evidenceStatus != EvidenceStatus.PENDING_CAPTURE && capturedBody == null) {
+            throw new IllegalArgumentException("captured schemas must include a captured body");
         }
         fields = List.copyOf(fields);
     }
@@ -93,7 +108,8 @@ public record PayShieldBodySchema(
     }
 
     public int bodyLength() {
-        return fields.stream().mapToInt(Field::length).sum();
+        return fields.stream().anyMatch(field -> field.length() == 0)
+                ? -1 : fields.stream().mapToInt(Field::length).sum();
     }
 
     private static void requireCode(String code, String label) {

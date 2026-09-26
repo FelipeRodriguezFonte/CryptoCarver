@@ -33,7 +33,7 @@ class HsmHostCommandNodeHandlerTest {
         assertEquals("0000NC", handler.execute(compose, Map.of(), null).render());
 
         // Origin not recorded: this value predates the provenance question and
-        // no independent capture supports it. Capture NC-00 will replace it.
+        // no independent capture supports it. The simulator capture is registered separately.
         ProcessDefinition.Node parse = node("HSM_HOST_PARSE_RESPONSE");
         parse.configuration.put("frame", "0000ND007B44AC1DDEE2A94B0007-E000");
         parse.configuration.put("headerLength", "4");
@@ -41,8 +41,8 @@ class HsmHostCommandNodeHandlerTest {
         assertTrue(report.contains("response=ND"), report);
         assertTrue(report.contains("error=00"), report);
         assertTrue(report.contains("dataOpaque=7B44AC1DDEE2A94B0007-E000"), report);
-        assertTrue(report.contains("schemaEvidenceStatus=PENDING_CAPTURE"), report);
-        assertTrue(report.contains("schemaEvidenceId=NC-00"), report);
+        assertTrue(report.contains("schemaEvidenceStatus=THIRD_PARTY_SIMULATOR"), report);
+        assertTrue(report.contains("schemaEvidenceId=SIM-ND-01"), report);
         assertTrue(report.contains("lmkCheckValue=7B44AC1DDEE2A94B"), report);
         assertTrue(report.contains("firmwareVersion=0007-E000"), report);
     }

@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.PaymentOperations;
 import com.cryptocarver.crypto.DukptKsn;
 import com.cryptocarver.crypto.AesDukpt;
 import com.cryptocarver.crypto.hsm.PayShieldBodyDecomposer;
+import com.cryptocarver.crypto.hsm.PayShieldBodySchema;
 import com.cryptocarver.crypto.hsm.PayShieldCommand;
 import com.cryptocarver.crypto.hsm.PayShieldErrorCatalog;
 import com.cryptocarver.crypto.hsm.PayShieldMessage;
@@ -354,7 +355,7 @@ public class PaymentsController {
     /**
      * Origin not recorded: this value was already in the tree when its
      * provenance was questioned, and no independent capture supports it.
-     * Capture NC-00 will replace it.
+     * Kept as an unsourced legacy example, separate from the simulator capture.
      */
     @FXML
     public void handleHsmHostLoadExample() {
@@ -402,7 +403,7 @@ public class PaymentsController {
                 : new String(frame, StandardCharsets.US_ASCII);
     }
 
-    private static String describeHsmCommand(PayShieldMessage message) {
+    private String describeHsmCommand(PayShieldMessage message) {
         PayShieldCommand command = findHsmCommand(message.code());
         String body = new String(message.body(), StandardCharsets.US_ASCII);
         String trailer = new String(message.trailer(), StandardCharsets.US_ASCII);
@@ -422,7 +423,7 @@ public class PaymentsController {
         return report.toString();
     }
 
-    private static String describeHsmResponse(PayShieldResponse response) {
+    private String describeHsmResponse(PayShieldResponse response) {
         PayShieldCommand command = findHsmCommandByResponse(response.responseCode());
         String data = new String(response.data(), StandardCharsets.US_ASCII);
         String trailer = new String(response.trailer(), StandardCharsets.US_ASCII);
@@ -442,12 +443,12 @@ public class PaymentsController {
         return report.toString();
     }
 
-    private static void appendHsmDecomposition(
+    private void appendHsmDecomposition(
             StringBuilder report,
             Optional<PayShieldBodyDecomposer.Decomposition> optionalDecomposition) {
         optionalDecomposition.ifPresent(decomposition -> {
             report.append("\nBody schema: ")
-                    .append(decomposition.schema().evidenceStatus())
+                    .append(evidenceLabel(decomposition.schema().evidenceStatus()))
                     .append(" (").append(decomposition.schema().evidenceId()).append(')');
             for (PayShieldBodyDecomposer.DecodedField field : decomposition.fields()) {
                 report.append('\n')
@@ -455,6 +456,15 @@ public class PaymentsController {
                         .append(": ")
                         .append(field.value());
             }
+        });
+    }
+
+    private String evidenceLabel(PayShieldBodySchema.EvidenceStatus status) {
+        return t(switch (status) {
+            case EXTERNAL_REQUEST -> "module.payments.hsmHost.evidence.externalRequest";
+            case THIRD_PARTY_SIMULATOR -> "module.payments.hsmHost.evidence.simulator";
+            case PENDING_CAPTURE -> "module.payments.hsmHost.evidence.pending";
+            case VERIFIED -> "module.payments.hsmHost.evidence.verified";
         });
     }
 

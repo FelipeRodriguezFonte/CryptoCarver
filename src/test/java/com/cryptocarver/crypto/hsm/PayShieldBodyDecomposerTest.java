@@ -20,14 +20,14 @@ class PayShieldBodyDecomposerTest {
         PayShieldBodySchema schema = PayShieldBodySchemas.responses("ND", "00").get(0);
 
         assertEquals(25, schema.bodyLength());
-        assertEquals(PayShieldBodySchema.EvidenceStatus.PENDING_CAPTURE,
+        assertEquals(PayShieldBodySchema.EvidenceStatus.THIRD_PARTY_SIMULATOR,
                 schema.evidenceStatus());
-        assertEquals("NC-00", schema.evidenceId());
+        assertEquals("SIM-ND-01", schema.evidenceId());
         assertEquals(new PayShieldBodySchema.Field(
-                "lmkCheckValue", "LMK check value", 16, PayShieldBodySchema.FieldType.HEX),
+                "lmkCheckValue", "lmkCheckValue", 16, PayShieldBodySchema.FieldType.HEX),
                 schema.fields().get(0));
         assertEquals(new PayShieldBodySchema.Field(
-                "firmwareVersion", "Firmware version", 9,
+                "firmwareVersion", "firmwareVersion", 9,
                 PayShieldBodySchema.FieldType.PRINTABLE_ASCII),
                 schema.fields().get(1));
     }
@@ -57,20 +57,20 @@ class PayShieldBodyDecomposerTest {
     @Test
     void unknownResponseHasNoInferredSchema() {
         PayShieldResponse response = new PayShieldResponse(
-                "0000", "A1", "00", "OPAQUE".getBytes(StandardCharsets.US_ASCII), EMPTY);
+                "0000", "ZZ", "00", "OPAQUE".getBytes(StandardCharsets.US_ASCII), EMPTY);
 
         assertFalse(PayShieldBodyDecomposer.decompose(response).isPresent());
     }
 
     @Test
-    void emptyNcCommandMatchesItsDeclaredPendingShape() {
+    void emptyNcCommandMatchesItsCapturedShape() {
         PayShieldMessage command = new PayShieldMessage("0000", "NC", EMPTY, EMPTY);
 
         PayShieldBodyDecomposer.Decomposition decomposition =
                 PayShieldBodyDecomposer.decompose(command).orElseThrow();
 
         assertTrue(decomposition.fields().isEmpty());
-        assertEquals("NC-00", decomposition.schema().evidenceId());
+        assertEquals("SIM-NC-01", decomposition.schema().evidenceId());
     }
 
     @Test
