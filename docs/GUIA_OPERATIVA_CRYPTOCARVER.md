@@ -79,3 +79,22 @@ Los componentes que utilizan SLF4J registran advertencias y errores mediante `si
 - Revise los detalles de la operación en el histórico.
 - Para XAdES, distinga entre integridad válida y confianza de cadena válida.
 - Para PQC, pruebe generación, firma/verificación o encapsulación/decapsulación en la misma familia de parámetros.
+
+## Procesos desde la línea de comandos
+
+Ejecute un proceso guardado del Process Designer con:
+
+```bash
+java -jar target/cryptocarver-<version>.jar --cli run-process docs/examples/processes/visa-hce.json \
+  --set luk.smUdk=94E3194C02105E3B153438D562D5A49D \
+  --set msd.atc=0001
+```
+
+La forma general es `run-process <fichero.json> [--set nodo.param=valor ...] [--json] [--reveal-secrets]`.
+El comando muestra `nodo.output` para cada nodo; las salidas clasificadas como secretas se muestran como `••••` con su longitud. `--reveal-secrets` muestra los valores completos. Los secretos no se guardan en el JSON y deben proporcionarse al ejecutar; evite dejar claves reales en el historial de la terminal. El comando rechaza nodos de escritura de archivos.
+
+Hay tres procesos de ejemplo en `docs/examples/processes/`, verificados con vectores conocidos:
+
+- `mc-data-storage.json`: `MC_DS_PARTIAL_KEY`, `MC_DS_DIGEST` y `MC_DS_SUMMARY`; requiere `--set summary.un=11223344`.
+- `visa-hce.json`: `VISA_HCE_LUK`, `VISA_HCE_MSD` y `VISA_HCE_QVSDC`; requiere `--set luk.smUdk=94E3194C02105E3B153438D562D5A49D --set msd.atc=0001`.
+- `emv-secure-messaging.json`: `EMV_SM_CARD_KEY`, `EMV_SM_SESSION_KEY` y `EMV_SM_MAC`; requiere `--set card.smMk=862F13DF807A13B9D9AEAEC885FE7CA4 --set session.smAc=51DB71A5DCC47F8A --set mac.smAc=51DB71A5DCC47F8A --set mac.atc=0010`.

@@ -1,0 +1,51 @@
+{
+  "version": 3,
+  "name": "visa-hce",
+  "nodes": [
+    {
+      "id": "luk",
+      "type": "VISA_HCE_LUK",
+      "label": "luk",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "hceYear": "26",
+        "hceHours": "6431",
+        "hceCounter": "01"
+      }
+    },
+    {
+      "id": "msd",
+      "type": "VISA_HCE_MSD",
+      "label": "msd",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "deviceType": "AAAA000000000001"
+      }
+    },
+    {
+      "id": "qvsdc",
+      "type": "VISA_HCE_QVSDC",
+      "label": "qvsdc",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "terminalData": "0000000010000000000000000710000000000007101302050030901B6A",
+        "iccData": "3C00005503A4A082"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "to": "msd",
+      "targetPort": "luk",
+      "from": "luk"
+    },
+    {
+      "to": "qvsdc",
+      "targetPort": "luk",
+      "from": "luk"
+    }
+  ]
+}

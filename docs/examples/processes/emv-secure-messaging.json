@@ -1,0 +1,50 @@
+{
+  "version": 3,
+  "name": "emv-secure-messaging",
+  "nodes": [
+    {
+      "id": "card",
+      "type": "EMV_SM_CARD_KEY",
+      "label": "card",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "smPanSeq": "7430100000157500"
+      }
+    },
+    {
+      "id": "session",
+      "type": "EMV_SM_SESSION_KEY",
+      "label": "session",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "smScheme": "MASTERCARD",
+        "smCommandNumber": "1"
+      }
+    },
+    {
+      "id": "mac",
+      "type": "EMV_SM_MAC",
+      "label": "mac",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "smHeader": "8424000210",
+        "smData": "2EC06BD5D6AEEBBC"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "to": "session",
+      "targetPort": "smUdk",
+      "from": "card"
+    },
+    {
+      "to": "mac",
+      "targetPort": "sk",
+      "from": "session"
+    }
+  ]
+}

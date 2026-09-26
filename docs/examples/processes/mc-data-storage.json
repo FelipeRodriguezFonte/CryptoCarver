@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "name": "mc-data-storage",
+  "nodes": [
+    {
+      "id": "partial",
+      "type": "MC_DS_PARTIAL_KEY",
+      "label": "partial",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "dsId": "5168624300900697"
+      }
+    },
+    {
+      "id": "digest",
+      "type": "MC_DS_DIGEST",
+      "label": "digest",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "dsId": "5168624300900697",
+        "dsOperatorId": "8199829983998499",
+        "dsInput": "1223344556677889"
+      }
+    },
+    {
+      "id": "summary",
+      "type": "MC_DS_SUMMARY",
+      "label": "summary",
+      "x": 0,
+      "y": 0,
+      "configuration": {
+        "dsId": "5168624300900697",
+        "dsSummary1": "1223344556677889",
+        "dsAmount": "000000001234",
+        "dsCurrency": "840",
+        "dsRcp": "80",
+        "dsGac": "01",
+        "dsUn": "11223344"
+      }
+    }
+  ],
+  "connections": []
+}
