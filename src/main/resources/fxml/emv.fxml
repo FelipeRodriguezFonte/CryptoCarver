@@ -367,7 +367,7 @@
             <!-- MASTERCARD DATA STORAGE -->
             <TitledPane text="💾 Mastercard Data Storage">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Derive the DS partial key and calculate its OWHF2 digest." wrapText="true" styleClass="form-label"/>
+                    <Label text="Derive the DS partial key, calculate its OWHF2 digest and the DS Summary (OWHF1)." wrapText="true" styleClass="form-label"/>
                     <Button text="Load Example" onAction="#handleDsLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <Label text="1. DS partial key (DSPK)" styleClass="form-label"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
@@ -388,6 +388,32 @@
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Calculate digest" onAction="#handleDsDigest" styleClass="action-button,primary-action"/>
+                    <Label text="3. Summary (OWHF1)" styleClass="form-label"/>
+                    <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                        <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                        <Label text="DS Summary 1:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsSummary1Field" promptText="8 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Amount authorized:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsAmountField" promptText="12 digits" maxWidth="Infinity"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Currency code:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsCurrencyField" promptText="3 digits" maxWidth="Infinity"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Reference control parameter:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsRcpField" promptText="1 byte in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Generate AC indicator:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsGacField" promptText="01 first, 02 second" maxWidth="Infinity"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="DS unpredictable number:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsDsUnField" promptText="4 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="Unpredictable number:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <TextField fx:id="dsUnField" promptText="4 bytes in hex" maxWidth="Infinity"
+                                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                    </GridPane>
+                    <Button text="Calculate summary" onAction="#handleDsSummary" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="dsResultArea" prefHeight="100" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
                 </VBox>
             </TitledPane>

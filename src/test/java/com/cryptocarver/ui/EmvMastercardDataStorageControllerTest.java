@@ -39,6 +39,8 @@ class EmvMastercardDataStorageControllerTest {
         controller.handleDsDigest();
         assertTrue(result(controller).contains("659C8EBFAA816DB5"), result(controller));
         assertEquals("659C8EBFAA816DB5", new String(published.get(1).getOutput()));
+        controller.handleDsSummary();
+        assertTrue(result(controller).contains("FC96571A6E95FFA4"), result(controller));
     }
 
     @Test void invalidOperatorIdIsTranslatedAndNotPublished() throws Exception {
@@ -55,19 +57,20 @@ class EmvMastercardDataStorageControllerTest {
 
     @Test void fxmlIdsAndActionsExist() throws Exception {
         String fxml = Files.readString(Path.of("src/main/resources/fxml/emv.fxml"));
-        Matcher ids = Pattern.compile("fx:id=\\\"(ds[A-Za-z]+)\\\"").matcher(fxml);
+        Matcher ids = Pattern.compile("fx:id=\\\"(ds[A-Za-z0-9]+)\\\"").matcher(fxml);
         int count = 0;
         while (ids.find()) { EMVController.class.getDeclaredField(ids.group(1)); count++; }
-        assertEquals(4, count);
+        assertEquals(11, count);
         Matcher actions = Pattern.compile("onAction=\\\"#(handleDs[A-Za-z]+)\\\"").matcher(fxml);
         count = 0;
         while (actions.find()) { EMVController.class.getMethod(actions.group(1)); count++; }
-        assertEquals(3, count);
+        assertEquals(4, count);
     }
 
     private static EMVController wire() throws Exception {
         EMVController c = new EMVController();
-        for (String name : List.of("dsIdField", "dsOperatorIdField", "dsInputField")) set(c, name, new TextField());
+        for (String name : List.of("dsIdField", "dsOperatorIdField", "dsInputField", "dsSummary1Field", "dsAmountField",
+                "dsCurrencyField", "dsRcpField", "dsGacField", "dsDsUnField", "dsUnField")) set(c, name, new TextField());
         set(c, "dsResultArea", new TextArea());
         return c;
     }

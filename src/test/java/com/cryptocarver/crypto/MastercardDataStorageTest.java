@@ -23,4 +23,18 @@ class MastercardDataStorageTest {
         assertEquals("659C8EBFAA816DB5",
                 MastercardDataStorage.owhf2(DS_ID, "8199829983998499", "1223344556677889"));
     }
+
+    /**
+     * Two captures of the tool's DS Summary (OWHF1). In the first, UN and DS UN are equal;
+     * the second changes the amount, currency, RCP, GAC indicator and DS UN, and the tool's
+     * intermediates (A 6978, X1 12233445CF650FEF, X2 6978112233449988, K3 20C8D2A083B43C61)
+     * pin where each input goes.
+     */
+    @Test
+    void theSummaryReproducesBothCaptures() {
+        assertEquals("FC96571A6E95FFA4", MastercardDataStorage.summary(DS_ID, "1223344556677889",
+                "000000001234", "840", "80", "01", "11223344", "11223344"));
+        assertEquals("80D66F2CFC670881", MastercardDataStorage.summary(DS_ID, "1223344556677889",
+                "000000009902", "978", "40", "02", "99887766", "11223344"));
+    }
 }

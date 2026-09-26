@@ -180,6 +180,7 @@ public class EMVController {
     @FXML private TextField hceAipField, hceQvsdcAtcField, hceCvrField;
     @FXML private TextArea hceResultArea;
     @FXML private TextField dsIdField, dsOperatorIdField, dsInputField;
+    @FXML private TextField dsSummary1Field, dsAmountField, dsCurrencyField, dsRcpField, dsGacField, dsDsUnField, dsUnField;
     @FXML private TextArea dsResultArea;
 
     static final String SM_MASTERCARD = "Mastercard";
@@ -591,6 +592,11 @@ public class EMVController {
     public void handleDsLoadExample() {
         dsIdField.setText("5168624300900697"); dsOperatorIdField.setText("8199829983998499");
         dsInputField.setText("1223344556677889");
+        if (dsSummary1Field != null) {
+            dsSummary1Field.setText("1223344556677889"); dsAmountField.setText("000000001234");
+            dsCurrencyField.setText("840"); dsRcpField.setText("80"); dsGacField.setText("01");
+            dsDsUnField.setText("11223344"); dsUnField.setText("11223344");
+        }
         emvShow(dsResultArea, t("module.emv.ds.exampleLoaded"));
     }
 
@@ -612,6 +618,19 @@ public class EMVController {
             emvShow(dsResultArea, t("module.emv.ds.digestResult", value));
             emvPublish("module.emv.ds.digestAction", "module.emv.ds.status", value, false,
                     java.util.List.of(OperationDetail.publicDetail("Digest", value)));
+        } catch (Exception e) { emvShow(dsResultArea, t("module.emv.ds.error", e.getMessage())); }
+    }
+
+    public void handleDsSummary() {
+        try {
+            String value = MastercardDataStorage.summary(emvDsId(),
+                    emvHex(dsSummary1Field, "module.emv.ds.summary1", 8),
+                    smText(dsAmountField), smText(dsCurrencyField),
+                    emvHex(dsRcpField, "module.emv.ds.rcp", 1), emvHex(dsGacField, "module.emv.ds.gac", 1),
+                    emvHex(dsDsUnField, "module.emv.ds.dsUn", 4), emvHex(dsUnField, "module.emv.ds.un", 4));
+            emvShow(dsResultArea, t("module.emv.ds.summaryResult", value));
+            emvPublish("module.emv.ds.summaryAction", "module.emv.ds.status", value, false,
+                    java.util.List.of(OperationDetail.publicDetail("DS Summary", value)));
         } catch (Exception e) { emvShow(dsResultArea, t("module.emv.ds.error", e.getMessage())); }
     }
 

@@ -200,16 +200,16 @@ DS Summary (OWHF1) y DS Digest (OWHF2), con ejemplo precargado.
   el ejemplo (DS ID `5168624300900697` → DSPK `66887C5600B47C5600B40CC2`; OID
   `8199829983998499`, entrada `1223344556677889` → digest `659C8EBFAA816DB5`).
   Implementados en `MastercardDataStorage` y nodos `MC_DS_*`.
-- **DS Summary (OWHF1)**: no está en Book C-2 (lo calcula la tarjeta). La
-  herramienta imprime los intermedios y todos cuadran con: X1 = DS Summary 1 ⊕
-  (`00000000` || 2 últimos bytes del importe || 2 últimos bytes del UN);
-  X2 = A || DS UN || 2 primeros bytes del UN; K1 = DSPKL || 2 bytes de UN,
-  K2 = DSPKR || otros 2; K3 = DES(K1)[X1] ⊕ X1; resumen = DES(K3)[DES⁻¹(K2)
-  [DES(K3)[X2]]] ⊕ X1 ⊕ X2 (`FC96571A6E95FFA4`). Pendiente: en el ejemplo UN y
-  DS UN son iguales (`11223344`) y A = `9840` mezcla el parámetro de control
-  (`80`), el indicador de GAC (`01`) y la moneda (`840`) de forma no aislable.
-  Falta una captura con UN ≠ DS UN, otro importe, RCP `40`, indicador `02` y
-  moneda `978` antes de implementarlo.
+- **DS Summary (OWHF1)**: no está en Book C-2 (lo calcula la tarjeta). Resuelto
+  con dos capturas; la segunda cambia importe (`9902`), moneda (`978`), RCP
+  (`40`), indicador (`02`) y DS UN (`99887766`) frente a UN (`11223344`), y todos
+  los intermedios cuadran:
+  A = (nibble alto del RCP OR indicador de GAC) || moneda (`9840`, `6978`);
+  X1 = DS Summary 1 ⊕ (`00000000` || 2 últimos bytes del importe || DS UN[3..4]);
+  X2 = A || UN || DS UN[1..2]; K1 = DSPKL || DS UN[1..2]; K2 = DSPKR || DS UN[3..4];
+  K3 = DES(K1)[X1] ⊕ X1; resumen = DES(K3)[DES⁻¹(K2)[DES(K3)[X2]]] ⊕ X1 ⊕ X2
+  (`FC96571A6E95FFA4`, `80D66F2CFC670881`). Implementado en
+  `MastercardDataStorage.summary`, nodo `MC_DS_SUMMARY` y la sección de la pantalla EMV.
 
 ## 4. Visa LUK
 

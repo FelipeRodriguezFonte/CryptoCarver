@@ -28,7 +28,7 @@ class PaymentOperationsNodeHandlerTest {
 
     @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
-        assertEquals(45, PaymentOperationsNodeHandler.TYPES.size());
+        assertEquals(46, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {
             assertNotNull(HANDLER.descriptors().stream().filter(d -> d.type().equals(type)).findFirst().orElse(null), type);
         }
@@ -147,6 +147,13 @@ class PaymentOperationsNodeHandlerTest {
                 Map.of("dsId", hex("5168624300900697")), null).render());
         assertEquals("659C8EBFAA816DB5", HANDLER.execute(node("MC_DS_DIGEST"), Map.of("dsId", hex("5168624300900697"),
                 "dsOperatorId", hex("8199829983998499"), "dsInput", hex("1223344556677889")), null).render());
+        ProcessDefinition.Node summary = node("MC_DS_SUMMARY");
+        summary.configuration.put("dsAmount", "000000009902");
+        summary.configuration.put("dsCurrency", "978");
+        summary.configuration.put("dsRcp", "40");
+        summary.configuration.put("dsGac", "02");
+        assertEquals("80D66F2CFC670881", HANDLER.execute(summary, Map.of("dsId", hex("5168624300900697"),
+                "dsSummary1", hex("1223344556677889"), "dsUn", hex("99887766"), "un", hex("11223344")), null).render());
     }
 
     /** The Visa HCE nodes chain the external tool's example: LUK, then MSD and qVSDC (see VisaHceOperationsTest). */

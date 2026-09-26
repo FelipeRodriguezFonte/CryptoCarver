@@ -1083,6 +1083,19 @@ public final class ModuleTextCatalog {
 
     public static Map<String, String> emv() {
         Map<String, String> map = common();
+        map.put("Derive the DS partial key, calculate its OWHF2 digest and the DS Summary (OWHF1).", "module.emv.ds.help");
+        map.put("3. Summary (OWHF1)", "module.emv.ds.step3");
+        map.put("DS Summary 1:", "module.emv.ds.summary1");
+        map.put("Amount authorized:", "module.emv.ds.amount");
+        map.put("Currency code:", "module.emv.ds.currency");
+        map.put("Reference control parameter:", "module.emv.ds.rcp");
+        map.put("Generate AC indicator:", "module.emv.ds.gac");
+        map.put("DS unpredictable number:", "module.emv.ds.dsUn");
+        map.put("Unpredictable number:", "module.emv.ds.un");
+        map.put("Calculate summary", "module.emv.ds.summaryAction");
+        map.put("12 digits", "module.emv.ds.prompt.amount");
+        map.put("3 digits", "module.emv.ds.prompt.currency");
+        map.put("01 first, 02 second", "module.emv.ds.prompt.gac");
         map.put("🔐 Secure Messaging (Issuer Script)", "module.emv.sm.title");
         map.put("Session keys, the enciphered PIN of a PIN change command and the command MAC, Mastercard or Visa. Each step fills the fields of the next; all of them stay editable.", "module.emv.sm.help");
         map.put("Scheme:", "module.emv.sm.scheme");
@@ -1161,8 +1174,7 @@ public final class ModuleTextCatalog {
         map.put("2 bytes in hex (AIP)", "module.emv.hce.prompt.aip");
         map.put("4 bytes in hex (CVR)", "module.emv.hce.prompt.cvr");
         map.put("💾 Mastercard Data Storage", "module.emv.ds.title");
-        map.put("Derive the DS partial key and calculate its OWHF2 digest.", "module.emv.ds.help");
-        map.put("1. DS partial key (DSPK)", "module.emv.ds.step1");
+                map.put("1. DS partial key (DSPK)", "module.emv.ds.step1");
         map.put("2. Digest (OWHF2)", "module.emv.ds.step2");
         map.put("DS ID:", "module.emv.ds.id");
         map.put("Operator ID:", "module.emv.ds.operatorId");
