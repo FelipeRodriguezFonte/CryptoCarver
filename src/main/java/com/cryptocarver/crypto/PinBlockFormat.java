@@ -50,6 +50,32 @@ public enum PinBlockFormat {
         this.unverifiedEquivalence = unverifiedEquivalence;
     }
 
+    /** Supported explicit padding selections; an empty list means padding is not configurable. */
+    public List<String> paddingOptions() {
+        return switch (this) {
+            case VISA2, VISA3, DOCUTEL -> java.util.stream.Stream.concat(
+                    "0123456789".chars().mapToObj(c -> String.valueOf((char) c)),
+                    java.util.stream.Stream.of(PinBlockPadding.RANDOM_DECIMAL)).toList();
+            case ECI2, ECI3, DIEBOLD -> PinBlockPadding.OPTIONS;
+            default -> List.of();
+        };
+    }
+
+    public String defaultPadding() {
+        return switch (this) {
+            case VISA2, VISA3 -> "5";
+            case ECI2, ECI3, DIEBOLD -> "F";
+            case DOCUTEL -> PinBlockPadding.RANDOM_DECIMAL;
+            default -> null;
+        };
+    }
+
+    public void validatePadding(String padding) {
+        if (!paddingOptions().contains(PinBlockPadding.normalize(padding)))
+            throw new IllegalArgumentException(displayName + " does not support PIN block padding " + padding
+                    + "; allowed: " + paddingOptions());
+    }
+
     public String displayName() { return displayName; }
     public Set<String> aliases() { return aliases; }
     public boolean usesPan() { return usesPan; }

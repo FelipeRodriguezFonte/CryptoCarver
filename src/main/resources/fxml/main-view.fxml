@@ -598,6 +598,8 @@
                                                 <Label text="Format:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                                                 <ComboBox fx:id="pinBlockFormatCombo" GridPane.rowIndex="2" GridPane.columnIndex="1"
                                                          prefWidth="300"/>
+                                                <Label fx:id="pinBlockPaddingLabel" text="Padding:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                                                <ComboBox fx:id="pinBlockPaddingCombo" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="300"/>
                                             </GridPane>
 
                                             <Button text="Encode PIN Block" onAction="#handleEncodePinBlock"

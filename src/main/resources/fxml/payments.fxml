@@ -64,18 +64,20 @@
                         <TextField fx:id="panFieldEncode" promptText="13-19 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
                         <Label text="Format:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
                         <ComboBox fx:id="pinBlockFormatCombo" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                        <Button text="Encode PIN Block" onAction="#handleEncodePinBlock" styleClass="action-button,primary-action" maxWidth="180" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        <Label fx:id="pinBlockPaddingLabel" text="Padding:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <ComboBox fx:id="pinBlockPaddingCombo" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        <Button text="Encode PIN Block" onAction="#handleEncodePinBlock" styleClass="action-button,primary-action" maxWidth="180" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
 
-                        <Separator GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2"/>
+                        <Separator GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2"/>
 
-                        <Label text="Decode PIN Block" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="6" GridPane.columnSpan="2"/>
-                        <Label text="PIN Block (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
-                        <TextField fx:id="pinBlockField" promptText="16 or 32 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
-                        <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
-                        <TextField fx:id="panFieldDecode" promptText="13-19 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="8"/>
-                        <Label text="Format:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="9"/>
-                        <ComboBox fx:id="pinBlockFormatDecodeCombo" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="9"/>
-                        <Button text="Decode PIN Block" onAction="#handleDecodePinBlock" styleClass="action-button,primary-action" maxWidth="180" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
+                        <Label text="Decode PIN Block" styleClass="form-label ux-inline-689e8d50bc" GridPane.columnIndex="0" GridPane.rowIndex="7" GridPane.columnSpan="2"/>
+                        <Label text="PIN Block (Hex):" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
+                        <TextField fx:id="pinBlockField" promptText="16 or 32 hex chars" styleClass="monospace-field,form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="8"/>
+                        <Label text="PAN:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="9"/>
+                        <TextField fx:id="panFieldDecode" promptText="13-19 digits" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="9"/>
+                        <Label text="Format:" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="10"/>
+                        <ComboBox fx:id="pinBlockFormatDecodeCombo" styleClass="form-field" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
+                        <Button text="Decode PIN Block" onAction="#handleDecodePinBlock" styleClass="action-button,primary-action" maxWidth="180" GridPane.columnIndex="1" GridPane.rowIndex="11"/>
                     </GridPane>
                     <TextArea fx:id="pinBlockResultArea" prefHeight="80" editable="false" wrapText="true" managed="false" visible="false" styleClass="result-area,monospace-field"/>
                 </VBox>

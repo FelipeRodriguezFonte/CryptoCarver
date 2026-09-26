@@ -39,6 +39,24 @@ class LegacyPinBlockFormatTest {
                 () -> PaymentOperations.encodePinBlock("1234", "123", "Plus Network"));
     }
 
+    @Test void configurableRandomPaddingRoundTripsAndRejectsUnsupportedModes() throws Exception {
+        for (String format : java.util.List.of("ECI-2", "ECI-3")) {
+            String block = PaymentOperations.encodePinBlock("1234", PAN, format,
+                    PinBlockPadding.RANDOM_HEX, () -> 10);
+            assertEquals("1234", PaymentOperations.decodePinBlock(block, PAN, format));
+            assertTrue(block.endsWith("A"));
+        }
+        String visa = PaymentOperations.encodePinBlock("1234", PAN, "VISA-2",
+                PinBlockPadding.RANDOM_DECIMAL, () -> 7);
+        assertEquals("1234", PaymentOperations.decodePinBlock(visa, PAN, "VISA-2"));
+        assertEquals("4123400777777777", visa);
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> PaymentOperations.encodePinBlock("1234", PAN, "VISA-2", "F"));
+        assertTrue(error.getMessage().contains("VISA-2"));
+        assertThrows(IllegalArgumentException.class,
+                () -> PaymentOperations.encodePinBlock("1234", PAN, "ISO-0", "0"));
+    }
+
     @Test void unknownFormatFailsOnEncode() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> PaymentOperations.encodePinBlock("1234", PAN, "mystery format"));
@@ -61,7 +79,11 @@ class LegacyPinBlockFormatTest {
     /** Clear blocks captured from the external tool, PIN 1234 (docs/CAPTURAS_PIN_BLOCKS_HEREDADOS.md). */
     @Test void matchesExternalToolCaptures() throws Exception {
         String pan2 = "4000123456789017";
-        assertEquals("1234FFFFFFFFFFFF", PaymentOperations.encodePinBlock("1234", PAN, "Diebold"));
+        assertEquals("1234FFFFFFFFFFFF", PaymentOperations.encodePinBlock("1234", PAN, "Diebold", "F"));
+        assertEquals("4123400000000000", PaymentOperations.encodePinBlock("1234", PAN, "VISA-2", "0"));
+        assertEquals("1234F00000000000", PaymentOperations.encodePinBlock("1234", PAN, "VISA-3", "0"));
+        assertEquals("4123400555555555", PaymentOperations.encodePinBlock("1234", PAN, "VISA-2"));
+        assertEquals("1234F55555555555", PaymentOperations.encodePinBlock("1234", PAN, "VISA-3"));
         assertEquals("041225EEEEEEEEEE", PaymentOperations.encodePinBlock("1234", PAN, "ECI-1"));
         assertEquals("041235DCBA9876FE", PaymentOperations.encodePinBlock("1234", pan2, "ECI-1"));
         assertEquals("041225EEEEEEEEEE", PaymentOperations.encodePinBlock("1234", PAN, "VISA-1"));

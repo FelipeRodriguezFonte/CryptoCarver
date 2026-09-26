@@ -168,6 +168,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 require(node, "pin"); pinFormat(node, "format");
                 if (PinBlockFormat.fromName(setting(node, "format", PIN_FORMATS.get(0))).usesPan()) require(node, "pan");
                 decimal(node, "pin", 4, 12); pan(node, "pan");
+                validatePadding(node, "format");
             }
             case "PIN_BLOCK_DECODE" -> {
                 require(node, "pinBlock"); pinFormat(node, "format");
@@ -180,6 +181,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 if (PinBlockFormat.fromName(setting(node, "sourceFormat", PIN_FORMATS.get(0))).usesPan()
                         || PinBlockFormat.fromName(setting(node, "targetFormat", PIN_FORMATS.get(0))).usesPan()) require(node, "pan");
                 pinBlock(node, "pinBlock", setting(node, "sourceFormat", PIN_FORMATS.get(0)));
+                validatePadding(node, "targetFormat");
             }
             case "CVV_GENERATE" -> { commonCvv(node); }
             case "CVV_VERIFY" -> { commonCvv(node); require(node, "inputCvv"); decimal(node, "inputCvv", 3, 3); }
@@ -259,14 +261,25 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         decimal(node, "pin", 4, 4); pan(node, "pan"); decimal(node, "pvki", 1, 1); positive(node, "pvvLength", 4, 6);
     }
 
+    private static String optionalPadding(ProcessDefinition.Node node) {
+        String padding = setting(node, "padding", "");
+        return padding.isBlank() ? null : padding;
+    }
+
+    private static void validatePadding(ProcessDefinition.Node node, String formatKey) {
+        String padding = setting(node, "padding", "");
+        if (!padding.isBlank() && !padding.equals(com.cryptocarver.crypto.PinBlockPadding.DEFAULT))
+            PinBlockFormat.fromName(setting(node, formatKey, PIN_FORMATS.get(0))).validatePadding(padding);
+    }
+
     @Override
     public FlowValue execute(ProcessDefinition.Node node, Map<String, FlowValue> inputs, ExecutionContext context) throws Exception {
         try {
             String type = node.type.toUpperCase(Locale.ROOT);
             return switch (type) {
-                case "PIN_BLOCK_ENCODE" -> hex(PaymentOperations.encodePinBlock(text(node, inputs, "pin"), textOptional(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0))));
+                case "PIN_BLOCK_ENCODE" -> hex(PaymentOperations.encodePinBlock(text(node, inputs, "pin"), textOptional(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0)), optionalPadding(node)));
                 case "PIN_BLOCK_DECODE" -> text(PaymentOperations.decodePinBlock(hexText(node, inputs, "pinBlock"), textOptional(node, inputs, "pan"), setting(node, "format", PIN_FORMATS.get(0))));
-                case "PIN_BLOCK_TRANSLATE" -> hex(PaymentOperations.translatePinBlock(hexText(node, inputs, "pinBlock"), textOptional(node, inputs, "pan"), setting(node, "sourceFormat", PIN_FORMATS.get(0)), setting(node, "targetFormat", PIN_FORMATS.get(0))));
+                case "PIN_BLOCK_TRANSLATE" -> hex(PaymentOperations.translatePinBlock(hexText(node, inputs, "pinBlock"), textOptional(node, inputs, "pan"), setting(node, "sourceFormat", PIN_FORMATS.get(0)), setting(node, "targetFormat", PIN_FORMATS.get(0)), optionalPadding(node)));
                 case "CVV_GENERATE" -> text(PaymentOperations.generateCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode")));
                 case "CVV_VERIFY" -> text(Boolean.toString(PaymentOperations.verifyCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "inputCvv"))));
                 case "DCVV_GENERATE" -> text(PaymentOperations.generateDCVV(hexText(node, inputs, "cvkA"), hexText(node, inputs, "cvkB"), text(node, inputs, "pan"), text(node, inputs, "panSeq"), text(node, inputs, "expiry"), text(node, inputs, "serviceCode"), text(node, inputs, "atc")));
@@ -526,9 +539,9 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
     @Override
     public List<NodeDescriptor> descriptors() {
         List<NodeDescriptor> result = new ArrayList<>();
-        result.add(descriptor("PIN_BLOCK_ENCODE", "pinBlockEncode", "pinBlockEncode", params(secret("pin", "module.process.param.payment.pin"), secret("pan", "module.process.param.payment.pan"), combo("format", "module.process.param.payment.format", PIN_FORMATS, PIN_FORMATS.get(0)))));
+        result.add(descriptor("PIN_BLOCK_ENCODE", "pinBlockEncode", "pinBlockEncode", params(secret("pin", "module.process.param.payment.pin"), secret("pan", "module.process.param.payment.pan"), combo("format", "module.process.param.payment.format", PIN_FORMATS, PIN_FORMATS.get(0)), combo("padding", "module.process.param.payment.padding", com.cryptocarver.crypto.PinBlockPadding.NODE_OPTIONS, "DEFAULT"))));
         result.add(descriptor("PIN_BLOCK_DECODE", "pinBlockDecode", "pinBlockDecode", params(secret("pinBlock", "module.process.param.payment.pinBlock"), secret("pan", "module.process.param.payment.pan"), combo("format", "module.process.param.payment.format", PIN_FORMATS, PIN_FORMATS.get(0)))));
-        result.add(descriptor("PIN_BLOCK_TRANSLATE", "pinBlockTranslate", "pinBlockTranslate", params(secret("pinBlock", "module.process.param.payment.pinBlock"), secret("pan", "module.process.param.payment.pan"), combo("sourceFormat", "module.process.param.payment.sourceFormat", PIN_FORMATS, PIN_FORMATS.get(0)), combo("targetFormat", "module.process.param.payment.targetFormat", PIN_FORMATS, PIN_FORMATS.get(0)))));
+        result.add(descriptor("PIN_BLOCK_TRANSLATE", "pinBlockTranslate", "pinBlockTranslate", params(secret("pinBlock", "module.process.param.payment.pinBlock"), secret("pan", "module.process.param.payment.pan"), combo("sourceFormat", "module.process.param.payment.sourceFormat", PIN_FORMATS, PIN_FORMATS.get(0)), combo("targetFormat", "module.process.param.payment.targetFormat", PIN_FORMATS, PIN_FORMATS.get(0)), combo("padding", "module.process.param.payment.padding", com.cryptocarver.crypto.PinBlockPadding.NODE_OPTIONS, "DEFAULT"))));
         result.add(descriptor("CVV_GENERATE", "cvvGenerate", "cvvGenerate", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""))));
         result.add(descriptor("CVV_VERIFY", "cvvVerify", "cvvVerify", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), secret("inputCvv", "module.process.param.payment.cvv"))));
         result.add(descriptor("DCVV_GENERATE", "dcvvGenerate", "dcvvGenerate", params(cvk("cvkA"), cvk("cvkB"), secret("pan", "module.process.param.payment.pan"), textParam("panSeq", "module.process.param.payment.panSeq", "00"), textParam("expiry", "module.process.param.payment.expiry", ""), textParam("serviceCode", "module.process.param.payment.serviceCode", ""), textParam("atc", "module.process.param.payment.atc", ""))));

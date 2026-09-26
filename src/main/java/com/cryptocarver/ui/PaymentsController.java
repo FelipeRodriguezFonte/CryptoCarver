@@ -65,6 +65,8 @@ public class PaymentsController {
     @FXML private TextField panFieldDecode;
     @FXML private ComboBox<String> pinBlockFormatCombo;
     @FXML private ComboBox<String> pinBlockFormatDecodeCombo;
+    @FXML private ComboBox<String> pinBlockPaddingCombo;
+    @FXML private javafx.scene.control.Label pinBlockPaddingLabel;
     @FXML private TextArea pinBlockResultArea;
     @FXML private ResultPanel paymentsResultPanel;
 
@@ -822,6 +824,39 @@ public class PaymentsController {
         }
     }
 
+    public void setPinBlockPaddingCombo(ComboBox<String> combo, javafx.scene.control.Label label) {
+        this.pinBlockPaddingCombo = combo;
+        this.pinBlockPaddingLabel = label;
+        setupPaddingSelection();
+    }
+
+    private void setupPaddingSelection() {
+        if (pinBlockPaddingCombo == null || pinBlockFormatCombo == null) return;
+        if (pinBlockPaddingLabel != null) pinBlockPaddingLabel.setText(t("module.payments.padding"));
+        pinBlockPaddingCombo.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(String value) {
+                if (value == null) return "";
+                if (value.equals(com.cryptocarver.crypto.PinBlockPadding.RANDOM_HEX))
+                    return t("module.payments.padding.randomHex");
+                if (value.equals(com.cryptocarver.crypto.PinBlockPadding.RANDOM_DECIMAL))
+                    return t("module.payments.padding.randomDecimal");
+                return value;
+            }
+            @Override public String fromString(String value) { return value; }
+        });
+        pinBlockFormatCombo.valueProperty().addListener((obs, oldValue, newValue) -> updatePaddingSelection());
+        updatePaddingSelection();
+    }
+
+    private void updatePaddingSelection() {
+        if (pinBlockPaddingCombo == null || pinBlockFormatCombo.getValue() == null) return;
+        com.cryptocarver.crypto.PinBlockFormat format =
+                com.cryptocarver.crypto.PinBlockFormat.fromName(pinBlockFormatCombo.getValue());
+        pinBlockPaddingCombo.getItems().setAll(format.paddingOptions());
+        pinBlockPaddingCombo.setDisable(format.paddingOptions().isEmpty());
+        pinBlockPaddingCombo.setValue(format.defaultPadding());
+    }
+
     private void setupPinBlockFormats() {
         if (pinBlockFormatCombo == null || pinBlockFormatDecodeCombo == null) {
             return; // Safety check
@@ -831,6 +866,7 @@ public class PaymentsController {
 
         pinBlockFormatDecodeCombo.getItems().addAll(pinBlockFormatCombo.getItems());
         pinBlockFormatDecodeCombo.getSelectionModel().selectFirst();
+        setupPaddingSelection();
     }
 
     private void setupCvvTypes() {
@@ -908,7 +944,9 @@ public class PaymentsController {
                 clearPanBlock = iso4Result[1];
                 pinBlock = clearPinField;
             } else {
-                pinBlock = PaymentOperations.encodePinBlock(pin, pan, format);
+                pinBlock = pinBlockPaddingCombo == null || pinBlockPaddingCombo.isDisabled()
+                        ? PaymentOperations.encodePinBlock(pin, pan, format)
+                        : PaymentOperations.encodePinBlock(pin, pan, format, pinBlockPaddingCombo.getValue());
             }
 
             // Display result

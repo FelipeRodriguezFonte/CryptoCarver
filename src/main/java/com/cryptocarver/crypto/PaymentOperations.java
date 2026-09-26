@@ -22,16 +22,24 @@ public class PaymentOperations {
 
     // ==================== PIN BLOCK OPERATIONS ====================
 
-    /** Encode a PIN using a catalogued PIN-block format. */
+    /** Encode with the format's historical default padding. */
     public static String encodePinBlock(String pin, String pan, String format) throws Exception {
-        java.security.SecureRandom random = new java.security.SecureRandom();
-        return encodePinBlock(pin, pan, format, () -> random.nextInt(10));
+        return encodePinBlock(pin, pan, format, null, PinBlockPadding.secureRandom());
     }
 
-    /** Supplies decimal padding digits for formats that require them; intended for repeatable test vectors. */
-    public static String encodePinBlock(String pin, String pan, String format,
-            java.util.function.IntSupplier decimalPaddingDigit) throws Exception {
+    /** Encode with an explicit fixed nibble, RANDOM_HEX or RANDOM_DECIMAL. */
+    public static String encodePinBlock(String pin, String pan, String format, String padding) throws Exception {
+        return encodePinBlock(pin, pan, format, padding, PinBlockPadding.secureRandom());
+    }
+
+    /** Injects random nibble generation for reproducible vectors. */
+    public static String encodePinBlock(String pin, String pan, String format, String padding,
+            java.util.function.IntSupplier randomDigit) throws Exception {
         PinBlockFormat selected = PinBlockFormat.fromName(format);
+        if (padding != null) selected.validatePadding(padding);
+        String effective = padding == null ? selected.defaultPadding() : PinBlockPadding.normalize(padding);
+        java.util.function.IntSupplier digits = effective == null ? randomDigit
+                : PinBlockPadding.supplier(effective, randomDigit);
         return switch (selected) {
             case ISO0, ANSI, VISA1, ECI1 -> encodePinBlockISO0(pin, pan);
             case ISO1, ECI4 -> encodePinBlockISO1(pin, pan);
@@ -39,15 +47,34 @@ public class PaymentOperations {
             case ISO3 -> encodePinBlockISO3(pin, pan);
             case ISO4 -> encodePinBlockISO4(pin, pan);
             case IBM3624 -> encodePinBlockIBM3624(pin, pan);
-            case VISA2 -> encodePinBlockVISA2(pin, pan);
-            case VISA3 -> encodePinBlockVISA3(pin, pan);
-            case ECI2 -> encodePinBlockECI2(pin);
-            case ECI3 -> encodePinBlockECI3(pin);
-            case DOCUTEL -> encodePinBlockDocutel(pin, decimalPaddingDigit);
-            case DIEBOLD -> encodePinBlockDiebold(pin);
+            case VISA2 -> encodePinBlockVISA2(pin, pan, digits);
+            case VISA3 -> encodePinBlockVISA3(pin, pan, digits);
+            case ECI2 -> encodePinBlockECI2(pin, digits);
+            case ECI3 -> encodePinBlockECI3(pin, digits);
+            case DOCUTEL -> encodePinBlockDocutel(pin, effective.equals(PinBlockPadding.RANDOM_DECIMAL)
+                    ? () -> Math.floorMod(randomDigit.getAsInt(), 10) : digits);
+            case DIEBOLD -> encodePinBlockDiebold(pin, digits);
             case PLUS, VISA4 -> encodePinBlockPlus(pin, pan);
             case EUROPAY -> encodePinBlockEuropay(pin, pan);
         };
+    }
+
+    /** Historical Docutel test hook: supplies decimal padding digits. */
+    public static String encodePinBlock(String pin, String pan, String format,
+            java.util.function.IntSupplier decimalPaddingDigit) throws Exception {
+        if (PinBlockFormat.fromName(format) == PinBlockFormat.DOCUTEL)
+            return encodePinBlockDocutel(pin, decimalPaddingDigit);
+        return encodePinBlock(pin, pan, format, null, decimalPaddingDigit);
+    }
+
+    private static String fill(int count, java.util.function.IntSupplier digits) {
+        StringBuilder result = new StringBuilder(count);
+        for (int i = 0; i < count; i++) {
+            int digit = digits.getAsInt();
+            if (digit < 0 || digit > 15) throw new IllegalArgumentException("PIN block padding nibble must be 0..15");
+            result.append(Character.toUpperCase(Character.forDigit(digit, 16)));
+        }
+        return result.toString();
     }
 
     /** Decode a PIN using a catalogued PIN-block format. */
@@ -420,15 +447,13 @@ public class PaymentOperations {
      * decimal pad digit repeated to the end of the 8-byte block.  It does not
      * bind the block to a PAN.
      */
-    private static String encodePinBlockVISA2(String pin, String ignoredPan) {
+    private static String encodePinBlockVISA2(String pin, String ignoredPan, java.util.function.IntSupplier digits) {
         requirePin(pin, 4, 6);
         StringBuilder block = new StringBuilder(16);
         block.append(Integer.toHexString(pin.length())).append(pin);
         while (block.length() < 7) block.append('0');
-        // The compact API has no pad parameter.  Use the public Visa example's
-        // decimal pad (5); callers needing another pad should use an HSM/API
-        // that exposes Visa's PIN-profile pad-digit parameter.
-        while (block.length() < 16) block.append('5');
+        int pad = digits.getAsInt();
+        block.append(fill(16 - block.length(), () -> pad));
         return block.toString().toUpperCase(java.util.Locale.ROOT);
     }
 
@@ -450,9 +475,10 @@ public class PaymentOperations {
     }
 
     /** Visa format 3: PIN, F delimiter, then a repeated hexadecimal pad. */
-    private static String encodePinBlockVISA3(String pin, String ignoredPan) {
+    private static String encodePinBlockVISA3(String pin, String ignoredPan, java.util.function.IntSupplier digits) {
         requirePin(pin, 4, 12);
-        return (pin + "F" + "5".repeat(15 - pin.length())).toUpperCase(java.util.Locale.ROOT);
+        int pad = digits.getAsInt();
+        return (pin + "F" + fill(15 - pin.length(), () -> pad)).toUpperCase(java.util.Locale.ROOT);
     }
 
     private static String decodePinBlockVISA3(String pinBlock, String ignoredPan) {
@@ -470,9 +496,9 @@ public class PaymentOperations {
     }
 
     /** ECI-2 is the fixed four-digit, left-justified no-PAN form. */
-    private static String encodePinBlockECI2(String pin) {
+    private static String encodePinBlockECI2(String pin, java.util.function.IntSupplier digits) {
         requirePin(pin, 4, 4);
-        return (pin + "F".repeat(12)).toUpperCase(java.util.Locale.ROOT);
+        return (pin + fill(12, digits)).toUpperCase(java.util.Locale.ROOT);
     }
 
     private static String decodePinBlockECI2(String pinBlock) {
@@ -484,9 +510,9 @@ public class PaymentOperations {
     }
 
     /** ECI-3 is the length-prefixed 4..6 digit no-PAN form. */
-    private static String encodePinBlockECI3(String pin) {
+    private static String encodePinBlockECI3(String pin, java.util.function.IntSupplier digits) {
         requirePin(pin, 4, 6);
-        return (Integer.toHexString(pin.length()) + pin + "F".repeat(15 - pin.length()))
+        return (Integer.toHexString(pin.length()) + pin + fill(15 - pin.length(), digits))
                 .toUpperCase(java.util.Locale.ROOT);
     }
 
@@ -535,9 +561,9 @@ public class PaymentOperations {
      * nibbles through position 15 are F. No PIN-length nibble or PAN is used.
      * Source: payShield Host Programmer's Manual (1270A542-038 v3.5), format 03, p. 171.
      */
-    private static String encodePinBlockDiebold(String pin) {
+    private static String encodePinBlockDiebold(String pin, java.util.function.IntSupplier digits) {
         requirePin(pin, 4, 12);
-        return pin + "F".repeat(16 - pin.length());
+        return pin + fill(16 - pin.length(), digits);
     }
 
     private static String decodePinBlockDiebold(String pinBlock) {
@@ -893,6 +919,12 @@ public class PaymentOperations {
         String translatedBlock = encodePinBlock(pin, pan, targetFormat);
 
         return translatedBlock;
+    }
+
+    /** Translate using an explicit padding selection for the target format. */
+    public static String translatePinBlock(String pinBlock, String pan,
+            String sourceFormat, String targetFormat, String padding) throws Exception {
+        return encodePinBlock(decodePinBlock(pinBlock, pan, sourceFormat), pan, targetFormat, padding);
     }
 
     /**

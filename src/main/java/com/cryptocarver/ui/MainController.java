@@ -243,6 +243,10 @@ public class MainController implements StatusReporter {
     @FXML
     private ComboBox<String> pinBlockFormatDecodeCombo;
     @FXML
+    private ComboBox<String> pinBlockPaddingCombo;
+    @FXML
+    private Label pinBlockPaddingLabel;
+    @FXML
     private TextArea pinBlockResultArea;
     @FXML
     private TextField cvkAField;
@@ -672,6 +676,7 @@ public class MainController implements StatusReporter {
                 null, null, null, // New Offset Config Fields (Start, Length, Pad)
                 null, null, null, null, null, // VISA PVV
                 null, null, null, null, null); // Derive PIN
+        paymentsController.setPinBlockPaddingCombo(pinBlockPaddingCombo, pinBlockPaddingLabel);
     }
 
     private void initializeCMSController() {

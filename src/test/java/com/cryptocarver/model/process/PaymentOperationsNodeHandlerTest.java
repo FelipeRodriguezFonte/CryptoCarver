@@ -45,6 +45,21 @@ class PaymentOperationsNodeHandlerTest {
     }
 
     @Test
+    void visa2NodeUsesExplicitZeroPadding() throws Exception {
+        ProcessDefinition.Node encode = node("PIN_BLOCK_ENCODE");
+        encode.configuration.put("format", "VISA-2");
+        encode.configuration.put("padding", "0");
+        assertEquals("4123400000000000", HANDLER.execute(encode,
+                Map.of("pin", text("1234")), null).render());
+        ProcessDefinition.Node translate = node("PIN_BLOCK_TRANSLATE");
+        translate.configuration.put("sourceFormat", "Diebold");
+        translate.configuration.put("targetFormat", "VISA-2");
+        translate.configuration.put("padding", "0");
+        assertEquals("4123400000000000", HANDLER.execute(translate,
+                Map.of("pinBlock", hex("1234FFFFFFFFFFFF")), null).render());
+    }
+
+    @Test
     void allPaymentTypesHaveDescriptorsAndKnownFacadeVectors() throws Exception {
         assertEquals(46, PaymentOperationsNodeHandler.TYPES.size());
         for (String type : PaymentOperationsNodeHandler.TYPES) {
