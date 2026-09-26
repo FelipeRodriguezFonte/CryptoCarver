@@ -817,7 +817,7 @@ public class PaymentsController {
 
         // Initialize Encrypted PIN Block Format Combo if available
         if (encPinBlockFormatCombo != null) {
-            encPinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
+            encPinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames());
             encPinBlockFormatCombo.getSelectionModel().selectFirst();
         }
     }
@@ -826,7 +826,7 @@ public class PaymentsController {
         if (pinBlockFormatCombo == null || pinBlockFormatDecodeCombo == null) {
             return; // Safety check
         }
-        pinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
+        pinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames());
         pinBlockFormatCombo.getSelectionModel().selectFirst();
 
         pinBlockFormatDecodeCombo.getItems().addAll(pinBlockFormatCombo.getItems());
@@ -1390,12 +1390,12 @@ public class PaymentsController {
 
         // Setup combo boxes
         if (pinTransSourceFormatCombo != null) {
-            pinTransSourceFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
+            pinTransSourceFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames());
             pinTransSourceFormatCombo.getSelectionModel().selectFirst();
         }
 
         if (pinTransTargetFormatCombo != null) {
-            pinTransTargetFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames(key -> t(key)));
+            pinTransTargetFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames());
             pinTransTargetFormatCombo.getSelectionModel().select(1); // Default to Format 1
         }
 

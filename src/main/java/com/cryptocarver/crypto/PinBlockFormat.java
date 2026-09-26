@@ -28,7 +28,7 @@ public enum PinBlockFormat {
     private static final class Specs {
         private static final String ISO = "ISO 9564-1; https://www.ibm.com/docs/en/zos/3.1.0?topic=profile-pin-block-format";
         private static final String IBM = "IBM PIN profile; https://www.ibm.com/docs/en/zos/3.1.0?topic=profile-pin-block-format";
-        private static final String LEGACY = "Host Programmer's Manual, PIN block formats 02-04, pp. 171-172; https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5";
+        private static final String LEGACY = "payShield Host Programmer's Manual (1270A542-038 v3.5), PIN block formats 02-04, pp. 171-172";
     }
 
     private final String displayName;
@@ -59,13 +59,6 @@ public enum PinBlockFormat {
         return Arrays.stream(values()).map(PinBlockFormat::displayName).toList();
     }
 
-    /** UI labels remain the persisted format names in every locale. */
-    public static List<String> displayNames(java.util.function.Function<String, String> translate) {
-        return Arrays.stream(values()).map(format -> switch (format) {
-            case DOCUTEL, DIEBOLD, PLUS -> translate.apply("module.payments.pinFormat." + format.name().toLowerCase(java.util.Locale.ROOT));
-            default -> format.displayName;
-        }).toList();
-    }
 
     public static PinBlockFormat fromName(String name) {
         for (PinBlockFormat format : values()) {

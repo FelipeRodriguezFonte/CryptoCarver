@@ -505,8 +505,7 @@ public class PaymentOperations {
      * Docutel format 02: nibble 0 is PIN length (4..6); nibbles 1..6 are the PIN
      * left-justified and zero-padded to six digits; nibbles 7..15 are nine
      * user-supplied decimal pad digits. No PAN is involved.
-     * Source: Host Programmer's Manual v3.5, format 02, p. 171:
-     * https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5
+     * Source: payShield Host Programmer's Manual (1270A542-038 v3.5), format 02, p. 171.
      */
     private static String encodePinBlockDocutel(String pin, java.util.function.IntSupplier padding) {
         requirePin(pin, 4, 6);
@@ -534,8 +533,7 @@ public class PaymentOperations {
     /**
      * Diebold format 03: nibbles 0..L-1 contain 4..12 PIN digits; all remaining
      * nibbles through position 15 are F. No PIN-length nibble or PAN is used.
-     * Source: Host Programmer's Manual v3.5, format 03, p. 171:
-     * https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5
+     * Source: payShield Host Programmer's Manual (1270A542-038 v3.5), format 03, p. 171.
      */
     private static String encodePinBlockDiebold(String pin) {
         requirePin(pin, 4, 12);
@@ -557,8 +555,7 @@ public class PaymentOperations {
      * (4..12), [2..] PIN digits, then F to nibble 15. PAN field is four zero
      * nibbles followed by the leftmost 12 digits of the PAN (excluding its
      * check digit). The clear block is the nibble-wise XOR of those fields.
-     * Source: Host Programmer's Manual v3.5, format 04, p. 172:
-     * https://www.scribd.com/document/713264175/1270A542-038-Host-Programmer-v3-5
+     * Source: payShield Host Programmer's Manual (1270A542-038 v3.5), format 04, p. 172.
      */
     private static String encodePinBlockPlus(String pin, String pan) {
         requirePin(pin, 4, 12);
