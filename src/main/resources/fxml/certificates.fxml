@@ -187,6 +187,8 @@
 
                     <Button text="Validate Chain" onAction="#handleValidateCertificateChain"
                             styleClass="action-button,primary-action" maxWidth="180"/>
+                    <Button text="Exportar informe (Markdown)" onAction="#handleExportChainReport"
+                            styleClass="secondary-button" maxWidth="260"/>
 
                     <TextArea fx:id="chainResultArea" prefHeight="150" editable="false" wrapText="true"
                               styleClass="result-area,monospace-field"

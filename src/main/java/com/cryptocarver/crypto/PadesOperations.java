@@ -453,6 +453,9 @@ public final class PadesOperations {
                     .append("; chain trust=").append(signerChainTrusted(reports, signatureId, trustConfigured) ? "ESTABLISHED" : "NOT ESTABLISHED").append("\n")
                     .append("TSA DSS indication: ").append(archiveTimestamp.dssIndication())
                     .append("; chain trust=").append(tsaChainTrusted ? "ESTABLISHED" : "NOT ESTABLISHED").append("\n")
+                    .append(archiveTimestampCount > 0 && !tsaChainTrusted
+                            ? "TSA chain trust reason: DSS did not establish a trusted path to a configured truststore anchor.\n"
+                            : "")
                     .append("DSS archive timestamp reports: ").append(String.join(", ", archiveTimestamp.reports())).append("\n")
                     .append("DSS profile: ").append(dssSignatureFormat).append("\n")
                     .append("Effective profile: ").append(effectiveProfile).append("\n");
@@ -475,41 +478,68 @@ public final class PadesOperations {
         if (reports == null || reports.getSimpleReport() == null) {
             return new ArchiveTimestampAssessment(false, false, false, false, "not established", List.of());
         }
+        // DSS 6.3 does not expose document timestamps in SimpleReport.timestampIdList.
+        // Read their dedicated detailed-report section instead. Qualification against
+        // a QTSP trusted list is separate from PKIX trust in the supplied truststore.
         java.util.LinkedHashMap<String, String> indications = new java.util.LinkedHashMap<>();
-        boolean cryptographicIntegrity = false;
-        boolean dssPassed = false;
-        boolean tsaChainTrusted = false;
-        for (String timestampId : reports.getSimpleReport().getTimestampIdList()) {
-            var indication = reports.getSimpleReport().getIndication(timestampId);
-            var subIndication = reports.getSimpleReport().getSubIndication(timestampId);
-            indications.put(timestampId, indication + "/" + subIndication);
-            cryptographicIntegrity |= timestampCryptographicallyUsable(indication, subIndication);
-            dssPassed |= dssPassed(indication);
-            tsaChainTrusted |= dssPassed(indication);
+        boolean integrity = false, passed = false, chainTrusted = false;
+        try {
+            var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            var document = factory.newDocumentBuilder().parse(new org.xml.sax.InputSource(new java.io.StringReader(reports.getXmlDetailedReport())));
+            var timestamps = document.getElementsByTagNameNS("*", "Timestamp");
+            var blocks = document.getElementsByTagNameNS("*", "BasicBuildingBlocks");
+            for (int i=0;i<timestamps.getLength();i++) {
+                var timestamp=(org.w3c.dom.Element)timestamps.item(i);
+                var basic=(org.w3c.dom.Element)timestamp.getElementsByTagNameNS("*", "ValidationProcessBasicTimestamp").item(0);
+                if (basic==null || !"DOCUMENT_TIMESTAMP".equals(basic.getAttribute("Type"))) continue;
+                String id=timestamp.getAttribute("Id");
+                String indication=textOf(basic,"Indication");
+                String subIndication=textOf(basic,"SubIndication");
+                var qualifications=timestamp.getElementsByTagNameNS("*","ValidationTimestampQualification");
+                var qualification=qualifications.getLength()==0?null:(org.w3c.dom.Element)qualifications.item(0);
+                String qualificationIndication=qualification==null?"not reported":textOf(qualification,"Indication");
+                String qualificationKey=qualification==null?"none":firstErrorKey(qualification);
+                String qualificationError=qualification==null?"none":textOf(qualification,"Error");
+                indications.put(id, "ValidationProcessBasicTimestamp="+indication
+                        +"/SubIndication "+(subIndication.isEmpty()?"absent":subIndication)+"; ValidationTimestampQualification="
+                        +qualificationIndication+" ("+qualificationKey+": "+qualificationError+")");
+                integrity |= dssPassed(parseDssIndication(indication));
+                passed |= dssPassed(parseDssIndication(textOf(timestamp,"Indication")));
+                for(int j=0;j<blocks.getLength();j++) {
+                    var block=(org.w3c.dom.Element)blocks.item(j);
+                    if(!id.equals(block.getAttribute("Id")) || !"TIMESTAMP".equals(block.getAttribute("Type"))) continue;
+                    var chainItems=block.getElementsByTagNameNS("*","ChainItem"); boolean anchor=false;
+                    for(int k=0;k<chainItems.getLength();k++) if("TRUSTED_STORE".equals(textOf((org.w3c.dom.Element)chainItems.item(k),"Source"))) anchor=true;
+                    var xcvs=block.getElementsByTagNameNS("*","XCV");
+                    boolean xcvPassed=xcvs.getLength()>0 && dssPassed(parseDssIndication(textOf((org.w3c.dom.Element)xcvs.item(0),"Indication")));
+                    chainTrusted |= anchor && xcvPassed;
+                }
+            }
+        } catch(Exception parseError) {
+            indications.put("diagnostic", "DSS detailed report parsing failed: " + parseError.getClass().getSimpleName());
         }
-        // SimpleReport.timestampIdList is DSS's document-timestamp section.
-        // Signature timestamps are not archive timestamps and must not satisfy
-        // the LTA archive-seal requirement.
-        String first = indications.values().stream().findFirst().orElse("not established");
-        return new ArchiveTimestampAssessment(!indications.isEmpty(), cryptographicIntegrity, dssPassed,
-                tsaChainTrusted, first, List.copyOf(indications.entrySet().stream()
-                        .map(entry -> entry.getKey() + ":" + entry.getValue()).toList()));
+        String first=indications.values().stream().findFirst().orElse("no DOCUMENT_TIMESTAMP entry in DSS detailed report");
+        return new ArchiveTimestampAssessment(!indications.isEmpty() && !indications.containsKey("diagnostic"), integrity, passed, chainTrusted, first,
+                List.copyOf(indications.entrySet().stream().map(e->e.getKey()+":"+e.getValue()).toList()));
+    }
+
+    private static String textOf(org.w3c.dom.Element element,String local) {
+        var nodes=element.getElementsByTagNameNS("*",local); return nodes.getLength()==0?"":nodes.item(0).getTextContent().trim();
+    }
+    private static String firstErrorKey(org.w3c.dom.Element element) {
+        var errors=element.getElementsByTagNameNS("*","Error");
+        return errors.getLength()==0?"none":((org.w3c.dom.Element)errors.item(0)).getAttribute("Key");
+    }
+    private static eu.europa.esig.dss.enumerations.Indication parseDssIndication(String value) {
+        try { return eu.europa.esig.dss.enumerations.Indication.valueOf(value); }
+        catch(Exception ignored) { return eu.europa.esig.dss.enumerations.Indication.INDETERMINATE; }
     }
 
     private static boolean dssPassed(eu.europa.esig.dss.enumerations.Indication indication) {
         return indication == eu.europa.esig.dss.enumerations.Indication.PASSED
                 || indication == eu.europa.esig.dss.enumerations.Indication.TOTAL_PASSED;
-    }
-
-    private static boolean timestampCryptographicallyUsable(
-            eu.europa.esig.dss.enumerations.Indication indication,
-            eu.europa.esig.dss.enumerations.SubIndication subIndication) {
-        if (dssPassed(indication)) return true;
-        // DSS can still expose a cryptographically checked RFC 3161 token when
-        // its TSA path is not trusted. This is deliberately reported only as
-        // integrity; it is never sufficient for the effective LTA profile.
-        return indication == eu.europa.esig.dss.enumerations.Indication.INDETERMINATE
-                && subIndication == eu.europa.esig.dss.enumerations.SubIndication.NO_CERTIFICATE_CHAIN_FOUND;
     }
 
     private static boolean signerChainTrusted(Reports reports, String signatureId, boolean trustConfigured) {

@@ -41,6 +41,18 @@ final class LocalPkiFixture implements AutoCloseable {
     final String tsaUrl, revocationUrl;
     private final AtomicInteger revocationDownloadAttempts = new AtomicInteger();
 
+    X509Certificate expiredCertificate() throws Exception {
+        KeyPairGenerator generator=KeyPairGenerator.getInstance("RSA"); generator.initialize(2048);
+        KeyPair pair=generator.generateKeyPair();
+        X500Name subject=new X500Name("CN=CryptoCarver Expired Fixture Certificate");
+        JcaX509v3CertificateBuilder builder=new JcaX509v3CertificateBuilder(
+                new X500Name(intermediate.getSubjectX500Principal().getName()),BigInteger.valueOf(99),
+                new GregorianCalendar(2010,Calendar.JANUARY,1).getTime(),new GregorianCalendar(2011,Calendar.JANUARY,1).getTime(),subject,pair.getPublic());
+        builder.addExtension(Extension.basicConstraints,true,new BasicConstraints(false));
+        builder.addExtension(Extension.keyUsage,true,new KeyUsage(KeyUsage.digitalSignature));
+        return new JcaX509CertificateConverter().setProvider("BC").getCertificate(builder.build(signer(intermediateKeys.getPrivate())));
+    }
+
     LocalPkiFixture(Path directory) throws Exception {
         this.directory = directory;
         if (Security.getProvider("BC") == null) Security.addProvider(new BouncyCastleProvider());

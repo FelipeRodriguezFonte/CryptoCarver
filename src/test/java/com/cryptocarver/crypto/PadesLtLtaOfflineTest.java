@@ -77,6 +77,23 @@ class PadesLtLtaOfflineTest {
         assertTrue(report.dssProfile().toUpperCase().contains("BASELINE-LTA"), report.summary());
         assertTrue(report.archiveTimestampCount() > 0, report.summary());
         assertTrue(report.archiveTimestampCryptographicIntegrity(), report.summary());
+        assertTrue(report.tsaChainTrusted(), report.summary());
+        assertTrue(report.summary().contains("Effective profile: PAdES Baseline-LTA"), report.summary());
+    }
+
+    @Test void archiveTimestampWithoutTrustAnchorDoesNotEstablishLtaProfile() throws Exception {
+        byte[] signed = PadesOperations.signBaselineLTA(minimalPdf(), pki.pkcs12.toFile(), LocalPkiFixture.PASSWORD,
+                pki.tsaUrl, List.of(pki.goodCrlFile.toFile(), pki.rootCrlFile.toFile()), false);
+        Path emptyTrust=temp.resolve("empty-truststore.p12");
+        KeyStore empty=KeyStore.getInstance("PKCS12"); empty.load(null,LocalPkiFixture.PASSWORD);
+        try(var out=java.nio.file.Files.newOutputStream(emptyTrust)){empty.store(out,LocalPkiFixture.PASSWORD);}
+        PadesOperations.PadesValidationResult report = PadesOperations.validate(signed, emptyTrust.toFile(), LocalPkiFixture.PASSWORD,
+                List.of(pki.goodCrlFile.toFile(), pki.rootCrlFile.toFile()));
+        assertTrue(report.archiveTimestampCryptographicIntegrity(), report.summary());
+        assertFalse(report.tsaChainTrusted(), report.summary());
+        assertEquals("not established", report.effectiveProfile());
+        assertTrue(report.summary().contains("chain trust=NOT ESTABLISHED"), report.summary());
+        assertTrue(report.summary().contains("TSA chain trust reason: DSS did not establish a trusted path"), report.summary());
     }
 
     @Test void revokedSignerIsRejectedByPadesAndLocalChainAndCmsValidation() throws Exception {

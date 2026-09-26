@@ -128,6 +128,26 @@ public class CertificatesController {
         if (asn1Controller != null) asn1Controller.init(reporter);
     }
 
+    @FXML private void handleExportChainReport() {
+        try {
+            String text=chainInputArea.getText();
+            var chain=new java.util.ArrayList<java.security.cert.X509Certificate>();
+            try(var in=new java.io.ByteArrayInputStream(text.getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                for(var c:java.security.cert.CertificateFactory.getInstance("X.509").generateCertificates(in))
+                    chain.add((java.security.cert.X509Certificate)c);
+            }
+            var crls=new java.util.ArrayList<java.security.cert.X509CRL>();
+            if(chainCrlInputArea!=null && !chainCrlInputArea.getText().isBlank()) try(var in=new java.io.ByteArrayInputStream(chainCrlInputArea.getText().getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                for(var c:java.security.cert.CertificateFactory.getInstance("X.509").generateCRLs(in)) crls.add((java.security.cert.X509CRL)c);
+            }
+            String markdown=com.cryptocarver.service.PkiChainReportExporter.export(chain,null,crls,java.util.List.of(),false);
+            javafx.stage.FileChooser chooser=new javafx.stage.FileChooser(); chooser.setTitle(com.cryptocarver.service.I18nService.getInstance().text("module.cert.exportChainMarkdown")); chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Markdown", "*.md"));
+            var file=chooser.showSaveDialog(certificatesContainer.getScene().getWindow());
+            if(file!=null) java.nio.file.Files.writeString(file.toPath(),markdown,java.nio.charset.StandardCharsets.UTF_8);
+        } catch(Exception e) { new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR,
+                com.cryptocarver.service.I18nService.getInstance().text("module.cert.exportChainMarkdown.error", e.getMessage())).showAndWait(); }
+    }
+
     public void expandPane(String paneName) {
         if (paneName == null || paneName.isBlank() || certificatesContainer == null) return;
         Accordion accordion = certificatesContainer.getChildren().stream()

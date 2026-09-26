@@ -120,6 +120,52 @@ public final class RevocationValidationService {
         return null;
     }
 
+    /** Classifies caller-parsed local CRLs without opening any network source. */
+    public static Result classifyLocalCrls(java.security.cert.X509Certificate certificate,
+                                           java.security.cert.X509Certificate issuer,
+                                           List<java.security.cert.X509CRL> crls) {
+        if (certificate == null || issuer == null || crls == null || crls.isEmpty())
+            return new Result(Status.UNKNOWN, Evidence.NONE, List.of(), List.of("No local CRL evidence supplied"));
+        try {
+            for (var crl : crls) {
+                if (!crl.getIssuerX500Principal().equals(certificate.getIssuerX500Principal())) continue;
+                crl.verify(issuer.getPublicKey());
+                if (crl.getThisUpdate()==null || crl.getNextUpdate()==null || crl.getThisUpdate().after(new java.util.Date()) || crl.getNextUpdate().before(new java.util.Date())) continue;
+                if (crl.getRevokedCertificate(certificate)!=null) return new Result(Status.REVOKED,Evidence.LOCAL,List.of(),List.of());
+                return new Result(Status.GOOD,Evidence.LOCAL,List.of(),List.of());
+            }
+            return new Result(Status.UNKNOWN,Evidence.NONE,List.of(),List.of("No current CRL matched the certificate issuer"));
+        } catch(Exception error) { return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of(error.getMessage())); }
+    }
+
+    /** Validates matching locally supplied OCSP responses; this method never performs I/O. */
+    public static Result classifyLocalOcsp(java.security.cert.X509Certificate certificate,
+            java.security.cert.X509Certificate issuer, List<byte[]> responses) {
+        if(certificate==null || issuer==null || responses==null || responses.isEmpty())
+            return new Result(Status.UNKNOWN,Evidence.NONE,List.of(),List.of("No matching local OCSP response supplied"));
+        try {
+            var provider=new org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder().setProvider("BC").build();
+            for(byte[] encoded:responses) {
+                var response=new org.bouncycastle.cert.ocsp.OCSPResp(encoded);
+                if(response.getStatus()!=org.bouncycastle.cert.ocsp.OCSPResp.SUCCESSFUL) continue;
+                var basic=(org.bouncycastle.cert.ocsp.BasicOCSPResp)response.getResponseObject();
+                var id=new org.bouncycastle.cert.ocsp.CertificateID(provider.get(org.bouncycastle.cert.ocsp.CertificateID.HASH_SHA1),
+                        new org.bouncycastle.cert.jcajce.JcaX509CertificateHolder(issuer),certificate.getSerialNumber());
+                for(var single:basic.getResponses()) if(single.getCertID().equals(id)) {
+                    boolean valid=basic.isSignatureValid(new org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder().setProvider("BC").build(issuer.getPublicKey()));
+                    if(!valid) return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of("OCSP response signature is invalid"));
+                    if(single.getNextUpdate()!=null && single.getNextUpdate().before(new java.util.Date())) return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of("OCSP response is stale"));
+                    var certStatus=single.getCertStatus();
+                    if(certStatus==null) return new Result(Status.GOOD,Evidence.LOCAL,List.of(),List.of());
+                    if(certStatus instanceof org.bouncycastle.cert.ocsp.RevokedStatus)
+                        return new Result(Status.REVOKED,Evidence.LOCAL,List.of(),List.of());
+                    return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of("OCSP responder returned unknown certificate status"));
+                }
+            }
+        } catch(Exception error) { return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of(error.getMessage())); }
+        return new Result(Status.UNKNOWN,Evidence.NONE,List.of(),List.of("No matching certificate status in local OCSP response"));
+    }
+
     private static Evidence evidenceFor(boolean online, boolean localEvidence, String report) {
         if (!online) return localEvidence ? Evidence.LOCAL : Evidence.NONE;
         if (report.contains("OCSP")) return Evidence.OCSP;

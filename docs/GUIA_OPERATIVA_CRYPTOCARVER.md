@@ -107,3 +107,6 @@ Hay tres procesos de ejemplo en `docs/examples/processes/`, verificados con vect
 - `mc-data-storage.json`: `MC_DS_PARTIAL_KEY`, `MC_DS_DIGEST` y `MC_DS_SUMMARY`; requiere `--set summary.un=11223344`.
 - `visa-hce.json`: `VISA_HCE_LUK`, `VISA_HCE_MSD` y `VISA_HCE_QVSDC`; requiere `--set luk.smUdk=94E3194C02105E3B153438D562D5A49D --set msd.atc=0001`.
 - `emv-secure-messaging.json`: `EMV_SM_CARD_KEY`, `EMV_SM_SESSION_KEY` y `EMV_SM_MAC`; requiere `--set card.smMk=862F13DF807A13B9D9AEAEC885FE7CA4 --set session.smAc=51DB71A5DCC47F8A --set mac.smAc=51DB71A5DCC47F8A --set mac.atc=0010`.
+# Informe de cadena PKI por línea de comandos
+
+`chain-report <cadena.pem>` escribe un diagnóstico Markdown en la salida estándar. Opcionalmente, `--truststore fichero.p12 --password-env VAR` carga un truststore PKCS#12; el secreto se lee solo de la variable de entorno indicada. Se pueden añadir CRL u OCSP locales con `--crl fichero.crl` y `--ocsp fichero.der` (repetibles). El informe no realiza consultas de red por defecto.

@@ -42,9 +42,11 @@ Continúa sin implementación ni vectores públicos incorporados. Mantener el re
 
 `LocalApiServer` continúa limitado a `/v1/sha256` y a codificación/decodificación Base64URL (`LocalApiServerTest`). No cubre todavía el catálogo batch; conserva el acceso por loopback.
 
-## 10. Exportación de informes PKI — pendiente
+## 10. Exportación de informes PKI — hecho
 
-Hay diagnósticos en `EidasCertificateInspector` (`EidasCertificateInspectorTest`) e informes específicos de CMS en `CmsInspectionReport` (`CmsInspectionReportTest`), pero no se ha localizado un exportador Markdown/PDF del diagnóstico de cadena completo.
+`PkiChainReportExporter` genera un informe Markdown con datos X.509, hallazgos de `CertificateLinter` y `EidasCertificateInspector`, ruta de confianza y estado de revocación offline. La interfaz de certificados ofrece «Exportar informe (Markdown)» y la CLI expone `chain-report`. La cobertura está en `PkiChainReportExporterTest`.
+
+La validación PAdES lee el sello de archivo de `DetailedReport`: DSS coloca el documento bajo `Timestamp` con `Type="DOCUMENT_TIMESTAMP"`, no en `SimpleReport.timestampIdList`. El informe local registra `ValidationProcessBasicTimestamp=PASSED` y que la subindicación no está presente; separadamente, `ValidationTimestampQualification=FAILED` con `QUAL_CERT_TRUSTED_LIST_REACHED_ANS` indica que no se alcanzó una lista de confianza cualificada. En el test la TSA encadena al root del truststore y su EKU crítico es `timeStamping`; por ello esa advertencia de lista cualificada no invalida la ruta PKIX local. `PadesLtLtaOfflineTest` verifica el perfil LTA con el ancla y su rechazo cuando falta.
 
 ## 11. AES DUKPT — hecho
 

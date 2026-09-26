@@ -365,6 +365,7 @@ public final class ModuleTextCatalog {
         map.put("Validation Report", "module.cert.validationReport");
         map.put("🔗 Validate Chain", "module.cert.validateChain");
         map.put("Validate Chain", "module.cert.validateChainButton");
+        map.put("Exportar informe (Markdown)", "module.cert.exportChainMarkdown");
         map.put("🚫 CRL Management", "module.cert.crl");
         map.put("Generate Empty CRL", "module.cert.generateCrl");
         map.put("Revoke & Update CRL", "module.cert.updateCrl");

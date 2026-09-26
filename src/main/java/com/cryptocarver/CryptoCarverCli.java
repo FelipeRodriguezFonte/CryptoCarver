@@ -34,7 +34,7 @@ public final class CryptoCarverCli {
         if (code != EXIT_SUCCESS) System.exit(code);
     }
 
-    static int run(String[] args, PrintWriter out, PrintWriter err) {
+    public static int run(String[] args, PrintWriter out, PrintWriter err) {
         if (args == null) {
             args = new String[0];
         }
@@ -63,6 +63,7 @@ public final class CryptoCarverCli {
                 case "icsf-inspect" -> icsfKeyWrap(args, out, json, KeyWrapCommand.INSPECT);
                 case "icsf-resolve" -> icsfKeyWrap(args, out, json, KeyWrapCommand.RESOLVE);
                 case "serve" -> serve(args, out);
+                case "chain-report" -> chainReport(args, out);
                 default -> { error(err, "Unknown command: " + args[0], json); help(err, json); yield EXIT_INVALID_ARGS; }
             };
         } catch (IllegalArgumentException e) { error(err, "Error: " + e.getMessage(), json); return EXIT_INVALID_ARGS; }
@@ -85,6 +86,7 @@ public final class CryptoCarverCli {
         if ("batch".equals(cmd)) allowedFlags.addAll(List.of("--format", "--output", "--column"));
         if ("run-process".equals(cmd)) allowedFlags.addAll(List.of("--set", "--batch", "--format", "--output", "--reveal-secrets"));
         if ("serve".equals(cmd)) allowedFlags.add("--port");
+        if ("chain-report".equals(cmd)) allowedFlags.addAll(List.of("--truststore", "--password-env", "--crl", "--ocsp"));
         if ("icsf-token".equals(cmd)) allowedFlags.add("--provenance");
         if ("icsf-batch".equals(cmd)) {
             allowedFlags.addAll(List.of("--provenance", "--format", "--txt", "--csv",
@@ -132,6 +134,31 @@ public final class CryptoCarverCli {
         String version = BuildInfo.version();
         if (json) out.println(new Gson().toJson(Map.of("version", version)));
         else out.println("CryptoCarver CLI version " + version);
+    }
+
+    private static int chainReport(String[] args, PrintWriter out) throws Exception {
+        if (args.length < 2) throw new IllegalArgumentException("Usage: chain-report <chain.pem> [--truststore file.p12 --password-env VAR] [--crl file ...] [--ocsp file ...]");
+        Path input=Path.of(args[1]);
+        var chain=com.cryptocarver.service.PkiChainReportExporter.readPem(input.toFile());
+        java.security.KeyStore trust=null; char[] password=null;
+        String trustPath=option(args,"--truststore"), envName=option(args,"--password-env");
+        if ((trustPath==null)!=(envName==null)) throw new IllegalArgumentException("--truststore and --password-env must be supplied together");
+        try {
+            if(trustPath!=null) {
+                String value=System.getenv(envName);
+                if(value==null) throw new IllegalArgumentException("Password environment variable is not set: "+envName);
+                password=value.toCharArray(); trust=com.cryptocarver.service.PkiChainReportExporter.readTrustStore(Path.of(trustPath).toFile(),password);
+            }
+            var crls=new java.util.ArrayList<java.security.cert.X509CRL>();
+            var factory=java.security.cert.CertificateFactory.getInstance("X.509");
+            for(String path:options(args,"--crl")) try(var in=Files.newInputStream(Path.of(path))) {
+                for(var crl:factory.generateCRLs(in)) crls.add((java.security.cert.X509CRL)crl);
+            }
+            var ocsps=new java.util.ArrayList<byte[]>();
+            for(String path:options(args,"--ocsp")) ocsps.add(Files.readAllBytes(Path.of(path)));
+            out.print(com.cryptocarver.service.PkiChainReportExporter.export(chain,trust,crls,ocsps,false));
+            return EXIT_SUCCESS;
+        } finally { if(password!=null) java.util.Arrays.fill(password,'\0'); }
     }
 
     private static int single(String[] args, String operation, String result, boolean json, PrintWriter out) {
@@ -578,9 +605,14 @@ public final class CryptoCarverCli {
     private static String option(String[] args, String option) {
         for (int i = 0; i < args.length; i++) if (option.equals(args[i])) return (i + 1 < args.length) ? args[i + 1] : null; return null;
     }
+    private static List<String> options(String[] args,String option) {
+        java.util.ArrayList<String> values=new java.util.ArrayList<>();
+        for(int i=0;i+1<args.length;i++) if(option.equals(args[i])) values.add(args[i+1]);
+        return List.copyOf(values);
+    }
     private static void help(PrintWriter out, boolean json) {
         if (json) {
-            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, run-process, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, serve")));
+            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, run-process, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, chain-report, serve")));
             return;
         }
         out.println("CryptoCarver CLI (local laboratory operations)");
@@ -591,6 +623,7 @@ public final class CryptoCarverCli {
         out.println("  icsf-batch <file|-> [--format auto|linea|dos-filas] [--provenance ...] [--detail]");
         out.println("             [--txt PATH [--no-detail]] [--csv PATH [--sep ;]] [--json-out PATH]");
         out.println("  serve [--port 8787]  (loopback-only local API)");
+        out.println("  chain-report <chain.pem> [--truststore file.p12 --password-env VAR] [--crl file ...] [--ocsp file ...]");
         out.println("Note: hmac-sha256 requires CRYPTOCARVER_HMAC_KEY env var.");
         out.println("Note: icsf-* decrypt nothing, but their output carries whole key tokens in hex.");
     }
