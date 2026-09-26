@@ -63,12 +63,14 @@ public final class PayShieldBodyDecomposer {
             if (field.type() == PayShieldBodySchema.FieldType.SCHEME_KEY) {
                 if (offset >= body.length) return Optional.empty();
                 char scheme = (char) body[offset];
+                // An unknown scheme means this schema does not match; other candidates may.
                 length = switch (scheme) {
                     case 'U', 'X' -> 33;
                     case 'T', 'Y' -> 49;
                     case 'Z' -> 17;
-                    default -> throw new IllegalArgumentException("Unknown payShield key scheme: " + scheme);
+                    default -> -1;
                 };
+                if (length < 0) return Optional.empty();
             } else if (field.type() == PayShieldBodySchema.FieldType.UNTIL_SEMICOLON) {
                 int end = offset;
                 while (end < body.length && body[end] != ';') end++;

@@ -13,7 +13,9 @@ import java.util.Map;
  */
 public final class PayShieldErrorCatalog {
     private static final Map<String, String> KNOWN_ERRORS = Map.of(
-            "00", "No error (simulator evidence; real payShield pending)");
+            "00", "No error (simulator evidence; real payShield pending)",
+            "15", "Invalid input data (label shown by the external HSM console; real payShield pending)",
+            "30", "Invalid reference number (label shown by the external HSM console; real payShield pending)");
 
     private PayShieldErrorCatalog() {
     }

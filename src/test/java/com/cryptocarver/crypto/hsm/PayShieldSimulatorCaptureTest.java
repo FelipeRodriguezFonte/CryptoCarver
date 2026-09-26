@@ -92,7 +92,7 @@ class PayShieldSimulatorCaptureTest {
                 "T0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF", "Y0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF")) {
             assertEquals(key, PayShieldBodyDecomposer.decompose(schema, key.getBytes(StandardCharsets.US_ASCII)).orElseThrow().value("key").orElseThrow());
         }
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> PayShieldBodyDecomposer.decompose(schema, "Q0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII))).getMessage().contains("Unknown payShield key scheme"));
+        assertTrue(PayShieldBodyDecomposer.decompose(schema, "Q0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII)).isEmpty());
     }
 
     @Test
