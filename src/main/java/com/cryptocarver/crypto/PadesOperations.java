@@ -523,8 +523,9 @@ public final class PadesOperations {
     private record ArchiveTimestampAssessment(boolean present, boolean cryptographicIntegrity, boolean dssPassed,
                                               boolean tsaChainTrusted, String dssIndication, List<String> reports) { }
 
-    /** Verifies each RFC 3161 document timestamp directly, independent of TSA trust policy. */
+    /** Verifies every RFC 3161 document timestamp directly, independent of TSA trust policy; all must pass. */
     private static boolean verifyArchiveTimestampIntegrity(byte[] pdf) {
+        int verified = 0;
         try (PDDocument document = Loader.loadPDF(pdf)) {
             for (PDSignature signature : document.getSignatureDictionaries()) {
                 if (!"DocTimeStamp".equals(signature.getCOSObject().getNameAsString(COSName.TYPE))) continue;
@@ -532,7 +533,7 @@ public final class PadesOperations {
                 org.bouncycastle.tsp.TimeStampToken token = new org.bouncycastle.tsp.TimeStampToken(
                         new org.bouncycastle.cms.CMSSignedData(contents));
                 var signers = token.getCertificates().getMatches(token.getSID());
-                if (signers.isEmpty()) continue;
+                if (signers.isEmpty()) return false;
                 org.bouncycastle.cert.X509CertificateHolder certificate =
                         (org.bouncycastle.cert.X509CertificateHolder) signers.iterator().next();
                 var verifier = new org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder()
@@ -542,10 +543,13 @@ public final class PadesOperations {
                 var calculator = new org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder()
                         .setProvider("BC").build().get(imprint.getHashAlgorithm());
                 try (var output = calculator.getOutputStream()) { output.write(signature.getSignedContent(pdf)); }
-                if (java.security.MessageDigest.isEqual(calculator.getDigest(), imprint.getMessageImprintDigest())) return true;
+                if (!java.security.MessageDigest.isEqual(calculator.getDigest(), imprint.getMessageImprintDigest())) return false;
+                verified++;
             }
-        } catch (Exception ignored) { }
-        return false;
+        } catch (Exception invalid) {
+            return false;
+        }
+        return verified > 0;
     }
 
     private static List<X509Certificate> embeddedCertificates(byte[] pdf) throws Exception {
