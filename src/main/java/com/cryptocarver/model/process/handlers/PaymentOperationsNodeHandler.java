@@ -322,7 +322,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 case "MC_DS_DIGEST" -> hex(MastercardDataStorage.owhf2(hexText(node, inputs, "dsId"),
                         hexText(node, inputs, "dsOperatorId"), hexText(node, inputs, "dsInput")));
                 case "MC_ICC_DYNAMIC_NUMBER" -> hex(MastercardIccDynamicNumber.dynamicNumber(
-                        MastercardIccDynamicNumber.sessionKey(hexText(node, inputs, "mkDn"), setting(node, "panField16", "")),
+                        MastercardIccDynamicNumber.sessionKey(hexText(node, inputs, "mkDn"), text(node, inputs, "panField16")),
                         hexText(node, inputs, "atc"), hexText(node, inputs, "un")));
                 case "MC_CAP_TOKEN" -> {
                     MastercardIccDynamicNumber.CapResult cap = MastercardIccDynamicNumber.capToken(hexText(node, inputs, "ipb"),
