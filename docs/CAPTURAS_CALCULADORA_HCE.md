@@ -1,8 +1,8 @@
-# Capturas de Cryptographic Calculator para HCE y tokenización
+# Capturas de la calculadora externa para HCE y tokenización
 
 Esta campaña convierte el bloque C en vectores reproducibles. No describe los
-algoritmos: fija entradas y pide todas las salidas e intermedios que BP-Tools
-Cryptographic Calculator conoce. La implementación sólo empieza después de
+algoritmos: fija entradas y pide todas las salidas e intermedios que la herramienta externa
+la calculadora externa conoce. La implementación sólo empieza después de
 recibir esas capturas.
 
 ## Entrega común
@@ -15,7 +15,7 @@ entre versiones; esta captura evita confundir dos perfiles parecidos.
 Para cada ID de abajo devolver:
 
 1. ventana entera, sin recortar desplegables ni paneles laterales;
-2. versión exacta de BP-Tools y nombre completo de la pestaña;
+2. versión exacta de la herramienta externa y nombre completo de la pestaña;
 3. todos los inputs, incluso los que la herramienta rellene por defecto;
 4. resultado final y **todos los valores intermedios** que imprima;
 5. export/copy-text de la herramienta, si existe;
@@ -318,6 +318,6 @@ suposiciones:
 - claves, bloques y datos intermedios;
 - segundo caso con una sola variable cambiada cuando se solicita.
 
-Si BP-Tools no muestra un intermedio, la ficha sigue siendo útil, pero se marca
+Si la herramienta externa no muestra un intermedio, la ficha sigue siendo útil, pero se marca
 esa ausencia: no se reconstruye el valor con una implementación propia y se
 presenta después como evidencia externa.

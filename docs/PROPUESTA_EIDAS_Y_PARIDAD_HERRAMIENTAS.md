@@ -1,4 +1,4 @@
-# Propuesta: eIDAS 2 / cartera europea, y paridad con BP-Tools
+# Propuesta: eIDAS 2 / cartera europea, y paridad con la herramienta externa
 
 ### Estado de ejecución
 
@@ -15,7 +15,7 @@ Actualizado el 19 de septiembre de 2026, rama `feat/eidas2-eudi-wallet`.
 | Interfaz | **Hecha**: módulo «Wallet / eIDAS» con ocho secciones (SD-JWT VC, mdoc, lista de estado, perfiles de certificado, lista de confianza, CBOR, SCA/OpenID4VP y validación AdES), en el rail y en el buscador, con un test que exige que cada frase del panel esté traducida. |
 | Carril pagos — EMV ODA | **Hecha**: `EmvOdaOperations` cubre SDA, DDA y CDA en las dos mitades — recuperar y comprobar lo que presenta una tarjeta, y firmar las mismas estructuras para tener algo que comprobar. Recupera la clave del emisor (tag 90 + 92 + 9F32) y la del ICC (9F46 + 9F48 + 9F47), verifica el SSAD (93) y el SDAD (9F4B) en los dos modos, y desempaqueta el criptograma que CDA lleva dentro. Ocho nodos en el Process Designer, sección propia en el módulo EMV con un botón que personaliza una tarjeta de pruebas, y un test de traducción para el panel. |
 | Carril pagos — Thales LMK de variante | **Hecha**: `ThalesLmkOperations` cifra y descifra claves bajo una LMK de variante, con la tabla de tipos de clave completa, los dos esquemas de variante (U y T), el marcado de componentes (`FF`) y la búsqueda del tipo de clave por KCV. Verificado contra el **ejemplo resuelto del manual del programador de payShield 10K, cláusula 7.2.3**, byte a byte incluido el KCV. Cinco nodos en el Process Designer y sección propia en el módulo de Claves con un botón que carga el ejemplo del manual. |
-| Carril pagos — Thales Key Block | **Hecha para 3DES**: `ThalesKeyBlockOperations` lee, construye, cifra, descifra y autentica. Cabecera de 16 caracteres, tabla de usos completa con los algoritmos y modos que cada uso permite, y bloques opcionales con sus reglas. Lo que el capítulo 8 **no** dice —cómo salen de la LMK las claves de cifrado y de MAC, y si el autenticador cubre los datos claros o los cifrados— se resolvió generando un bloque con **BP-Tools bajo la LMK de test que publica la cláusula 8.8.1** y leyendo lo que derivó: `KBEK = KBPK ⊕ 45…`, `KBAK = KBPK ⊕ 4D…` (el método de variante de X9.143 A/C), y el MAC sobre la cabecera más los datos **cifrados**. Ese vector está en los tests. La variante AES **no** está: deriva sus claves en vez de variarlas y no tenemos vector, así que se rechaza por su nombre en lugar de adivinarla. |
+| Carril pagos — Thales Key Block | **Hecha para 3DES**: `ThalesKeyBlockOperations` lee, construye, cifra, descifra y autentica. Cabecera de 16 caracteres, tabla de usos completa con los algoritmos y modos que cada uso permite, y bloques opcionales con sus reglas. Lo que el capítulo 8 **no** dice —cómo salen de la LMK las claves de cifrado y de MAC, y si el autenticador cubre los datos claros o los cifrados— se resolvió generando un bloque con **la herramienta externa bajo la LMK de test que publica la cláusula 8.8.1** y leyendo lo que derivó: `KBEK = KBPK ⊕ 45…`, `KBAK = KBPK ⊕ 4D…` (el método de variante de X9.143 A/C), y el MAC sobre la cabecera más los datos **cifrados**. Ese vector está en los tests. La variante AES **no** está: deriva sus claves en vez de variarlas y no tenemos vector, así que se rechaza por su nombre en lugar de adivinarla. |
 | Carril pagos — resto | Pendiente: Atalla AKB, Futurex MFK, SafeNet KM, ISO 8583 (**encargado a Luna**, ver [PAQUETE_LUNA_ISO8583.md](PAQUETE_LUNA_ISO8583.md)), secure messaging por esquema, MAC ISO 9797-1 algoritmos 2/4/6, PIN blocks heredados, banco de comandos host de HSM, HCE y tokenización, y el menudeo genérico. FPE se hizo por otra vía. |
 
 Límites declarados y no disimulados: la comparación de key usage contra los
@@ -25,14 +25,14 @@ la determina la lista de confianza.
 
 ## Contexto
 
-Pregunta que motiva esta propuesta: *"¿Qué capacidades tenía BP-Tools, o ha
+Pregunta que motiva esta propuesta: *"¿Qué capacidades tenía la herramienta externa, o ha
 incluido su sustituto capacidades nuevas que no tengamos contempladas? Y como
 viene ahora la parte de eIDAS, ¿hay algo que debamos meter para las pruebas que
 tengamos que hacer, incluida la cartera digital obligatoria?"*
 
 Método: inventario del repo verificado con `grep` sobre `src/main/java` y
 `pom.xml` — no de memoria ni del README — contrastado contra la documentación
-publicada de EFTLab, sus clones web, el ARF de la cartera europea y las
+publicada de la herramienta externa, sus clones web, el ARF de la cartera europea y las
 especificaciones ETSI e IETF citadas al final.
 
 Lo que la búsqueda en el código confirma, y que conviene tener presente antes de
@@ -60,46 +60,37 @@ leer nada más:
 
 ### Fuera de alcance deliberado
 
-**FPE (FF1, FF3-1, FF3, FF2/VAES3, DFF).** Es un hueco real frente a BP-CCALC
+**FPE (FF1, FF3-1, FF3, FF2/VAES3, DFF).** Es un hueco real frente a la calculadora externa
 —no hay nada en el repo— pero se está montando por otra vía. No se detalla aquí
 para no duplicar el trabajo. Queda anotado sólo para que el inventario de huecos
 esté completo.
 
 ---
 
-# Parte 1 — BP-Tools: estado real y sustitutos
+# Parte 1 — La herramienta externa: estado real y sustitutos
 
 ## Qué era y en qué estado está
 
-**BP-Tools** (EFTLab) son cuatro aplicaciones freeware de Windows:
-
-| Componente | Función |
-|---|---|
-| **BP-CCALC** | Cryptographic Calculator: menús Generic, Cipher, Keys, Payments, EMV, Development |
-| **BP-HCMD** | HSM Commander: comandos host contra Thales, Gemalto/SafeNet y MicroFocus/HPE Atalla |
-| **BP-EMVT** | Diccionario de tags EMV, parser TLV, consulta de respuestas APDU |
-| **BP-CardEdit** | Ficheros P3 de Thales — **marcado EOL** por el propio EFTLab |
-
-Última versión pública **14.08**. El espejo de SourceForge no se actualiza desde
-2015. EFTLab no lo ha retirado formalmente, pero está congelado: su inversión
-está en la línea comercial **BP-Sim / EFTsim** (BP-Source, BP-Host, BP-HSM,
-BP-Switch, BP-Auth), con los módulos de desarrollo vendidos aparte.
+Un paquete freeware de Windows, congelado desde hace años, con una calculadora
+criptográfica (menús genéricos, cifrado, claves, pagos, EMV y desarrollo), una
+consola de comandos host para HSM de pagos, un diccionario de tags EMV y un
+editor de ficheros de personalización ya retirado.
 
 ## Quién lo ha sustituido, y qué trae de nuevo
 
-El sustituto real no es de EFTLab, son las reimplementaciones web:
+El sustituto real son las reimplementaciones web:
 
 | Herramienta | Qué aporta |
 |---|---|
-| **HSM Kit** (hsmkit.com) | Clon casi 1:1 de los menús de BP-CCALC, 44 herramientas en navegador |
+| **HSM Kit** (hsmkit.com) | Clon casi 1:1 de los menús de la calculadora externa, 44 herramientas en navegador |
 | **KeyLab** (keylab.cloud) | 51 herramientas, **emulación payShield 10K (37 comandos host, 111 de consola)**, PQC (ML-KEM/ML-DSA/SLH-DSA), asistente IA |
 | paymentcardtools.com, emvlab.org | Piezas sueltas: key block decoder, PIN block, TLV |
 
-Capacidades **nuevas** de los sustitutos respecto al BP-Tools original: emulación
+Capacidades **nuevas** de los sustitutos respecto a la herramienta externa original: emulación
 de comandos host de HSM, PQC y ejecución local en navegador. De las tres, ya
 tenemos PQC y ejecución local. La que falta es la de comandos host.
 
-## Huecos frente a BP-CCALC y sus clones
+## Huecos frente a la calculadora externa y sus clones
 
 Verificados contra el código, ordenados por valor:
 
@@ -110,19 +101,19 @@ Verificados contra el código, ordenados por valor:
 | 3 | **Secure messaging EMV** de Visa y Mastercard: cifrado de PIN en scripts y MAC por esquema | Parcial: hay `generateScriptMAC` genérico, faltan los perfiles de esquema |
 | 4 | **ISO 8583**: bitmap y parser de mensajes; ATM NDC, Wincor, AS2805, APACS30 | Cero |
 | 5 | **MAC ISO 9797-1 algoritmos 2, 4 y 6** | `MACOperations` tiene 1, 3 y 5 |
-| 6 | **PIN blocks heredados**: Docutel, Diebold, Plus, ECI 1-4, Visa 1-4, Europay/Banksys (BP soporta 19+) | `PinBlock` cubre ISO 0/1/2/3/4 e IBM 3624 |
-| 7 | **Banco de comandos host de HSM**: payShield A0/BU/CA/CC/CI/CW/CY/DC/EC/FA/GC/HC/JA/KA/M0-M6/NC, Atalla, Futurex | **Parcial verificable**: envoltura payShield, prefijo TCP, catálogo de códigos y descompositor declarativo exacto por código/error. La forma `NC` está cargada como `PENDING_CAPTURE (NC-00)`, no como vector verificado; también el significado de error `00` queda pendiente de esa captura. Los demás cuerpos siguen opacos hasta añadir su fila respaldada por HSM Commander. No se abren sockets |
-| 8 | **HCE y tokenización**: Visa LUK/MSD/qVSDC, Mastercard **CVC3** y PIN-CVC3, Mastercard **DS** (DSPK, DS Summary, DS Digest), ICC Dynamic Number, token **CAP**/SecureCode; **AMEX CSC v1/v2** | Sin implementación criptográfica. Campaña reproducible de capturas preparada en `CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md` |
+| 6 | **PIN blocks heredados**: Docutel, Diebold, Plus, ECI 1-4, Visa 1-4, Europay/Banksys (la herramienta externa soporta 19+) | `PinBlock` cubre ISO 0/1/2/3/4 e IBM 3624 |
+| 7 | **Banco de comandos host de HSM**: payShield A0/BU/CA/CC/CI/CW/CY/DC/EC/FA/GC/HC/JA/KA/M0-M6/NC, Atalla, Futurex | **Parcial verificable**: envoltura payShield, prefijo TCP, catálogo de códigos y descompositor declarativo exacto por código/error. La forma `NC` está cargada como `PENDING_CAPTURE (NC-00)`, no como vector verificado; también el significado de error `00` queda pendiente de esa captura. Los demás cuerpos siguen opacos hasta añadir su fila respaldada por la consola HSM externa. No se abren sockets |
+| 8 | **HCE y tokenización**: Visa LUK/MSD/qVSDC, Mastercard **CVC3** y PIN-CVC3, Mastercard **DS** (DSPK, DS Summary, DS Digest), ICC Dynamic Number, token **CAP**/SecureCode; **AMEX CSC v1/v2** | Sin implementación criptográfica. Campaña reproducible de capturas preparada en `CAPTURAS_CALCULADORA_HCE.md` |
 | 9 | Menudeo genérico: MD4, Whirlpool, Tiger-192, variantes CRC32, **Base94**, **BCD**, tablas de **decimalización**, *bit shift*, *trace parser* (extraer hex de un tcpdump), check digit AMEX SE, **parser de ATR**, códigos de respuesta APDU, diccionario de tags EMV | Sólo CRC32 |
 | — | **FPE** | Fuera de alcance de esta propuesta (ver arriba) |
 
 ## Dónde ya vamos por delante
 
-Para no sobrevalorar la paridad: CryptoCarver ya supera a BP-Tools y a sus clones
+Para no sobrevalorar la paridad: CryptoCarver ya supera a la herramienta externa y a sus clones
 en TR-34, ICSF/CCA (analizador, lote y export/import con verbos nativos), PQC con
 firma, XAdES/PAdES/CMS/ASiC/WS-Security/COSE, PKCS#11, Process Designer, CLI y
 Batch Runner, e informes bilingües. El KCV ya cubre VISA, IBM, ATALLA, ATALLA-R,
-FUTUREX, SHA256, CMAC y AES — exactamente la lista de BP-CCALC.
+FUTUREX, SHA256, CMAC y AES — exactamente la lista de la calculadora externa.
 
 ---
 
@@ -406,7 +397,7 @@ El banco payShield implementa únicamente el framing verificable con el
 secciones 1.3–1.5, y la forma de una respuesta `NC` suministrada. La procedencia
 original de esa respuesta no quedó registrada, de modo que no se presenta como
 KAT externo. La receta exacta para sustituirla y capturar los siguientes
-comandos está en `docs/CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`. En todos los casos
+comandos está en `docs/CAPTURAS_CONSOLA_HSM_PAYSHIELD.md`. En todos los casos
 se necesitan petición, respuesta, cabecera, prefijo TCP, ventana completa y
 versión de la herramienta:
 
@@ -423,7 +414,7 @@ versión de la herramienta:
   MAC/cifrado resultante, incluyendo un caso en el límite de bloque.
 
 Para **secure messaging EMV**, la campaña reproducible está en
-`docs/CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_SECURE_MESSAGING.md`: fichas separadas
+`docs/CAPTURAS_CALCULADORA_SECURE_MESSAGING.md`: fichas separadas
 para Visa CSK y Mastercard SKD con versión/perfil exactos, MK-SMI/MK-SMC de
 test, PAN/PSN, ATC, APDU completa, datos claros, entrada exacta al MAC, clave de
 sesión derivada, bloque rellenado, PIN cifrado y MAC final. Incluye un segundo
@@ -431,7 +422,7 @@ caso que cambia sólo la cabecera APDU para demostrar qué bytes autentica el
 perfil.
 
 Para **HCE/tokenización**, la campaña reproducible está en
-`docs/CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md`: fichas independientes para Visa
+`docs/CAPTURAS_CALCULADORA_HCE.md`: fichas independientes para Visa
 LUK/MSD/qVSDC, Mastercard CVC3/PIN-CVC3 y DS (DSPK, DS Summary, DS Digest), ICC
 Dynamic Number, CAP/SecureCode y AMEX CSC v1/v2, más pares que cambian sólo UN,
 ATC, contador o dato. Hasta disponer de esos vectores no se deducen algoritmos
@@ -449,15 +440,7 @@ estable, y es el cimiento de las fases C y D.
 
 # Referencias
 
-- EFTLab, tutoriales de Cryptographic Calculator: menús
-  [Generic](https://www.eftlab.com/tutorials/cryptographic-calculator-generic-menu),
-  [Cipher](https://www.eftlab.com/tutorials/cryptographic-calculator-cipher-menu),
-  [Keys](https://www.eftlab.com/tutorials/cryptographic-calculator-keys-menu),
-  [Payments](https://www.eftlab.com/tutorials/cryptographic-calculator-payments-menu),
-  [EMV](https://www.eftlab.com/tutorials/cryptographic-calculator-emv-menu),
-  [Development](https://www.eftlab.com/tutorials/cryptographic-calculator-development-menu)
-- [EFTLab, cronología de producto 2009–hoy](https://www.eftlab.com/post/eftlabs-product-timeline-2009-today)
-- [BP-Tools en SourceForge](https://sourceforge.net/projects/bptools/) · [HSM Kit](https://hsmkit.com/) · [KeyLab](https://keylab.cloud/)
+- [HSM Kit](https://hsmkit.com/) · [KeyLab](https://keylab.cloud/)
 - [ARF v3.0.0](https://eudi.dev/latest/) · [Especificaciones técnicas TS01–TS14](https://eudi.dev/latest/technical-specifications/)
 - [TS12 — SCA con la cartera](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/main/docs/technical-specifications/ts12-electronic-payments-SCA-implementation-with-wallet.md)
 - [RFC 9901 — Selective Disclosure for JWTs](https://www.rfc-editor.org/rfc/rfc9901.html)

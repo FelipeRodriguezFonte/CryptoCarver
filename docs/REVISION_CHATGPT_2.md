@@ -50,7 +50,7 @@ es peor que ninguna, que es exactamente lo que dijimos de la URL del manual.
 **Arreglo:** que no empiece por `Source:`. Algo como «origen no registrado: este
 valor ya estaba en el árbol cuando se planteó la pregunta de procedencia, y
 ninguna captura lo respalda. La sustituye `NC-00` de
-`CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`».
+`CAPTURAS_CONSOLA_HSM_PAYSHIELD.md`».
 
 **Y el mismo bucle, más pequeño, en la tabla de errores.** `00` se traduce hoy
 como *"No error (verified by captured NC response)"*, y esa captura es
@@ -104,8 +104,8 @@ el bloque A se cierra en una tarde o en dos semanas cuando lleguen las capturas.
 
 ## 3. El bloque C, que no está bloqueado
 
-Para HCE y tokenización —CVC3, DS, LUK— la herramienta no es HSM Commander sino
-el **Cryptographic Calculator**, que los calcula todos e imprime las claves
+Para HCE y tokenización —CVC3, DS, LUK— la herramienta no es la consola HSM sino
+la **calculadora** de la herramienta externa, que los calcula todos e imprime las claves
 intermedias. Ese oráculo está disponible ahora mismo y no depende de las
 capturas del bloque A.
 

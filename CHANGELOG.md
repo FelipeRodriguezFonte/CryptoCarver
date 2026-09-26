@@ -298,14 +298,14 @@ alcanzan fontanería, claves, pagos, sobres y firmas. Los detalles por fase, aba
 ### 1. ✅ CVV CALCULATION - CORREGIDO
 
 **Problema Identificado**:
-- CVV no coincidía con BP-Tools ni estándares Visa/Mastercard
+- CVV no coincidía con la herramienta externa ni estándares Visa/Mastercard
 - CVK A y CVK B requerían 32 hex chars (16 bytes) cuando deberían ser 16 hex chars (8 bytes) cada uno
 - Algoritmo no seguía la especificación estándar
 
 **Solución Implementada**:
 - ✅ Algoritmo corregido siguiendo estándar Visa/Mastercard
 - ✅ Validado contra `psec` library (Python)
-- ✅ Validado contra BP-Tools
+- ✅ Validado contra la herramienta externa
 - ✅ CVK A y CVK B ahora son 8 bytes (16 hex chars) cada uno
 - ✅ Decimalization correcta
 
@@ -319,7 +319,7 @@ Input:
   Service:    000
 
 Output:
-  CVV:        122  ✓ CORRECTO (coincide con BP-Tools y psec)
+  CVV:        122  ✓ CORRECTO (coincide con la herramienta externa y psec)
 ```
 
 **Archivos Modificados**:
@@ -441,7 +441,7 @@ crypto-calculator-UPDATED/
 ### CVV - VALIDADO ✅
 
 **Método de Validación**:
-1. ✅ BP-Tools
+1. ✅ Herramienta externa
 2. ✅ psec library (Python)
 3. ✅ Test vectors estándar
 
@@ -481,7 +481,7 @@ java -jar target/cryptocarver-1.0.0.jar
 ### Inmediato (Prioritario)
 1. ✅ **Validar CVV en tu entorno**
    - Compilar proyecto
-   - Probar con datos de BP-Tools
+   - Probar con datos de la herramienta externa
    - Confirmar resultado = 122
 
 ### Corto Plazo (1-2 días)
@@ -546,7 +546,6 @@ java -jar target/cryptocarver-1.0.0.jar
 - IBM CCA TR-31: https://www.ibm.com/docs/en/linux-on-systems?topic=programming-tr-31-symmetric-key-management
 - psec library: https://github.com/knovichikhin/psec (Python reference)
 - openemv/tr31: https://github.com/openemv/tr31 (C reference)
-- EFTLab guides: https://www.eftlabs.com/
 
 ---
 
@@ -554,7 +553,7 @@ java -jar target/cryptocarver-1.0.0.jar
 
 ### CVV
 - ✅ **Producción Ready**: Sí, algoritmo validado
-- ✅ **Compatibilidad**: BP-Tools, psec, HSMs estándar
+- ✅ **Compatibilidad**: la herramienta externa, psec, HSMs estándar
 - ✅ **Estándares**: Visa/Mastercard compliant
 
 ### TR-31
@@ -599,7 +598,7 @@ java -jar target/cryptocarver-1.0.0.jar
 
 **Implementado por**: Claude (Anthropic)  
 **Validado por**: Felipe (pendiente)  
-**Referencias**: psec, openemv, IBM CCA, BP-Tools  
+**Referencias**: psec, openemv, IBM CCA, la herramienta externa  
 **Fecha**: 8 de Diciembre de 2025
 
 ---
@@ -610,7 +609,7 @@ Gracias a:
 - **psec library** - Excelente implementación de referencia en Python
 - **openemv/tr31** - Implementación completa en C
 - **IBM CCA** - Documentación técnica detallada
-- **BP-Tools** - Validación de CVV
+- **Herramienta externa** - Validación de CVV
 
 ---
 

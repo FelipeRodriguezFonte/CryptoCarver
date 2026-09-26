@@ -24,7 +24,7 @@ acaba mal.
 Ficheros que tocaremos los tres, todos por añadido al final de listas:
 `OperationRegistry.java`, `ModuleTextCatalog.java`, `messages*.properties`,
 `UiNavigationRegistry.java` y la tabla de estado de
-[`PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md`](PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md).
+[`PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md`](PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md).
 `docs/OPERATIONS_CATALOG.md` **se genera**: no lo resuelvas a mano, regenera con
 `bash scripts/generate-operations-catalog.sh`.
 
@@ -35,7 +35,7 @@ no está en verde, no está hecho.
 
 ## 2. El encargo
 
-Tres bloques, de la lista de huecos frente a BP-Tools. En este orden.
+Tres bloques, de la lista de huecos frente a la herramienta externa. En este orden.
 
 ### A. Banco de comandos host de HSM — hueco 7, el grande
 
@@ -96,16 +96,16 @@ genérico, estará mal para uno de los dos.
 - **AMEX CSC v1 y v2**
 
 Es el bloque con más piezas y el que más se beneficia del método de la sección
-3, porque casi todo esto lo calcula BP-Tools y casi nada está bien documentado
+3, porque casi todo esto lo calcula la herramienta externa y casi nada está bien documentado
 en abierto.
 
 ---
 
-## 3. El método que hace que esto funcione: BP-Tools como oráculo
+## 3. El método que hace que esto funcione: la herramienta externa como oráculo
 
 **Esto es lo más importante del documento.**
 
-Felipe tiene **BP-Tools 21.06** (Cryptographic Calculator y HSM Commander) en
+Felipe tiene **la herramienta externa** (calculadora y consola HSM) en
 una máquina Windows. Es la herramienta con la que buscamos paridad. Puede
 generar cualquiera de estos valores con entradas que tú elijas, y ese par
 entrada/salida es un vector de prueba.
@@ -113,7 +113,7 @@ entrada/salida es un vector de prueba.
 Hoy mismo cerré con ese método el Key Block de Thales, que llevaba bloqueado
 dos intentos. El manual del fabricante describe los algoritmos pero **nunca dice
 cómo salen de la LMK las claves de cifrado y de MAC** — las cláusulas 8.6 y 8.7
-dicen sólo «una variante de la LMK». Pedirle a BP-Tools que envolviera una clave
+dicen sólo «una variante de la LMK». Pedirle a la herramienta externa que envolviera una clave
 bajo la LMK de test publicada y leer lo que derivó lo resolvió en diez minutos:
 
 ```
@@ -126,7 +126,7 @@ los claros sale `C033654B`; el hardware dice `31D00034`.
 
 **Cómo usarlo**: cuando llegues a algo que no puedas verificar con una fuente
 pública, **no lo implementes**. Escribe en el informe exactamente qué entradas
-necesitas que Felipe meta en BP-Tools y qué campos quieres que te copie. Un
+necesitas que Felipe meta en la herramienta externa y qué campos quieres que te copie. Un
 mensaje suyo con un par entrada/salida vale más que una tarde de deducción, y no
 se equivoca.
 
@@ -243,10 +243,10 @@ Todas me han mordido a mí esta semana:
 - [ ] Rama propia.
 - [ ] Cada tabla y cada constante con su fuente citada por cláusula.
 - [ ] **Al menos un vector externo por bloque** — de la norma, de otra
-      implementación, o de BP-Tools vía Felipe. No valen sólo round-trips.
+      implementación, o de la herramienta externa vía Felipe. No valen sólo round-trips.
 - [ ] Las cinco capas para cada cosa.
 - [ ] Panel con test de controlador y test de traducción.
 - [ ] Catálogo regenerado con el script.
 - [ ] Tabla de estado de la propuesta actualizada, **diciendo qué has dejado
       fuera y por qué**.
-- [ ] Una lista de los vectores que necesitas de BP-Tools, si los necesitas.
+- [ ] Una lista de los vectores que necesitas de la herramienta externa, si los necesitas.

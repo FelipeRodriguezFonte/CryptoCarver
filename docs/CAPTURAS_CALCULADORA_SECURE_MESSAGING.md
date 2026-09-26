@@ -1,4 +1,4 @@
-# Capturas de Cryptographic Calculator para secure messaging EMV
+# Capturas de la calculadora externa para secure messaging EMV
 
 Esta campaña cierra el bloque B con vectores reproducibles de **secure
 messaging de emisor**. Visa y Mastercard no se tratan como variantes de un
@@ -7,7 +7,7 @@ los bytes realmente autenticados antes de que se implemente cualquiera de los
 dos.
 
 No se inventa una APDU. La APDU de partida es la plantilla de cambio de PIN que
-ofrezca la versión instalada de Cryptographic Calculator; se captura completa y
+ofrezca la versión instalada de la calculadora externa; se captura completa y
 se reutiliza literalmente para los casos derivados.
 
 ## Entrega común

@@ -1,8 +1,8 @@
-# Capturas HSM Commander para cerrar el banco payShield
+# Capturas de la consola HSM externa para cerrar el banco payShield
 
 Esta lista es ejecutable en orden. Cada valor producido se reutiliza por su
 identificador (`A0-0.keyUnderLmk`, por ejemplo), para no inventar una clave bajo
-LMK que dependa del juego de LMK configurado en HSM Commander.
+LMK que dependa del juego de LMK configurado en la consola HSM externa.
 
 ## Entrega común a todas las capturas
 
@@ -17,11 +17,11 @@ Configurar una sola sesión payShield y no cambiarla entre casos:
 
 Devolver para cada ID:
 
-1. captura de **la ventana entera**, incluidos versión de BP-Tools, perfil de
+1. captura de **la ventana entera**, incluidos versión de la herramienta externa, perfil de
    LMK, desplegables, campos deshabilitados y valores intermedios;
 2. petición y respuesta crudas, sin espacios añadidos;
 3. petición y respuesta en hexadecimal si la consola lo ofrece;
-4. texto del error de HSM Commander, aunque la respuesta sea correcta;
+4. texto del error de la consola HSM externa, aunque la respuesta sea correcta;
 5. nombre exacto y versión del perfil/emulador al que se envió.
 
 No enviar claves de producción. Todos los valores de este documento son de
@@ -42,7 +42,7 @@ Copiar la petición y la respuesta completas. La petición esperada sin prefijo
 TCP es `0000NC`. La respuesta que hoy tiene el repositorio es
 `0000ND007B44AC1DDEE2A94B0007-E000`, pero **no se debe pegar como entrada**: el
 objetivo es obtener una captura nueva e independiente. La ventana debe mostrar
-qué etiqueta da HSM Commander a `7B44AC1DDEE2A94B` y a `0007-E000`.
+qué etiqueta da la consola HSM externa a `7B44AC1DDEE2A94B` y a `0007-E000`.
 
 ## 2. `A0` — crear el material reutilizable
 
@@ -103,13 +103,13 @@ ID: `A6-00`.
 | Output/key-under-LMK scheme | `U` |
 | ZMK under LMK | `A0-0.keyUnderLmk` |
 | ZMK scheme | `U` |
-| Key under ZMK | `A0-1.keyUnderZmk`; si `A0-1` no lo produce, usar el campo de helper de HSM Commander para envolver la clave de prueba de abajo |
+| Key under ZMK | `A0-1.keyUnderZmk`; si `A0-1` no lo produce, usar el campo de helper de la consola HSM externa para envolver la clave de prueba de abajo |
 | Clear test key del helper | `00112233445566778899AABBCCDDEEFF` |
 | Imported key scheme | `U` |
 | Optional data / trailer | vacío |
 
 Copiar la clave importada bajo LMK y su KCV, además de cualquier valor claro o
-intermedio que HSM Commander enseñe al lado.
+intermedio que la consola HSM externa enseñe al lado.
 
 ### Respuesta de error real
 
@@ -119,7 +119,7 @@ avise; enviar la trama si permite transmitirla. Si la UI impide enviarla,
 sustituir sólo el último nibble por `0` y transmitir el criptograma de longitud
 válida pero incorrecto.
 
-Copiar la respuesta cruda, el código de error y el texto que BP-Tools le asigne.
+Copiar la respuesta cruda, el código de error y el texto que la herramienta externa le asigne.
 Esta captura es la fuente para añadir esa entrada a `PayShieldErrorCatalog`.
 
 ## 5. `A8` — exportar la misma clave
@@ -139,7 +139,7 @@ ID: `A8-00`.
 | Optional data / trailer | vacío |
 
 El valor exportado bajo ZMK debería poder compararse con el valor de entrada de
-`A6-00`; copiar ambos aunque HSM Commander ya indique match.
+`A6-00`; copiar ambos aunque la consola HSM externa ya indique match.
 
 ## 6. `CA` — traducción de bloque de PIN
 

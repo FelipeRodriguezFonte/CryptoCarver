@@ -16,8 +16,8 @@ Process Designer, al nivel de calidad y verificación del resto del repositorio.
 
 ## 1. Por qué esta tarea y no otra
 
-El repositorio tiene una lista de huecos frente a BP-Tools en
-[`docs/PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md`](PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md).
+El repositorio tiene una lista de huecos frente a la herramienta externa en
+[`docs/PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md`](PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md).
 ISO 8583 es el hueco número 4 y está entero sin hacer.
 
 Se te asigna éste y no los formatos de clave de fabricante (Thales Key Block,
@@ -225,7 +225,7 @@ base. Ficheros que tocaremos los dos:
   uno, y el generador de markdown.
 - `src/main/resources/i18n/messages*.properties` — los dos añadimos al final.
 - `src/main/java/com/cryptocarver/ui/ModuleTextCatalog.java`.
-- `docs/PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md` — la tabla de estado.
+- `docs/PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md` — la tabla de estado.
 - `docs/OPERATIONS_CATALOG.md` — **generado**: no lo resuelvas a mano, regenera
   después de fusionar.
 

@@ -38,7 +38,7 @@ class PayShieldMessageCodecTest {
 
     /**
      * Origin not recorded: this value was already in the tree when provenance
-     * was questioned, and no capture supports it. NC-00 in the HSM Commander
+     * was questioned, and no capture supports it. NC-00 in the external HSM console
      * capture recipe will replace it.
      */
     @Test

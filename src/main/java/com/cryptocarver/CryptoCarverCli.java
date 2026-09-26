@@ -4,6 +4,7 @@ import com.cryptocarver.model.batch.BatchInputCodec;
 import com.cryptocarver.model.batch.BatchOutputCodec;
 import com.cryptocarver.model.batch.BatchRunner;
 import com.cryptocarver.model.BuildInfo;
+import com.cryptocarver.model.process.*;
 import com.google.gson.Gson;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -24,7 +25,7 @@ public final class CryptoCarverCli {
     /** Flags that are switches rather than name/value pairs. */
     private static final java.util.Set<String> VALUELESS_FLAGS =
             java.util.Set.of("--json", "--detail", "--no-detail",
-                    "--host-version", "--table616-version", "--nocv");
+                    "--host-version", "--table616-version", "--nocv", "--reveal-secrets");
 
     private CryptoCarverCli() { }
 
@@ -54,6 +55,7 @@ public final class CryptoCarverCli {
                 case "inspect-tlv" -> single(args, "inspect-tlv", com.cryptocarver.model.SafeTransformations.inspectTlv(requireArgument(args, 1)), json, out);
                 case "hmac-sha256" -> single(args, "hmac-sha256", hmacSha256(requireArgument(args, 1)), json, out);
                 case "batch" -> batch(args, out, json);
+                case "run-process" -> runProcess(args, out, err, json);
                 case "icsf-token" -> icsfToken(args, out, json);
                 case "icsf-batch" -> icsfBatch(args, out, json);
                 case "icsf-export" -> icsfKeyWrap(args, out, json, KeyWrapCommand.EXPORT);
@@ -81,6 +83,7 @@ public final class CryptoCarverCli {
         String cmd = args[0];
         java.util.Set<String> allowedFlags = new java.util.HashSet<>(List.of("--json"));
         if ("batch".equals(cmd)) allowedFlags.addAll(List.of("--format", "--output", "--column"));
+        if ("run-process".equals(cmd)) allowedFlags.addAll(List.of("--set", "--reveal-secrets"));
         if ("serve".equals(cmd)) allowedFlags.add("--port");
         if ("icsf-token".equals(cmd)) allowedFlags.add("--provenance");
         if ("icsf-batch".equals(cmd)) {
@@ -96,6 +99,7 @@ public final class CryptoCarverCli {
 
         int expectedArgs = switch (cmd) {
             case "batch" -> 3;
+            case "run-process" -> 2;
             // Every input is a named flag: with a key, a KEK and a token in play, positional
             // hex would be unreadable and easy to transpose.
             case "serve", "icsf-export", "icsf-import", "icsf-inspect", "icsf-resolve" -> 1;
@@ -179,6 +183,95 @@ public final class CryptoCarverCli {
         }
         out.flush();
         return report.failed() == 0 ? 0 : 3;
+    }
+
+    private static int runProcess(String[] args, PrintWriter out, PrintWriter err, boolean json) throws IOException {
+        String file = requireArgument(args, 1);
+        ProcessDefinition definition = ProcessDefinitionCodec.deserialize(Files.readString(Path.of(file), StandardCharsets.UTF_8));
+        if (definition.nodes == null || definition.connections == null) {
+            throw new IllegalArgumentException("Process requires nodes and connections");
+        }
+        for (int i = 2; i < args.length; i++) {
+            if (!"--set".equals(args[i])) continue;
+            String assignment = args[++i];
+            int dot = assignment.indexOf('.');
+            int equals = assignment.indexOf('=', dot + 1);
+            if (dot <= 0 || equals <= dot + 1) throw new IllegalArgumentException("Expected --set node.param=value");
+            String id = assignment.substring(0, dot);
+            String parameter = assignment.substring(dot + 1, equals);
+            ProcessDefinition.Node node = definition.nodes.stream().filter(n -> id.equals(n.id)).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown node in --set: " + id));
+            boolean known = NodeCatalog.allDescriptors().stream().filter(d -> d.type().equalsIgnoreCase(node.type))
+                    .flatMap(d -> d.parameters().stream()).anyMatch(p -> p.key().equals(parameter));
+            if (!known && !node.configuration.containsKey(parameter)) {
+                throw new IllegalArgumentException("Unknown parameter " + id + "." + parameter);
+            }
+            node.configuration.put(parameter, assignment.substring(equals + 1));
+        }
+        for (ProcessDefinition.Node node : definition.nodes) {
+            if ("FILE_OUTPUT".equalsIgnoreCase(node.type)) {
+                error(err, "Node " + node.id + ", port output: file writing is disabled in run-process", json);
+                return EXIT_OPERATION_FAILED;
+            }
+        }
+        try {
+            ProcessEngine.validate(definition);
+        } catch (Exception e) {
+            String location = validationLocation(definition, e);
+            error(err, "Validation failed: " + location + ": " + e.getMessage(), json);
+            return EXIT_OPERATION_FAILED;
+        }
+        java.util.List<NodeExecutionEvent> events = new java.util.ArrayList<>();
+        Map<String, String> values;
+        try {
+            values = ProcessEngine.executeAndRender(definition,
+                    new ExecutionContext(FileWritePolicy.FAIL_IF_EXISTS, events::add));
+        } catch (Exception e) {
+            String node = events.stream().filter(v -> v.state() == NodeExecutionState.ERROR)
+                    .map(NodeExecutionEvent::nodeId).findFirst().orElse("workflow");
+            error(err, "Execution failed: node " + node + ", port output: " + e.getMessage(), json);
+            return EXIT_OPERATION_FAILED;
+        }
+        boolean reveal = contains(args, "--reveal-secrets");
+        java.util.List<Map<String, Object>> outputs = new java.util.ArrayList<>();
+        for (ProcessDefinition.Node node : definition.nodes) {
+            String value = values.get(node.id);
+            if (value == null) continue;
+            boolean masked = !reveal && SecretOutputPolicy.isSecretMaterialOutput(node.type);
+            String shown = masked ? "•••• (length " + value.length() + ")" : value;
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("node", node.id);
+            item.put("port", "output");
+            item.put("value", shown);
+            item.put("masked", masked);
+            outputs.add(item);
+            if (!json) out.println(node.id + ".output: " + shown);
+        }
+        if (json) out.println(new Gson().toJson(Map.of("outputs", outputs)));
+        out.flush();
+        return EXIT_SUCCESS;
+    }
+
+    private static String validationLocation(ProcessDefinition definition, Exception failure) {
+        String message = String.valueOf(failure.getMessage());
+        for (ProcessDefinition.Node node : definition.nodes) {
+            if (message.contains(node.id) || (node.label != null && message.contains(node.label))) {
+                return "node " + node.id + ", port " + mentionedPort(node, message);
+            }
+        }
+        for (ProcessDefinition.Node node : definition.nodes) {
+            try { ProcessEngine.getHandlerFor(node.type).validateConfiguration(node); }
+            catch (Exception e) { return "node " + node.id + ", port " + mentionedPort(node, message); }
+        }
+        return "node workflow, port connection";
+    }
+
+    private static String mentionedPort(ProcessDefinition.Node node, String message) {
+        for (ProcessNodeHandler.PortDefinition port : ProcessEngine.getHandlerFor(node.type).inputPorts(node)) {
+            if (message.contains(port.name()) || (!node.configuration.containsKey(port.name())
+                    && !"true".equals(node.configuration.get(port.name() + "FromFlow")))) return port.name();
+        }
+        return "configuration";
     }
 
     /** Analyses one ICSF / CCA key token given as hexadecimal. */
@@ -358,12 +451,13 @@ public final class CryptoCarverCli {
     }
     private static void help(PrintWriter out, boolean json) {
         if (json) {
-            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, serve")));
+            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, run-process, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, serve")));
             return;
         }
         out.println("CryptoCarver CLI (local laboratory operations)");
         out.println("  sha256|base64url-encode|base64url-decode|compress-gzip|decompress-gzip|inspect-asn1|inspect-tlv|hmac-sha256 <value> [--json]");
         out.println("  batch <operation> <file> [--format csv|jsonl] [--output csv|jsonl] [--column name]");
+        out.println("  run-process <file.json> [--set node.param=value ...] [--json] [--reveal-secrets]");
         out.println("  icsf-token <hex> [--provenance kds-crudo|key-record-read|inferir] [--json]");
         out.println("  icsf-batch <file|-> [--format auto|linea|dos-filas] [--provenance ...] [--detail]");
         out.println("             [--txt PATH [--no-detail]] [--csv PATH [--sep ;]] [--json-out PATH]");

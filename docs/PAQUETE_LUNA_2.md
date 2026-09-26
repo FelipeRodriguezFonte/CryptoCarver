@@ -101,7 +101,7 @@ Pártelas, y comenta el *porqué* de lo que no es obvio.
 **Haz primero A1–A5.** No empieces lo nuevo con el ISO 8583 a medio verificar.
 
 Luego, tres huecos de
-[`PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md`](PROPUESTA_EIDAS_Y_PARIDAD_BPTOOLS.md).
+[`PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md`](PROPUESTA_EIDAS_Y_PARIDAD_HERRAMIENTAS.md).
 Los tres son independientes entre sí y no chocan con lo que estoy haciendo yo
 (formatos de clave de fabricante: Thales, Atalla, Futurex, SafeNet).
 
@@ -121,7 +121,7 @@ no lo entregues a ojo.
 
 ## B2. PIN blocks heredados (hueco 6)
 
-`PinBlock` cubre ISO 0/1/2/3/4 e IBM 3624. BP-Tools soporta 19 o más. Faltan:
+`PinBlock` cubre ISO 0/1/2/3/4 e IBM 3624. La herramienta externa soporta 19 o más. Faltan:
 
 Docutel, Diebold, Plus Network, ECI-1 a ECI-4, Visa-1 a Visa-4, y
 Europay/Banksys.

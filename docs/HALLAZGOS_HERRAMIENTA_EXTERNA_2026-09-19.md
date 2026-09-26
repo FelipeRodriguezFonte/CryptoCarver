@@ -1,6 +1,6 @@
-# Lo que salió de las capturas de BP-Tools del 19-09-2026
+# Lo que salió de las capturas de la herramienta externa del 19-09-2026
 
-Catorce capturas de BP-Tools Cryptographic Calculator 21.06, en cuatro tandas.
+Catorce capturas de la calculadora de la herramienta externa, en cuatro tandas.
 Todas las preguntas abiertas quedaron cerradas salvo el desglose de la
 cabecera Atalla, del que sólo se conocen tres hechos sueltos. Este documento
 es el registro de qué se dedujo, de qué sigue sin saberse y de qué haría falta

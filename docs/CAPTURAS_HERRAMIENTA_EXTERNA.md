@@ -1,6 +1,6 @@
-# Qué sacar de BP-Tools — lista de capturas
+# Qué sacar de la herramienta externa — lista de capturas
 
-Felipe tiene BP-Tools (HSM Commander y Cryptographic Calculator) en la sesión
+Felipe tiene la herramienta externa (consola HSM y calculadora) en la sesión
 Windows de Parallels. Yo no puedo conducirla: los eventos sintéticos de macOS no
 llegan al invitado. Así que el trato es: aquí digo exactamente qué meter en cada
 campo y qué devolver; él manda pantallazo.
@@ -40,7 +40,7 @@ es comparable entre formatos y entre agentes.
 
 Tres intentos y cuatro fuentes sin cerrar el formato. La herramienta lo calcula.
 
-**Dónde:** Cryptographic Calculator → Key Management (o Key Blocks) → Atalla /
+**Dónde:** La calculadora externa → Key Management (o Key Blocks) → Atalla /
 AKB.
 
 **Qué meter:**
@@ -90,7 +90,7 @@ imprime `6A` donde 7.2.3 y su propio Ejemplo 1 dicen `A6`. Dos fuentes muy
 citadas de internet lo ponían mal, cada una en un byte distinto. Quiero una
 confirmación que no sea papel.
 
-**Dónde:** Cryptographic Calculator → Thales → Key under LMK (esquema de
+**Dónde:** La calculadora externa → Thales → Key under LMK (esquema de
 variante, no key block).
 
 **Qué meter:**
@@ -109,7 +109,7 @@ tipos distintos bajo la misma LMK aíslan la variante del tipo de todo lo demás
 
 ## 4. Futurex MFK y SafeNet KM
 
-Mismo patrón que Atalla, misma razón. Si el Cryptographic Calculator los tiene:
+Mismo patrón que Atalla, misma razón. Si la calculadora externa los tiene:
 
 - Clave maestra: `0123456789ABCDEF8080808080808080FEDCBA9876543210`
 - Clave a proteger: `0123456789ABCDEFFEDCBA9876543210`
@@ -128,10 +128,10 @@ Estas no me desbloquean a mí, pero sin ellas Luna y ChatGPT van a adivinar, que
 es exactamente lo que hemos acordado no hacer. Son más largas; sácalas cuando
 ellos lleguen ahí y te las pidan, o de golpe si tienes la tarde.
 
-## 5. HSM Commander — tramas de comando (ChatGPT, hueco 7)
+## 5. La consola HSM externa — tramas de comando (ChatGPT, hueco 7)
 
 La receta campo a campo y el orden de reutilización están en
-[`CAPTURAS_HSM_COMMANDER_PAYSHIELD.md`](CAPTURAS_HSM_COMMANDER_PAYSHIELD.md).
+[`CAPTURAS_CONSOLA_HSM_PAYSHIELD.md`](CAPTURAS_CONSOLA_HSM_PAYSHIELD.md).
 Esta sección queda como índice de prioridad.
 
 Aquí el valor no está en el resultado criptográfico sino en **la trama de texto
@@ -159,12 +159,12 @@ descompositor y no viene en ningún sitio con ejemplos reales.
 ## 6. Esquemas: CVC3, DS, LUK (ChatGPT, hueco 8)
 
 La campaña campo a campo, con IDs y casos que cambian una sola variable, está
-en [`CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md`](CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_HCE.md).
+en [`CAPTURAS_CALCULADORA_HCE.md`](CAPTURAS_CALCULADORA_HCE.md).
 Esta sección queda como resumen.
 
 Casi nada de esto está bien documentado en abierto. La herramienta lo calcula.
 
-**Mastercard CVC3** — Cryptographic Calculator → EMV → CVC3 (o Contactless):
+**Mastercard CVC3** — la calculadora externa → EMV → CVC3 (o Contactless):
 
 - IMK: `0123456789ABCDEFFEDCBA9876543210`
 - PAN `4111111111111111`, PAN seq `00`
@@ -182,21 +182,21 @@ todo lo demás por defecto, y otra vez los intermedios.
 
 La campaña reproducible, con perfiles Visa CSK y Mastercard SKD separados y
 un segundo caso que cambia sólo la cabecera APDU, está en
-[`CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_SECURE_MESSAGING.md`](CAPTURAS_CRYPTOGRAPHIC_CALCULATOR_SECURE_MESSAGING.md).
+[`CAPTURAS_CALCULADORA_SECURE_MESSAGING.md`](CAPTURAS_CALCULADORA_SECURE_MESSAGING.md).
 Esta sección queda como índice de prioridad.
 
 ## 8. MAC y bloques de PIN (Luna)
 
 Rápidas, y cierran cosas que hoy tiene sólo contra sí misma.
 
-**ISO 9797-1 MAC**, Cryptographic Calculator → MAC:
+**ISO 9797-1 MAC**, la calculadora externa → MAC:
 
 - Clave: `0123456789ABCDEFFEDCBA9876543210`
 - Datos: `48656C6C6F2C20776F726C6421` (`Hello, world!` en ASCII)
 - Una captura por **algoritmo 1, 2, 4 y 6**, y por cada uno **método de relleno
   1 y 2**. Son ocho, pero es la misma pantalla cambiando dos desplegables.
 
-**Bloques de PIN**, Cryptographic Calculator → PIN Blocks:
+**Bloques de PIN**, la calculadora externa → PIN Blocks:
 
 - PIN `1234`, PAN `4111111111111111`
 - Formatos **0, 1, 2, 3 y 4** (ISO-0 a ISO-4). El 4 es AES y es el que más falta
@@ -207,8 +207,8 @@ Rápidas, y cierran cosas que hoy tiene sólo contra sí misma.
 
 ## Qué hago yo con esto
 
-Cada captura entra en el repositorio como test con el origen citado — «BP-Tools
-Cryptographic Calculator, captura de 2026-09-19» — igual que el vector del Key
+Cada captura entra en el repositorio como test con el origen citado — «herramienta externa
+(calculadora), captura de 2026-09-19» — igual que el vector del Key
 Block. Un vector de la herramienta contra la que buscamos paridad vale más que
 tres descripciones de internet, y ya hemos visto que las descripciones se
 contradicen.

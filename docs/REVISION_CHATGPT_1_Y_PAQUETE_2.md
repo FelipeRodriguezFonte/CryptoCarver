@@ -54,7 +54,7 @@ Formato que usamos en `main`:
 
 ```java
 /**
- * Source: EFTLab BP-Tools Cryptographic Calculator 21.06, Thales Key Block,
+ * Source: external tool's calculator, Thales Key Block,
  * captured 2026-09-19.
  */
 ```
@@ -121,7 +121,7 @@ entrada y se fusionan sin dolor.
 ## Primero: el bloqueo ya no existe
 
 El informe da por bloqueados los quince comandos y los bloques B y C por falta
-de documentación. **No lo están.** Felipe tiene **BP-Tools HSM Commander**
+de documentación. **No lo están.** Felipe tiene **la consola HSM de la herramienta externa**
 corriendo, que compone tramas reales y enseña respuestas reales, incluidos los
 códigos de error. Para nuestros efectos, eso *es* el Core Host Commands Manual,
 y además es mejor: no describe el formato, lo produce.
@@ -157,7 +157,7 @@ Que pida un `A6` con una clave mal formada. Eso convierte la tabla de errores de
 recuerdo en evidencia, y un descompositor que traduce mal un código de error es
 peor que uno que no lo traduce.
 
-El formato de la lista: como `docs/CAPTURAS_BPTOOLS.md` en `main`. Valores
+El formato de la lista: como `docs/CAPTURAS_HERRAMIENTA_EXTERNA.md` en `main`. Valores
 concretos en cada campo, y la instrucción de mandar la ventana entera —lo que
 cerró el Key Block no fue el bloque, fueron las claves derivadas que la
 herramienta imprime al lado—.
@@ -173,7 +173,7 @@ Eso, por comando, con su vector detrás, es el bloque A entero.
 
 ## Los bloques B y C, después
 
-Mismo método. Para el C —CVC3, DS, LUK— la herramienta es el **Cryptographic
-Calculator**, no el HSM Commander, y calcula todos ellos imprimiendo las claves
+Mismo método. Para el C —CVC3, DS, LUK— la herramienta es la
+**calculadora**, no la consola HSM, y calcula todos ellos imprimiendo las claves
 intermedias. Casi nada de eso está bien documentado en abierto, así que es el
 bloque donde el oráculo vale más. Pero primero A, cerrado y con evidencia.
