@@ -402,12 +402,36 @@ Token:             1385
 |---|---|---|---|
 | `AMEX-CSC1-00` | `K.TDES2`, PAN de 15 dígitos, `EXPIRY`, `SERVICE_CODE=201` y `000` | Ambos resultados CSC registrados arriba; sin claves ni bloques intermedios | Captura parcial; algoritmo no deducible |
 | `AMEX-CSC2-00` | Los mismos valores, versión 2 y tipo `CSC` | Excepción no controlada al calcular `201` y `000`; sin resultado ni intermedios | Capturas de fallo; no implementable |
-| `ICC-DYNAMIC-00` | `K.TDES2`, `PAN`, `ATC.1`, `UN.0` y `UN.1`; el campo combinado impide añadir `PSN` | Dos resultados registrados arriba; sin clave ICC ni bloque formateado | Captura parcial; algoritmo no deducible |
-| `MC-CAP-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1`; `PIN` si se solicita | La pantalla `CAP Token Computation` no ofrece MK, PAN, UN ni PIN; el ejemplo precargado produjo Token `1385` | Operación de la campaña no disponible en esa pantalla; no implementable |
+| `ICC-DYNAMIC-00` | `K.TDES2`, `PAN`, `ATC.1`, `UN.0` y `UN.1`; el campo combinado impide añadir `PSN` | Dos resultados registrados arriba; sin clave ICC ni bloque formateado | **Deducido** (ver abajo); implementable |
+| `MC-CAP-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1`; `PIN` si se solicita | La pantalla `CAP Token Computation` no ofrece MK, PAN, UN ni PIN; el ejemplo precargado produjo Token `1385` | La generación de CAP de la campaña no existe; el **cálculo del token** sí se deduce del panel (ver abajo) |
 
-Las salidas observadas no bastan para deducir el formato de entrada ni la
-derivación y cálculo de AMEX CSC o ICC Dynamic Number. La pantalla CAP no
-ofrece las entradas requeridas por la campaña.
+### Deducción a partir de las capturas (revisión de Claude, 26-09-2026)
+
+AMEX CSC v1 sigue sin poder deducirse: no hay intermedios y las
+construcciones habituales no reproducen `08746`/`2908`/`854`.
+
+**ICC Dynamic Number (MasterCard).** Las dos capturas se reproducen exactamente con:
+
+- `Session Key` = derivación de clave ICC «opción A» de EMV a partir de `MK-DN`,
+  con Y = el campo `PAN/PAN Seq.No` de 16 dígitos:
+  `3DES(MK, Y) ‖ 3DES(MK, Y ⊕ FF…FF)` → `69D9405C8462F4109CB20DC8B99F3BD9`.
+  No depende del ATC, y por eso no cambia entre los dos casos.
+- `Dynamic Number` = los 2 primeros bytes de `3DES(Session Key, ATC ‖ 0000 ‖ UN)`:
+  `3DES(SK, 0001000000000000)` = `6AB24A2E…` y
+  `3DES(SK, 0001000000000001)` = `816AA3B4…`.
+
+**CAP Token Computation.** El panel muestra todos los pasos:
+
+- `Token data` = `PAN sn ‖ CID ‖ ATC ‖ AC ‖ IAD` (`00 80 0001 5AC19AC9FE1360F3 06010A03A41000`).
+  El PSN va delante porque el IAF `40` indica que se incluye.
+- `IPB data` = el IPB de entrada (18 bytes) rellenado con `00` por la derecha
+  hasta la longitud de `Token data` (19 bytes).
+- `Compressed data` = los bits de `Token data` cuya posición vale 1 en el IPB,
+  en orden de MSB a LSB (25 bits: `0000000000000010101101001`).
+- `Token` = ese número binario en decimal: `1385`.
+
+Queda por confirmar con otro vector cómo trata el IAF la ausencia del PSN
+(IAF sin el bit `40`).
 
 ## Criterio de aceptación
 
