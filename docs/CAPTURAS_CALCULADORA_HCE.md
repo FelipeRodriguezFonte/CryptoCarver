@@ -306,33 +306,108 @@ confirma que la versión instalada ofrece la operación:
 Para AMEX, una segunda pareja cambia sólo `SERVICE_CODE` de `201` a `000`. Para
 ICC Dynamic Number y CAP, un segundo caso cambia sólo `UN.0` por `UN.1`.
 
-### Resultados (26-09-2026) — captura bloqueada
+### Resultados (26-09-2026) — capturas parciales
 
 `HCE-INDEX-00` sólo pudo verificarse parcialmente: la ventana principal indica
 versión `21.06` y muestra los menús superiores `Main`, `Generic`, `Cipher`,
 `Keys`, `Payments`, `EMV` y `Development`. Con el foco cedido por el usuario se
 abrió `Payments → Card Validation`: su submenú contiene `CWVs`, `AMEX CSCs` y
-`MasterCard dynamic CVC3`. La pestaña `AMEX CSCs` se abrió una vez, pero al
-cerrarse el menú el control de teclado de la máquina virtual dejó de responder.
-No se abrió `EMV` ni se verificaron sus submenús. No se guardó una imagen de la
-ventana porque su título identifica al fabricante.
+`MasterCard dynamic CVC3`. El menú `EMV` muestra `Application Cryptograms`,
+`SDA`, `DDA`, `ICC Dynamic Number`, `Data Storage Partial Key`, `Secure
+Messaging`, `HCE`, `CAP Token Computation`, `ATR Parser`, `EMV Data Parser`,
+`EMV Tag dictionary` y `APDU response query`. El submenú `ICC Dynamic Number`
+sólo ofreció `MasterCard`. No se inspeccionaron los demás submenús de `EMV`.
+No se guardó una imagen de la ventana porque su título identifica al
+fabricante.
 
 `AMEX CSCs` mostró la pestaña `Generate`, versiones `CSC ver. 1` y `CSC ver. 2`,
 y estos valores precargados: CSC Key `0123456789ABCDEFFEDCBA9876543210` (32),
 PAN `371234567890123` (15), Exp. date `9912` (4) y Service Code `702` (3).
-Los cuatro tipos visibles de `Verification Value Type` estaban deshabilitados.
-No se cambió ni calculó ningún valor de campaña.
+Los cinco tipos de `Verification Value Type` estaban deshabilitados en v1 y
+se habilitaron en v2. El PAN de 16 dígitos de la campaña no cupo en el campo
+AMEX; para los cálculos se usó `411111111111111` (15 dígitos), eliminando el
+último `1`. Esta desviación se conserva explícita en vez de presentar los
+resultados como si usaran el PAN original.
+
+El panel de v1 imprimió literalmente las entradas `CSC Key`, `PAN`,
+`Expiration date`, `Service Code` y `Value Type: CSC ver.1`, seguidas de
+`CSC-5`, `CSC-4` y `CSC-3`. No imprimió clave derivada, dato de derivación,
+bloque formateado ni operación criptográfica intermedia.
+
+| Caso | Clave CSC | PAN | Caducidad | Código de servicio | CSC-5 | CSC-4 | CSC-3 |
+|---|---|---|---|---|---|---|---|
+| `AMEX-CSC1-00` | `0123456789ABCDEFFEDCBA9876543210` | `411111111111111` | `2512` | `201` | `08746` | `2908` | `854` |
+| `AMEX-CSC1-SC-01` | igual | igual | igual | `000` | `08746` | `2908` | `854` |
+
+Ambos cálculos de v1 devolvieron los mismos CSC al cambiar sólo el código de
+servicio. `CSC ver. 2`, con los mismos valores de entrada y tipo visible `CSC`,
+mostró el diálogo «Unhandled exception» al calcular tanto con `201` como con
+`000`; el panel no imprimió resultado para esa versión. «Omitir» permitió
+recuperar el formulario después del primer fallo. No se reconstruyó ningún
+intermedio ausente.
+
+`EMV → ICC Dynamic Number → MasterCard` abrió la pestaña `ICC Dynamic Number`.
+Los campos visibles son `MK-DN`, `PAN/PAN Seq.No`, `ATC` y `Unpredictable nr.`;
+sus valores precargados eran, respectivamente, una clave de 32 caracteres,
+`9503493362330001` (16), `0001` (4) y `92ED9B7F` (8). El campo combinado
+`PAN/PAN Seq.No` rechazó `411111111111111100` con el error de que sus 18
+caracteres debían ser exactamente 16. Por decisión del usuario se introdujo
+el PAN de campaña de 16 dígitos en ese campo, sin PSN separado. El panel
+rotuló este valor simplemente como `PAN`; no es posible atribuir un PSN.
+
+El panel imprimió `MK-DN`, `PAN`, `ATC`, `Unpredictable nr.`, `Session Key` y
+`Dynamic Number`, sin clave ICC derivada ni bloque formateado de entrada.
+
+| Caso | MK-DN | Campo PAN/PAN Seq.No | ATC | UN | Session Key | Dynamic Number |
+|---|---|---|---|---|---|---|
+| `ICC-DYNAMIC-00` | `0123456789ABCDEFFEDCBA9876543210` | `4111111111111111` | `0001` | `00000000` | `69D9405C8462F4109CB20DC8B99F3BD9` | `6AB2` |
+| `ICC-DYNAMIC-UN-01` | igual | igual | igual | `00000001` | `69D9405C8462F4109CB20DC8B99F3BD9` | `816A` |
+
+`EMV → CAP Token Computation` es una pantalla distinta de la generación de
+CAP/SecureCode planteada en `MC-CAP-00`: sólo ofrece `IPB` (36 caracteres
+según el contador del campo; el panel imprime 38 caracteres en `IPB data`),
+`IAF` (`40`), `PAN sn` (`00`), `CID` (`80`), `ATC` (`0001`),
+`AC` (`5AC19AC9FE1360F3`) e `IAD` (`06010A03A41000`) en su ejemplo
+precargado. No presenta MK, PAN completo, UN, PIN, derivación de claves ni
+desafío. Con esos valores precargados, el panel mostró `Token data`, `Binary
+Token data`, `IPB data`, `Binary IPB data`, `Compressed data` y `Token: 1385`.
+Esta observación identifica la herramienta disponible, pero no constituye el
+vector `MC-CAP-00`: tampoco permite el segundo caso que cambia sólo UN.
+
+Salida completa del panel para el ejemplo precargado, copiada como texto:
+
+```text
+[2026-09-26 13:19:56]
+EMV Cryptography: CAP Token derivation finished
+****************************************
+Token data:        008000015AC19AC9FE1360F306010A03A41000
+Binary Token data:
+0000 0000 1000 0000 0000 0000 0000 0001
+0101 1010 1100 0001 1001 1010 1100 1001
+1111 1110 0001 0011 0110 0000 1111 0011
+0000 0110 0000 0001 0000 1010 0000 0011
+1010 0100 0001 0000 0000 0000
+IPB data:          00007FFFFF0000000000000000000020800000
+Binary IPB data:
+0000 0000 0000 0000 0111 1111 1111 1111
+1111 1111 0000 0000 0000 0000 0000 0000
+0000 0000 0000 0000 0000 0000 0000 0000
+0000 0000 0000 0000 0000 0000 0010 0000
+1000 0000 0000 0000 0000 0000
+Compressed data:   0000000000000010101101001
+Token:             1385
+```
 
 | Caso | Entradas previstas | Pantalla y resultado observados | Estado |
 |---|---|---|---|
-| `AMEX-CSC1-00` | `K.TDES2`, `PAN`, `EXPIRY`, `SERVICE_CODE=201` y `000` | Se abrió el formulario con sus valores precargados; no se introdujeron los valores de campaña ni se observó CSC o intermedios | Captura incompleta; no implementable |
-| `AMEX-CSC2-00` | Los mismos dos valores de `SERVICE_CODE` | Se vio el selector de versión; no se calculó ni se observó CSC o intermedios | Captura incompleta; no implementable |
-| `ICC-DYNAMIC-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1` | No se abrió la operación; sin campos, claves, bloques ni número dinámico observados | Sin captura; no implementable |
-| `MC-CAP-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1`; `PIN` si se solicita | No se abrió la operación; sin campos, claves, bloques ni resultado observados | Sin captura; no implementable |
+| `AMEX-CSC1-00` | `K.TDES2`, PAN de 15 dígitos, `EXPIRY`, `SERVICE_CODE=201` y `000` | Ambos resultados CSC registrados arriba; sin claves ni bloques intermedios | Captura parcial; algoritmo no deducible |
+| `AMEX-CSC2-00` | Los mismos valores, versión 2 y tipo `CSC` | Excepción no controlada al calcular `201` y `000`; sin resultado ni intermedios | Capturas de fallo; no implementable |
+| `ICC-DYNAMIC-00` | `K.TDES2`, `PAN`, `ATC.1`, `UN.0` y `UN.1`; el campo combinado impide añadir `PSN` | Dos resultados registrados arriba; sin clave ICC ni bloque formateado | Captura parcial; algoritmo no deducible |
+| `MC-CAP-00` | `K.TDES2`, `PAN`, `PSN`, `ATC.1`, `UN.0` y `UN.1`; `PIN` si se solicita | La pantalla `CAP Token Computation` no ofrece MK, PAN, UN ni PIN; el ejemplo precargado produjo Token `1385` | Operación de la campaña no disponible en esa pantalla; no implementable |
 
-No hay vector que permita deducir el formato de entrada, la derivación de
-claves o el cálculo de ninguna de estas operaciones. Quedan pendientes también
-las variaciones de una sola entrada exigidas por la campaña.
+Las salidas observadas no bastan para deducir el formato de entrada ni la
+derivación y cálculo de AMEX CSC o ICC Dynamic Number. La pantalla CAP no
+ofrece las entradas requeridas por la campaña.
 
 ## Criterio de aceptación
 
