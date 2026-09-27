@@ -25,6 +25,18 @@ class EMVOptionBTest {
     }
 
     /** EMV Book 2 v4.4 §A1.4.2, decimalisation Example 2 exercises fallback A..F mapping. */
+    /**
+     * External tool capture, 2026-09-27 (EMV 4.2, UDK, option B): with key parity "None"
+     * it prints the raw key below and KCV A07865; with odd parity it prints the published key.
+     */
+    @Test
+    void matchesExternalToolOptionBCapture() throws Exception {
+        EMVOperations.IccMasterKeyDerivation result = EMVOperations.deriveICCMasterKey(
+                IMK, "9876543210123456789", "01", EMVOperations.IccMasterKeyMethod.AUTO);
+        assertEquals(EMVOperations.IccMasterKeyMethod.B, result.method());
+        assertEquals("E4AA99AA5E76F656FFDD7F006F5F2259", result.key());
+    }
+
     @Test
     void decimalisationUsesSecondPassOnlyToFillDigits() throws Exception {
         assertEquals("1230567842417923", EMVOperations.decimalizeY(

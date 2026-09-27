@@ -51,18 +51,20 @@ el libro imprime dos ceros de más al final de esa entrada.
 | Y | `4020708018002609` |
 | ICC Master Key (paridad impar) | `E5AB98AB5E76F757FEDC7F016E5E2358` |
 
-Captura de control solicitada:
+Captura de control en la herramienta externa (27-09-2026, Claude): *EMV → Application
+Cryptograms → EMV v4.2*, pestaña *UDK*, «UDK derivation option» = Option B. La pantalla
+solo imprime la clave y el KCV; no muestra la entrada del SHA-1, el hash ni Y.
 
 | Entrada | Valor |
 |---|---|
-| IMK de test | `DFADBFEF0123456789866443DFADBFEF` |
+| MDK (IMK de test) | `DFADBFEF0123456789866443DFADBFEF` |
 | PAN de 19 dígitos | `9876543210123456789` |
 | PSN | `01` |
-| Entrada SHA-1 |  |
-| SHA-1 |  |
-| Dígitos decimalizados |  |
-| Y |  |
-| ICC Master Key |  |
+| UDK, paridad «Odd» | `E5AB98AB5E76F757FEDC7F016E5E2358`: coincide con el libro |
+| UDK, paridad «None» | `E4AA99AA5E76F656FFDD7F006F5F2259`: coincide con la salida sin ajustar de `EMVOperations` |
+| KCV (ambas) | `A07865` |
+
+Fijado en `EMVOptionBTest.matchesExternalToolOptionBCapture`.
 
 | Operación | Entrada | Valor | Origen |
 |---|---|---|---|
