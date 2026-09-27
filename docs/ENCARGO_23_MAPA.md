@@ -26,7 +26,7 @@ Inventario sobre `src/main/java/com/cryptocarver/ui/ModernMainController.java` e
 
 ## Sesiones y secretos
 
-El guardado de sesión llama a `captureUIState()`, que usa `UiStateSnapshot.capture(this)` en modo `FULL`. Por tanto, hoy puede guardar entradas sensibles en claro bajo cualquier perfil; el contrato de pruebas de `UiStateSnapshotTest` demuestra el comportamiento de los modos de histórico (redacta salvo `FULL_LAB`), pero esos modos no son los que usa `SavedSession`. `SavedSession` copia el `OperationSessionLog`, cuyo modelo y pruebas documentan expresamente texto claro de laboratorio. La extracción conserva este comportamiento: no añade campos, no captura nuevos controles y mantiene el registro de pasos intacto. El codec puro nuevo solo serializa/deserializa `SavedSession`; no transforma el estado ni cambia su política.
+El guardado llama a `captureUIState()`, que usa `UiStateSnapshot.capture(this)` en modo `FULL`; hoy conserva las entradas de texto tal cual, sin filtrado por nombre ni por perfil. El test de `SavedSessionCodecTest` demuestra que la extracción conserva los valores secretos que ya entraban en el mapa y no añade campos. `SavedSession` también copia el `OperationSessionLog`, cuyo modelo y pruebas describen texto claro de laboratorio. El codec puro solo serializa/deserializa el objeto existente. Por tanto, la extracción no cambia esa política ni trata de añadir material nuevo; sí queda constatado que las sesiones explícitas actuales pueden contener secretos en claro.
 
 ## Auditoría de los bloques sospechosos
 
