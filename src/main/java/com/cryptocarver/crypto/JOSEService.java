@@ -299,6 +299,9 @@ public class JOSEService {
         if (match instanceof com.nimbusds.jose.jwk.ECKey ec) {
             return new ECDSAVerifier(ec.toECPublicKey());
         }
+        if (match instanceof com.nimbusds.jose.jwk.OctetKeyPair okp) {
+            return EdDsaJws.verifier(JoseKeyMaterial.publicKey(okp.toPublicJWK().toJSONString()));
+        }
         if (match != null) throw new IllegalArgumentException("Unsupported JWK type: " + match.getKeyType());
         return createVerifier(algorithm, key, secretEncoding);
     }
@@ -399,6 +402,8 @@ public class JOSEService {
             return new RSASSASigner(parseRSAPrivateKey(secretOrKey));
         } else if (JWSAlgorithm.Family.EC.contains(jwsAlgo)) {
             return new ECDSASigner(requireEcPrivateKey(jwsAlgo, secretOrKey));
+        } else if (JWSAlgorithm.EdDSA.equals(jwsAlgo)) {
+            return EdDsaJws.signer(JoseKeyMaterial.privateKey(secretOrKey));
         } else {
             throw new IllegalArgumentException("Unsupported algorithm family: " + jwsAlgo.getName());
         }
@@ -450,6 +455,7 @@ public class JOSEService {
         }
         if (JWSAlgorithm.Family.RSA.contains(algorithm)) return new RSASSAVerifier((RSAPublicKey) parseRSAPublicKey(key));
         if (JWSAlgorithm.Family.EC.contains(algorithm)) return new ECDSAVerifier(requireEcPublicKey(algorithm, key));
+        if (JWSAlgorithm.EdDSA.equals(algorithm)) return EdDsaJws.verifier(JoseKeyMaterial.publicKey(key));
         throw new IllegalArgumentException("Unsupported JWS algorithm: " + algorithm);
     }
 

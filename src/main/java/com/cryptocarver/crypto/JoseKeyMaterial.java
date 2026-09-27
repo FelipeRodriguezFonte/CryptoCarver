@@ -2,6 +2,8 @@ package com.cryptocarver.crypto;
 
 import com.cryptocarver.util.DataConverter;
 import com.nimbusds.jose.jwk.AsymmetricJWK;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.OctetKeyPair;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
@@ -141,6 +143,7 @@ public final class JoseKeyMaterial {
         } else {
             jwk = JWK.parse(json);
         }
+        if (jwk instanceof OctetKeyPair okp) return fromOkp(okp);
         if (!(jwk instanceof AsymmetricJWK asymmetric)) {
             throw new IllegalArgumentException("A symmetric (oct) JWK is not an RSA/EC key; use it as a shared secret instead.");
         }
@@ -182,8 +185,48 @@ public final class JoseKeyMaterial {
         return new JcaPEMKeyConverter().getPrivateKey(info);
     }
 
+    /** DER prefixes that wrap a raw RFC 8037 key into SubjectPublicKeyInfo / PKCS#8. */
+    private static final byte[] ED25519_SPKI = DataConverter.hexToBytes("302a300506032b6570032100");
+    private static final byte[] ED448_SPKI = DataConverter.hexToBytes("3043300506032b6571033a00");
+    private static final byte[] ED25519_PKCS8 = DataConverter.hexToBytes("302e020100300506032b657004220420");
+    private static final byte[] ED448_PKCS8 = DataConverter.hexToBytes("3047020100300506032b6571043b0439");
+
+    /** Ed25519 / Ed448 OKP JWK to JDK keys; Nimbus needs Tink for this conversion. */
+    private static Object fromOkp(OctetKeyPair okp) throws Exception {
+        boolean ed25519 = Curve.Ed25519.equals(okp.getCurve());
+        if (!ed25519 && !Curve.Ed448.equals(okp.getCurve())) {
+            throw new IllegalArgumentException("Only Ed25519 and Ed448 OKP keys are supported (got " + okp.getCurve() + ").");
+        }
+        KeyFactory factory = KeyFactory.getInstance(ed25519 ? "Ed25519" : "Ed448");
+        if (okp.isPrivate()) {
+            return factory.generatePrivate(new PKCS8EncodedKeySpec(
+                    concat(ed25519 ? ED25519_PKCS8 : ED448_PKCS8, okp.getDecodedD())));
+        }
+        return factory.generatePublic(new X509EncodedKeySpec(
+                concat(ed25519 ? ED25519_SPKI : ED448_SPKI, okp.getDecodedX())));
+    }
+
+    /** Raw RFC 8037 public key bytes of an Ed25519 / Ed448 key. */
+    public static byte[] rawEdPublicKey(PublicKey key) {
+        byte[] der = key.getEncoded();
+        int length = key.getAlgorithm().equals("Ed448") || der.length == ED448_SPKI.length + 57 ? 57 : 32;
+        return java.util.Arrays.copyOfRange(der, der.length - length, der.length);
+    }
+
+    /** Raw RFC 8037 private key bytes (the seed) of an Ed25519 / Ed448 key. */
+    public static byte[] rawEdPrivateKey(PrivateKey key) throws Exception {
+        PrivateKeyInfo info = PrivateKeyInfo.getInstance(key.getEncoded());
+        return org.bouncycastle.asn1.ASN1OctetString.getInstance(info.parsePrivateKey()).getOctets();
+    }
+
+    private static byte[] concat(byte[] prefix, byte[] raw) {
+        byte[] out = java.util.Arrays.copyOf(prefix, prefix.length + raw.length);
+        System.arraycopy(raw, 0, out, prefix.length, raw.length);
+        return out;
+    }
+
     private static Object fromBareDer(byte[] der) {
-        for (String algorithm : new String[] { "RSA", "EC" }) {
+        for (String algorithm : new String[] { "RSA", "EC", "Ed25519", "Ed448" }) {
             try {
                 return KeyFactory.getInstance(algorithm).generatePrivate(new PKCS8EncodedKeySpec(der));
             } catch (Exception ignored) {
@@ -208,6 +251,15 @@ public final class JoseKeyMaterial {
                     .multiply(ec.getS()).normalize();
             ECPoint w = new ECPoint(q.getAffineXCoord().toBigInteger(), q.getAffineYCoord().toBigInteger());
             return KeyFactory.getInstance("EC").generatePublic(new ECPublicKeySpec(w, ec.getParams()));
+        }
+        if (key instanceof java.security.interfaces.EdECPrivateKey) {
+            byte[] seed = rawEdPrivateKey(key);
+            boolean ed25519 = seed.length == 32;
+            byte[] raw = ed25519
+                    ? new org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters(seed).generatePublicKey().getEncoded()
+                    : new org.bouncycastle.crypto.params.Ed448PrivateKeyParameters(seed).generatePublicKey().getEncoded();
+            return KeyFactory.getInstance(ed25519 ? "Ed25519" : "Ed448")
+                    .generatePublic(new X509EncodedKeySpec(concat(ed25519 ? ED25519_SPKI : ED448_SPKI, raw)));
         }
         throw new IllegalArgumentException("Cannot derive a public key from a " + key.getAlgorithm() + " private key.");
     }

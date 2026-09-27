@@ -51,6 +51,16 @@ class JOSEControllerJwkConversionTest {
         assertThrows(IllegalArgumentException.class, () -> JOSEController.asymmetricJwk(privatePem, "EC", null));
     }
 
+    @Test
+    void ed25519PemBecomesAnOkpJwk() throws Exception {
+        KeyPair pair = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        JWK jwk = JOSEController.asymmetricJwk(pem("PRIVATE KEY", pair.getPrivate().getEncoded()), "OKP", "ed");
+        assertTrue(jwk instanceof com.nimbusds.jose.jwk.OctetKeyPair);
+        assertEquals(Curve.Ed25519, ((com.nimbusds.jose.jwk.OctetKeyPair) jwk).getCurve());
+        assertTrue(jwk.isPrivate());
+        assertEquals(pair.getPublic(), com.cryptocarver.crypto.JoseKeyMaterial.publicKey(jwk.toPublicJWK().toJSONString()));
+    }
+
     private static String pem(String type, byte[] der) {
         return "-----BEGIN " + type + "-----\n" + Base64.getMimeEncoder().encodeToString(der)
                 + "\n-----END " + type + "-----\n";

@@ -69,7 +69,8 @@ public class JOSEController implements Initializable {
             "HS256", "HS384", "HS512",
             "RS256", "RS384", "RS512",
             "ES256", "ES384", "ES512",
-            "PS256", "PS384", "PS512");
+            "PS256", "PS384", "PS512",
+            "EdDSA");
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
@@ -152,7 +153,7 @@ public class JOSEController implements Initializable {
 
             // Init JWK Combo
             if (jwkKeyTypeCombo != null && jwkKeyTypeCombo.getItems().isEmpty()) {
-                jwkKeyTypeCombo.getItems().setAll("RSA", "EC", "OCT");
+                jwkKeyTypeCombo.getItems().setAll("RSA", "EC", "OKP", "OCT");
                 jwkKeyTypeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
                     if (newV == null)
                         return;
@@ -162,7 +163,7 @@ public class JOSEController implements Initializable {
             }
             if (jwksRotateAlgoCombo != null && jwksRotateAlgoCombo.getItems().isEmpty()) {
                 jwksRotateAlgoCombo.getItems().setAll(
-                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512",
+                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA",
                         "HS256", "HS384", "HS512", "A128KW", "A256KW", "A128GCM", "A256GCM", "dir");
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
@@ -1324,6 +1325,15 @@ public class JOSEController implements Initializable {
                     .algorithm(new JWSAlgorithm(alg))
                     .keyID(UUID.randomUUID().toString())
                     .generate();
+        } else if (alg.equals("EdDSA")) {
+            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+            return new OctetKeyPair.Builder(Curve.Ed25519,
+                    Base64URL.encode(JoseKeyMaterial.rawEdPublicKey(pair.getPublic())))
+                    .d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(pair.getPrivate())))
+                    .keyUse(KeyUse.SIGNATURE)
+                    .algorithm(JWSAlgorithm.EdDSA)
+                    .keyID(UUID.randomUUID().toString())
+                    .build();
         } else if (alg.startsWith("ES")) {
             Curve curve = Curve.P_256;
             if (alg.contains("384"))
@@ -1547,13 +1557,30 @@ public class JOSEController implements Initializable {
             if (privateKey != null) builder.privateKey(privateKey);
             return builder.build();
         }
+        if (publicKey instanceof java.security.interfaces.EdECPublicKey) {
+            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is an Ed25519/Ed448 (OKP) key but key type " + keyType + " is selected.");
+            }
+            byte[] x = JoseKeyMaterial.rawEdPublicKey(publicKey);
+            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x.length == 32 ? Curve.Ed25519 : Curve.Ed448,
+                    Base64URL.encode(x)).keyID(kid);
+            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(privateKey)));
+            return builder.build();
+        }
         throw new IllegalArgumentException("Unsupported key algorithm: " + publicKey.getAlgorithm());
+    }
+
+    private static String pem(String type, byte[] der) {
+        return "-----BEGIN " + type + "-----\n"
+                + java.util.Base64.getMimeEncoder(64, new byte[] { '\n' }).encodeToString(der)
+                + "\n-----END " + type + "-----\n";
     }
 
     private static JWK withKeyId(JWK jwk, String kid) {
         if (jwk instanceof RSAKey rsa) return new RSAKey.Builder(rsa).keyID(kid).build();
         if (jwk instanceof ECKey ec) return new ECKey.Builder(ec).keyID(kid).build();
         if (jwk instanceof OctetSequenceKey oct) return new OctetSequenceKey.Builder(oct).keyID(kid).build();
+        if (jwk instanceof OctetKeyPair okp) return new OctetKeyPair.Builder(okp).keyID(kid).build();
         return jwk;
     }
 
@@ -1621,6 +1648,15 @@ public class JOSEController implements Initializable {
                 sb.append("Base64URL:\n");
                 sb.append(java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(secret));
 
+                outputArea.setText(sb.toString());
+            } else if (jwk instanceof OctetKeyPair okp) {
+                String json = okp.toJSONString();
+                sb.append("=== Public Key (PEM) ===\n");
+                sb.append(pem("PUBLIC KEY", JoseKeyMaterial.publicKey(json).getEncoded())).append("\n");
+                if (okp.isPrivate()) {
+                    sb.append("=== Private Key (PEM) ===\n");
+                    sb.append(pem("PRIVATE KEY", JoseKeyMaterial.privateKey(json).getEncoded()));
+                }
                 outputArea.setText(sb.toString());
             } else {
                 outputArea.setText("Unsupported or Unknown Key Type for PEM export: " + jwk.getKeyType());
@@ -1790,6 +1826,7 @@ public class JOSEController implements Initializable {
                 new SimpleAlgo("RS256 / RS384 / RS512", "Signature", "RSASSA-PKCS1-v1_5 using SHA-2"),
                 new SimpleAlgo("PS256 / PS384 / PS512", "Signature", "RSASSA-PSS using SHA-2 and MGF1"),
                 new SimpleAlgo("ES256 / ES384 / ES512", "Signature", "ECDSA using P-256 / P-384 / P-521"),
+                new SimpleAlgo("EdDSA", "Signature", "Ed25519 / Ed448 (RFC 8037)"),
                 new SimpleAlgo("RSA-OAEP-256 / 384 / 512", "Key Management", "RSAES OAEP using SHA-2 and MGF1"),
                 new SimpleAlgo("ECDH-ES", "Key Management", "ECDH-ES direct key agreement (Concat KDF)"),
                 new SimpleAlgo("ECDH-ES+A128KW / A192KW / A256KW", "Key Management", "ECDH-ES with AES Key Wrap"),
