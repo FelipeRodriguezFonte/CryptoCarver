@@ -160,5 +160,6 @@ final class LocalPkiFixture implements AutoCloseable {
         return LocalTimestampAuthority.tokenGenerator(tsaKeys, tsaHolder,
                 List.of(tsaHolder, new JcaX509CertificateHolder(root)));
     }
-    @Override public void close() { tsaServer.stop(0); Arrays.fill(PASSWORD, '\0'); }
+    // PASSWORD is shared by every fixture and test class, so it is not wiped here.
+    @Override public void close() { tsaServer.stop(0); }
 }

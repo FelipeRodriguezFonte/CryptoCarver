@@ -482,7 +482,8 @@ public final class PadesOperations {
         // Read their dedicated detailed-report section instead. Qualification against
         // a QTSP trusted list is separate from PKIX trust in the supplied truststore.
         java.util.LinkedHashMap<String, String> indications = new java.util.LinkedHashMap<>();
-        boolean integrity = false, passed = false, chainTrusted = false;
+        // Every document timestamp must pass; one good seal must not hide a bad one.
+        boolean integrity = true, passed = true, chainTrusted = true;
         try {
             var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
@@ -505,8 +506,9 @@ public final class PadesOperations {
                 indications.put(id, "ValidationProcessBasicTimestamp="+indication
                         +"/SubIndication "+(subIndication.isEmpty()?"absent":subIndication)+"; ValidationTimestampQualification="
                         +qualificationIndication+" ("+qualificationKey+": "+qualificationError+")");
-                integrity |= dssPassed(parseDssIndication(indication));
-                passed |= dssPassed(parseDssIndication(textOf(timestamp,"Indication")));
+                integrity &= dssPassed(parseDssIndication(indication));
+                passed &= dssPassed(parseDssIndication(textOf(timestamp,"Indication")));
+                boolean thisChainTrusted = false;
                 for(int j=0;j<blocks.getLength();j++) {
                     var block=(org.w3c.dom.Element)blocks.item(j);
                     if(!id.equals(block.getAttribute("Id")) || !"TIMESTAMP".equals(block.getAttribute("Type"))) continue;
@@ -514,12 +516,15 @@ public final class PadesOperations {
                     for(int k=0;k<chainItems.getLength();k++) if("TRUSTED_STORE".equals(textOf((org.w3c.dom.Element)chainItems.item(k),"Source"))) anchor=true;
                     var xcvs=block.getElementsByTagNameNS("*","XCV");
                     boolean xcvPassed=xcvs.getLength()>0 && dssPassed(parseDssIndication(textOf((org.w3c.dom.Element)xcvs.item(0),"Indication")));
-                    chainTrusted |= anchor && xcvPassed;
+                    thisChainTrusted |= anchor && xcvPassed;
                 }
+                chainTrusted &= thisChainTrusted;
             }
         } catch(Exception parseError) {
             indications.put("diagnostic", "DSS detailed report parsing failed: " + parseError.getClass().getSimpleName());
         }
+        boolean found = !indications.isEmpty() && !indications.containsKey("diagnostic");
+        integrity &= found; passed &= found; chainTrusted &= found;
         String first=indications.values().stream().findFirst().orElse("no DOCUMENT_TIMESTAMP entry in DSS detailed report");
         return new ArchiveTimestampAssessment(!indications.isEmpty() && !indications.containsKey("diagnostic"), integrity, passed, chainTrusted, first,
                 List.copyOf(indications.entrySet().stream().map(e->e.getKey()+":"+e.getValue()).toList()));

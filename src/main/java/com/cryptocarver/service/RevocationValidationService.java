@@ -126,16 +126,52 @@ public final class RevocationValidationService {
                                            List<java.security.cert.X509CRL> crls) {
         if (certificate == null || issuer == null || crls == null || crls.isEmpty())
             return new Result(Status.UNKNOWN, Evidence.NONE, List.of(), List.of("No local CRL evidence supplied"));
-        try {
-            for (var crl : crls) {
-                if (!crl.getIssuerX500Principal().equals(certificate.getIssuerX500Principal())) continue;
+        List<String> problems = new java.util.ArrayList<>();
+        java.util.Date now = new java.util.Date();
+        for (var crl : crls) {
+            if (!crl.getIssuerX500Principal().equals(certificate.getIssuerX500Principal())) continue;
+            // A CRL that does not verify or is out of date is skipped; another supplied CRL may still be usable.
+            try {
                 crl.verify(issuer.getPublicKey());
-                if (crl.getThisUpdate()==null || crl.getNextUpdate()==null || crl.getThisUpdate().after(new java.util.Date()) || crl.getNextUpdate().before(new java.util.Date())) continue;
-                if (crl.getRevokedCertificate(certificate)!=null) return new Result(Status.REVOKED,Evidence.LOCAL,List.of(),List.of());
-                return new Result(Status.GOOD,Evidence.LOCAL,List.of(),List.of());
+            } catch (Exception invalid) {
+                problems.add("CRL signature is invalid: " + invalid.getMessage());
+                continue;
             }
-            return new Result(Status.UNKNOWN,Evidence.NONE,List.of(),List.of("No current CRL matched the certificate issuer"));
-        } catch(Exception error) { return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of(error.getMessage())); }
+            if (crl.getThisUpdate()==null || crl.getNextUpdate()==null || crl.getThisUpdate().after(now) || crl.getNextUpdate().before(now)) {
+                problems.add("CRL is not current");
+                continue;
+            }
+            if (crl.getRevokedCertificate(certificate)!=null) return new Result(Status.REVOKED,Evidence.LOCAL,List.of(),List.of());
+            return new Result(Status.GOOD,Evidence.LOCAL,List.of(),List.of());
+        }
+        if (problems.isEmpty()) problems.add("No current CRL matched the certificate issuer");
+        return new Result(Status.UNKNOWN,problems.size()==1 && problems.get(0).startsWith("No current") ? Evidence.NONE : Evidence.LOCAL,
+                List.of(),List.copyOf(problems));
+    }
+
+    /**
+     * RFC 6960 §4.2.2.2: the response is signed either by the issuing CA itself or by a
+     * delegated responder whose certificate the CA issued with the id-kp-OCSPSigning EKU.
+     */
+    private static boolean ocspSignedByIssuerOrDelegate(org.bouncycastle.cert.ocsp.BasicOCSPResp basic,
+            java.security.cert.X509Certificate issuer) throws Exception {
+        var verifiers = new org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder().setProvider("BC");
+        if (basic.isSignatureValid(verifiers.build(issuer.getPublicKey()))) return true;
+        var converter = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter().setProvider("BC");
+        for (var holder : basic.getCerts()) {
+            java.security.cert.X509Certificate responder = converter.getCertificate(holder);
+            if (!responder.getIssuerX500Principal().equals(issuer.getSubjectX500Principal())) continue;
+            try {
+                responder.verify(issuer.getPublicKey());
+                responder.checkValidity(basic.getProducedAt());
+            } catch (Exception notIssuedByCa) {
+                continue;
+            }
+            List<String> usages = responder.getExtendedKeyUsage();
+            if (usages == null || !usages.contains("1.3.6.1.5.5.7.3.9")) continue;
+            if (basic.isSignatureValid(verifiers.build(responder.getPublicKey()))) return true;
+        }
+        return false;
     }
 
     /** Validates matching locally supplied OCSP responses; this method never performs I/O. */
@@ -152,8 +188,7 @@ public final class RevocationValidationService {
                 var id=new org.bouncycastle.cert.ocsp.CertificateID(provider.get(org.bouncycastle.cert.ocsp.CertificateID.HASH_SHA1),
                         new org.bouncycastle.cert.jcajce.JcaX509CertificateHolder(issuer),certificate.getSerialNumber());
                 for(var single:basic.getResponses()) if(single.getCertID().equals(id)) {
-                    boolean valid=basic.isSignatureValid(new org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder().setProvider("BC").build(issuer.getPublicKey()));
-                    if(!valid) return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of("OCSP response signature is invalid"));
+                    if(!ocspSignedByIssuerOrDelegate(basic, issuer)) return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of("OCSP response signature is invalid"));
                     if(single.getNextUpdate()!=null && single.getNextUpdate().before(new java.util.Date())) return new Result(Status.UNKNOWN,Evidence.LOCAL,List.of(),List.of("OCSP response is stale"));
                     var certStatus=single.getCertStatus();
                     if(certStatus==null) return new Result(Status.GOOD,Evidence.LOCAL,List.of(),List.of());
