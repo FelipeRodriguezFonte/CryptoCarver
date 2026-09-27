@@ -107,9 +107,6 @@ public class PaymentsController {
     private TextArea macDataField;
     private TextArea macResultArea;
 
-    // PIN Controller for advanced operations
-    private PinController pinController;
-
     // Additional PIN fields for Encrypted PIN Blocks (Generic)
     @FXML private ComboBox<String> encPinBlockFormatCombo;
     @FXML private TextField encPinField;
