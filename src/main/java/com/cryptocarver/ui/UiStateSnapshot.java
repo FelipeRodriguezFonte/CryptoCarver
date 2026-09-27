@@ -344,7 +344,15 @@ public final class UiStateSnapshot {
         visitControllers(rootController, (owner, field, value) -> {
             String qualifiedKey = key(owner, field);
             Object saved = state.containsKey(qualifiedKey) ? state.get(qualifiedKey) : state.get(field.getName());
-            if (saved != null || state.containsKey(qualifiedKey) || state.containsKey(field.getName())) {
+            String oldName = LEGACY_FIELD_ALIASES.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(field.getName()))
+                    .map(Map.Entry::getKey).findFirst().orElse(null);
+            String oldKey = oldName == null ? null : qualifiedKey.replace("." + field.getName(), "." + oldName);
+            boolean hasAlias = oldKey != null && (state.containsKey(oldKey) || state.containsKey(oldName));
+            if (saved == null && hasAlias) {
+                saved = state.containsKey(oldKey) ? state.get(oldKey) : state.get(oldName);
+            }
+            if (saved != null || state.containsKey(qualifiedKey) || state.containsKey(field.getName()) || hasAlias) {
                 tasks.add(new RestorationTask(owner, field, value, saved));
             }
         });
@@ -362,7 +370,9 @@ public final class UiStateSnapshot {
             Object value = task.value;
             Object saved = task.saved;
             if ("[REDACTED_SECRET]".equals(saved)) {
-                writeControlValue(value, "");
+                // Old snapshots may have redacted a selector by name. Keep its
+                // initialized default instead of clearing it or selecting the marker.
+                if (!isHistorySelector(task.field.getName(), value)) writeControlValue(value, "");
                 if (value instanceof Node node) {
                     redactedNodes.add(node);
                 }

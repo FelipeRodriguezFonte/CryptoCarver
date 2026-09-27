@@ -235,5 +235,17 @@ class UiStateSnapshotTest {
                 UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", "[REDACTED_SECRET]"));
         org.junit.jupiter.api.Assertions.assertFalse(
                 UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", null));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                UiStateSnapshot.holdsSecretValue("CipherController.symKeySourceCombo", "Manual Input"));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                UiStateSnapshot.holdsSecretValue("CipherController.pinBlockSpinner", "5"));
+    }
+
+    @org.junit.jupiter.api.Test
+    void legacyRedactedSelectorKeepsItsInitializedDefault() {
+        DummyController controller = new DummyController();
+        UiStateSnapshot.restoreHistoryRecipe(controller,
+                Map.of("DummyController.algoCombo", "[REDACTED_SECRET]"));
+        assertEquals("AES", controller.algoCombo.getValue());
     }
 }
