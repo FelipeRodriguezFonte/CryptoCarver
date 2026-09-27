@@ -7,6 +7,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.Set;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.AtomicMoveNotSupportedException;
 
 public class SavedSessionsManager {
     private static final SavedSessionsManager instance = new SavedSessionsManager();
@@ -27,7 +31,8 @@ public class SavedSessionsManager {
             Path legacyFile = Paths.get(userHome, ".crypto-calculator", "saved_sessions.json");
             if (!Files.exists(sessionsFilePath) && Files.exists(legacyFile)) {
                 Files.createDirectories(configDir);
-                Files.copy(legacyFile, sessionsFilePath);
+                applyPermissions(configDir, "rwx------");
+                writeOwnerOnly(sessionsFilePath, Files.readString(legacyFile));
             }
 
             loadSessions();
@@ -36,13 +41,20 @@ public class SavedSessionsManager {
         }
     }
 
+    SavedSessionsManager(Path sessionsFilePath) {
+        this.sessionsFilePath = sessionsFilePath;
+        loadSessions();
+    }
+
     public static SavedSessionsManager getInstance() {
         return instance;
     }
 
     public void addSession(SavedSession session) {
         if (session != null) {
-            savedSessions.add(0, session); // Add to top
+            SavedSession prepared = session.getProtectedFields() == null
+                    ? codec.prepareForStorage(session, null) : session;
+            savedSessions.add(0, prepared); // Add to top
             saveSessions();
         }
     }
@@ -58,21 +70,65 @@ public class SavedSessionsManager {
         return new ArrayList<>(savedSessions);
     }
 
+    public boolean hasLegacyPlaintextSecrets() {
+        return savedSessions.stream().anyMatch(session -> session.getVersion() == 0
+                && (session.getOperationLog() != null || (session.getUiState() != null && session.getUiState().entrySet().stream().anyMatch(entry -> {
+                    String field = entry.getKey() == null ? "" : entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
+                    return com.cryptocarver.ui.UiStateSnapshot.isHistorySensitiveField(field)
+                            && entry.getValue() != null && !"[REDACTED_SECRET]".equals(entry.getValue());
+                }))));
+    }
+
+    public void removeLegacyPlaintextSecrets() {
+        List<SavedSession> cleaned = codec.redactLegacyPlaintext(savedSessions);
+        savedSessions.clear();
+        savedSessions.addAll(cleaned);
+        saveSessions();
+    }
+
     private void saveSessions() {
         if (sessionsFilePath == null)
             return;
 
         try {
-            if (!Files.exists(sessionsFilePath.getParent())) {
-                Files.createDirectories(sessionsFilePath.getParent());
-            }
+            Files.createDirectories(sessionsFilePath.getParent());
+            applyPermissions(sessionsFilePath.getParent(), "rwx------");
 
             String json = codec.serialize(savedSessions);
-            Files.writeString(sessionsFilePath, json);
+            writeOwnerOnly(sessionsFilePath, json);
 
         } catch (IOException e) {
             System.err.println("Warning: Error saving sessions: " + e.getMessage());
         }
+    }
+
+    private static void writeOwnerOnly(Path destination, String contents) throws IOException {
+        Path temporary = Files.createTempFile(destination.getParent(), ".saved-sessions-", ".tmp");
+        boolean moved = false;
+        try {
+            applyPermissions(temporary, "rw-------");
+            Files.writeString(temporary, contents);
+            try {
+                Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary, destination, StandardCopyOption.REPLACE_EXISTING);
+            }
+            moved = true;
+            applyPermissions(destination, "rw-------");
+        } finally {
+            if (!moved) Files.deleteIfExists(temporary);
+        }
+    }
+
+    private static void applyPermissions(Path path, String permissions) {
+        try {
+            Set<PosixFilePermission> set = new java.util.HashSet<>();
+            if (permissions.contains("r")) set.add(PosixFilePermission.OWNER_READ);
+            if (permissions.contains("w")) set.add(PosixFilePermission.OWNER_WRITE);
+            if (permissions.contains("x")) set.add(PosixFilePermission.OWNER_EXECUTE);
+            Files.setPosixFilePermissions(path, set);
+        } catch (UnsupportedOperationException | IOException ignored) { }
     }
 
     private void loadSessions() {
