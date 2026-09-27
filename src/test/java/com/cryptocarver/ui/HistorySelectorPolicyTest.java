@@ -100,9 +100,17 @@ class HistorySelectorPolicyTest {
 
     @Test
     void secretPromptCountsOnlyNonemptyTextSecrets() {
-        assertFalse(UiStateSnapshot.holdsSecretValue("CipherController.symKeySourceCombo", "Manual Input"));
-        assertFalse(UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", ""));
-        assertTrue(UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", "invented-test-key"));
+        var emptyState = java.util.Map.<String, Object>of(
+                "CipherController.symKeySourceCombo", "Manual Input",
+                "CipherController.symmetricKeyField", "");
+        long emptyCount = emptyState.entrySet().stream()
+                .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
+        assertEquals(0, emptyCount);
+        var filledState = new java.util.LinkedHashMap<>(emptyState);
+        filledState.put("CipherController.symmetricKeyField", "invented-test-key");
+        long filledCount = filledState.entrySet().stream()
+                .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
+        assertEquals(1, filledCount);
     }
 
     @Test
