@@ -236,41 +236,10 @@ public class JOSEController implements Initializable {
     }
 
     @FXML
-    public void handlePasteJwtKey() {
-        IngestionUIHelper.pasteFromClipboard(jwtKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    @FXML
-    public void handlePasteJwtValidateKey() {
-        IngestionUIHelper.pasteFromClipboard(jwtValidateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    @FXML
-    public void handlePasteJwePublicKey() {
-        IngestionUIHelper.pasteFromClipboard(jwePublicKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    @FXML
     public void handlePopulateJwePubKeyShelf() {
         IngestionUIHelper.populateShelfMenu(jwePubKeyShelfMenu, jwePublicKeyArea, null, null,
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    @FXML
-    public void handlePasteJwePrivateKey() {
-        IngestionUIHelper.pasteFromClipboard(jwePrivateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     @FXML
@@ -543,12 +512,6 @@ public class JOSEController implements Initializable {
 
             this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
                     jwkOutputArea);
-            // History
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Key Type", jwkKeyTypeCombo.getValue());
-            if (jwkKeyIdField.getText() != null && !jwkKeyIdField.getText().isEmpty()) {
-                details.put("Key ID", jwkKeyIdField.getText());
-            }
 
         }
 
@@ -563,7 +526,6 @@ public class JOSEController implements Initializable {
                 String content = java.nio.file.Files.readString(file.toPath());
                 jwksArea.setText(content);
                 updateStatus(t("module.jose.feedback.jwksLoaded"));
-                // History
 
             } catch (Exception e) {
                 showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
@@ -662,11 +624,6 @@ public class JOSEController implements Initializable {
                     nestedCompressCheck.isSelected(),
                     secretEncoding(nestedSecretFormatCombo),
                     nestedOutputArea);
-            Map<String, String> details = new HashMap<>();
-            details.put("Sign Algo", nestedSignAlgoCombo.getValue());
-            details.put("Key Algo", nestedKeyAlgoCombo.getValue());
-            details.put("Content Algo", nestedContentAlgoCombo.getValue());
-            details.put("Compression", nestedCompressCheck.isSelected() ? "Yes" : "No");
 
         }
 
@@ -690,7 +647,6 @@ public class JOSEController implements Initializable {
             }
 
             this.calculateThumbprint(jwkInputArea.getText(), jwkOutputArea);
-            // History
 
         }
 
@@ -761,12 +717,6 @@ public class JOSEController implements Initializable {
                     serialization,
                     unencoded,
                     jwtOutputArea);
-            // Add to History
-            Map<String, String> details = new HashMap<>();
-            details.put("Algorithm", algo);
-            details.put("Key/Secret", key.length() > 50 ? "Provided (Length: " + key.length() + ")" : key);
-            details.put("Payload", jwtPayloadArea.getText());
-            details.put("Output JWT", jwtOutputArea.getText());
 
         }
 
@@ -800,12 +750,6 @@ public class JOSEController implements Initializable {
                     jwtDecodedHeaderArea,
                     jwtDecodedPayloadArea,
                     jwtStatusLabel);
-            // Add to History
-            Map<String, String> details = new HashMap<>();
-            details.put("Token", jwtValidateTokenArea.getText());
-            details.put("Verification Key", jwtValidateKeyArea.getText().length() > 50 ? "Provided (PEM/Secret)"
-                    : jwtValidateKeyArea.getText());
-            details.put("Status", jwtStatusLabel.getText());
 
         }
 
@@ -839,9 +783,6 @@ public class JOSEController implements Initializable {
             String newJson = this.addToJWKSet(currentJson, newKey);
             jwksArea.setText(newJson);
             updateStatus(t("module.jose.feedback.keyAdded", alg));
-            // History
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", alg);
 
         } catch (Exception e) {
             showError("Rotate Key Error", e.getMessage());
@@ -911,11 +852,6 @@ public class JOSEController implements Initializable {
                 return;
             }
             this.inspectToken(inspectorInputArea.getText(), inspectorOutputFlow);
-            // History
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            if (inspectorInputArea.getText().length() > 50) {
-                details.put("Token Preview", inspectorInputArea.getText().substring(0, 20) + "...");
-            }
 
         }
     }
@@ -955,7 +891,6 @@ public class JOSEController implements Initializable {
             }
 
             this.convertJwkToPem(jwkInputArea.getText(), jwkOutputArea);
-            // History
 
         }
 
@@ -1054,10 +989,6 @@ public class JOSEController implements Initializable {
         return sb.toString();
     }
 
-    public boolean isInspectorVisible() {
-        return inspectorSection != null && inspectorSection.isVisible();
-    }
-
 
 
 
@@ -1134,51 +1065,6 @@ public class JOSEController implements Initializable {
         } catch (Exception e) {
             statusReporter.showError("JWT Generation Error", e.getMessage());
             LOG.error("Signed JWT generation failed", e);
-        }
-    }
-
-    public void validateJWT(String tokenString, String keyString, TextArea headerOut, TextArea payloadOut,
-            Label statusLabel) {
-        try {
-            // 1. Parse JWT
-            SignedJWT signedJWT = SignedJWT.parse(tokenString);
-
-            // 2. Display Parts
-            headerOut.setText(signedJWT.getHeader().toString());
-            payloadOut.setText(signedJWT.getJWTClaimsSet().toString());
-
-            // 3. Verify
-            JWSVerifier verifier;
-            JWSAlgorithm algo = signedJWT.getHeader().getAlgorithm();
-
-            if (JWSAlgorithm.Family.HMAC_SHA.contains(algo) || JWSAlgorithm.Family.RSA.contains(algo)
-                    || JWSAlgorithm.Family.EC.contains(algo)) {
-                verifier = JOSEService.createVerifier(algo, keyString);
-            } else {
-                statusLabel.setText(t("module.jose.unsupportedVerification"));
-                statusLabel.setStyle("-fx-text-fill: orange;");
-                return;
-            }
-
-            boolean verified = signedJWT.verify(verifier);
-            if (verified) {
-                statusLabel.setText(t("module.jose.validSignature"));
-                statusLabel.setStyle("-fx-text-fill: green;");
-            } else {
-                statusLabel.setText(t("module.jose.invalidSignature"));
-                statusLabel.setStyle("-fx-text-fill: red;");
-            }
-            statusReporter.publish(OperationResult.forOperation("JWT Validation")
-                    .input(tokenString.getBytes(StandardCharsets.US_ASCII))
-                    .detail("Algorithm", algo.getName()).detail("Result", verified ? "VALID" : "INVALID")
-                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyString))
-                    .status(t("module.jose.feedback.statusJwtValidation", verified ? "valid" : "invalid")).build());
-
-        } catch (Exception e) {
-            statusLabel.setText(t("module.jose.error", e.getMessage()));
-            statusLabel.setStyle("-fx-text-fill: red;");
-            headerOut.setText("");
-            payloadOut.setText("");
         }
     }
 
@@ -1426,75 +1312,6 @@ public class JOSEController implements Initializable {
 
     static String directCekPreviewMessage() {
         return "Direct encryption: the CEK is the supplied direct key and is not displayed automatically.";
-    }
-
-    // --- JWK ---
-    public void generateRSAJWK(TextArea outputArea) {
-        try {
-            RSAKey rsaJWK = new RSAKeyGenerator(2048)
-                    .keyID(UUID.randomUUID().toString())
-                    .generate();
-
-            outputArea.setText(rsaJWK.toJSONString());
-            statusReporter.updateStatus(t("module.jose.feedback.statusJwkGenerated"));
-        } catch (Exception e) {
-            statusReporter.showError("JWK Error", e.getMessage());
-        }
-    }
-
-    // --- Helpers ---
-    private PrivateKey parseRSAPrivateKey(String pem) throws Exception {
-        return JoseKeyMaterial.rsaPrivateKey(pem);
-    }
-
-    private java.security.interfaces.ECPrivateKey parseECPrivateKey(String pem) throws Exception {
-        return JoseKeyMaterial.ecPrivateKey(pem);
-    }
-
-    private PublicKey parseRSAPublicKey(String pem) throws Exception {
-        return JoseKeyMaterial.rsaPublicKey(pem);
-    }
-
-    private java.security.interfaces.ECPublicKey parseECPublicKey(String pem) throws Exception {
-        return JoseKeyMaterial.ecPublicKey(pem);
-    }
-
-    private java.security.interfaces.ECPrivateKey requireEcPrivateKey(JWSAlgorithm algorithm, String pem) throws Exception {
-        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
-        validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
-        return key;
-    }
-
-    private java.security.interfaces.ECPublicKey requireEcPublicKey(JWSAlgorithm algorithm, String pem) throws Exception {
-        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
-        validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
-        return key;
-    }
-
-    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
-    private java.security.interfaces.ECPublicKey requireJweEcPublicKey(String pem) throws Exception {
-        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
-        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
-        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
-            throw new IllegalArgumentException("The supplied EC public key curve is not supported by Nimbus ECDH-ES.");
-        }
-        return key;
-    }
-
-    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
-    private java.security.interfaces.ECPrivateKey requireJweEcPrivateKey(String pem) throws Exception {
-        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
-        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
-        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
-            throw new IllegalArgumentException("The supplied EC private key curve is not supported by Nimbus ECDH-ES.");
-        }
-        return key;
-    }
-
-    private void validateEcCurve(JWSAlgorithm algorithm, int fieldSize) {
-        int expected = JWSAlgorithm.ES256.equals(algorithm) ? 256 : JWSAlgorithm.ES384.equals(algorithm) ? 384 : JWSAlgorithm.ES512.equals(algorithm) ? 521 : -1;
-        if (expected < 0) throw new IllegalArgumentException("Unsupported EC JWS algorithm: " + algorithm);
-        if (fieldSize != expected) throw new IllegalArgumentException(algorithm + " requires a P-" + expected + " EC key; supplied key has a " + fieldSize + "-bit field");
     }
 
     // --- Enterprise Features (level 4 & 5) ---
