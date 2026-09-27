@@ -173,6 +173,8 @@
 
                             <Label text="Decoded Payload:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="jwtDecodedPayloadArea" promptText="Payload JSON..." prefRowCount="5" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="result-area,monospace-field" editable="false"/>
+                            <Label text="Claim Checks:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <TextArea fx:id="jwtFindingsArea" promptText="Issuer, audience, time and critical-header findings..." prefRowCount="3" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="result-area,monospace-field" editable="false" wrapText="true"/>
                         </GridPane>
                     </VBox>
                 </TitledPane>

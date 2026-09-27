@@ -259,44 +259,48 @@ public class JOSEService {
             throw new IllegalArgumentException("Header algorithm does not match selection");
         }
 
-        com.nimbusds.jose.JWSVerifier verifier = null;
-        String keyStringTrimmed = keyStr.trim();
+        return object.verify(resolveVerifier(object.getHeader(), keyStr, secretEncoding));
+    }
 
-        if (keyStringTrimmed.startsWith("{") && keyStringTrimmed.contains("\"keys\"")) {
-            com.nimbusds.jose.jwk.JWKSet jwkSet = com.nimbusds.jose.jwk.JWKSet.parse(keyStringTrimmed);
-            String kid = object.getHeader().getKeyID();
-            com.nimbusds.jose.jwk.JWK match = null;
+    /**
+     * Picks the verifier for a JWS header: a JWKS is searched by {@code kid}
+     * (else by {@code alg}, else its first key), a single oct JWK is an HMAC
+     * key, and anything else goes through {@link #createVerifier}.
+     */
+    public static JWSVerifier resolveVerifier(JWSHeader header, String key,
+            JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
+        JWSAlgorithm algorithm = header.getAlgorithm();
+        String trimmed = key.trim();
+        com.nimbusds.jose.jwk.JWK match = null;
+        if (trimmed.startsWith("{") && trimmed.contains("\"keys\"")) {
+            List<com.nimbusds.jose.jwk.JWK> keys = com.nimbusds.jose.jwk.JWKSet.parse(trimmed).getKeys();
+            String kid = header.getKeyID();
             if (kid != null) {
-                match = jwkSet.getKeyByKeyId(kid);
-                if (match == null) throw new IllegalArgumentException("JWKS does not contain a key matching the token's 'kid': " + kid);
+                match = keys.stream().filter(k -> kid.equals(k.getKeyID())).findFirst().orElseThrow(
+                        () -> new IllegalArgumentException("JWKS does not contain a key matching the token's 'kid': " + kid));
             } else {
-                for (com.nimbusds.jose.jwk.JWK k : jwkSet.getKeys()) {
-                    if (k.getAlgorithm() != null && k.getAlgorithm().equals(actual)) {
-                        match = k; break;
-                    }
-                }
-                if (match == null && !jwkSet.getKeys().isEmpty()) match = jwkSet.getKeys().get(0);
+                match = keys.stream().filter(k -> algorithm.equals(k.getAlgorithm())).findFirst()
+                        .orElse(keys.isEmpty() ? null : keys.get(0));
                 if (match == null) throw new IllegalArgumentException("JWKS is empty");
             }
-
-            if (match instanceof com.nimbusds.jose.jwk.RSAKey) {
-                verifier = new com.nimbusds.jose.crypto.RSASSAVerifier(((com.nimbusds.jose.jwk.RSAKey) match).toRSAPublicKey());
-            } else if (match instanceof com.nimbusds.jose.jwk.ECKey) {
-                verifier = new com.nimbusds.jose.crypto.ECDSAVerifier(((com.nimbusds.jose.jwk.ECKey) match).toECPublicKey());
-            } else if (match instanceof com.nimbusds.jose.jwk.OctetSequenceKey) {
-                verifier = new com.nimbusds.jose.crypto.MACVerifier(((com.nimbusds.jose.jwk.OctetSequenceKey) match).toByteArray());
-            } else {
-                throw new IllegalArgumentException("Unsupported JWK type: " + match.getKeyType());
-            }
-        } else {
-            if (JWSAlgorithm.Family.HMAC_SHA.contains(actual) || JWSAlgorithm.Family.RSA.contains(actual)
-                    || JWSAlgorithm.Family.EC.contains(actual)) {
-                verifier = createVerifier(actual, keyStr, secretEncoding);
-            }
+        } else if (trimmed.startsWith("{")) {
+            match = com.nimbusds.jose.jwk.JWK.parse(trimmed);
         }
 
-        if (verifier == null) throw new IllegalArgumentException("Unsupported detached JWS algorithm: " + actual);
-        return object.verify(verifier);
+        if (match instanceof com.nimbusds.jose.jwk.OctetSequenceKey oct) {
+            if (!JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
+                throw new IllegalArgumentException("A symmetric JWK cannot verify " + algorithm + ".");
+            }
+            return new PromiscuousMACVerifier(oct.toByteArray(), algorithm);
+        }
+        if (match instanceof com.nimbusds.jose.jwk.RSAKey rsa) {
+            return new RSASSAVerifier(rsa.toRSAPublicKey());
+        }
+        if (match instanceof com.nimbusds.jose.jwk.ECKey ec) {
+            return new ECDSAVerifier(ec.toECPublicKey());
+        }
+        if (match != null) throw new IllegalArgumentException("Unsupported JWK type: " + match.getKeyType());
+        return createVerifier(algorithm, key, secretEncoding);
     }
 
     public static String generateNestedJWT(String payloadJson, String signAlgoStr, String signKey, String keyAlgoStr, String encAlgoStr, String encKey) throws Exception {

@@ -15,6 +15,7 @@ import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.JoseKeyMaterial;
 import com.cryptocarver.crypto.JweComposer;
 import com.cryptocarver.crypto.JwtClaimsBuilder;
+import com.cryptocarver.crypto.JwtValidator;
 import com.cryptocarver.crypto.SignerConfig;
 import com.cryptocarver.model.OperationResult;
 
@@ -1228,6 +1229,7 @@ public class JOSEController implements Initializable {
     }
 
     @FXML private ComboBox<String> jwtSecretFormatCombo;
+    @FXML private TextArea jwtFindingsArea;
     @FXML private ComboBox<String> jwtValidateSecretFormatCombo;
     @FXML private ComboBox<String> detachedSecretFormatCombo;
     @FXML private ComboBox<String> nestedSecretFormatCombo;
@@ -1575,141 +1577,46 @@ public class JOSEController implements Initializable {
     public void validateJWTAdvanced(String tokenString, String keyString,
             String expectedIss, String expectedAud, long clockSkewSec, boolean checkExpiry, boolean oidcStrict,
             JoseKeyMaterial.SecretEncoding secretEncoding, TextArea headerOut, TextArea payloadOut, Label statusLabel) {
+        if (jwtFindingsArea != null) jwtFindingsArea.clear();
         try {
-            // 1. Parse
-            SignedJWT signedJWT = SignedJWT.parse(tokenString);
-            headerOut.setText(signedJWT.getHeader().toString());
-            payloadOut.setText(signedJWT.getJWTClaimsSet().toString());
+            JwtValidator.Result result = JwtValidator.validate(tokenString, keyString,
+                    new JwtValidator.Options(expectedIss, expectedAud, clockSkewSec, checkExpiry, oidcStrict,
+                            secretEncoding),
+                    java.time.Instant.now());
+            headerOut.setText(result.header());
+            payloadOut.setText(result.payload());
 
-            // 2. Verify Signature
-            JWSVerifier verifier = null;
-            JWSAlgorithm algo = signedJWT.getHeader().getAlgorithm();
-            boolean sigValid = false;
-
-            String keyStringTrimmed = keyString.trim();
-            if (keyStringTrimmed.startsWith("{") && keyStringTrimmed.contains("\"keys\"")) {
-                // It's a JWKS
-                JWKSet jwkSet = JWKSet.parse(keyStringTrimmed);
-                String kid = signedJWT.getHeader().getKeyID();
-                JWK match = null;
-
-                if (kid != null) {
-                    match = jwkSet.getKeyByKeyId(kid);
-                    if (match == null) {
-                        throw new Exception("JWKS does not contain a key matching the token's 'kid': " + kid);
-                    }
-                } else {
-                    // If no kid, try to find a key that matches the algorithm, or just take the firs
-                    for (JWK k : jwkSet.getKeys()) {
-                        if (k.getAlgorithm() != null && k.getAlgorithm().equals(algo)) {
-                            match = k; break;
-                        }
-                    }
-                    if (match == null && !jwkSet.getKeys().isEmpty()) {
-                        match = jwkSet.getKeys().get(0);
-                    }
-                    if (match == null) throw new Exception("JWKS is empty");
-                }
-
-                if (match instanceof com.nimbusds.jose.jwk.RSAKey) {
-                    verifier = new RSASSAVerifier(((com.nimbusds.jose.jwk.RSAKey) match).toRSAPublicKey());
-                } else if (match instanceof com.nimbusds.jose.jwk.ECKey) {
-                    verifier = new ECDSAVerifier(((com.nimbusds.jose.jwk.ECKey) match).toECPublicKey());
-                } else if (match instanceof com.nimbusds.jose.jwk.OctetSequenceKey) {
-                    verifier = new MACVerifier(((com.nimbusds.jose.jwk.OctetSequenceKey) match).toByteArray());
-                } else {
-                    throw new Exception("Unsupported JWK type: " + match.getKeyType());
-                }
-            } else {
-                // PEM, certificate, single JWK or shared secret
-                if (JWSAlgorithm.Family.HMAC_SHA.contains(algo) || JWSAlgorithm.Family.RSA.contains(algo)
-                        || JWSAlgorithm.Family.EC.contains(algo)) {
-                    verifier = JOSEService.createVerifier(algo, keyString, secretEncoding);
-                }
+            List<String> findings = new ArrayList<>();
+            for (JwtValidator.Finding finding : result.findings()) {
+                findings.add(t("module.jose.claim." + finding.code(), finding.argument()));
             }
+            if (jwtFindingsArea != null) jwtFindingsArea.setText(String.join("\n", findings));
 
-            if (verifier == null) {
-                statusLabel.setText("Algorithm Verification not supported manually.");
-                statusLabel.setStyle("-fx-text-fill: orange;");
-                return;
-            }
-
-            sigValid = signedJWT.verify(verifier);
-
-            if (!sigValid) {
-                statusLabel.setText("INVALID Signature ❌");
+            String status;
+            if (!result.signatureValid()) {
+                status = t("module.jose.invalidSignature");
                 statusLabel.setStyle("-fx-text-fill: red;");
-                return;
-            }
-
-            // 3. Validate Claims (Enterprise)
-            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-            List<String> errors = new ArrayList<>();
-
-            // Issuer
-            if (expectedIss != null && !expectedIss.isEmpty()) {
-                if (!expectedIss.equals(claims.getIssuer())) {
-                    errors.add("Issuer mismatch (expected " + expectedIss + ")");
-                }
-            }
-
-            // Audience
-            if (expectedAud != null && !expectedAud.isEmpty()) {
-                List<String> auds = claims.getAudience();
-                if (auds == null || !auds.contains(expectedAud)) {
-                    errors.add("Audience mismatch (expected " + expectedAud + ")");
-                }
-            }
-
-            Date now = new Date();
-            long skewMillis = clockSkewSec * 1000L;
-            Date exp = claims.getExpirationTime();
-            Date nbf = claims.getNotBeforeTime();
-            Date iat = claims.getIssueTime();
-
-            // Strict OIDC Check
-            if (oidcStrict) {
-                if (exp == null) errors.add("OIDC Strict: Missing 'exp' claim");
-                if (iat == null) errors.add("OIDC Strict: Missing 'iat' claim");
-                if (claims.getIssuer() == null) errors.add("OIDC Strict: Missing 'iss' claim");
-                if (claims.getAudience() == null || claims.getAudience().isEmpty()) errors.add("OIDC Strict: Missing 'aud' claim");
-            }
-
-            // Expiration, Not Before, Issued At (w/ Clock Skew)
-            if (checkExpiry || oidcStrict) {
-                if (exp != null) {
-                    if (now.getTime() > (exp.getTime() + skewMillis)) {
-                        errors.add("Token Expired");
-                    }
-                }
-
-                if (nbf != null) {
-                    if (now.getTime() < (nbf.getTime() - skewMillis)) {
-                        errors.add("Token Not Yet Valid (nbf)");
-                    }
-                }
-
-                if (iat != null) {
-                    if (now.getTime() < (iat.getTime() - skewMillis)) {
-                        errors.add("Token issued in the future (iat > now)");
-                    }
-                }
-            }
-
-            if (errors.isEmpty()) {
-                statusLabel.setText("VALID ✅ (Sig + Claims)");
-                statusLabel.setStyle("-fx-text-fill: green;");
-            } else {
-                statusLabel.setText("INVALID Claims ⚠️");
+            } else if (!findings.isEmpty()) {
+                status = t("module.jose.invalidClaims");
                 statusLabel.setStyle("-fx-text-fill: orange;");
-                // Append errors to payload output for visibility
-                payloadOut.appendText("\n\n--- VALIDATION ERRORS ---\n" + String.join("\n", errors));
+            } else {
+                status = t("module.jose.validSignatureAndClaims");
+                statusLabel.setStyle("-fx-text-fill: green;");
             }
-
+            statusLabel.setText(status);
+            statusReporter.publish(OperationResult.forOperation("JWT Validation")
+                    .input(tokenString.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Signature", result.signatureValid() ? "VALID" : "INVALID")
+                    .detail("Claim Checks", findings.isEmpty() ? "OK" : String.join("; ", findings))
+                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyString))
+                    .status(t("module.jose.feedback.statusJwtValidation", status)).build());
         } catch (Exception e) {
-            statusLabel.setText("Error: " + e.getMessage());
+            headerOut.setText("");
+            payloadOut.setText("");
+            statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
-            LOG.error("JWT validation failed", e);
+            // No exception attached: key parsers may echo key material.
+            LOG.error("JWT validation failed: {}", e.getClass().getSimpleName());
         }
     }
 
