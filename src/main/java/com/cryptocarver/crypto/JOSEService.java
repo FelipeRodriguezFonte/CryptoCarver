@@ -294,6 +294,12 @@ public class JOSEService {
     }
 
     public static String generateNestedJWT(String payloadJson, String signAlgoStr, String signKey, String keyAlgoStr, String encAlgoStr, String encKey) throws Exception {
+        return generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr, encAlgoStr, encKey, false);
+    }
+
+    /** Signs the claims, then encrypts the JWS with {@code cty: JWT} (RFC 7519 §5.2). */
+    public static String generateNestedJWT(String payloadJson, String signAlgoStr, String signKey, String keyAlgoStr,
+            String encAlgoStr, String encKey, boolean compress) throws Exception {
         // 1. Sign
         JWSAlgorithm signAlgo = JWSAlgorithm.parse(signAlgoStr);
         JWSSigner signer = createSigner(signAlgo, signKey);
@@ -310,31 +316,29 @@ public class JOSEService {
         EncryptionMethod encMethod = EncryptionMethod.parse(encAlgoStr);
         JWEEncrypter encrypter = createEncrypter(jweAlgo, encKey);
 
-        JWEHeader jweHeader = new JWEHeader.Builder(jweAlgo, encMethod)
-                .contentType("JWT") // Recommended for nested tokens
-                .build();
+        JWEHeader.Builder jweHeader = new JWEHeader.Builder(jweAlgo, encMethod)
+                .contentType("JWT"); // Recommended for nested tokens
+        if (compress) jweHeader.compressionAlgorithm(CompressionAlgorithm.DEF);
 
-        JWEObject jweObject = new JWEObject(jweHeader, new Payload(jwsToken));
+        JWEObject jweObject = new JWEObject(jweHeader.build(), new Payload(jwsToken));
         jweObject.encrypt(encrypter);
 
         return jweObject.serialize();
     }
 
+    /**
+     * Decrypts and verifies a nested JWT. The verification key may be the
+     * signer's private key: its public half is derived.
+     */
     public static String verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM) throws Exception {
         JWEObject jweObject = JWEObject.parse(nestedToken);
         JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
-        JWEDecrypter decrypter;
-
-        if (JWEAlgorithm.Family.RSA.contains(alg)) {
-            decrypter = new RSADecrypter(parseRSAPrivateKey(decryptionKeyPEM));
-        } else if (JWEAlgorithm.DIR.equals(alg)) {
-            byte[] keyBytes = decryptionKeyPEM.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            decrypter = new DirectDecrypter(keyBytes);
-        } else {
+        if (!JWEAlgorithm.Family.RSA.contains(alg) && !JWEAlgorithm.Family.ECDH_ES.contains(alg)
+                && !JWEAlgorithm.DIR.equals(alg)) {
             throw new IllegalArgumentException("Unsupported decryption algorithm: " + alg.getName());
         }
-
-        jweObject.decrypt(decrypter);
+        jweObject.decrypt(JweComposer.decrypter(alg, decryptionKeyPEM,
+                JoseKeyMaterial.SecretEncoding.UTF8, new JweComposer.LoadedKey()));
         SignedJWT signedJWT = jweObject.getPayload().toSignedJWT();
         if (signedJWT == null) {
             throw new IllegalArgumentException("The decrypted payload is not a valid Signed JWT.");
@@ -342,15 +346,10 @@ public class JOSEService {
 
         JWSAlgorithm signAlg = signedJWT.getHeader().getAlgorithm();
         JWSVerifier verifier;
-
-        if (JWSAlgorithm.Family.HMAC_SHA.contains(signAlg)) {
-            verifier = new MACVerifier(verificationKeyPEM.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        } else if (JWSAlgorithm.Family.RSA.contains(signAlg)) {
-            // Need public key for verification
-            java.security.PublicKey pubKey = parseRSAPublicKey(verificationKeyPEM);
-            verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
-        } else {
-            throw new IllegalArgumentException("Unsupported verification algorithm: " + signAlg.getName());
+        try {
+            verifier = createVerifier(signAlg, verificationKeyPEM);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unsupported verification algorithm: " + signAlg.getName(), e);
         }
 
         if (!signedJWT.verify(verifier)) {
@@ -379,6 +378,8 @@ public class JOSEService {
         if (JWEAlgorithm.Family.RSA.contains(jweAlgo)) {
             java.security.PublicKey pubKey = parseRSAPublicKey(encKey);
             return new RSAEncrypter((java.security.interfaces.RSAPublicKey) pubKey);
+        } else if (JWEAlgorithm.Family.ECDH_ES.contains(jweAlgo)) {
+            return new ECDHEncrypter(JoseKeyMaterial.ecPublicKey(encKey));
         } else if (JWEAlgorithm.DIR.equals(jweAlgo)) {
             byte[] keyBytes = encKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             return new DirectEncrypter(keyBytes);
@@ -414,30 +415,14 @@ public class JOSEService {
         throw new IllegalArgumentException("Unsupported JWS algorithm: " + algorithm);
     }
 
+    /** Accepts PKCS#8, PKCS#1, bare DER or JWK; see {@link JoseKeyMaterial}. */
     public static PrivateKey parseRSAPrivateKey(String pem) throws Exception {
-        String privateKeyPEM = pem
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                .replace("-----END RSA PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-        byte[] encoded = DataConverter.decodeBase64Flexible(privateKeyPEM);
-        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(encoded));
+        return JoseKeyMaterial.rsaPrivateKey(pem);
     }
 
+    /** Accepts PKCS#8, SEC1, bare DER or JWK; see {@link JoseKeyMaterial}. */
     public static ECPrivateKey parseECPrivateKey(String pem) throws Exception {
-        if (pem.contains("-----BEGIN EC PRIVATE KEY-----")) {
-            throw new IllegalArgumentException("EC private keys must be PEM PKCS#8 (BEGIN PRIVATE KEY), not SEC1");
-        }
-        String base64 = pem.replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-        byte[] encoded = DataConverter.decodeBase64Flexible(base64);
-        PrivateKey key = KeyFactory.getInstance("EC").generatePrivate(new PKCS8EncodedKeySpec(encoded));
-        if (!(key instanceof ECPrivateKey ecKey)) {
-            throw new IllegalArgumentException("The supplied PKCS#8 key is not an EC private key");
-        }
-        return ecKey;
+        return JoseKeyMaterial.ecPrivateKey(pem);
     }
 
     public static ECPrivateKey requireEcPrivateKey(JWSAlgorithm algo, String secretOrKey) throws Exception {
@@ -450,23 +435,13 @@ public class JOSEService {
         return privateKey;
     }
 
+    /** Accepts SubjectPublicKeyInfo, PKCS#1, certificates, JWK or a private key to derive from. */
     public static java.security.PublicKey parseRSAPublicKey(String pem) throws Exception {
-        String publicKeyPEM = pem
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replace("-----BEGIN RSA PUBLIC KEY-----", "")
-                .replace("-----END RSA PUBLIC KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] encoded = DataConverter.decodeBase64Flexible(publicKeyPEM);
-        return KeyFactory.getInstance("RSA").generatePublic(new java.security.spec.X509EncodedKeySpec(encoded));
+        return JoseKeyMaterial.rsaPublicKey(pem);
     }
 
     public static java.security.interfaces.ECPublicKey requireEcPublicKey(JWSAlgorithm algo, String pem) throws Exception {
-        String base64 = pem.replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
-        java.security.PublicKey key = KeyFactory.getInstance("EC").generatePublic(new java.security.spec.X509EncodedKeySpec(DataConverter.decodeBase64Flexible(base64)));
-        if (!(key instanceof java.security.interfaces.ECPublicKey ecKey)) throw new IllegalArgumentException("The supplied key is not an EC public key");
+        java.security.interfaces.ECPublicKey ecKey = JoseKeyMaterial.ecPublicKey(pem);
 
         Curve requiredCurve = Curve.forJWSAlgorithm(algo).iterator().next();
         Curve keyCurve = Curve.forECParameterSpec(ecKey.getParams());

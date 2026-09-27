@@ -62,6 +62,13 @@ public class JOSEController implements Initializable {
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
     private ModuleI18n.Binding moduleI18n;
 
+    /** JWS algorithms the module can sign and verify. */
+    private static final List<String> JWS_ALGORITHMS = List.of(
+            "HS256", "HS384", "HS512",
+            "RS256", "RS384", "RS512",
+            "ES256", "ES384", "ES512",
+            "PS256", "PS384", "PS512");
+
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
@@ -77,19 +84,11 @@ public class JOSEController implements Initializable {
         com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         // Initialize Combo
             if (jwtAlgoCombo != null && jwtAlgoCombo.getItems().isEmpty()) {
-                jwtAlgoCombo.getItems().addAll(
-                        "HS256", "HS384", "HS512",
-                        "RS256", "RS384", "RS512",
-                        "ES256", "ES384", "ES512",
-                        "PS256", "PS384", "PS512");
+                jwtAlgoCombo.getItems().addAll(JWS_ALGORITHMS);
                 jwtAlgoCombo.getSelectionModel().selectFirst();
             }
             if (jwtAlgoCombo2 != null && jwtAlgoCombo2.getItems().isEmpty()) {
-                jwtAlgoCombo2.getItems().addAll(
-                        "HS256", "HS384", "HS512",
-                        "RS256", "RS384", "RS512",
-                        "ES256", "ES384", "ES512",
-                        "PS256", "PS384", "PS512");
+                jwtAlgoCombo2.getItems().addAll(JWS_ALGORITHMS);
                 jwtAlgoCombo2.getSelectionModel().selectFirst();
             }
 
@@ -114,17 +113,30 @@ public class JOSEController implements Initializable {
                 jwePbes2IterField.setText(String.valueOf(JweComposer.DEFAULT_PBES2_ITERATIONS));
             }
 
+            if (detachedAlgoCombo != null && detachedAlgoCombo.getItems().isEmpty()) {
+                detachedAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
+                detachedAlgoCombo.getSelectionModel().selectFirst();
+            }
+            for (ComboBox<String> serialization : java.util.Arrays.asList(jwsSerializationCombo, detachedSerializationCombo)) {
+                if (serialization != null && serialization.getItems().isEmpty()) {
+                    serialization.getItems().setAll("Compact", "Flattened JSON", "General JSON");
+                    serialization.getSelectionModel().selectFirst();
+                }
+            }
+
             // Init Nested Combos
             if (nestedSignAlgoCombo != null && nestedSignAlgoCombo.getItems().isEmpty()) {
-                nestedSignAlgoCombo.getItems().setAll("HS256", "HS384", "HS512", "RS256", "RS384", "RS512");
+                nestedSignAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
                 nestedSignAlgoCombo.getSelectionModel().select("HS256");
             }
             if (nestedKeyAlgoCombo != null && nestedKeyAlgoCombo.getItems().isEmpty()) {
-                nestedKeyAlgoCombo.getItems().setAll("RSA-OAEP-256", "RSA-OAEP-512");
+                nestedKeyAlgoCombo.getItems().setAll(
+                        "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512",
+                        "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW");
                 nestedKeyAlgoCombo.getSelectionModel().selectFirst();
             }
             if (nestedContentAlgoCombo != null && nestedContentAlgoCombo.getItems().isEmpty()) {
-                nestedContentAlgoCombo.getItems().setAll("A128GCM", "A256GCM");
+                nestedContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
                 nestedContentAlgoCombo.getSelectionModel().select("A256GCM");
             }
 
@@ -140,7 +152,7 @@ public class JOSEController implements Initializable {
             }
             if (jwksRotateAlgoCombo != null && jwksRotateAlgoCombo.getItems().isEmpty()) {
                 jwksRotateAlgoCombo.getItems().setAll(
-                        "RS256", "RS384", "RS512", "ES256", "ES384", "ES512",
+                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512",
                         "HS256", "HS384", "HS512", "A128KW", "A256KW", "A128GCM", "A256GCM", "dir");
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
@@ -339,6 +351,7 @@ public class JOSEController implements Initializable {
     private void restoreSafeDefaults() {
         if (jwtAlgoCombo != null && !jwtAlgoCombo.getItems().isEmpty()) jwtAlgoCombo.getSelectionModel().selectFirst();
         if (jwsSerializationCombo != null) jwsSerializationCombo.setValue("Compact");
+        if (detachedSerializationCombo != null) detachedSerializationCombo.setValue("Compact");
         if (jwsUnencodedPayloadCheck != null) jwsUnencodedPayloadCheck.setSelected(false);
         showSection("JWT (Signed)");
     }
@@ -659,7 +672,6 @@ public class JOSEController implements Initializable {
     }
     @FXML
     public void handleCalculateThumbprint() {
-        showSection("JWT");
 
             if (isBlank(jwkInputArea)) {
                 showValidation(t("module.jose.feedback.thumbprintInput"), "jwkInputArea");
@@ -805,7 +817,8 @@ public class JOSEController implements Initializable {
                     return;
                 }
             }
-            com.nimbusds.jose.jwk.JWK newKey = this.generateNewJWK(alg, "sig");
+            String use = alg.startsWith("A") || alg.equals("dir") ? "enc" : "sig";
+            com.nimbusds.jose.jwk.JWK newKey = this.generateNewJWK(alg, use);
             String currentJson = jwksArea.getText();
             if (currentJson == null || currentJson.isBlank())
                 currentJson = "{\"keys\":[]}";
@@ -1160,10 +1173,8 @@ public class JOSEController implements Initializable {
             String keyAlgoStr, String contentAlgoStr, String encKeyPEM, boolean compress,
             TextArea outputArea) {
         try {
-            if (compress) {
-                statusReporter.showInfo("Compression", "Compression handling in pure service is omitted in this refactor unless implemented.");
-            }
-            String serialized = JOSEService.generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr, contentAlgoStr, encKeyPEM);
+            String serialized = JOSEService.generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr,
+                    contentAlgoStr, encKeyPEM, compress);
 
             outputArea.setText(serialized);
             String status = "Nested JWT Generated (Signed: " + signAlgoStr + ", Encrypted: " + keyAlgoStr + ")";
@@ -1380,54 +1391,19 @@ public class JOSEController implements Initializable {
 
     // --- Helpers ---
     private PrivateKey parseRSAPrivateKey(String pem) throws Exception {
-        String privateKeyPEM = pem
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                .replace("-----END RSA PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] encoded = DataConverter.decodeBase64Flexible(privateKeyPEM);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(encoded));
+        return JoseKeyMaterial.rsaPrivateKey(pem);
     }
 
-    /** Loads an EC private key encoded as PEM PKCS#8 for ES256/ES384/ES512. */
     private java.security.interfaces.ECPrivateKey parseECPrivateKey(String pem) throws Exception {
-        if (pem.contains("-----BEGIN EC PRIVATE KEY-----")) {
-            throw new IllegalArgumentException("EC private keys must be PEM PKCS#8 (BEGIN PRIVATE KEY), not SEC1 (BEGIN EC PRIVATE KEY)");
-        }
-        String base64 = pem.replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-        byte[] encoded = DataConverter.decodeBase64Flexible(base64);
-        PrivateKey key = KeyFactory.getInstance("EC").generatePrivate(new PKCS8EncodedKeySpec(encoded));
-        if (!(key instanceof java.security.interfaces.ECPrivateKey ecKey)) {
-            throw new IllegalArgumentException("The supplied PKCS#8 key is not an EC private key");
-        }
-        return ecKey;
+        return JoseKeyMaterial.ecPrivateKey(pem);
     }
 
     private PublicKey parseRSAPublicKey(String pem) throws Exception {
-        String publicKeyPEM = pem
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replace("-----BEGIN RSA PUBLIC KEY-----", "")
-                .replace("-----END RSA PUBLIC KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] encoded = DataConverter.decodeBase64Flexible(publicKeyPEM);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
+        return JoseKeyMaterial.rsaPublicKey(pem);
     }
 
-    /** Loads an EC public key encoded as PEM SubjectPublicKeyInfo for ES verification. */
     private java.security.interfaces.ECPublicKey parseECPublicKey(String pem) throws Exception {
-        String base64 = pem.replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
-        PublicKey key = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(DataConverter.decodeBase64Flexible(base64)));
-        if (!(key instanceof java.security.interfaces.ECPublicKey ecKey)) throw new IllegalArgumentException("The supplied key is not an EC public key");
-        return ecKey;
+        return JoseKeyMaterial.ecPublicKey(pem);
     }
 
     private java.security.interfaces.ECPrivateKey requireEcPrivateKey(JWSAlgorithm algorithm, String pem) throws Exception {
@@ -1777,7 +1753,7 @@ public class JOSEController implements Initializable {
         } catch (Exception e) {
             statusLabel.setText("Error: " + e.getMessage());
             statusLabel.setStyle("-fx-text-fill: red;");
-            LOG.error("JWK generation failed", e);
+            LOG.error("JWT validation failed", e);
         }
     }
 
@@ -1847,95 +1823,56 @@ public class JOSEController implements Initializable {
             return;
         }
         try {
-            // Flexible PEM parsing using DataConverter logic implicitly via Nimbus or
-            // manual strip
-            String cleanPem = pem
-                    .replace("-----BEGIN PUBLIC KEY-----", "")
-                    .replace("-----END PUBLIC KEY-----", "")
-                    .replace("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "")
-                    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                    .replace("-----END RSA PRIVATE KEY-----", "")
-                    .replace("-----BEGIN EC PRIVATE KEY-----", "")
-                    .replace("-----END EC PRIVATE KEY-----", "")
-                    .replaceAll("\\s+", "");
+            String kid = keyId == null || keyId.isBlank() ? null : keyId.trim();
+            JWK jwk = "OCT".equalsIgnoreCase(keyType)
+                    ? new OctetSequenceKey.Builder(DataConverter.decodeBase64Flexible(pem.replaceAll("\\s+", "")))
+                            .keyID(kid).build()
+                    : asymmetricJwk(pem, keyType, kid);
+            String thumbprint = jwk.computeThumbprint().toString();
+            if (kid == null) jwk = withKeyId(jwk, thumbprint);
 
-            byte[] keyBytes = com.cryptocarver.util.DataConverter.decodeBase64Flexible(cleanPem);
-
-            com.nimbusds.jose.jwk.JWK jwk = null;
-
-            if ("RSA".equalsIgnoreCase(keyType)) {
-                // Try parsing as Private -> Public -> Just creation
-                try {
-                    java.security.spec.PKCS8EncodedKeySpec spec = new java.security.spec.PKCS8EncodedKeySpec(keyBytes);
-                    java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
-                    java.security.interfaces.RSAPrivateKey privKey = (java.security.interfaces.RSAPrivateKey) kf
-                            .generatePrivate(spec);
-
-                    // Need public key to make full JWK.
-                    // Logic to extract mod/exp from private key implies using RSAPrivateCrtKey
-                    if (privKey instanceof java.security.interfaces.RSAPrivateCrtKey) {
-                        java.security.interfaces.RSAPrivateCrtKey crt = (java.security.interfaces.RSAPrivateCrtKey) privKey;
-                        java.security.spec.RSAPublicKeySpec pubSpec = new java.security.spec.RSAPublicKeySpec(
-                                crt.getModulus(), crt.getPublicExponent());
-                        java.security.interfaces.RSAPublicKey pubKey = (java.security.interfaces.RSAPublicKey) kf
-                                .generatePublic(pubSpec);
-
-                        jwk = new com.nimbusds.jose.jwk.RSAKey.Builder(pubKey)
-                                .privateKey(privKey)
-                                .keyID(keyId != null && !keyId.isEmpty() ? keyId : null)
-                                .build();
-                    } else {
-                        outputArea.setText("Error: Encoded RSA private key is not CRT compatible.");
-                        return;
-                    }
-                } catch (Exception ePriv) {
-                    // Try Public
-                    try {
-                        java.security.spec.X509EncodedKeySpec pubSpec = new java.security.spec.X509EncodedKeySpec(
-                                keyBytes);
-                        java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
-                        java.security.interfaces.RSAPublicKey pubKey = (java.security.interfaces.RSAPublicKey) kf
-                                .generatePublic(pubSpec);
-                        jwk = new com.nimbusds.jose.jwk.RSAKey.Builder(pubKey)
-                                .keyID(keyId != null && !keyId.isEmpty() ? keyId : null)
-                                .build();
-                    } catch (Exception ePub) {
-                        throw new Exception("Could not parse as RSA Private (PKCS8) or Public (X509) key.");
-                    }
-                }
-            } else if ("EC".equalsIgnoreCase(keyType)) {
-                // Simplified EC handling - requires definition of curve usually.
-                // For now, attempting generic parsing or failing gracefully.
-                outputArea.setText(
-                        "EC Key parsing from raw bytes requires Curve context. \nSupport for Generic EC PEM -> JWK is limited.\nTry converting via File -> Import if possible.");
-                return;
-            } else if ("OCT".equalsIgnoreCase(keyType)) {
-                // Symmetric Key - keyBytes is the secre
-                jwk = new com.nimbusds.jose.jwk.OctetSequenceKey.Builder(keyBytes)
-                        .keyID(keyId != null && !keyId.isEmpty() ? keyId : null)
-                        .build();
-            }
-
-            if (jwk != null) {
-                // Auto-calc KID if not provided
-                if (keyId == null || keyId.trim().isEmpty()) {
-                    String thumbprint = jwk.computeThumbprint().toString();
-                    // Re-build with kid
-                    if (jwk instanceof com.nimbusds.jose.jwk.RSAKey) {
-                        jwk = new com.nimbusds.jose.jwk.RSAKey.Builder((com.nimbusds.jose.jwk.RSAKey) jwk)
-                                .keyID(thumbprint).build();
-                    }
-                }
-
-                outputArea.setText(jwk.toJSONString());
-                outputArea.appendText("\n\n// Thumbprint (SHA-256): " + jwk.computeThumbprint().toString());
-            }
-
+            outputArea.setText(jwk.toJSONString());
+            outputArea.appendText("\n\n// Thumbprint (SHA-256): " + thumbprint);
         } catch (Exception e) {
             outputArea.setText("Error converting to JWK: " + e.getMessage());
-            LOG.error("PEM key import failed", e);
+            // No exception attached: parser messages may echo key bytes.
+            LOG.error("PEM key import failed for key type {}", keyType);
         }
+    }
+
+    /** RSA or EC key as a JWK; keeps the private half when the input has one. */
+    static JWK asymmetricJwk(String keyMaterial, String keyType, String kid) throws Exception {
+        PublicKey publicKey = JoseKeyMaterial.publicKey(keyMaterial);
+        PrivateKey privateKey = null;
+        try {
+            privateKey = JoseKeyMaterial.privateKey(keyMaterial);
+        } catch (IllegalArgumentException publicOnly) {
+            // public key, certificate or public JWK
+        }
+        if (publicKey instanceof RSAPublicKey rsa) {
+            if (keyType != null && !"RSA".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is RSA but key type " + keyType + " is selected.");
+            }
+            RSAKey.Builder builder = new RSAKey.Builder(rsa).keyID(kid);
+            if (privateKey != null) builder.privateKey(privateKey);
+            return builder.build();
+        }
+        if (publicKey instanceof java.security.interfaces.ECPublicKey ec) {
+            if (keyType != null && !"EC".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is EC but key type " + keyType + " is selected.");
+            }
+            ECKey.Builder builder = new ECKey.Builder(Curve.forECParameterSpec(ec.getParams()), ec).keyID(kid);
+            if (privateKey != null) builder.privateKey(privateKey);
+            return builder.build();
+        }
+        throw new IllegalArgumentException("Unsupported key algorithm: " + publicKey.getAlgorithm());
+    }
+
+    private static JWK withKeyId(JWK jwk, String kid) {
+        if (jwk instanceof RSAKey rsa) return new RSAKey.Builder(rsa).keyID(kid).build();
+        if (jwk instanceof ECKey ec) return new ECKey.Builder(ec).keyID(kid).build();
+        if (jwk instanceof OctetSequenceKey oct) return new OctetSequenceKey.Builder(oct).keyID(kid).build();
+        return jwk;
     }
 
     public void convertJwkToPem(String jwkJson, TextArea outputArea) {
@@ -2020,11 +1957,8 @@ public class JOSEController implements Initializable {
                 com.nimbusds.jose.jwk.JWK jwk = com.nimbusds.jose.jwk.JWK.parse(input);
                 outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
             } else {
-                // Assume PEM -> Convert to JWK -> Calc
-                // Reuse convert logic but just output thumbprint?
-                // For now, ask user to convert to JWK first for clarity or implemen
-                // auto-detect.
-                outputArea.setText("Please convert PEM to JWK first, or ensure input is valid JSON JWK.");
+                JWK jwk = asymmetricJwk(input, null, null);
+                outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
             }
         } catch (Exception e) {
             outputArea.setText("Error calculating thumbprint: " + e.getMessage());
@@ -2098,14 +2032,20 @@ public class JOSEController implements Initializable {
         jwaTypeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().type()));
         jwaDescCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().description()));
         jwaTable.setItems(javafx.collections.FXCollections.observableArrayList(
-                new SimpleAlgo("HS256", "Signature", "HMAC using SHA-256"),
-                new SimpleAlgo("RS256", "Signature", "RSASSA-PKCS1-v1_5 using SHA-256"),
-                new SimpleAlgo("ES256", "Signature", "ECDSA using P-256 and SHA-256"),
-                new SimpleAlgo("PS256", "Signature", "RSASSA-PSS using SHA-256 and MGF1"),
-                new SimpleAlgo("EdDSA", "Signature", "EdDSA using Ed25519 or Ed448"),
-                new SimpleAlgo("RSA-OAEP-256", "Encryption", "RSAES OAEP using SHA-256 and MGF1"),
-                new SimpleAlgo("A256GCM", "Encryption", "AES GCM (256-bit) content encryption"),
-                new SimpleAlgo("dir", "Encryption", "Direct use of shared symmetric key")));
+                new SimpleAlgo("HS256 / HS384 / HS512", "Signature", "HMAC using SHA-2"),
+                new SimpleAlgo("RS256 / RS384 / RS512", "Signature", "RSASSA-PKCS1-v1_5 using SHA-2"),
+                new SimpleAlgo("PS256 / PS384 / PS512", "Signature", "RSASSA-PSS using SHA-2 and MGF1"),
+                new SimpleAlgo("ES256 / ES384 / ES512", "Signature", "ECDSA using P-256 / P-384 / P-521"),
+                new SimpleAlgo("RSA-OAEP-256 / 384 / 512", "Key Management", "RSAES OAEP using SHA-2 and MGF1"),
+                new SimpleAlgo("ECDH-ES", "Key Management", "ECDH-ES direct key agreement (Concat KDF)"),
+                new SimpleAlgo("ECDH-ES+A128KW / A192KW / A256KW", "Key Management", "ECDH-ES with AES Key Wrap"),
+                new SimpleAlgo("A128KW / A192KW / A256KW", "Key Management", "AES Key Wrap with a shared key"),
+                new SimpleAlgo("A128GCMKW / A192GCMKW / A256GCMKW", "Key Management", "AES-GCM key wrap with a shared key"),
+                new SimpleAlgo("PBES2-HS256+A128KW / …", "Key Management", "PBKDF2 password-based key wrap"),
+                new SimpleAlgo("dir", "Key Management", "Direct use of a shared symmetric key as the CEK"),
+                new SimpleAlgo("A128GCM / A192GCM / A256GCM", "Content Encryption", "AES GCM"),
+                new SimpleAlgo("A128CBC-HS256 / A192CBC-HS384 / A256CBC-HS512", "Content Encryption",
+                        "AES CBC with HMAC SHA-2 authentication")));
     }
 
     private record SimpleAlgo(String name, String type, String description) {
