@@ -119,6 +119,12 @@ public class JOSEController implements Initializable {
                 detachedAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
                 detachedAlgoCombo.getSelectionModel().selectFirst();
             }
+            if (jweSerializationCombo != null && jweSerializationCombo.getItems().isEmpty()) {
+                for (JweComposer.Serialization serialization : JweComposer.Serialization.values()) {
+                    jweSerializationCombo.getItems().add(serialization.label());
+                }
+                jweSerializationCombo.getSelectionModel().selectFirst();
+            }
             for (ComboBox<String> serialization : java.util.Arrays.asList(jwsSerializationCombo, detachedSerializationCombo)) {
                 if (serialization != null && serialization.getItems().isEmpty()) {
                     serialization.getItems().setAll("Compact", "Flattened JSON", "General JSON");
@@ -870,6 +876,8 @@ public class JOSEController implements Initializable {
                             textOf(jweApuField), textOf(jweApvField), textOf(jweCustomHeaderArea)),
                     secretEncoding(jweKeyFormatCombo),
                     iterations,
+                    JweComposer.Serialization.fromLabel(jweSerializationCombo == null ? null : jweSerializationCombo.getValue()),
+                    textOf(jweAadField),
                     jweOutputArea);
 
         }
@@ -1226,6 +1234,8 @@ public class JOSEController implements Initializable {
     @FXML private ComboBox<String> detachedSecretFormatCombo;
     @FXML private ComboBox<String> nestedSecretFormatCombo;
     @FXML private ComboBox<String> jweKeyFormatCombo;
+    @FXML private ComboBox<String> jweSerializationCombo;
+    @FXML private TextField jweAadField;
     @FXML private TextField jwePbes2IterField;
     @FXML private TextField jweKidField;
     @FXML private TextField jweTypField;
@@ -1238,10 +1248,10 @@ public class JOSEController implements Initializable {
     // --- JWE (Encrypted) ---
     public void generateJWE(String payload, String keyAlgo, String contentAlgo, String keyMaterial, boolean compress,
             JweComposer.HeaderOptions headerOptions, JoseKeyMaterial.SecretEncoding secretEncoding,
-            int pbes2Iterations, TextArea outputArea) {
+            int pbes2Iterations, JweComposer.Serialization serialization, String aad, TextArea outputArea) {
         try {
             String serialized = JweComposer.encrypt(payload, keyAlgo, contentAlgo, compress, headerOptions,
-                    keyMaterial, secretEncoding, pbes2Iterations);
+                    keyMaterial, secretEncoding, pbes2Iterations, serialization, aad);
             outputArea.setText(serialized);
             String status = "JWE Encrypted (" + keyAlgo + " / " + contentAlgo + ")";
             if (compress)
@@ -1251,7 +1261,9 @@ public class JOSEController implements Initializable {
                     .output(serialized.getBytes(StandardCharsets.US_ASCII))
                     .detail("Key Algorithm", keyAlgo).detail("Content Algorithm", contentAlgo)
                     .detail("Compression", String.valueOf(compress))
+                    .detail("Serialization", serialization == null ? "Compact" : serialization.label())
                     .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyMaterial));
+            if (aad != null && !aad.isBlank()) result.detail("AAD", aad);
             if (headerOptions != null && headerOptions.kid() != null && !headerOptions.kid().isBlank()) {
                 result.detail("kid", headerOptions.kid().trim());
             }
@@ -1279,6 +1291,35 @@ public class JOSEController implements Initializable {
             }
             if (privateKeyPEM == null || privateKeyPEM.isBlank()) {
                 throw new IllegalArgumentException("Key material is required to decrypt the JWE.");
+            }
+            if (jweString.trim().startsWith("{")) {
+                algorithmName = "(JSON serialization)";
+                JweComposer.JsonDecryption result = JweComposer.decryptJson(jweString.trim(), privateKeyPEM.trim(),
+                        secretEncoding);
+                String header = com.nimbusds.jose.util.JSONObjectUtils.toJSONString(result.effectiveHeader());
+                headerOut.setText(header);
+                payloadOut.setText(result.payload());
+                jweHeaderArea.setText(header);
+                jweEncryptedKeyArea.setText(result.encryptedKey() == null ? "" : result.encryptedKey().toString());
+                jweDecryptedKeyArea.setText("Manual CEK preview is only available for compact serialization.");
+                jweIVArea.setText(result.iv() == null ? "" : result.iv() + " \n[Hex: "
+                        + DataConverter.bytesToHex(result.iv().decode()) + "]");
+                jweCiphertextArea.setText(result.cipherText().toString());
+                jweAuthTagArea.setText(result.authTag() == null ? "" : result.authTag() + " \n[Hex: "
+                        + DataConverter.bytesToHex(result.authTag().decode()) + "]");
+                statusLabel.setText(t("module.jose.decryptionSuccessful") + " (recipient "
+                        + (result.recipientIndex() + 1) + "/" + result.recipientCount() + ")");
+                statusLabel.setStyle("-fx-text-fill: green;");
+                OperationResult.Builder published = OperationResult.forOperation("JWE Decryption")
+                        .input(jweString.getBytes(StandardCharsets.UTF_8))
+                        .output(result.payload().getBytes(StandardCharsets.UTF_8))
+                        .detail("Key Algorithm", String.valueOf(result.effectiveHeader().get("alg")))
+                        .detail("Content Algorithm", String.valueOf(result.effectiveHeader().get("enc")))
+                        .detail("Serialization", "JSON")
+                        .detail("Recipient", (result.recipientIndex() + 1) + " of " + result.recipientCount());
+                if (result.aad() != null) published.detail("AAD", result.aad());
+                statusReporter.publish(published.status(t("module.jose.feedback.statusJweDecrypted")).build());
+                return;
             }
 
             final JWEObject jweObject;

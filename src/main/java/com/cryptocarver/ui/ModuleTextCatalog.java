@@ -961,6 +961,7 @@ public final class ModuleTextCatalog {
         map.put("Party U Info (apu):", "module.jose.apu");
         map.put("Party V Info (apv):", "module.jose.apv");
         map.put("Custom Parameters:", "module.jose.customParams");
+        map.put("AAD:", "module.jose.aad");
         map.put("Private Key / Secret:", "module.jose.privateOrSecret");
         map.put("Visual Breakdown (Layer 6)", "module.jose.visualBreakdownLayer");
         map.put("Protected Header:", "module.jose.protectedHeader");

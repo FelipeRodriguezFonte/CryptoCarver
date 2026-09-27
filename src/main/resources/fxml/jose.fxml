@@ -324,11 +324,18 @@
                                     <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePubKeyShelf"/>
                                 </FlowPane>
-                                <TextArea fx:id="jwePublicKeyArea" promptText="RSA/EC public key (PEM, certificate or JWK) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
+                                <TextArea fx:id="jwePublicKeyArea" promptText="RSA/EC public key (PEM, certificate or JWK) · JWKS with alg per key for several recipients (General JSON) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
 
                             <Label text="Payload (Any String):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="jwePayloadArea" promptText="Secret Data..." prefRowCount="3" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                            <Label text="Serialization:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="4" GridPane.columnIndex="1">
+                                <ComboBox fx:id="jweSerializationCombo" prefWidth="150" styleClass="form-field"/>
+                                <Label text="AAD:" styleClass="form-label"/>
+                                <TextField fx:id="jweAadField" promptText="JSON serializations only · UTF-8 text" HBox.hgrow="ALWAYS" styleClass="form-field"/>
+                            </HBox>
                         </GridPane>
 
                         <TitledPane text="Header Parameters (Optional)" expanded="false">
@@ -364,7 +371,7 @@
                 <TitledPane text="Decrypt">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <Label text="JWE Token:" styleClass="form-label"/>
-                        <TextArea fx:id="jweInputArea" promptText="Paste JWE here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
+                        <TextArea fx:id="jweInputArea" promptText="Paste compact or JSON-serialized JWE here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
 
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>

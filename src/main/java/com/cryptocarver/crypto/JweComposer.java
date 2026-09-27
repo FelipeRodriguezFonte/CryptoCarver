@@ -9,6 +9,10 @@ import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEEncrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWEObjectJSON;
+import com.nimbusds.jose.crypto.MultiEncrypter;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.AESDecrypter;
 import com.nimbusds.jose.crypto.AESEncrypter;
@@ -23,6 +27,7 @@ import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jose.util.JSONObjectUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,6 +59,34 @@ public final class JweComposer {
     /** Header names the composer owns; custom JSON may not override them. */
     private static final Set<String> RESERVED_HEADERS = Set.of("alg", "enc", "zip", "epk", "iv", "tag", "p2s", "p2c");
 
+    /** Output form of the JWE (RFC 7516 §7). */
+    public enum Serialization {
+        COMPACT("Compact"), FLATTENED("Flattened JSON"), GENERAL("General JSON");
+
+        private final String label;
+
+        Serialization(String label) {
+            this.label = label;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static Serialization fromLabel(String label) {
+            for (Serialization serialization : values()) {
+                if (serialization.label.equals(label)) return serialization;
+            }
+            return COMPACT;
+        }
+    }
+
+    /** Result of decrypting a JSON-serialized JWE. */
+    public record JsonDecryption(String payload, Map<String, Object> effectiveHeader, int recipientIndex,
+            int recipientCount, String aad, Base64URL encryptedKey, Base64URL iv, Base64URL cipherText,
+            Base64URL authTag) {
+    }
+
     /** Optional protected-header parameters; blank strings are omitted. */
     public record HeaderOptions(String kid, String typ, String cty, String apu, String apv, String customJson) {
         public static HeaderOptions none() {
@@ -67,17 +100,77 @@ public final class JweComposer {
     public static String encrypt(String payload, String keyAlgorithm, String contentAlgorithm, boolean compress,
             HeaderOptions options, String keyInput, SecretEncoding secretEncoding, int pbes2Iterations)
             throws Exception {
-        JWEAlgorithm alg = JWEAlgorithm.parse(keyAlgorithm);
+        return encrypt(payload, keyAlgorithm, contentAlgorithm, compress, options, keyInput, secretEncoding,
+                pbes2Iterations, Serialization.COMPACT, null);
+    }
+
+    /**
+     * Encrypts in any serialization. {@code aad} (UTF-8 text) needs a JSON
+     * serialization. For General JSON, a JWKS with several keys produces one
+     * recipient per key; each key then names its own {@code alg} and the
+     * key-management field is not used.
+     */
+    public static String encrypt(String payload, String keyAlgorithm, String contentAlgorithm, boolean compress,
+            HeaderOptions options, String keyInput, SecretEncoding secretEncoding, int pbes2Iterations,
+            Serialization serialization, String aad) throws Exception {
+        HeaderOptions headerOptions = options == null ? HeaderOptions.none() : options;
+        Serialization form = serialization == null ? Serialization.COMPACT : serialization;
         EncryptionMethod enc = EncryptionMethod.parse(contentAlgorithm);
-        JWEHeader header = header(alg, enc, compress, options == null ? HeaderOptions.none() : options);
-        JWEObject object = new JWEObject(header, new Payload(payload));
-        object.encrypt(encrypter(alg, keyInput, secretEncoding, pbes2Iterations));
-        return object.serialize();
+        if (form == Serialization.COMPACT && present(aad)) {
+            throw new IllegalArgumentException("AAD needs a JSON serialization; compact JWE has no 'aad' member.");
+        }
+
+        List<JWK> recipients = form == Serialization.GENERAL ? multiRecipientKeys(keyInput) : List.of();
+        if (!recipients.isEmpty()) {
+            if (present(headerOptions.kid()) || present(headerOptions.apu()) || present(headerOptions.apv())) {
+                throw new IllegalArgumentException("kid, apu and apv are per recipient; with several recipients they come from each JWK.");
+            }
+            JWEObjectJSON object = new JWEObjectJSON(header(null, enc, compress, headerOptions),
+                    new Payload(payload), null, aadMember(aad));
+            object.encrypt(new MultiEncrypter(new JWKSet(recipients)));
+            return object.serializeGeneral();
+        }
+
+        JWEAlgorithm alg = JWEAlgorithm.parse(keyAlgorithm);
+        JWEHeader header = header(alg, enc, compress, headerOptions);
+        JWEEncrypter encrypter = encrypter(alg, keyInput, secretEncoding, pbes2Iterations);
+        if (form == Serialization.COMPACT) {
+            JWEObject object = new JWEObject(header, new Payload(payload));
+            object.encrypt(encrypter);
+            return object.serialize();
+        }
+        JWEObjectJSON object = new JWEObjectJSON(header, new Payload(payload), null, aadMember(aad));
+        object.encrypt(encrypter);
+        return form == Serialization.FLATTENED ? object.serializeFlattened() : object.serializeGeneral();
+    }
+
+    /**
+     * Nimbus takes the JSON {@code aad} member text, not the raw AAD, and
+     * authenticates {@code ASCII(protected || '.' || aad)} as RFC 7516 §5.1
+     * step 14 requires.
+     */
+    private static byte[] aadMember(String aad) {
+        return present(aad) ? Base64URL.encode(aad).toString().getBytes(StandardCharsets.US_ASCII) : null;
+    }
+
+    /** Keys of a JWKS with more than one entry; empty for any other key input. */
+    private static List<JWK> multiRecipientKeys(String keyInput) throws Exception {
+        String text = keyInput == null ? "" : keyInput.trim();
+        if (!text.startsWith("{") || !text.contains("\"keys\"")) return List.of();
+        List<JWK> keys = JWKSet.parse(text).getKeys();
+        if (keys.size() < 2) return List.of();
+        for (JWK key : keys) {
+            if (key.getAlgorithm() == null) {
+                throw new IllegalArgumentException("Each recipient JWK needs an 'alg' member (key "
+                        + (key.getKeyID() == null ? "without kid" : key.getKeyID()) + ").");
+            }
+        }
+        return keys;
     }
 
     static JWEHeader header(JWEAlgorithm alg, EncryptionMethod enc, boolean compress, HeaderOptions options)
             throws Exception {
-        JWEHeader.Builder builder = new JWEHeader.Builder(alg, enc);
+        JWEHeader.Builder builder = alg == null ? new JWEHeader.Builder(enc) : new JWEHeader.Builder(alg, enc);
         if (compress) builder.compressionAlgorithm(CompressionAlgorithm.DEF);
         if (present(options.kid())) builder.keyID(options.kid().trim());
         if (present(options.typ())) builder.type(new JOSEObjectType(options.typ().trim()));
@@ -147,6 +240,75 @@ public final class JweComposer {
         if (JWEAlgorithm.Family.PBES2.contains(alg)) return new PasswordBasedDecrypter(loaded.secret);
         if (JWEAlgorithm.DIR.equals(alg)) return new DirectDecrypter(loaded.secret);
         throw new IllegalArgumentException("Unsupported JWE key-management algorithm: " + alg.getName());
+    }
+
+    /**
+     * Decrypts a flattened or general JSON JWE with one key: each recipient is
+     * tried in turn, so a PEM key works without matching {@code kid}s.
+     */
+    public static JsonDecryption decryptJson(String json, String keyInput, SecretEncoding secretEncoding)
+            throws Exception {
+        Map<String, Object> jwe;
+        try {
+            jwe = JSONObjectUtils.parse(json);
+        } catch (java.text.ParseException e) {
+            throw new IllegalArgumentException("The JWE JSON serialization is not valid JSON.", e);
+        }
+        String protectedB64 = JSONObjectUtils.getString(jwe, "protected");
+        Map<String, Object> protectedHeader = protectedB64 == null ? Map.of()
+                : JSONObjectUtils.parse(new Base64URL(protectedB64).decodeToString());
+        Map<String, Object> shared = jwe.get("unprotected") == null ? Map.of()
+                : JSONObjectUtils.getJSONObject(jwe, "unprotected");
+        String aadB64 = JSONObjectUtils.getString(jwe, "aad");
+        Base64URL iv = JSONObjectUtils.getBase64URL(jwe, "iv");
+        Base64URL cipherText = JSONObjectUtils.getBase64URL(jwe, "ciphertext");
+        Base64URL tag = JSONObjectUtils.getBase64URL(jwe, "tag");
+        if (cipherText == null) throw new IllegalArgumentException("The JWE JSON has no 'ciphertext' member.");
+
+        List<Map<String, Object>> recipients = new java.util.ArrayList<>();
+        if (jwe.containsKey("recipients")) {
+            for (Map<String, Object> recipient : JSONObjectUtils.getJSONObjectArray(jwe, "recipients")) {
+                recipients.add(recipient);
+            }
+        } else {
+            Map<String, Object> flattened = new java.util.HashMap<>();
+            if (jwe.get("header") != null) flattened.put("header", jwe.get("header"));
+            if (jwe.get("encrypted_key") != null) flattened.put("encrypted_key", jwe.get("encrypted_key"));
+            recipients.add(flattened);
+        }
+        if (recipients.isEmpty()) throw new IllegalArgumentException("The JWE JSON lists no recipients.");
+
+        byte[] aad = ((protectedB64 == null ? "" : protectedB64) + (aadB64 == null ? "" : "." + aadB64))
+                .getBytes(StandardCharsets.US_ASCII);
+        String firstFailure = null;
+        for (int i = 0; i < recipients.size(); i++) {
+            Map<String, Object> recipient = recipients.get(i);
+            Map<String, Object> perRecipient = recipient.get("header") == null ? Map.of()
+                    : JSONObjectUtils.getJSONObject(recipient, "header");
+            Map<String, Object> merged = new java.util.LinkedHashMap<>(protectedHeader);
+            for (Map<String, Object> part : List.of(shared, perRecipient)) {
+                for (Map.Entry<String, Object> entry : part.entrySet()) {
+                    if (merged.put(entry.getKey(), entry.getValue()) != null) {
+                        throw new IllegalArgumentException("Header parameter '" + entry.getKey()
+                                + "' appears in more than one JWE header (RFC 7516 §7.2.1).");
+                    }
+                }
+            }
+            JWEHeader header = JWEHeader.parse(merged);
+            Base64URL encryptedKey = JSONObjectUtils.getBase64URL(recipient, "encrypted_key");
+            try {
+                JWEDecrypter decrypter = decrypter(header.getAlgorithm(), keyInput, secretEncoding, new LoadedKey());
+                byte[] plaintext = decrypter.decrypt(header, encryptedKey, iv, cipherText, tag, aad);
+                return new JsonDecryption(new String(plaintext, StandardCharsets.UTF_8), merged, i,
+                        recipients.size(), aadB64 == null ? null : new Base64URL(aadB64).decodeToString(),
+                        encryptedKey, iv, cipherText, tag);
+            } catch (Exception e) {
+                if (firstFailure == null) firstFailure = header.getAlgorithm().getName() + ": " + e.getMessage();
+            }
+        }
+        throw new IllegalArgumentException(recipients.size() == 1
+                ? "JWE decryption failed (" + firstFailure + ")."
+                : "None of the " + recipients.size() + " recipients could be decrypted with the supplied key.");
     }
 
     /** Key material resolved while building a decrypter. */
