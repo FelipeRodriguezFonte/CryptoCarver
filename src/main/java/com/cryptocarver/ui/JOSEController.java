@@ -1450,10 +1450,12 @@ public class JOSEController implements Initializable {
 
         String indent = "  ".repeat(depth);
         String prefix = depth > 0 ? indent + "↳ " : "";
-        String[] parts = token.trim().split("\\.");
+        String[] parts = token.trim().split("\\.", -1);
 
         try {
-            if (parts.length == 3) {
+            if (token.trim().startsWith("{")) {
+                inspectJsonSerialization(token.trim(), outputFlow, depth, prefix);
+            } else if (parts.length == 3) {
                 // JWS
                 addText(outputFlow, prefix + "[JWS Detected]\n", Color.LIGHTGREEN, true);
                 addSection(outputFlow, "HEADER", parts[0], Color.RED, true, depth);
@@ -1663,8 +1665,8 @@ public class JOSEController implements Initializable {
 
             if (isJson) {
                 try {
-                    if (title.equals("HEADER")) {
-                        decoded = com.nimbusds.jose.JWSHeader.parse(b64).toString();
+                    if (title.contains("HEADER")) {
+                        decoded = prettyJson(decoded);
                     } else if (title.equals("PAYLOAD")) {
                         try {
                             decoded = com.nimbusds.jwt.JWTClaimsSet.parse(decoded).toString();
@@ -1686,6 +1688,78 @@ public class JOSEController implements Initializable {
             addText(flow, indent + "Could not decode: " + e.getMessage() + "\n\n", Color.RED);
         }
         return decodedContent;
+    }
+
+    /** Breaks down JWS or JWE JSON serialization (RFC 7515 §7.2, RFC 7516 §7.2). */
+    private void inspectJsonSerialization(String json, TextFlow flow, int depth, String prefix) throws Exception {
+        Map<String, Object> members = com.nimbusds.jose.util.JSONObjectUtils.parse(json);
+        String indent = "  ".repeat(depth);
+        if (members.containsKey("ciphertext")) {
+            boolean general = members.containsKey("recipients");
+            addText(flow, prefix + "[JWE JSON Detected — " + (general ? "General" : "Flattened") + "]\n", Color.LIGHTBLUE, true);
+            addOptionalSection(flow, "PROTECTED HEADER", members.get("protected"), Color.RED, true, depth);
+            if (members.get("unprotected") != null) addJsonMember(flow, "SHARED UNPROTECTED HEADER", members.get("unprotected"), depth);
+            addOptionalSection(flow, "AAD", members.get("aad"), Color.MAGENTA, true, depth);
+            List<Map<String, Object>> recipients = new ArrayList<>();
+            if (general) {
+                for (Map<String, Object> recipient : com.nimbusds.jose.util.JSONObjectUtils.getJSONObjectArray(members, "recipients")) {
+                    recipients.add(recipient);
+                }
+            } else {
+                recipients.add(members);
+            }
+            for (int i = 0; i < recipients.size(); i++) {
+                String label = general ? "RECIPIENT " + (i + 1) + " " : "";
+                if (recipients.get(i).get("header") != null) addJsonMember(flow, label + "HEADER", recipients.get(i).get("header"), depth);
+                addOptionalSection(flow, label + "ENCRYPTED KEY", recipients.get(i).get("encrypted_key"), Color.ORANGE, false, depth);
+            }
+            addOptionalSection(flow, "IV", members.get("iv"), Color.GREEN, false, depth);
+            addOptionalSection(flow, "CIPHERTEXT", members.get("ciphertext"), Color.BLUE, false, depth);
+            addOptionalSection(flow, "TAG", members.get("tag"), Color.YELLOW, false, depth);
+        } else if (members.containsKey("signatures") || members.containsKey("signature")) {
+            boolean general = members.containsKey("signatures");
+            addText(flow, prefix + "[JWS JSON Detected — " + (general ? "General" : "Flattened") + "]\n", Color.LIGHTGREEN, true);
+            if (members.get("payload") == null) {
+                addText(flow, indent + "=== PAYLOAD ===\n" + indent + "(Detached — not included)\n\n", Color.MAGENTA, true);
+            } else {
+                addSection(flow, "PAYLOAD", String.valueOf(members.get("payload")), Color.MAGENTA, true, depth);
+            }
+            List<Map<String, Object>> signatures = new ArrayList<>();
+            if (general) {
+                for (Map<String, Object> signature : com.nimbusds.jose.util.JSONObjectUtils.getJSONObjectArray(members, "signatures")) {
+                    signatures.add(signature);
+                }
+            } else {
+                signatures.add(members);
+            }
+            for (int i = 0; i < signatures.size(); i++) {
+                String label = general ? "SIGNATURE " + (i + 1) + " " : "";
+                addOptionalSection(flow, label + "PROTECTED HEADER", signatures.get(i).get("protected"), Color.RED, true, depth);
+                if (signatures.get(i).get("header") != null) addJsonMember(flow, label + "UNPROTECTED HEADER", signatures.get(i).get("header"), depth);
+                addOptionalSection(flow, label + "SIGNATURE", signatures.get(i).get("signature"), Color.CYAN, false, depth);
+            }
+        } else {
+            addText(flow, prefix + "JSON without JWS/JWE members (no 'ciphertext', 'signature' or 'signatures').\n\n", Color.WHITE);
+        }
+    }
+
+    private void addOptionalSection(TextFlow flow, String title, Object value, Color color, boolean isJson, int depth) {
+        if (value != null) addSection(flow, title, String.valueOf(value), color, isJson, depth);
+    }
+
+    private void addJsonMember(TextFlow flow, String title, Object value, int depth) {
+        String indent = "  ".repeat(depth);
+        addText(flow, indent + "=== " + title + " ===\n", Color.RED, true);
+        addText(flow, indent + prettyJson(new com.google.gson.Gson().toJson(value)).replace("\n", "\n" + indent) + "\n\n", Color.WHITE);
+    }
+
+    private static String prettyJson(String json) {
+        try {
+            return new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+                    .toJson(com.google.gson.JsonParser.parseString(json));
+        } catch (Exception notJson) {
+            return json;
+        }
     }
 
     private void addText(TextFlow flow, String text, Color color) {
