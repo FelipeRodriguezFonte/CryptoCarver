@@ -154,11 +154,11 @@ public final class UiStateSnapshot {
     }
 
     /** Single History policy shared by capture, restore filtering and clearing. */
-    static boolean isHistorySensitiveField(String fieldName) {
+    public static boolean isHistorySensitiveField(String fieldName) {
         return isHistorySensitiveField(fieldName, null);
     }
 
-    private static boolean isHistorySensitiveField(String fieldName, Object control) {
+    public static boolean isHistorySensitiveField(String fieldName, Object control) {
         if (isSafeHistorySelector(fieldName, control)) return false;
         String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
         // The certificate subject is public metadata, unlike certificate PEM

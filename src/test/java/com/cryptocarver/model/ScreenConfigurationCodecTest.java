@@ -21,22 +21,26 @@ class ScreenConfigurationCodecTest {
 
     @Test
     void plainConfigurationRoundTripsTypedValues() {
-        ScreenConfiguration decoded = ScreenConfigurationCodec.decode(
-                ScreenConfigurationCodec.encodePlain(sample()), null);
+        String plainJson = ScreenConfigurationCodec.encodePlain(sample());
+        assertFalse(plainJson.contains("00112233445566778899AABBCCDDEEFF"));
+        ScreenConfiguration decoded = ScreenConfigurationCodec.decode(plainJson, null);
         assertEquals("Symmetric Ciphers", decoded.operation());
         assertEquals("CIPHER", decoded.module());
         assertEquals("GCM", decoded.toState().get("CipherController.cipherModeCombo"));
         assertEquals(true, decoded.toState().get("CipherController.fileCipherCompactCbcCheck"));
-        assertTrue(decoded.mayContainSecrets());
+        assertFalse(decoded.mayContainSecrets());
+        assertEquals("[REDACTED_SECRET]", decoded.toState().get("CipherController.symmetricKeyField"));
     }
 
     @Test
     void encryptedConfigurationRequiresTheCorrectPasswordAndDetectsModification() {
-        String encrypted = ScreenConfigurationCodec.encodeEncrypted(sample(), "correct horse".toCharArray());
+        ScreenConfiguration raw = new ScreenConfiguration("Symmetric Ciphers", "CIPHER",
+                Map.of("CipherController.publicDataField", "ordinary-config-value"),
+                SecretVisibilityProfile.FULL_LAB, true);
+        String encrypted = ScreenConfigurationCodec.encodeEncrypted(raw, "correct horse".toCharArray());
         assertTrue(ScreenConfigurationCodec.isEncrypted(encrypted));
         ScreenConfiguration decoded = ScreenConfigurationCodec.decode(encrypted, "correct horse".toCharArray());
-        assertEquals("00112233445566778899AABBCCDDEEFF",
-                decoded.toState().get("CipherController.symmetricKeyField"));
+        assertEquals("ordinary-config-value", decoded.toState().get("CipherController.publicDataField"));
 
         IllegalArgumentException wrongPassword = assertThrows(IllegalArgumentException.class,
                 () -> ScreenConfigurationCodec.decode(encrypted, "wrong password".toCharArray()));

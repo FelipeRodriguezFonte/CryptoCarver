@@ -4,14 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import javax.crypto.AEADBadTagException;
-import javax.crypto.Cipher;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
 import java.util.Base64;
 
 /** Encodes portable screen configurations as plain JSON or password-protected AES-GCM envelopes. */
@@ -19,32 +13,26 @@ public final class ScreenConfigurationCodec {
 
     public static final String ENVELOPE_FORMAT = "cryptocarver-screen-configuration-encrypted";
     private static final int VERSION = 1;
-    private static final int ITERATIONS = 210_000;
-    private static final int KEY_BITS = 256;
+    private static final int ITERATIONS = 600_000;
     private static final int SALT_BYTES = 16;
     private static final int NONCE_BYTES = 12;
-    private static final int GCM_TAG_BITS = 128;
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private ScreenConfigurationCodec() {
     }
 
     public static String encodePlain(ScreenConfiguration configuration) {
         if (configuration == null) throw new IllegalArgumentException("Configuration is required");
-        return configuration.toJson();
+        return configuration.redacted().toJson();
     }
 
     public static String encodeEncrypted(ScreenConfiguration configuration, char[] password) {
         requirePassword(password);
         byte[] salt = randomBytes(SALT_BYTES);
         byte[] nonce = randomBytes(NONCE_BYTES);
-        byte[] plaintext = configuration.toJson().getBytes(StandardCharsets.UTF_8);
+        byte[] plaintext = configuration.redacted().toJson().getBytes(StandardCharsets.UTF_8);
         byte[] ciphertext;
         try {
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, deriveKey(password, salt, ITERATIONS), new GCMParameterSpec(GCM_TAG_BITS, nonce));
-            cipher.updateAAD(aad());
-            ciphertext = cipher.doFinal(plaintext);
+            ciphertext = PasswordFieldCipher.encrypt(password, salt, nonce, plaintext, ITERATIONS, aad());
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Unable to encrypt screen configuration", e);
         } finally {
@@ -73,11 +61,7 @@ public final class ScreenConfigurationCodec {
             byte[] salt = Base64.getDecoder().decode(envelope.salt);
             byte[] nonce = Base64.getDecoder().decode(envelope.nonce);
             byte[] ciphertext = Base64.getDecoder().decode(envelope.ciphertext);
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, deriveKey(password, salt, envelope.iterations),
-                    new GCMParameterSpec(GCM_TAG_BITS, nonce));
-            cipher.updateAAD(aad());
-            plaintext = cipher.doFinal(ciphertext);
+            plaintext = PasswordFieldCipher.decrypt(password, salt, nonce, ciphertext, envelope.iterations, aad());
         } catch (AEADBadTagException e) {
             throw new IllegalArgumentException("Incorrect password or modified configuration file");
         } catch (GeneralSecurityException | IllegalArgumentException e) {
@@ -102,20 +86,6 @@ public final class ScreenConfigurationCodec {
         }
     }
 
-    private static SecretKeySpec deriveKey(char[] password, byte[] salt, int iterations) throws GeneralSecurityException {
-        PBEKeySpec spec = new PBEKeySpec(password, salt, iterations, KEY_BITS);
-        try {
-            byte[] encoded = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();
-            try {
-                return new SecretKeySpec(encoded, "AES");
-            } finally {
-                java.util.Arrays.fill(encoded, (byte) 0);
-            }
-        } finally {
-            spec.clearPassword();
-        }
-    }
-
     private static void validate(Envelope envelope) {
         if (envelope == null || !ENVELOPE_FORMAT.equals(envelope.format) || envelope.version != VERSION) {
             throw new IllegalArgumentException("Unsupported encrypted configuration format");
@@ -136,9 +106,7 @@ public final class ScreenConfigurationCodec {
     }
 
     private static byte[] randomBytes(int length) {
-        byte[] value = new byte[length];
-        RANDOM.nextBytes(value);
-        return value;
+        return PasswordFieldCipher.randomBytes(length);
     }
 
     private static byte[] aad() {

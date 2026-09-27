@@ -6,6 +6,7 @@ import com.google.gson.GsonBuilder;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.cryptocarver.ui.UiStateSnapshot;
 
 /** Portable, complete configuration for one CryptoCarver screen. */
 public final class ScreenConfiguration {
@@ -52,6 +53,17 @@ public final class ScreenConfiguration {
 
     public ScreenConfiguration(String operation, String module, Map<String, Object> state, SecretVisibilityProfile visibilityProfile, boolean mayContainSecrets) {
         this(FORMAT, CURRENT_VERSION, operation, module, Instant.now().toString(), mayContainSecrets, visibilityProfile, encode(state));
+    }
+
+    ScreenConfiguration redacted() {
+        Map<String, Object> state = toState();
+        Map<String, Object> safe = new LinkedHashMap<>();
+        state.forEach((key, value) -> {
+            String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);
+            safe.put(key, UiStateSnapshot.isHistorySensitiveField(field) ? "[REDACTED_SECRET]" : value);
+        });
+        return new ScreenConfiguration(FORMAT, CURRENT_VERSION, operation, module, createdAt,
+                false, visibilityProfile, encode(safe));
     }
 
     private ScreenConfiguration(String format, int version, String operation, String module, String createdAt,
