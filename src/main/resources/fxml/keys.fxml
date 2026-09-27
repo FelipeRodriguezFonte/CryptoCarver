@@ -18,7 +18,7 @@
                         <HBox spacing="10" alignment="CENTER_LEFT">
                             <Label text="Search:" styleClass="form-label"/>
                             <TextField fx:id="keyLabSearchField" promptText="Search keys by name or algorithm..." HBox.hgrow="ALWAYS"/>
-                            <ComboBox fx:id="keyLabStatusFilter" prefWidth="120"/>
+                            <ComboBox fx:id="keyLabStatusFilterCombo" prefWidth="120"/>
                             <Button text="Import Metadata" onAction="#handleImportKeyLabMetadata" styleClass="secondary-button"/>
                             <Button text="Export Metadata" onAction="#handleExportKeyLabMetadata" styleClass="secondary-button"/>
                         </HBox>

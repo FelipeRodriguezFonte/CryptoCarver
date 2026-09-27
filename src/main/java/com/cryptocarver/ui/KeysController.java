@@ -73,7 +73,7 @@ public class KeysController {
     // Key Lab FXML fields
     @FXML private TitledPane keyLabPane;
     @FXML private TextField keyLabSearchField;
-    @FXML private ComboBox<String> keyLabStatusFilter;
+    @FXML private ComboBox<String> keyLabStatusFilterCombo;
     @FXML private TableView<KeyMaterial> keyLabTable;
     @FXML private TextField keyLabNewNameField;
     @FXML private ComboBox<String> keyLabNewAlgoCombo;
@@ -5912,10 +5912,10 @@ public class KeysController {
     }
 
     private void initializeKeyLab() {
-        if (keyLabStatusFilter != null) {
-            keyLabStatusFilter.getItems().setAll("Active Only", "Archived Only", "All Keys");
-            keyLabStatusFilter.setValue("Active Only");
-            keyLabStatusFilter.setOnAction(e -> refreshKeyLabTable());
+        if (keyLabStatusFilterCombo != null) {
+            keyLabStatusFilterCombo.getItems().setAll("Active Only", "Archived Only", "All Keys");
+            keyLabStatusFilterCombo.setValue("Active Only");
+            keyLabStatusFilterCombo.setOnAction(e -> refreshKeyLabTable());
         }
 
         if (keyLabNewAlgoCombo != null) {
@@ -6028,8 +6028,8 @@ public class KeysController {
     public void refreshKeyLabTable() {
         if (keyLabTable == null) return;
 
-        boolean includeArchived = !"Active Only".equals(keyLabStatusFilter.getValue());
-        boolean onlyArchived = "Archived Only".equals(keyLabStatusFilter.getValue());
+        boolean includeArchived = !"Active Only".equals(keyLabStatusFilterCombo.getValue());
+        boolean onlyArchived = "Archived Only".equals(keyLabStatusFilterCombo.getValue());
         String query = keyLabSearchField != null ? keyLabSearchField.getText().toLowerCase(java.util.Locale.ROOT) : "";
 
         java.util.List<KeyMaterial> filtered = new java.util.ArrayList<>();
@@ -6479,8 +6479,8 @@ public class KeysController {
         if (keyLabPane != null) {
             keyLabPane.setExpanded(true);
         }
-        if (keyLabStatusFilter != null) {
-            keyLabStatusFilter.setValue("All Keys");
+        if (keyLabStatusFilterCombo != null) {
+            keyLabStatusFilterCombo.setValue("All Keys");
         }
         refreshKeyLabTable();
         if (keyLabTable != null) {

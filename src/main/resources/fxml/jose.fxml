@@ -63,7 +63,7 @@
                                         <ColumnConstraints hgrow="ALWAYS"/>
                                     </columnConstraints>
                                     <Label text="Algorithm 2:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
-                                    <ComboBox fx:id="jwtAlgoCombo2" prefWidth="150" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <ComboBox fx:id="jwtAlgo2Combo" prefWidth="150" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
                                     <Label text="Signing Key 2:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                                     <TextArea fx:id="jwtKeyArea2" promptText="Optional. Required if using General JSON with two signers..." prefRowCount="2" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field"/>
                                 </GridPane>

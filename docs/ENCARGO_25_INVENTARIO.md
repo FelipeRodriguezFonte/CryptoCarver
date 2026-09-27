@@ -1,6 +1,6 @@
 # Encargo 25: inventario previo
 
-Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resources/fxml`. Se incluyen los controles con `fx:id`, que son los controles que `UiStateSnapshot` puede descubrir por reflexión; los controles construidos sin campo/ID no forman parte de la captura. Sensibilidad actual calculada con la regla previa (`HISTORY_SENSITIVE_TOKENS` por subcadena y la excepción de selectores ya existente).
+Inventario de los controles identificados por `fx:id` en los 30 FXML bajo `src/main/resources/fxml`, preparado antes de cambiar la política. `UiStateSnapshot` descubre controles FXML por campos de controlador y captura también controles JavaFX admitidos creados y asignados a esos campos; los controles sin campo no son capturables. La tabla registra la clasificación anterior, con la regla de subcadena y su excepción de selector. La ComboBox editable original `xmlSignTsaUrlCombo` se trata como campo de texto. Durante la implementación se normalizaron los IDs selectores no canónicos para permitir que los codecs los reconozcan solo por nombre; se conservan alias de compatibilidad al restaurar sesiones anteriores.
 
 ## Selectores
 
@@ -17,7 +17,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `asn1.fxml` | `asn1StrictDerCheck` | CheckBox | no |
 | `asn1.fxml` | `asn1EncodeTypeCombo` | ComboBox | no |
 | `asn1.fxml` | `asn1EncodeInputFormatCombo` | ComboBox | no |
-| `authentication.fxml` | `signatureTemplateCombo` | ComboBox | no |
+| `authentication.fxml` | `signatureTemplateCombo` | ComboBox | sí |
 | `authentication.fxml` | `signatureAlgorithmCombo` | ComboBox | no |
 | `authentication.fxml` | `authMacAlgorithmCombo` | ComboBox | no |
 | `authentication.fxml` | `authMacTruncationCombo` | ComboBox | sí |
@@ -112,7 +112,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `jose.fxml` | `jwtAlgoCombo` | ComboBox | no |
 | `jose.fxml` | `jwtTemplateCombo` | ComboBox | no |
 | `jose.fxml` | `jwsSerializationCombo` | ComboBox | no |
-| `jose.fxml` | `jwsUnencodedPayloadCheck` | CheckBox | no |
+| `jose.fxml` | `jwsUnencodedPayloadCheck` | CheckBox | sí |
 | `jose.fxml` | `jwtSecretFormatCombo` | ComboBox | no |
 | `jose.fxml` | `jwtAlgoCombo2` | ComboBox | no |
 | `jose.fxml` | `jwtValidateSecretFormatCombo` | ComboBox | no |
@@ -200,8 +200,8 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `pades.fxml` | `padesSourcePkcs11Radio` | RadioButton | no |
 | `pades.fxml` | `padesPkcs11AliasCombo` | ComboBox | no |
 | `pades.fxml` | `padesTimestampCheck` | CheckBox | no |
-| `pades.fxml` | `padesVisibleSignatureCheck` | CheckBox | no |
-| `payments.fxml` | `cvvTypeCombo` | ComboBox | no |
+| `pades.fxml` | `padesVisibleSignatureCheck` | CheckBox | sí |
+| `payments.fxml` | `cvvTypeCombo` | ComboBox | sí |
 | `payments.fxml` | `pinBlockFormatCombo` | ComboBox | no |
 | `payments.fxml` | `pinBlockPaddingCombo` | ComboBox | sí |
 | `payments.fxml` | `pinBlockFormatDecodeCombo` | ComboBox | no |
@@ -231,7 +231,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `wss_security.fxml` | `wssTimestampValiditySpinner` | Spinner | sí |
 | `wss_security.fxml` | `wssSignTimestampCheck` | CheckBox | no |
 | `wss_security.fxml` | `wssSignKeyAliasCombo` | ComboBox | sí |
-| `wss_security.fxml` | `wssUsernamePasswordTypeCombo` | ComboBox | no |
+| `wss_security.fxml` | `wssUsernamePasswordTypeCombo` | ComboBox | sí |
 | `wss_security.fxml` | `wssUsernameMaxAgeSpinner` | Spinner | sí |
 | `wss_security.fxml` | `wssEncryptDataAlgorithmCombo` | ComboBox | no |
 | `wss_security.fxml` | `wssEncryptKeyTransportCombo` | ComboBox | sí |
@@ -240,12 +240,10 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `xml_security.fxml` | `xmlSignKeyAliasCombo` | ComboBox | sí |
 | `xml_security.fxml` | `xmlSignLevelCombo` | ComboBox | no |
 | `xml_security.fxml` | `xmlSignPackagingCombo` | ComboBox | no |
-| `xml_security.fxml` | `xmlSignTsaUrlCombo` | ComboBox | no |
 | `xml_security.fxml` | `xmlSignTsaAuthTypeCombo` | ComboBox | no |
 | `xml_security.fxml` | `xmlSignTsaProfileCombo` | ComboBox | no |
 | `xml_security.fxml` | `xmlTimestampHashCombo` | ComboBox | no |
-| `xml_security.fxml` | `xmlVerifyTrustStoreProfileCombo` | ComboBox | no |
-
+| `xml_security.fxml` | `xmlVerifyTrustStoreProfileCombo` | ComboBox | sí |
 ## Campos de texto
 
 | FXML | Campo | Control | Sensible hoy |
@@ -253,12 +251,12 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `asic.fxml` | `asicInputPathField` | TextField | sí |
 | `asic.fxml` | `asicOutputPathField` | TextField | no |
 | `asic.fxml` | `asicPkcs12PathField` | TextField | no |
-| `asic.fxml` | `asicPasswordField` | PasswordField | no |
+| `asic.fxml` | `asicPasswordField` | PasswordField | sí |
 | `asic.fxml` | `asicTsaUrlField` | TextField | no |
 | `asic.fxml` | `asicRevocationFilesField` | TextField | no |
-| `asic.fxml` | `asicEPayloadsField` | TextField | no |
+| `asic.fxml` | `asicEPayloadsField` | TextField | sí |
 | `asic.fxml` | `asicTrustStorePathField` | TextField | no |
-| `asic.fxml` | `asicTrustStorePasswordField` | PasswordField | no |
+| `asic.fxml` | `asicTrustStorePasswordField` | PasswordField | sí |
 | `asic.fxml` | `asicResultArea` | TextArea | no |
 | `asn1.fxml` | `asn1InputArea` | TextArea | sí |
 | `asn1.fxml` | `asn1DetailsArea` | TextArea | no |
@@ -267,7 +265,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `authentication.fxml` | `authInputArea` | TextArea | sí |
 | `authentication.fxml` | `signaturePrivateKeyArea` | TextArea | sí |
 | `authentication.fxml` | `signaturePublicKeyArea` | TextArea | sí |
-| `authentication.fxml` | `signatureVerifyField` | TextField | no |
+| `authentication.fxml` | `signatureVerifyField` | TextField | sí |
 | `authentication.fxml` | `authMacKeyField` | TextField | sí |
 | `authentication.fxml` | `authMacNonceField` | TextField | sí |
 | `authentication.fxml` | `authMacVerifyField` | TextField | sí |
@@ -309,7 +307,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `certificates.fxml` | `cmsInputArea` | TextArea | sí |
 | `certificates.fxml` | `cmsSignCertArea` | TextArea | sí |
 | `certificates.fxml` | `cmsSignKeyArea` | TextArea | sí |
-| `certificates.fxml` | `cmsVerifyDataArea` | TextArea | no |
+| `certificates.fxml` | `cmsVerifyDataArea` | TextArea | sí |
 | `certificates.fxml` | `cmsCadesTsaUrlField` | TextField | no |
 | `certificates.fxml` | `cmsEncryptCertArea` | TextArea | sí |
 | `certificates.fxml` | `cmsDecryptKeyArea` | TextArea | sí |
@@ -317,7 +315,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `cipher.fxml` | `symmetricKeyField` | TextField | sí |
 | `cipher.fxml` | `ivField` | TextField | sí |
 | `cipher.fxml` | `gcmTagField` | TextField | sí |
-| `cipher.fxml` | `aadField` | TextField | no |
+| `cipher.fxml` | `aadField` | TextField | sí |
 | `cipher.fxml` | `cipherInputArea` | TextArea | sí |
 | `cipher.fxml` | `cipherOutputArea` | TextArea | no |
 | `cipher.fxml` | `fpeKeyField` | TextField | sí |
@@ -329,8 +327,8 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `cipher.fxml` | `fileCipherDestinationField` | TextField | no |
 | `cipher.fxml` | `fileCipherTagField` | TextField | sí |
 | `cipher.fxml` | `fileCipherKeyField` | TextField | sí |
-| `cipher.fxml` | `fileCipherNonceField` | TextField | no |
-| `cipher.fxml` | `fileCipherAadField` | TextField | no |
+| `cipher.fxml` | `fileCipherNonceField` | TextField | sí |
+| `cipher.fxml` | `fileCipherAadField` | TextField | sí |
 | `cipher.fxml` | `fileCipherResultArea` | TextArea | no |
 | `cipher.fxml` | `publicKeyArea` | TextArea | sí |
 | `cipher.fxml` | `privateKeyArea` | TextArea | sí |
@@ -338,18 +336,18 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `clipboard_shelf.fxml` | `detailsArea` | TextArea | no |
 | `cms_inspector.fxml` | `cmsInputArea` | TextArea | sí |
 | `cms_inspector.fxml` | `cmsContentArea` | TextArea | no |
-| `cms_inspector.fxml` | `truststorePasswordField` | PasswordField | no |
+| `cms_inspector.fxml` | `truststorePasswordField` | PasswordField | sí |
 | `cms_inspector.fxml` | `cmsReportArea` | TextArea | no |
 | `compare_results.fxml` | `diffDetailsArea` | TextArea | no |
 | `compressed_hex.fxml` | `compressedHexInputArea` | TextArea | sí |
 | `compressed_hex.fxml` | `compressedHexOutputArea` | TextArea | no |
 | `cose.fxml` | `sign1PrivateKeyArea` | TextArea | sí |
 | `cose.fxml` | `sign1PublicKeyArea` | TextArea | sí |
-| `cose.fxml` | `sign1PayloadArea` | TextArea | no |
+| `cose.fxml` | `sign1PayloadArea` | TextArea | sí |
 | `cose.fxml` | `sign1OutputArea` | TextArea | no |
 | `cose.fxml` | `verify1PublicKeyArea` | TextArea | sí |
-| `cose.fxml` | `verify1MessageArea` | TextArea | no |
-| `cose.fxml` | `verify1ResultArea` | TextArea | no |
+| `cose.fxml` | `verify1MessageArea` | TextArea | sí |
+| `cose.fxml` | `verify1ResultArea` | TextArea | sí |
 | `cose.fxml` | `mac0KeyField` | TextField | sí |
 | `cose.fxml` | `mac0PayloadArea` | TextArea | sí |
 | `cose.fxml` | `mac0OutputArea` | TextArea | sí |
@@ -357,7 +355,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `cose.fxml` | `verifyMac0MessageArea` | TextArea | sí |
 | `cose.fxml` | `verifyMac0ResultArea` | TextArea | sí |
 | `cose.fxml` | `encrypt0KeyField` | TextField | sí |
-| `cose.fxml` | `encrypt0PayloadArea` | TextArea | no |
+| `cose.fxml` | `encrypt0PayloadArea` | TextArea | sí |
 | `cose.fxml` | `encrypt0OutputArea` | TextArea | no |
 | `cose.fxml` | `decrypt0KeyField` | TextField | sí |
 | `cose.fxml` | `decrypt0MessageArea` | TextArea | no |
@@ -482,7 +480,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `generic.fxml` | `batchOutputColumnField` | TextField | no |
 | `generic.fxml` | `batchKeyField` | PasswordField | sí |
 | `generic.fxml` | `batchIvNonceField` | TextField | sí |
-| `generic.fxml` | `batchAadField` | TextField | no |
+| `generic.fxml` | `batchAadField` | TextField | sí |
 | `generic.fxml` | `batchInputArea` | TextArea | sí |
 | `generic.fxml` | `batchResultArea` | TextArea | no |
 | `generic.fxml` | `fileInputPathField` | TextField | sí |
@@ -527,7 +525,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `jose.fxml` | `jwtSubField` | TextField | no |
 | `jose.fxml` | `jwtAudField` | TextField | no |
 | `jose.fxml` | `jwtExpField` | TextField | no |
-| `jose.fxml` | `jwtPayloadArea` | TextArea | no |
+| `jose.fxml` | `jwtPayloadArea` | TextArea | sí |
 | `jose.fxml` | `jwtOutputArea` | TextArea | no |
 | `jose.fxml` | `jwtValidateTokenArea` | TextArea | sí |
 | `jose.fxml` | `jwtValidateKeyArea` | TextArea | sí |
@@ -535,9 +533,9 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `jose.fxml` | `jwtExpectedAudField` | TextField | no |
 | `jose.fxml` | `jwtClockSkewField` | TextField | no |
 | `jose.fxml` | `jwtDecodedHeaderArea` | TextArea | no |
-| `jose.fxml` | `jwtDecodedPayloadArea` | TextArea | no |
+| `jose.fxml` | `jwtDecodedPayloadArea` | TextArea | sí |
 | `jose.fxml` | `jwtFindingsArea` | TextArea | no |
-| `jose.fxml` | `detachedPayloadArea` | TextArea | no |
+| `jose.fxml` | `detachedPayloadArea` | TextArea | sí |
 | `jose.fxml` | `detachedSigningKeyArea` | TextArea | sí |
 | `jose.fxml` | `detachedVerificationKeyArea` | TextArea | sí |
 | `jose.fxml` | `detachedTokenArea` | TextArea | sí |
@@ -547,8 +545,8 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `jose.fxml` | `jwksArea` | TextArea | no |
 | `jose.fxml` | `jwePbes2IterField` | TextField | no |
 | `jose.fxml` | `jwePublicKeyArea` | TextArea | sí |
-| `jose.fxml` | `jwePayloadArea` | TextArea | no |
-| `jose.fxml` | `jweAadField` | TextField | no |
+| `jose.fxml` | `jwePayloadArea` | TextArea | sí |
+| `jose.fxml` | `jweAadField` | TextField | sí |
 | `jose.fxml` | `jweKidField` | TextField | no |
 | `jose.fxml` | `jweTypField` | TextField | no |
 | `jose.fxml` | `jweCtyField` | TextField | no |
@@ -559,7 +557,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `jose.fxml` | `jweInputArea` | TextArea | sí |
 | `jose.fxml` | `jwePrivateKeyArea` | TextArea | sí |
 | `jose.fxml` | `jweDecodedHeaderArea` | TextArea | no |
-| `jose.fxml` | `jweDecodedPayloadArea` | TextArea | no |
+| `jose.fxml` | `jweDecodedPayloadArea` | TextArea | sí |
 | `jose.fxml` | `jweHeaderArea` | TextArea | no |
 | `jose.fxml` | `jweEncryptedKeyArea` | TextArea | sí |
 | `jose.fxml` | `jweDecryptedKeyArea` | TextArea | sí |
@@ -567,12 +565,12 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `jose.fxml` | `jweCiphertextArea` | TextArea | no |
 | `jose.fxml` | `jweAuthTagArea` | TextArea | sí |
 | `jose.fxml` | `nestedSigningKeyArea` | TextArea | sí |
-| `jose.fxml` | `nestedPayloadArea` | TextArea | no |
+| `jose.fxml` | `nestedPayloadArea` | TextArea | sí |
 | `jose.fxml` | `nestedEncryptionKeyArea` | TextArea | sí |
 | `jose.fxml` | `nestedOutputArea` | TextArea | no |
-| `jose.fxml` | `nestedPayloadOutputArea` | TextArea | no |
+| `jose.fxml` | `nestedPayloadOutputArea` | TextArea | sí |
 | `jose.fxml` | `inspectorInputArea` | TextArea | sí |
-| `key_certificate_workbench.fxml` | `workbenchPasswordField` | PasswordField | no |
+| `key_certificate_workbench.fxml` | `workbenchPasswordField` | PasswordField | sí |
 | `key_certificate_workbench.fxml` | `workbenchInputArea` | TextArea | sí |
 | `key_certificate_workbench.fxml` | `validationSecondaryInput` | TextField | sí |
 | `key_certificate_workbench.fxml` | `workbenchOutputArea` | TextArea | no |
@@ -597,9 +595,9 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `keys.fxml` | `pkcs11LibraryField` | TextField | no |
 | `keys.fxml` | `pkcs11ReportArea` | TextArea | no |
 | `keys.fxml` | `pkcs11DataArea` | TextArea | no |
-| `keys.fxml` | `pkcs11SignatureArea` | TextArea | no |
+| `keys.fxml` | `pkcs11SignatureArea` | TextArea | sí |
 | `keys.fxml` | `pkcs11CertificateArea` | TextArea | sí |
-| `keys.fxml` | `pkcs11JwtPayloadArea` | TextArea | no |
+| `keys.fxml` | `pkcs11JwtPayloadArea` | TextArea | sí |
 | `keys.fxml` | `pkcs11JwtOutputArea` | TextArea | no |
 | `keys.fxml` | `pkcs11CmsDataArea` | TextArea | no |
 | `keys.fxml` | `pkcs11CmsOutputArea` | TextArea | no |
@@ -620,17 +618,17 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `keys.fxml` | `kdfIterationsField` | TextField | no |
 | `keys.fxml` | `kdfOutputLengthField` | TextField | no |
 | `keys.fxml` | `kdfInputField` | TextField | sí |
-| `keys.fxml` | `kdfSaltField` | TextField | no |
-| `keys.fxml` | `kdfInfoField` | TextField | no |
+| `keys.fxml` | `kdfSaltField` | TextField | sí |
+| `keys.fxml` | `kdfInfoField` | TextField | sí |
 | `keys.fxml` | `kdfResultArea` | TextArea | no |
 | `keys.fxml` | `keyWrapKekField` | TextField | sí |
 | `keys.fxml` | `keyWrapDataField` | TextField | sí |
 | `keys.fxml` | `keyWrapResultArea` | TextArea | sí |
-| `keys.fxml` | `tr31KbpkExportField` | TextField | no |
+| `keys.fxml` | `tr31KbpkExportField` | TextField | sí |
 | `keys.fxml` | `tr31KeyToWrapField` | TextField | sí |
 | `keys.fxml` | `tr31OptionalBlocksField` | TextField | no |
 | `keys.fxml` | `tr31ExportResultArea` | TextArea | no |
-| `keys.fxml` | `tr31KbpkImportField` | TextField | no |
+| `keys.fxml` | `tr31KbpkImportField` | TextField | sí |
 | `keys.fxml` | `tr31KeyBlockField` | TextArea | sí |
 | `keys.fxml` | `tr31KeyLengthField` | TextField | sí |
 | `keys.fxml` | `tr31ImportResultArea` | TextArea | no |
@@ -662,12 +660,12 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `keys.fxml` | `tr34ReceiverCertArea` | TextArea | sí |
 | `keys.fxml` | `tr34KeyToDistributeField` | TextField | sí |
 | `keys.fxml` | `tr34KeyIdField` | TextField | sí |
-| `keys.fxml` | `tr34BindingNonceField` | TextField | no |
+| `keys.fxml` | `tr34BindingNonceField` | TextField | sí |
 | `keys.fxml` | `tr34DistributeResultArea` | TextArea | no |
 | `keys.fxml` | `tr34ReceiverPrivateKeyArea` | TextArea | sí |
 | `keys.fxml` | `tr34ExpectedSenderCertArea` | TextArea | sí |
 | `keys.fxml` | `tr34DistributedDataArea` | TextArea | no |
-| `keys.fxml` | `tr34ChallengeNonceField` | TextField | no |
+| `keys.fxml` | `tr34ChallengeNonceField` | TextField | sí |
 | `keys.fxml` | `tr34ReceiveResultArea` | TextArea | sí |
 | `keys.fxml` | `rsaPublicKeyArea` | TextArea | sí |
 | `keys.fxml` | `rsaPrivateKeyArea` | TextArea | sí |
@@ -683,12 +681,12 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `openpgp.fxml` | `openPgpPublicKeyArea` | TextArea | sí |
 | `openpgp.fxml` | `openPgpSecretKeyArea` | TextArea | sí |
 | `openpgp.fxml` | `openPgpInputArea` | TextArea | sí |
-| `openpgp.fxml` | `openPgpSignatureArea` | TextArea | no |
+| `openpgp.fxml` | `openPgpSignatureArea` | TextArea | sí |
 | `openpgp.fxml` | `openPgpOutputArea` | TextArea | no |
 | `pades.fxml` | `padesInputPathField` | TextField | sí |
 | `pades.fxml` | `padesOutputPathField` | TextField | no |
 | `pades.fxml` | `padesPkcs12PathField` | TextField | no |
-| `pades.fxml` | `padesPasswordField` | PasswordField | no |
+| `pades.fxml` | `padesPasswordField` | PasswordField | sí |
 | `pades.fxml` | `padesTsaUrlField` | TextField | no |
 | `pades.fxml` | `padesVisiblePageField` | TextField | no |
 | `pades.fxml` | `padesVisibleXField` | TextField | no |
@@ -697,16 +695,16 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `pades.fxml` | `padesVisibleHeightField` | TextField | no |
 | `pades.fxml` | `padesVisibleTextField` | TextField | no |
 | `pades.fxml` | `padesTrustStorePathField` | TextField | no |
-| `pades.fxml` | `padesTrustStorePasswordField` | PasswordField | no |
+| `pades.fxml` | `padesTrustStorePasswordField` | PasswordField | sí |
 | `pades.fxml` | `padesCrlEvidenceField` | TextField | no |
 | `pades.fxml` | `padesResultArea` | TextArea | no |
-| `payments.fxml` | `cvkAField` | TextField | no |
-| `payments.fxml` | `cvkBField` | TextField | no |
+| `payments.fxml` | `cvkAField` | TextField | sí |
+| `payments.fxml` | `cvkBField` | TextField | sí |
 | `payments.fxml` | `panFieldCvv` | TextField | sí |
 | `payments.fxml` | `expiryDateField` | TextField | no |
 | `payments.fxml` | `serviceCodeField` | TextField | no |
 | `payments.fxml` | `atcField` | TextField | no |
-| `payments.fxml` | `cvvResultArea` | TextArea | no |
+| `payments.fxml` | `cvvResultArea` | TextArea | sí |
 | `payments.fxml` | `pinField` | TextField | sí |
 | `payments.fxml` | `panFieldEncode` | TextField | sí |
 | `payments.fxml` | `pinBlockField` | TextField | sí |
@@ -719,7 +717,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `payments.fxml` | `encPanFieldDecode` | TextField | sí |
 | `payments.fxml` | `encPinBlockKeyFieldDecode` | TextField | sí |
 | `payments.fxml` | `encResultArea` | TextArea | no |
-| `payments.fxml` | `ibm3624PvkField` | TextField | no |
+| `payments.fxml` | `ibm3624PvkField` | TextField | sí |
 | `payments.fxml` | `ibm3624ConvTableField` | TextField | no |
 | `payments.fxml` | `ibm3624OffsetField` | TextField | no |
 | `payments.fxml` | `ibm3624PanField` | TextField | sí |
@@ -728,7 +726,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `payments.fxml` | `ibm3624PadField` | TextField | no |
 | `payments.fxml` | `ibm3624PinVerifyField` | TextField | sí |
 | `payments.fxml` | `ibm3624ResultArea` | TextArea | no |
-| `payments.fxml` | `genOffsetPvkField` | TextField | no |
+| `payments.fxml` | `genOffsetPvkField` | TextField | sí |
 | `payments.fxml` | `genOffsetDecTableField` | TextField | no |
 | `payments.fxml` | `genOffsetPanField` | TextField | sí |
 | `payments.fxml` | `genOffsetPinField` | TextField | sí |
@@ -736,7 +734,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `payments.fxml` | `genOffsetLengthField` | TextField | no |
 | `payments.fxml` | `genOffsetPadField` | TextField | no |
 | `payments.fxml` | `genOffsetResultArea` | TextArea | no |
-| `payments.fxml` | `genPvvPvkField` | TextField | no |
+| `payments.fxml` | `genPvvPvkField` | TextField | sí |
 | `payments.fxml` | `genPvvPanField` | TextField | sí |
 | `payments.fxml` | `genPvvPinField` | TextField | sí |
 | `payments.fxml` | `genPvvKeyIndexField` | TextField | sí |
@@ -768,10 +766,10 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `pqc.fxml` | `pqcKeyDetailsArea` | TextArea | sí |
 | `pqc.fxml` | `pqcSignInputArea` | TextArea | sí |
 | `pqc.fxml` | `pqcSignOutputArea` | TextArea | no |
-| `pqc.fxml` | `pqcVerifySignatureField` | TextField | no |
+| `pqc.fxml` | `pqcVerifySignatureField` | TextField | sí |
 | `pqc.fxml` | `pqcKemCiphertextArea` | TextArea | no |
-| `pqc.fxml` | `pqcKemSharedSecretField` | TextField | no |
-| `pqc.fxml` | `pqcAliceSecretField` | TextField | no |
+| `pqc.fxml` | `pqcKemSharedSecretField` | TextField | sí |
+| `pqc.fxml` | `pqcAliceSecretField` | TextField | sí |
 | `pqc.fxml` | `pqcBenchmarkArea` | TextArea | no |
 | `process_designer.fxml` | `processNameField` | TextField | no |
 | `process_designer.fxml` | `paletteSearchField` | TextField | no |
@@ -786,15 +784,15 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `wallet.fxml` | `sdJwtPresentInputArea` | TextArea | sí |
 | `wallet.fxml` | `sdJwtRevealArea` | TextArea | no |
 | `wallet.fxml` | `sdJwtAudienceField` | TextField | no |
-| `wallet.fxml` | `sdJwtNonceField` | TextField | no |
+| `wallet.fxml` | `sdJwtNonceField` | TextField | sí |
 | `wallet.fxml` | `sdJwtHolderKeyArea` | TextArea | sí |
 | `wallet.fxml` | `sdJwtPresentOutputArea` | TextArea | no |
 | `wallet.fxml` | `sdJwtVerifyInputArea` | TextArea | sí |
 | `wallet.fxml` | `sdJwtVerifyIssuerKeyArea` | TextArea | sí |
 | `wallet.fxml` | `sdJwtVerifyHolderKeyArea` | TextArea | sí |
-| `wallet.fxml` | `sdJwtVerifyAudienceField` | TextField | no |
-| `wallet.fxml` | `sdJwtVerifyNonceField` | TextField | no |
-| `wallet.fxml` | `sdJwtVerifyOutputArea` | TextArea | no |
+| `wallet.fxml` | `sdJwtVerifyAudienceField` | TextField | sí |
+| `wallet.fxml` | `sdJwtVerifyNonceField` | TextField | sí |
+| `wallet.fxml` | `sdJwtVerifyOutputArea` | TextArea | sí |
 | `wallet.fxml` | `sdJwtInspectInputArea` | TextArea | sí |
 | `wallet.fxml` | `sdJwtInspectOutputArea` | TextArea | no |
 | `wallet.fxml` | `mdocDocTypeField` | TextField | no |
@@ -806,7 +804,7 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `wallet.fxml` | `mdocIssueOutputArea` | TextArea | no |
 | `wallet.fxml` | `mdocVerifyInputArea` | TextArea | sí |
 | `wallet.fxml` | `mdocVerifyIssuerKeyArea` | TextArea | sí |
-| `wallet.fxml` | `mdocVerifyOutputArea` | TextArea | no |
+| `wallet.fxml` | `mdocVerifyOutputArea` | TextArea | sí |
 | `wallet.fxml` | `statusListStatusesArea` | TextArea | no |
 | `wallet.fxml` | `statusListUriField` | TextField | no |
 | `wallet.fxml` | `statusListKeyArea` | TextArea | sí |
@@ -828,14 +826,14 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `wallet.fxml` | `cborJsonArea` | TextArea | no |
 | `wallet.fxml` | `cborFromJsonOutputArea` | TextArea | no |
 | `wallet.fxml` | `scaCredentialIdsField` | TextField | no |
-| `wallet.fxml` | `scaPayloadArea` | TextArea | no |
+| `wallet.fxml` | `scaPayloadArea` | TextArea | sí |
 | `wallet.fxml` | `scaEntryArea` | TextArea | no |
 | `wallet.fxml` | `scaPresentationArea` | TextArea | no |
 | `wallet.fxml` | `scaTransactionDataArea` | TextArea | no |
 | `wallet.fxml` | `scaIssuerKeyArea` | TextArea | sí |
 | `wallet.fxml` | `scaHolderKeyArea` | TextArea | sí |
 | `wallet.fxml` | `scaAudienceField` | TextField | no |
-| `wallet.fxml` | `scaNonceField` | TextField | no |
+| `wallet.fxml` | `scaNonceField` | TextField | sí |
 | `wallet.fxml` | `scaResponseModeField` | TextField | no |
 | `wallet.fxml` | `scaOutputArea` | TextArea | no |
 | `wallet.fxml` | `oid4vpRequestArea` | TextArea | no |
@@ -850,16 +848,16 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `wss_security.fxml` | `wssSignPrivateKeyPasswordField` | PasswordField | sí |
 | `wss_security.fxml` | `wssSignOutputArea` | TextArea | no |
 | `wss_security.fxml` | `wssVerifyInputArea` | TextArea | sí |
-| `wss_security.fxml` | `wssVerifyTrustStorePathField` | TextField | no |
-| `wss_security.fxml` | `wssVerifyReportArea` | TextArea | no |
+| `wss_security.fxml` | `wssVerifyTrustStorePathField` | TextField | sí |
+| `wss_security.fxml` | `wssVerifyReportArea` | TextArea | sí |
 | `wss_security.fxml` | `wssUsernameCreateInputArea` | TextArea | sí |
 | `wss_security.fxml` | `wssUsernameCreateNameField` | TextField | no |
-| `wss_security.fxml` | `wssUsernameCreatePasswordField` | PasswordField | no |
+| `wss_security.fxml` | `wssUsernameCreatePasswordField` | PasswordField | sí |
 | `wss_security.fxml` | `wssUsernameCreateOutputArea` | TextArea | no |
 | `wss_security.fxml` | `wssUsernameVerifyInputArea` | TextArea | sí |
 | `wss_security.fxml` | `wssUsernameExpectedNameField` | TextField | no |
-| `wss_security.fxml` | `wssUsernameExpectedPasswordField` | PasswordField | no |
-| `wss_security.fxml` | `wssUsernameVerifyReportArea` | TextArea | no |
+| `wss_security.fxml` | `wssUsernameExpectedPasswordField` | PasswordField | sí |
+| `wss_security.fxml` | `wssUsernameVerifyReportArea` | TextArea | sí |
 | `wss_security.fxml` | `wssEncryptInputArea` | TextArea | sí |
 | `wss_security.fxml` | `wssEncryptCertificatePathField` | TextField | sí |
 | `wss_security.fxml` | `wssEncryptOutputArea` | TextArea | no |
@@ -873,8 +871,9 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `xml_security.fxml` | `xmlSignInputPathField` | TextField | sí |
 | `xml_security.fxml` | `xmlSignKeyPathField` | TextField | sí |
 | `xml_security.fxml` | `xmlSignKeyPasswordField` | PasswordField | sí |
+| `xml_security.fxml` | `xmlSignTsaUrlCombo` | ComboBox editable | no |
 | `xml_security.fxml` | `xmlSignTsaUserField` | TextField | no |
-| `xml_security.fxml` | `xmlSignTsaPasswordField` | PasswordField | no |
+| `xml_security.fxml` | `xmlSignTsaPasswordField` | PasswordField | sí |
 | `xml_security.fxml` | `xmlSignTsaProfileNameField` | TextField | no |
 | `xml_security.fxml` | `xmlSignOutputArea` | TextArea | no |
 | `xml_security.fxml` | `xmlInspectInputArea` | TextArea | sí |
@@ -883,9 +882,15 @@ Generado antes de cambiar la política, desde los 30 FXML bajo `src/main/resourc
 | `xml_security.fxml` | `xmlTimestampUrlField` | TextField | no |
 | `xml_security.fxml` | `xmlTimestampTokenField` | TextField | sí |
 | `xml_security.fxml` | `xmlTimestampTrustStoreField` | TextField | no |
-| `xml_security.fxml` | `xmlTimestampTrustStorePasswordField` | PasswordField | no |
+| `xml_security.fxml` | `xmlTimestampTrustStorePasswordField` | PasswordField | sí |
 | `xml_security.fxml` | `xmlTimestampReportArea` | TextArea | no |
 | `xml_security.fxml` | `xmlVerifyInputArea` | TextArea | sí |
-| `xml_security.fxml` | `xmlVerifyTrustStorePathField` | TextField | no |
-| `xml_security.fxml` | `xmlVerifyTrustStorePasswordField` | PasswordField | no |
-| `xml_security.fxml` | `xmlVerifyReportArea` | TextArea | no |
+| `xml_security.fxml` | `xmlVerifyTrustStorePathField` | TextField | sí |
+| `xml_security.fxml` | `xmlVerifyTrustStorePasswordField` | PasswordField | sí |
+| `xml_security.fxml` | `xmlVerifyReportArea` | TextArea | sí |
+
+
+Selectores clasificados como sensibles por la política previa (y que pasan a no sensibles): `signatureTemplateCombo`, `authMacTruncationCombo`, `macKeySourceCombo`, `macHsmKeyCombo`, `certRootCaCheck`, `certIssueProfileCombo`, `certTemplateCombo`, `cmsSignKeyAliasCombo`, `cmsEncryptKeyAliasCombo`, `symKeySourceCombo`, `symHsmKeyCombo`, `pinnedFilterCombo`, `icsfTokenOriginCombo`, `jwsUnencodedPayloadCheck`, `keyLabStatusFilter`, `keyStoreProfileCombo`, `keyStoreTypeCombo`, `keyStoreUnsafeExtractCheck`, `pkcs11SigningKeyCombo`, `pkcs11CertificateAliasCombo`, `pkcs11WrappingKeyCombo`, `pkcs11WrapKeyCombo`, `pkcs11UnwrappingKeyCombo`, `keyWrapUnwrapCheck`, `padesVisibleSignatureCheck`, `cvvTypeCombo`, `pinBlockPaddingCombo`, `dukptAesPinOperationCombo`, `wssTimestampValiditySpinner`, `wssSignKeyAliasCombo`, `wssUsernamePasswordTypeCombo`, `wssUsernameMaxAgeSpinner`, `wssEncryptKeyTransportCombo`, `xmlSignKeyAliasCombo`, `xmlVerifyTrustStoreProfileCombo`. La única ComboBox editable continúa siendo campo de texto. No se encontró selector cuyo valor represente material secreto; alias de clave/HSM son identificadores.
+## Decisión para los codecs
+
+Los codecs solo reciben el nombre del campo. Se normalizaron los tres IDs que no terminaban en un sufijo selector (`keyLabStatusFilter`, `jwtAlgoCombo2` y la ComboBox editable `xmlSignTsaUrlCombo`), de modo que los selectores actuales se identifican por `Combo`, `Choice`, `Check`, `Spinner`, `Radio` o `Toggle`. La ComboBox editable queda con sufijo `Input` y se trata como texto. Los nombres previos se conservan en un único mapa de alias para clasificar/recuperar sesiones ya guardadas. El test recorre los FXML y garantiza que cada selector no editable tiene un sufijo canónico; además verifica por separado que la ComboBox editable es texto.

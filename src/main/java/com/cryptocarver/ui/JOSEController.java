@@ -90,9 +90,9 @@ public class JOSEController implements Initializable {
                 jwtAlgoCombo.getItems().addAll(JWS_ALGORITHMS);
                 jwtAlgoCombo.getSelectionModel().selectFirst();
             }
-            if (jwtAlgoCombo2 != null && jwtAlgoCombo2.getItems().isEmpty()) {
-                jwtAlgoCombo2.getItems().addAll(JWS_ALGORITHMS);
-                jwtAlgoCombo2.getSelectionModel().selectFirst();
+            if (jwtAlgo2Combo != null && jwtAlgo2Combo.getItems().isEmpty()) {
+                jwtAlgo2Combo.getItems().addAll(JWS_ALGORITHMS);
+                jwtAlgo2Combo.getSelectionModel().selectFirst();
             }
 
             // Init JWE Combos
@@ -342,7 +342,7 @@ public class JOSEController implements Initializable {
     }
 
 @FXML
-    private ComboBox<String> jwtAlgoCombo2;
+    private ComboBox<String> jwtAlgo2Combo;
 @FXML private Label detachedStatusLabel;
 @FXML
     private TextField jwtAudField;
@@ -708,8 +708,8 @@ public class JOSEController implements Initializable {
             java.util.List<com.cryptocarver.crypto.SignerConfig> signers = new java.util.ArrayList<>();
             JoseKeyMaterial.SecretEncoding secretEncoding = secretEncoding(jwtSecretFormatCombo);
             signers.add(new com.cryptocarver.crypto.SignerConfig(algo, key, secretEncoding));
-            if (jwtAlgoCombo2 != null && jwtKeyArea2 != null && !jwtKeyArea2.getText().trim().isEmpty()) {
-                signers.add(new com.cryptocarver.crypto.SignerConfig(jwtAlgoCombo2.getSelectionModel().getSelectedItem(),
+            if (jwtAlgo2Combo != null && jwtKeyArea2 != null && !jwtKeyArea2.getText().trim().isEmpty()) {
+                signers.add(new com.cryptocarver.crypto.SignerConfig(jwtAlgo2Combo.getSelectionModel().getSelectedItem(),
                         jwtKeyArea2.getText(), secretEncoding));
             }
             this.generateSignedJWT(

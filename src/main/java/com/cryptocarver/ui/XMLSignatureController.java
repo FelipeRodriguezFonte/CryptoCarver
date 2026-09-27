@@ -41,7 +41,7 @@ public class XMLSignatureController {
     @FXML private TextArea xmlSignOutputArea;
     @FXML private ComboBox<String> xmlSignLevelCombo;
     @FXML private ComboBox<String> xmlSignPackagingCombo;
-    @FXML private ComboBox<String> xmlSignTsaUrlCombo;
+    @FXML private ComboBox<String> xmlSignTsaUrlInput;
     @FXML private ComboBox<String> xmlSignTsaProfileCombo;
     @FXML private TextField xmlSignTsaProfileNameField;
     @FXML private ComboBox<String> xmlSignTsaAuthTypeCombo;
@@ -121,9 +121,9 @@ public class XMLSignatureController {
         xmlSignLevelCombo.setValue("XAdES-BASELINE-B");
         xmlSignPackagingCombo.getItems().setAll("ENVELOPED", "ENVELOPING", "DETACHED");
         xmlSignPackagingCombo.setValue("ENVELOPED");
-        xmlSignTsaUrlCombo.getItems().setAll(NO_TSA, DIGICERT_TSA, FREETSA_TSA);
+        xmlSignTsaUrlInput.getItems().setAll(NO_TSA, DIGICERT_TSA, FREETSA_TSA);
         String customTsa = AppSettings.getInstance().getCustomTsaUrl();
-        xmlSignTsaUrlCombo.setValue(customTsa.isBlank() ? NO_TSA : customTsa);
+        xmlSignTsaUrlInput.setValue(customTsa.isBlank() ? NO_TSA : customTsa);
         reloadTsaProfiles();
 
         if (xmlSignTsaAuthTypeCombo != null) {
@@ -307,8 +307,8 @@ public class XMLSignatureController {
                 .filter(profile -> name.equals(profile.name()))
                 .findFirst()
                 .ifPresentOrElse(profile -> {
-                    xmlSignTsaUrlCombo.getEditor().setText(profile.url());
-                    xmlSignTsaUrlCombo.setValue(profile.url());
+                    xmlSignTsaUrlInput.getEditor().setText(profile.url());
+                    xmlSignTsaUrlInput.setValue(profile.url());
                     xmlSignTsaProfileNameField.setText(profile.name());
                     statusReporter.updateStatus(t("module.xml.status.success") + " (" + profile.name() + ")");
                 }, () -> statusReporter.showError("TSA Profile", t("module.xml.profileMissing")));
@@ -361,11 +361,11 @@ public class XMLSignatureController {
             String tsaUrl = getTsaUrl();
 
             if (!"XAdES-BASELINE-B".equals(level) && tsaUrl == null) {
-                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.tsaRequired", level), "xmlSignTsaUrlCombo");
+                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.tsaRequired", level), "xmlSignTsaUrlInput");
                 return;
             }
             if (tsaUrl != null && !isHttpUrl(tsaUrl)) {
-                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.tsaUrlInvalid"), "xmlSignTsaUrlCombo");
+                showValidationError(t("module.xml.error.inputTitle"), t("module.xml.tsaUrlInvalid"), "xmlSignTsaUrlInput");
                 return;
             }
             saveCustomTsa(tsaUrl);
@@ -699,7 +699,7 @@ public class XMLSignatureController {
     }
 
     private String getTsaUrl() {
-        String selected = xmlSignTsaUrlCombo.getEditor().getText().trim();
+        String selected = xmlSignTsaUrlInput.getEditor().getText().trim();
         if (selected.isEmpty() || NO_TSA.equals(selected)) {
             return null;
         }

@@ -54,6 +54,16 @@ public final class UiStateSnapshot {
             // the crypto/payment modules, even when their id is generic.
             "input", "payload", "info", "verify", "tag"
     );
+    private static final Set<String> LEGACY_SENSITIVE_TEXT_NAMES = Set.of(
+            "smAcField", "derivePvvTargetPvvField", "derivePvvResultArea", "tr34ReceiveResultArea",
+            "verify1MessageArea", "verify1ResultArea", "mac0OutputArea", "asicEPayloadsField"
+    );
+    /** Previous controller field names kept readable for sessions saved before selector IDs were normalized. */
+    private static final Map<String, String> LEGACY_FIELD_ALIASES = Map.of(
+            "keyLabStatusFilter", "keyLabStatusFilterCombo",
+            "jwtAlgoCombo2", "jwtAlgo2Combo",
+            "xmlSignTsaUrlCombo", "xmlSignTsaUrlInput"
+    );
 
     private UiStateSnapshot() {
     }
@@ -170,24 +180,32 @@ public final class UiStateSnapshot {
     }
 
     public static boolean isHistorySensitiveField(String fieldName, Object control) {
-        if (isSafeHistorySelector(fieldName, control)) return false;
-        String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
+        if (isHistorySelector(fieldName, control)) return false;
         // The certificate subject is public metadata, unlike certificate PEM
         // inputs and issuance key material.
-        if ("certcnfield".equals(lower)) return false;
-        return HISTORY_SENSITIVE_TOKENS.stream().anyMatch(lower::contains);
+        List<String> words = nameWords(fieldName);
+        if (words.equals(List.of("cert", "cn", "field"))) return false;
+        return HISTORY_SENSITIVE_TOKENS.stream().anyMatch(words::contains)
+                || LEGACY_SENSITIVE_TEXT_NAMES.contains(fieldName);
     }
 
-    private static boolean isSafeHistorySelector(String fieldName, Object control) {
+    private static boolean isHistorySelector(String fieldName, Object control) {
+        if (control instanceof ComboBox<?> combo && combo.isEditable()) return false;
+        if (control instanceof Spinner<?> spinner && spinner.isEditable()) return false;
+        if (control instanceof ComboBox<?> || control instanceof ChoiceBox<?> || control instanceof CheckBox
+                || control instanceof Spinner<?> || control instanceof ToggleButton) return true;
+        if (LEGACY_FIELD_ALIASES.containsKey(fieldName)) return fieldName.equals("keyLabStatusFilter");
         String lower = fieldName == null ? "" : fieldName.toLowerCase(java.util.Locale.ROOT);
-        boolean selectorControl = control instanceof ComboBox<?> || control instanceof ChoiceBox<?> || control instanceof CheckBox;
-        boolean selectorName = lower.endsWith("combo") || lower.endsWith("choice") || lower.endsWith("check");
-        if (!selectorControl && !selectorName) return false;
-        return lower.contains("algorithm") || lower.contains("algo")
-                || lower.contains("format") || lower.contains("mode")
-                || lower.contains("size") || lower.contains("usage")
-                || lower.contains("keytype") || lower.contains("keyalgorithm")
-                || lower.contains("keyusage");
+        return lower.endsWith("combo") || lower.endsWith("choice") || lower.endsWith("check")
+                || lower.endsWith("spinner") || lower.endsWith("radio") || lower.endsWith("toggle");
+    }
+
+    private static List<String> nameWords(String name) {
+        if (name == null || name.isEmpty()) return List.of();
+        return java.util.Arrays.stream(name.replaceAll("([a-z0-9])([A-Z])", "$1 $2")
+                        .replaceAll("([A-Z])([A-Z][a-z])", "$1 $2")
+                        .toLowerCase(java.util.Locale.ROOT).split("[^a-z0-9]+"))
+                .filter(word -> !word.isEmpty()).toList();
     }
 
     private static boolean isResultField(String fieldName) {

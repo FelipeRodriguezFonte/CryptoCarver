@@ -52,6 +52,18 @@ class SavedSessionCodecTest {
     }
 
     @Test
+    void storesSelectorAndRedactsOnlyTheKey() {
+        String key = "invented-test-key-1234567890";
+        SavedSession saved = codec.prepareForStorage(new SavedSession("Lab", "Cipher",
+                Map.of("CipherController.symKeySourceCombo", "Manual Input",
+                        "CipherController.symmetricKeyField", key)), null);
+        SavedSession loaded = codec.deserialize(codec.serialize(List.of(saved))).get(0);
+        assertEquals("Manual Input", loaded.getUiState().get("CipherController.symKeySourceCombo"));
+        assertEquals("[REDACTED_SECRET]", loaded.getUiState().get("CipherController.symmetricKeyField"));
+        assertFalse(codec.serialize(List.of(saved)).contains(key));
+    }
+
+    @Test
     void encryptedSecretsRoundTripAndRejectWrongPasswordOrTampering() {
         String secret = "invented-test-key-987654321";
         OperationSessionLog trail = new OperationSessionLog();
