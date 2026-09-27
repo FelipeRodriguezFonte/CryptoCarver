@@ -12,6 +12,10 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Alert;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -38,6 +42,7 @@ public final class SavedSessionsCoordinator {
     private final Supplier<String> operationSupplier;
     private final Supplier<String> subtitleSupplier;
     private final Supplier<Node> ownerNodeSupplier;
+    private final com.cryptocarver.model.SavedSessionCodec codec = new com.cryptocarver.model.SavedSessionCodec();
 
     public SavedSessionsCoordinator(VBox container, VBox list, StatusReporter statusReporter,
                                     SavedSessionsManager manager, I18nService i18n,
@@ -78,6 +83,20 @@ public final class SavedSessionsCoordinator {
         if (list == null) return;
         list.getChildren().clear();
         List<SavedSession> sessions = manager.getSessions();
+        if (manager.hasLegacyPlaintextSecrets()) {
+            Label legacyWarning = new Label(i18n.text("savedSessions.legacyWarning"));
+            legacyWarning.setWrapText(true);
+            Button purge = new Button(i18n.text("savedSessions.removePlaintextSecrets"));
+            purge.setOnAction(event -> {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                        i18n.text("savedSessions.removePlaintextConfirm"), ButtonType.CANCEL, ButtonType.OK);
+                if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                    manager.removeLegacyPlaintextSecrets();
+                    refresh();
+                }
+            });
+            list.getChildren().addAll(legacyWarning, purge);
+        }
         if (sessions.isEmpty()) {
             Label placeholder = new Label("No saved sessions");
             placeholder.setStyle("-fx-text-fill: #718096; -fx-font-size: 11px; -fx-padding: 10;");
@@ -114,7 +133,9 @@ public final class SavedSessionsCoordinator {
         }
     }
 
-    public void save(String name) {
+    public void save(String name) { save(name, null); }
+
+    public void save(String name, char[] password) {
         if (name == null || name.trim().isEmpty()) return;
         String operation = operationSupplier.get();
         if ("Dashboard".equals(operation) || operation == null) {
@@ -122,7 +143,17 @@ public final class SavedSessionsCoordinator {
             if (subtitle != null) operation = subtitle;
         }
         if (operation == null || operation.isEmpty()) operation = "Generic";
-        manager.addSession(new SavedSession(name, operation, stateCapture.get(), trailSupplier.get()));
+        Map<String, Object> captured = stateCapture.get();
+        long redacted = captured == null ? 0 : captured.entrySet().stream().filter(entry -> {
+            String key = entry.getKey();
+            String field = key.substring(key.lastIndexOf('.') + 1);
+            return UiStateSnapshot.isHistorySensitiveField(field)
+                    && entry.getValue() != null && !"[REDACTED_SECRET]".equals(entry.getValue());
+        }).count();
+        if (trailSupplier.get() != null && !trailSupplier.get().isEmpty()) redacted++;
+        SavedSession source = new SavedSession(name, operation, captured, trailSupplier.get());
+        manager.addSession(codec.prepareForStorage(source, password));
+        if (redacted > 0) statusReporter.updateStatus(i18n.text("savedSessions.redactedCount", redacted));
         statusReporter.updateStatus("Session saved: " + name);
         if (container != null && container.isVisible()) refresh();
     }
@@ -145,12 +176,29 @@ public final class SavedSessionsCoordinator {
         replacementNote.setWrapText(true);
         dialog.getDialogPane().setContent(new VBox(8, replacementNote, preview));
         if (dialog.showAndWait().orElse(ButtonType.CANCEL) != load) return;
-        stateRestore.accept(session.getUiState());
-        OperationSessionLog loadedLog = session.getOperationLog();
+        SavedSession restored = session;
+        if (session.getProtectedFields() != null) {
+            PasswordField password = new PasswordField();
+            password.setPromptText(i18n.text("savedSessions.passwordPrompt"));
+            Dialog<ButtonType> unlock = new Dialog<>();
+            unlock.setTitle(i18n.text("savedSessions.passwordTitle"));
+            unlock.getDialogPane().setContent(password);
+            unlock.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            if (owner != null) unlock.initOwner(owner);
+            if (unlock.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                try { restored = codec.restore(session, password.getText().toCharArray()); }
+                catch (IllegalArgumentException error) {
+                    new Alert(Alert.AlertType.ERROR, i18n.text("savedSessions.decryptError")).showAndWait();
+                    return;
+                } finally { password.clear(); }
+            }
+        }
+        stateRestore.accept(restored.getUiState());
+        OperationSessionLog loadedLog = restored.getOperationLog();
         OperationSessionLog trail = loadedLog == null ? new OperationSessionLog() : loadedLog;
         // Replace the current trail through the supplied callback's controller-owned state.
         trailReplacement.accept(trail);
-        operationSelection.accept(session.getOperation());
+        operationSelection.accept(restored.getOperation());
         trailRefresh.run();
         if (!trail.isEmpty()) showTrailStep.accept(trail.size() - 1);
         statusReporter.updateStatus(i18n.text("savedSessions.loaded", session.getName()));

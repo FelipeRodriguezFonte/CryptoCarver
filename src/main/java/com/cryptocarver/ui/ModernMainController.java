@@ -3970,21 +3970,57 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void handleSaveSession() {
-        // Ask for name
-        TextInputDialog dialog = LocalizedDialogSupport.textInput(
-                "dialog.saveSession.title", "dialog.saveSession.header", "dialog.saveSession.prompt", "My Session");
-
-        // Style the dialog roughly to match dark theme (optional/basic)
-        dialog.getDialogPane().setStyle("-fx-background-color: #2d3748;");
-        dialog.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white;");
-
-        java.util.Optional<String> result = dialog.showAndWait();
-        result.ifPresent(name -> {
-            if (name.trim().isEmpty())
-                return;
-
-            savedSessionsCoordinator().save(name);
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(i18n.text("dialog.saveSession.title"));
+        dialog.setHeaderText(i18n.text("dialog.saveSession.header"));
+        TextField nameField = new TextField("My Session");
+        nameField.setPromptText(i18n.text("dialog.saveSession.prompt"));
+        CheckBox includeSecrets = new CheckBox(i18n.text("savedSessions.includeSecrets"));
+        includeSecrets.setSelected(false);
+        includeSecrets.setDisable(AppSettings.getInstance().getSecretVisibilityProfile()
+                == com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+        long sensitiveCount = captureUIState().entrySet().stream().filter(entry -> {
+            String field = entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
+            return UiStateSnapshot.isHistorySensitiveField(field) && entry.getValue() != null
+                    && !"[REDACTED_SECRET]".equals(entry.getValue());
+        }).count();
+        if (operationSessionLog != null && !operationSessionLog.isEmpty()) sensitiveCount++;
+        final long secretsCount = sensitiveCount;
+        Label secretNotice = new Label(i18n.text("savedSessions.redactedCount", secretsCount));
+        secretNotice.setWrapText(true);
+        secretNotice.setVisible(secretsCount > 0);
+        secretNotice.setManaged(secretsCount > 0);
+        includeSecrets.selectedProperty().addListener((obs, wasSelected, selected) -> {
+            secretNotice.setText(selected ? i18n.text("savedSessions.secretsEncrypted")
+                    : i18n.text("savedSessions.redactedCount", secretsCount));
+            secretNotice.setVisible(selected || secretsCount > 0);
+            secretNotice.setManaged(selected || secretsCount > 0);
         });
+        VBox content = new VBox(10, new Label(i18n.text("dialog.saveSession.prompt")), nameField,
+                includeSecrets, secretNotice);
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().setStyle("-fx-background-color: #2d3748;");
+        java.util.Optional<ButtonType> result = dialog.showAndWait();
+        if (result.orElse(ButtonType.CANCEL) != ButtonType.OK || nameField.getText().trim().isEmpty()) return;
+        char[] password = null;
+        if (includeSecrets.isSelected()) {
+            PasswordField field = new PasswordField();
+            Dialog<ButtonType> passwordDialog = new Dialog<>();
+            passwordDialog.setTitle(i18n.text("savedSessions.passwordTitle"));
+            passwordDialog.setHeaderText(i18n.text("savedSessions.passwordRequired"));
+            passwordDialog.getDialogPane().setContent(field);
+            passwordDialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            if (passwordDialog.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            password = field.getText().toCharArray();
+            field.clear();
+            if (password.length < 8) {
+                java.util.Arrays.fill(password, '\0');
+                showWarning(i18n.text("savedSessions.passwordTitle"), i18n.text("savedSessions.passwordTooShort"));
+                return;
+            }
+        }
+        savedSessionsCoordinator().save(nameField.getText(), password);
     }
 
     @FXML
@@ -3997,15 +4033,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             return;
         }
 
-        boolean fullLab = AppSettings.isFullLab();
         String encryptedOption = i18n.text("dialog.configuration.encryptedOption");
-        String plainOption = fullLab ? i18n.text("dialog.configuration.unencryptedJson")
-                : i18n.text("dialog.configuration.plainJsonUnsafe");
+        String plainOption = i18n.text("dialog.configuration.unencryptedJson");
         ChoiceDialog<String> modeDialog = new ChoiceDialog<>(encryptedOption,
                 encryptedOption, plainOption);
         modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
-        modeDialog.setHeaderText(fullLab ? i18n.text("dialog.configuration.exportHeader")
-                : i18n.text("dialog.configuration.sensitiveHeader"));
+        modeDialog.setHeaderText(i18n.text("dialog.configuration.exportHeader"));
         modeDialog.setContentText(i18n.text("dialog.configuration.protectionPrompt"));
         java.util.Optional<String> mode = modeDialog.showAndWait();
         if (mode.isEmpty()) return;
@@ -4016,12 +4049,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             java.util.Optional<char[]> selected = promptConfigurationPassword(true);
             if (selected.isEmpty()) return;
             password = selected.get();
-        } else if (LabPrompt.CONFIGURATION_EXPORT.shouldShow()) {
-            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
-                    i18n.text("dialog.configuration.unsafePlainTitle"),
-                    i18n.text("dialog.configuration.unsafePlainHeader"),
-                    new Label(i18n.text("dialog.configuration.unsafePlainMessage")),
-                    ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
         }
 
         FileChooser chooser = new FileChooser();
@@ -4043,11 +4070,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     : com.cryptocarver.model.ScreenConfigurationCodec.encodePlain(configuration);
             com.cryptocarver.model.ScreenConfigurationFiles.writeAtomic(file.toPath(), document);
             updateStatus("Screen configuration exported: " + file.getName());
-            if (!fullLab || encrypted) {
-                showInfo("Configuration Exported", encrypted
-                        ? "Encrypted configuration saved. Share its password separately."
-                        : "Plain configuration saved. Treat the file as sensitive material.");
-            }
+            showInfo(i18n.text("dialog.configuration.exportedTitle"), encrypted
+                    ? i18n.text("dialog.configuration.encryptedSaved")
+                    : i18n.text("dialog.configuration.plainSavedRedacted"));
         } catch (Exception e) {
             showError("Configuration Export", e.getMessage());
         } finally {
