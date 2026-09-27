@@ -72,11 +72,8 @@ public class SavedSessionsManager {
 
     public boolean hasLegacyPlaintextSecrets() {
         return savedSessions.stream().anyMatch(session -> session.getVersion() == 0
-                && (session.getOperationLog() != null || (session.getUiState() != null && session.getUiState().entrySet().stream().anyMatch(entry -> {
-                    String field = entry.getKey() == null ? "" : entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
-                    return com.cryptocarver.ui.UiStateSnapshot.isHistorySensitiveField(field)
-                            && entry.getValue() != null && !"[REDACTED_SECRET]".equals(entry.getValue());
-                }))));
+                && (session.getOperationLog() != null || (session.getUiState() != null && session.getUiState().entrySet().stream().anyMatch(entry ->
+                        com.cryptocarver.ui.UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())))));
     }
 
     public void removeLegacyPlaintextSecrets() {

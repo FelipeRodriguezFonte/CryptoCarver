@@ -144,12 +144,8 @@ public final class SavedSessionsCoordinator {
         }
         if (operation == null || operation.isEmpty()) operation = "Generic";
         Map<String, Object> captured = stateCapture.get();
-        long redacted = captured == null ? 0 : captured.entrySet().stream().filter(entry -> {
-            String key = entry.getKey();
-            String field = key.substring(key.lastIndexOf('.') + 1);
-            return UiStateSnapshot.isHistorySensitiveField(field)
-                    && entry.getValue() != null && !"[REDACTED_SECRET]".equals(entry.getValue());
-        }).count();
+        long redacted = captured == null ? 0 : captured.entrySet().stream()
+                .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
         if (trailSupplier.get() != null && !trailSupplier.get().isEmpty()) redacted++;
         SavedSession source = new SavedSession(name, operation, captured, trailSupplier.get());
         manager.addSession(codec.prepareForStorage(source, password));

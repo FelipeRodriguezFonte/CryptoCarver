@@ -222,4 +222,18 @@ class UiStateSnapshotTest {
 
         assertEquals("my-super-secret-key", state.get("DummyController.keyField"));
     }
+
+    @org.junit.jupiter.api.Test
+    void onlyNonEmptySensitiveValuesCountAsSecrets() {
+        org.junit.jupiter.api.Assertions.assertTrue(
+                UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", "C0FFEE00"));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", ""));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", "  "));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", "[REDACTED_SECRET]"));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                UiStateSnapshot.holdsSecretValue("CipherController.symmetricKeyField", null));
+    }
 }

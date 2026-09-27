@@ -3979,11 +3979,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         includeSecrets.setSelected(false);
         includeSecrets.setDisable(AppSettings.getInstance().getSecretVisibilityProfile()
                 == com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
-        long sensitiveCount = captureUIState().entrySet().stream().filter(entry -> {
-            String field = entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
-            return UiStateSnapshot.isHistorySensitiveField(field) && entry.getValue() != null
-                    && !"[REDACTED_SECRET]".equals(entry.getValue());
-        }).count();
+        long sensitiveCount = captureUIState().entrySet().stream()
+                .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
         if (operationSessionLog != null && !operationSessionLog.isEmpty()) sensitiveCount++;
         final long secretsCount = sensitiveCount;
         Label secretNotice = new Label(i18n.text("savedSessions.redactedCount", secretsCount));

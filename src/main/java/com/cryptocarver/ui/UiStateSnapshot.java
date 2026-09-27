@@ -154,6 +154,17 @@ public final class UiStateSnapshot {
     }
 
     /** Single History policy shared by capture, restore filtering and clearing. */
+    /**
+     * True when a captured entry is a sensitive field that actually holds a
+     * value: blank text and the redaction marker do not count.
+     */
+    public static boolean holdsSecretValue(String key, Object value) {
+        if (value == null || "[REDACTED_SECRET]".equals(value)) return false;
+        if (value instanceof String text && text.isBlank()) return false;
+        String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);
+        return isHistorySensitiveField(field);
+    }
+
     public static boolean isHistorySensitiveField(String fieldName) {
         return isHistorySensitiveField(fieldName, null);
     }
