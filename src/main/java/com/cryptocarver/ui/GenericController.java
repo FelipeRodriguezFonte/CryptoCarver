@@ -58,8 +58,6 @@ public class GenericController {
                 com.cryptocarver.model.batch.BatchRunner.ProgressListener progressListener);
     }
 
-    private TextArea inputArea;
-    private TextArea outputArea;
     private ComboBox<String> inputFormatCombo;
     private ComboBox<String> outputFormatCombo;
     /** The operation whose format contract is currently presented in the shell toolbar. */
@@ -979,28 +977,13 @@ public class GenericController {
         }
     }
 
-
-
-
-    public GenericController(StatusReporter statusReporter,
-            TextArea inputArea,
-            TextArea outputArea,
-            ComboBox<String> inputFormatCombo,
-            ComboBox<String> outputFormatCombo) {
-        this.statusReporter = statusReporter;
-        this.inputArea = inputArea;
-        this.outputArea = outputArea;
-        this.inputFormatCombo = inputFormatCombo;
-        this.outputFormatCombo = outputFormatCombo;
-    }
-
     /**
      * Connects the shared format toolbar to Generic's operation-specific controls.
      *
      * <p>The Generic module is FXML-included, so its local hash and conversion
-     * controls are not injected through the legacy constructor. Keeping this
-     * connection explicit prevents the toolbar from advertising a format which
-     * the operation then ignores.</p>
+     * controls are independent of the shell toolbar. Keeping this connection
+     * explicit prevents the toolbar from advertising a format which the
+     * operation then ignores.</p>
      */
     public void setFormatControls(ComboBox<String> inputFormatCombo,
             ComboBox<String> outputFormatCombo) {
@@ -1508,9 +1491,6 @@ public class GenericController {
         }
     }
 
-    /**
-     * Legacy wrapper for MainController compatibility
-     */
     @FXML
 
     public void handleCalculateHash() {
@@ -1523,12 +1503,6 @@ public class GenericController {
                     selectedFormatOrDefault(outputFormatCombo, "Hexadecimal"),
                     hashAlgorithmCombo.getValue(),
                     hashOutputArea);
-        } else if (inputArea != null && hashAlgorithmCombo != null && outputArea != null) {
-            calculateHash(inputArea.getText(),
-                    selectedFormatOrDefault(inputFormatCombo, "Text (UTF-8)"),
-                    selectedFormatOrDefault(outputFormatCombo, "Hexadecimal"),
-                    hashAlgorithmCombo.getValue(),
-                    outputArea);
         }
     }
 
@@ -1660,15 +1634,6 @@ public class GenericController {
         }
     }
 
-    @FXML
-
-
-    public void handleConvert() {
-        if (inputArea != null && inputFormatCombo != null && outputFormatCombo != null && outputArea != null) {
-            convert(inputArea.getText(), inputFormatCombo.getValue(), outputFormatCombo.getValue(), outputArea);
-        }
-    }
-
     /**
      * Calculate check digit
      */
@@ -1705,10 +1670,6 @@ public class GenericController {
     public void handleCalculateCheckDigit() {
         if (checkDigitInput != null && checkDigitAlgorithmCombo != null && checkDigitOutput != null) {
             calculateCheckDigit(checkDigitInput.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutput);
-        } else if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
-            calculateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), outputArea);
-        } else if (checkDigitAlgorithmCombo != null && checkDigitOutputArea != null && inputArea != null) {
-            calculateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutputArea);
         }
     }
 
@@ -1745,19 +1706,10 @@ public class GenericController {
     public void handleValidateCheckDigit() {
         if (checkDigitInput != null && checkDigitAlgorithmCombo != null && checkDigitOutput != null) {
             validateCheckDigit(checkDigitInput.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutput);
-        } else if (inputArea != null && checkDigitAlgorithmCombo != null && outputArea != null) {
-            validateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), outputArea);
-        } else if (checkDigitAlgorithmCombo != null && checkDigitOutputArea != null && inputArea != null) {
-            validateCheckDigit(inputArea.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutputArea);
         }
     }
 
-    /**
-     * Get input data as bytes based on selected format
-     */
-    /**
-     * Parse input string based on format
-     */
+    /** Parse input string based on format. */
     public static byte[] parseInput(String input, String format) {
         if (input == null || input.trim().isEmpty()) {
             return null;
@@ -1775,46 +1727,6 @@ public class GenericController {
             // Default fallback if format unknown but we try to be safe
             return CodecRegistry.getInstance().decode(input, ByteFormat.HEX);
         }
-    }
-
-    /**
-     * Get input data as bytes based on selected format
-     */
-    private byte[] getInputDataAsBytes() {
-        return parseInput(inputArea.getText(), inputFormatCombo.getValue());
-    }
-
-    /**
-     * Set output data based on selected format
-     */
-    private void setOutputData(byte[] data) {
-        String format = outputFormatCombo.getValue();
-        if (format == null) {
-            format = "Hexadecimal";
-        }
-
-        String output;
-        switch (format) {
-            case "Hexadecimal":
-                output = DataConverter.bytesToHex(data);
-                break;
-            case "Base64":
-                output = org.apache.commons.codec.binary.Base64.encodeBase64String(data);
-                break;
-            case "Text (UTF-8)":
-                output = new String(data, java.nio.charset.StandardCharsets.UTF_8);
-                break;
-            case "Binary":
-                output = DataConverter.bytesToBinary(data);
-                break;
-            case "C Array":
-                output = DataConverter.bytesToCArray(data, 12);
-                break;
-            default:
-                output = DataConverter.bytesToHex(data);
-        }
-
-        outputArea.setText(output);
     }
 
     /**
@@ -1872,8 +1784,6 @@ public class GenericController {
 
             if (randomOutputArea != null) {
                 randomOutputArea.setText(output);
-            } else if (outputArea != null) {
-                outputArea.setText(output);
             } else {
                 statusReporter.showError("System Error", "No output area defined for random generator");
             }
@@ -2425,9 +2335,6 @@ public class GenericController {
             if (uuidOutputField != null) {
                 uuidOutputField.setText(uuid);
                 // Output is reported below through OperationResult.
-            } else if (outputArea != null) {
-                outputArea.setText(uuid);
-                // Output is reported below through OperationResult.
             }
 
             statusReporter.publish(OperationResult.forOperation("UUID Generation")
@@ -2443,12 +2350,6 @@ public class GenericController {
 
 
     public void handleClear() {
-        // Clear Standard Conversion
-        if (inputArea != null)
-            inputArea.clear();
-        if (outputArea != null)
-            outputArea.clear();
-
         // Clear Manual Conversion
         if (manualInputArea != null)
             manualInputArea.clear();
@@ -2490,10 +2391,6 @@ public class GenericController {
 
     public String getOutputText() {
         // Check output areas in priority order or all of them
-
-        if (outputArea != null && !outputArea.getText().isEmpty()) {
-            return outputArea.getText();
-        }
 
         if (manualOutputArea != null && !manualOutputArea.getText().isEmpty()) {
             return manualOutputArea.getText();

@@ -12,7 +12,7 @@
 
 - [x] Adoptar **CryptoCarver** como identidad pública en aplicación, artefactos, lanzadores, empaquetado y documentación.
 - [x] Mantener y migrar automáticamente el histórico y las sesiones de la ubicación de configuración anterior.
-- [x] Unificar `DataConverter` en `com.cryptoforge.util.DataConverter` y completar conversión decimal/UTF-8 estricta.
+- [x] Unificar `DataConverter` y completar conversión decimal/UTF-8 estricta.
 - [x] Añadir una prueba contractual del FXML moderno: documento, controlador y handlers.
 - [~] Recorridos smoke automatizados de navegación completados para todas las operaciones registradas: cada ruta evita el placeholder y deja exactamente un módulo visible. Queda la comprobación visual manual periódica por plataforma.
 - [x] Extraer y desacoplar la lógica PQC y XML/XAdES mediante la frontera `StatusReporter`.
@@ -36,9 +36,9 @@
 - [x] Endurecer el formato portable v2 con alcance real por panel: ya no arrastra campos ocultos de otras operaciones del mismo módulo, conserva controles comunes de la pantalla y mantiene importación compatible con los documentos v1. El recorrido contractual cubre todas las rutas exportables y ha alineado los alias PIN/CVV, ML-KEM y CMS Inspector con sus paneles reales.
 - [x] Proteger el almacenamiento de configuraciones con escritura atómica, límite centralizado de 12 MB, limpieza de temporales y permisos de propietario (`0600`) en sistemas POSIX.
 - [~] Iniciar formatos por operación sin romper los controladores existentes: los selectores compartidos ya recuerdan pares independientes de entrada/salida por ruta y normalizan alias dinámicos; queda trasladar gradualmente los formatos propios de cada módulo a metadatos declarativos.
-- [~] Modularizar `ModernMainController`: Authentication, Cipher (incluidos streaming, RSA y OpenPGP), Payments, EMV, Keys y Certificates ya disponen de FXML/controladores autocontenidos. La navegación se ha trasladado a un registro declarativo tipado y se retiró el gran switch heredado; queda reducir coordinación transversal de inspector, histórico y ciclo de vida.
+- [~] Modularizar `ModernMainController`: los módulos disponen de FXML/controladores autocontenidos y la navegación usa un registro declarativo tipado. La retirada del shell antiguo elimina `MainController` y su FXML, respaldada por los contratos FXML modernos. La división del controlador moderno sigue abierta: aún coordina inspector, histórico y ciclo de vida; la clase continúa siendo el punto de entrada de `main-view-modern.fxml`.
 
-> Nota de migración: `com.cryptoforge` permanece temporalmente como namespace Java interno para mantener compatibilidad. No forma parte de la identidad pública y se migrará en una fase técnica independiente, acompañada de pruebas de regresión.
+> Nota de namespace: el código Java actual está bajo `com.cryptocarver`; `com.cryptoforge` permanece como `groupId` Maven y en documentación histórica. Cambiar la coordenada de publicación requiere una decisión de compatibilidad independiente.
 
 ---
 
@@ -117,7 +117,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 ### 4.3 Limpieza técnica prioritaria
 
 - Unificar los dos `DataConverter` existentes y eliminar el paquete duplicado.
-- [~] Dividir `ModernMainController` por módulos FXML independientes. Authentication, Cipher, Payments, EMV, Keys, Certificates/CRL/CMS, PQC, XML/XAdES, WSS, JOSE, ASN.1, OpenPGP, PAdES, ASiC, histórico y herramientas genéricas ya están extraídos. Las rutas internas heredadas se sustituyeron por `UiNavigationRegistry`; histórico, inspector, renderizador y seguimiento del visor tienen componentes propios. Queda reducir coordinación de ciclo de vida y acciones seguras del visor.
+- [~] Reducir la coordinación que conserva `ModernMainController`. Los módulos FXML y servicios listados arriba ya están extraídos; el controlador aún coordina ciclo de vida y acciones del visor. La retirada de `MainController` y `main-view.fxml` no completa esta división.
 - [x] Sacar clases de depuracion de `src/main/java/com/cryptocarver/test` y trasladar los casos útiles a pruebas automatizadas.
 - Evitar versionar artefactos de `target/` y revisar `.gitignore`.
 - Usar `--release 17` o migrar de forma planificada a Java 21 LTS.
@@ -600,7 +600,7 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 | Prioridad | Iniciativa | Valor | Esfuerzo | Dependencias |
 |---|---|---|---|---|
 | P0 | Unificar `DataConverter` y codecs | Evita inconsistencias y errores runtime | M | **Completado: CodecRegistry y adaptadores** |
-| P0 | Dividir `ModernMainController` | Reduce riesgo de cada cambio UI | L | OperationRegistry básico |
+| P0 | Reducir coordinación de `ModernMainController` | Reduce riesgo de cada cambio UI | L | En curso; quedan ciclo de vida y acciones del visor |
 | P0 | Test de carga FXML y smoke UI | Detecta fallos antes de ejecutar manualmente | M | **Completado; falta smoke visual por plataforma** |
 | P0 | Matriz de estado de operaciones | Evita anunciar soporte incompleto | S | **Completado: OperationRegistry/catálogo** |
 | P0 | Vectores conocidos por modulo | Aumenta confianza en resultados | L | Catalogo de tests |
@@ -674,24 +674,9 @@ Cada operación nueva debe incluir:
 
 Las versiones son orientativas. Una versión no debe cerrarse por fecha si no cumple sus criterios de salida.
 
-## 9. Siguiente sprint recomendado
+## 9. Próxima planificación
 
-Duración sugerida: 2 semanas.
-
-1. Crear inventario de operaciones con estado `estable`, `experimental` o `incompleto`.
-2. Unificar `com.cryptoforge.util.DataConverter` y `com.cryptoforge.utils.DataConverter`.
-3. Añadir test que cargue `main-view-modern.fxml` y valide todos los handlers.
-4. Extraer Post-Quantum y XML Security a FXML/controladores completamente independientes.
-5. Crear `CodecRegistry` y migrar Manual Conversión como primer consumidor.
-6. Corregir los bytes del inspector para que procedan del resultado real.
-7. Convertir el detalle del histórico de JSON plano a una vista clave/valor con campos multilínea.
-8. Añadir ejemplos integrados: UTF-8, EBCDIC España, ML-KEM y XAdES-B.
-9. Configurar SLF4J y un dialogo `Copy diagnostics`.
-10. Actualizar README para reflejar el soporte realmente disponible.
-
-### Entregable del sprint
-
-Una versión 2.2.x que arranque limpiamente, tenga conversiones coherentes, cargue todos los FXML bajo test y permita diagnosticar errores sin revisar la terminal.
+Se retira la lista fija de «Siguiente sprint recomendado»: quedó obsoleta porque mezcla tareas que ya se completaron con prioridades cuyo orden debe decidirse en cada planificación. El backlog priorizado y el estado de ejecución son las referencias vigentes.
 
 ## 10. Decisiones que conviene posponer
 

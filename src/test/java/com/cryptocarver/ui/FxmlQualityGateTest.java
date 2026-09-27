@@ -33,7 +33,7 @@ class FxmlQualityGateTest {
             "cipher.fxml", "clipboard_shelf.fxml", "cms_inspector.fxml", "compare_results.fxml",
             "compressed_hex.fxml", "cose.fxml", "emv.fxml", "generic.fxml", "history.fxml",
             "icsf_batch.fxml", "icsf_token.fxml", "jose.fxml",
-            "key_certificate_workbench.fxml", "keys.fxml", "main-view-modern.fxml", "main-view.fxml",
+            "key_certificate_workbench.fxml", "keys.fxml", "main-view-modern.fxml",
             "openpgp.fxml", "pades.fxml", "payments.fxml", "pqc.fxml", "process_designer.fxml",
             "wss_security.fxml", "xml_security.fxml");
 
@@ -71,7 +71,7 @@ class FxmlQualityGateTest {
             assertNotNull(getClass().getResourceAsStream("/fxml/" + file),
                     "Smoke list entry must remain a production resource: " + file);
         }
-        assertTrue(FXML_FILES.size() >= 24, "Add new production FXML to this release gate");
+        assertTrue(FXML_FILES.size() >= 23, "Add new production FXML to this release gate");
     }
 
     private static DocumentBuilderFactory secureFactory() throws Exception {

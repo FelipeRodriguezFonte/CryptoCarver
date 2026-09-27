@@ -43,7 +43,7 @@ public class PaymentsController {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
 
-    // Helper methods to call methods on MainController or ModernMainController
+    // Route module status and errors through the active shell reporter.
     private void updateStatus(String message) {
         if (mainController != null) mainController.updateStatus(message);
     }

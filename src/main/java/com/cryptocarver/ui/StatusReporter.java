@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * Interface for controllers that can report status and show errors.
- * Bridging MainController (Lead/Legacy) and ModernMainController.
+ * Shared reporting contract for UI modules and the modern application shell.
  */
 public interface StatusReporter {
     void updateStatus(String message);
@@ -48,7 +48,7 @@ public interface StatusReporter {
     }
 
     default void addToHistory(String operation, List<OperationDetail> details) {
-        // Default implementation does nothing, for legacy compatibility
+        // Default implementation does nothing for reporters without history.
     }
 
     default boolean checkPreflightReadiness(String operation, boolean isEncrypt) {

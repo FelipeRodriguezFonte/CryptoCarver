@@ -33,7 +33,7 @@ class Ux47ReleaseQualityGateTest {
             "cipher.fxml", "clipboard_shelf.fxml", "cms_inspector.fxml", "compare_results.fxml",
             "compressed_hex.fxml", "cose.fxml", "emv.fxml", "generic.fxml", "history.fxml",
             "icsf_batch.fxml", "icsf_token.fxml", "jose.fxml", "key_certificate_workbench.fxml",
-            "keys.fxml", "main-view-modern.fxml", "main-view.fxml", "openpgp.fxml", "pades.fxml",
+            "keys.fxml", "main-view-modern.fxml", "openpgp.fxml", "pades.fxml",
             "payments.fxml", "pqc.fxml", "process_designer.fxml", "wss_security.fxml",
             "xml_security.fxml");
     private static final Pattern PLACEHOLDER = Pattern.compile("%(?:\\d+\\$)?[a-zA-Z]|\\{\\d+}");

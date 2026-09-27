@@ -2464,8 +2464,8 @@
 /*
  * Button contrast and sizing guardrail.
  *
- * Older modules use `action-button` directly while newer ones use the
- * primary/secondary aliases.  Keep every primary alias on the same dark blue
+ * Modules use the primary/secondary action classes. Keep every primary
+ * action on the same dark blue
  * surface so its white text remains readable, including hover and pressed
  * states.  Action collections should use responsive-action-bar (a FlowPane),
  * which lets labels wrap onto a new line instead of being reduced to an
@@ -2473,8 +2473,7 @@
  */
 .action-button,
 .action-button-primary,
-.primary-action,
-.button-primary {
+.primary-action {
     -fx-background-color: -cc-accent-hover;
     -fx-text-fill: -cc-bg-surface;
     -fx-border-color: -cc-info-text;
@@ -2483,8 +2482,7 @@
 
 .action-button:hover,
 .action-button-primary:hover,
-.primary-action:hover,
-.button-primary:hover {
+.primary-action:hover {
     -fx-background-color: -cc-accent-hover;
     -fx-text-fill: -cc-bg-surface;
     -fx-border-color: -cc-accent-hover;
@@ -2492,8 +2490,7 @@
 
 .action-button:pressed,
 .action-button-primary:pressed,
-.primary-action:pressed,
-.button-primary:pressed {
+.primary-action:pressed {
     -fx-background-color: -cc-info-text;
     -fx-text-fill: -cc-bg-surface;
 }
@@ -2501,9 +2498,7 @@
 .secondary-button,
 .secondary-action,
 .action-button-secondary,
-.button-secondary,
-.danger-button,
-.button-danger {
+.danger-button {
     -fx-text-fill: -cc-text;
 }
 
