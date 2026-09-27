@@ -4000,7 +4000,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 includeSecrets, secretNotice);
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.getDialogPane().setStyle("-fx-background-color: #2d3748;");
         java.util.Optional<ButtonType> result = dialog.showAndWait();
         if (result.orElse(ButtonType.CANCEL) != ButtonType.OK || nameField.getText().trim().isEmpty()) return;
         char[] password = null;
