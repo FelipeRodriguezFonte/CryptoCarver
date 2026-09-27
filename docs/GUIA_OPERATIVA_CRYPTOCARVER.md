@@ -102,6 +102,21 @@ java -jar target/cryptocarver-<version>.jar --cli run-process docs/examples/proc
 
 La forma general es `run-process <fichero.json> --batch <fichero|-> [--format csv|jsonl] [--output csv|jsonl] [--set nodo.param=valor ...] [--reveal-secrets]`. El guion `-` lee de la entrada estándar. `--reveal-secrets` también muestra valores secretos en la salida del lote; úselo solo cuando proceda.
 
+### Lotes TR-31
+
+La KBPK se obtiene exclusivamente de una variable de entorno. Las filas CSV/JSONL no incluyen la KBPK. Para `unwrap`, cada fila requiere `block`; para `wrap`, use `material`, `usage`, `version`, `algorithm`, `mode` y `exportability`. `optionalBlocks` acepta la codificación compacta `NNRR...` opcional. Por defecto las claves en claro se redactan en entradas y salidas; `--reveal-secrets` las muestra completas.
+
+```bash
+export TR31_KBPK='<KBPK hexadecimal>'
+java -jar target/cryptocarver-<version>.jar --cli tr31-batch unwrap entrada.jsonl \
+  --kbpk-env TR31_KBPK --format jsonl --output csv
+java -jar target/cryptocarver-<version>.jar --cli tr31-batch wrap claves.csv \
+  --kbpk-env TR31_KBPK --format csv --output jsonl
+cat bloques.jsonl | java -jar target/cryptocarver-<version>.jar --cli tr31-batch unwrap - --kbpk-env TR31_KBPK
+```
+
+Cada fila fallida conserva su error y las demás continúan; el código de salida es 3 si hubo algún error. `--reveal-secrets` desactiva la redacción de claves en claro. La operación de solo lectura «TR-31 → Header JSON» está disponible en el catálogo batch y en la API local; las operaciones con KBPK quedan fuera de la API.
+
 Hay tres procesos de ejemplo en `docs/examples/processes/`, verificados con vectores conocidos:
 
 - `mc-data-storage.json`: `MC_DS_PARTIAL_KEY`, `MC_DS_DIGEST` y `MC_DS_SUMMARY`; requiere `--set summary.un=11223344`.

@@ -49,6 +49,15 @@ class BatchOperationCatalogTest {
     }
 
     @Test
+    void parsesTr31HeadersAsJsonWithoutKeyMaterial() throws Exception {
+        String result = BatchOperationCatalog.execute("TR-31 → Header JSON",
+                Map.of("block", "B0016P0TE00E0000"), "block", "result").get("result");
+        assertTrue(result.contains("\"version\":\"B\""));
+        assertTrue(result.contains("\"usageDescription\":\"PIN Encryption Key\""));
+        assertTrue(BatchOperationCatalog.getAvailableOperations().contains("TR-31 → Header JSON"));
+    }
+
+    @Test
     @DisplayName("Strict allowlist rejects heuristic/partial matching and non-permitted operations")
     void testStrictAllowlistRejections() {
         // Required forbidden examples

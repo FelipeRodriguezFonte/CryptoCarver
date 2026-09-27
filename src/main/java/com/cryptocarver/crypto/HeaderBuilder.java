@@ -148,7 +148,7 @@ public class HeaderBuilder {
      * y el byte reserved. Para la mayoría de casos, usar "0000" (sin bloques).
      */
     public HeaderBuilder optionalBlocks(String optionalBlocks) {
-        this.optionalBlocks = optionalBlocks.toUpperCase();
+        this.optionalBlocks = optionalBlocks;
         return this;
     }
 

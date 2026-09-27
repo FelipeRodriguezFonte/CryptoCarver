@@ -178,6 +178,8 @@ public class MainController implements StatusReporter {
     private ComboBox<String> tr31VersionCombo;
     @FXML
     private ComboBox<String> tr31ExportabilityCombo;
+    @FXML private ComboBox<String> tr31OptionalBlockCombo;
+    @FXML private TextField tr31OptionalBlocksField;
     @FXML
     private TextArea tr31ExportResultArea;
     @FXML
@@ -642,9 +644,9 @@ public class MainController implements StatusReporter {
             keysController.initializeTR31(
                     tr31KbpkExportField, tr31KeyToWrapField, tr31VersionCombo,
                     tr31UsageCombo, tr31AlgorithmCombo, tr31ModeCombo,
-                    tr31ExportabilityCombo, null, tr31ExportResultArea,
+                    tr31ExportabilityCombo, tr31OptionalBlocksField, tr31ExportResultArea,
                     tr31KbpkImportField, tr31KeyBlockField, tr31KeyLengthField,
-                    tr31ImportResultArea);
+                    tr31ImportResultArea, tr31OptionalBlockCombo);
         }
     }
 

@@ -60,6 +60,41 @@ class CryptoCarverCliTest {
         Files.deleteIfExists(csv);
     }
 
+    @Test void tr31BatchRequiresAProtectionKeyEnvironmentVariable() {
+        StringWriter error = new StringWriter();
+        assertEquals(CryptoCarverCli.EXIT_INVALID_ARGS, CryptoCarverCli.run(
+                new String[] {"tr31-batch", "unwrap", "-", "--kbpk-env", "CRYPTOCARVER_TEST_KBPK_MUST_NOT_EXIST"},
+                new PrintWriter(new StringWriter()), new PrintWriter(error)));
+        assertTrue(error.toString().toLowerCase(java.util.Locale.ROOT).contains("environment variable")
+                && error.toString().toLowerCase(java.util.Locale.ROOT).contains("required"), error.toString());
+    }
+
+    @Test void tr31BatchContinuesAfterBadRowAndMasksKeyMaterial() throws Exception {
+        Path csv = Files.createTempFile("cryptocarver-tr31-batch-", ".csv");
+        try {
+            String clearKey = "0123456789ABCDEFFEDCBA9876543210";
+            Files.writeString(csv, "material,usage,version,algorithm,mode,exportability\n"
+                    + clearKey + ",P0,B,T,E,N\nBADHEX,P0,B,T,E,N\n", StandardCharsets.UTF_8);
+            ProcessBuilder process = new ProcessBuilder(
+                    Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                    "-cp", System.getProperty("java.class.path"),
+                    "com.cryptocarver.Launcher", "--cli", "tr31-batch", "wrap", csv.toString(),
+                    "--kbpk-env", "CRYPTOCARVER_TEST_KBPK", "--format", "csv", "--output", "jsonl");
+            process.environment().put("CRYPTOCARVER_TEST_KBPK", "AB2E09DB3EF0BA71E0CE6CD755C23A3B");
+            Process run = process.start();
+            String output = new String(run.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            String error = new String(run.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+            assertEquals(CryptoCarverCli.EXIT_OPERATION_FAILED, run.waitFor(), error);
+            assertTrue(output.contains("\"row\":1,\"status\":\"ok\""), output);
+            assertTrue(output.contains("\"row\":2,\"status\":\"error\""), output);
+            assertTrue(output.contains("[REDACTED]"), output);
+            assertFalse(output.contains(clearKey), output);
+            assertFalse(output.contains("BADHEX"), output);
+        } finally {
+            Files.deleteIfExists(csv);
+        }
+    }
+
     @Test void batchUsesNewCatalogOperationsAndRejectsSecretOperation() throws Exception {
         Path csv = Files.createTempFile("cryptocarver-cli-catalog-", ".csv");
         Files.writeString(csv, "input\nabc\n", StandardCharsets.UTF_8);

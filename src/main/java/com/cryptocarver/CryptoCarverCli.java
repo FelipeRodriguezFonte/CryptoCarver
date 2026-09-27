@@ -55,6 +55,7 @@ public final class CryptoCarverCli {
                 case "inspect-tlv" -> single(args, "inspect-tlv", com.cryptocarver.model.SafeTransformations.inspectTlv(requireArgument(args, 1)), json, out);
                 case "hmac-sha256" -> single(args, "hmac-sha256", hmacSha256(requireArgument(args, 1)), json, out);
                 case "batch" -> batch(args, out, json);
+                case "tr31-batch" -> tr31Batch(args, out);
                 case "run-process" -> runProcess(args, out, err, json);
                 case "icsf-token" -> icsfToken(args, out, json);
                 case "icsf-batch" -> icsfBatch(args, out, json);
@@ -84,6 +85,7 @@ public final class CryptoCarverCli {
         String cmd = args[0];
         java.util.Set<String> allowedFlags = new java.util.HashSet<>(List.of("--json"));
         if ("batch".equals(cmd)) allowedFlags.addAll(List.of("--format", "--output", "--column"));
+        if ("tr31-batch".equals(cmd)) allowedFlags.addAll(List.of("--kbpk-env", "--format", "--output", "--reveal-secrets"));
         if ("run-process".equals(cmd)) allowedFlags.addAll(List.of("--set", "--batch", "--format", "--output", "--reveal-secrets"));
         if ("serve".equals(cmd)) allowedFlags.add("--port");
         if ("chain-report".equals(cmd)) allowedFlags.addAll(List.of("--truststore", "--password-env", "--crl", "--ocsp"));
@@ -101,6 +103,7 @@ public final class CryptoCarverCli {
 
         int expectedArgs = switch (cmd) {
             case "batch" -> 3;
+            case "tr31-batch" -> 3;
             case "run-process" -> 2;
             // Every input is a named flag: with a key, a KEK and a token in play, positional
             // hex would be unreadable and easy to transpose.
@@ -117,7 +120,10 @@ public final class CryptoCarverCli {
                     i++; // skip value
                 }
             } else {
-                if (i >= expectedArgs) throw new IllegalArgumentException("Unexpected positional argument: " + args[i]);
+                if (i >= expectedArgs) {
+                    if ("tr31-batch".equals(cmd)) throw new IllegalArgumentException("Unexpected positional argument for tr31-batch; key material belongs in the input file and KBPK in the named environment variable");
+                    throw new IllegalArgumentException("Unexpected positional argument: " + args[i]);
+                }
             }
         }
     }
@@ -214,6 +220,69 @@ public final class CryptoCarverCli {
         }
         out.flush();
         return report.failed() == 0 ? 0 : 3;
+    }
+
+    /** TR-31 key operations read their protection key only from the named environment variable. */
+    private static int tr31Batch(String[] args, PrintWriter out) throws Exception {
+        if (args.length < 3) throw new IllegalArgumentException("Usage: tr31-batch unwrap|wrap <file|-> --kbpk-env VAR [--format csv|jsonl] [--output csv|jsonl] [--reveal-secrets]");
+        String action = args[1].toLowerCase(java.util.Locale.ROOT);
+        if (!List.of("wrap", "unwrap").contains(action)) throw new IllegalArgumentException("tr31-batch operation must be wrap or unwrap");
+        String envName = option(args, "--kbpk-env");
+        if (envName == null || !envName.matches("[A-Za-z_][A-Za-z0-9_]*")) throw new IllegalArgumentException("--kbpk-env must name an environment variable");
+        String kbpk = System.getenv(envName);
+        if (kbpk == null || kbpk.isBlank()) throw new IllegalArgumentException("Environment variable " + envName + " is required for TR-31 batch operations");
+        String path = args[2];
+        String format = option(args, "--format");
+        if (format == null) format = path.toLowerCase(java.util.Locale.ROOT).endsWith(".csv") || "-".equals(path) ? "csv" : "jsonl";
+        String outputFormat = option(args, "--output");
+        if (outputFormat == null) outputFormat = "jsonl";
+        if (!List.of("csv", "jsonl").contains(format) || !List.of("csv", "jsonl").contains(outputFormat))
+            throw new IllegalArgumentException("Formats must be csv or jsonl");
+        java.io.Reader reader = "-".equals(path) ? new java.io.InputStreamReader(System.in, StandardCharsets.UTF_8)
+                : Files.newBufferedReader(Path.of(path), StandardCharsets.UTF_8);
+        List<Map<String, String>> rows;
+        try (reader) { rows = "csv".equals(format) ? BatchInputCodec.parseCsv(reader, BatchInputCodec.MAX_ROWS)
+                : BatchInputCodec.parseJsonLines(reader, BatchInputCodec.MAX_ROWS); }
+        final String protectionKey = kbpk;
+        boolean reveal = contains(args, "--reveal-secrets");
+        BatchRunner.Report report = BatchRunner.run(rows, (rowNum, row) -> {
+            if ("unwrap".equals(action)) {
+                String block = row.get("block");
+                if (block == null || block.isBlank()) throw new IllegalArgumentException("Required field: block");
+                return Map.of("key", com.cryptocarver.crypto.TR31Operations.unwrapKey(protectionKey, block));
+            }
+            String material = row.get("material");
+            if (material == null || material.isBlank()) throw new IllegalArgumentException("Required field: material");
+            String usage = required(row, "usage");
+            String version = required(row, "version");
+            String algorithm = required(row, "algorithm");
+            String mode = required(row, "mode");
+            String exportability = required(row, "exportability");
+            if (version.length() != 1 || algorithm.length() != 1 || mode.length() != 1 || exportability.length() != 1)
+                throw new IllegalArgumentException("version, algorithm, mode and exportability must each be one character");
+            String result = com.cryptocarver.crypto.TR31Operations.wrapKey(protectionKey, material, usage,
+                    version.charAt(0), algorithm.charAt(0), mode.charAt(0), exportability.charAt(0), row.getOrDefault("optionalBlocks", ""));
+            return Map.of("keyBlock", result);
+        }, () -> false);
+        if (!reveal) {
+            List<BatchRunner.RowResult> safeRows = report.results().stream().map(row -> {
+                Map<String, String> input = new java.util.LinkedHashMap<>(row.input());
+                if (input.containsKey("material")) input.put("material", "[REDACTED]");
+                Map<String, String> output = new java.util.LinkedHashMap<>(row.output());
+                if (output.containsKey("key")) output.put("key", "[REDACTED]");
+                return new BatchRunner.RowResult(row.rowNumber(), Map.copyOf(input), Map.copyOf(output), row.error());
+            }).toList();
+            report = new BatchRunner.Report(safeRows, report.cancelled());
+        }
+        out.print("csv".equals(outputFormat) ? BatchOutputCodec.toCsv(report) : BatchOutputCodec.toJsonLines(report));
+        out.flush();
+        return report.failed() == 0 ? EXIT_SUCCESS : EXIT_OPERATION_FAILED;
+    }
+
+    private static String required(Map<String, String> row, String field) {
+        String value = row.get(field);
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("Required field: " + field);
+        return value;
     }
 
     private static int runProcess(String[] args, PrintWriter out, PrintWriter err, boolean json) throws IOException {
@@ -616,12 +685,13 @@ public final class CryptoCarverCli {
     }
     private static void help(PrintWriter out, boolean json) {
         if (json) {
-            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, run-process, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, chain-report, serve")));
+            out.println(new Gson().toJson(Map.of("help", "Available commands: sha256, base64url-encode, base64url-decode, compress-gzip, decompress-gzip, inspect-asn1, inspect-tlv, hmac-sha256, batch, tr31-batch, run-process, icsf-token, icsf-batch, icsf-export, icsf-import, icsf-inspect, icsf-resolve, chain-report, serve")));
             return;
         }
         out.println("CryptoCarver CLI (local laboratory operations)");
         out.println("  sha256|base64url-encode|base64url-decode|compress-gzip|decompress-gzip|inspect-asn1|inspect-tlv|hmac-sha256 <value> [--json]");
         out.println("  batch <operation> <file> [--format csv|jsonl] [--output csv|jsonl] [--column name]");
+        out.println("  tr31-batch unwrap|wrap <file|-> --kbpk-env VAR [--format csv|jsonl] [--output csv|jsonl] [--reveal-secrets]");
         out.println("    Batch operations use the keyless BatchOperationCatalog aliases (for example sha-1, crc32c, utf8-to-hex, inspect-asn1).");
         out.println("  run-process <file.json> [--set node.param=value ...] [--batch file|-> [--format csv|jsonl] [--output csv|jsonl]] [--json] [--reveal-secrets]");
         out.println("  icsf-token <hex> [--provenance kds-crudo|key-record-read|inferir] [--json]");

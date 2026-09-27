@@ -488,7 +488,7 @@ public class KeysController {
         initializeTR31(tr31KbpkExportField, tr31KeyToWrapField, tr31VersionCombo, tr31UsageCombo,
                 tr31AlgorithmCombo, tr31ModeCombo, tr31ExportabilityCombo, tr31OptionalBlocksField,
                 tr31ExportResultArea, tr31KbpkImportField, tr31KeyBlockField, tr31KeyLengthField,
-                tr31ImportResultArea);
+                tr31ImportResultArea, tr31OptionalBlockCombo);
         initializeRSA(rsaKeySizeCombo, rsaPublicKeyArea, rsaPrivateKeyArea);
         initializeDSA(dsaKeySizeCombo, dsaPublicKeyArea, dsaPrivateKeyArea);
         initializeECDSAFp(ecdsaCurveCombo, ecdsaPublicKeyArea, ecdsaPrivateKeyArea);
@@ -3230,6 +3230,7 @@ public class KeysController {
     private ComboBox<String> tr31ExportabilityCombo;
     @FXML
     private TextField tr31OptionalBlocksField;
+    @javafx.fxml.FXML private ComboBox<String> tr31OptionalBlockCombo;
     @FXML
     private TextArea tr31ExportResultArea;
 
@@ -3252,7 +3253,7 @@ public class KeysController {
             TextField tr31OptionalBlocksField,
             TextArea tr31ExportResultArea, TextField tr31KbpkImportField,
             TextArea tr31KeyBlockField, TextField tr31KeyLengthField,
-            TextArea tr31ImportResultArea) {
+            TextArea tr31ImportResultArea, ComboBox<String> optionalBlockCombo) {
 
         this.tr31KbpkExportField = tr31KbpkExportField;
         this.tr31KeyToWrapField = tr31KeyToWrapField;
@@ -3262,6 +3263,7 @@ public class KeysController {
         this.tr31ModeCombo = tr31ModeCombo;
         this.tr31ExportabilityCombo = tr31ExportabilityCombo;
         this.tr31OptionalBlocksField = tr31OptionalBlocksField;
+        this.tr31OptionalBlockCombo = optionalBlockCombo;
         this.tr31ExportResultArea = tr31ExportResultArea;
 
         this.tr31KbpkImportField = tr31KbpkImportField;
@@ -3276,6 +3278,14 @@ public class KeysController {
      * Setup TR-31 ComboBoxes
      */
     private void setupTR31Combos() {
+        if (tr31OptionalBlockCombo != null) {
+            tr31OptionalBlockCombo.setPromptText(t("module.keys.tr31.optionalBlockPrompt"));
+            TR31Operations.OPTIONAL_BLOCKS.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
+                    .forEach(entry -> tr31OptionalBlockCombo.getItems().add(entry.getKey() + " - " + entry.getValue()));
+        }
+        if (tr31OptionalBlocksField != null) {
+            tr31OptionalBlocksField.setPromptText(t("module.keys.tr31.optionalBlockFormat"));
+        }
         if (tr31VersionCombo != null) {
             tr31VersionCombo.getItems().addAll(
                     "A - DES Key Variant Binding (deprecated)",
@@ -3286,26 +3296,8 @@ public class KeysController {
         }
 
         if (tr31UsageCombo != null) {
-            tr31UsageCombo.getItems().addAll(
-                    "B0 - BDK (Base Derivation Key)",
-                    "B1 - Initial DUKPT Key",
-                    "C0 - CVK (Card Verification Key)",
-                    "D0 - Data Encryption (symmetric)",
-                    "D1 - Data Encryption (asymmetric)",
-                    "E0 - EMV/Chip Card Keys",
-                    "I0 - Initialization Vector",
-                    "K0 - Key Encryption / Wrapping",
-                    "K1 - TR-31 KBPK",
-                    "M0 - ISO 16609 MAC (algorithm 1)",
-                    "M1 - ISO 9797-1 MAC (algorithm 1)",
-                    "M3 - ISO 9797-1 MAC (algorithm 3 - Retail)",
-                    "M6 - ISO 9797-1 CMAC (algorithm 5)",
-                    "M7 - HMAC",
-                    "P0 - PIN Encryption",
-                    "S0 - Asymmetric Digital Signature",
-                    "V0 - PIN Verification (other)",
-                    "V1 - PIN Verification (IBM 3624)",
-                    "V2 - PIN Verification (VISA PVV)");
+            TR31Operations.KEY_USAGES.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
+                    .forEach(entry -> tr31UsageCombo.getItems().add(entry.getKey() + " - " + entry.getValue()));
             tr31UsageCombo.getSelectionModel().selectFirst();
         }
 
@@ -3322,18 +3314,9 @@ public class KeysController {
         }
 
         if (tr31ModeCombo != null) {
-            tr31ModeCombo.getItems().addAll(
-                    "B - Both encrypt & decrypt",
-                    "C - Both generate & verify",
-                    "D - Decrypt only",
-                    "E - Encrypt only",
-                    "G - Generate only",
-                    "N - No special restrictions",
-                    "S - Signature only",
-                    "T - Both sign & key transport",
-                    "V - Verify only",
-                    "X - Key derivation",
-                    "Y - Create cryptographic checksum");
+            TR31Operations.MODES.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
+                    .forEach(entry -> tr31ModeCombo.getItems().add(entry.getKey() + " - " + entry.getValue()));
+            tr31ModeCombo.getItems().add("T - Both sign & key transport (legacy compatibility)");
             tr31ModeCombo.getSelectionModel().selectFirst(); // "B - Both"
         }
 
@@ -3418,7 +3401,7 @@ public class KeysController {
                     .append(")\n");
             result.append("Optional Blocks:   ").append(header.numOptionalBlocks).append("\n\n");
             if (!header.optionalBlockDetails.isEmpty()) {
-                result.append("OPTIONAL BLOCKS:\n");
+                result.append(t("module.keys.tr31.optionalBlock").toUpperCase(java.util.Locale.ROOT)).append(":\n");
                 for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
                     result.append("  ").append(block.id()).append(" (" ).append(block.dataCharacters()).append(" characters): ").append(block.data()).append("\n");
                 }
@@ -3613,13 +3596,17 @@ public class KeysController {
                 result.append("OPTIONAL BLOCKS:\n");
                 result.append("------------------\n");
                 for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
-                    result.append(block.id()).append(": ").append(block.dataCharacters()).append(" characters\n");
+                    result.append(block.id()).append(" (")
+                            .append(TR31Operations.OPTIONAL_BLOCKS.getOrDefault(block.id(), "Unknown optional block"))
+                            .append("): ").append(block.dataCharacters()).append(" characters\n");
                     result.append("  Data: ").append(block.data()).append("\n");
+                    result.append("  ").append(t("module.keys.tr31.decoded")).append(": ")
+                            .append(TR31Operations.describeOptionalBlockData(block.id(), block.data())).append("\n");
                 }
                 result.append("\n");
             }
 
-            result.append("DIAGNOSTICS:\n");
+            result.append(t("module.keys.tr31.headerWarnings").toUpperCase(java.util.Locale.ROOT)).append(":\n");
             result.append("------------------\n");
             if (header.getDiagnostics().isEmpty()) result.append("No structural warnings detected.\n\n");
             else {

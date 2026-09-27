@@ -520,6 +520,9 @@
                                         <ComboBox styleClass="ux-inline-da9c4cada5" fx:id="tr31ExportabilityCombo" prefWidth="200"/>
                                     </HBox>
 
+                                    <ComboBox styleClass="ux-inline-da9c4cada5" fx:id="tr31OptionalBlockCombo" prefWidth="260"/>
+                                    <TextField styleClass="ux-inline-98b1fbacfd" fx:id="tr31OptionalBlocksField"/>
+
                                     <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
                                             styleClass="button-primary ux-inline-da9c4cada5" maxWidth="Infinity"/>
                                 </VBox>

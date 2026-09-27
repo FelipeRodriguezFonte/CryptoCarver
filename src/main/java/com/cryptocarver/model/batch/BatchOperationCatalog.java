@@ -7,6 +7,7 @@ import com.cryptocarver.crypto.CheckDigitCalculator;
 import com.cryptocarver.crypto.EmvTlv;
 import com.cryptocarver.crypto.HashOperations;
 import com.cryptocarver.crypto.PaymentOperations;
+import com.cryptocarver.crypto.TR31Operations;
 import com.cryptocarver.crypto.smartcard.ApduStatus;
 import com.cryptocarver.model.SafeTransformations;
 
@@ -59,6 +60,7 @@ public final class BatchOperationCatalog {
     private static final String APDU_STATUS = "APDU Status → Inspect";
     private static final String ASN1_INSPECT = "ASN.1 → Inspect";
     private static final String TLV_INSPECT = "TLV → Inspect";
+    private static final String TR31_HEADER_JSON = "TR-31 → Header JSON";
 
     private static final List<String> OPERATIONS = List.of(
             SHA256_UTF8_HEX, SHA384_UTF8_HEX, SHA512_UTF8_HEX,
@@ -70,7 +72,7 @@ public final class BatchOperationCatalog {
             SHA1, SHA224, SHA3_256, SHA3_512, MD5, CRC32, CRC32C,
             UTF8_TO_BASE32, BASE32_TO_UTF8, UTF8_TO_BASE58, BASE58_TO_UTF8,
             UTF8_TO_BASE94, BASE94_TO_UTF8, DECIMAL_TO_BCD, BCD_TO_DECIMAL,
-            AMEX_CHECK, PAN_VALIDATE, TRACK2, EMV_TLV, APDU_STATUS, ASN1_INSPECT, TLV_INSPECT
+            AMEX_CHECK, PAN_VALIDATE, TRACK2, EMV_TLV, APDU_STATUS, ASN1_INSPECT, TLV_INSPECT, TR31_HEADER_JSON
     );
     private static final Map<String, String> LOOKUP;
 
@@ -184,6 +186,7 @@ public final class BatchOperationCatalog {
                 case APDU_STATUS -> new com.google.gson.Gson().toJson(ApduStatus.parse(input));
                 case ASN1_INSPECT -> SafeTransformations.inspectAsn1(input);
                 case TLV_INSPECT -> SafeTransformations.inspectTlv(input);
+                case TR31_HEADER_JSON -> TR31Operations.parseHeaderJson(input);
                 default -> throw new IllegalArgumentException("Unsupported batch operation: " + operationName);
             };
         } catch (CodecException e) { throw new IllegalArgumentException("Invalid " + e.getFormat().getDisplayName() + " format"); }

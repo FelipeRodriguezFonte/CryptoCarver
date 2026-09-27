@@ -91,10 +91,10 @@ public class TR31 {
 
     public String wrap(String header, byte[] key, Integer maskedKeyLen) throws Exception {
         char version = header.charAt(0);
-        char algorithm = header.charAt(11);
+        char algorithm = header.charAt(7);
         String usage = header.substring(5, 7);
-        char mode = header.charAt(12);
-        char exportability = header.charAt(14);
+        char mode = header.charAt(8);
+        char exportability = header.charAt(11);
         validateMatrix(version, algorithm, usage, mode, exportability);
 
         switch (version) {
@@ -115,10 +115,10 @@ public class TR31 {
      */
     public UnwrapResult unwrap(String keyBlock) throws Exception {
         char version = keyBlock.charAt(0);
-        char algorithm = keyBlock.charAt(11);
+        char algorithm = keyBlock.charAt(7);
         String usage = keyBlock.substring(5, 7);
-        char mode = keyBlock.charAt(12);
-        char exportability = keyBlock.charAt(14);
+        char mode = keyBlock.charAt(8);
+        char exportability = keyBlock.charAt(11);
         validateMatrix(version, algorithm, usage, mode, exportability);
 
         switch (version) {
@@ -850,7 +850,7 @@ public class TR31 {
         if (keyBlock == null || keyBlock.length() < 16) throw new IllegalArgumentException("TR-31 key block too short for its fixed header");
         final int optionalCount;
         try {
-            optionalCount = Integer.parseInt(keyBlock.substring(12, 14), 16);
+            optionalCount = Integer.parseInt(keyBlock.substring(12, 14), 10);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("TR-31 optional-block count is not hexadecimal", e);
         }
