@@ -12,6 +12,10 @@ import java.util.Map;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.JWEManualCekRecovery;
+import com.cryptocarver.crypto.JoseKeyMaterial;
+import com.cryptocarver.crypto.JweComposer;
+import com.cryptocarver.crypto.JwtClaimsBuilder;
+import com.cryptocarver.crypto.JwtValidator;
 import com.cryptocarver.crypto.SignerConfig;
 import com.cryptocarver.model.OperationResult;
 
@@ -60,6 +64,14 @@ public class JOSEController implements Initializable {
     private final ExpandedTextViewer expandedInspectorViewer = new ExpandedTextViewer();
     private ModuleI18n.Binding moduleI18n;
 
+    /** JWS algorithms the module can sign and verify. */
+    private static final List<String> JWS_ALGORITHMS = List.of(
+            "HS256", "HS384", "HS512",
+            "RS256", "RS384", "RS512",
+            "ES256", "ES384", "ES512",
+            "PS256", "PS384", "PS512",
+            "EdDSA");
+
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
@@ -75,51 +87,73 @@ public class JOSEController implements Initializable {
         com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         // Initialize Combo
             if (jwtAlgoCombo != null && jwtAlgoCombo.getItems().isEmpty()) {
-                jwtAlgoCombo.getItems().addAll(
-                        "HS256", "HS384", "HS512",
-                        "RS256", "RS384", "RS512",
-                        "ES256", "ES384", "ES512",
-                        "PS256", "PS384", "PS512");
+                jwtAlgoCombo.getItems().addAll(JWS_ALGORITHMS);
                 jwtAlgoCombo.getSelectionModel().selectFirst();
             }
             if (jwtAlgoCombo2 != null && jwtAlgoCombo2.getItems().isEmpty()) {
-                jwtAlgoCombo2.getItems().addAll(
-                        "HS256", "HS384", "HS512",
-                        "RS256", "RS384", "RS512",
-                        "ES256", "ES384", "ES512",
-                        "PS256", "PS384", "PS512");
+                jwtAlgoCombo2.getItems().addAll(JWS_ALGORITHMS);
                 jwtAlgoCombo2.getSelectionModel().selectFirst();
             }
 
             // Init JWE Combos
             if (jweKeyAlgoCombo != null && jweKeyAlgoCombo.getItems().isEmpty()) {
-                jweKeyAlgoCombo.getItems().setAll(
-                        "RSA-OAEP-256", "RSA-OAEP-512",
-                        "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A256KW");
+                jweKeyAlgoCombo.getItems().setAll(JweComposer.KEY_ALGORITHMS);
                 jweKeyAlgoCombo.getSelectionModel().selectFirst();
             }
             if (jweContentAlgoCombo != null && jweContentAlgoCombo.getItems().isEmpty()) {
-                jweContentAlgoCombo.getItems().setAll("A128GCM", "A256GCM", "A128CBC-HS256", "A256CBC-HS512");
+                jweContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
                 jweContentAlgoCombo.getSelectionModel().select("A256GCM");
+            }
+            for (ComboBox<String> format : java.util.Arrays.asList(jweKeyFormatCombo, jweDecryptKeyFormatCombo,
+                    jwtSecretFormatCombo, jwtValidateSecretFormatCombo, detachedSecretFormatCombo,
+                    nestedSecretFormatCombo)) {
+                if (format != null && format.getItems().isEmpty()) {
+                    for (JoseKeyMaterial.SecretEncoding encoding : JoseKeyMaterial.SecretEncoding.values()) {
+                        format.getItems().add(encoding.label());
+                    }
+                    format.getSelectionModel().selectFirst();
+                }
+            }
+            if (jwePbes2IterField != null && jwePbes2IterField.getText().isBlank()) {
+                jwePbes2IterField.setText(String.valueOf(JweComposer.DEFAULT_PBES2_ITERATIONS));
+            }
+
+            if (detachedAlgoCombo != null && detachedAlgoCombo.getItems().isEmpty()) {
+                detachedAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
+                detachedAlgoCombo.getSelectionModel().selectFirst();
+            }
+            if (jweSerializationCombo != null && jweSerializationCombo.getItems().isEmpty()) {
+                for (JweComposer.Serialization serialization : JweComposer.Serialization.values()) {
+                    jweSerializationCombo.getItems().add(serialization.label());
+                }
+                jweSerializationCombo.getSelectionModel().selectFirst();
+            }
+            for (ComboBox<String> serialization : java.util.Arrays.asList(jwsSerializationCombo, detachedSerializationCombo)) {
+                if (serialization != null && serialization.getItems().isEmpty()) {
+                    serialization.getItems().setAll("Compact", "Flattened JSON", "General JSON");
+                    serialization.getSelectionModel().selectFirst();
+                }
             }
 
             // Init Nested Combos
             if (nestedSignAlgoCombo != null && nestedSignAlgoCombo.getItems().isEmpty()) {
-                nestedSignAlgoCombo.getItems().setAll("HS256", "HS384", "HS512", "RS256", "RS384", "RS512");
+                nestedSignAlgoCombo.getItems().setAll(JWS_ALGORITHMS);
                 nestedSignAlgoCombo.getSelectionModel().select("HS256");
             }
             if (nestedKeyAlgoCombo != null && nestedKeyAlgoCombo.getItems().isEmpty()) {
-                nestedKeyAlgoCombo.getItems().setAll("RSA-OAEP-256", "RSA-OAEP-512");
+                nestedKeyAlgoCombo.getItems().setAll(
+                        "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512",
+                        "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW");
                 nestedKeyAlgoCombo.getSelectionModel().selectFirst();
             }
             if (nestedContentAlgoCombo != null && nestedContentAlgoCombo.getItems().isEmpty()) {
-                nestedContentAlgoCombo.getItems().setAll("A128GCM", "A256GCM");
+                nestedContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
                 nestedContentAlgoCombo.getSelectionModel().select("A256GCM");
             }
 
             // Init JWK Combo
             if (jwkKeyTypeCombo != null && jwkKeyTypeCombo.getItems().isEmpty()) {
-                jwkKeyTypeCombo.getItems().setAll("RSA", "EC", "OCT");
+                jwkKeyTypeCombo.getItems().setAll("RSA", "EC", "OKP", "OCT");
                 jwkKeyTypeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
                     if (newV == null)
                         return;
@@ -129,7 +163,7 @@ public class JOSEController implements Initializable {
             }
             if (jwksRotateAlgoCombo != null && jwksRotateAlgoCombo.getItems().isEmpty()) {
                 jwksRotateAlgoCombo.getItems().setAll(
-                        "RS256", "RS384", "RS512", "ES256", "ES384", "ES512",
+                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA",
                         "HS256", "HS384", "HS512", "A128KW", "A256KW", "A128GCM", "A256GCM", "dir");
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
@@ -137,9 +171,9 @@ public class JOSEController implements Initializable {
         IngestionUIHelper.bindField(jwtKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(jwtValidateTokenArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
         IngestionUIHelper.bindField(jwtValidateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-        IngestionUIHelper.bindField(jwePublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+        IngestionUIHelper.bindField(jwePublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(jweInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
-        IngestionUIHelper.bindField(jwePrivateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+        IngestionUIHelper.bindField(jwePrivateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
 
             // Init JWA Table
             if (jwaTable != null && jwaTable.getItems().isEmpty()) {
@@ -203,44 +237,17 @@ public class JOSEController implements Initializable {
     }
 
     @FXML
-    public void handlePasteJwtKey() {
-        IngestionUIHelper.pasteFromClipboard(jwtKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    @FXML
-    public void handlePasteJwtValidateKey() {
-        IngestionUIHelper.pasteFromClipboard(jwtValidateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    @FXML
-    public void handlePasteJwePublicKey() {
-        IngestionUIHelper.pasteFromClipboard(jwePublicKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
-    }
-
-    @FXML
     public void handlePopulateJwePubKeyShelf() {
         IngestionUIHelper.populateShelfMenu(jwePubKeyShelfMenu, jwePublicKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
-    }
-
-    @FXML
-    public void handlePasteJwePrivateKey() {
-        IngestionUIHelper.pasteFromClipboard(jwePrivateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     @FXML
     public void handlePopulateJwePrivKeyShelf() {
         IngestionUIHelper.populateShelfMenu(jwePrivKeyShelfMenu, jwePrivateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     public void showSection(String sectionName) {
@@ -324,6 +331,7 @@ public class JOSEController implements Initializable {
     private void restoreSafeDefaults() {
         if (jwtAlgoCombo != null && !jwtAlgoCombo.getItems().isEmpty()) jwtAlgoCombo.getSelectionModel().selectFirst();
         if (jwsSerializationCombo != null) jwsSerializationCombo.setValue("Compact");
+        if (detachedSerializationCombo != null) detachedSerializationCombo.setValue("Compact");
         if (jwsUnencodedPayloadCheck != null) jwsUnencodedPayloadCheck.setSelected(false);
         showSection("JWT (Signed)");
     }
@@ -505,12 +513,6 @@ public class JOSEController implements Initializable {
 
             this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
                     jwkOutputArea);
-            // History
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Key Type", jwkKeyTypeCombo.getValue());
-            if (jwkKeyIdField.getText() != null && !jwkKeyIdField.getText().isEmpty()) {
-                details.put("Key ID", jwkKeyIdField.getText());
-            }
 
         }
 
@@ -525,7 +527,6 @@ public class JOSEController implements Initializable {
                 String content = java.nio.file.Files.readString(file.toPath());
                 jwksArea.setText(content);
                 updateStatus(t("module.jose.feedback.jwksLoaded"));
-                // History
 
             } catch (Exception e) {
                 showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
@@ -534,25 +535,22 @@ public class JOSEController implements Initializable {
     }
     @FXML
     private void handleApplyJWTClaims() {
-        if (jwtPayloadArea != null) {
+        if (jwtPayloadArea == null) return;
+        long expHours = 1;
+        String hours = textOf(jwtExpField);
+        if (hours != null && !hours.isBlank()) {
             try {
-                long now = System.currentTimeMillis() / 1000L;
-                long expHours = 1;
-                try {
-                    expHours = Long.parseLong(jwtExpField.getText());
-                } catch (NumberFormatException ignored) {
-                }
-                String json = String.format(
-                        "{\n  \"iss\": \"%s\",\n  \"sub\": \"%s\",\n  \"aud\": \"%s\",\n  \"iat\": %d,\n  \"exp\": %d\n}",
-                        jwtIssField.getText(),
-                        jwtSubField.getText(),
-                        jwtAudField.getText(),
-                        now,
-                        now + (expHours * 3600));
-                jwtPayloadArea.setText(json);
-            } catch (Exception e) {
-                showError("Claims Error", t("module.jose.error", e.getMessage()));
+                expHours = Long.parseLong(hours.trim());
+            } catch (NumberFormatException e) {
+                showValidation(t("module.jose.feedback.validForHours"), "jwtExpField");
+                return;
             }
+        }
+        try {
+            jwtPayloadArea.setText(JwtClaimsBuilder.apply(jwtPayloadArea.getText(), textOf(jwtIssField),
+                    textOf(jwtSubField), textOf(jwtAudField), expHours, System.currentTimeMillis() / 1000L));
+        } catch (IllegalArgumentException | ArithmeticException e) {
+            showValidation(t("module.jose.feedback.claimsPayload"), "jwtPayloadArea");
         }
     }
     @FXML
@@ -564,7 +562,8 @@ public class JOSEController implements Initializable {
             showValidation(t("module.jose.feedback.algorithmRequired"), "detachedAlgoCombo", "preflight.remedy.algorithm");
             return;
         }
-        this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel);
+        this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(),
+                detachedVerificationKeyArea.getText(), secretEncoding(detachedSecretFormatCombo), detachedStatusLabel);
     }
     @FXML
     private void handleVerifyNestedJWT() {
@@ -576,7 +575,8 @@ public class JOSEController implements Initializable {
             String nestedToken = nestedOutputArea.getText();
             String decryptionKey = nestedEncryptionKeyArea.getText();
             String verificationKey = nestedSigningKeyArea.getText();
-            this.verifyNestedJWT(nestedToken, decryptionKey, verificationKey, nestedPayloadOutputArea, nestedStatusLabel);
+            this.verifyNestedJWT(nestedToken, decryptionKey, verificationKey, secretEncoding(nestedSecretFormatCombo),
+                    nestedPayloadOutputArea, nestedStatusLabel);
         }
 
     @FXML
@@ -604,7 +604,8 @@ public class JOSEController implements Initializable {
 
             String serialization = detachedSerializationCombo != null ? detachedSerializationCombo.getValue() : "Compact";
             boolean unencoded = detachedUnencodedCheck != null && detachedUnencodedCheck.isSelected();
-            this.generateDetachedJWS(detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedSigningKeyArea.getText(), serialization, unencoded, detachedTokenArea);
+            this.generateDetachedJWS(detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedSigningKeyArea.getText(),
+                    secretEncoding(detachedSecretFormatCombo), serialization, unencoded, detachedTokenArea);
         }
 
     @FXML
@@ -622,12 +623,8 @@ public class JOSEController implements Initializable {
                     nestedContentAlgoCombo.getValue(),
                     nestedEncryptionKeyArea.getText(),
                     nestedCompressCheck.isSelected(),
+                    secretEncoding(nestedSecretFormatCombo),
                     nestedOutputArea);
-            Map<String, String> details = new HashMap<>();
-            details.put("Sign Algo", nestedSignAlgoCombo.getValue());
-            details.put("Key Algo", nestedKeyAlgoCombo.getValue());
-            details.put("Content Algo", nestedContentAlgoCombo.getValue());
-            details.put("Compression", nestedCompressCheck.isSelected() ? "Yes" : "No");
 
         }
 
@@ -644,7 +641,6 @@ public class JOSEController implements Initializable {
     }
     @FXML
     public void handleCalculateThumbprint() {
-        showSection("JWT");
 
             if (isBlank(jwkInputArea)) {
                 showValidation(t("module.jose.feedback.thumbprintInput"), "jwkInputArea");
@@ -652,7 +648,6 @@ public class JOSEController implements Initializable {
             }
 
             this.calculateThumbprint(jwkInputArea.getText(), jwkOutputArea);
-            // History
 
         }
 
@@ -711,9 +706,11 @@ public class JOSEController implements Initializable {
             String serialization = jwsSerializationCombo != null ? jwsSerializationCombo.getValue() : "Compact";
             boolean unencoded = jwsUnencodedPayloadCheck != null && jwsUnencodedPayloadCheck.isSelected();
             java.util.List<com.cryptocarver.crypto.SignerConfig> signers = new java.util.ArrayList<>();
-            signers.add(new com.cryptocarver.crypto.SignerConfig(algo, key));
+            JoseKeyMaterial.SecretEncoding secretEncoding = secretEncoding(jwtSecretFormatCombo);
+            signers.add(new com.cryptocarver.crypto.SignerConfig(algo, key, secretEncoding));
             if (jwtAlgoCombo2 != null && jwtKeyArea2 != null && !jwtKeyArea2.getText().trim().isEmpty()) {
-                signers.add(new com.cryptocarver.crypto.SignerConfig(jwtAlgoCombo2.getSelectionModel().getSelectedItem(), jwtKeyArea2.getText()));
+                signers.add(new com.cryptocarver.crypto.SignerConfig(jwtAlgoCombo2.getSelectionModel().getSelectedItem(),
+                        jwtKeyArea2.getText(), secretEncoding));
             }
             this.generateSignedJWT(
                     jwtPayloadArea.getText(),
@@ -721,12 +718,6 @@ public class JOSEController implements Initializable {
                     serialization,
                     unencoded,
                     jwtOutputArea);
-            // Add to History
-            Map<String, String> details = new HashMap<>();
-            details.put("Algorithm", algo);
-            details.put("Key/Secret", key.length() > 50 ? "Provided (Length: " + key.length() + ")" : key);
-            details.put("Payload", jwtPayloadArea.getText());
-            details.put("Output JWT", jwtOutputArea.getText());
 
         }
 
@@ -756,15 +747,10 @@ public class JOSEController implements Initializable {
                     jwtValidateTokenArea.getText(),
                     jwtValidateKeyArea.getText(),
                     iss, aud, skew, checkExp, oidcStrict,
+                    secretEncoding(jwtValidateSecretFormatCombo),
                     jwtDecodedHeaderArea,
                     jwtDecodedPayloadArea,
                     jwtStatusLabel);
-            // Add to History
-            Map<String, String> details = new HashMap<>();
-            details.put("Token", jwtValidateTokenArea.getText());
-            details.put("Verification Key", jwtValidateKeyArea.getText().length() > 50 ? "Provided (PEM/Secret)"
-                    : jwtValidateKeyArea.getText());
-            details.put("Status", jwtStatusLabel.getText());
 
         }
 
@@ -790,16 +776,14 @@ public class JOSEController implements Initializable {
                     return;
                 }
             }
-            com.nimbusds.jose.jwk.JWK newKey = this.generateNewJWK(alg, "sig");
+            String use = alg.startsWith("A") || alg.equals("dir") ? "enc" : "sig";
+            com.nimbusds.jose.jwk.JWK newKey = this.generateNewJWK(alg, use);
             String currentJson = jwksArea.getText();
             if (currentJson == null || currentJson.isBlank())
                 currentJson = "{\"keys\":[]}";
             String newJson = this.addToJWKSet(currentJson, newKey);
             jwksArea.setText(newJson);
             updateStatus(t("module.jose.feedback.keyAdded", alg));
-            // History
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", alg);
 
         } catch (Exception e) {
             showError("Rotate Key Error", e.getMessage());
@@ -810,6 +794,18 @@ public class JOSEController implements Initializable {
 
             if (isBlank(jwePayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwePayloadArea"); return; }
             if (isBlank(jwePublicKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePublicKeyArea"); return; }
+            int iterations = JweComposer.DEFAULT_PBES2_ITERATIONS;
+            if (jwePbes2IterField != null && !jwePbes2IterField.getText().isBlank()) {
+                try {
+                    iterations = Integer.parseInt(jwePbes2IterField.getText().trim());
+                } catch (NumberFormatException e) {
+                    iterations = -1;
+                }
+                if (iterations < 1000) {
+                    showValidation(t("module.jose.feedback.pbes2Iterations"), "jwePbes2IterField");
+                    return;
+                }
+            }
 
             this.generateJWE(
                     jwePayloadArea.getText(),
@@ -817,10 +813,13 @@ public class JOSEController implements Initializable {
                     jweContentAlgoCombo.getValue(),
                     jwePublicKeyArea.getText(),
                     jweCompressCheck.isSelected(),
+                    new JweComposer.HeaderOptions(textOf(jweKidField), textOf(jweTypField), textOf(jweCtyField),
+                            textOf(jweApuField), textOf(jweApvField), textOf(jweCustomHeaderArea)),
+                    secretEncoding(jweKeyFormatCombo),
+                    iterations,
+                    JweComposer.Serialization.fromLabel(jweSerializationCombo == null ? null : jweSerializationCombo.getValue()),
+                    textOf(jweAadField),
                     jweOutputArea);
-            Map<String, String> details = new HashMap<>(
-                    Map.of("alg", jweKeyAlgoCombo.getValue(), "enc", jweContentAlgoCombo.getValue()));
-            details.put("Compression", jweCompressCheck.isSelected() ? "Yes" : "No");
 
         }
 
@@ -833,6 +832,7 @@ public class JOSEController implements Initializable {
             this.decryptJWE(
                     jweInputArea.getText(),
                     jwePrivateKeyArea.getText(),
+                    secretEncoding(jweDecryptKeyFormatCombo),
                     jweDecodedHeaderArea,
                     jweDecodedPayloadArea,
                     jweHeaderArea,
@@ -853,11 +853,6 @@ public class JOSEController implements Initializable {
                 return;
             }
             this.inspectToken(inspectorInputArea.getText(), inspectorOutputFlow);
-            // History
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            if (inspectorInputArea.getText().length() > 50) {
-                details.put("Token Preview", inspectorInputArea.getText().substring(0, 20) + "...");
-            }
 
         }
     }
@@ -897,7 +892,6 @@ public class JOSEController implements Initializable {
             }
 
             this.convertJwkToPem(jwkInputArea.getText(), jwkOutputArea);
-            // History
 
         }
 
@@ -952,6 +946,14 @@ public class JOSEController implements Initializable {
         }
     }
 
+    private static String textOf(TextInputControl control) {
+        return control == null ? null : control.getText();
+    }
+
+    private static JoseKeyMaterial.SecretEncoding secretEncoding(ComboBox<String> combo) {
+        return JoseKeyMaterial.SecretEncoding.fromLabel(combo == null ? null : combo.getValue());
+    }
+
     private static boolean isBlank(TextInputControl control) {
         return control == null || control.getText() == null || control.getText().isBlank();
     }
@@ -988,10 +990,6 @@ public class JOSEController implements Initializable {
         return sb.toString();
     }
 
-    public boolean isInspectorVisible() {
-        return inspectorSection != null && inspectorSection.isVisible();
-    }
-
 
 
 
@@ -1003,9 +1001,10 @@ public class JOSEController implements Initializable {
     public JOSEController() {
     }
 
-    public void generateDetachedJWS(String payload, String algorithm, String key, String serializationType, boolean unencodedPayload, TextArea output) {
+    public void generateDetachedJWS(String payload, String algorithm, String key, JoseKeyMaterial.SecretEncoding secretEncoding,
+            String serializationType, boolean unencodedPayload, TextArea output) {
         try {
-            java.util.List<SignerConfig> signers = java.util.Collections.singletonList(new SignerConfig(algorithm, key));
+            java.util.List<SignerConfig> signers = java.util.Collections.singletonList(new SignerConfig(algorithm, key, secretEncoding));
             String serialized = JOSEService.generateDetachedJWS(payload, signers, serializationType, unencodedPayload);
 
             output.setText(serialized);
@@ -1021,9 +1020,10 @@ public class JOSEController implements Initializable {
         } catch (Exception e) { statusReporter.showError("Detached JWS", t("module.jose.error", e.getMessage())); }
     }
 
-    public void verifyDetachedJWS(String detached, String payload, String algorithm, String key, Label status) {
+    public void verifyDetachedJWS(String detached, String payload, String algorithm, String key,
+            JoseKeyMaterial.SecretEncoding secretEncoding, Label status) {
         try {
-            boolean valid = JOSEService.verifyDetachedJWS(detached, payload, algorithm, key);
+            boolean valid = JOSEService.verifyDetachedJWS(detached, payload, algorithm, key, secretEncoding);
             status.setText(valid ? "VALID DETACHED SIGNATURE" : "INVALID DETACHED SIGNATURE");
             status.setStyle(valid ? "-fx-text-fill: green;" : "-fx-text-fill: red;");
             statusReporter.publish(OperationResult.forOperation("Detached JWS Verification")
@@ -1069,64 +1069,13 @@ public class JOSEController implements Initializable {
         }
     }
 
-    public void validateJWT(String tokenString, String keyString, TextArea headerOut, TextArea payloadOut,
-            Label statusLabel) {
-        try {
-            // 1. Parse JWT
-            SignedJWT signedJWT = SignedJWT.parse(tokenString);
-
-            // 2. Display Parts
-            headerOut.setText(signedJWT.getHeader().toString());
-            payloadOut.setText(signedJWT.getJWTClaimsSet().toString());
-
-            // 3. Verify
-            JWSVerifier verifier;
-            JWSAlgorithm algo = signedJWT.getHeader().getAlgorithm();
-
-            if (JWSAlgorithm.Family.HMAC_SHA.contains(algo)) {
-                verifier = new PromiscuousMACVerifier(keyString, algo);
-            } else if (JWSAlgorithm.Family.RSA.contains(algo)) {
-                PublicKey pubKey = parseRSAPublicKey(keyString);
-                verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
-            } else if (JWSAlgorithm.Family.EC.contains(algo)) {
-                verifier = new ECDSAVerifier(requireEcPublicKey(algo, keyString));
-            } else {
-                statusLabel.setText(t("module.jose.unsupportedVerification"));
-                statusLabel.setStyle("-fx-text-fill: orange;");
-                return;
-            }
-
-            boolean verified = signedJWT.verify(verifier);
-            if (verified) {
-                statusLabel.setText(t("module.jose.validSignature"));
-                statusLabel.setStyle("-fx-text-fill: green;");
-            } else {
-                statusLabel.setText(t("module.jose.invalidSignature"));
-                statusLabel.setStyle("-fx-text-fill: red;");
-            }
-            statusReporter.publish(OperationResult.forOperation("JWT Validation")
-                    .input(tokenString.getBytes(StandardCharsets.US_ASCII))
-                    .detail("Algorithm", algo.getName()).detail("Result", verified ? "VALID" : "INVALID")
-                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyString))
-                    .status(t("module.jose.feedback.statusJwtValidation", verified ? "valid" : "invalid")).build());
-
-        } catch (Exception e) {
-            statusLabel.setText(t("module.jose.error", e.getMessage()));
-            statusLabel.setStyle("-fx-text-fill: red;");
-            headerOut.setText("");
-            payloadOut.setText("");
-        }
-    }
-
     // --- Nested JWT (Sign then Encrypt) ---
     public void generateNestedJWT(String payloadJson, String signAlgoStr, String signKey,
             String keyAlgoStr, String contentAlgoStr, String encKeyPEM, boolean compress,
-            TextArea outputArea) {
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea outputArea) {
         try {
-            if (compress) {
-                statusReporter.showInfo("Compression", "Compression handling in pure service is omitted in this refactor unless implemented.");
-            }
-            String serialized = JOSEService.generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr, contentAlgoStr, encKeyPEM);
+            String serialized = JOSEService.generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr,
+                    contentAlgoStr, encKeyPEM, compress, secretEncoding);
 
             outputArea.setText(serialized);
             String status = "Nested JWT Generated (Signed: " + signAlgoStr + ", Encrypted: " + keyAlgoStr + ")";
@@ -1145,9 +1094,10 @@ public class JOSEController implements Initializable {
         }
     }
 
-    public void verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM, TextArea payloadOut, Label statusLabel) {
+    public void verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM,
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea payloadOut, Label statusLabel) {
         try {
-            String payload = JOSEService.verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM);
+            String payload = JOSEService.verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM, secretEncoding);
             payloadOut.setText(payload);
             statusLabel.setText(t("module.jose.decryptedVerified"));
             statusLabel.setStyle("-fx-text-fill: green;");
@@ -1165,73 +1115,58 @@ public class JOSEController implements Initializable {
         }
     }
 
+    @FXML private ComboBox<String> jwtSecretFormatCombo;
+    @FXML private TextArea jwtFindingsArea;
+    @FXML private ComboBox<String> jwtValidateSecretFormatCombo;
+    @FXML private ComboBox<String> detachedSecretFormatCombo;
+    @FXML private ComboBox<String> nestedSecretFormatCombo;
+    @FXML private ComboBox<String> jweKeyFormatCombo;
+    @FXML private ComboBox<String> jweSerializationCombo;
+    @FXML private TextField jweAadField;
+    @FXML private TextField jwePbes2IterField;
+    @FXML private TextField jweKidField;
+    @FXML private TextField jweTypField;
+    @FXML private TextField jweCtyField;
+    @FXML private TextField jweApuField;
+    @FXML private TextField jweApvField;
+    @FXML private TextArea jweCustomHeaderArea;
+    @FXML private ComboBox<String> jweDecryptKeyFormatCombo;
+
     // --- JWE (Encrypted) ---
-    public void generateJWE(String payload, String keyAlgo, String contentAlgo, String publicKeyPEM, boolean compress,
-            TextArea outputArea) {
+    public void generateJWE(String payload, String keyAlgo, String contentAlgo, String keyMaterial, boolean compress,
+            JweComposer.HeaderOptions headerOptions, JoseKeyMaterial.SecretEncoding secretEncoding,
+            int pbes2Iterations, JweComposer.Serialization serialization, String aad, TextArea outputArea) {
         try {
-            // 1. Algorithms
-            JWEAlgorithm alg = JWEAlgorithm.parse(keyAlgo);
-            EncryptionMethod enc = EncryptionMethod.parse(contentAlgo);
-
-            // 2. Key & Encrypter
-            JWEEncrypter encrypter;
-            if (JWEAlgorithm.Family.RSA.contains(alg)) {
-                PublicKey publicKey = parseRSAPublicKey(publicKeyPEM);
-                encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
-            } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
-                // AES Key Wrap expects an AES key (e.g. 128, 192, 256 bits)
-                // Assuming publicKeyPEM here contains a raw secret (base64 or string) for AES
-                byte[] keyBytes = publicKeyPEM.getBytes(StandardCharsets.UTF_8);
-                if (publicKeyPEM.startsWith("-----BEGIN")) {
-                    throw new IllegalArgumentException("AES Key Wrap requires a symmetric key (secret), not a PEM certificate/key.");
-                }
-                // Pad or truncate to required length for the algorithm if needed, or assume user provides correct length
-                encrypter = new com.nimbusds.jose.crypto.AESEncrypter(keyBytes);
-            } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                PublicKey ecPublicKey = requireJweEcPublicKey(publicKeyPEM);
-                encrypter = new com.nimbusds.jose.crypto.ECDHEncrypter((java.security.interfaces.ECPublicKey) ecPublicKey);
-            } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
-                if (publicKeyPEM.startsWith("-----BEGIN")) {
-                    throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
-                }
-                encrypter = new com.nimbusds.jose.crypto.PasswordBasedEncrypter(publicKeyPEM.getBytes(StandardCharsets.UTF_8), 16, 2048);
-            } else {
-                throw new IllegalArgumentException("Unsupported JWE Algorithm: " + alg.getName());
-            }
-
-            // 3. Header
-            JWEHeader.Builder headerBuilder = new JWEHeader.Builder(alg, enc);
-            if (compress) {
-                headerBuilder.compressionAlgorithm(CompressionAlgorithm.DEF);
-            }
-            JWEHeader header = headerBuilder.build();
-
-            // 4. Objec
-            JWEObject jweObject = new JWEObject(header, new Payload(payload));
-
-            // 5. Encryp
-            jweObject.encrypt(encrypter);
-
-            // 6. Outpu
-            String serialized = jweObject.serialize();
+            String serialized = JweComposer.encrypt(payload, keyAlgo, contentAlgo, compress, headerOptions,
+                    keyMaterial, secretEncoding, pbes2Iterations, serialization, aad);
             outputArea.setText(serialized);
             String status = "JWE Encrypted (" + keyAlgo + " / " + contentAlgo + ")";
             if (compress)
                 status += " [Compressed]";
-            statusReporter.publish(OperationResult.forOperation("JWE Encryption")
+            OperationResult.Builder result = OperationResult.forOperation("JWE Encryption")
                     .input(payload.getBytes(StandardCharsets.UTF_8))
                     .output(serialized.getBytes(StandardCharsets.US_ASCII))
                     .detail("Key Algorithm", keyAlgo).detail("Content Algorithm", contentAlgo)
-                    .detail("Compression", String.valueOf(compress)).detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", publicKeyPEM))
-                    .status(status).build());
+                    .detail("Compression", String.valueOf(compress))
+                    .detail("Serialization", serialization == null ? "Compact" : serialization.label())
+                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyMaterial));
+            if (aad != null && !aad.isBlank()) result.detail("AAD", aad);
+            if (headerOptions != null && headerOptions.kid() != null && !headerOptions.kid().isBlank()) {
+                result.detail("kid", headerOptions.kid().trim());
+            }
+            if (JWEAlgorithm.Family.PBES2.contains(JWEAlgorithm.parse(keyAlgo))) {
+                result.detail("PBES2 Iterations", String.valueOf(pbes2Iterations));
+            }
+            statusReporter.publish(result.status(status).build());
 
         } catch (Exception e) {
             statusReporter.showError("JWE Encryption Error", e.getMessage());
-            LOG.error("JWE encryption failed", e);
+            // No exception attached: provider messages may echo key material.
+            LOG.error("JWE encryption failed for key-management algorithm {}", keyAlgo);
         }
     }
 
-    public void decryptJWE(String jweString, String privateKeyPEM,
+    public void decryptJWE(String jweString, String privateKeyPEM, JoseKeyMaterial.SecretEncoding secretEncoding,
             TextArea headerOut, TextArea payloadOut,
             TextArea jweHeaderArea, TextArea jweEncryptedKeyArea, TextArea jweDecryptedKeyArea,
             TextArea jweIVArea, TextArea jweCiphertextArea, TextArea jweAuthTagArea,
@@ -1244,6 +1179,35 @@ public class JOSEController implements Initializable {
             if (privateKeyPEM == null || privateKeyPEM.isBlank()) {
                 throw new IllegalArgumentException("Key material is required to decrypt the JWE.");
             }
+            if (jweString.trim().startsWith("{")) {
+                algorithmName = "(JSON serialization)";
+                JweComposer.JsonDecryption result = JweComposer.decryptJson(jweString.trim(), privateKeyPEM.trim(),
+                        secretEncoding);
+                String header = com.nimbusds.jose.util.JSONObjectUtils.toJSONString(result.effectiveHeader());
+                headerOut.setText(header);
+                payloadOut.setText(result.payload());
+                jweHeaderArea.setText(header);
+                jweEncryptedKeyArea.setText(result.encryptedKey() == null ? "" : result.encryptedKey().toString());
+                jweDecryptedKeyArea.setText("Manual CEK preview is only available for compact serialization.");
+                jweIVArea.setText(result.iv() == null ? "" : result.iv() + " \n[Hex: "
+                        + DataConverter.bytesToHex(result.iv().decode()) + "]");
+                jweCiphertextArea.setText(result.cipherText().toString());
+                jweAuthTagArea.setText(result.authTag() == null ? "" : result.authTag() + " \n[Hex: "
+                        + DataConverter.bytesToHex(result.authTag().decode()) + "]");
+                statusLabel.setText(t("module.jose.decryptionSuccessful") + " (recipient "
+                        + (result.recipientIndex() + 1) + "/" + result.recipientCount() + ")");
+                statusLabel.setStyle("-fx-text-fill: green;");
+                OperationResult.Builder published = OperationResult.forOperation("JWE Decryption")
+                        .input(jweString.getBytes(StandardCharsets.UTF_8))
+                        .output(result.payload().getBytes(StandardCharsets.UTF_8))
+                        .detail("Key Algorithm", String.valueOf(result.effectiveHeader().get("alg")))
+                        .detail("Content Algorithm", String.valueOf(result.effectiveHeader().get("enc")))
+                        .detail("Serialization", "JSON")
+                        .detail("Recipient", (result.recipientIndex() + 1) + " of " + result.recipientCount());
+                if (result.aad() != null) published.detail("AAD", result.aad());
+                statusReporter.publish(published.status(t("module.jose.feedback.statusJweDecrypted")).build());
+                return;
+            }
 
             final JWEObject jweObject;
             try {
@@ -1254,45 +1218,21 @@ public class JOSEController implements Initializable {
 
             JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
             algorithmName = alg == null ? "(missing)" : alg.getName();
-            if (!JWEManualCekRecovery.isSupported(alg)) {
-                throw new IllegalArgumentException("Unsupported JWE key-management algorithm for this application: " + algorithmName + ".");
+            if (alg == null) {
+                throw new IllegalArgumentException("The JWE header has no 'alg' parameter.");
             }
 
             JWEDecrypter decrypter;
-            PrivateKey privateKey = null;
-            byte[] secret = null;
-            String keyMaterial = privateKeyPEM.trim();
-
+            JweComposer.LoadedKey loaded = new JweComposer.LoadedKey();
             try {
-                if (JWEAlgorithm.Family.RSA.contains(alg)) {
-                    privateKey = parseRSAPrivateKey(keyMaterial);
-                    decrypter = new RSADecrypter(privateKey);
-                } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
-                    if (keyMaterial.startsWith("-----BEGIN")) {
-                        throw new IllegalArgumentException("AES-KW requires a symmetric key, not a PEM certificate/key.");
-                    }
-                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
-                    decrypter = new com.nimbusds.jose.crypto.AESDecrypter(secret);
-                } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                    privateKey = requireJweEcPrivateKey(keyMaterial);
-                    decrypter = new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) privateKey);
-                } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
-                    if (keyMaterial.startsWith("-----BEGIN")) {
-                        throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
-                    }
-                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
-                    decrypter = new com.nimbusds.jose.crypto.PasswordBasedDecrypter(secret);
-                } else if (JWEAlgorithm.DIR.equals(alg)) {
-                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
-                    decrypter = new com.nimbusds.jose.crypto.DirectDecrypter(secret);
-                } else {
-                    throw new IllegalArgumentException("Unsupported JWE key-management algorithm: " + algorithmName + ".");
-                }
+                decrypter = JweComposer.decrypter(alg, privateKeyPEM.trim(), secretEncoding, loaded);
             } catch (IllegalArgumentException e) {
                 throw e;
             } catch (Exception e) {
                 throw new IllegalArgumentException("Key material is missing or incompatible with JWE algorithm " + algorithmName + ".", e);
             }
+            PrivateKey privateKey = loaded.privateKey;
+            byte[] secret = loaded.secret;
 
             try {
                 jweObject.decrypt(decrypter);
@@ -1316,6 +1256,8 @@ public class JOSEController implements Initializable {
                 // The direct key is the CEK. Keep it out of automatic preview,
                 // OperationResult, history, reports, clipboard and logs.
                 jweDecryptedKeyArea.setText(directCekPreviewMessage());
+            } else if (!JWEManualCekRecovery.isSupported(alg)) {
+                jweDecryptedKeyArea.setText("Manual CEK preview is not available for " + algorithmName + ".");
             } else {
                 try {
                     byte[] cek = JWEManualCekRecovery.recover(jweObject, privateKey, secret);
@@ -1373,200 +1315,6 @@ public class JOSEController implements Initializable {
         return "Direct encryption: the CEK is the supplied direct key and is not displayed automatically.";
     }
 
-    // --- JWK ---
-    public void generateRSAJWK(TextArea outputArea) {
-        try {
-            RSAKey rsaJWK = new RSAKeyGenerator(2048)
-                    .keyID(UUID.randomUUID().toString())
-                    .generate();
-
-            outputArea.setText(rsaJWK.toJSONString());
-            statusReporter.updateStatus(t("module.jose.feedback.statusJwkGenerated"));
-        } catch (Exception e) {
-            statusReporter.showError("JWK Error", e.getMessage());
-        }
-    }
-
-    // --- Helpers ---
-    private PrivateKey parseRSAPrivateKey(String pem) throws Exception {
-        String privateKeyPEM = pem
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                .replace("-----END RSA PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] encoded = DataConverter.decodeBase64Flexible(privateKeyPEM);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(encoded));
-    }
-
-    /** Loads an EC private key encoded as PEM PKCS#8 for ES256/ES384/ES512. */
-    private java.security.interfaces.ECPrivateKey parseECPrivateKey(String pem) throws Exception {
-        if (pem.contains("-----BEGIN EC PRIVATE KEY-----")) {
-            throw new IllegalArgumentException("EC private keys must be PEM PKCS#8 (BEGIN PRIVATE KEY), not SEC1 (BEGIN EC PRIVATE KEY)");
-        }
-        String base64 = pem.replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-        byte[] encoded = DataConverter.decodeBase64Flexible(base64);
-        PrivateKey key = KeyFactory.getInstance("EC").generatePrivate(new PKCS8EncodedKeySpec(encoded));
-        if (!(key instanceof java.security.interfaces.ECPrivateKey ecKey)) {
-            throw new IllegalArgumentException("The supplied PKCS#8 key is not an EC private key");
-        }
-        return ecKey;
-    }
-
-    private PublicKey parseRSAPublicKey(String pem) throws Exception {
-        String publicKeyPEM = pem
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replace("-----BEGIN RSA PUBLIC KEY-----", "")
-                .replace("-----END RSA PUBLIC KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] encoded = DataConverter.decodeBase64Flexible(publicKeyPEM);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
-    }
-
-    /** Loads an EC public key encoded as PEM SubjectPublicKeyInfo for ES verification. */
-    private java.security.interfaces.ECPublicKey parseECPublicKey(String pem) throws Exception {
-        String base64 = pem.replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
-        PublicKey key = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(DataConverter.decodeBase64Flexible(base64)));
-        if (!(key instanceof java.security.interfaces.ECPublicKey ecKey)) throw new IllegalArgumentException("The supplied key is not an EC public key");
-        return ecKey;
-    }
-
-    private java.security.interfaces.ECPrivateKey requireEcPrivateKey(JWSAlgorithm algorithm, String pem) throws Exception {
-        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
-        validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
-        return key;
-    }
-
-    private java.security.interfaces.ECPublicKey requireEcPublicKey(JWSAlgorithm algorithm, String pem) throws Exception {
-        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
-        validateEcCurve(algorithm, key.getParams().getCurve().getField().getFieldSize());
-        return key;
-    }
-
-    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
-    private java.security.interfaces.ECPublicKey requireJweEcPublicKey(String pem) throws Exception {
-        java.security.interfaces.ECPublicKey key = parseECPublicKey(pem);
-        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
-        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
-            throw new IllegalArgumentException("The supplied EC public key curve is not supported by Nimbus ECDH-ES.");
-        }
-        return key;
-    }
-
-    /** Loads an EC recipient key for the Nimbus ECDH-ES profiles already exposed by JWE. */
-    private java.security.interfaces.ECPrivateKey requireJweEcPrivateKey(String pem) throws Exception {
-        java.security.interfaces.ECPrivateKey key = parseECPrivateKey(pem);
-        com.nimbusds.jose.jwk.Curve curve = com.nimbusds.jose.jwk.Curve.forECParameterSpec(key.getParams());
-        if (!com.nimbusds.jose.crypto.ECDHDecrypter.SUPPORTED_ELLIPTIC_CURVES.contains(curve)) {
-            throw new IllegalArgumentException("The supplied EC private key curve is not supported by Nimbus ECDH-ES.");
-        }
-        return key;
-    }
-
-    private void validateEcCurve(JWSAlgorithm algorithm, int fieldSize) {
-        int expected = JWSAlgorithm.ES256.equals(algorithm) ? 256 : JWSAlgorithm.ES384.equals(algorithm) ? 384 : JWSAlgorithm.ES512.equals(algorithm) ? 521 : -1;
-        if (expected < 0) throw new IllegalArgumentException("Unsupported EC JWS algorithm: " + algorithm);
-        if (fieldSize != expected) throw new IllegalArgumentException(algorithm + " requires a P-" + expected + " EC key; supplied key has a " + fieldSize + "-bit field");
-    }
-
-    // --- Internal Permissive Implementations ---
-
-    private static class PromiscuousMACSigner implements JWSSigner {
-        private final byte[] secret;
-        private final JWSAlgorithm algorithm;
-        private final JCAContext jcaContext = new JCAContext();
-
-        public PromiscuousMACSigner(String secretStr, JWSAlgorithm algorithm) {
-            this.secret = secretStr.getBytes(StandardCharsets.UTF_8);
-            this.algorithm = algorithm;
-        }
-
-        @Override
-        public Base64URL sign(final JWSHeader header, final byte[] signingInput) throws JOSEException {
-            try {
-                String jcaAlgo = getJCAAlgorithmName(header.getAlgorithm());
-                Mac mac = Mac.getInstance(jcaAlgo);
-                mac.init(new SecretKeySpec(secret, jcaAlgo));
-                return Base64URL.encode(mac.doFinal(signingInput));
-            } catch (Exception e) {
-                throw new JOSEException(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public Set<JWSAlgorithm> supportedJWSAlgorithms() {
-            return Collections.singleton(algorithm);
-        }
-
-        @Override
-        public JCAContext getJCAContext() {
-            return jcaContext;
-        }
-    }
-
-    private static class PromiscuousMACVerifier implements JWSVerifier {
-        private final byte[] secret;
-        private final JWSAlgorithm algorithm;
-        private final JCAContext jcaContext = new JCAContext();
-
-        public PromiscuousMACVerifier(String secretStr, JWSAlgorithm algorithm) {
-            this.secret = secretStr.getBytes(StandardCharsets.UTF_8);
-            this.algorithm = algorithm;
-        }
-
-        @Override
-        public boolean verify(JWSHeader header, byte[] signedContent, Base64URL signature) throws JOSEException {
-            if (!header.getAlgorithm().equals(algorithm)) {
-                return false;
-            }
-            try {
-                String jcaAlgo = getJCAAlgorithmName(header.getAlgorithm());
-                Mac mac = Mac.getInstance(jcaAlgo);
-                mac.init(new SecretKeySpec(secret, jcaAlgo));
-                byte[] expectedSignature = mac.doFinal(signedContent);
-                byte[] providedSignature = signature.decode();
-                if (expectedSignature.length != providedSignature.length) {
-                    return false;
-                }
-                int result = 0;
-                for (int i = 0; i < expectedSignature.length; i++) {
-                    result |= expectedSignature[i] ^ providedSignature[i];
-                }
-                return result == 0;
-            } catch (Exception e) {
-                return false;
-            }
-        }
-
-        @Override
-        public Set<JWSAlgorithm> supportedJWSAlgorithms() {
-            return Collections.singleton(algorithm);
-        }
-
-        @Override
-        public JCAContext getJCAContext() {
-            return jcaContext;
-        }
-    }
-
-    private static String getJCAAlgorithmName(JWSAlgorithm alg) throws JOSEException {
-        if (alg.equals(JWSAlgorithm.HS256))
-            return "HmacSHA256";
-        if (alg.equals(JWSAlgorithm.HS384))
-            return "HmacSHA384";
-        if (alg.equals(JWSAlgorithm.HS512))
-            return "HmacSHA512";
-        throw new JOSEException("Unsupported HMAC algorithm: " + alg.getName());
-    }
-
     // --- Enterprise Features (level 4 & 5) ---
 
     // 1. JWK Managemen
@@ -1577,6 +1325,15 @@ public class JOSEController implements Initializable {
                     .algorithm(new JWSAlgorithm(alg))
                     .keyID(UUID.randomUUID().toString())
                     .generate();
+        } else if (alg.equals("EdDSA")) {
+            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+            return new OctetKeyPair.Builder(Curve.Ed25519,
+                    Base64URL.encode(JoseKeyMaterial.rawEdPublicKey(pair.getPublic())))
+                    .d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(pair.getPrivate())))
+                    .keyUse(KeyUse.SIGNATURE)
+                    .algorithm(JWSAlgorithm.EdDSA)
+                    .keyID(UUID.randomUUID().toString())
+                    .build();
         } else if (alg.startsWith("ES")) {
             Curve curve = Curve.P_256;
             if (alg.contains("384"))
@@ -1646,147 +1403,47 @@ public class JOSEController implements Initializable {
     // 2. Advanced Validation
     public void validateJWTAdvanced(String tokenString, String keyString,
             String expectedIss, String expectedAud, long clockSkewSec, boolean checkExpiry, boolean oidcStrict,
-            TextArea headerOut, TextArea payloadOut, Label statusLabel) {
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea headerOut, TextArea payloadOut, Label statusLabel) {
+        if (jwtFindingsArea != null) jwtFindingsArea.clear();
         try {
-            // 1. Parse
-            SignedJWT signedJWT = SignedJWT.parse(tokenString);
-            headerOut.setText(signedJWT.getHeader().toString());
-            payloadOut.setText(signedJWT.getJWTClaimsSet().toString());
+            JwtValidator.Result result = JwtValidator.validate(tokenString, keyString,
+                    new JwtValidator.Options(expectedIss, expectedAud, clockSkewSec, checkExpiry, oidcStrict,
+                            secretEncoding),
+                    java.time.Instant.now());
+            headerOut.setText(result.header());
+            payloadOut.setText(result.payload());
 
-            // 2. Verify Signature
-            JWSVerifier verifier = null;
-            JWSAlgorithm algo = signedJWT.getHeader().getAlgorithm();
-            boolean sigValid = false;
-
-            String keyStringTrimmed = keyString.trim();
-            if (keyStringTrimmed.startsWith("{") && keyStringTrimmed.contains("\"keys\"")) {
-                // It's a JWKS
-                JWKSet jwkSet = JWKSet.parse(keyStringTrimmed);
-                String kid = signedJWT.getHeader().getKeyID();
-                JWK match = null;
-
-                if (kid != null) {
-                    match = jwkSet.getKeyByKeyId(kid);
-                    if (match == null) {
-                        throw new Exception("JWKS does not contain a key matching the token's 'kid': " + kid);
-                    }
-                } else {
-                    // If no kid, try to find a key that matches the algorithm, or just take the firs
-                    for (JWK k : jwkSet.getKeys()) {
-                        if (k.getAlgorithm() != null && k.getAlgorithm().equals(algo)) {
-                            match = k; break;
-                        }
-                    }
-                    if (match == null && !jwkSet.getKeys().isEmpty()) {
-                        match = jwkSet.getKeys().get(0);
-                    }
-                    if (match == null) throw new Exception("JWKS is empty");
-                }
-
-                if (match instanceof com.nimbusds.jose.jwk.RSAKey) {
-                    verifier = new RSASSAVerifier(((com.nimbusds.jose.jwk.RSAKey) match).toRSAPublicKey());
-                } else if (match instanceof com.nimbusds.jose.jwk.ECKey) {
-                    verifier = new ECDSAVerifier(((com.nimbusds.jose.jwk.ECKey) match).toECPublicKey());
-                } else if (match instanceof com.nimbusds.jose.jwk.OctetSequenceKey) {
-                    verifier = new MACVerifier(((com.nimbusds.jose.jwk.OctetSequenceKey) match).toByteArray());
-                } else {
-                    throw new Exception("Unsupported JWK type: " + match.getKeyType());
-                }
-            } else {
-                // Direct PEM or Secre
-                if (JWSAlgorithm.Family.HMAC_SHA.contains(algo)) {
-                    verifier = new PromiscuousMACVerifier(keyString, algo);
-                } else if (JWSAlgorithm.Family.RSA.contains(algo)) {
-                    PublicKey pubKey = parseRSAPublicKey(keyString);
-                    verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
-                } else if (JWSAlgorithm.Family.EC.contains(algo)) {
-                    PublicKey pubKey = requireEcPublicKey(algo, keyString);
-                    verifier = new ECDSAVerifier((java.security.interfaces.ECPublicKey) pubKey);
-                }
+            List<String> findings = new ArrayList<>();
+            for (JwtValidator.Finding finding : result.findings()) {
+                findings.add(t("module.jose.claim." + finding.code(), finding.argument()));
             }
+            if (jwtFindingsArea != null) jwtFindingsArea.setText(String.join("\n", findings));
 
-            if (verifier == null) {
-                statusLabel.setText("Algorithm Verification not supported manually.");
-                statusLabel.setStyle("-fx-text-fill: orange;");
-                return;
-            }
-
-            sigValid = signedJWT.verify(verifier);
-
-            if (!sigValid) {
-                statusLabel.setText("INVALID Signature ❌");
+            String status;
+            if (!result.signatureValid()) {
+                status = t("module.jose.invalidSignature");
                 statusLabel.setStyle("-fx-text-fill: red;");
-                return;
-            }
-
-            // 3. Validate Claims (Enterprise)
-            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-            List<String> errors = new ArrayList<>();
-
-            // Issuer
-            if (expectedIss != null && !expectedIss.isEmpty()) {
-                if (!expectedIss.equals(claims.getIssuer())) {
-                    errors.add("Issuer mismatch (expected " + expectedIss + ")");
-                }
-            }
-
-            // Audience
-            if (expectedAud != null && !expectedAud.isEmpty()) {
-                List<String> auds = claims.getAudience();
-                if (auds == null || !auds.contains(expectedAud)) {
-                    errors.add("Audience mismatch (expected " + expectedAud + ")");
-                }
-            }
-
-            Date now = new Date();
-            long skewMillis = clockSkewSec * 1000L;
-            Date exp = claims.getExpirationTime();
-            Date nbf = claims.getNotBeforeTime();
-            Date iat = claims.getIssueTime();
-
-            // Strict OIDC Check
-            if (oidcStrict) {
-                if (exp == null) errors.add("OIDC Strict: Missing 'exp' claim");
-                if (iat == null) errors.add("OIDC Strict: Missing 'iat' claim");
-                if (claims.getIssuer() == null) errors.add("OIDC Strict: Missing 'iss' claim");
-                if (claims.getAudience() == null || claims.getAudience().isEmpty()) errors.add("OIDC Strict: Missing 'aud' claim");
-            }
-
-            // Expiration, Not Before, Issued At (w/ Clock Skew)
-            if (checkExpiry || oidcStrict) {
-                if (exp != null) {
-                    if (now.getTime() > (exp.getTime() + skewMillis)) {
-                        errors.add("Token Expired");
-                    }
-                }
-
-                if (nbf != null) {
-                    if (now.getTime() < (nbf.getTime() - skewMillis)) {
-                        errors.add("Token Not Yet Valid (nbf)");
-                    }
-                }
-
-                if (iat != null) {
-                    if (now.getTime() < (iat.getTime() - skewMillis)) {
-                        errors.add("Token issued in the future (iat > now)");
-                    }
-                }
-            }
-
-            if (errors.isEmpty()) {
-                statusLabel.setText("VALID ✅ (Sig + Claims)");
-                statusLabel.setStyle("-fx-text-fill: green;");
-            } else {
-                statusLabel.setText("INVALID Claims ⚠️");
+            } else if (!findings.isEmpty()) {
+                status = t("module.jose.invalidClaims");
                 statusLabel.setStyle("-fx-text-fill: orange;");
-                // Append errors to payload output for visibility
-                payloadOut.appendText("\n\n--- VALIDATION ERRORS ---\n" + String.join("\n", errors));
+            } else {
+                status = t("module.jose.validSignatureAndClaims");
+                statusLabel.setStyle("-fx-text-fill: green;");
             }
-
+            statusLabel.setText(status);
+            statusReporter.publish(OperationResult.forOperation("JWT Validation")
+                    .input(tokenString.getBytes(StandardCharsets.US_ASCII))
+                    .detail("Signature", result.signatureValid() ? "VALID" : "INVALID")
+                    .detail("Claim Checks", findings.isEmpty() ? "OK" : String.join("; ", findings))
+                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyString))
+                    .status(t("module.jose.feedback.statusJwtValidation", status)).build());
         } catch (Exception e) {
-            statusLabel.setText("Error: " + e.getMessage());
+            headerOut.setText("");
+            payloadOut.setText("");
+            statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
-            LOG.error("JWK generation failed", e);
+            // No exception attached: key parsers may echo key material.
+            LOG.error("JWT validation failed: {}", e.getClass().getSimpleName());
         }
     }
 
@@ -1803,10 +1460,12 @@ public class JOSEController implements Initializable {
 
         String indent = "  ".repeat(depth);
         String prefix = depth > 0 ? indent + "↳ " : "";
-        String[] parts = token.trim().split("\\.");
+        String[] parts = token.trim().split("\\.", -1);
 
         try {
-            if (parts.length == 3) {
+            if (token.trim().startsWith("{")) {
+                inspectJsonSerialization(token.trim(), outputFlow, depth, prefix);
+            } else if (parts.length == 3) {
                 // JWS
                 addText(outputFlow, prefix + "[JWS Detected]\n", Color.LIGHTGREEN, true);
                 addSection(outputFlow, "HEADER", parts[0], Color.RED, true, depth);
@@ -1856,95 +1515,73 @@ public class JOSEController implements Initializable {
             return;
         }
         try {
-            // Flexible PEM parsing using DataConverter logic implicitly via Nimbus or
-            // manual strip
-            String cleanPem = pem
-                    .replace("-----BEGIN PUBLIC KEY-----", "")
-                    .replace("-----END PUBLIC KEY-----", "")
-                    .replace("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "")
-                    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                    .replace("-----END RSA PRIVATE KEY-----", "")
-                    .replace("-----BEGIN EC PRIVATE KEY-----", "")
-                    .replace("-----END EC PRIVATE KEY-----", "")
-                    .replaceAll("\\s+", "");
+            String kid = keyId == null || keyId.isBlank() ? null : keyId.trim();
+            JWK jwk = "OCT".equalsIgnoreCase(keyType)
+                    ? new OctetSequenceKey.Builder(DataConverter.decodeBase64Flexible(pem.replaceAll("\\s+", "")))
+                            .keyID(kid).build()
+                    : asymmetricJwk(pem, keyType, kid);
+            String thumbprint = jwk.computeThumbprint().toString();
+            if (kid == null) jwk = withKeyId(jwk, thumbprint);
 
-            byte[] keyBytes = com.cryptocarver.util.DataConverter.decodeBase64Flexible(cleanPem);
-
-            com.nimbusds.jose.jwk.JWK jwk = null;
-
-            if ("RSA".equalsIgnoreCase(keyType)) {
-                // Try parsing as Private -> Public -> Just creation
-                try {
-                    java.security.spec.PKCS8EncodedKeySpec spec = new java.security.spec.PKCS8EncodedKeySpec(keyBytes);
-                    java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
-                    java.security.interfaces.RSAPrivateKey privKey = (java.security.interfaces.RSAPrivateKey) kf
-                            .generatePrivate(spec);
-
-                    // Need public key to make full JWK.
-                    // Logic to extract mod/exp from private key implies using RSAPrivateCrtKey
-                    if (privKey instanceof java.security.interfaces.RSAPrivateCrtKey) {
-                        java.security.interfaces.RSAPrivateCrtKey crt = (java.security.interfaces.RSAPrivateCrtKey) privKey;
-                        java.security.spec.RSAPublicKeySpec pubSpec = new java.security.spec.RSAPublicKeySpec(
-                                crt.getModulus(), crt.getPublicExponent());
-                        java.security.interfaces.RSAPublicKey pubKey = (java.security.interfaces.RSAPublicKey) kf
-                                .generatePublic(pubSpec);
-
-                        jwk = new com.nimbusds.jose.jwk.RSAKey.Builder(pubKey)
-                                .privateKey(privKey)
-                                .keyID(keyId != null && !keyId.isEmpty() ? keyId : null)
-                                .build();
-                    } else {
-                        outputArea.setText("Error: Encoded RSA private key is not CRT compatible.");
-                        return;
-                    }
-                } catch (Exception ePriv) {
-                    // Try Public
-                    try {
-                        java.security.spec.X509EncodedKeySpec pubSpec = new java.security.spec.X509EncodedKeySpec(
-                                keyBytes);
-                        java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
-                        java.security.interfaces.RSAPublicKey pubKey = (java.security.interfaces.RSAPublicKey) kf
-                                .generatePublic(pubSpec);
-                        jwk = new com.nimbusds.jose.jwk.RSAKey.Builder(pubKey)
-                                .keyID(keyId != null && !keyId.isEmpty() ? keyId : null)
-                                .build();
-                    } catch (Exception ePub) {
-                        throw new Exception("Could not parse as RSA Private (PKCS8) or Public (X509) key.");
-                    }
-                }
-            } else if ("EC".equalsIgnoreCase(keyType)) {
-                // Simplified EC handling - requires definition of curve usually.
-                // For now, attempting generic parsing or failing gracefully.
-                outputArea.setText(
-                        "EC Key parsing from raw bytes requires Curve context. \nSupport for Generic EC PEM -> JWK is limited.\nTry converting via File -> Import if possible.");
-                return;
-            } else if ("OCT".equalsIgnoreCase(keyType)) {
-                // Symmetric Key - keyBytes is the secre
-                jwk = new com.nimbusds.jose.jwk.OctetSequenceKey.Builder(keyBytes)
-                        .keyID(keyId != null && !keyId.isEmpty() ? keyId : null)
-                        .build();
-            }
-
-            if (jwk != null) {
-                // Auto-calc KID if not provided
-                if (keyId == null || keyId.trim().isEmpty()) {
-                    String thumbprint = jwk.computeThumbprint().toString();
-                    // Re-build with kid
-                    if (jwk instanceof com.nimbusds.jose.jwk.RSAKey) {
-                        jwk = new com.nimbusds.jose.jwk.RSAKey.Builder((com.nimbusds.jose.jwk.RSAKey) jwk)
-                                .keyID(thumbprint).build();
-                    }
-                }
-
-                outputArea.setText(jwk.toJSONString());
-                outputArea.appendText("\n\n// Thumbprint (SHA-256): " + jwk.computeThumbprint().toString());
-            }
-
+            outputArea.setText(jwk.toJSONString());
+            outputArea.appendText("\n\n// Thumbprint (SHA-256): " + thumbprint);
         } catch (Exception e) {
             outputArea.setText("Error converting to JWK: " + e.getMessage());
-            LOG.error("PEM key import failed", e);
+            // No exception attached: parser messages may echo key bytes.
+            LOG.error("PEM key import failed for key type {}", keyType);
         }
+    }
+
+    /** RSA or EC key as a JWK; keeps the private half when the input has one. */
+    static JWK asymmetricJwk(String keyMaterial, String keyType, String kid) throws Exception {
+        PublicKey publicKey = JoseKeyMaterial.publicKey(keyMaterial);
+        PrivateKey privateKey = null;
+        try {
+            privateKey = JoseKeyMaterial.privateKey(keyMaterial);
+        } catch (IllegalArgumentException publicOnly) {
+            // public key, certificate or public JWK
+        }
+        if (publicKey instanceof RSAPublicKey rsa) {
+            if (keyType != null && !"RSA".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is RSA but key type " + keyType + " is selected.");
+            }
+            RSAKey.Builder builder = new RSAKey.Builder(rsa).keyID(kid);
+            if (privateKey != null) builder.privateKey(privateKey);
+            return builder.build();
+        }
+        if (publicKey instanceof java.security.interfaces.ECPublicKey ec) {
+            if (keyType != null && !"EC".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is EC but key type " + keyType + " is selected.");
+            }
+            ECKey.Builder builder = new ECKey.Builder(Curve.forECParameterSpec(ec.getParams()), ec).keyID(kid);
+            if (privateKey != null) builder.privateKey(privateKey);
+            return builder.build();
+        }
+        if (publicKey instanceof java.security.interfaces.EdECPublicKey) {
+            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is an Ed25519/Ed448 (OKP) key but key type " + keyType + " is selected.");
+            }
+            byte[] x = JoseKeyMaterial.rawEdPublicKey(publicKey);
+            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x.length == 32 ? Curve.Ed25519 : Curve.Ed448,
+                    Base64URL.encode(x)).keyID(kid);
+            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(privateKey)));
+            return builder.build();
+        }
+        throw new IllegalArgumentException("Unsupported key algorithm: " + publicKey.getAlgorithm());
+    }
+
+    private static String pem(String type, byte[] der) {
+        return "-----BEGIN " + type + "-----\n"
+                + java.util.Base64.getMimeEncoder(64, new byte[] { '\n' }).encodeToString(der)
+                + "\n-----END " + type + "-----\n";
+    }
+
+    private static JWK withKeyId(JWK jwk, String kid) {
+        if (jwk instanceof RSAKey rsa) return new RSAKey.Builder(rsa).keyID(kid).build();
+        if (jwk instanceof ECKey ec) return new ECKey.Builder(ec).keyID(kid).build();
+        if (jwk instanceof OctetSequenceKey oct) return new OctetSequenceKey.Builder(oct).keyID(kid).build();
+        if (jwk instanceof OctetKeyPair okp) return new OctetKeyPair.Builder(okp).keyID(kid).build();
+        return jwk;
     }
 
     public void convertJwkToPem(String jwkJson, TextArea outputArea) {
@@ -2012,6 +1649,15 @@ public class JOSEController implements Initializable {
                 sb.append(java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(secret));
 
                 outputArea.setText(sb.toString());
+            } else if (jwk instanceof OctetKeyPair okp) {
+                String json = okp.toJSONString();
+                sb.append("=== Public Key (PEM) ===\n");
+                sb.append(pem("PUBLIC KEY", JoseKeyMaterial.publicKey(json).getEncoded())).append("\n");
+                if (okp.isPrivate()) {
+                    sb.append("=== Private Key (PEM) ===\n");
+                    sb.append(pem("PRIVATE KEY", JoseKeyMaterial.privateKey(json).getEncoded()));
+                }
+                outputArea.setText(sb.toString());
             } else {
                 outputArea.setText("Unsupported or Unknown Key Type for PEM export: " + jwk.getKeyType());
             }
@@ -2029,11 +1675,8 @@ public class JOSEController implements Initializable {
                 com.nimbusds.jose.jwk.JWK jwk = com.nimbusds.jose.jwk.JWK.parse(input);
                 outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
             } else {
-                // Assume PEM -> Convert to JWK -> Calc
-                // Reuse convert logic but just output thumbprint?
-                // For now, ask user to convert to JWK first for clarity or implemen
-                // auto-detect.
-                outputArea.setText("Please convert PEM to JWK first, or ensure input is valid JSON JWK.");
+                JWK jwk = asymmetricJwk(input, null, null);
+                outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
             }
         } catch (Exception e) {
             outputArea.setText("Error calculating thumbprint: " + e.getMessage());
@@ -2058,8 +1701,8 @@ public class JOSEController implements Initializable {
 
             if (isJson) {
                 try {
-                    if (title.equals("HEADER")) {
-                        decoded = com.nimbusds.jose.JWSHeader.parse(b64).toString();
+                    if (title.contains("HEADER")) {
+                        decoded = prettyJson(decoded);
                     } else if (title.equals("PAYLOAD")) {
                         try {
                             decoded = com.nimbusds.jwt.JWTClaimsSet.parse(decoded).toString();
@@ -2081,6 +1724,78 @@ public class JOSEController implements Initializable {
             addText(flow, indent + "Could not decode: " + e.getMessage() + "\n\n", Color.RED);
         }
         return decodedContent;
+    }
+
+    /** Breaks down JWS or JWE JSON serialization (RFC 7515 §7.2, RFC 7516 §7.2). */
+    private void inspectJsonSerialization(String json, TextFlow flow, int depth, String prefix) throws Exception {
+        Map<String, Object> members = com.nimbusds.jose.util.JSONObjectUtils.parse(json);
+        String indent = "  ".repeat(depth);
+        if (members.containsKey("ciphertext")) {
+            boolean general = members.containsKey("recipients");
+            addText(flow, prefix + "[JWE JSON Detected — " + (general ? "General" : "Flattened") + "]\n", Color.LIGHTBLUE, true);
+            addOptionalSection(flow, "PROTECTED HEADER", members.get("protected"), Color.RED, true, depth);
+            if (members.get("unprotected") != null) addJsonMember(flow, "SHARED UNPROTECTED HEADER", members.get("unprotected"), depth);
+            addOptionalSection(flow, "AAD", members.get("aad"), Color.MAGENTA, true, depth);
+            List<Map<String, Object>> recipients = new ArrayList<>();
+            if (general) {
+                for (Map<String, Object> recipient : com.nimbusds.jose.util.JSONObjectUtils.getJSONObjectArray(members, "recipients")) {
+                    recipients.add(recipient);
+                }
+            } else {
+                recipients.add(members);
+            }
+            for (int i = 0; i < recipients.size(); i++) {
+                String label = general ? "RECIPIENT " + (i + 1) + " " : "";
+                if (recipients.get(i).get("header") != null) addJsonMember(flow, label + "HEADER", recipients.get(i).get("header"), depth);
+                addOptionalSection(flow, label + "ENCRYPTED KEY", recipients.get(i).get("encrypted_key"), Color.ORANGE, false, depth);
+            }
+            addOptionalSection(flow, "IV", members.get("iv"), Color.GREEN, false, depth);
+            addOptionalSection(flow, "CIPHERTEXT", members.get("ciphertext"), Color.BLUE, false, depth);
+            addOptionalSection(flow, "TAG", members.get("tag"), Color.YELLOW, false, depth);
+        } else if (members.containsKey("signatures") || members.containsKey("signature")) {
+            boolean general = members.containsKey("signatures");
+            addText(flow, prefix + "[JWS JSON Detected — " + (general ? "General" : "Flattened") + "]\n", Color.LIGHTGREEN, true);
+            if (members.get("payload") == null) {
+                addText(flow, indent + "=== PAYLOAD ===\n" + indent + "(Detached — not included)\n\n", Color.MAGENTA, true);
+            } else {
+                addSection(flow, "PAYLOAD", String.valueOf(members.get("payload")), Color.MAGENTA, true, depth);
+            }
+            List<Map<String, Object>> signatures = new ArrayList<>();
+            if (general) {
+                for (Map<String, Object> signature : com.nimbusds.jose.util.JSONObjectUtils.getJSONObjectArray(members, "signatures")) {
+                    signatures.add(signature);
+                }
+            } else {
+                signatures.add(members);
+            }
+            for (int i = 0; i < signatures.size(); i++) {
+                String label = general ? "SIGNATURE " + (i + 1) + " " : "";
+                addOptionalSection(flow, label + "PROTECTED HEADER", signatures.get(i).get("protected"), Color.RED, true, depth);
+                if (signatures.get(i).get("header") != null) addJsonMember(flow, label + "UNPROTECTED HEADER", signatures.get(i).get("header"), depth);
+                addOptionalSection(flow, label + "SIGNATURE", signatures.get(i).get("signature"), Color.CYAN, false, depth);
+            }
+        } else {
+            addText(flow, prefix + "JSON without JWS/JWE members (no 'ciphertext', 'signature' or 'signatures').\n\n", Color.WHITE);
+        }
+    }
+
+    private void addOptionalSection(TextFlow flow, String title, Object value, Color color, boolean isJson, int depth) {
+        if (value != null) addSection(flow, title, String.valueOf(value), color, isJson, depth);
+    }
+
+    private void addJsonMember(TextFlow flow, String title, Object value, int depth) {
+        String indent = "  ".repeat(depth);
+        addText(flow, indent + "=== " + title + " ===\n", Color.RED, true);
+        addText(flow, indent + prettyJson(new com.google.gson.Gson().toJson(value)).replace("\n", "\n" + indent) + "\n\n", Color.WHITE);
+    }
+
+    private static String prettyJson(String json) {
+        try {
+            return new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+                    .toJson(com.google.gson.JsonParser.parseString(json));
+        } catch (Exception notJson) {
+            return json;
+        }
     }
 
     private void addText(TextFlow flow, String text, Color color) {
@@ -2107,14 +1822,21 @@ public class JOSEController implements Initializable {
         jwaTypeCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().type()));
         jwaDescCol.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().description()));
         jwaTable.setItems(javafx.collections.FXCollections.observableArrayList(
-                new SimpleAlgo("HS256", "Signature", "HMAC using SHA-256"),
-                new SimpleAlgo("RS256", "Signature", "RSASSA-PKCS1-v1_5 using SHA-256"),
-                new SimpleAlgo("ES256", "Signature", "ECDSA using P-256 and SHA-256"),
-                new SimpleAlgo("PS256", "Signature", "RSASSA-PSS using SHA-256 and MGF1"),
-                new SimpleAlgo("EdDSA", "Signature", "EdDSA using Ed25519 or Ed448"),
-                new SimpleAlgo("RSA-OAEP-256", "Encryption", "RSAES OAEP using SHA-256 and MGF1"),
-                new SimpleAlgo("A256GCM", "Encryption", "AES GCM (256-bit) content encryption"),
-                new SimpleAlgo("dir", "Encryption", "Direct use of shared symmetric key")));
+                new SimpleAlgo("HS256 / HS384 / HS512", "Signature", "HMAC using SHA-2"),
+                new SimpleAlgo("RS256 / RS384 / RS512", "Signature", "RSASSA-PKCS1-v1_5 using SHA-2"),
+                new SimpleAlgo("PS256 / PS384 / PS512", "Signature", "RSASSA-PSS using SHA-2 and MGF1"),
+                new SimpleAlgo("ES256 / ES384 / ES512", "Signature", "ECDSA using P-256 / P-384 / P-521"),
+                new SimpleAlgo("EdDSA", "Signature", "Ed25519 / Ed448 (RFC 8037)"),
+                new SimpleAlgo("RSA-OAEP-256 / 384 / 512", "Key Management", "RSAES OAEP using SHA-2 and MGF1"),
+                new SimpleAlgo("ECDH-ES", "Key Management", "ECDH-ES direct key agreement (Concat KDF)"),
+                new SimpleAlgo("ECDH-ES+A128KW / A192KW / A256KW", "Key Management", "ECDH-ES with AES Key Wrap"),
+                new SimpleAlgo("A128KW / A192KW / A256KW", "Key Management", "AES Key Wrap with a shared key"),
+                new SimpleAlgo("A128GCMKW / A192GCMKW / A256GCMKW", "Key Management", "AES-GCM key wrap with a shared key"),
+                new SimpleAlgo("PBES2-HS256+A128KW / …", "Key Management", "PBKDF2 password-based key wrap"),
+                new SimpleAlgo("dir", "Key Management", "Direct use of a shared symmetric key as the CEK"),
+                new SimpleAlgo("A128GCM / A192GCM / A256GCM", "Content Encryption", "AES GCM"),
+                new SimpleAlgo("A128CBC-HS256 / A192CBC-HS384 / A256CBC-HS512", "Content Encryption",
+                        "AES CBC with HMAC SHA-2 authentication")));
     }
 
     private record SimpleAlgo(String name, String type, String description) {

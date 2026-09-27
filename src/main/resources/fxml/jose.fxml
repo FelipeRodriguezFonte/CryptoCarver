@@ -46,6 +46,10 @@
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwtKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtKeyShelf"/>
+                                    <Label text="Secret Format:" styleClass="form-label"/>
+                                    <ComboBox fx:id="jwtSecretFormatCombo" prefWidth="170" styleClass="form-field">
+                                        <tooltip><Tooltip text="How an HMAC secret is read. Ignored for RSA/EC keys."/></tooltip>
+                                    </ComboBox>
                                 </FlowPane>
                                 <TextArea fx:id="jwtKeyArea" promptText="Enter secret (for HMAC) or paste Private Key PEM (for RSA/EC)..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
@@ -121,6 +125,10 @@
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwtValidateKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtValidateKeyShelf"/>
+                                    <Label text="Secret Format:" styleClass="form-label"/>
+                                    <ComboBox fx:id="jwtValidateSecretFormatCombo" prefWidth="170" styleClass="form-field">
+                                        <tooltip><Tooltip text="How an HMAC secret is read. Ignored for RSA/EC keys."/></tooltip>
+                                    </ComboBox>
                                 </FlowPane>
                                 <TextArea fx:id="jwtValidateKeyArea" promptText="Enter secret (for HMAC) or paste Public Key PEM (for RSA/EC)..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
@@ -165,6 +173,8 @@
 
                             <Label text="Decoded Payload:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="jwtDecodedPayloadArea" promptText="Payload JSON..." prefRowCount="5" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="result-area,monospace-field" editable="false"/>
+                            <Label text="Claim Checks:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <TextArea fx:id="jwtFindingsArea" promptText="Issuer, audience, time and critical-header findings..." prefRowCount="3" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="result-area,monospace-field" editable="false" wrapText="true"/>
                         </GridPane>
                     </VBox>
                 </TitledPane>
@@ -194,6 +204,10 @@
 
                             <Label text="Verification Key:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="detachedVerificationKeyArea" promptText="Same Secret or Public PEM" prefRowCount="3" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                            <Label text="Secret Format:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <ComboBox fx:id="detachedSecretFormatCombo" prefWidth="170" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field">
+                                <tooltip><Tooltip text="How an HMAC secret is read. Ignored for RSA/EC keys."/></tooltip>
+                            </ComboBox>
                         </GridPane>
 
                         <HBox spacing="10" alignment="CENTER_LEFT">
@@ -295,20 +309,59 @@
                                 <CheckBox fx:id="jweCompressCheck" text="Compress (DEF)"/>
                             </HBox>
 
-                            <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="0">
-                                <Label text="Recipient Public Key:" styleClass="form-label"/>
+                            <Label text="Secret Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                                <ComboBox fx:id="jweKeyFormatCombo" prefWidth="170" styleClass="form-field">
+                                    <tooltip><Tooltip text="How a shared secret (AES-KW, AES-GCMKW, dir) or PBES2 password is read. Ignored for RSA/EC keys."/></tooltip>
+                                </ComboBox>
+                                <Label text="PBES2 Iterations:" styleClass="form-label"/>
+                                <TextField fx:id="jwePbes2IterField" prefWidth="100" styleClass="form-field"/>
+                            </HBox>
+
+                            <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="0">
+                                <Label text="Recipient Key:" styleClass="form-label"/>
                             </VBox>
-                            <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                            <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Import from File..." onAction="#handleLoadJWEPublicKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePubKeyShelf"/>
                                 </FlowPane>
-                                <TextArea fx:id="jwePublicKeyArea" promptText="Paste RSA Public Key PEM..." prefRowCount="3" styleClass="monospace-field"/>
+                                <TextArea fx:id="jwePublicKeyArea" promptText="RSA/EC public key (PEM, certificate or JWK) · JWKS with alg per key for several recipients (General JSON) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
 
-                            <Label text="Payload (Any String):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
-                            <TextArea fx:id="jwePayloadArea" promptText="Secret Data..." prefRowCount="3" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                            <Label text="Payload (Any String):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <TextArea fx:id="jwePayloadArea" promptText="Secret Data..." prefRowCount="3" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field"/>
+
+                            <Label text="Serialization:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="4" GridPane.columnIndex="1">
+                                <ComboBox fx:id="jweSerializationCombo" prefWidth="150" styleClass="form-field"/>
+                                <Label text="AAD:" styleClass="form-label"/>
+                                <TextField fx:id="jweAadField" promptText="JSON serializations only · UTF-8 text" HBox.hgrow="ALWAYS" styleClass="form-field"/>
+                            </HBox>
                         </GridPane>
+
+                        <TitledPane text="Header Parameters (Optional)" expanded="false">
+                            <VBox spacing="10" styleClass="module-pane-content">
+                                <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="150" prefWidth="150"/>
+                                        <ColumnConstraints hgrow="ALWAYS"/>
+                                    </columnConstraints>
+                                    <Label text="Key ID (kid):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jweKidField" promptText="Recipient key identifier" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label text="Type (typ):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jweTypField" promptText="e.g. JWT" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label text="Content Type (cty):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jweCtyField" promptText="JWT when the payload is a signed token" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label text="Party U Info (apu):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jweApuField" promptText="ECDH-ES only · text, sent Base64URL-encoded" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label text="Party V Info (apv):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jweApvField" promptText="ECDH-ES only · text, sent Base64URL-encoded" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label text="Custom Parameters:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextArea fx:id="jweCustomHeaderArea" promptText='{"x5t#S256": "...", "iss": "..."}' prefRowCount="2" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                                </GridPane>
+                            </VBox>
+                        </TitledPane>
 
                         <Button text="Encrypt &amp; Generate JWE" onAction="#handleGenerateJWE" styleClass="action-button,primary-action"/>
 
@@ -320,7 +373,7 @@
                 <TitledPane text="Decrypt">
                     <VBox spacing="12" styleClass="module-pane-content">
                         <Label text="JWE Token:" styleClass="form-label"/>
-                        <TextArea fx:id="jweInputArea" promptText="Paste JWE here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
+                        <TextArea fx:id="jweInputArea" promptText="Paste compact or JSON-serialized JWE here..." prefRowCount="3" styleClass="monospace-field" wrapText="true"/>
 
                         <GridPane hgap="10" vgap="9" styleClass="form-grid">
                             <columnConstraints>
@@ -328,15 +381,17 @@
                                 <ColumnConstraints hgrow="ALWAYS"/>
                             </columnConstraints>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
-                                <Label text="Private Key (PEM):" styleClass="form-label"/>
+                                <Label text="Private Key / Secret:" styleClass="form-label"/>
                             </VBox>
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Import from File..." onAction="#handleLoadJWEPrivateKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwePrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwePrivKeyShelf"/>
                                 </FlowPane>
-                                <TextArea fx:id="jwePrivateKeyArea" promptText="Paste RSA Private Key PEM..." prefRowCount="3" styleClass="monospace-field"/>
+                                <TextArea fx:id="jwePrivateKeyArea" promptText="RSA/EC private key (PEM or JWK) · shared secret (AES-KW, dir) · password (PBES2)" prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
+                            <Label text="Secret Format:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <ComboBox fx:id="jweDecryptKeyFormatCombo" prefWidth="170" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
                         </GridPane>
 
                         <HBox spacing="10" alignment="CENTER_LEFT">
@@ -407,6 +462,10 @@
 
                             <Label text="Payload:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="nestedPayloadArea" promptText="{ 'sub': 'user' }..." prefRowCount="2" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                            <Label text="Secret Format:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <ComboBox fx:id="nestedSecretFormatCombo" prefWidth="170" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field">
+                                <tooltip><Tooltip text="How the HMAC signing secret and the dir key are read. Ignored for RSA/EC keys."/></tooltip>
+                            </ComboBox>
                         </GridPane>
 
                         <Separator/>

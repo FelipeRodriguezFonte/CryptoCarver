@@ -79,4 +79,50 @@ public class NestedJwtInteropTest {
         // It could be a ParseException from Nimbus or JOSEException from our side
         assertTrue(e.getMessage().contains("Invalid signature") || e.getMessage().contains("decrypted, but inner signature verification failed") || e.getMessage().contains("Invalid JWS"));
     }
+
+    @Test
+    void nestedRsaRoundTripAcceptsThePrivateKeysTheUiFieldsHold() throws Exception {
+        java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        java.security.KeyPair signing = generator.generateKeyPair();
+        java.security.KeyPair recipient = generator.generateKeyPair();
+        String signingPrivate = pem("PRIVATE KEY", signing.getPrivate().getEncoded());
+        String recipientPrivate = pem("PRIVATE KEY", recipient.getPrivate().getEncoded());
+
+        String token = JOSEService.generateNestedJWT("{\"sub\":\"rsa\"}", "PS256", signingPrivate,
+                "RSA-OAEP-256", "A256GCM", recipientPrivate, true);
+
+        JWEHeader header = JWEObject.parse(token).getHeader();
+        assertEquals(CompressionAlgorithm.DEF, header.getCompressionAlgorithm());
+        assertEquals("JWT", header.getContentType());
+        assertTrue(JOSEService.verifyNestedJWT(token, recipientPrivate, signingPrivate).contains("\"rsa\""));
+    }
+
+    @Test
+    void nestedEcSignatureInsideEcdhEncryptionRoundTrips() throws Exception {
+        java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC");
+        generator.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+        java.security.KeyPair signing = generator.generateKeyPair();
+        java.security.KeyPair recipient = generator.generateKeyPair();
+
+        String token = JOSEService.generateNestedJWT("{\"sub\":\"ec\"}", "ES256",
+                pem("PRIVATE KEY", signing.getPrivate().getEncoded()), "ECDH-ES+A256KW", "A128CBC-HS256",
+                pem("PUBLIC KEY", recipient.getPublic().getEncoded()));
+
+        assertTrue(JOSEService.verifyNestedJWT(token, pem("PRIVATE KEY", recipient.getPrivate().getEncoded()),
+                pem("PUBLIC KEY", signing.getPublic().getEncoded())).contains("\"ec\""));
+    }
+
+    @Test
+    void nestedHmacVerificationAcceptsTheSameShortSecretUsedToSign() throws Exception {
+        String token = JOSEService.generateNestedJWT("{\"sub\":\"short\"}", "HS256", "short-secret",
+                "dir", "A256GCM", "abcdefghijklmnopqrstuvwxyz123456");
+        assertTrue(JOSEService.verifyNestedJWT(token, "abcdefghijklmnopqrstuvwxyz123456", "short-secret")
+                .contains("short"));
+    }
+
+    private static String pem(String type, byte[] der) {
+        return "-----BEGIN " + type + "-----\n" + java.util.Base64.getMimeEncoder().encodeToString(der)
+                + "\n-----END " + type + "-----\n";
+    }
 }

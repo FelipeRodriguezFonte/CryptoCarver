@@ -98,6 +98,8 @@ class Ux25CmsJoseValidationLiveUITest {
 
             fixture[0].presenter.hideBanner();
             expandAncestors(fixture[0].detachedAlgorithm);
+            assertTrue(fixture[0].detachedAlgorithm.getItems().contains("HS256"),
+                    "detached JWS must offer its algorithms without manual seeding");
             fixture[0].detachedPayload.setText("payload");
             fixture[0].detachedSigningKey.setText("secret=00112233445566778899AABBCCDDEEFF");
             fixture[0].detachedAlgorithm.setValue(null);
@@ -110,7 +112,6 @@ class Ux25CmsJoseValidationLiveUITest {
             fixture[0].presenter.hideBanner();
             fixture[0].detachedToken.setText("header.payload.signature");
             fixture[0].detachedPayload.setText("payload");
-            fixture[0].detachedAlgorithm.getItems().add("HS256");
             fixture[0].detachedAlgorithm.setValue("HS256");
             fixture[0].detachedVerificationKey.clear();
             expandAncestors(fixture[0].detachedVerificationKey);
