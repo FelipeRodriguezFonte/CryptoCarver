@@ -33,6 +33,37 @@ CVK A/B `0123456789ABCDEF` / `FEDCBA9876543210`.
 
 ## Valores de control que coinciden
 
+### Opción B
+
+Fuente del vector completo: Igor Dubinsky, *Cryptography for Payment Professionals*,
+apéndice C.5.2, también fijado en el test C del repositorio `ilya-dubinsky/cfpp`
+(Unlicense). Entrada intermedia de hash corregida a partir del SHA-1 publicado;
+el libro imprime dos ceros de más al final de esa entrada.
+
+| Entrada | Valor |
+|---|---|
+| IMK | `DFADBFEF0123456789866443DFADBFEF` |
+| PAN | `9876543210123456789` |
+| PSN | `01` |
+| Entrada SHA-1 (BCD) | `0987654321012345678901` |
+| SHA-1 | `FBC4FDF02B0EF7F0801D8C0D02DD609D8BEAD233` |
+| Dígitos decimales de primera pasada | `40207080180026098233` |
+| Y | `4020708018002609` |
+| ICC Master Key (paridad impar) | `E5AB98AB5E76F757FEDC7F016E5E2358` |
+
+Captura de control solicitada:
+
+| Entrada | Valor |
+|---|---|
+| IMK de test | `DFADBFEF0123456789866443DFADBFEF` |
+| PAN de 19 dígitos | `9876543210123456789` |
+| PSN | `01` |
+| Entrada SHA-1 |  |
+| SHA-1 |  |
+| Dígitos decimalizados |  |
+| Y |  |
+| ICC Master Key |  |
+
 | Operación | Entrada | Valor | Origen |
 |---|---|---|---|
 | KCV TDES | K2 | `08D7B4` | publicado |

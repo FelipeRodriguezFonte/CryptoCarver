@@ -122,6 +122,7 @@ public class EMVController {
     @FXML private TextField imkField;
     @FXML private TextField panFieldSession;
     @FXML private TextField panSeqFieldSession;
+    @FXML private ComboBox<String> iccMethodCombo;
     @FXML private TextField emvAtcField;
     private TextField atcField;
     @FXML private TextArea sessionKeyResultArea;
@@ -197,6 +198,7 @@ public class EMVController {
         atcField = emvAtcField;
         setupARQCPaddingMethods();
         setupARPCMethods();
+        setupIccMethods();
         if (smSchemeCombo != null) {
             smSchemeCombo.getItems().setAll(SM_MASTERCARD, SM_VISA);
             smSchemeCombo.getSelectionModel().selectFirst();
@@ -205,6 +207,22 @@ public class EMVController {
 
     public void init(StatusReporter reporter) {
         this.mainController = reporter;
+    }
+
+    private void setupIccMethods() {
+        if (iccMethodCombo == null) return;
+        iccMethodCombo.getItems().setAll(t("module.emv.iccMethod.auto"),
+                t("module.emv.iccMethod.a"), t("module.emv.iccMethod.b"));
+        iccMethodCombo.getSelectionModel().selectFirst();
+    }
+
+    private EMVOperations.IccMasterKeyMethod selectedIccMethod() {
+        if (iccMethodCombo == null) return EMVOperations.IccMasterKeyMethod.AUTO;
+        return switch (iccMethodCombo.getSelectionModel().getSelectedIndex()) {
+            case 1 -> EMVOperations.IccMasterKeyMethod.A;
+            case 2 -> EMVOperations.IccMasterKeyMethod.B;
+            default -> EMVOperations.IccMasterKeyMethod.AUTO;
+        };
     }
 
     public void initialize(StatusReporter mainController,
@@ -333,10 +351,19 @@ public class EMVController {
             // Step 1: Derive ICC Master Key
             result.append("Step 1: Derive ICC Master Key (UDK)\n");
             result.append("───────────────────────────────────\n");
-            String iccMK = EMVOperations.deriveICCMasterKey(imk, pan, panSeq);
+            EMVOperations.IccMasterKeyDerivation derivation = EMVOperations.deriveICCMasterKey(
+                    imk, pan, panSeq, selectedIccMethod());
+            String iccMK = derivation.key();
             result.append("IMK: ").append(imk).append("\n");
             result.append("PAN: ").append(pan).append("\n");
             result.append("PAN Sequence: ").append(panSeq).append("\n");
+            result.append(t("module.emv.iccResult.method")).append(' ').append(derivation.method()).append("\n");
+            result.append(t("module.emv.iccResult.input")).append(' ').append(derivation.input()).append("\n");
+            if (derivation.method() == EMVOperations.IccMasterKeyMethod.B) {
+                result.append(t("module.emv.iccResult.sha1")).append(' ').append(derivation.sha1()).append("\n");
+                result.append(t("module.emv.iccResult.decimalized")).append(' ').append(derivation.decimalizedDigits()).append("\n");
+                result.append(t("module.emv.iccResult.y")).append(' ').append(derivation.y()).append("\n");
+            }
             result.append("➜ ICC Master Key: ").append(iccMK).append("\n\n");
 
             // Step 2: Derive Session Key (if ATC provided)
@@ -1233,7 +1260,8 @@ public class EMVController {
             String panSeq = profile.getInput("panSeq");
             String atc = profile.getInput("atc");
             if (imk == null || pan == null || panSeq == null || atc == null) return "";
-            String iccMasterKey = EMVOperations.deriveICCMasterKey(imk, pan, panSeq);
+            String iccMasterKey = EMVOperations.deriveICCMasterKey(imk, pan, panSeq,
+                    EMVOperations.IccMasterKeyMethod.AUTO).key();
             return EMVOperations.deriveSessionKey(iccMasterKey, atc, "");
         } catch (Exception ignored) {
             return "";

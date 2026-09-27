@@ -1247,7 +1247,8 @@ public final class ModuleTextCatalog {
         map.put("CDOL/DDOL Builder", "module.emv.dolBuilder");
         map.put("Build DOL Data", "module.emv.buildDol");
         map.put("🔑 Session Key Derivation", "module.emv.sessionTitle");
-        map.put("Derive ICC Master Key (Action A)", "module.emv.deriveIcc");
+        map.put("Derive ICC Master Key", "module.emv.deriveIcc");
+        map.put("Derivation method:", "module.emv.iccMethod.label");
         map.put("IMK (Hex):", "module.emv.imk");
         map.put("PAN Seq:", "module.emv.panSeq");
         map.put("Derive Session Key (SK)", "module.emv.deriveSession");

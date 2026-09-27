@@ -62,6 +62,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             "DATA_ENCRYPTION_ENCRYPT", "DATA_ENCRYPTION_DECRYPT", "DATA_ENCRYPTION_BOTH_WAYS",
             "KEY_ENCRYPTION", "KEY_DERIVATION");
     private static final List<String> AES_KEY_TYPES = List.of("AES128", "AES192", "AES256");
+    private static final List<String> ICC_METHODS = List.of("AUTO", "A", "B");
     /** payShield 10K Host Programmer's Manual clause 7.2.3: the variant schemes. */
     private static final List<String> THALES_SCHEMES = List.of("U", "T", "Z");
     /** Clause 8.5.1: a digit, not the letter an X9.143 block carries. */
@@ -200,7 +201,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
             case "DUKPT_TDES_DERIVE" -> { require(node, "ipek"); require(node, "ksn"); hexLength(node, "ksn", 10); oneOf(node, "usage", TDES_USAGES); }
             case "DUKPT_AES_DERIVE" -> { require(node, "bdk"); require(node, "ksn"); hexLength(node, "ksn", 12); oneOf(node, "usage", AES_USAGES); oneOf(node, "outputType", AES_KEY_TYPES); }
             case "DUKPT_PIN_CRYPT" -> { require(node, "bdk"); require(node, "ksn"); require(node, "pinBlock"); hexLength(node, "ksn", 12); hexLength(node, "pinBlock", 16); oneOf(node, "outputType", AES_KEY_TYPES); }
-            case "EMV_ICC_MASTER_KEY" -> { require(node, "imk"); require(node, "pan"); pan(node, "pan"); decimal(node, "panSequence", 2, 2); }
+            case "EMV_ICC_MASTER_KEY" -> { require(node, "imk"); require(node, "pan"); pan(node, "pan"); decimal(node, "panSequence", 2, 2); oneOf(node, "method", ICC_METHODS); }
             case "EMV_SESSION_KEY" -> { require(node, "mkac"); require(node, "atc"); require(node, "un"); hexLength(node, "atc", 2); hexLength(node, "un", 4); }
             case "EMV_ARQC_GENERATE" -> { require(node, "sk"); require(node, "transactionData"); positive(node, "paddingMethod", 1, 2); }
             case "EMV_ARQC_VERIFY" -> { require(node, "sk"); require(node, "arqc"); require(node, "transactionData"); hexLength(node, "arqc", 8); positive(node, "paddingMethod", 1, 2); }
@@ -296,7 +297,8 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
                 case "DUKPT_TDES_DERIVE" -> hex(DukptKsn.deriveWorkingKey(hexText(node, inputs, "ipek"), hexText(node, inputs, "ksn"), DukptKsn.TdesKeyUsage.valueOf(setting(node, "usage", "PIN_ENCRYPTION"))).workingKeyHex());
                 case "DUKPT_AES_DERIVE" -> hex(AesDukpt.deriveWorkingKey(hexText(node, inputs, "bdk"), hexText(node, inputs, "ksn"), AesDukpt.KeyUsage.valueOf(setting(node, "usage", "PIN_ENCRYPTION")), AesDukpt.KeyType.valueOf(setting(node, "outputType", "AES128"))).workingKeyHex());
                 case "DUKPT_PIN_CRYPT" -> hex(AesDukpt.cryptPinBlock(hexText(node, inputs, "bdk"), hexText(node, inputs, "ksn"), AesDukpt.KeyType.valueOf(setting(node, "outputType", "AES128")), hexText(node, inputs, "pinBlock"), Boolean.parseBoolean(setting(node, "decrypt", "false"))));
-                case "EMV_ICC_MASTER_KEY" -> hex(EMVOperations.deriveICCMasterKey(hexText(node, inputs, "imk"), text(node, inputs, "pan"), text(node, inputs, "panSequence")));
+                case "EMV_ICC_MASTER_KEY" -> hex(EMVOperations.deriveICCMasterKey(hexText(node, inputs, "imk"), text(node, inputs, "pan"), text(node, inputs, "panSequence"),
+                        EMVOperations.IccMasterKeyMethod.valueOf(setting(node, "method", "AUTO").toUpperCase(Locale.ROOT))).key());
                 case "EMV_SESSION_KEY" -> hex(EMVOperations.deriveSessionKey(hexText(node, inputs, "mkac"), hexText(node, inputs, "atc"), hexText(node, inputs, "un")));
                 case "EMV_ARQC_GENERATE" -> hex(EMVOperations.generateARQC(hexText(node, inputs, "sk"), hexText(node, inputs, "transactionData"), integer(node, "paddingMethod", 2, 1, 2)));
                 case "EMV_ARQC_VERIFY" -> text(Boolean.toString(EMVOperations.verifyARQC(hexText(node, inputs, "sk"), hexText(node, inputs, "arqc"), hexText(node, inputs, "transactionData"), integer(node, "paddingMethod", 2, 1, 2))));
@@ -568,7 +570,7 @@ public final class PaymentOperationsNodeHandler implements ProcessNodeHandler {
         result.add(descriptor("DUKPT_TDES_DERIVE", "dukptTdesDerive", "dukptTdesDerive", params(secret("ipek", "module.process.param.payment.ipek"), secret("ksn", "module.process.param.payment.ksn"), combo("usage", "module.process.param.payment.dukptUsage", TDES_USAGES, "PIN_ENCRYPTION"))));
         result.add(descriptor("DUKPT_AES_DERIVE", "dukptAesDerive", "dukptAesDerive", params(secret("bdk", "module.process.param.payment.bdk"), secret("ksn", "module.process.param.payment.ksn"), combo("usage", "module.process.param.payment.dukptUsage", AES_USAGES, "PIN_ENCRYPTION"), combo("outputType", "module.process.param.payment.keyType", AES_KEY_TYPES, "AES128"))));
         result.add(descriptor("DUKPT_PIN_CRYPT", "dukptPinCrypt", "dukptPinCrypt", params(secret("bdk", "module.process.param.payment.bdk"), secret("ksn", "module.process.param.payment.ksn"), secret("pinBlock", "module.process.param.payment.pinBlock"), combo("outputType", "module.process.param.payment.keyType", AES_KEY_TYPES, "AES128"), new NodeParameter("decrypt", "module.process.param.payment.decrypt", ParameterKind.CHECKBOX, "false"))));
-        result.add(descriptor("EMV_ICC_MASTER_KEY", "emvIccMasterKey", "emvIccMasterKey", params(secret("imk", "module.process.param.payment.imk"), secret("pan", "module.process.param.payment.pan"), textParam("panSequence", "module.process.param.payment.panSequence", "00"))));
+        result.add(descriptor("EMV_ICC_MASTER_KEY", "emvIccMasterKey", "emvIccMasterKey", params(secret("imk", "module.process.param.payment.imk"), secret("pan", "module.process.param.payment.pan"), textParam("panSequence", "module.process.param.payment.panSequence", "00"), combo("method", "module.process.param.payment.iccMethod", ICC_METHODS, "AUTO"))));
         result.add(descriptor("EMV_SESSION_KEY", "emvSessionKey", "emvSessionKey", params(secret("mkac", "module.process.param.payment.mkac"), secret("atc", "module.process.param.payment.atc"), secret("un", "module.process.param.payment.un"))));
         result.add(descriptor("EMV_ARQC_GENERATE", "emvArqcGenerate", "emvArqcGenerate", params(secret("sk", "module.process.param.payment.sk"), secret("transactionData", "module.process.param.payment.transactionData"), combo("paddingMethod", "module.process.param.payment.paddingMethod", List.of("1", "2"), "2"))));
         result.add(descriptor("EMV_ARQC_VERIFY", "emvArqcVerify", "emvArqcVerify", params(secret("sk", "module.process.param.payment.sk"), secret("arqc", "module.process.param.payment.arqc"), secret("transactionData", "module.process.param.payment.transactionData"), combo("paddingMethod", "module.process.param.payment.paddingMethod", List.of("1", "2"), "2"))));

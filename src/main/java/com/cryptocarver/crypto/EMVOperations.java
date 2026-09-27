@@ -20,6 +20,13 @@ import java.nio.charset.StandardCharsets;
  */
 public class EMVOperations {
 
+    /** ICC master key derivation selection. AUTO follows the PAN length threshold in EMV Book 2 §A1.4.2. */
+    public enum IccMasterKeyMethod { AUTO, A, B }
+
+    /** Intermediate values returned by the method-selecting ICC MK API. */
+    public record IccMasterKeyDerivation(String input, String sha1, String decimalizedDigits,
+                                         String y, String key, IccMasterKeyMethod method) { }
+
     // ============================================================================
     // SESSION KEY DERIVATION
     // ============================================================================
@@ -86,6 +93,96 @@ public class EMVOperations {
 
         // Return concatenated key (16 bytes) - Raw (matches the external tool "None forced")
         return (DataConverter.bytesToHex(leftHalf) + DataConverter.bytesToHex(rightHalf)).toUpperCase();
+    }
+
+    /**
+     * Derives the ICC Master Key using EMV Integrated Circuit Card Specifications
+     * for Payment Systems, Book 2, Version 4.4, Annex A1.4.2 (Option B).
+     * Odd-length PANs receive one zero digit on the left before BCD encoding;
+     * SHA-1 is decimalised by retaining nibbles 0..9, then mapping A..F to 0..5
+     * from the beginning of the hash only as needed to complete Y. Y is passed
+     * into the Option A Triple-DES derivation. For PANs of at most 16 digits,
+     * the clause directs use of Option A.
+     *
+     * @see <a href="https://www.emvco.com/emvco-website-search/?post_id=80377&amp;type=specifications">EMVCo, Book 2 v4.4, Annex A1.4.2</a>
+     */
+    public static IccMasterKeyDerivation deriveICCMasterKeyOptionB(String imk, String pan, String panSequence) throws Exception {
+        String paddedPan = requireDigits(pan, "PAN");
+        if (paddedPan.length() <= 16) {
+            String sequence = sequenceDigits(panSequence);
+            return new IccMasterKeyDerivation(paddedPan + sequence, "", "", "",
+                    deriveICCMasterKey(imk, paddedPan, sequence), IccMasterKeyMethod.A);
+        }
+        if ((paddedPan.length() & 1) != 0) paddedPan = "0" + paddedPan;
+        String input = paddedPan + sequenceDigits(panSequence);
+        byte[] digest = MessageDigest.getInstance("SHA-1").digest(DataConverter.hexToBytes(input));
+        String hash = DataConverter.bytesToHex(digest).toUpperCase();
+        String dec = decimalizeHash(hash);
+        String y = dec.substring(0, 16);
+        String key = deriveFromDiversificationDigits(imk, y);
+        return new IccMasterKeyDerivation(input, hash, dec, y, key, IccMasterKeyMethod.B);
+    }
+
+    static String decimalizeHash(String hash) {
+        if (hash == null || hash.isEmpty() || !hash.matches("(?i)[0-9a-f]+"))
+            throw new IllegalArgumentException("Hash must be hexadecimal");
+        StringBuilder digits = new StringBuilder(hash.length());
+        for (int i = 0; i < hash.length(); i++) {
+            char c = Character.toUpperCase(hash.charAt(i));
+            if (c <= '9') digits.append(c);
+        }
+        for (int i = 0; i < hash.length() && digits.length() < 16; i++) {
+            char c = Character.toUpperCase(hash.charAt(i));
+            if (c >= 'A') digits.append((char) ('0' + c - 'A'));
+        }
+        if (digits.length() < 16) throw new IllegalStateException("Hash did not decimalise to 16 digits");
+        return digits.toString();
+    }
+
+    static String decimalizeY(String hash) {
+        return decimalizeHash(hash).substring(0, 16);
+    }
+
+    /** Selects A/B. AUTO follows EMV Book 2 v4.4 §A1.4.2 and selects B when PAN exceeds 16 digits. */
+    public static IccMasterKeyDerivation deriveICCMasterKey(String imk, String pan, String psn,
+                                                            IccMasterKeyMethod method) throws Exception {
+        if (method == null) method = IccMasterKeyMethod.AUTO;
+        String sequence = sequenceDigits(psn);
+        String normalizedPan = requireDigits(pan, "PAN");
+        IccMasterKeyMethod selected = method == IccMasterKeyMethod.AUTO
+                ? (normalizedPan.length() > 16 ? IccMasterKeyMethod.B : IccMasterKeyMethod.A)
+                : method;
+        if (selected == IccMasterKeyMethod.B) return deriveICCMasterKeyOptionB(imk, normalizedPan, sequence);
+        String value = deriveICCMasterKey(imk, normalizedPan, sequence);
+        return new IccMasterKeyDerivation(normalizedPan + sequence, "", "", "", value, IccMasterKeyMethod.A);
+    }
+
+    private static String requireDigits(String value, String name) {
+        if (value == null || !value.matches("[0-9]+")) throw new IllegalArgumentException(name + " must contain decimal digits");
+        return value;
+    }
+
+    private static String sequenceDigits(String sequence) {
+        String result = (sequence == null || sequence.isEmpty()) ? "00" : sequence;
+        if (!result.matches("[0-9]{2}")) throw new IllegalArgumentException("PAN sequence must be two decimal digits");
+        return result;
+    }
+
+    private static String deriveFromDiversificationDigits(String imk, String divString) throws Exception {
+        byte[] divData = DataConverter.hexToBytes(divString);
+        byte[] imkBytes = DataConverter.hexToBytes(imk);
+        byte[] tdesKey = new byte[24];
+        if (imkBytes.length == 16) {
+            System.arraycopy(imkBytes, 0, tdesKey, 0, 16);
+            System.arraycopy(imkBytes, 0, tdesKey, 16, 8);
+        } else tdesKey = imkBytes;
+        Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(tdesKey, "DESede"));
+        byte[] left = cipher.doFinal(divData);
+        byte[] inverted = new byte[8];
+        for (int i = 0; i < 8; i++) inverted[i] = (byte) ~divData[i];
+        byte[] right = cipher.doFinal(inverted);
+        return (DataConverter.bytesToHex(left) + DataConverter.bytesToHex(right)).toUpperCase();
     }
 
     // Helper to ensure string is treated as hex digits for BCD conversion

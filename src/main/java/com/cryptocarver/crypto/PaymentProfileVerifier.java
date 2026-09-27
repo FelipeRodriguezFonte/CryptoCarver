@@ -153,7 +153,8 @@ public class PaymentProfileVerifier {
         if (pan.length() < 12) throw new IllegalArgumentException("PAN too short");
         if (imk.length() < 32) throw new IllegalArgumentException("IMK too short");
 
-        String iccMasterKey = EMVOperations.deriveICCMasterKey(imk, pan, panSeq);
+        String iccMasterKey = EMVOperations.deriveICCMasterKey(imk, pan, panSeq,
+                EMVOperations.IccMasterKeyMethod.AUTO).key();
         String sessionKey = EMVOperations.deriveSessionKey(iccMasterKey, atc, "");
 
         System.out.println("EMV ICC Master Key: " + iccMasterKey);

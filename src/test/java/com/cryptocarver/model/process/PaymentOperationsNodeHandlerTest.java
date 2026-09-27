@@ -136,6 +136,14 @@ class PaymentOperationsNodeHandlerTest {
         String imk = "0123456789ABCDEFFEDCBA9876543210";
         String icc = EMVOperations.deriveICCMasterKey(imk, "4512345678901234", "01");
         assertEquals(icc, HANDLER.execute(node("EMV_ICC_MASTER_KEY"), Map.of("imk", hex(imk), "pan", text("4512345678901234"), "panSequence", text("01")), null).render());
+        ProcessDefinition.Node iccAuto = node("EMV_ICC_MASTER_KEY");
+        iccAuto.configuration.put("method", "AUTO");
+        assertEquals(icc, HANDLER.execute(iccAuto, Map.of("imk", hex(imk), "pan", text("4512345678901234"), "panSequence", text("01")), null).render());
+        ProcessDefinition.Node iccB = node("EMV_ICC_MASTER_KEY");
+        iccB.configuration.put("method", "B");
+        String longPan = "9876543210123456785";
+        assertEquals(EMVOperations.deriveICCMasterKeyOptionB(imk, longPan, "01").key(),
+                HANDLER.execute(iccB, Map.of("imk", hex(imk), "pan", text(longPan), "panSequence", text("01")), null).render());
         String session = EMVOperations.deriveSessionKey(icc, "0001", "");
         assertEquals(session, HANDLER.execute(node("EMV_SESSION_KEY"), Map.of("mkac", hex(icc), "atc", hex("0001"), "un", hex("")), null).render());
         String txn = "000000001000000000000000097800000000000009781911220012345678";

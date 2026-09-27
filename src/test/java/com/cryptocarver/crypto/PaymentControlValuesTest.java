@@ -179,13 +179,15 @@ class PaymentControlValuesTest {
     void emvKeyDerivation() throws Exception {
         String mk = EMVOperations.deriveICCMasterKey(K2, PAN, "00");
         assertEquals("30089565674D73ED841A6F0637029C18", mk);
+        assertEquals(mk, EMVOperations.deriveICCMasterKey(K2, PAN, "00", EMVOperations.IccMasterKeyMethod.AUTO).key());
         assertEquals("38F14068B3EA57C194F8E3A20D51E3E6", EMVOperations.deriveSessionKey(mk, "0001", ""));
     }
 
     /** Cross-checked: ARQC as ISO 9797-1 algorithm 3, padding 1 and 2, and ARPC method 1 with ARC "00". */
     @Test
     void emvArqcAndArpcMethod1() throws Exception {
-        String sk = EMVOperations.deriveSessionKey(EMVOperations.deriveICCMasterKey(K2, PAN, "00"), "0001", "");
+        String sk = EMVOperations.deriveSessionKey(EMVOperations.deriveICCMasterKey(
+                K2, PAN, "00", EMVOperations.IccMasterKeyMethod.AUTO).key(), "0001", "");
         assertEquals("E8499E593250A030", EMVOperations.generateARQC(sk, TXN, 1));
         String arqc = EMVOperations.generateARQC(sk, TXN, 2);
         assertEquals("A8DB2B65F9C821F1", arqc);
@@ -198,8 +200,10 @@ class PaymentControlValuesTest {
      */
     @Test
     void emvArpcMethod2() throws Exception {
+        String sk = EMVOperations.deriveSessionKey(EMVOperations.deriveICCMasterKey(
+                K2, PAN, "00", EMVOperations.IccMasterKeyMethod.AUTO).key(), "0001", "");
         assertEquals("54DB2625", EMVOperations.generateARPC_Method2(
-                "38F14068B3EA57C194F8E3A20D51E3E6", "A8DB2B65F9C821F1", "00820000"));
+                sk, "A8DB2B65F9C821F1", "00820000"));
     }
 
     /**

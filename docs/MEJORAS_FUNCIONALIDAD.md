@@ -10,9 +10,15 @@ Revisión del 26 de septiembre de 2026. «Hecho» significa que se localizaron u
 
 `Pkcs11LibraryInventoryService` enumera slots, tokens y mecanismos sin PIN (`Pkcs11LibraryInventoryServiceTest`). `Pkcs11ProfileRepository` guarda perfiles sin credenciales (`Pkcs11ProfileRepositoryTest`). `Pkcs11LibraryDiagnosticService` diagnostica la biblioteca nativa (`Pkcs11LibraryDiagnosticServiceTest`). `XMLSignatureOperations.signXAdESWithPkcs11` conecta el token con XAdES (`SoftHsmIntegrationTest`; requiere el entorno de integración para ejecutarse).
 
-## 3. EMV Option B — pendiente
+## 3. EMV Option B — hecho
 
-Continúa sin implementación ni vectores públicos incorporados. Mantener el requisito de vectores verificables antes de añadir la derivación.
+`EMVOperations.deriveICCMasterKeyOptionB` y el selector `deriveICCMasterKey(..., method)` implementan la derivación de EMV Book 2 v4.4, §A1.4.2, con los intermedios SHA-1, decimalización y Y. `AUTO` selecciona B cuando PAN supera 16 dígitos, siguiendo literalmente la cláusula. Aunque el encargo describía el umbral sobre PAN || PSN, §A1.4.2 decide por la longitud de PAN; con PAN de 16 dígitos o menos `AUTO` conserva A incluso si PAN || PSN excede 16.
+
+El vector completo de PAN de 19 dígitos procede de Igor Dubinsky, *Cryptography for Payment Professionals*, apéndice C.5.2, y está corroborado por su test público en `ilya-dubinsky/cfpp` (licencia Unlicense). El libro muestra un sufijo `00` adicional en la entrada de hash; el SHA-1 publicado coincide con BCD `0987654321012345678901`, es decir, PAN rellenado a la izquierda y PSN `01`, sin esos dos ceros extra. Los ejemplos 1 y 2 de decimalización se cotejaron con EMV Book 2 v4.4 §A1.4.2. La norma rellena a la izquierda el PAN impar antes de concatenar PSN; primero se recogen los nibbles decimales de izquierda a derecha y solo si faltan se añaden los nibbles A–F convertidos a 0–5, también desde la izquierda. Nunca faltan suficientes nibbles tras consumir el hash SHA-1 completo para formar 16 dígitos.
+
+El vector del libro presenta la clave con paridad DES impar; la API mantiene la forma cruda de Option A. El test ajusta paridad al comparar con el valor publicado.
+
+La pantalla EMV muestra método e intermedios, y `EMV_ICC_MASTER_KEY` acepta `method` (`AUTO` por defecto). Los flujos que derivan la clave ICC para ARQC/ARPC usan `AUTO`; los vectores existentes de ambos métodos de ARPC y los de ARQC conservan sus valores.
 
 ## 4. TR-31 / X9.143 — tablas, diagnóstico y lotes — hecho con límites documentados
 
