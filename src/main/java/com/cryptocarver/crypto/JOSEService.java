@@ -105,7 +105,7 @@ public class JOSEService {
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
             JWSHeader header = headerBuilder.build();
-            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey());
+            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
             return jwsObject.serialize(unencodedPayload); // unencodedPayload true -> detached
@@ -126,7 +126,7 @@ public class JOSEService {
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
             JWSHeader header = headerBuilder.build();
-            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey());
+            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
 
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
@@ -166,7 +166,7 @@ public class JOSEService {
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
             JWSHeader header = headerBuilder.build();
-            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey());
+            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
             return jwsObject.serialize(true); // true = detached compact
@@ -185,7 +185,7 @@ public class JOSEService {
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
             JWSHeader header = headerBuilder.build();
-            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey());
+            JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
 
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
@@ -207,6 +207,11 @@ public class JOSEService {
     }
 
     public static boolean verifyDetachedJWS(String detachedToken, String rawPayload, String algorithmStr, String keyStr) throws Exception {
+        return verifyDetachedJWS(detachedToken, rawPayload, algorithmStr, keyStr, JoseKeyMaterial.SecretEncoding.UTF8);
+    }
+
+    public static boolean verifyDetachedJWS(String detachedToken, String rawPayload, String algorithmStr, String keyStr,
+            JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
         JWSObject object;
         try {
             // Try to parse as Compact
@@ -284,9 +289,10 @@ public class JOSEService {
                 throw new IllegalArgumentException("Unsupported JWK type: " + match.getKeyType());
             }
         } else {
-            if (JWSAlgorithm.Family.HMAC_SHA.contains(actual)) verifier = new PromiscuousMACVerifier(keyStr, actual);
-            else if (JWSAlgorithm.Family.RSA.contains(actual)) verifier = new com.nimbusds.jose.crypto.RSASSAVerifier((java.security.interfaces.RSAPublicKey) parseRSAPublicKey(keyStr));
-            else if (JWSAlgorithm.Family.EC.contains(actual)) verifier = new com.nimbusds.jose.crypto.ECDSAVerifier(requireEcPublicKey(actual, keyStr));
+            if (JWSAlgorithm.Family.HMAC_SHA.contains(actual) || JWSAlgorithm.Family.RSA.contains(actual)
+                    || JWSAlgorithm.Family.EC.contains(actual)) {
+                verifier = createVerifier(actual, keyStr, secretEncoding);
+            }
         }
 
         if (verifier == null) throw new IllegalArgumentException("Unsupported detached JWS algorithm: " + actual);
@@ -300,9 +306,17 @@ public class JOSEService {
     /** Signs the claims, then encrypts the JWS with {@code cty: JWT} (RFC 7519 §5.2). */
     public static String generateNestedJWT(String payloadJson, String signAlgoStr, String signKey, String keyAlgoStr,
             String encAlgoStr, String encKey, boolean compress) throws Exception {
+        return generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr, encAlgoStr, encKey, compress,
+                JoseKeyMaterial.SecretEncoding.UTF8);
+    }
+
+    /** {@code secretEncoding} decodes the HMAC signing secret and the {@code dir} key. */
+    public static String generateNestedJWT(String payloadJson, String signAlgoStr, String signKey, String keyAlgoStr,
+            String encAlgoStr, String encKey, boolean compress, JoseKeyMaterial.SecretEncoding secretEncoding)
+            throws Exception {
         // 1. Sign
         JWSAlgorithm signAlgo = JWSAlgorithm.parse(signAlgoStr);
-        JWSSigner signer = createSigner(signAlgo, signKey);
+        JWSSigner signer = createSigner(signAlgo, signKey, secretEncoding);
         JWTClaimsSet claimsSet = JWTClaimsSet.parse(payloadJson);
 
         SignedJWT signedJWT = new SignedJWT(
@@ -314,7 +328,9 @@ public class JOSEService {
         // 2. Encrypt
         JWEAlgorithm jweAlgo = JWEAlgorithm.parse(keyAlgoStr);
         EncryptionMethod encMethod = EncryptionMethod.parse(encAlgoStr);
-        JWEEncrypter encrypter = createEncrypter(jweAlgo, encKey);
+        JWEEncrypter encrypter = JWEAlgorithm.DIR.equals(jweAlgo)
+                ? new DirectEncrypter(JoseKeyMaterial.secret(encKey, secretEncoding))
+                : createEncrypter(jweAlgo, encKey);
 
         JWEHeader.Builder jweHeader = new JWEHeader.Builder(jweAlgo, encMethod)
                 .contentType("JWT"); // Recommended for nested tokens
@@ -331,14 +347,18 @@ public class JOSEService {
      * signer's private key: its public half is derived.
      */
     public static String verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM) throws Exception {
+        return verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM, JoseKeyMaterial.SecretEncoding.UTF8);
+    }
+
+    public static String verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM,
+            JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
         JWEObject jweObject = JWEObject.parse(nestedToken);
         JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
         if (!JWEAlgorithm.Family.RSA.contains(alg) && !JWEAlgorithm.Family.ECDH_ES.contains(alg)
                 && !JWEAlgorithm.DIR.equals(alg)) {
             throw new IllegalArgumentException("Unsupported decryption algorithm: " + alg.getName());
         }
-        jweObject.decrypt(JweComposer.decrypter(alg, decryptionKeyPEM,
-                JoseKeyMaterial.SecretEncoding.UTF8, new JweComposer.LoadedKey()));
+        jweObject.decrypt(JweComposer.decrypter(alg, decryptionKeyPEM, secretEncoding, new JweComposer.LoadedKey()));
         SignedJWT signedJWT = jweObject.getPayload().toSignedJWT();
         if (signedJWT == null) {
             throw new IllegalArgumentException("The decrypted payload is not a valid Signed JWT.");
@@ -347,7 +367,7 @@ public class JOSEService {
         JWSAlgorithm signAlg = signedJWT.getHeader().getAlgorithm();
         JWSVerifier verifier;
         try {
-            verifier = createVerifier(signAlg, verificationKeyPEM);
+            verifier = createVerifier(signAlg, verificationKeyPEM, secretEncoding);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Unsupported verification algorithm: " + signAlg.getName(), e);
         }
@@ -360,11 +380,17 @@ public class JOSEService {
     }
 
     public static JWSSigner createSigner(JWSAlgorithm jwsAlgo, String secretOrKey) throws Exception {
+        return createSigner(jwsAlgo, secretOrKey, JoseKeyMaterial.SecretEncoding.UTF8);
+    }
+
+    /** {@code secretEncoding} decodes HMAC secrets; RSA/EC keys ignore it. */
+    public static JWSSigner createSigner(JWSAlgorithm jwsAlgo, String secretOrKey,
+            JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
         if (JWSAlgorithm.Family.HMAC_SHA.contains(jwsAlgo)) {
             if (secretOrKey.trim().startsWith("-----BEGIN")) {
                 throw new IllegalArgumentException("Detected PEM Key for HMAC Algorithm. HMAC uses a shared secret.");
             }
-            return new PromiscuousMACSigner(secretOrKey, jwsAlgo);
+            return new PromiscuousMACSigner(JoseKeyMaterial.secret(secretOrKey, secretEncoding), jwsAlgo);
         } else if (JWSAlgorithm.Family.RSA.contains(jwsAlgo)) {
             return new RSASSASigner(parseRSAPrivateKey(secretOrKey));
         } else if (JWSAlgorithm.Family.EC.contains(jwsAlgo)) {
@@ -409,7 +435,15 @@ public class JOSEService {
     /** Public because SD-JWT verification needs the same key-to-verifier
      *  resolution and there is no reason for a second copy of it. */
     public static JWSVerifier createVerifier(JWSAlgorithm algorithm, String key) throws Exception {
-        if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) return new PromiscuousMACVerifier(key, algorithm);
+        return createVerifier(algorithm, key, JoseKeyMaterial.SecretEncoding.UTF8);
+    }
+
+    /** {@code secretEncoding} decodes HMAC secrets; RSA/EC keys ignore it. */
+    public static JWSVerifier createVerifier(JWSAlgorithm algorithm, String key,
+            JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
+        if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
+            return new PromiscuousMACVerifier(JoseKeyMaterial.secret(key, secretEncoding), algorithm);
+        }
         if (JWSAlgorithm.Family.RSA.contains(algorithm)) return new RSASSAVerifier((RSAPublicKey) parseRSAPublicKey(key));
         if (JWSAlgorithm.Family.EC.contains(algorithm)) return new ECDSAVerifier(requireEcPublicKey(algorithm, key));
         throw new IllegalArgumentException("Unsupported JWS algorithm: " + algorithm);
@@ -457,7 +491,11 @@ public class JOSEService {
         private final com.nimbusds.jose.jca.JCAContext jcaContext = new com.nimbusds.jose.jca.JCAContext();
 
         public PromiscuousMACSigner(String secretStr, JWSAlgorithm algorithm) {
-            this.secret = secretStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            this(secretStr.getBytes(java.nio.charset.StandardCharsets.UTF_8), algorithm);
+        }
+
+        public PromiscuousMACSigner(byte[] secret, JWSAlgorithm algorithm) {
+            this.secret = secret.clone();
             this.algorithm = algorithm;
         }
 
@@ -490,7 +528,11 @@ public class JOSEService {
         private final com.nimbusds.jose.jca.JCAContext jcaContext = new com.nimbusds.jose.jca.JCAContext();
 
         public PromiscuousMACVerifier(String secretStr, JWSAlgorithm algorithm) {
-            this.secret = secretStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            this(secretStr.getBytes(java.nio.charset.StandardCharsets.UTF_8), algorithm);
+        }
+
+        public PromiscuousMACVerifier(byte[] secret, JWSAlgorithm algorithm) {
+            this.secret = secret.clone();
             this.algorithm = algorithm;
         }
 

@@ -101,7 +101,9 @@ public class JOSEController implements Initializable {
                 jweContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
                 jweContentAlgoCombo.getSelectionModel().select("A256GCM");
             }
-            for (ComboBox<String> format : java.util.Arrays.asList(jweKeyFormatCombo, jweDecryptKeyFormatCombo)) {
+            for (ComboBox<String> format : java.util.Arrays.asList(jweKeyFormatCombo, jweDecryptKeyFormatCombo,
+                    jwtSecretFormatCombo, jwtValidateSecretFormatCombo, detachedSecretFormatCombo,
+                    nestedSecretFormatCombo)) {
                 if (format != null && format.getItems().isEmpty()) {
                     for (JoseKeyMaterial.SecretEncoding encoding : JoseKeyMaterial.SecretEncoding.values()) {
                         format.getItems().add(encoding.label());
@@ -592,7 +594,8 @@ public class JOSEController implements Initializable {
             showValidation(t("module.jose.feedback.algorithmRequired"), "detachedAlgoCombo", "preflight.remedy.algorithm");
             return;
         }
-        this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedVerificationKeyArea.getText(), detachedStatusLabel);
+        this.verifyDetachedJWS(detachedTokenArea.getText(), detachedPayloadArea.getText(), detachedAlgoCombo.getValue(),
+                detachedVerificationKeyArea.getText(), secretEncoding(detachedSecretFormatCombo), detachedStatusLabel);
     }
     @FXML
     private void handleVerifyNestedJWT() {
@@ -604,7 +607,8 @@ public class JOSEController implements Initializable {
             String nestedToken = nestedOutputArea.getText();
             String decryptionKey = nestedEncryptionKeyArea.getText();
             String verificationKey = nestedSigningKeyArea.getText();
-            this.verifyNestedJWT(nestedToken, decryptionKey, verificationKey, nestedPayloadOutputArea, nestedStatusLabel);
+            this.verifyNestedJWT(nestedToken, decryptionKey, verificationKey, secretEncoding(nestedSecretFormatCombo),
+                    nestedPayloadOutputArea, nestedStatusLabel);
         }
 
     @FXML
@@ -632,7 +636,8 @@ public class JOSEController implements Initializable {
 
             String serialization = detachedSerializationCombo != null ? detachedSerializationCombo.getValue() : "Compact";
             boolean unencoded = detachedUnencodedCheck != null && detachedUnencodedCheck.isSelected();
-            this.generateDetachedJWS(detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedSigningKeyArea.getText(), serialization, unencoded, detachedTokenArea);
+            this.generateDetachedJWS(detachedPayloadArea.getText(), detachedAlgoCombo.getValue(), detachedSigningKeyArea.getText(),
+                    secretEncoding(detachedSecretFormatCombo), serialization, unencoded, detachedTokenArea);
         }
 
     @FXML
@@ -650,6 +655,7 @@ public class JOSEController implements Initializable {
                     nestedContentAlgoCombo.getValue(),
                     nestedEncryptionKeyArea.getText(),
                     nestedCompressCheck.isSelected(),
+                    secretEncoding(nestedSecretFormatCombo),
                     nestedOutputArea);
             Map<String, String> details = new HashMap<>();
             details.put("Sign Algo", nestedSignAlgoCombo.getValue());
@@ -738,9 +744,11 @@ public class JOSEController implements Initializable {
             String serialization = jwsSerializationCombo != null ? jwsSerializationCombo.getValue() : "Compact";
             boolean unencoded = jwsUnencodedPayloadCheck != null && jwsUnencodedPayloadCheck.isSelected();
             java.util.List<com.cryptocarver.crypto.SignerConfig> signers = new java.util.ArrayList<>();
-            signers.add(new com.cryptocarver.crypto.SignerConfig(algo, key));
+            JoseKeyMaterial.SecretEncoding secretEncoding = secretEncoding(jwtSecretFormatCombo);
+            signers.add(new com.cryptocarver.crypto.SignerConfig(algo, key, secretEncoding));
             if (jwtAlgoCombo2 != null && jwtKeyArea2 != null && !jwtKeyArea2.getText().trim().isEmpty()) {
-                signers.add(new com.cryptocarver.crypto.SignerConfig(jwtAlgoCombo2.getSelectionModel().getSelectedItem(), jwtKeyArea2.getText()));
+                signers.add(new com.cryptocarver.crypto.SignerConfig(jwtAlgoCombo2.getSelectionModel().getSelectedItem(),
+                        jwtKeyArea2.getText(), secretEncoding));
             }
             this.generateSignedJWT(
                     jwtPayloadArea.getText(),
@@ -783,6 +791,7 @@ public class JOSEController implements Initializable {
                     jwtValidateTokenArea.getText(),
                     jwtValidateKeyArea.getText(),
                     iss, aud, skew, checkExp, oidcStrict,
+                    secretEncoding(jwtValidateSecretFormatCombo),
                     jwtDecodedHeaderArea,
                     jwtDecodedPayloadArea,
                     jwtStatusLabel);
@@ -1053,9 +1062,10 @@ public class JOSEController implements Initializable {
     public JOSEController() {
     }
 
-    public void generateDetachedJWS(String payload, String algorithm, String key, String serializationType, boolean unencodedPayload, TextArea output) {
+    public void generateDetachedJWS(String payload, String algorithm, String key, JoseKeyMaterial.SecretEncoding secretEncoding,
+            String serializationType, boolean unencodedPayload, TextArea output) {
         try {
-            java.util.List<SignerConfig> signers = java.util.Collections.singletonList(new SignerConfig(algorithm, key));
+            java.util.List<SignerConfig> signers = java.util.Collections.singletonList(new SignerConfig(algorithm, key, secretEncoding));
             String serialized = JOSEService.generateDetachedJWS(payload, signers, serializationType, unencodedPayload);
 
             output.setText(serialized);
@@ -1071,9 +1081,10 @@ public class JOSEController implements Initializable {
         } catch (Exception e) { statusReporter.showError("Detached JWS", t("module.jose.error", e.getMessage())); }
     }
 
-    public void verifyDetachedJWS(String detached, String payload, String algorithm, String key, Label status) {
+    public void verifyDetachedJWS(String detached, String payload, String algorithm, String key,
+            JoseKeyMaterial.SecretEncoding secretEncoding, Label status) {
         try {
-            boolean valid = JOSEService.verifyDetachedJWS(detached, payload, algorithm, key);
+            boolean valid = JOSEService.verifyDetachedJWS(detached, payload, algorithm, key, secretEncoding);
             status.setText(valid ? "VALID DETACHED SIGNATURE" : "INVALID DETACHED SIGNATURE");
             status.setStyle(valid ? "-fx-text-fill: green;" : "-fx-text-fill: red;");
             statusReporter.publish(OperationResult.forOperation("Detached JWS Verification")
@@ -1133,13 +1144,9 @@ public class JOSEController implements Initializable {
             JWSVerifier verifier;
             JWSAlgorithm algo = signedJWT.getHeader().getAlgorithm();
 
-            if (JWSAlgorithm.Family.HMAC_SHA.contains(algo)) {
-                verifier = new PromiscuousMACVerifier(keyString, algo);
-            } else if (JWSAlgorithm.Family.RSA.contains(algo)) {
-                PublicKey pubKey = parseRSAPublicKey(keyString);
-                verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
-            } else if (JWSAlgorithm.Family.EC.contains(algo)) {
-                verifier = new ECDSAVerifier(requireEcPublicKey(algo, keyString));
+            if (JWSAlgorithm.Family.HMAC_SHA.contains(algo) || JWSAlgorithm.Family.RSA.contains(algo)
+                    || JWSAlgorithm.Family.EC.contains(algo)) {
+                verifier = JOSEService.createVerifier(algo, keyString);
             } else {
                 statusLabel.setText(t("module.jose.unsupportedVerification"));
                 statusLabel.setStyle("-fx-text-fill: orange;");
@@ -1171,10 +1178,10 @@ public class JOSEController implements Initializable {
     // --- Nested JWT (Sign then Encrypt) ---
     public void generateNestedJWT(String payloadJson, String signAlgoStr, String signKey,
             String keyAlgoStr, String contentAlgoStr, String encKeyPEM, boolean compress,
-            TextArea outputArea) {
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea outputArea) {
         try {
             String serialized = JOSEService.generateNestedJWT(payloadJson, signAlgoStr, signKey, keyAlgoStr,
-                    contentAlgoStr, encKeyPEM, compress);
+                    contentAlgoStr, encKeyPEM, compress, secretEncoding);
 
             outputArea.setText(serialized);
             String status = "Nested JWT Generated (Signed: " + signAlgoStr + ", Encrypted: " + keyAlgoStr + ")";
@@ -1193,9 +1200,10 @@ public class JOSEController implements Initializable {
         }
     }
 
-    public void verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM, TextArea payloadOut, Label statusLabel) {
+    public void verifyNestedJWT(String nestedToken, String decryptionKeyPEM, String verificationKeyPEM,
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea payloadOut, Label statusLabel) {
         try {
-            String payload = JOSEService.verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM);
+            String payload = JOSEService.verifyNestedJWT(nestedToken, decryptionKeyPEM, verificationKeyPEM, secretEncoding);
             payloadOut.setText(payload);
             statusLabel.setText(t("module.jose.decryptedVerified"));
             statusLabel.setStyle("-fx-text-fill: green;");
@@ -1213,6 +1221,10 @@ public class JOSEController implements Initializable {
         }
     }
 
+    @FXML private ComboBox<String> jwtSecretFormatCombo;
+    @FXML private ComboBox<String> jwtValidateSecretFormatCombo;
+    @FXML private ComboBox<String> detachedSecretFormatCombo;
+    @FXML private ComboBox<String> nestedSecretFormatCombo;
     @FXML private ComboBox<String> jweKeyFormatCombo;
     @FXML private TextField jwePbes2IterField;
     @FXML private TextField jweKidField;
@@ -1444,96 +1456,6 @@ public class JOSEController implements Initializable {
         if (fieldSize != expected) throw new IllegalArgumentException(algorithm + " requires a P-" + expected + " EC key; supplied key has a " + fieldSize + "-bit field");
     }
 
-    // --- Internal Permissive Implementations ---
-
-    private static class PromiscuousMACSigner implements JWSSigner {
-        private final byte[] secret;
-        private final JWSAlgorithm algorithm;
-        private final JCAContext jcaContext = new JCAContext();
-
-        public PromiscuousMACSigner(String secretStr, JWSAlgorithm algorithm) {
-            this.secret = secretStr.getBytes(StandardCharsets.UTF_8);
-            this.algorithm = algorithm;
-        }
-
-        @Override
-        public Base64URL sign(final JWSHeader header, final byte[] signingInput) throws JOSEException {
-            try {
-                String jcaAlgo = getJCAAlgorithmName(header.getAlgorithm());
-                Mac mac = Mac.getInstance(jcaAlgo);
-                mac.init(new SecretKeySpec(secret, jcaAlgo));
-                return Base64URL.encode(mac.doFinal(signingInput));
-            } catch (Exception e) {
-                throw new JOSEException(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public Set<JWSAlgorithm> supportedJWSAlgorithms() {
-            return Collections.singleton(algorithm);
-        }
-
-        @Override
-        public JCAContext getJCAContext() {
-            return jcaContext;
-        }
-    }
-
-    private static class PromiscuousMACVerifier implements JWSVerifier {
-        private final byte[] secret;
-        private final JWSAlgorithm algorithm;
-        private final JCAContext jcaContext = new JCAContext();
-
-        public PromiscuousMACVerifier(String secretStr, JWSAlgorithm algorithm) {
-            this.secret = secretStr.getBytes(StandardCharsets.UTF_8);
-            this.algorithm = algorithm;
-        }
-
-        @Override
-        public boolean verify(JWSHeader header, byte[] signedContent, Base64URL signature) throws JOSEException {
-            if (!header.getAlgorithm().equals(algorithm)) {
-                return false;
-            }
-            try {
-                String jcaAlgo = getJCAAlgorithmName(header.getAlgorithm());
-                Mac mac = Mac.getInstance(jcaAlgo);
-                mac.init(new SecretKeySpec(secret, jcaAlgo));
-                byte[] expectedSignature = mac.doFinal(signedContent);
-                byte[] providedSignature = signature.decode();
-                if (expectedSignature.length != providedSignature.length) {
-                    return false;
-                }
-                int result = 0;
-                for (int i = 0; i < expectedSignature.length; i++) {
-                    result |= expectedSignature[i] ^ providedSignature[i];
-                }
-                return result == 0;
-            } catch (Exception e) {
-                return false;
-            }
-        }
-
-        @Override
-        public Set<JWSAlgorithm> supportedJWSAlgorithms() {
-            return Collections.singleton(algorithm);
-        }
-
-        @Override
-        public JCAContext getJCAContext() {
-            return jcaContext;
-        }
-    }
-
-    private static String getJCAAlgorithmName(JWSAlgorithm alg) throws JOSEException {
-        if (alg.equals(JWSAlgorithm.HS256))
-            return "HmacSHA256";
-        if (alg.equals(JWSAlgorithm.HS384))
-            return "HmacSHA384";
-        if (alg.equals(JWSAlgorithm.HS512))
-            return "HmacSHA512";
-        throw new JOSEException("Unsupported HMAC algorithm: " + alg.getName());
-    }
-
     // --- Enterprise Features (level 4 & 5) ---
 
     // 1. JWK Managemen
@@ -1613,7 +1535,7 @@ public class JOSEController implements Initializable {
     // 2. Advanced Validation
     public void validateJWTAdvanced(String tokenString, String keyString,
             String expectedIss, String expectedAud, long clockSkewSec, boolean checkExpiry, boolean oidcStrict,
-            TextArea headerOut, TextArea payloadOut, Label statusLabel) {
+            JoseKeyMaterial.SecretEncoding secretEncoding, TextArea headerOut, TextArea payloadOut, Label statusLabel) {
         try {
             // 1. Parse
             SignedJWT signedJWT = SignedJWT.parse(tokenString);
@@ -1660,15 +1582,10 @@ public class JOSEController implements Initializable {
                     throw new Exception("Unsupported JWK type: " + match.getKeyType());
                 }
             } else {
-                // Direct PEM or Secre
-                if (JWSAlgorithm.Family.HMAC_SHA.contains(algo)) {
-                    verifier = new PromiscuousMACVerifier(keyString, algo);
-                } else if (JWSAlgorithm.Family.RSA.contains(algo)) {
-                    PublicKey pubKey = parseRSAPublicKey(keyString);
-                    verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
-                } else if (JWSAlgorithm.Family.EC.contains(algo)) {
-                    PublicKey pubKey = requireEcPublicKey(algo, keyString);
-                    verifier = new ECDSAVerifier((java.security.interfaces.ECPublicKey) pubKey);
+                // PEM, certificate, single JWK or shared secret
+                if (JWSAlgorithm.Family.HMAC_SHA.contains(algo) || JWSAlgorithm.Family.RSA.contains(algo)
+                        || JWSAlgorithm.Family.EC.contains(algo)) {
+                    verifier = JOSEService.createVerifier(algo, keyString, secretEncoding);
                 }
             }
 

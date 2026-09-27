@@ -46,6 +46,10 @@
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Import from File..." onAction="#handleLoadJWTKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwtKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtKeyShelf"/>
+                                    <Label text="Secret Format:" styleClass="form-label"/>
+                                    <ComboBox fx:id="jwtSecretFormatCombo" prefWidth="170" styleClass="form-field">
+                                        <tooltip><Tooltip text="How an HMAC secret is read. Ignored for RSA/EC keys."/></tooltip>
+                                    </ComboBox>
                                 </FlowPane>
                                 <TextArea fx:id="jwtKeyArea" promptText="Enter secret (for HMAC) or paste Private Key PEM (for RSA/EC)..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
@@ -121,6 +125,10 @@
                                 <FlowPane styleClass="responsive-action-bar">
                                     <Button text="Import from File..." onAction="#handleLoadJWTValidateKey" styleClass="secondary-button"/>
                                     <MenuButton fx:id="jwtValidateKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button" onShowing="#handlePopulateJwtValidateKeyShelf"/>
+                                    <Label text="Secret Format:" styleClass="form-label"/>
+                                    <ComboBox fx:id="jwtValidateSecretFormatCombo" prefWidth="170" styleClass="form-field">
+                                        <tooltip><Tooltip text="How an HMAC secret is read. Ignored for RSA/EC keys."/></tooltip>
+                                    </ComboBox>
                                 </FlowPane>
                                 <TextArea fx:id="jwtValidateKeyArea" promptText="Enter secret (for HMAC) or paste Public Key PEM (for RSA/EC)..." prefRowCount="3" styleClass="monospace-field"/>
                             </VBox>
@@ -194,6 +202,10 @@
 
                             <Label text="Verification Key:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="detachedVerificationKeyArea" promptText="Same Secret or Public PEM" prefRowCount="3" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                            <Label text="Secret Format:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <ComboBox fx:id="detachedSecretFormatCombo" prefWidth="170" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field">
+                                <tooltip><Tooltip text="How an HMAC secret is read. Ignored for RSA/EC keys."/></tooltip>
+                            </ComboBox>
                         </GridPane>
 
                         <HBox spacing="10" alignment="CENTER_LEFT">
@@ -441,6 +453,10 @@
 
                             <Label text="Payload:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="nestedPayloadArea" promptText="{ 'sub': 'user' }..." prefRowCount="2" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
+                            <Label text="Secret Format:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <ComboBox fx:id="nestedSecretFormatCombo" prefWidth="170" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field">
+                                <tooltip><Tooltip text="How the HMAC signing secret and the dir key are read. Ignored for RSA/EC keys."/></tooltip>
+                            </ComboBox>
                         </GridPane>
 
                         <Separator/>
