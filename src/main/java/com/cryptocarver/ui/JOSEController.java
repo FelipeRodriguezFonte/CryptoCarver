@@ -14,6 +14,7 @@ import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.JoseKeyMaterial;
 import com.cryptocarver.crypto.JweComposer;
+import com.cryptocarver.crypto.JwtClaimsBuilder;
 import com.cryptocarver.crypto.SignerConfig;
 import com.cryptocarver.model.OperationResult;
 
@@ -570,25 +571,22 @@ public class JOSEController implements Initializable {
     }
     @FXML
     private void handleApplyJWTClaims() {
-        if (jwtPayloadArea != null) {
+        if (jwtPayloadArea == null) return;
+        long expHours = 1;
+        String hours = textOf(jwtExpField);
+        if (hours != null && !hours.isBlank()) {
             try {
-                long now = System.currentTimeMillis() / 1000L;
-                long expHours = 1;
-                try {
-                    expHours = Long.parseLong(jwtExpField.getText());
-                } catch (NumberFormatException ignored) {
-                }
-                String json = String.format(
-                        "{\n  \"iss\": \"%s\",\n  \"sub\": \"%s\",\n  \"aud\": \"%s\",\n  \"iat\": %d,\n  \"exp\": %d\n}",
-                        jwtIssField.getText(),
-                        jwtSubField.getText(),
-                        jwtAudField.getText(),
-                        now,
-                        now + (expHours * 3600));
-                jwtPayloadArea.setText(json);
-            } catch (Exception e) {
-                showError("Claims Error", t("module.jose.error", e.getMessage()));
+                expHours = Long.parseLong(hours.trim());
+            } catch (NumberFormatException e) {
+                showValidation(t("module.jose.feedback.validForHours"), "jwtExpField");
+                return;
             }
+        }
+        try {
+            jwtPayloadArea.setText(JwtClaimsBuilder.apply(jwtPayloadArea.getText(), textOf(jwtIssField),
+                    textOf(jwtSubField), textOf(jwtAudField), expHours, System.currentTimeMillis() / 1000L));
+        } catch (IllegalArgumentException | ArithmeticException e) {
+            showValidation(t("module.jose.feedback.claimsPayload"), "jwtPayloadArea");
         }
     }
     @FXML
