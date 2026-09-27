@@ -16,16 +16,30 @@ import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import eu.europa.esig.dss.asic.xades.ASiCWithXAdESSignatureParameters;
+import eu.europa.esig.dss.asic.xades.signature.ASiCWithXAdESService;
+import eu.europa.esig.dss.asic.cades.ASiCWithCAdESSignatureParameters;
+import eu.europa.esig.dss.asic.cades.signature.ASiCWithCAdESService;
+import eu.europa.esig.dss.enumerations.ASiCContainerType;
+import eu.europa.esig.dss.enumerations.DigestAlgorithm;
+import eu.europa.esig.dss.enumerations.SignatureLevel;
+import eu.europa.esig.dss.model.DSSDocument;
+import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.model.SignatureValue;
+import eu.europa.esig.dss.model.ToBeSigned;
+import eu.europa.esig.dss.service.tsp.OnlineTSPSource;
+import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.token.AbstractKeyStoreTokenConnection;
+import eu.europa.esig.dss.token.DSSPrivateKeyEntry;
+import eu.europa.esig.dss.token.KeyStoreSignatureTokenConnection;
+import eu.europa.esig.dss.enumerations.Indication;
+import com.cryptocarver.service.RevocationValidationService;
+import java.net.URI;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-/**
- * Minimal ASiC-S laboratory container: one payload plus one detached
- * CAdES-BES signature. This deliberately does not claim ASiC-E, LTV or
- * trust validation; it provides a small deterministic surface for packaging
- * and structural verification.
- */
+/** ASiC-S/ASiC-E signing helpers for CAdES and XAdES baseline profiles. */
 public final class AsicOperations {
     public static final String MIME_TYPE = "application/vnd.etsi.asic-s+zip";
     public static final String ASIC_E_MIME_TYPE = "application/vnd.etsi.asic-e+zip";
@@ -38,6 +52,163 @@ public final class AsicOperations {
     private static final long MAX_EXPANDED_ARCHIVE_BYTES = MAX_ENTRY_BYTES + 4L * 1024L * 1024L;
 
     private AsicOperations() {
+    }
+
+    /** Signs an ASiC-S container at the requested CAdES or XAdES baseline level. */
+    public static byte[] signAsicS(byte[] content, String fileName, File pkcs12File, char[] password,
+                                   String format, String level, String tsaUrl,
+                                   List<File> revocationFiles, boolean onlineRevocation) throws Exception {
+        DSSDocument payload = asicSPayload(content, fileName);
+        if ("XAdES".equalsIgnoreCase(format)) {
+            return signXades(List.of(payload), ASiCContainerType.ASiC_S,
+                    pkcs12File, password, null, level, tsaUrl, revocationFiles, onlineRevocation);
+        }
+        requireCades(format);
+        return signCades(List.of(payload), ASiCContainerType.ASiC_S,
+                pkcs12File, password, null, level, tsaUrl, revocationFiles, onlineRevocation);
+    }
+
+    /** Signs an ASiC-E container at the requested CAdES or XAdES baseline level. */
+    public static byte[] signAsicE(Map<String, byte[]> payloads, File pkcs12File, char[] password,
+                                   String format, String level, String tsaUrl,
+                                   List<File> revocationFiles, boolean onlineRevocation) throws Exception {
+        AsicEManifest manifest = prepareAsicEManifest(payloads);
+        List<DSSDocument> documents = new java.util.ArrayList<>();
+        manifest.payloads().forEach((name, value) -> documents.add(new InMemoryDocument(value, name)));
+        if ("XAdES".equalsIgnoreCase(format)) {
+            return signXades(documents, ASiCContainerType.ASiC_E, pkcs12File, password, null,
+                    level, tsaUrl, revocationFiles, onlineRevocation);
+        }
+        requireCades(format);
+        return signCades(documents, ASiCContainerType.ASiC_E, pkcs12File, password, null,
+                level, tsaUrl, revocationFiles, onlineRevocation);
+    }
+
+    /** Token-backed ASiC-S signing. */
+    public static byte[] signAsicS(byte[] content, String fileName, AbstractKeyStoreTokenConnection token,
+                                   String alias, String format, String level, String tsaUrl,
+                                   List<File> revocationFiles, boolean onlineRevocation) throws Exception {
+        DSSDocument payload = asicSPayload(content, fileName);
+        if ("XAdES".equalsIgnoreCase(format)) return signXades(List.of(payload),
+                ASiCContainerType.ASiC_S, null, null, new TokenKey(token, alias), level, tsaUrl, revocationFiles, onlineRevocation);
+        requireCades(format);
+        return signCades(List.of(payload), ASiCContainerType.ASiC_S,
+                null, null, new TokenKey(token, alias), level, tsaUrl, revocationFiles, onlineRevocation);
+    }
+
+    private static DSSDocument asicSPayload(byte[] content, String fileName) {
+        if (content == null || content.length == 0) throw new IllegalArgumentException("ASiC payload is required");
+        if (content.length > MAX_ENTRY_BYTES) throw new IllegalArgumentException("ASiC payload exceeds the 64 MiB limit");
+        return new InMemoryDocument(content, payloadName(fileName));
+    }
+
+    /** Token-backed ASiC-E signing. */
+    public static byte[] signAsicE(Map<String, byte[]> payloads, AbstractKeyStoreTokenConnection token,
+                                   String alias, String format, String level, String tsaUrl,
+                                   List<File> revocationFiles, boolean onlineRevocation) throws Exception {
+        AsicEManifest manifest = prepareAsicEManifest(payloads);
+        List<DSSDocument> documents = new java.util.ArrayList<>();
+        manifest.payloads().forEach((name, value) -> documents.add(new InMemoryDocument(value, name)));
+        if ("XAdES".equalsIgnoreCase(format)) {
+            return signXades(documents, ASiCContainerType.ASiC_E, null, null, new TokenKey(token, alias),
+                    level, tsaUrl, revocationFiles, onlineRevocation);
+        }
+        requireCades(format);
+        return signCades(documents, ASiCContainerType.ASiC_E, null, null, new TokenKey(token, alias),
+                level, tsaUrl, revocationFiles, onlineRevocation);
+    }
+
+    private record TokenKey(AbstractKeyStoreTokenConnection token, String alias) { }
+
+    private static byte[] signCades(List<DSSDocument> documents, ASiCContainerType type, File file, char[] password,
+                                    TokenKey tokenKey, String levelName, String tsa, List<File> evidence,
+                                    boolean online) throws Exception {
+        SignatureLevel level = cadesLevel(levelName);
+        requireLevel(level, tsa, evidence, online);
+        char[] pass = password == null ? new char[0] : password.clone();
+        KeyStoreSignatureTokenConnection local = null;
+        try {
+            AbstractKeyStoreTokenConnection token;
+            DSSPrivateKeyEntry key;
+            if (tokenKey != null) { token = tokenKey.token(); key = token.getKey(tokenKey.alias()); }
+            else {
+                local = new KeyStoreSignatureTokenConnection(file, "PKCS12", new KeyStore.PasswordProtection(pass));
+                token = local; key = token.getKeys().isEmpty() ? null : token.getKeys().get(0);
+            }
+            if (key == null) throw new IllegalArgumentException("Signing key was not found");
+            ASiCWithCAdESSignatureParameters parameters = new ASiCWithCAdESSignatureParameters();
+            parameters.setSignatureLevel(level);
+            parameters.setDigestAlgorithm(DigestAlgorithm.SHA256);
+            parameters.setSigningCertificate(key.getCertificate());
+            parameters.setCertificateChain(key.getCertificateChain());
+            parameters.aSiC().setContainerType(type);
+            ASiCWithCAdESService service = new ASiCWithCAdESService(verifier(evidence, online));
+            if (tsa != null && !tsa.isBlank()) service.setTspSource(new OnlineTSPSource(validateTsa(tsa)));
+            ToBeSigned toSign = service.getDataToSign(documents, parameters);
+            SignatureValue value = token.sign(toSign, parameters.getDigestAlgorithm(), key);
+            DSSDocument signed = service.signDocument(documents, parameters, value);
+            if (level == SignatureLevel.CAdES_BASELINE_LT) signed = service.extendDocument(signed, parameters);
+            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) { signed.writeTo(out); return out.toByteArray(); }
+        } finally { if (local != null) local.close(); Arrays.fill(pass, '\0'); }
+    }
+
+    private static byte[] signXades(List<DSSDocument> documents, ASiCContainerType type, File file, char[] password,
+                                    TokenKey tokenKey, String levelName, String tsa, List<File> evidence,
+                                    boolean online) throws Exception {
+        SignatureLevel level = xadesLevel(levelName);
+        requireLevel(level, tsa, evidence, online);
+        char[] pass = password == null ? new char[0] : password.clone();
+        KeyStoreSignatureTokenConnection local = null;
+        try {
+            AbstractKeyStoreTokenConnection token;
+            DSSPrivateKeyEntry key;
+            if (tokenKey != null) { token = tokenKey.token(); key = token.getKey(tokenKey.alias()); }
+            else {
+                local = new KeyStoreSignatureTokenConnection(file, "PKCS12", new KeyStore.PasswordProtection(pass));
+                token = local; key = token.getKeys().isEmpty() ? null : token.getKeys().get(0);
+            }
+            if (key == null) throw new IllegalArgumentException("Signing key was not found");
+            ASiCWithXAdESSignatureParameters parameters = new ASiCWithXAdESSignatureParameters();
+            parameters.setSignatureLevel(level); parameters.setDigestAlgorithm(DigestAlgorithm.SHA256);
+            parameters.setSigningCertificate(key.getCertificate()); parameters.setCertificateChain(key.getCertificateChain());
+            parameters.aSiC().setContainerType(type);
+            CommonCertificateVerifier verifier = verifier(evidence, online);
+            ASiCWithXAdESService service = new ASiCWithXAdESService(verifier);
+            if (tsa != null && !tsa.isBlank()) service.setTspSource(new OnlineTSPSource(validateTsa(tsa)));
+            ToBeSigned toSign = service.getDataToSign(documents, parameters);
+            SignatureValue value = token.sign(toSign, parameters.getDigestAlgorithm(), key);
+            DSSDocument signed = service.signDocument(documents, parameters, value);
+            if (level == SignatureLevel.XAdES_BASELINE_LT) signed = service.extendDocument(signed, parameters);
+            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) { signed.writeTo(out); return out.toByteArray(); }
+        } finally { if (local != null) local.close(); Arrays.fill(pass, '\0'); }
+    }
+
+    private static void requireCades(String format) {
+        if (!"CAdES".equalsIgnoreCase(format)) throw new IllegalArgumentException("Unsupported ASiC signature format: " + format);
+    }
+    private static SignatureLevel cadesLevel(String level) { return switch(level.toUpperCase(java.util.Locale.ROOT)) {
+        case "B" -> SignatureLevel.CAdES_BASELINE_B; case "T" -> SignatureLevel.CAdES_BASELINE_T;
+        case "LT" -> SignatureLevel.CAdES_BASELINE_LT; case "LTA" -> SignatureLevel.CAdES_BASELINE_LTA;
+        default -> throw new IllegalArgumentException("Unsupported CAdES level: " + level); }; }
+    private static SignatureLevel xadesLevel(String level) { return switch(level.toUpperCase(java.util.Locale.ROOT)) {
+        case "B" -> SignatureLevel.XAdES_BASELINE_B; case "T" -> SignatureLevel.XAdES_BASELINE_T;
+        case "LT" -> SignatureLevel.XAdES_BASELINE_LT; case "LTA" -> SignatureLevel.XAdES_BASELINE_LTA;
+        default -> throw new IllegalArgumentException("Unsupported XAdES level: " + level); }; }
+    private static void requireLevel(SignatureLevel level, String tsa, List<File> evidence, boolean online) {
+        String n = level.name();
+        if ((n.endsWith("_T") || n.endsWith("_LT") || n.endsWith("_LTA"))) validateTsa(tsa);
+        if ((n.endsWith("_LT") || n.endsWith("_LTA")) && (evidence == null || evidence.isEmpty()) && !online)
+            throw new IllegalArgumentException("ASiC-LT/LTA requires local CRL/OCSP evidence or explicit online revocation");
+    }
+    private static String validateTsa(String tsa) {
+        if (tsa == null || tsa.isBlank()) throw new IllegalArgumentException("A TSA URL is required for T/LT/LTA");
+        URI uri=URI.create(tsa.trim()); if (!List.of("http","https").contains(uri.getScheme()) || uri.getHost()==null)
+            throw new IllegalArgumentException("Invalid TSA URL"); return tsa.trim(); }
+    private static CommonCertificateVerifier verifier(List<File> files, boolean online) throws Exception {
+        List<DSSDocument> crls=PadesOperations.loadLocalCrlEvidence(files), ocsps=PadesOperations.loadLocalOcspEvidence(files);
+        if (files!=null && !files.isEmpty() && crls.isEmpty() && ocsps.isEmpty()) throw new IllegalArgumentException("No valid X.509 CRL or OCSP evidence was provided");
+        CommonCertificateVerifier v=new CommonCertificateVerifier();
+        RevocationValidationService.configure(v,new RevocationValidationService.Configuration(online,crls,ocsps)); return v;
     }
 
     /** Creates an ASiC-S ZIP with a first, uncompressed mimetype entry and detached CAdES-BES signature. */
@@ -92,18 +263,18 @@ public final class AsicOperations {
     }
 
     /**
-     * Inspects a bounded ASiC-S archive and verifies its detached CAdES
-     * signature against the packaged payload. Certificate trust is not
-     * evaluated by this convenience overload.
+     * Inspects a bounded ASiC-S archive. Legacy CAdES-BES is checked locally;
+     * DSS-produced CAdES and XAdES are checked by the common AdES validator.
+     * Certificate trust is not evaluated by this convenience overload.
      */
     public static AsicInspection inspectAndVerify(byte[] asicBytes) throws Exception {
         return inspectAndVerify(asicBytes, null);
     }
 
     /**
-     * Inspects an ASiC-S archive and optionally validates its signer against
-     * a local truststore. The PKIX check is offline: it does not make a
-     * revocation or LTV claim.
+     * Inspects an ASiC-S archive and optionally validates a legacy CAdES-BES
+     * signer against a local truststore. Use AdesValidationOperations for a
+     * trusted DSS level and revocation result on advanced CAdES or XAdES.
      */
     public static AsicInspection inspectAndVerify(byte[] asicBytes, KeyStore trustStore) throws Exception {
         if (asicBytes == null || asicBytes.length == 0) throw new IllegalArgumentException("ASiC input is required");
@@ -140,7 +311,13 @@ public final class AsicOperations {
                     payload = value;
                 }
             }
-            if (payload == null || signature == null) throw new IllegalArgumentException("ASiC-S payload or signature is missing");
+            if (payload == null) throw new IllegalArgumentException("ASiC-S payload is missing");
+            if (signature == null) {
+                AdesValidationOperations.SignatureOutcome outcome = inspectDssSignature(asicBytes, "signed.asics");
+                return new AsicInspection(payloadName, entryCount, mimeTypeValid, true,
+                        outcome.level(), true, CmsInspectionReport.ValidationState.NOT_EVALUATED,
+                        "Use AdesValidationOperations with a truststore and revocation evidence for PKIX validation");
+            }
             CMSOperations.VerificationResult verification = CMSOperations.verifySignedData(signature, null, payload);
             CMSOperations.CadesProfile profile = CMSOperations.inspectCadesProfile(signature);
             CmsInspectionReport cmsReport = new CmsInspector().inspect(signature, payload, trustStore);
@@ -155,11 +332,7 @@ public final class AsicOperations {
         }
     }
 
-    /**
-     * Creates the experimental ASiC-E/CAdES baseline: multiple payloads, an
-     * ETSI ASiCManifest with SHA-256 references and detached CAdES-BES over
-     * that manifest. It intentionally does not implement ASiC-E XAdES or LTV.
-     */
+    /** Creates a legacy ASiC-E/CAdES-BES container with a local SHA-256 manifest. */
     public static byte[] createAsicE(Map<String, byte[]> payloads, File pkcs12File, char[] password) throws Exception {
         AsicEManifest prepared = prepareAsicEManifest(payloads);
         if (pkcs12File == null || !pkcs12File.isFile()) throw new IllegalArgumentException("PKCS#12 file is required");
@@ -199,17 +372,17 @@ public final class AsicOperations {
     }
 
     /**
-     * Validates the ASiC-E manifest references and the detached CAdES signature locally.
-     * Certificate trust is deliberately not evaluated by this convenience overload.
+     * Inspects a legacy ASiC-E manifest locally, or delegates DSS-produced
+     * CAdES and XAdES containers to the common AdES validator.
      */
     public static AsicEInspection inspectAndVerifyE(byte[] asicBytes) throws Exception {
         return inspectAndVerifyE(asicBytes, null);
     }
 
     /**
-     * Validates an ASiC-E container and, when a local truststore is supplied,
-     * performs an offline PKIX check of the detached CAdES signer. Revocation
-     * and LTV are not implied by this operation.
+     * Validates a legacy ASiC-E CAdES-BES signer against a supplied local
+     * truststore. Advanced containers use the common AdES validator; call it
+     * directly to evaluate trust, revocation and the achieved DSS level.
      */
     public static AsicEInspection inspectAndVerifyE(byte[] asicBytes, KeyStore trustStore) throws Exception {
         if (asicBytes == null || asicBytes.length == 0) throw new IllegalArgumentException("ASiC-E input is required");
@@ -244,7 +417,14 @@ public final class AsicOperations {
                     payloads.put(name, value);
                 }
             }
-            if (manifest == null || signature == null || payloads.isEmpty()) throw new IllegalArgumentException("ASiC-E payload, manifest or signature is missing");
+            if (payloads.isEmpty()) throw new IllegalArgumentException("ASiC-E payload is missing");
+            if (manifest == null || signature == null) {
+                AdesValidationOperations.SignatureOutcome outcome = inspectDssSignature(asicBytes, "signed.asice");
+                return new AsicEInspection(payloads.size(), entryCount, mimeTypeValid, true,
+                        true, true, outcome.level(), true,
+                        CmsInspectionReport.ValidationState.NOT_EVALUATED,
+                        "Use AdesValidationOperations with a truststore and revocation evidence for PKIX validation");
+            }
             ManifestCheck manifestCheck = verifyAsicEManifest(manifest, payloads);
             CMSOperations.VerificationResult verification = CMSOperations.verifySignedData(signature, null, manifest);
             CMSOperations.CadesProfile profile = CMSOperations.inspectCadesProfile(signature);
@@ -259,6 +439,18 @@ public final class AsicOperations {
                     manifestCheck.signatureReferenceValid(), verification.verified, profile.profile(), profile.certificateBindingValid(),
                     trustStep.getState(), trustStep.getDetails());
         }
+    }
+
+    private static AdesValidationOperations.SignatureOutcome inspectDssSignature(byte[] container,
+                                                                                  String fileName) throws Exception {
+        AdesValidationOperations.Result result = AdesValidationOperations.validate(container, fileName, null, null);
+        if (result.signatures().size() != 1) throw new IllegalArgumentException("ASiC must contain one recognizable AdES signature");
+        AdesValidationOperations.SignatureOutcome outcome = result.signatures().get(0);
+        if (outcome.level() == null || outcome.indication() == Indication.TOTAL_FAILED
+                || outcome.errors().stream().anyMatch(error -> error.contains("cryptographic") || error.contains("digest"))) {
+            throw new IllegalArgumentException("ASiC signature failed DSS verification: " + outcome.errors());
+        }
+        return outcome;
     }
 
     private static byte[] packageAsic(String fileName, byte[] content, byte[] signature) throws Exception {

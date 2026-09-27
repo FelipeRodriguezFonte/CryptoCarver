@@ -668,7 +668,7 @@ public final class PadesOperations {
         throw new java.io.IOException("Unable to load truststore as PKCS12 or JKS", lastFailure);
     }
 
-    private static List<DSSDocument> loadLocalCrlEvidence(List<File> localCrlFiles) throws Exception {
+    static List<DSSDocument> loadLocalCrlEvidence(List<File> localCrlFiles) throws Exception {
         if (localCrlFiles == null || localCrlFiles.isEmpty()) return List.of();
         List<DSSDocument> documents = new java.util.ArrayList<>();
         for (File crlFile : localCrlFiles) {
@@ -685,7 +685,7 @@ public final class PadesOperations {
         return List.copyOf(documents);
     }
 
-    private static List<DSSDocument> loadLocalOcspEvidence(List<File> files) throws Exception {
+    static List<DSSDocument> loadLocalOcspEvidence(List<File> files) throws Exception {
         if (files == null || files.isEmpty()) return List.of();
         List<DSSDocument> documents = new java.util.ArrayList<>();
         for (File file : files) {

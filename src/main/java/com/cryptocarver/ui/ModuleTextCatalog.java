@@ -1391,8 +1391,8 @@ public final class ModuleTextCatalog {
     public static Map<String, String> asic() {
         Map<String, String> map = common();
         map.put("ASiC Containers", "module.asic.title");
-        map.put("ASiC-S laboratory — one payload plus detached CAdES-BES signature", "module.asic.help");
-        map.put("Creates a bounded ASiC-S ZIP container. Inspection checks the mimetype and detached signature; it does not establish certificate trust, revocation or LTV.", "module.asic.warning");
+        map.put("ASiC-S and ASiC-E containers with CAdES or XAdES baseline profiles", "module.asic.help");
+        map.put("Select a signature format and baseline level. T/LT/LTA require a TSA; LT/LTA also require local CRL/OCSP evidence or explicit online revocation.", "module.asic.warning");
         map.put("Input File:", "module.asic.input");
         map.put("Choose input…", "module.asic.chooseInput");
         map.put("Output File:", "module.asic.output");
@@ -1404,7 +1404,12 @@ public final class ModuleTextCatalog {
         map.put("Load Token Keys", "module.asic.loadKeys");
         map.put("Create ASiC-S", "module.asic.createS");
         map.put("Inspect / Verify", "module.asic.inspect");
-        map.put("Experimental ASiC-E / CAdES — multiple payloads plus a SHA-256 manifest", "module.asic.experimental");
+        map.put("ASiC-E — multiple payloads plus a SHA-256 manifest", "module.asic.experimental");
+        map.put("Signature format:", "module.asic.format");
+        map.put("Baseline level:", "module.asic.level");
+        map.put("TSA URL:", "module.asic.tsaUrl");
+        map.put("Choose CRL/OCSP…", "module.asic.chooseRevocationFiles");
+        map.put("Validate revocation online (OCSP/CRL) — disabled by default", "module.asic.onlineRevocation");
         map.put("Choose payloads…", "module.asic.choosePayloads");
         map.put("Create ASiC-E", "module.asic.createE");
         map.put("Choose truststore…", "module.asic.chooseTruststore");

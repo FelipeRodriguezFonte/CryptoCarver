@@ -482,6 +482,26 @@ public final class Pkcs11Session implements AutoCloseable {
                 prepared.payloads(), prepared.manifest(), signature);
     }
 
+    /** Signs ASiC-S through DSS while keeping the token connection inside this session. */
+    public byte[] signAsicS(String alias, byte[] payload, String payloadName, String format, String level,
+                            String tsaUrl, java.util.List<java.io.File> revocationFiles, boolean onlineRevocation) throws Exception {
+        ensureOpen();
+        try (AbstractKeyStoreTokenConnection token = createDssTokenConnection()) {
+            return com.cryptocarver.crypto.AsicOperations.signAsicS(payload, payloadName, token, alias, format, level,
+                    tsaUrl, revocationFiles, onlineRevocation);
+        }
+    }
+
+    /** Signs ASiC-E through DSS while keeping the token connection inside this session. */
+    public byte[] signAsicE(String alias, java.util.Map<String, byte[]> payloads, String format, String level,
+                            String tsaUrl, java.util.List<java.io.File> revocationFiles, boolean onlineRevocation) throws Exception {
+        ensureOpen();
+        try (AbstractKeyStoreTokenConnection token = createDssTokenConnection()) {
+            return com.cryptocarver.crypto.AsicOperations.signAsicE(payloads, token, alias, format, level,
+                    tsaUrl, revocationFiles, onlineRevocation);
+        }
+    }
+
     public byte[] encrypt(String alias, byte[] plaintext, String transformation, byte[] iv)
             throws GeneralSecurityException {
         return encrypt(alias, plaintext, transformation, iv, null);

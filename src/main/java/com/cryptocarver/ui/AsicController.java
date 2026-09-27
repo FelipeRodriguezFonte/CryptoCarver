@@ -9,6 +9,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.CheckBox;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -41,10 +42,17 @@ public final class AsicController {
     @FXML private TextField asicEPayloadsField;
     @FXML private TextField asicTrustStorePathField;
     @FXML private PasswordField asicTrustStorePasswordField;
+    @FXML private ComboBox<String> asicFormatCombo;
+    @FXML private ComboBox<String> asicLevelCombo;
+    @FXML private TextField asicTsaUrlField;
+    @FXML private TextField asicRevocationFilesField;
+    @FXML private CheckBox asicOnlineRevocationCheck;
+    @FXML private javafx.scene.layout.HBox asicTsaBox;
     @FXML private TextArea asicResultArea;
 
     private StatusReporter statusReporter;
     private List<File> asicEPayloads = List.of();
+    private List<File> asicRevocationFiles = List.of();
 
     public void setStatusReporter(StatusReporter statusReporter) {
         this.statusReporter = statusReporter;
@@ -53,12 +61,31 @@ public final class AsicController {
     @FXML
     private void initialize() {
         moduleI18n = ModuleI18n.bind(asicRoot, ModuleTextCatalog.asic());
+        asicFormatCombo.getItems().setAll(t("module.asic.cades"), t("module.asic.xades"));
+        asicLevelCombo.getItems().setAll(t("module.asic.baselineB"), t("module.asic.baselineT"),
+                t("module.asic.baselineLt"), t("module.asic.baselineLta"));
+        asicFormatCombo.getSelectionModel().selectFirst(); asicLevelCombo.getSelectionModel().selectFirst();
+        asicLevelCombo.valueProperty().addListener((o, old, value) -> handleProfileChanged());
+        handleProfileChanged();
         handleSourceChanged();
     }
 
     @FXML private void handleChooseInput() { chooseInput(asicInputPathField, "Select ASiC payload"); }
     @FXML private void handleChoosePkcs12() { chooseInput(asicPkcs12PathField, "Select PKCS#12 signing key"); }
     @FXML private void handleChooseTrustStore() { chooseInput(asicTrustStorePathField, "Select local truststore"); }
+
+    @FXML private void handleChooseRevocationFiles() {
+        FileChooser chooser = new FileChooser(); chooser.setTitle("Select local CRL/OCSP evidence");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CRL / OCSP evidence", "*.crl", "*.pem", "*.der", "*.ocsp", "*.resp"));
+        List<File> selected = chooser.showOpenMultipleDialog(owner());
+        if (selected != null && !selected.isEmpty()) { asicRevocationFiles = List.copyOf(selected); asicRevocationFilesField.setText(selected.size()+" evidence file(s) selected"); }
+    }
+
+    @FXML private void handleProfileChanged() {
+        boolean tsa = asicLevelCombo != null && asicLevelCombo.getSelectionModel().getSelectedIndex() > 0;
+        setVisibleManaged(asicTsaBox, tsa);
+        if (tsa && asicTsaUrlField.getText().isBlank()) asicTsaUrlField.setText(com.cryptocarver.model.AppSettings.getInstance().getCustomTsaUrl());
+    }
 
     @FXML
     private void handleChooseAsicEPayloads() {
@@ -93,12 +120,15 @@ public final class AsicController {
     private void clearModuleData() {
         ModuleResetPolicy.clearTextInputs(asicRoot);
         asicEPayloads = List.of();
+        asicRevocationFiles = List.of();
         if (asicPkcs11AliasCombo != null) asicPkcs11AliasCombo.getItems().clear();
         if (asicResultArea != null) asicResultArea.clear();
     }
 
     private void restoreSafeDefaults() {
         if (asicSourceLocalRadio != null) asicSourceLocalRadio.setSelected(true);
+        asicFormatCombo.getSelectionModel().selectFirst(); asicLevelCombo.getSelectionModel().selectFirst();
+        asicOnlineRevocationCheck.setSelected(false); handleProfileChanged();
         handleSourceChanged();
     }
 
@@ -139,17 +169,20 @@ public final class AsicController {
             byte[] container;
             if (tokenSource) {
                 container = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                        .createAsicS(selectedTokenAlias(), payload, input.getName());
+                        .signAsicS(selectedTokenAlias(), payload, input.getName(), format(),
+                        level(), asicTsaUrlField.getText(),
+                        asicRevocationFiles, asicOnlineRevocationCheck.isSelected());
             } else {
                 File pkcs12 = requireFile(asicPkcs12PathField, "PKCS#12 signing key");
-                container = AsicOperations.createAsicS(payload, input.getName(), pkcs12, password);
+                container = AsicOperations.signAsicS(payload, input.getName(), pkcs12, password,
+                        format(), level(), asicTsaUrlField.getText(),
+                        asicRevocationFiles, asicOnlineRevocationCheck.isSelected());
             }
             Files.write(output.toPath(), container, java.nio.file.StandardOpenOption.CREATE_NEW);
             AsicOperations.AsicInspection inspection = AsicOperations.inspectAndVerify(container);
             asicResultArea.setText("ASiC-S written to: " + output.getName() + "\nPayload: " + inspection.payloadName()
-                    + "\nCAdES signature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
-                    + "\nProfile: " + inspection.cadesProfile()
-                    + "\n\nStructural/CAdES integrity only; certificate trust and LTV are not evaluated.");
+                    + "\nSignature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
+                    + "\nDSS format: " + inspection.cadesProfile());
             publish("ASiC-S Create" + (tokenSource ? " (PKCS#11)" : ""), input, output, inspection);
         } catch (FieldValidationException validation) {
             showValidation(validation);
@@ -175,7 +208,8 @@ public final class AsicController {
                         + "\nEntries: " + inspection.entryCount()
                         + "\nManifest hashes: " + (inspection.manifestDigestsValid() ? "VALID" : "INVALID")
                         + "\nSignature reference: " + (inspection.signatureReferenceValid() ? "VALID" : "INVALID")
-                        + "\nCAdES signature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
+                        + "\nSignature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
+                        + "\nDSS format: " + inspection.cadesProfile()
                         + "\nTrust chain (local): " + inspection.trustState() + " — " + inspection.trustDetails()
                         + "\n\nRevocation and LTV are not evaluated by this local ASiC-E inspection.");
                 if (statusReporter != null) statusReporter.publish(OperationResult.forOperation("ASiC-E Inspect")
@@ -184,8 +218,8 @@ public final class AsicController {
                         .detail("Entries", String.valueOf(inspection.entryCount()))
                         .detail("Manifest hashes", inspection.manifestDigestsValid() ? "VALID" : "INVALID")
                         .detail("Signature reference", inspection.signatureReferenceValid() ? "VALID" : "INVALID")
-                        .detail("CAdES profile", inspection.cadesProfile())
-                        .detail("CAdES signature", inspection.signatureValid() ? "VALID" : "INVALID")
+                        .detail("DSS format", inspection.cadesProfile())
+                        .detail("Signature", inspection.signatureValid() ? "VALID" : "INVALID")
                         .detail("Certificate binding", inspection.certificateBindingValid() ? "VALID" : "INVALID")
                         .detail("Trust chain", inspection.trustState().name())
                         .detail("Trust details", inspection.trustDetails())
@@ -196,8 +230,8 @@ public final class AsicController {
                 asicResultArea.setText("ASiC-S inspection\nPayload: " + inspection.payloadName()
                         + "\nEntries: " + inspection.entryCount()
                         + "\nMimetype: " + (inspection.mimeTypeValid() ? "VALID" : "INVALID")
-                        + "\nCAdES profile: " + inspection.cadesProfile()
-                        + "\nCAdES signature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
+                        + "\nDSS format: " + inspection.cadesProfile()
+                        + "\nSignature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
                         + "\nCertificate binding: " + (inspection.certificateBindingValid() ? "VALID" : "INVALID")
                         + "\nTrust chain (local): " + inspection.trustState() + " — " + inspection.trustDetails()
                         + "\n\nRevocation and LTV are not evaluated by this local ASiC-S inspection.");
@@ -206,8 +240,8 @@ public final class AsicController {
                         .detail("Payload", inspection.payloadName())
                         .detail("Entries", String.valueOf(inspection.entryCount()))
                         .detail("Mimetype", inspection.mimeTypeValid() ? "VALID" : "INVALID")
-                        .detail("CAdES profile", inspection.cadesProfile())
-                        .detail("CAdES signature", inspection.signatureValid() ? "VALID" : "INVALID")
+                        .detail("DSS format", inspection.cadesProfile())
+                        .detail("Signature", inspection.signatureValid() ? "VALID" : "INVALID")
                         .detail("Certificate binding", inspection.certificateBindingValid() ? "VALID" : "INVALID")
                         .detail("Trust chain", inspection.trustState().name())
                         .detail("Trust details", inspection.trustDetails())
@@ -241,17 +275,20 @@ public final class AsicController {
             byte[] container;
             if (tokenSource) {
                 container = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                        .createAsicE(selectedTokenAlias(), payloads);
+                        .signAsicE(selectedTokenAlias(), payloads, format(), level(), asicTsaUrlField.getText(),
+                        asicRevocationFiles, asicOnlineRevocationCheck.isSelected());
             } else {
                 File pkcs12 = requireFile(asicPkcs12PathField, "PKCS#12 signing key");
-                container = AsicOperations.createAsicE(payloads, pkcs12, password);
+                container = AsicOperations.signAsicE(payloads, pkcs12, password,
+                        format(), level(), asicTsaUrlField.getText(),
+                        asicRevocationFiles, asicOnlineRevocationCheck.isSelected());
             }
             Files.write(output.toPath(), container, java.nio.file.StandardOpenOption.CREATE_NEW);
             AsicOperations.AsicEInspection inspection = AsicOperations.inspectAndVerifyE(container);
             asicResultArea.setText("ASiC-E written to: " + output.getName() + "\nPayloads: " + inspection.payloadCount()
                     + "\nManifest hashes: " + (inspection.manifestDigestsValid() ? "VALID" : "INVALID")
-                    + "\nCAdES signature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
-                    + "\n\nExperimental CAdES baseline: certificate trust, revocation and LTV are not evaluated.");
+                    + "\nSignature: " + (inspection.signatureValid() ? "VALID" : "INVALID")
+                    + "\nDSS format: " + inspection.cadesProfile());
             if (statusReporter != null) statusReporter.publish(OperationResult.forOperation("ASiC-E Create" + (tokenSource ? " (PKCS#11)" : ""))
                     .detail("Container type", "ASiC-E")
                     .detail("Payloads", String.valueOf(inspection.payloadCount()))
@@ -344,6 +381,17 @@ public final class AsicController {
             throw new FieldValidationException(t("module.asic.feedback.tokenKey"), "asicPkcs11AliasCombo");
         }
         return asicPkcs11AliasCombo.getValue();
+    }
+
+    private String format() { return asicFormatCombo.getSelectionModel().getSelectedIndex() == 1 ? "XAdES" : "CAdES"; }
+    private String level() {
+        return switch (asicLevelCombo.getSelectionModel().getSelectedIndex()) {
+            case 0 -> "B";
+            case 1 -> "T";
+            case 2 -> "LT";
+            case 3 -> "LTA";
+            default -> throw new IllegalArgumentException("Unsupported ASiC level");
+        };
     }
 
     private void showValidation(FieldValidationException validation) {

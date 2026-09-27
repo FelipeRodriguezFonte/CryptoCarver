@@ -18,9 +18,9 @@ Continúa sin implementación ni vectores públicos incorporados. Mantener el re
 
 `TR31Operations` analiza bloques opcionales y versiones A/B/C/D; `TR31OperationsTest` comprueba análisis, errores, normalización y casos de matriz. Falta acreditar la cobertura completa de cada bloque opcional por versión. `BatchOperationCatalog` no incluye importación/exportación TR-31 por lotes.
 
-## 5. PAdES y ASiC — perfiles avanzados — parcial
+## 5. PAdES y ASiC — perfiles avanzados — hecho
 
-`PadesLtLtaOfflineTest` acredita Baseline-T con sello de firma RFC 3161, Baseline-LT con DSS, certificados y CRL local, y Baseline-LTA con sello de archivo validado criptográficamente. Prueba también Baseline-T/LT/LTA mediante conexión de token PKCS#12. `AsicOperations` implementa contenedores ASiC con CAdES; siguen pendientes XAdES dentro del contenedor, revocación y LTV, por lo que el punto permanece parcial.
+`PadesLtLtaOfflineTest` acredita Baseline-T con sello de firma RFC 3161, Baseline-LT con DSS, certificados y CRL local, y Baseline-LTA con sello de archivo validado criptográficamente. Para ASiC-S y ASiC-E, `AsicOperations` expone firma CAdES/XAdES en niveles B/T/LT/LTA; T y superiores usan TSA y LT/LTA exigen CRL/OCSP local o revocación en línea explícita. El panel ASiC permite elegir formato, nivel, TSA y evidencia local, con la red desactivada por defecto. Las pruebas offline específicas y los niveles DSS observados documentan el alcance comprobado.
 
 ## 6. WSS-Security — integración con Process Designer — parcial
 

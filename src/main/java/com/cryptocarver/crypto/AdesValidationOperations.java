@@ -5,6 +5,7 @@ import eu.europa.esig.dss.enumerations.SubIndication;
 import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
+import com.cryptocarver.service.RevocationValidationService;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
 
@@ -94,10 +95,24 @@ public final class AdesValidationOperations {
                                   String fileName,
                                   File trustStore,
                                   char[] trustStorePassword) throws Exception {
+        return validate(document, fileName, trustStore, trustStorePassword, List.of(), false);
+    }
+
+    /** Validates with local revocation evidence; network retrieval requires explicit opt-in. */
+    public static Result validate(byte[] document,
+                                  String fileName,
+                                  File trustStore,
+                                  char[] trustStorePassword,
+                                  List<File> localRevocationFiles,
+                                  boolean onlineRevocation) throws Exception {
         if (document == null || document.length == 0) {
             throw new IllegalArgumentException("A signed document is required");
         }
         CommonCertificateVerifier verifier = new CommonCertificateVerifier();
+        RevocationValidationService.configure(verifier, new RevocationValidationService.Configuration(
+                onlineRevocation,
+                PadesOperations.loadLocalCrlEvidence(localRevocationFiles),
+                PadesOperations.loadLocalOcspEvidence(localRevocationFiles)));
         boolean trustSupplied = trustStore != null;
         if (trustSupplied) {
             verifier.setTrustedCertSources(trustedSource(trustStore, trustStorePassword));
