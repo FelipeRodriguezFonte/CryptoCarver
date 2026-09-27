@@ -192,6 +192,6 @@ public final class LocalApiServer implements AutoCloseable {
             respond(exchange, 200, Map.of("operation", slug, "result", result));
         } catch (CodecException | IllegalArgumentException e) {
             respondError(exchange, 400, e.getMessage() == null ? "invalid_input" : e.getMessage());
-        } catch (Exception e) { respondError(exchange, 400, e.getMessage() == null ? "invalid_input" : e.getMessage()); }
+        } catch (Exception e) { respondError(exchange, 500, "operation_failed"); }
     }
 }
