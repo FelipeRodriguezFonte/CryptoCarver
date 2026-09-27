@@ -202,8 +202,9 @@ class PaymentControlValuesTest {
     void emvArpcMethod2() throws Exception {
         String sk = EMVOperations.deriveSessionKey(EMVOperations.deriveICCMasterKey(
                 K2, PAN, "00", EMVOperations.IccMasterKeyMethod.AUTO).key(), "0001", "");
+        assertEquals("38F14068B3EA57C194F8E3A20D51E3E6", sk);
         assertEquals("54DB2625", EMVOperations.generateARPC_Method2(
-                sk, "A8DB2B65F9C821F1", "00820000"));
+                "38F14068B3EA57C194F8E3A20D51E3E6", "A8DB2B65F9C821F1", "00820000"));
     }
 
     /**
