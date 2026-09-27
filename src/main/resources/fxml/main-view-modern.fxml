@@ -462,7 +462,7 @@
         <HBox styleClass="status-bar" spacing="10" alignment="CENTER_LEFT" minHeight="26" prefHeight="26" maxHeight="26">
             <Label fx:id="statusLabel" text="Ready" styleClass="status-label-main"/>
             <HBox fx:id="asyncProgressBox" visible="false" managed="false" alignment="CENTER_LEFT" spacing="8" styleClass="async-progress-box">
-                <ProgressIndicator fx:id="asyncProgressSpinner" prefWidth="16" prefHeight="16" styleClass="async-progress-spinner"/>
+                <ProgressIndicator fx:id="asyncProgressIndicator" prefWidth="16" prefHeight="16" styleClass="async-progress-spinner"/>
                 <ProgressBar fx:id="asyncProgressBar" prefWidth="120" prefHeight="14" visible="false" managed="false" styleClass="async-progress-bar"/>
                 <Label fx:id="asyncProgressLabel" text="Working..." styleClass="async-progress-label"/>
                 <Button fx:id="asyncCancelBtn" text="Cancel" onAction="#handleCancelAsyncOperation" styleClass="async-cancel-button"/>

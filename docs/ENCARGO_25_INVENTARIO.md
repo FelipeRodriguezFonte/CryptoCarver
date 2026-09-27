@@ -1,6 +1,6 @@
 # Encargo 25: inventario previo
 
-Inventario de los controles identificados por `fx:id` en los 30 FXML bajo `src/main/resources/fxml`, preparado antes de cambiar la política. `UiStateSnapshot` descubre controles FXML por campos de controlador y captura también controles JavaFX admitidos creados y asignados a esos campos; los controles sin campo no son capturables. La tabla registra la clasificación anterior, con la regla de subcadena y su excepción de selector. La ComboBox editable original `xmlSignTsaUrlCombo` se trata como campo de texto. Durante la implementación se normalizaron los IDs selectores no canónicos para permitir que los codecs los reconozcan solo por nombre; se conservan alias de compatibilidad al restaurar sesiones anteriores.
+Inventario de controles identificados por `fx:id` en los 30 FXML bajo `src/main/resources/fxml` y campos JavaFX de control declarados directamente en clases `*Controller` sin `fx:id`, preparado antes de cambiar la política. `UiStateSnapshot` descubre controles FXML por campos de controlador y captura también controles JavaFX admitidos creados y asignados a esos campos; los controles sin campo no son capturables. Las tablas registran la clasificación anterior, con la regla de subcadena y su excepción de selector; los campos Java se marcan con `(código)`. La ComboBox editable original `xmlSignTsaUrlCombo` se trata como campo de texto. Durante la implementación se normalizaron los IDs selectores no canónicos para permitir que los codecs los reconozcan solo por nombre; se conservan alias de compatibilidad al restaurar sesiones anteriores.
 
 ## Selectores
 
@@ -244,6 +244,13 @@ Inventario de los controles identificados por `fx:id` en los 30 FXML bajo `src/m
 | `xml_security.fxml` | `xmlSignTsaProfileCombo` | ComboBox | no |
 | `xml_security.fxml` | `xmlTimestampHashCombo` | ComboBox | no |
 | `xml_security.fxml` | `xmlVerifyTrustStoreProfileCombo` | ComboBox | sí |
+| `CipherController.java (código)` | `cipherInputFormatCombo` | ComboBox | no |
+| `KeysController.java (código)` | `ecdsaFpCurveCombo` | ComboBox | no |
+| `KeysController.java (código)` | `cmsOnlineRevocationCheck` | CheckBox | no |
+| `PaymentsController.java (código)` | `macAlgorithmCombo` | ComboBox | no |
+| `PaymentsController.java (código)` | `pinTransSourceFormatCombo` | ComboBox | no |
+| `PaymentsController.java (código)` | `pinTransTargetFormatCombo` | ComboBox | no |
+
 ## Campos de texto
 
 | FXML | Campo | Control | Sensible hoy |
@@ -888,9 +895,35 @@ Inventario de los controles identificados por `fx:id` en los 30 FXML bajo `src/m
 | `xml_security.fxml` | `xmlVerifyTrustStorePathField` | TextField | sí |
 | `xml_security.fxml` | `xmlVerifyTrustStorePasswordField` | PasswordField | sí |
 | `xml_security.fxml` | `xmlVerifyReportArea` | TextArea | sí |
-
+| `KeysController.java (código)` | `ecdsaFpPublicKeyArea` | TextArea | sí |
+| `KeysController.java (código)` | `ecdsaFpPrivateKeyArea` | TextArea | sí |
+| `KeysController.java (código)` | `ed25519PublicKeyArea` | TextArea | sí |
+| `KeysController.java (código)` | `ed25519PrivateKeyArea` | TextArea | sí |
+| `PaymentsController.java (código)` | `macKeyField` | TextField | sí |
+| `PaymentsController.java (código)` | `macDataField` | TextArea | sí |
+| `PaymentsController.java (código)` | `macResultArea` | TextArea | sí |
+| `PaymentsController.java (código)` | `pinTransSourceBlockField` | TextField | sí |
+| `PaymentsController.java (código)` | `pinTransPanField` | TextField | sí |
+| `PaymentsController.java (código)` | `pinTransResultArea` | TextArea | sí |
+| `PaymentsController.java (código)` | `pvvPinField` | TextField | sí |
+| `PaymentsController.java (código)` | `pvvPanField` | TextField | sí |
+| `PaymentsController.java (código)` | `pvvKeyField` | TextField | sí |
+| `PaymentsController.java (código)` | `pvvLengthField` | TextField | no |
+| `PaymentsController.java (código)` | `pvvValueField` | TextField | no |
+| `PaymentsController.java (código)` | `pvvResultArea` | TextArea | no |
+| `PaymentsController.java (código)` | `trackPanField` | TextField | sí |
+| `PaymentsController.java (código)` | `trackNameField` | TextField | no |
+| `PaymentsController.java (código)` | `trackExpiryField` | TextField | no |
+| `PaymentsController.java (código)` | `trackServiceCodeField` | TextField | no |
+| `PaymentsController.java (código)` | `trackDiscretionaryField` | TextField | no |
+| `PaymentsController.java (código)` | `trackDataField` | TextArea | no |
+| `PaymentsController.java (código)` | `trackResultArea` | TextArea | no |
 
 Selectores clasificados como sensibles por la política previa (y que pasan a no sensibles): `signatureTemplateCombo`, `authMacTruncationCombo`, `macKeySourceCombo`, `macHsmKeyCombo`, `certRootCaCheck`, `certIssueProfileCombo`, `certTemplateCombo`, `cmsSignKeyAliasCombo`, `cmsEncryptKeyAliasCombo`, `symKeySourceCombo`, `symHsmKeyCombo`, `pinnedFilterCombo`, `icsfTokenOriginCombo`, `jwsUnencodedPayloadCheck`, `keyLabStatusFilter`, `keyStoreProfileCombo`, `keyStoreTypeCombo`, `keyStoreUnsafeExtractCheck`, `pkcs11SigningKeyCombo`, `pkcs11CertificateAliasCombo`, `pkcs11WrappingKeyCombo`, `pkcs11WrapKeyCombo`, `pkcs11UnwrappingKeyCombo`, `keyWrapUnwrapCheck`, `padesVisibleSignatureCheck`, `cvvTypeCombo`, `pinBlockPaddingCombo`, `dukptAesPinOperationCombo`, `wssTimestampValiditySpinner`, `wssSignKeyAliasCombo`, `wssUsernamePasswordTypeCombo`, `wssUsernameMaxAgeSpinner`, `wssEncryptKeyTransportCombo`, `xmlSignKeyAliasCombo`, `xmlVerifyTrustStoreProfileCombo`. La única ComboBox editable continúa siendo campo de texto. No se encontró selector cuyo valor represente material secreto; alias de clave/HSM son identificadores.
 ## Decisión para los codecs
 
-Los codecs solo reciben el nombre del campo. Se normalizaron los tres IDs que no terminaban en un sufijo selector (`keyLabStatusFilter`, `jwtAlgoCombo2` y la ComboBox editable `xmlSignTsaUrlCombo`), de modo que los selectores actuales se identifican por `Combo`, `Choice`, `Check`, `Spinner`, `Radio` o `Toggle`. La ComboBox editable queda con sufijo `Input` y se trata como texto. Los nombres previos se conservan en un único mapa de alias para clasificar/recuperar sesiones ya guardadas. El test recorre los FXML y garantiza que cada selector no editable tiene un sufijo canónico; además verifica por separado que la ComboBox editable es texto.
+Los codecs solo reciben el nombre del campo. Se normalizaron los tres IDs que no terminaban en un sufijo selector (`keyLabStatusFilter`, `jwtAlgoCombo2` y la ComboBox editable `xmlSignTsaUrlCombo`), de modo que los selectores actuales se identifican por `Combo`, `Choice`, `Check`, `Spinner`, `Radio` o `Toggle`. La ComboBox editable queda con sufijo `Text` y se trata como texto. Los nombres previos se conservan en un único mapa de alias para clasificar/recuperar sesiones ya guardadas. El test recorre los FXML y garantiza que cada selector no editable tiene un sufijo canónico; además verifica por separado que la ComboBox editable es texto.
+
+## Cambios de clasificación de texto
+
+Ningún campo de texto que era sensible ha pasado a no sensible. Ocho nombres que antes coincidían con tokens solo por subcadena conservan su sensibilidad mediante excepciones exactas (`smAcField`, `derivePvvTargetPvvField`, `derivePvvResultArea`, `tr34ReceiveResultArea`, `verify1MessageArea`, `verify1ResultArea`, `mac0OutputArea` y `asicEPayloadsField`). Los demás campos se clasifican por palabras camelCase.

@@ -62,7 +62,7 @@ public final class UiStateSnapshot {
     private static final Map<String, String> LEGACY_FIELD_ALIASES = Map.of(
             "keyLabStatusFilter", "keyLabStatusFilterCombo",
             "jwtAlgoCombo2", "jwtAlgo2Combo",
-            "xmlSignTsaUrlCombo", "xmlSignTsaUrlInput"
+            "xmlSignTsaUrlCombo", "xmlSignTsaUrlText"
     );
 
     private UiStateSnapshot() {
@@ -191,7 +191,6 @@ public final class UiStateSnapshot {
 
     private static boolean isHistorySelector(String fieldName, Object control) {
         if (control instanceof ComboBox<?> combo && combo.isEditable()) return false;
-        if (control instanceof Spinner<?> spinner && spinner.isEditable()) return false;
         if (control instanceof ComboBox<?> || control instanceof ChoiceBox<?> || control instanceof CheckBox
                 || control instanceof Spinner<?> || control instanceof ToggleButton) return true;
         if (LEGACY_FIELD_ALIASES.containsKey(fieldName)) return fieldName.equals("keyLabStatusFilter");

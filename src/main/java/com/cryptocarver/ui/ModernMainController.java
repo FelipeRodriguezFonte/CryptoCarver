@@ -348,7 +348,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // Async Progress UI
     @FXML private HBox asyncProgressBox;
-    @FXML private ProgressIndicator asyncProgressSpinner;
+    @FXML private ProgressIndicator asyncProgressIndicator;
     @FXML private ProgressBar asyncProgressBar;
     @FXML private Label asyncProgressLabel;
     @FXML private Button asyncCancelBtn;
@@ -511,16 +511,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 asyncProgressBar.setVisible(true);
                 asyncProgressBar.setManaged(true);
             }
-            if (asyncProgressSpinner != null) {
-                asyncProgressSpinner.setVisible(false);
-                asyncProgressSpinner.setManaged(false);
+            if (asyncProgressIndicator != null) {
+                asyncProgressIndicator.setVisible(false);
+                asyncProgressIndicator.setManaged(false);
             }
         } else {
-            if (asyncProgressSpinner != null) {
-                asyncProgressSpinner.setProgress(-1);
-                asyncProgressSpinner.setAccessibleText("Working: " + details.getOperationName());
-                asyncProgressSpinner.setVisible(true);
-                asyncProgressSpinner.setManaged(true);
+            if (asyncProgressIndicator != null) {
+                asyncProgressIndicator.setProgress(-1);
+                asyncProgressIndicator.setAccessibleText("Working: " + details.getOperationName());
+                asyncProgressIndicator.setVisible(true);
+                asyncProgressIndicator.setManaged(true);
             }
             if (asyncProgressBar != null) {
                 asyncProgressBar.setVisible(false);

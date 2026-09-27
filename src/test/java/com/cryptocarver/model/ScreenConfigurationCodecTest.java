@@ -13,6 +13,7 @@ class ScreenConfigurationCodecTest {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("CipherController.symmetricAlgorithmCombo", "AES");
         state.put("CipherController.cipherModeCombo", "GCM");
+        state.put("CipherController.symKeySourceCombo", "Manual Input");
         state.put("CipherController.symmetricKeyField", "00112233445566778899AABBCCDDEEFF");
         state.put("CipherController.ivField", "00112233445566778899AABB");
         state.put("CipherController.fileCipherCompactCbcCheck", true);
@@ -27,6 +28,7 @@ class ScreenConfigurationCodecTest {
         assertEquals("Symmetric Ciphers", decoded.operation());
         assertEquals("CIPHER", decoded.module());
         assertEquals("GCM", decoded.toState().get("CipherController.cipherModeCombo"));
+        assertEquals("Manual Input", decoded.toState().get("CipherController.symKeySourceCombo"));
         assertEquals(true, decoded.toState().get("CipherController.fileCipherCompactCbcCheck"));
         assertFalse(decoded.mayContainSecrets());
         assertEquals("[REDACTED_SECRET]", decoded.toState().get("CipherController.symmetricKeyField"));

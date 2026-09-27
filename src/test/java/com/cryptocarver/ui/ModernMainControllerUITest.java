@@ -3156,7 +3156,7 @@ class ModernMainControllerUITest {
                 controller.initialize();
 
                 javafx.scene.layout.HBox box = getField(controller, "asyncProgressBox");
-                javafx.scene.control.ProgressIndicator spinner = getField(controller, "asyncProgressSpinner");
+                javafx.scene.control.ProgressIndicator spinner = getField(controller, "asyncProgressIndicator");
                 javafx.scene.control.ProgressBar bar = getField(controller, "asyncProgressBar");
                 javafx.scene.control.Label label = getField(controller, "asyncProgressLabel");
                 javafx.scene.control.Button cancelBtn = getField(controller, "asyncCancelBtn");

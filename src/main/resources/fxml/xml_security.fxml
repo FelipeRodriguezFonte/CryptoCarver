@@ -79,7 +79,7 @@
 
                         <Label text="TSA (required for T/LT/LTA):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                            <ComboBox fx:id="xmlSignTsaUrlInput" editable="true" promptText="Select a preset or enter your corporate TSA URL" HBox.hgrow="ALWAYS" styleClass="form-field"/>
+                            <ComboBox fx:id="xmlSignTsaUrlText" editable="true" promptText="Select a preset or enter your corporate TSA URL" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button text="Save TSA" onAction="#handleSaveTSA" styleClass="secondary-button"/>
                             <Button text="Test TSA" onAction="#handleTestTSA" styleClass="secondary-button"/>
                         </HBox>
