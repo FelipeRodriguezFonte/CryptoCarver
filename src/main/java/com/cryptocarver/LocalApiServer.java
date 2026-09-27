@@ -2,6 +2,7 @@ package com.cryptocarver;
 
 import com.cryptocarver.model.SafeTransformations;
 import com.cryptocarver.model.BuildInfo;
+import com.cryptocarver.model.batch.BatchOperationCatalog;
 import com.cryptocarver.codec.CodecException;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
@@ -12,6 +13,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
@@ -24,10 +26,12 @@ public final class LocalApiServer implements AutoCloseable {
     private LocalApiServer(HttpServer server) { this.server = server; }
     public static LocalApiServer start(int port) throws IOException {
         if (port < 0 || port > 65535) throw new IllegalArgumentException("Port must be between 0 and 65535");
-        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
         LocalApiServer api = new LocalApiServer(server);
         server.createContext("/openapi.json", api::openApi);
         server.createContext("/health", api::health);
+        server.createContext("/v1/operations", api::operations);
+        server.createContext("/v1/transform/", api::genericTransform);
         server.createContext("/v1/sha256", exchange -> api.transform(exchange, "sha256"));
         server.createContext("/v1/base64url/encode", exchange -> api.transform(exchange, "base64url-encode"));
         server.createContext("/v1/base64url/decode", exchange -> api.transform(exchange, "base64url-decode"));
@@ -35,6 +39,7 @@ public final class LocalApiServer implements AutoCloseable {
         server.start(); return api;
     }
     public int port() { return server.getAddress().getPort(); }
+    public String bindAddress() { return server.getAddress().getAddress().getHostAddress(); }
     @Override public void close() { server.stop(0); }
 
     private static void respond(HttpExchange exchange, int status, Map<String, ?> body) throws IOException {
@@ -102,83 +107,34 @@ public final class LocalApiServer implements AutoCloseable {
     private void openApi(HttpExchange exchange) throws IOException {
         if (!"GET".equals(exchange.getRequestMethod())) { respond(exchange, 405, Map.of("error", "method_not_allowed")); return; }
         if (!checkRateLimitAndCors(exchange)) return;
-        String spec = """
-        {
-          "openapi": "3.0.0",
-          "info": { "title": "CryptoCarver Local API", "version": "%s" },
-          "components": {
-            "schemas": {
-              "Error": {
-                "type": "object",
-                "required": ["error"],
-                "properties": { "error": { "type": "string" } },
-                "additionalProperties": false
-              },
-              "RequestTooLargeError": {
-                "type": "object",
-                "required": ["error", "maxBytes"],
-                "properties": {
-                  "error": { "type": "string", "enum": ["request_too_large"] },
-                  "maxBytes": { "type": "integer", "example": 1048576 }
-                },
-                "additionalProperties": false
-              }
-            }
-          },
-          "paths": {
-            "/health": {
-              "get": {
-                "responses": {
-                  "200": { "description": "OK" },
-                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
-                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
-                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } }
-                }
-              }
-            },
-            "/v1/sha256": {
-              "post": {
-                "responses": {
-                  "200": { "description": "OK" },
-                  "400": { "description": "Invalid request or input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "invalidRequest": { "value": { "error": "invalid_request" } }, "invalidInput": { "value": { "error": "invalid_input" } } } } } },
-                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
-                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
-                  "413": { "description": "Request body exceeds 1 MiB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestTooLargeError" }, "example": { "error": "request_too_large", "maxBytes": 1048576 } } } },
-                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } },
-                  "500": { "description": "Unexpected operation failure", "content": { "application/json": { "example": { "error": "operation_failed" } } } }
-                }
-              }
-            },
-            "/v1/base64url/encode": {
-              "post": {
-                "responses": {
-                  "200": { "description": "OK" },
-                  "400": { "description": "Invalid request or input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "invalidRequest": { "value": { "error": "invalid_request" } }, "invalidInput": { "value": { "error": "invalid_input" } } } } } },
-                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
-                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
-                  "413": { "description": "Request body exceeds 1 MiB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestTooLargeError" }, "example": { "error": "request_too_large", "maxBytes": 1048576 } } } },
-                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } },
-                  "500": { "description": "Unexpected operation failure", "content": { "application/json": { "example": { "error": "operation_failed" } } } }
-                }
-              }
-            },
-            "/v1/base64url/decode": {
-              "post": {
-                "responses": {
-                  "200": { "description": "OK" },
-                  "400": { "description": "Invalid request or input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "invalidRequest": { "value": { "error": "invalid_request" } }, "invalidInput": { "value": { "error": "invalid_input" } } } } } },
-                  "403": { "description": "CORS denied", "content": { "application/json": { "example": { "error": "cors_denied" } } } },
-                  "405": { "description": "Method not allowed", "content": { "application/json": { "example": { "error": "method_not_allowed" } } } },
-                  "413": { "description": "Request body exceeds 1 MiB", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestTooLargeError" }, "example": { "error": "request_too_large", "maxBytes": 1048576 } } } },
-                  "429": { "description": "Rate limit exceeded", "content": { "application/json": { "example": { "error": "rate_limit_exceeded" } } } },
-                  "500": { "description": "Unexpected operation failure", "content": { "application/json": { "example": { "error": "operation_failed" } } } }
-                }
-              }
-            }
-          }
-        }
-        """.formatted(BuildInfo.version());
-        respondString(exchange, 200, spec);
+        Map<String, Object> paths = new LinkedHashMap<>();
+        paths.put("/health", Map.of("get", Map.of("responses", Map.of("200", Map.of("description", "OK")))));
+        paths.put("/v1/operations", Map.of("get", Map.of("responses", Map.of("200", Map.of("description", "Available deterministic operations")))));
+        paths.put("/v1/sha256", legacyOpenApiOperation());
+        paths.put("/v1/base64url/encode", legacyOpenApiOperation());
+        paths.put("/v1/base64url/decode", legacyOpenApiOperation());
+        Map<String, Object> generic = new LinkedHashMap<>();
+        generic.put("post", Map.of("summary", "Apply a catalog operation", "description", "Operation slug is listed by GET /v1/operations.",
+                "parameters", List.of(Map.of("name", "operation", "in", "path", "required", true, "schema", Map.of("type", "string", "enum", BatchOperationCatalog.descriptions().keySet()))),
+                "requestBody", Map.of("required", true, "content", Map.of("application/json", Map.of("schema", Map.of("type", "object", "required", List.of("input"), "properties", Map.of("input", Map.of("type", "string")))))),
+                "responses", Map.of("200", Map.of("description", "Transformed input"), "400", Map.of("description", "Invalid request or input"),
+                        "404", Map.of("description", "Unknown operation"), "413", Map.of("description", "Request body exceeds 1 MiB"))));
+        paths.put("/v1/transform/{operation}", generic);
+        Map<String, Object> spec = Map.of("openapi", "3.0.0", "info", Map.of("title", "CryptoCarver Local API", "version", BuildInfo.version()),
+                "components", Map.of("schemas", Map.of("Error", Map.of("type", "object", "required", List.of("error"), "properties", Map.of("error", Map.of("type", "string")), "additionalProperties", false))), "paths", paths);
+        respond(exchange, 200, spec);
+    }
+
+    private static Map<String, Object> legacyOpenApiOperation() {
+        return Map.of("post", Map.of("responses", Map.of("200", Map.of("description", "OK"), "400", Map.of("description", "Invalid request or input"), "413", Map.of("description", "Request body exceeds 1 MiB"))));
+    }
+
+    private void operations(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) { respond(exchange, 405, Map.of("error", "method_not_allowed")); return; }
+        if (!checkRateLimitAndCors(exchange)) return;
+        Map<String, Object> entries = new LinkedHashMap<>();
+        BatchOperationCatalog.descriptions().forEach((slug, description) -> entries.put(slug, Map.of("description", description)));
+        respond(exchange, 200, Map.of("operations", entries));
     }
 
     private void health(HttpExchange exchange) throws IOException {
@@ -211,5 +167,31 @@ public final class LocalApiServer implements AutoCloseable {
             respond(exchange, 200, Map.of("operation", operation, "result", result));
         } catch (CodecException | IllegalArgumentException e) { respondError(exchange, 400, "invalid_input"); }
         catch (Exception e) { respondError(exchange, 500, "operation_failed"); }
+    }
+
+    private void genericTransform(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { respond(exchange, 405, Map.of("error", "method_not_allowed")); return; }
+        if (!checkRateLimitAndCors(exchange)) return;
+        String path = exchange.getRequestURI().getPath();
+        String slug = path.startsWith("/v1/transform/") ? path.substring("/v1/transform/".length()) : "";
+        if (slug.isBlank() || slug.contains("/")) { respondError(exchange, 404, "unknown_operation"); return; }
+        String operation = BatchOperationCatalog.getAvailableOperations().stream()
+                .filter(candidate -> BatchOperationCatalog.slug(candidate).equals(slug)).findFirst().orElse(null);
+        if (operation == null) { respondError(exchange, 404, "unknown_operation"); return; }
+        try {
+            byte[] bytes = exchange.getRequestBody().readNBytes(MAX_REQUEST_BYTES + 1);
+            if (bytes.length > MAX_REQUEST_BYTES) { respond(exchange, 413, Map.of("error", "request_too_large", "maxBytes", MAX_REQUEST_BYTES)); return; }
+            Map<String, Object> request;
+            try {
+                @SuppressWarnings("unchecked") Map<String, Object> parsed = GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), Map.class);
+                request = parsed;
+            } catch (JsonParseException e) { respondError(exchange, 400, "invalid_request"); return; }
+            Object input = request == null ? null : request.get("input");
+            if (!(input instanceof String value)) { respondError(exchange, 400, "invalid_request"); return; }
+            String result = BatchOperationCatalog.execute(operation, Map.of("input", value), "input", "result").get("result");
+            respond(exchange, 200, Map.of("operation", slug, "result", result));
+        } catch (CodecException | IllegalArgumentException e) {
+            respondError(exchange, 400, e.getMessage() == null ? "invalid_input" : e.getMessage());
+        } catch (Exception e) { respondError(exchange, 400, e.getMessage() == null ? "invalid_input" : e.getMessage()); }
     }
 }

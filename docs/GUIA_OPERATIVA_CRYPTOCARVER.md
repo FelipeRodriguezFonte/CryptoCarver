@@ -107,6 +107,22 @@ Hay tres procesos de ejemplo en `docs/examples/processes/`, verificados con vect
 - `mc-data-storage.json`: `MC_DS_PARTIAL_KEY`, `MC_DS_DIGEST` y `MC_DS_SUMMARY`; requiere `--set summary.un=11223344`.
 - `visa-hce.json`: `VISA_HCE_LUK`, `VISA_HCE_MSD` y `VISA_HCE_QVSDC`; requiere `--set luk.smUdk=94E3194C02105E3B153438D562D5A49D --set msd.atc=0001`.
 - `emv-secure-messaging.json`: `EMV_SM_CARD_KEY`, `EMV_SM_SESSION_KEY` y `EMV_SM_MAC`; requiere `--set card.smMk=862F13DF807A13B9D9AEAEC885FE7CA4 --set session.smAc=51DB71A5DCC47F8A --set mac.smAc=51DB71A5DCC47F8A --set mac.atc=0010`.
+## API REST local
+
+El servidor local solo enlaza `127.0.0.1`. Inícielo desde la CLI con `serve [--port 8787]`; `GET /health` comprueba disponibilidad y `GET /openapi.json` publica la especificación actualizada desde el catálogo batch.
+
+`GET /v1/operations` devuelve un objeto indexado por slug estable, con descripción. Para transformar texto envíe JSON con el campo `input` a `POST /v1/transform/{operation}`. La respuesta contiene el slug y `result`; si la operación devuelve JSON, `result` contiene ese JSON serializado como texto.
+
+```bash
+curl http://127.0.0.1:8787/v1/operations
+curl -X POST http://127.0.0.1:8787/v1/transform/sha-256 \\
+  -H 'Content-Type: application/json' -d '{"input":"abc"}'
+```
+
+El slug se obtiene de los nombres del catálogo: por ejemplo, `SHA-256 (UTF-8 → Hex)` es `sha-256`, `SHA3-256 (UTF-8 → Hex)` es `sha3-256`, CRC32C es `crc32c` y `UTF-8 → Hexadecimal` es `utf8-to-hex`. Los endpoints anteriores `/v1/sha256`, `/v1/base64url/encode` y `/v1/base64url/decode` siguen disponibles. El límite de petición es 1 MiB. Una operación desconocida responde 404; JSON o entradas no válidas responden 400 con un mensaje claro. El servicio no ofrece operaciones con claves ni PIN.
+
+El catálogo incluye SHA-1, SHA-224, SHA3-256, SHA3-512 y MD5 (marcado como legacy), CRC32/CRC32C, conversiones Base32/Base58/Base94 y BCD empaquetado, AMEX SE, validación PAN, Track 2, EMV TLV, estado APDU e inspección ASN.1/TLV, además de las transformaciones previas. BCD rellena con un cero inicial las entradas decimales de longitud impar. BLAKE2b-256 no está disponible en `HashOperations`.
+
 # Informe de cadena PKI por línea de comandos
 
 `chain-report <cadena.pem>` escribe un diagnóstico Markdown en la salida estándar. Opcionalmente, `--truststore fichero.p12 --password-env VAR` carga un truststore PKCS#12; el secreto se lee solo de la variable de entorno indicada. Se pueden añadir CRL u OCSP locales con `--crl fichero.crl` y `--ocsp fichero.der` (repetibles). El informe no realiza consultas de red por defecto.

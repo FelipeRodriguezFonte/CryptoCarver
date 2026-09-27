@@ -187,17 +187,21 @@ public final class CryptoCarverCli {
         final String col = column;
         if (rows.stream().anyMatch(row -> !row.containsKey(col))) throw new IllegalArgumentException("Every batch row requires field: " + col);
 
-        BatchRunner.Report report = BatchRunner.run(rows, (rowNum, row) -> Map.of("result", switch (operation) {
-            case "sha256" -> com.cryptocarver.model.SafeTransformations.sha256(row.get(col));
-            case "base64url-encode" -> com.cryptocarver.model.SafeTransformations.encodeBase64Url(row.get(col));
-            case "base64url-decode" -> com.cryptocarver.model.SafeTransformations.decodeBase64Url(row.get(col));
-            case "compress-gzip" -> com.cryptocarver.model.SafeTransformations.compressGzip(row.get(col));
-            case "decompress-gzip" -> com.cryptocarver.model.SafeTransformations.decompressGzip(row.get(col));
-            case "inspect-asn1" -> com.cryptocarver.model.SafeTransformations.inspectAsn1(row.get(col));
-            case "inspect-tlv" -> com.cryptocarver.model.SafeTransformations.inspectTlv(row.get(col));
-            case "hmac-sha256" -> hmacSha256(row.get(col));
-            default -> throw new IllegalArgumentException("Unsupported batch operation: " + operation);
-        }), () -> false);
+        if ("hmac-sha256".equalsIgnoreCase(operation)) {
+            throw new IllegalArgumentException("HMAC is not available in batch operations");
+        }
+        BatchRunner.Report report = BatchRunner.run(rows, (rowNum, row) -> {
+            String value = row.get(col);
+            if (com.cryptocarver.model.batch.BatchOperationCatalog.isSupportedOperation(operation)) {
+                return com.cryptocarver.model.batch.BatchOperationCatalog.execute(operation, row, col, "result");
+            }
+            // Preserve the pre-catalogue gzip options while keeping secret/key operations out of batch.
+            return Map.of("result", switch (operation) {
+                case "compress-gzip" -> com.cryptocarver.model.SafeTransformations.compressGzip(value);
+                case "decompress-gzip" -> com.cryptocarver.model.SafeTransformations.decompressGzip(value);
+                default -> throw new IllegalArgumentException("Unsupported batch operation: " + operation);
+            });
+        }, () -> false);
         if (json) {
             out.println(new Gson().toJson(Map.of(
                     "operation", "batch",
@@ -618,6 +622,7 @@ public final class CryptoCarverCli {
         out.println("CryptoCarver CLI (local laboratory operations)");
         out.println("  sha256|base64url-encode|base64url-decode|compress-gzip|decompress-gzip|inspect-asn1|inspect-tlv|hmac-sha256 <value> [--json]");
         out.println("  batch <operation> <file> [--format csv|jsonl] [--output csv|jsonl] [--column name]");
+        out.println("    Batch operations use the keyless BatchOperationCatalog aliases (for example sha-1, crc32c, utf8-to-hex, inspect-asn1).");
         out.println("  run-process <file.json> [--set node.param=value ...] [--batch file|-> [--format csv|jsonl] [--output csv|jsonl]] [--json] [--reveal-secrets]");
         out.println("  icsf-token <hex> [--provenance kds-crudo|key-record-read|inferir] [--json]");
         out.println("  icsf-batch <file|-> [--format auto|linea|dos-filas] [--provenance ...] [--detail]");

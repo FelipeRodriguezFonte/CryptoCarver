@@ -18,11 +18,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class BatchOperationCatalogTest {
 
     @Test
-    @DisplayName("Catalog lists all 17 permitted operations in exact expected order")
+    @DisplayName("Catalog preserves the original operation order and includes additions")
     void testCatalogAvailableOperations() {
         List<String> ops = BatchOperationCatalog.getAvailableOperations();
         assertNotNull(ops);
-        assertEquals(17, ops.size());
+        assertTrue(ops.size() > 17);
 
         assertEquals("SHA-256 (UTF-8 → Hex)", ops.get(0));
         assertEquals("SHA-384 (UTF-8 → Hex)", ops.get(1));
@@ -183,6 +183,69 @@ class BatchOperationCatalogTest {
         assertEquals("4", execute(BatchOperationCatalog.DAMM_CALCULATE_CHECK_DIGIT, "572"));
         assertEquals("true", execute(BatchOperationCatalog.DAMM_VALIDATE_CHECK_DIGIT, "5724"));
         assertEquals("false", execute(BatchOperationCatalog.DAMM_VALIDATE_CHECK_DIGIT, "5725"));
+    }
+
+    @Test
+    @DisplayName("Expanded deterministic catalog operations have known vectors and reject malformed inputs")
+    void expandedOperationsKnownVectorsAndErrors() throws Exception {
+        assertEquals("a9993e364706816aba3e25717850c26c9cd0d89d", execute("sha-1", "abc"));
+        assertEquals("23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7", execute("sha-224 (utf-8 → hex)", "abc"));
+        assertEquals("3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532", execute("SHA3-256 (UTF-8 → Hex)", "abc"));
+        assertEquals("b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0", execute("SHA3-512 (UTF-8 → Hex)", "abc"));
+        assertEquals("900150983cd24fb0d6963f7d28e17f72", execute("MD5 (legacy; UTF-8 → Hex)", "abc"));
+        assertEquals("cbf43926", execute("CRC32 (UTF-8 → Hex)", "123456789"));
+        assertEquals("e3069283", execute("CRC32C (UTF-8 → Hex)", "123456789"));
+        assertEquals("MZXW6===", execute("UTF-8 → Base32", "foo"));
+        assertEquals("foo", execute("Base32 → UTF-8", "MZXW6==="));
+        assertEquals("JxF12TrwUP45BMd", execute("UTF-8 → Base58", "Hello World"));
+        assertEquals("Hello World", execute("Base58 → UTF-8", "JxF12TrwUP45BMd"));
+        assertEquals(")(h\"", execute("UTF-8 → Base94", "foo"));
+        assertEquals("foo", execute("Base94 → UTF-8", ")(h\""));
+        assertEquals("012345", execute("Decimal → Packed BCD Hex", "12345"));
+        assertEquals("012345", execute("Packed BCD Hex → Decimal", "012345"));
+        assertEquals("3", execute("AMEX SE → Calculate Check Digit", "7992739871"));
+        assertEquals("true", execute("PAN → Validate (Luhn, 13–19 digits)", "4111111111111111"));
+        assertEquals("false", execute("PAN → Validate (Luhn, 13–19 digits)", "4111111111111112"));
+        assertEquals("{\n  \"pan\": \"1234567890123456\",\n  \"expiry\": \"2512\",\n  \"serviceCode\": \"101\"\n}", execute("Track 2 → Analyze JSON", "1234567890123456D2512101F"));
+        assertTrue(execute("EMV TLV → JSON", "9F0206000000000100").contains("9F02"));
+        assertTrue(execute("APDU Status → Inspect", "9000").contains("SUCCESS"));
+        assertTrue(execute("ASN.1 → Inspect", "3003020101").contains("INTEGER"));
+        assertTrue(execute("TLV → Inspect", "5A081234567890123456").contains("5A"));
+
+        for (String op : List.of("SHA-1 (UTF-8 → Hex)", "SHA-224 (UTF-8 → Hex)", "SHA3-256 (UTF-8 → Hex)",
+                "SHA3-512 (UTF-8 → Hex)", "MD5 (legacy; UTF-8 → Hex)", "CRC32 (UTF-8 → Hex)", "CRC32C (UTF-8 → Hex)")) {
+            assertNotEquals("", execute(op, ""));
+        }
+        assertThrows(IllegalArgumentException.class, () -> execute("Base32 → UTF-8", "!"));
+        assertThrows(IllegalArgumentException.class, () -> execute("Base58 → UTF-8", "0"));
+        assertThrows(IllegalArgumentException.class, () -> execute("Base94 → UTF-8", " !"));
+        assertThrows(IllegalArgumentException.class, () -> execute("Decimal → Packed BCD Hex", "12x"));
+        assertThrows(IllegalArgumentException.class, () -> execute("Packed BCD Hex → Decimal", "0"));
+        assertThrows(IllegalArgumentException.class, () -> execute("AMEX SE → Calculate Check Digit", "12x"));
+        assertThrows(IllegalArgumentException.class, () -> execute("Track 2 → Analyze JSON", "not-track-data"));
+        assertThrows(IllegalArgumentException.class, () -> execute("EMV TLV → JSON", "ZZ"));
+        assertThrows(IllegalArgumentException.class, () -> execute("APDU Status → Inspect", "900"));
+        assertThrows(Exception.class, () -> execute("ASN.1 → Inspect", "ZZ"));
+        assertThrows(IllegalArgumentException.class, () -> execute("TLV → Inspect", "ZZ"));
+
+        for (String op : BatchOperationCatalog.getAvailableOperations()) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> BatchOperationCatalog.execute(op, Map.of(), "input", "output"), op);
+        }
+    }
+
+    @Test
+    void operationSlugsAreStableAndUnique() {
+        assertEquals("sha-256", BatchOperationCatalog.slug(BatchOperationCatalog.SHA256_UTF8_HEX));
+        assertEquals("sha-1", BatchOperationCatalog.slug("SHA-1 (UTF-8 → Hex)"));
+        assertEquals("sha3-256", BatchOperationCatalog.slug("SHA3-256 (UTF-8 → Hex)"));
+        assertEquals("crc32c", BatchOperationCatalog.slug("CRC32C (UTF-8 → Hex)"));
+        assertEquals("utf8-to-hex", BatchOperationCatalog.slug(BatchOperationCatalog.UTF8_TO_HEX));
+        assertEquals(BatchOperationCatalog.getAvailableOperations().size(),
+                BatchOperationCatalog.getAvailableOperations().stream().map(BatchOperationCatalog::slug).distinct().count());
+        for (String operation : BatchOperationCatalog.getAvailableOperations()) {
+            assertEquals(operation, BatchOperationCatalog.resolveOperationName(BatchOperationCatalog.slug(operation)));
+        }
     }
 
     @Test

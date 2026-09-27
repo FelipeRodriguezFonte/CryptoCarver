@@ -20,11 +20,13 @@ import eu.europa.esig.dss.asic.xades.ASiCWithXAdESSignatureParameters;
 import eu.europa.esig.dss.asic.xades.signature.ASiCWithXAdESService;
 import eu.europa.esig.dss.asic.cades.ASiCWithCAdESSignatureParameters;
 import eu.europa.esig.dss.asic.cades.signature.ASiCWithCAdESService;
+import eu.europa.esig.dss.asic.common.signature.AbstractASiCSignatureService;
 import eu.europa.esig.dss.enumerations.ASiCContainerType;
 import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.model.SerializableSignatureParameters;
 import eu.europa.esig.dss.model.SignatureValue;
 import eu.europa.esig.dss.model.ToBeSigned;
 import eu.europa.esig.dss.service.tsp.OnlineTSPSource;
@@ -58,14 +60,8 @@ public final class AsicOperations {
     public static byte[] signAsicS(byte[] content, String fileName, File pkcs12File, char[] password,
                                    String format, String level, String tsaUrl,
                                    List<File> revocationFiles, boolean onlineRevocation) throws Exception {
-        DSSDocument payload = asicSPayload(content, fileName);
-        if ("XAdES".equalsIgnoreCase(format)) {
-            return signXades(List.of(payload), ASiCContainerType.ASiC_S,
-                    pkcs12File, password, null, level, tsaUrl, revocationFiles, onlineRevocation);
-        }
-        requireCades(format);
-        return signCades(List.of(payload), ASiCContainerType.ASiC_S,
-                pkcs12File, password, null, level, tsaUrl, revocationFiles, onlineRevocation);
+        return signAsic(List.of(asicSPayload(content, fileName)), ASiCContainerType.ASiC_S,
+                pkcs12File, password, null, format, level, tsaUrl, revocationFiles, onlineRevocation);
     }
 
     /** Signs an ASiC-E container at the requested CAdES or XAdES baseline level. */
@@ -75,25 +71,16 @@ public final class AsicOperations {
         AsicEManifest manifest = prepareAsicEManifest(payloads);
         List<DSSDocument> documents = new java.util.ArrayList<>();
         manifest.payloads().forEach((name, value) -> documents.add(new InMemoryDocument(value, name)));
-        if ("XAdES".equalsIgnoreCase(format)) {
-            return signXades(documents, ASiCContainerType.ASiC_E, pkcs12File, password, null,
-                    level, tsaUrl, revocationFiles, onlineRevocation);
-        }
-        requireCades(format);
-        return signCades(documents, ASiCContainerType.ASiC_E, pkcs12File, password, null,
-                level, tsaUrl, revocationFiles, onlineRevocation);
+        return signAsic(documents, ASiCContainerType.ASiC_E, pkcs12File, password, null,
+                format, level, tsaUrl, revocationFiles, onlineRevocation);
     }
 
     /** Token-backed ASiC-S signing. */
     public static byte[] signAsicS(byte[] content, String fileName, AbstractKeyStoreTokenConnection token,
                                    String alias, String format, String level, String tsaUrl,
                                    List<File> revocationFiles, boolean onlineRevocation) throws Exception {
-        DSSDocument payload = asicSPayload(content, fileName);
-        if ("XAdES".equalsIgnoreCase(format)) return signXades(List.of(payload),
-                ASiCContainerType.ASiC_S, null, null, new TokenKey(token, alias), level, tsaUrl, revocationFiles, onlineRevocation);
-        requireCades(format);
-        return signCades(List.of(payload), ASiCContainerType.ASiC_S,
-                null, null, new TokenKey(token, alias), level, tsaUrl, revocationFiles, onlineRevocation);
+        return signAsic(List.of(asicSPayload(content, fileName)), ASiCContainerType.ASiC_S,
+                null, null, new TokenKey(token, alias), format, level, tsaUrl, revocationFiles, onlineRevocation);
     }
 
     private static DSSDocument asicSPayload(byte[] content, String fileName) {
@@ -109,82 +96,75 @@ public final class AsicOperations {
         AsicEManifest manifest = prepareAsicEManifest(payloads);
         List<DSSDocument> documents = new java.util.ArrayList<>();
         manifest.payloads().forEach((name, value) -> documents.add(new InMemoryDocument(value, name)));
-        if ("XAdES".equalsIgnoreCase(format)) {
-            return signXades(documents, ASiCContainerType.ASiC_E, null, null, new TokenKey(token, alias),
-                    level, tsaUrl, revocationFiles, onlineRevocation);
-        }
-        requireCades(format);
-        return signCades(documents, ASiCContainerType.ASiC_E, null, null, new TokenKey(token, alias),
-                level, tsaUrl, revocationFiles, onlineRevocation);
+        return signAsic(documents, ASiCContainerType.ASiC_E, null, null, new TokenKey(token, alias),
+                format, level, tsaUrl, revocationFiles, onlineRevocation);
     }
 
     private record TokenKey(AbstractKeyStoreTokenConnection token, String alias) { }
 
-    private static byte[] signCades(List<DSSDocument> documents, ASiCContainerType type, File file, char[] password,
-                                    TokenKey tokenKey, String levelName, String tsa, List<File> evidence,
-                                    boolean online) throws Exception {
-        SignatureLevel level = cadesLevel(levelName);
+    private static byte[] signAsic(List<DSSDocument> documents, ASiCContainerType type, File file, char[] password,
+                                   TokenKey tokenKey, String format, String levelName, String tsa,
+                                   List<File> evidence, boolean online) throws Exception {
+        boolean xades = "XAdES".equalsIgnoreCase(format);
+        if (!xades && !"CAdES".equalsIgnoreCase(format)) {
+            throw new IllegalArgumentException("Unsupported ASiC signature format: " + format);
+        }
+        SignatureLevel level = xades ? xadesLevel(levelName) : cadesLevel(levelName);
         requireLevel(level, tsa, evidence, online);
         char[] pass = password == null ? new char[0] : password.clone();
         KeyStoreSignatureTokenConnection local = null;
         try {
             AbstractKeyStoreTokenConnection token;
             DSSPrivateKeyEntry key;
-            if (tokenKey != null) { token = tokenKey.token(); key = token.getKey(tokenKey.alias()); }
-            else {
+            if (tokenKey != null) {
+                token = tokenKey.token();
+                key = token.getKey(tokenKey.alias());
+            } else {
                 local = new KeyStoreSignatureTokenConnection(file, "PKCS12", new KeyStore.PasswordProtection(pass));
-                token = local; key = token.getKeys().isEmpty() ? null : token.getKeys().get(0);
+                token = local;
+                key = token.getKeys().isEmpty() ? null : token.getKeys().get(0);
             }
             if (key == null) throw new IllegalArgumentException("Signing key was not found");
+            CommonCertificateVerifier certificateVerifier = verifier(evidence, online);
+            if (xades) {
+                ASiCWithXAdESSignatureParameters parameters = new ASiCWithXAdESSignatureParameters();
+                parameters.setSignatureLevel(level);
+                parameters.setDigestAlgorithm(DigestAlgorithm.SHA256);
+                parameters.setSigningCertificate(key.getCertificate());
+                parameters.setCertificateChain(key.getCertificateChain());
+                parameters.aSiC().setContainerType(type);
+                return signWithService(documents, parameters, new ASiCWithXAdESService(certificateVerifier),
+                        token, key, level, tsa);
+            }
             ASiCWithCAdESSignatureParameters parameters = new ASiCWithCAdESSignatureParameters();
             parameters.setSignatureLevel(level);
             parameters.setDigestAlgorithm(DigestAlgorithm.SHA256);
             parameters.setSigningCertificate(key.getCertificate());
             parameters.setCertificateChain(key.getCertificateChain());
             parameters.aSiC().setContainerType(type);
-            ASiCWithCAdESService service = new ASiCWithCAdESService(verifier(evidence, online));
-            if (tsa != null && !tsa.isBlank()) service.setTspSource(new OnlineTSPSource(validateTsa(tsa)));
-            ToBeSigned toSign = service.getDataToSign(documents, parameters);
-            SignatureValue value = token.sign(toSign, parameters.getDigestAlgorithm(), key);
-            DSSDocument signed = service.signDocument(documents, parameters, value);
-            if (level == SignatureLevel.CAdES_BASELINE_LT) signed = service.extendDocument(signed, parameters);
-            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) { signed.writeTo(out); return out.toByteArray(); }
-        } finally { if (local != null) local.close(); Arrays.fill(pass, '\0'); }
+            return signWithService(documents, parameters, new ASiCWithCAdESService(certificateVerifier),
+                    token, key, level, tsa);
+        } finally {
+            if (local != null) local.close();
+            Arrays.fill(pass, '\0');
+        }
     }
 
-    private static byte[] signXades(List<DSSDocument> documents, ASiCContainerType type, File file, char[] password,
-                                    TokenKey tokenKey, String levelName, String tsa, List<File> evidence,
-                                    boolean online) throws Exception {
-        SignatureLevel level = xadesLevel(levelName);
-        requireLevel(level, tsa, evidence, online);
-        char[] pass = password == null ? new char[0] : password.clone();
-        KeyStoreSignatureTokenConnection local = null;
-        try {
-            AbstractKeyStoreTokenConnection token;
-            DSSPrivateKeyEntry key;
-            if (tokenKey != null) { token = tokenKey.token(); key = token.getKey(tokenKey.alias()); }
-            else {
-                local = new KeyStoreSignatureTokenConnection(file, "PKCS12", new KeyStore.PasswordProtection(pass));
-                token = local; key = token.getKeys().isEmpty() ? null : token.getKeys().get(0);
-            }
-            if (key == null) throw new IllegalArgumentException("Signing key was not found");
-            ASiCWithXAdESSignatureParameters parameters = new ASiCWithXAdESSignatureParameters();
-            parameters.setSignatureLevel(level); parameters.setDigestAlgorithm(DigestAlgorithm.SHA256);
-            parameters.setSigningCertificate(key.getCertificate()); parameters.setCertificateChain(key.getCertificateChain());
-            parameters.aSiC().setContainerType(type);
-            CommonCertificateVerifier verifier = verifier(evidence, online);
-            ASiCWithXAdESService service = new ASiCWithXAdESService(verifier);
-            if (tsa != null && !tsa.isBlank()) service.setTspSource(new OnlineTSPSource(validateTsa(tsa)));
-            ToBeSigned toSign = service.getDataToSign(documents, parameters);
-            SignatureValue value = token.sign(toSign, parameters.getDigestAlgorithm(), key);
-            DSSDocument signed = service.signDocument(documents, parameters, value);
-            if (level == SignatureLevel.XAdES_BASELINE_LT) signed = service.extendDocument(signed, parameters);
-            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) { signed.writeTo(out); return out.toByteArray(); }
-        } finally { if (local != null) local.close(); Arrays.fill(pass, '\0'); }
-    }
-
-    private static void requireCades(String format) {
-        if (!"CAdES".equalsIgnoreCase(format)) throw new IllegalArgumentException("Unsupported ASiC signature format: " + format);
+    private static <P extends SerializableSignatureParameters> byte[] signWithService(
+            List<DSSDocument> documents, P parameters, AbstractASiCSignatureService<P, ?, ?, ?> service,
+            AbstractKeyStoreTokenConnection token, DSSPrivateKeyEntry key, SignatureLevel level,
+            String tsa) throws Exception {
+        if (tsa != null && !tsa.isBlank()) service.setTspSource(new OnlineTSPSource(validateTsa(tsa)));
+        ToBeSigned toSign = service.getDataToSign(documents, parameters);
+        SignatureValue value = token.sign(toSign, parameters.getDigestAlgorithm(), key);
+        DSSDocument signed = service.signDocument(documents, parameters, value);
+        if (level == SignatureLevel.CAdES_BASELINE_LT || level == SignatureLevel.XAdES_BASELINE_LT) {
+            signed = service.extendDocument(signed, parameters);
+        }
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            signed.writeTo(out);
+            return out.toByteArray();
+        }
     }
     private static SignatureLevel cadesLevel(String level) { return switch(level.toUpperCase(java.util.Locale.ROOT)) {
         case "B" -> SignatureLevel.CAdES_BASELINE_B; case "T" -> SignatureLevel.CAdES_BASELINE_T;

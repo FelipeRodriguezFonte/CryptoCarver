@@ -59,4 +59,23 @@ class CryptoCarverCliTest {
         assertTrue(output.toString().contains("\"operation\":\"batch\""));
         Files.deleteIfExists(csv);
     }
+
+    @Test void batchUsesNewCatalogOperationsAndRejectsSecretOperation() throws Exception {
+        Path csv = Files.createTempFile("cryptocarver-cli-catalog-", ".csv");
+        Files.writeString(csv, "input\nabc\n", StandardCharsets.UTF_8);
+        StringWriter output = new StringWriter();
+        assertEquals(0, CryptoCarverCli.run(new String[] { "batch", "sha-1", csv.toString(), "--format", "csv", "--output", "jsonl" },
+                new PrintWriter(output), new PrintWriter(new StringWriter())));
+        assertTrue(output.toString().contains("a9993e364706816aba3e25717850c26c9cd0d89d"));
+        StringWriter encoded = new StringWriter();
+        assertEquals(0, CryptoCarverCli.run(new String[] { "batch", "utf8-to-base32", csv.toString(), "--format", "csv" },
+                new PrintWriter(encoded), new PrintWriter(new StringWriter())));
+        assertEquals("MFRGG===", com.google.gson.JsonParser.parseString(encoded.toString())
+                .getAsJsonObject().getAsJsonObject("output").get("result").getAsString());
+        StringWriter error = new StringWriter();
+        assertEquals(CryptoCarverCli.EXIT_INVALID_ARGS, CryptoCarverCli.run(new String[] { "batch", "hmac-sha256", csv.toString() },
+                new PrintWriter(new StringWriter()), new PrintWriter(error)));
+        assertTrue(error.toString().contains("not available in batch"));
+        Files.deleteIfExists(csv);
+    }
 }

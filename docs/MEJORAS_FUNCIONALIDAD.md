@@ -32,15 +32,17 @@ Continúa sin implementación ni vectores públicos incorporados. Mantener el re
 - Previsualización manual de CEK JWE: hecha para los algoritmos admitidos por `JWEManualCekRecovery` (`JweManualCekRecoveryTest`); otros algoritmos siguen fuera de su inventario.
 - Conversión JWK OKP Ed25519/Ed448: hecha en `KeyCertificateFormatService` (`KeyCertificateFormatServiceTest`, ida y vuelta JWK/PEM para ambas curvas).
 
-## 8. Batch Runner — catálogo limitado — parcial
+## 8. Batch Runner — catálogo determinista — hecho
 
-`BatchOperationCatalog` ya incluye hashes, conversiones de formatos y dígitos de control, con cobertura en `BatchOperationCatalogTest`; la antigua descripción «solo SHA-256 y Base64URL» está desfasada. Queda ampliar el catálogo a otras operaciones deterministas aptas para lote.
+`BatchOperationCatalog` ofrece hashes SHA-1, SHA-224, SHA3-256, SHA3-512 y MD5 (identificado como legacy), CRC32/CRC32C, conversiones UTF-8/Hex/Base64/Base64URL/Base32/Base58/Base94 y BCD empaquetado, dígitos AMEX SE, validación PAN, análisis Track 2 y EMV TLV, estado APDU e inspección ASN.1/TLV. Las operaciones reutilizan `HashOperations`, `CodecRegistry`, `DataConverter`, `CheckDigitCalculator`, `PaymentOperations`, `EmvTlv`, `ApduStatus` y `SafeTransformations`; no reciben claves ni PIN. La CLI `batch` y la selección de lotes de la interfaz leen el catálogo automáticamente.
+
+No hay implementación BLAKE2b-256 en `HashOperations`; esa variante no se ofrece. Para BCD, las entradas impares se rellenan con un cero inicial al empaquetar.
 
 `run-process --batch` permite aplicar columnas `nodo.parametro` a procesos guardados, con una ejecución y un resultado por fila; véase `CryptoCarverCli` y los tests del modo lote.
 
-## 9. API REST local — pendiente de ampliación
+## 9. API REST local — catálogo batch — hecho
 
-`LocalApiServer` continúa limitado a `/v1/sha256` y a codificación/decodificación Base64URL (`LocalApiServerTest`). No cubre todavía el catálogo batch; conserva el acceso por loopback.
+`LocalApiServer` publica `GET /v1/operations` y `POST /v1/transform/{operation}` para las operaciones del catálogo batch. Los slugs estables y descripciones proceden de `BatchOperationCatalog`; `/openapi.json` se construye usando ese catálogo. Se mantienen `/v1/sha256` y los dos endpoints Base64URL históricos. El servicio escucha exclusivamente en `127.0.0.1`, limita las peticiones a 1 MiB y devuelve 400 para entradas incorrectas y 404 para slugs desconocidos. No expone operaciones con claves o PIN. La cobertura está en `LocalApiServerTest`.
 
 ## 10. Exportación de informes PKI — hecho
 
