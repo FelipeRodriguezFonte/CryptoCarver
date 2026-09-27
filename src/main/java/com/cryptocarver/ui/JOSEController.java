@@ -12,6 +12,8 @@ import java.util.Map;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
 import com.cryptocarver.crypto.JWEManualCekRecovery;
+import com.cryptocarver.crypto.JoseKeyMaterial;
+import com.cryptocarver.crypto.JweComposer;
 import com.cryptocarver.crypto.SignerConfig;
 import com.cryptocarver.model.OperationResult;
 
@@ -93,14 +95,23 @@ public class JOSEController implements Initializable {
 
             // Init JWE Combos
             if (jweKeyAlgoCombo != null && jweKeyAlgoCombo.getItems().isEmpty()) {
-                jweKeyAlgoCombo.getItems().setAll(
-                        "RSA-OAEP-256", "RSA-OAEP-512",
-                        "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A256KW");
+                jweKeyAlgoCombo.getItems().setAll(JweComposer.KEY_ALGORITHMS);
                 jweKeyAlgoCombo.getSelectionModel().selectFirst();
             }
             if (jweContentAlgoCombo != null && jweContentAlgoCombo.getItems().isEmpty()) {
-                jweContentAlgoCombo.getItems().setAll("A128GCM", "A256GCM", "A128CBC-HS256", "A256CBC-HS512");
+                jweContentAlgoCombo.getItems().setAll(JweComposer.CONTENT_ALGORITHMS);
                 jweContentAlgoCombo.getSelectionModel().select("A256GCM");
+            }
+            for (ComboBox<String> format : java.util.Arrays.asList(jweKeyFormatCombo, jweDecryptKeyFormatCombo)) {
+                if (format != null && format.getItems().isEmpty()) {
+                    for (JoseKeyMaterial.SecretEncoding encoding : JoseKeyMaterial.SecretEncoding.values()) {
+                        format.getItems().add(encoding.label());
+                    }
+                    format.getSelectionModel().selectFirst();
+                }
+            }
+            if (jwePbes2IterField != null && jwePbes2IterField.getText().isBlank()) {
+                jwePbes2IterField.setText(String.valueOf(JweComposer.DEFAULT_PBES2_ITERATIONS));
             }
 
             // Init Nested Combos
@@ -137,9 +148,9 @@ public class JOSEController implements Initializable {
         IngestionUIHelper.bindField(jwtKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(jwtValidateTokenArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
         IngestionUIHelper.bindField(jwtValidateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-        IngestionUIHelper.bindField(jwePublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+        IngestionUIHelper.bindField(jwePublicKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(jweInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
-        IngestionUIHelper.bindField(jwePrivateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+        IngestionUIHelper.bindField(jwePrivateKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
 
             // Init JWA Table
             if (jwaTable != null && jwaTable.getItems().isEmpty()) {
@@ -222,25 +233,29 @@ public class JOSEController implements Initializable {
     @FXML
     public void handlePasteJwePublicKey() {
         IngestionUIHelper.pasteFromClipboard(jwePublicKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     @FXML
     public void handlePopulateJwePubKeyShelf() {
         IngestionUIHelper.populateShelfMenu(jwePubKeyShelfMenu, jwePublicKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY);
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     @FXML
     public void handlePasteJwePrivateKey() {
         IngestionUIHelper.pasteFromClipboard(jwePrivateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     @FXML
     public void handlePopulateJwePrivKeyShelf() {
         IngestionUIHelper.populateShelfMenu(jwePrivKeyShelfMenu, jwePrivateKeyArea, null, null,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY,
+                com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
     }
 
     public void showSection(String sectionName) {
@@ -810,6 +825,18 @@ public class JOSEController implements Initializable {
 
             if (isBlank(jwePayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwePayloadArea"); return; }
             if (isBlank(jwePublicKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePublicKeyArea"); return; }
+            int iterations = JweComposer.DEFAULT_PBES2_ITERATIONS;
+            if (jwePbes2IterField != null && !jwePbes2IterField.getText().isBlank()) {
+                try {
+                    iterations = Integer.parseInt(jwePbes2IterField.getText().trim());
+                } catch (NumberFormatException e) {
+                    iterations = -1;
+                }
+                if (iterations < 1000) {
+                    showValidation(t("module.jose.feedback.pbes2Iterations"), "jwePbes2IterField");
+                    return;
+                }
+            }
 
             this.generateJWE(
                     jwePayloadArea.getText(),
@@ -817,10 +844,11 @@ public class JOSEController implements Initializable {
                     jweContentAlgoCombo.getValue(),
                     jwePublicKeyArea.getText(),
                     jweCompressCheck.isSelected(),
+                    new JweComposer.HeaderOptions(textOf(jweKidField), textOf(jweTypField), textOf(jweCtyField),
+                            textOf(jweApuField), textOf(jweApvField), textOf(jweCustomHeaderArea)),
+                    secretEncoding(jweKeyFormatCombo),
+                    iterations,
                     jweOutputArea);
-            Map<String, String> details = new HashMap<>(
-                    Map.of("alg", jweKeyAlgoCombo.getValue(), "enc", jweContentAlgoCombo.getValue()));
-            details.put("Compression", jweCompressCheck.isSelected() ? "Yes" : "No");
 
         }
 
@@ -833,6 +861,7 @@ public class JOSEController implements Initializable {
             this.decryptJWE(
                     jweInputArea.getText(),
                     jwePrivateKeyArea.getText(),
+                    secretEncoding(jweDecryptKeyFormatCombo),
                     jweDecodedHeaderArea,
                     jweDecodedPayloadArea,
                     jweHeaderArea,
@@ -950,6 +979,14 @@ public class JOSEController implements Initializable {
         if (statusReporter != null) {
             statusReporter.showError(title, content);
         }
+    }
+
+    private static String textOf(TextInputControl control) {
+        return control == null ? null : control.getText();
+    }
+
+    private static JoseKeyMaterial.SecretEncoding secretEncoding(ComboBox<String> combo) {
+        return JoseKeyMaterial.SecretEncoding.fromLabel(combo == null ? null : combo.getValue());
     }
 
     private static boolean isBlank(TextInputControl control) {
@@ -1165,73 +1202,49 @@ public class JOSEController implements Initializable {
         }
     }
 
+    @FXML private ComboBox<String> jweKeyFormatCombo;
+    @FXML private TextField jwePbes2IterField;
+    @FXML private TextField jweKidField;
+    @FXML private TextField jweTypField;
+    @FXML private TextField jweCtyField;
+    @FXML private TextField jweApuField;
+    @FXML private TextField jweApvField;
+    @FXML private TextArea jweCustomHeaderArea;
+    @FXML private ComboBox<String> jweDecryptKeyFormatCombo;
+
     // --- JWE (Encrypted) ---
-    public void generateJWE(String payload, String keyAlgo, String contentAlgo, String publicKeyPEM, boolean compress,
-            TextArea outputArea) {
+    public void generateJWE(String payload, String keyAlgo, String contentAlgo, String keyMaterial, boolean compress,
+            JweComposer.HeaderOptions headerOptions, JoseKeyMaterial.SecretEncoding secretEncoding,
+            int pbes2Iterations, TextArea outputArea) {
         try {
-            // 1. Algorithms
-            JWEAlgorithm alg = JWEAlgorithm.parse(keyAlgo);
-            EncryptionMethod enc = EncryptionMethod.parse(contentAlgo);
-
-            // 2. Key & Encrypter
-            JWEEncrypter encrypter;
-            if (JWEAlgorithm.Family.RSA.contains(alg)) {
-                PublicKey publicKey = parseRSAPublicKey(publicKeyPEM);
-                encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
-            } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
-                // AES Key Wrap expects an AES key (e.g. 128, 192, 256 bits)
-                // Assuming publicKeyPEM here contains a raw secret (base64 or string) for AES
-                byte[] keyBytes = publicKeyPEM.getBytes(StandardCharsets.UTF_8);
-                if (publicKeyPEM.startsWith("-----BEGIN")) {
-                    throw new IllegalArgumentException("AES Key Wrap requires a symmetric key (secret), not a PEM certificate/key.");
-                }
-                // Pad or truncate to required length for the algorithm if needed, or assume user provides correct length
-                encrypter = new com.nimbusds.jose.crypto.AESEncrypter(keyBytes);
-            } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                PublicKey ecPublicKey = requireJweEcPublicKey(publicKeyPEM);
-                encrypter = new com.nimbusds.jose.crypto.ECDHEncrypter((java.security.interfaces.ECPublicKey) ecPublicKey);
-            } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
-                if (publicKeyPEM.startsWith("-----BEGIN")) {
-                    throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
-                }
-                encrypter = new com.nimbusds.jose.crypto.PasswordBasedEncrypter(publicKeyPEM.getBytes(StandardCharsets.UTF_8), 16, 2048);
-            } else {
-                throw new IllegalArgumentException("Unsupported JWE Algorithm: " + alg.getName());
-            }
-
-            // 3. Header
-            JWEHeader.Builder headerBuilder = new JWEHeader.Builder(alg, enc);
-            if (compress) {
-                headerBuilder.compressionAlgorithm(CompressionAlgorithm.DEF);
-            }
-            JWEHeader header = headerBuilder.build();
-
-            // 4. Objec
-            JWEObject jweObject = new JWEObject(header, new Payload(payload));
-
-            // 5. Encryp
-            jweObject.encrypt(encrypter);
-
-            // 6. Outpu
-            String serialized = jweObject.serialize();
+            String serialized = JweComposer.encrypt(payload, keyAlgo, contentAlgo, compress, headerOptions,
+                    keyMaterial, secretEncoding, pbes2Iterations);
             outputArea.setText(serialized);
             String status = "JWE Encrypted (" + keyAlgo + " / " + contentAlgo + ")";
             if (compress)
                 status += " [Compressed]";
-            statusReporter.publish(OperationResult.forOperation("JWE Encryption")
+            OperationResult.Builder result = OperationResult.forOperation("JWE Encryption")
                     .input(payload.getBytes(StandardCharsets.UTF_8))
                     .output(serialized.getBytes(StandardCharsets.US_ASCII))
                     .detail("Key Algorithm", keyAlgo).detail("Content Algorithm", contentAlgo)
-                    .detail("Compression", String.valueOf(compress)).detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", publicKeyPEM))
-                    .status(status).build());
+                    .detail("Compression", String.valueOf(compress))
+                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyMaterial));
+            if (headerOptions != null && headerOptions.kid() != null && !headerOptions.kid().isBlank()) {
+                result.detail("kid", headerOptions.kid().trim());
+            }
+            if (JWEAlgorithm.Family.PBES2.contains(JWEAlgorithm.parse(keyAlgo))) {
+                result.detail("PBES2 Iterations", String.valueOf(pbes2Iterations));
+            }
+            statusReporter.publish(result.status(status).build());
 
         } catch (Exception e) {
             statusReporter.showError("JWE Encryption Error", e.getMessage());
-            LOG.error("JWE encryption failed", e);
+            // No exception attached: provider messages may echo key material.
+            LOG.error("JWE encryption failed for key-management algorithm {}", keyAlgo);
         }
     }
 
-    public void decryptJWE(String jweString, String privateKeyPEM,
+    public void decryptJWE(String jweString, String privateKeyPEM, JoseKeyMaterial.SecretEncoding secretEncoding,
             TextArea headerOut, TextArea payloadOut,
             TextArea jweHeaderArea, TextArea jweEncryptedKeyArea, TextArea jweDecryptedKeyArea,
             TextArea jweIVArea, TextArea jweCiphertextArea, TextArea jweAuthTagArea,
@@ -1254,45 +1267,21 @@ public class JOSEController implements Initializable {
 
             JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
             algorithmName = alg == null ? "(missing)" : alg.getName();
-            if (!JWEManualCekRecovery.isSupported(alg)) {
-                throw new IllegalArgumentException("Unsupported JWE key-management algorithm for this application: " + algorithmName + ".");
+            if (alg == null) {
+                throw new IllegalArgumentException("The JWE header has no 'alg' parameter.");
             }
 
             JWEDecrypter decrypter;
-            PrivateKey privateKey = null;
-            byte[] secret = null;
-            String keyMaterial = privateKeyPEM.trim();
-
+            JweComposer.LoadedKey loaded = new JweComposer.LoadedKey();
             try {
-                if (JWEAlgorithm.Family.RSA.contains(alg)) {
-                    privateKey = parseRSAPrivateKey(keyMaterial);
-                    decrypter = new RSADecrypter(privateKey);
-                } else if (JWEAlgorithm.Family.AES_KW.contains(alg)) {
-                    if (keyMaterial.startsWith("-----BEGIN")) {
-                        throw new IllegalArgumentException("AES-KW requires a symmetric key, not a PEM certificate/key.");
-                    }
-                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
-                    decrypter = new com.nimbusds.jose.crypto.AESDecrypter(secret);
-                } else if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-                    privateKey = requireJweEcPrivateKey(keyMaterial);
-                    decrypter = new com.nimbusds.jose.crypto.ECDHDecrypter((java.security.interfaces.ECPrivateKey) privateKey);
-                } else if (JWEAlgorithm.Family.PBES2.contains(alg)) {
-                    if (keyMaterial.startsWith("-----BEGIN")) {
-                        throw new IllegalArgumentException("PBES2 requires a password/secret, not a PEM certificate/key.");
-                    }
-                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
-                    decrypter = new com.nimbusds.jose.crypto.PasswordBasedDecrypter(secret);
-                } else if (JWEAlgorithm.DIR.equals(alg)) {
-                    secret = keyMaterial.getBytes(StandardCharsets.UTF_8);
-                    decrypter = new com.nimbusds.jose.crypto.DirectDecrypter(secret);
-                } else {
-                    throw new IllegalArgumentException("Unsupported JWE key-management algorithm: " + algorithmName + ".");
-                }
+                decrypter = JweComposer.decrypter(alg, privateKeyPEM.trim(), secretEncoding, loaded);
             } catch (IllegalArgumentException e) {
                 throw e;
             } catch (Exception e) {
                 throw new IllegalArgumentException("Key material is missing or incompatible with JWE algorithm " + algorithmName + ".", e);
             }
+            PrivateKey privateKey = loaded.privateKey;
+            byte[] secret = loaded.secret;
 
             try {
                 jweObject.decrypt(decrypter);
@@ -1316,6 +1305,8 @@ public class JOSEController implements Initializable {
                 // The direct key is the CEK. Keep it out of automatic preview,
                 // OperationResult, history, reports, clipboard and logs.
                 jweDecryptedKeyArea.setText(directCekPreviewMessage());
+            } else if (!JWEManualCekRecovery.isSupported(alg)) {
+                jweDecryptedKeyArea.setText("Manual CEK preview is not available for " + algorithmName + ".");
             } else {
                 try {
                     byte[] cek = JWEManualCekRecovery.recover(jweObject, privateKey, secret);
