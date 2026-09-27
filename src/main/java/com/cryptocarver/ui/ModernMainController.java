@@ -220,7 +220,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
-    private com.cryptocarver.model.SavedSessionsManager savedSessionsManager;
+    private SavedSessionsCoordinator savedSessionsCoordinator;
     private com.cryptocarver.model.OperationSessionLog operationSessionLog =
             new com.cryptocarver.model.OperationSessionLog();
     private int selectedSessionStepIndex = -1;
@@ -3369,52 +3369,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
 
 
-    @FXML private void handleVisualizeBytes() {
-
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // File conversion handlers moved to GenericController
-
-
-
-
-
-
-
-    private void enableFileDrop(TextField field) {
-        if (field == null) return;
-        field.setOnDragOver(event -> {
-            if (event.getDragboard().hasFiles()) event.acceptTransferModes(javafx.scene.input.TransferMode.COPY);
-            event.consume();
-        });
-        field.setOnDragDropped(event -> {
-            boolean accepted = event.getDragboard().hasFiles() && !event.getDragboard().getFiles().isEmpty();
-            if (accepted) field.setText(event.getDragboard().getFiles().get(0).getAbsolutePath());
-            event.setDropCompleted(accepted);
-            event.consume();
-        });
-    }
-
-
-
-
-
-
-
-
 
 
 
@@ -3710,103 +3665,26 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // SAVED SESSIONS LOGIC
     // ============================================================
 
-    private void initializeSavedSessions() {
-        if (savedSessionsManager == null) {
-            savedSessionsManager = com.cryptocarver.model.SavedSessionsManager.getInstance();
+    private SavedSessionsCoordinator savedSessionsCoordinator() {
+        if (savedSessionsCoordinator == null) {
+            com.cryptocarver.model.SavedSessionsManager manager =
+                    com.cryptocarver.model.SavedSessionsManager.getInstance();
+            savedSessionsCoordinator = new SavedSessionsCoordinator(
+                    savedSessionsContainer, savedSessionsList, this, manager, i18n,
+                    this::captureUIState, this::restoreUIState, this::handleItemSelected,
+                    this::refreshSessionTrailUI, this::showSessionStep,
+                    () -> operationSessionLog, log -> operationSessionLog = log,
+                    () -> currentActiveOperation, () -> contentSubtitleLabel == null ? null : contentSubtitleLabel.getText(),
+                    () -> mainPane);
         }
-        refreshSavedSessionsUI();
-    }
-
-    private void refreshSavedSessionsUI() {
-        if (savedSessionsList == null)
-            return;
-        savedSessionsList.getChildren().clear();
-
-        if (savedSessionsManager == null)
-            return;
-
-        java.util.List<com.cryptocarver.model.SavedSession> sessions = savedSessionsManager.getSessions();
-
-        if (sessions.isEmpty()) {
-            Label placeholder = new Label("No saved sessions");
-            placeholder.setStyle("-fx-text-fill: #718096; -fx-font-size: 11px; -fx-padding: 10;");
-            savedSessionsList.getChildren().add(placeholder);
-            return;
-        }
-
-        for (com.cryptocarver.model.SavedSession session : sessions) {
-            HBox sessionItem = new HBox(10);
-            sessionItem.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-            sessionItem.setStyle(
-                    "-fx-padding: 10; -fx-background-color: #2d3748; -fx-background-radius: 5; -fx-border-color: #4a5568; -fx-border-radius: 5;");
-
-            VBox infoBox = new VBox(2);
-            Label nameLabel = new Label(session.getName());
-            nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px;");
-
-            com.cryptocarver.model.OperationSessionLog savedLog = session.getOperationLog();
-            String stepSummary = savedLog == null ? ""
-                    : " • " + i18n.text("sessionTrail.savedCount", savedLog.size());
-            Label detailsLabel = new Label(session.getTimestamp() + " • " + session.getOperation() + stepSummary);
-            detailsLabel.setStyle("-fx-text-fill: #a0aec0; -fx-font-size: 11px;");
-
-            infoBox.getChildren().addAll(nameLabel, detailsLabel);
-            HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
-
-            Button loadButton = new Button(i18n.text("savedSessions.previewAndLoad"));
-            loadButton.getStyleClass().add("action-button");
-            loadButton.setStyle("-fx-font-size: 11px; -fx-padding: 5 10;");
-            loadButton.setOnAction(e -> previewAndLoadSavedSession(session));
-
-            Button deleteButton = new Button("Delete");
-            deleteButton.getStyleClass().add("secondary-button");
-            deleteButton.setStyle("-fx-font-size: 11px; -fx-padding: 5 10; -fx-text-fill: #fc8181;");
-            deleteButton.setOnAction(e -> {
-                savedSessionsManager.removeSession(session);
-                refreshSavedSessionsUI();
-                updateStatus("Deleted session");
-            });
-
-            sessionItem.getChildren().addAll(infoBox, loadButton, deleteButton);
-            savedSessionsList.getChildren().add(sessionItem);
-        }
+        return savedSessionsCoordinator;
     }
 
     private void showSavedSessions() {
         hideAllContainers();
-        if (savedSessionsContainer != null) {
-            savedSessionsContainer.setVisible(true);
-            savedSessionsContainer.setManaged(true);
-            initializeSavedSessions();
-        }
+        savedSessionsCoordinator().show();
         updateContentHeader("Saved Sessions");
         updateContentSubtitle("Load or manage your saved workspaces");
-    }
-
-    private void previewAndLoadSavedSession(com.cryptocarver.model.SavedSession session) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(i18n.text("savedSessions.previewTitle"));
-        dialog.setHeaderText(session.getName());
-        if (windowOf(mainPane) != null) dialog.initOwner(windowOf(mainPane));
-        ButtonType load = new ButtonType(i18n.text("savedSessions.load"), ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(load, ButtonType.CANCEL);
-        TextArea preview = new TextArea(SessionTrailViewFormatter.preview(session, i18n));
-        preview.setEditable(false);
-        preview.setWrapText(true);
-        preview.setPrefSize(560, 340);
-        Label replacementNote = new Label(i18n.text("savedSessions.replacesCurrent"));
-        replacementNote.setWrapText(true);
-        dialog.getDialogPane().setContent(new VBox(8, replacementNote, preview));
-        if (dialog.showAndWait().orElse(ButtonType.CANCEL) != load) return;
-
-        restoreUIState(session.getUiState());
-        com.cryptocarver.model.OperationSessionLog loadedLog = session.getOperationLog();
-        operationSessionLog = loadedLog == null
-                ? new com.cryptocarver.model.OperationSessionLog() : loadedLog;
-        handleItemSelected(session.getOperation());
-        refreshSessionTrailUI();
-        if (!operationSessionLog.isEmpty()) showSessionStep(operationSessionLog.size() - 1);
-        updateStatus(i18n.text("savedSessions.loaded", session.getName()));
     }
 
     @FXML
@@ -4092,11 +3970,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void handleSaveSession() {
-        // Init manager
-        if (savedSessionsManager == null) {
-            savedSessionsManager = com.cryptocarver.model.SavedSessionsManager.getInstance();
-        }
-
         // Ask for name
         TextInputDialog dialog = LocalizedDialogSupport.textInput(
                 "dialog.saveSession.title", "dialog.saveSession.header", "dialog.saveSession.prompt", "My Session");
@@ -4110,33 +3983,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             if (name.trim().isEmpty())
                 return;
 
-            // Capture State
-            java.util.Map<String, Object> state = captureUIState();
-
-            String currentOperation = this.currentActiveOperation;
-
-            // Fallback: If "Dashboard" (default), try to read from UI label
-            if ("Dashboard".equals(currentOperation) || currentOperation == null) {
-                if (contentSubtitleLabel != null && contentSubtitleLabel.getText() != null) {
-                    currentOperation = contentSubtitleLabel.getText();
-                }
-            }
-
-            // Final fallback
-            if (currentOperation == null || currentOperation.isEmpty()) {
-                currentOperation = "Generic";
-            }
-
-            com.cryptocarver.model.SavedSession session = new com.cryptocarver.model.SavedSession(
-                    name, currentOperation, state, operationSessionLog);
-            savedSessionsManager.addSession(session);
-
-            updateStatus("Session saved: " + name);
-
-            // If we are currently viewing Saved Sessions, refresh i
-            if (savedSessionsContainer != null && savedSessionsContainer.isVisible()) {
-                refreshSavedSessionsUI();
-            }
+            savedSessionsCoordinator().save(name);
         });
     }
 
