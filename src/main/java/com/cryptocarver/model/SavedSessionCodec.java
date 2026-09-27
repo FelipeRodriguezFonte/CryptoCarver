@@ -111,6 +111,11 @@ public final class SavedSessionCodec {
     public List<SavedSession> redactLegacyPlaintext(List<SavedSession> sessions) {
         List<SavedSession> cleaned = new ArrayList<>();
         for (SavedSession session : sessions) {
+            // Versioned sessions were already redacted or encrypted when saved.
+            if (session.getVersion() != 0) {
+                cleaned.add(session);
+                continue;
+            }
             Map<String, Object> safe = new LinkedHashMap<>();
             if (session.getUiState() != null) session.getUiState().forEach((key, value) -> {
                 String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);

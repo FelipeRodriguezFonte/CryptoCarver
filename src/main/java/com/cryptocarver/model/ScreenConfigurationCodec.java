@@ -29,7 +29,8 @@ public final class ScreenConfigurationCodec {
         requirePassword(password);
         byte[] salt = randomBytes(SALT_BYTES);
         byte[] nonce = randomBytes(NONCE_BYTES);
-        byte[] plaintext = configuration.redacted().toJson().getBytes(StandardCharsets.UTF_8);
+        // The encrypted envelope is the explicit opt-in that keeps secrets; only plain JSON is redacted.
+        byte[] plaintext = configuration.toJson().getBytes(StandardCharsets.UTF_8);
         byte[] ciphertext;
         try {
             ciphertext = PasswordFieldCipher.encrypt(password, salt, nonce, plaintext, ITERATIONS, aad());

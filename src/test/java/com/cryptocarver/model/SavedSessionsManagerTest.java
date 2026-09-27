@@ -41,4 +41,25 @@ class SavedSessionsManagerTest {
         assertFalse(result.contains(secret));
         assertTrue(result.contains("[REDACTED_SECRET]"));
     }
+
+    @Test
+    void legacySecretPurgeKeepsEncryptedSessionsIntact() throws Exception {
+        Path file = temp.resolve("mixed.json");
+        Files.writeString(file, "[{\"name\":\"legacy\",\"operation\":\"Cipher\",\"uiState\":{"
+                + "\"CipherController.passwordField\":\"invented-legacy-secret\"}}]");
+        SavedSessionsManager manager = new SavedSessionsManager(file);
+        SavedSessionCodec codec = new SavedSessionCodec();
+        SavedSession encrypted = codec.prepareForStorage(new SavedSession("protected", "Cipher",
+                Map.of("CipherController.passwordField", "invented-protected-secret")), "long enough".toCharArray());
+        manager.addSession(encrypted);
+
+        manager.removeLegacyPlaintextSecrets();
+
+        SavedSession kept = manager.getSessions().stream()
+                .filter(session -> "protected".equals(session.getName())).findFirst().orElseThrow();
+        assertNotNull(kept.getProtectedFields());
+        assertEquals("invented-protected-secret", codec.restore(kept, "long enough".toCharArray())
+                .getUiState().get("CipherController.passwordField"));
+        assertFalse(Files.readString(file).contains("invented-legacy-secret"));
+    }
 }

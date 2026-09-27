@@ -4006,17 +4006,25 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         char[] password = null;
         if (includeSecrets.isSelected()) {
             PasswordField field = new PasswordField();
+            field.setPromptText(i18n.text("savedSessions.passwordPrompt"));
+            PasswordField confirmation = new PasswordField();
+            confirmation.setPromptText(i18n.text("savedSessions.passwordConfirmPrompt"));
             Dialog<ButtonType> passwordDialog = new Dialog<>();
             passwordDialog.setTitle(i18n.text("savedSessions.passwordTitle"));
             passwordDialog.setHeaderText(i18n.text("savedSessions.passwordRequired"));
-            passwordDialog.getDialogPane().setContent(field);
+            passwordDialog.getDialogPane().setContent(new VBox(8, field, confirmation));
             passwordDialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            if (passwordDialog.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+            boolean accepted = passwordDialog.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
             password = field.getText().toCharArray();
+            char[] repeated = confirmation.getText().toCharArray();
             field.clear();
-            if (password.length < 8) {
+            confirmation.clear();
+            boolean matches = java.util.Arrays.equals(password, repeated);
+            java.util.Arrays.fill(repeated, '\0');
+            if (!accepted || !matches || password.length < 8) {
                 java.util.Arrays.fill(password, '\0');
-                showWarning(i18n.text("savedSessions.passwordTitle"), i18n.text("savedSessions.passwordTooShort"));
+                if (accepted) showWarning(i18n.text("savedSessions.passwordTitle"),
+                        i18n.text(matches ? "savedSessions.passwordTooShort" : "savedSessions.passwordMismatch"));
                 return;
             }
         }

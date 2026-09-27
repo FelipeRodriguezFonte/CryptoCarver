@@ -34,13 +34,12 @@ class ScreenConfigurationCodecTest {
 
     @Test
     void encryptedConfigurationRequiresTheCorrectPasswordAndDetectsModification() {
-        ScreenConfiguration raw = new ScreenConfiguration("Symmetric Ciphers", "CIPHER",
-                Map.of("CipherController.publicDataField", "ordinary-config-value"),
-                SecretVisibilityProfile.FULL_LAB, true);
-        String encrypted = ScreenConfigurationCodec.encodeEncrypted(raw, "correct horse".toCharArray());
+        String encrypted = ScreenConfigurationCodec.encodeEncrypted(sample(), "correct horse".toCharArray());
         assertTrue(ScreenConfigurationCodec.isEncrypted(encrypted));
+        assertFalse(encrypted.contains("00112233445566778899AABBCCDDEEFF"));
         ScreenConfiguration decoded = ScreenConfigurationCodec.decode(encrypted, "correct horse".toCharArray());
-        assertEquals("ordinary-config-value", decoded.toState().get("CipherController.publicDataField"));
+        assertEquals("00112233445566778899AABBCCDDEEFF",
+                decoded.toState().get("CipherController.symmetricKeyField"));
 
         IllegalArgumentException wrongPassword = assertThrows(IllegalArgumentException.class,
                 () -> ScreenConfigurationCodec.decode(encrypted, "wrong password".toCharArray()));
