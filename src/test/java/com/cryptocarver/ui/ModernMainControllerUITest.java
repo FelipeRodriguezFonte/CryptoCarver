@@ -111,6 +111,21 @@ class ModernMainControllerUITest {
         throw new NoSuchFieldException("Field " + name + " not found in " + target.getClass());
     }
 
+    private void withVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile profile,
+            ThrowingRunnable action) throws Exception {
+        var settings = com.cryptocarver.model.AppSettings.getInstance();
+        var previous = settings.getSecretVisibilityProfile();
+        try {
+            settings.setSecretVisibilityProfile(profile);
+            action.run();
+        } finally {
+            settings.setSecretVisibilityProfile(previous);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable { void run() throws Exception; }
+
     private void setField(Object target, String name, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
@@ -2026,17 +2041,18 @@ class ModernMainControllerUITest {
         javafx.scene.control.TextArea input = getField(cipher, "cipherInputArea");
         javafx.scene.control.TextField key = getField(cipher, "symmetricKeyField");
 
-        runAndWait(() -> {
-            key.setText("pre-existing-secret-that-must-be-cleared");
-            controller.restoreOperationState(java.util.Map.of(
-                    "CipherController.cipherInputArea", "restored payload",
-                    "CipherController.symmetricKeyField", "[REDACTED_SECRET]"
-            ), "Symmetric Ciphers");
+        withVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED, () -> {
+            runAndWait(() -> {
+                key.setText("pre-existing-secret-that-must-be-cleared");
+                controller.restoreOperationState(java.util.Map.of(
+                        "CipherController.cipherInputArea", "restored payload",
+                        "CipherController.symmetricKeyField", "[REDACTED_SECRET]"
+                ), "Symmetric Ciphers");
+            });
+            assertEquals("", input.getText(), "History must not restore cipher input material");
+            assertEquals("", key.getText(), "Reopen should clear redacted secrets and never leave [REDACTED_SECRET] in the field");
+            assertTrue(((javafx.scene.Node) getField(controller, "cipherContainer")).isVisible());
         });
-
-        assertEquals("", input.getText(), "History must not restore cipher input material");
-        assertEquals("", key.getText(), "Reopen should clear redacted secrets and never leave [REDACTED_SECRET] in the field");
-        assertTrue(((javafx.scene.Node) getField(controller, "cipherContainer")).isVisible());
     }
 
     @Test
@@ -2056,16 +2072,15 @@ class ModernMainControllerUITest {
         javafx.scene.control.TextArea input = getField(generic, "hashInputArea");
         javafx.scene.control.ComboBox<String> algo = getField(generic, "hashAlgorithmCombo");
 
-        runAndWait(() -> {
-            controller.restoreOperationState(java.util.Map.of(
+        withVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED, () -> {
+            runAndWait(() -> controller.restoreOperationState(java.util.Map.of(
                     "GenericController.hashInputArea", "hash this",
                     "GenericController.hashAlgorithmCombo", "SHA-512"
-            ), "Hashing: SHA-512");
+            ), "Hashing: SHA-512"));
+            assertEquals("", input.getText(), "History must not restore hash input material");
+            assertEquals("SHA-512", algo.getValue());
+            assertTrue(((javafx.scene.Node) getField(controller, "genericContainer")).isVisible());
         });
-
-        assertEquals("", input.getText(), "History must not restore hash input material");
-        assertEquals("SHA-512", algo.getValue());
-        assertTrue(((javafx.scene.Node) getField(controller, "genericContainer")).isVisible());
     }
 
     @Test
@@ -2136,14 +2151,13 @@ class ModernMainControllerUITest {
         PaymentsController payments = getField(controller, "paymentsContainerController");
         javafx.scene.control.TextField pan = getField(payments, "panFieldEncode");
 
-        runAndWait(() -> {
-            controller.restoreOperationState(java.util.Map.of(
+        withVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED, () -> {
+            runAndWait(() -> controller.restoreOperationState(java.util.Map.of(
                     "PaymentsController.panFieldEncode", "123456789012345"
-            ), "PIN Generation");
+            ), "PIN Generation"));
+            assertEquals("", pan.getText(), "PAN must remain redacted when reopening history");
+            assertTrue(((javafx.scene.Node) getField(controller, "paymentsContainer")).isVisible());
         });
-
-        assertEquals("", pan.getText(), "PAN must remain redacted when reopening history");
-        assertTrue(((javafx.scene.Node) getField(controller, "paymentsContainer")).isVisible());
     }
 
     @Test
