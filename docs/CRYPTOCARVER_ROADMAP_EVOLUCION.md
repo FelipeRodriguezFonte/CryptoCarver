@@ -36,7 +36,7 @@
 - [x] Endurecer el formato portable v2 con alcance real por panel: ya no arrastra campos ocultos de otras operaciones del mismo módulo, conserva controles comunes de la pantalla y mantiene importación compatible con los documentos v1. El recorrido contractual cubre todas las rutas exportables y ha alineado los alias PIN/CVV, ML-KEM y CMS Inspector con sus paneles reales.
 - [x] Proteger el almacenamiento de configuraciones con escritura atómica, límite centralizado de 12 MB, limpieza de temporales y permisos de propietario (`0600`) en sistemas POSIX.
 - [~] Iniciar formatos por operación sin romper los controladores existentes: los selectores compartidos ya recuerdan pares independientes de entrada/salida por ruta y normalizan alias dinámicos; queda trasladar gradualmente los formatos propios de cada módulo a metadatos declarativos.
-- [~] Modularizar `ModernMainController`: los módulos disponen de FXML/controladores autocontenidos y la navegación usa un registro declarativo tipado. La retirada del shell antiguo elimina `MainController` y su FXML, respaldada por los contratos FXML modernos. Encargo 23 extrae la lista/preview/carga de sesiones guardadas a `SavedSessionsCoordinator` y su codec JSON a `SavedSessionCodec`; encargo 24 redacta secretos por defecto, cifra su inclusión opcional y endurece permisos de archivo. La división sigue abierta: ciclo de vida, inspector, histórico y visor continúan coordinados aquí; esta clase sigue siendo punto de entrada de `main-view-modern.fxml`.
+- [~] Modularizar `ModernMainController`: los módulos disponen de FXML/controladores autocontenidos y la navegación usa un registro declarativo tipado. Encargos 23 y 24 separaron y protegieron sesiones guardadas; encargo 26 extrae políticas puras de presentación de resultados y coordinación de menús/visores. La división sigue abierta: ciclo de vida, publicación, inspector, histórico y acciones seguras de copia/Shelf siguen coordinados en parte aquí; esta clase sigue siendo punto de entrada de `main-view-modern.fxml`.
 
 > Nota de namespace: el código Java actual está bajo `com.cryptocarver`; `com.cryptoforge` permanece como `groupId` Maven y en documentación histórica. Cambiar la coordenada de publicación requiere una decisión de compatibilidad independiente.
 
@@ -117,7 +117,7 @@ El controlador principal debe limitarse a navegación, cabecera, inspector, hist
 ### 4.3 Limpieza técnica prioritaria
 
 - Unificar los dos `DataConverter` existentes y eliminar el paquete duplicado.
-- [~] Reducir la coordinación que conserva `ModernMainController`. Encargo 23 extrajo las sesiones guardadas a `SavedSessionsCoordinator` y `SavedSessionCodec`; encargo 24 añade redacción por defecto, protección AES-GCM con contraseña opcional, migración de sesiones antiguas y permisos privados. Eliminó `handleVisualizeBytes` y `enableFileDrop`, sin referencias en FXML/código/tests. Siguen pendientes el ciclo de vida, inspector, histórico y las acciones del visor. La retirada de `MainController` y `main-view.fxml` no completa esta división.
+- [~] Reducir la coordinación que conserva `ModernMainController`. Encargos 23/24 separaron sesiones guardadas; encargo 26 extrae `ResultPresentationPolicy` y `ResultViewerCoordinator` para reglas puras y menús/visores. Siguen pendientes ciclo de vida, inspector, histórico, publicación y parte de las acciones seguras de copia/Shelf. La retirada de `MainController` y `main-view.fxml` no completa esta división.
 - [x] Sacar clases de depuracion de `src/main/java/com/cryptocarver/test` y trasladar los casos útiles a pruebas automatizadas.
 - Evitar versionar artefactos de `target/` y revisar `.gitignore`.
 - Usar `--release 17` o migrar de forma planificada a Java 21 LTS.
@@ -600,7 +600,7 @@ sin activación automática, con un límite de 1 MiB por petición y tres endpoi
 | Prioridad | Iniciativa | Valor | Esfuerzo | Dependencias |
 |---|---|---|---|---|
 | P0 | Unificar `DataConverter` y codecs | Evita inconsistencias y errores runtime | M | **Completado: CodecRegistry y adaptadores** |
-| P0 | Reducir coordinación de `ModernMainController` | Reduce riesgo de cada cambio UI | L | En curso; Encargos 23 y 24 separaron y protegieron sesiones guardadas; quedan ciclo de vida, inspector, histórico y acciones del visor |
+| P0 | Reducir coordinación de `ModernMainController` | Reduce riesgo de cada cambio UI | L | En curso; Encargos 23/24 separaron sesiones y encargo 26 extrae presentación y menús/visores; quedan ciclo de vida, publicación, inspector, histórico y seguridad de copia/Shelf |
 | P0 | Test de carga FXML y smoke UI | Detecta fallos antes de ejecutar manualmente | M | **Completado; falta smoke visual por plataforma** |
 | P0 | Matriz de estado de operaciones | Evita anunciar soporte incompleto | S | **Completado: OperationRegistry/catálogo** |
 | P0 | Vectores conocidos por modulo | Aumenta confianza en resultados | L | Catalogo de tests |
