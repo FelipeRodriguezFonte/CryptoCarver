@@ -162,6 +162,62 @@ class SessionTrailUITest {
     }
 
     @Test
+    void trailSaveOpenExportAndClearKeepCurrentProfileBehavior() throws Exception {
+        SecretVisibilityProfile previousProfile = AppSettings.getInstance().getSecretVisibilityProfile();
+        try {
+            for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+                AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+                runAndWait(() -> {
+                    AppSettings.getInstance().setSecretVisibilityProfile(profile);
+                    try {
+                        FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                        loader.load();
+                        ModernMainController controller = loader.getController();
+                        controllerRef.set(controller);
+                        controller.navigateTo("MAC");
+                        AuthenticationController module = field(controller, "authenticationContainerController");
+                        ((TextField) field(module, "authMacKeyField")).setText("0123456789ABCDEFFEDCBA9876543210");
+                        ((TextArea) field(module, "authInputArea")).setText("CHARACTERIZATION-INPUT");
+                        controller.publish(OperationResult.forOperation("Characterized operation")
+                                .input("CHARACTERIZATION-INPUT".getBytes(StandardCharsets.UTF_8))
+                                .output("CHARACTERIZATION-OUTPUT".getBytes(StandardCharsets.UTF_8), OperationDetail.Classification.SECRET)
+                                .detail(OperationDetail.sensitiveDetail("Synthetic field", "CHARACTERIZATION-DETAIL"))
+                                .build());
+                        controller.saveCurrentResultAsSessionStep("Characterized step", "profile, trail");
+                        ((Button) field(controller, "inspectorOpenSessionStepButton")).fire();
+                        controller.exportSessionTrail(temporaryDirectory.resolve("trail-" + profile + ".txt"));
+                        Platform.runLater(() -> javafx.stage.Window.getWindows().stream()
+                                .filter(javafx.stage.Stage.class::isInstance)
+                                .map(javafx.stage.Stage.class::cast)
+                                .filter(javafx.stage.Stage::isShowing)
+                                .map(stage -> stage.getScene() == null ? null : stage.getScene().getRoot())
+                                .filter(javafx.scene.control.DialogPane.class::isInstance)
+                                .map(javafx.scene.control.DialogPane.class::cast)
+                                .findFirst()
+                                .ifPresent(pane -> pane.lookupButton(javafx.scene.control.ButtonType.OK)
+                                        .fireEvent(new javafx.event.ActionEvent())));
+                        controller.handleClearSessionTrail();
+                    } catch (Exception exception) {
+                        throw new AssertionError(exception);
+                    }
+                });
+                ModernMainController controller = controllerRef.get();
+                OperationSessionLog log = field(controller, "operationSessionLog");
+                assertEquals(0, log.size());
+                String exported = Files.readString(temporaryDirectory.resolve("trail-" + profile + ".txt"));
+                assertTrue(exported.contains("[1] Characterized step"));
+                assertTrue(exported.contains("Tags: profile, trail"));
+                assertTrue(exported.contains("CHARACTERIZATION-DETAIL"));
+                assertTrue(exported.contains("0123456789ABCDEFFEDCBA9876543210"));
+                assertTrue(exported.contains("CHARACTERIZATION-INPUT"));
+                assertTrue(exported.contains("UNSAFE CLEAR-TEXT"));
+            }
+        } finally {
+            runAndWait(() -> AppSettings.getInstance().setSecretVisibilityProfile(previousProfile));
+        }
+    }
+
+    @Test
     void clearOutputKeepsTheCurrentInput() throws Exception {
         runAndWait(() -> {
             try {
