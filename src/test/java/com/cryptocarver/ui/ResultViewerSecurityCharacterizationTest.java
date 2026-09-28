@@ -1,6 +1,8 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.ClipboardEntry;
+import com.cryptocarver.model.ClipboardShelfManager;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -22,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("ui")
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class ResultViewerSecurityCharacterizationTest {
+    private static final String KEY_FIXTURE = "-----BEGIN PRIVATE KEY-----\nSYNTHETIC_FIXTURE\n-----END PRIVATE KEY-----";
+    private static final String MARKER_FIXTURE = "*** PRIVATE KEY MATERIAL — NOT RECORDED ***";
     @BeforeAll static void startFx() throws Exception {
         try { Platform.startup(() -> Platform.setImplicitExit(false)); }
         catch (IllegalStateException started) { Platform.setImplicitExit(false); }
@@ -32,19 +36,42 @@ class ResultViewerSecurityCharacterizationTest {
             try {
                 FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 Parent root = loader.load(); ModernMainController controller = loader.getController(); controller.initialize();
-                TextArea area = new TextArea("SYNTHETIC_PRIVATE_FIXTURE"); area.setId("syntheticPrivateKeyArea"); area.setEditable(false);
+                TextArea area = new TextArea(KEY_FIXTURE); area.setId("syntheticPrivateKeyArea"); area.setEditable(false);
                 ((BorderPane) field(controller, "mainPane")).getChildren().add(area);
                 ResultAreaTracker tracker = field(controller, "resultAreaTracker"); tracker.register(area); tracker.focus(area); tracker.markUpdated(area);
                 Method copy = ModernMainController.class.getDeclaredMethod("handleCopySecure", TextArea.class, String.class, boolean.class);
                 copy.setAccessible(true);
                 for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
                     AppSettings.getInstance().setSecretVisibilityProfile(profile);
-                    setClipboard("SENTINEL"); area.selectRange(0, 5); copy.invoke(controller, area, "SYNTHETIC", true);
-                    assertEquals(profile == SecretVisibilityProfile.FULL_LAB ? "SYNTHETIC" : "SENTINEL", Clipboard.getSystemClipboard().getString());
-                    setClipboard("SENTINEL"); copy.invoke(controller, area, null, false);
-                    assertEquals(profile == SecretVisibilityProfile.FULL_LAB ? "SYNTHETIC_PRIVATE_FIXTURE" : "SENTINEL",
-                            Clipboard.getSystemClipboard().getString());
+                    for (String fixture : new String[]{KEY_FIXTURE, MARKER_FIXTURE}) {
+                        area.setText(fixture); tracker.markUpdated(area);
+                        setClipboard("SENTINEL"); area.selectRange(0, Math.min(5, fixture.length())); copy.invoke(controller, area, fixture.substring(0, Math.min(5, fixture.length())), true);
+                        assertEquals(profile == SecretVisibilityProfile.FULL_LAB ? fixture.substring(0, 5) : "SENTINEL", Clipboard.getSystemClipboard().getString());
+                        setClipboard("SENTINEL"); copy.invoke(controller, area, null, false);
+                        assertEquals(profile == SecretVisibilityProfile.FULL_LAB ? fixture : "SENTINEL", Clipboard.getSystemClipboard().getString());
+                    }
                 }
+            } catch (Exception e) { throw new AssertionError(e); }
+        });
+    }
+
+    @Test void secureShelfCapturePreservesPlaceholderAndPrivateKeyRulesByProfile() throws Exception {
+        runFx(() -> {
+            try {
+                ClipboardShelfManager shelf = ClipboardShelfManager.getInstance(); shelf.clear();
+                FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                Parent root = loader.load(); ModernMainController controller = loader.getController(); controller.initialize();
+                TextArea area = new TextArea(MARKER_FIXTURE); area.setId("syntheticPrivateKeyArea"); area.setEditable(false);
+                ((BorderPane) field(controller, "mainPane")).getChildren().add(area);
+                ResultAreaTracker tracker = field(controller, "resultAreaTracker"); tracker.register(area); tracker.focus(area); tracker.markUpdated(area);
+                for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
+                    AppSettings.getInstance().setSecretVisibilityProfile(profile); shelf.clear(); area.setText(MARKER_FIXTURE); tracker.markUpdated(area);
+                    controller.handleAddCurrentOutputToShelf();
+                    assertTrue(shelf.getEntries().isEmpty(), "A placeholder must never be captured");
+                    shelf.clear(); area.setText(KEY_FIXTURE); tracker.markUpdated(area); controller.handleAddCurrentOutputToShelf();
+                    assertEquals(profile == SecretVisibilityProfile.FULL_LAB, shelf.getEntries().stream().anyMatch(ClipboardEntry::isSessionOnlyPrivateKey));
+                }
+                shelf.clear();
             } catch (Exception e) { throw new AssertionError(e); }
         });
     }
