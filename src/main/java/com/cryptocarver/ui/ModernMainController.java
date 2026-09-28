@@ -2736,7 +2736,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     area -> { String selected = area.getSelectedText(); handleAddToClipboardShelfSecure(area, selected != null && !selected.isEmpty() ? selected : null); },
                     area -> handleCopySecure(area, null, false),
                     area -> { String selected = area.getSelectedText(); boolean hasSelection = selected != null && !selected.isEmpty(); handleCopySecure(area, hasSelection ? selected : null, hasSelection); },
-                    () -> currentActiveOperation);
+                    () -> currentActiveOperation, () -> lastPublishedResultSnapshot != null,
+                    this::resolveResultText, this::classificationForResultArea, AppSettings::isFullLab,
+                    this::updateStatus, this::copyToClipboard,
+                    entry -> { if (entry != null && clipboardShelfController != null) clipboardShelfController.refreshAndReveal(entry.getId()); });
         }
         resultAreaTracker.install(mainPane, additionalAreas,
                 area -> area.setContextMenu(resultViewerCoordinator.createContextMenu(area)));
@@ -2745,36 +2748,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private ContextMenu createResultContextMenu(TextArea area) { return resultViewerCoordinator.createContextMenu(area); }
 
     private void handleCopySecure(TextArea area, String textToCopy, boolean isSelection) {
-        if (!isSelection) {
-            String content = resolveResultText(area);
-            if (content == null || content.isEmpty()) {
-                updateStatus("Action blocked: No current output available to copy.");
-                return;
-            }
-            if (content.equals("***MASKED***")) {
-                updateStatus("Action blocked: Secret cannot be copied in current visibility mode.");
-                return;
-            }
-            copyToClipboard(content);
-            return;
-        }
-
-        if (textToCopy == null || textToCopy.isEmpty()) return;
-
-        if (!resultAreaTracker.isCurrentSelection(area, lastPublishedResultSnapshot != null)) {
-            updateStatus("Action blocked: Cannot securely copy selection from old or unknown result.");
-            return;
-        }
-        com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
-        boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
-                || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-        if (requiresFullLab
-                && !AppSettings.isFullLab()) {
-            updateStatus("Action blocked: Cannot copy partial selection of protected text in current visibility mode.");
-            return;
-        }
-
-        copyToClipboard(textToCopy);
+        resultViewerCoordinator.copySecure(area, textToCopy, isSelection);
     }
 
     private void handleAddToClipboardShelfSecure(javafx.scene.control.TextArea area, String selectedText) {
@@ -2901,9 +2875,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     void revealShelfEntry(com.cryptocarver.model.ClipboardEntry entry) {
-        if (entry != null && clipboardShelfController != null) {
-            clipboardShelfController.refreshAndReveal(entry.getId());
-        }
+        if (resultViewerCoordinator != null) resultViewerCoordinator.revealShelfEntry(entry);
     }
 
     public com.cryptocarver.model.OperationDetail.Classification classifyPublishedResult(com.cryptocarver.model.OperationResult result) {
