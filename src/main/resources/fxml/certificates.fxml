@@ -108,8 +108,8 @@
                     <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                         <Label text="Apply Template:" styleClass="form-label"/>
                         <ComboBox fx:id="certTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                        <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
-                        <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
+                        <Button text="Apply" onAction="#handleApplyCertTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                        <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                             <items>
                                 <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveCertTemplate"/>
                                 <MenuItem text="Export Selected Template..." onAction="#handleExportCertTemplate"/>
@@ -117,7 +117,7 @@
                                 <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteCertTemplate"/>
                             </items>
                         </MenuButton>
-                        <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
+                        <Button text="Reset Defaults" onAction="#handleResetCertDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                     </FlowPane>
 
                     <Label text="Paste PEM Certificate:" styleClass="form-label"/>

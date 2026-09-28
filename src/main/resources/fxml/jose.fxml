@@ -551,7 +551,7 @@
         <Label text="Visual Breakdown:" styleClass="form-label"/>
 
         <ScrollPane fitToWidth="true" styleClass="edge-to-edge" prefHeight="400">
-             <TextFlow fx:id="inspectorOutputFlow" styleClass="code-area ux-inline-9250a3b4b6"/>
+             <TextFlow fx:id="inspectorOutputFlow" styleClass="code-area,ux-inline-9250a3b4b6"/>
         </ScrollPane>
     </VBox>
 

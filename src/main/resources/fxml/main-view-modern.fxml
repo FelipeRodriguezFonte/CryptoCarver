@@ -210,27 +210,27 @@
                 </HBox>
 
                 <!-- Guided Flow Panel (reusable) -->
-                <HBox fx:id="guidedFlowPanel" spacing="15" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="guided-flow-panel ux-inline-d8a3fb5a2c">
+                <HBox fx:id="guidedFlowPanel" spacing="15" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="guided-flow-panel,ux-inline-d8a3fb5a2c">
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <Label styleClass="ux-inline-47484768be" fx:id="guideStepTitleLabel" text="Step 1: Choose data/input format"/>
                         <Label styleClass="ux-inline-b2d7ff5bea" fx:id="guideStepDescLabel" text="Configure the input source type and encoding on the format flow bar." wrapText="true"/>
                     </VBox>
                     <HBox spacing="8" alignment="CENTER_RIGHT">
-                        <Button fx:id="guideBackBtn" text="Back" onAction="#handleGuideBack" styleClass="secondary-button ux-inline-401c00305b"/>
-                        <Button fx:id="guideNextBtn" text="Next" onAction="#handleGuideNext" styleClass="action-button-primary ux-inline-401c00305b"/>
-                        <Button fx:id="guideSkipBtn" text="Skip Guidance" onAction="#handleGuideSkip" styleClass="secondary-button ux-inline-401c00305b"/>
-                        <Button fx:id="guideExitBtn" text="Exit" onAction="#handleGuideExit" styleClass="secondary-button ux-inline-401c00305b"/>
+                        <Button fx:id="guideBackBtn" text="Back" onAction="#handleGuideBack" styleClass="secondary-button,ux-inline-401c00305b"/>
+                        <Button fx:id="guideNextBtn" text="Next" onAction="#handleGuideNext" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                        <Button fx:id="guideSkipBtn" text="Skip Guidance" onAction="#handleGuideSkip" styleClass="secondary-button,ux-inline-401c00305b"/>
+                        <Button fx:id="guideExitBtn" text="Exit" onAction="#handleGuideExit" styleClass="secondary-button,ux-inline-401c00305b"/>
                     </HBox>
                 </HBox>
 
                 <!-- Execution Readiness Panel (reusable compact card) -->
-                <HBox fx:id="readinessPanel" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="readiness-panel ux-inline-4ca8ef014b">
+                <HBox fx:id="readinessPanel" spacing="12" alignment="CENTER_LEFT" managed="false" visible="false" styleClass="readiness-panel,ux-inline-4ca8ef014b">
                     <Label fx:id="readinessStatusBadge" text="✔ READY" styleClass="readiness-status-ready"/>
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <Label styleClass="ux-inline-d9f657c0dd" fx:id="readinessSummaryLabel" text="Execution Readiness Checklist"/>
                         <FlowPane fx:id="readinessChecksContainer" hgap="10" vgap="4"/>
                     </VBox>
-                    <Button fx:id="readinessToggleDetailsBtn" text="Show Details" onAction="#handleToggleReadinessDetails" styleClass="secondary-button ux-inline-8e3aa95844"/>
+                    <Button fx:id="readinessToggleDetailsBtn" text="Show Details" onAction="#handleToggleReadinessDetails" styleClass="secondary-button,ux-inline-8e3aa95844"/>
                 </HBox>
 
                 <!-- Scrollable Content -->
@@ -240,8 +240,8 @@
                         <!-- Quick Start Container -->
                         <VBox styleClass="ux-inline-8d20c1fddd" fx:id="quickStartContainer" managed="false" visible="false" spacing="20">
                             <VBox spacing="5">
-                                <Label text="Laboratory Quick Start" styleClass="quick-start-title ux-inline-fb7f3b0802"/>
-                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." styleClass="quick-start-description ux-inline-da9c4cada5"/>
+                                <Label text="Laboratory Quick Start" styleClass="quick-start-title,ux-inline-fb7f3b0802"/>
+                                <Label text="Choose a guided workflow to easily configure standard cryptographic and data operations." styleClass="quick-start-description,ux-inline-da9c4cada5"/>
                             </VBox>
 
                             <GridPane hgap="15" vgap="15">
@@ -259,7 +259,7 @@
                                         <Label styleClass="ux-inline-c0bff2bb67" text="Medium (Key Material / Secrets)"/>
                                     </HBox>
                                     <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedEncrypt" styleClass="action-button-primary ux-inline-7011792fac"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedEncrypt" styleClass="action-button-primary,ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 2: Calculate a hash -->
@@ -271,7 +271,7 @@
                                         <Label styleClass="ux-inline-bed983efd1" text="Low (No secrets involved)"/>
                                     </HBox>
                                     <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedHash" styleClass="action-button-primary ux-inline-7011792fac"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedHash" styleClass="action-button-primary,ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 3: Sign or verify data -->
@@ -283,7 +283,7 @@
                                         <Label styleClass="ux-inline-1ec5e1dd8f" text="High (Private signing keys)"/>
                                     </HBox>
                                     <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedSign" styleClass="action-button-primary ux-inline-7011792fac"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedSign" styleClass="action-button-primary,ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 4: Inspect a certificate -->
@@ -295,7 +295,7 @@
                                         <Label styleClass="ux-inline-bed983efd1" text="Low (Public data only)"/>
                                     </HBox>
                                     <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedCert" styleClass="action-button-primary ux-inline-7011792fac"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedCert" styleClass="action-button-primary,ux-inline-7011792fac"/>
                                 </VBox>
 
                                 <!-- Card 5: Convert encodings -->
@@ -307,7 +307,7 @@
                                         <Label styleClass="ux-inline-bed983efd1" text="Low (No secrets)"/>
                                     </HBox>
                                     <Region styleClass="ux-inline-f82d03488b" VBox.vgrow="ALWAYS"/>
-                                    <Button text="Start guided flow" onAction="#handleStartGuidedConvert" styleClass="action-button-primary ux-inline-7011792fac"/>
+                                    <Button text="Start guided flow" onAction="#handleStartGuidedConvert" styleClass="action-button-primary,ux-inline-7011792fac"/>
                                 </VBox>
                             </GridPane>
                         </VBox>
@@ -478,7 +478,7 @@
 
     <!-- Command Palette Overlay -->
     <VBox styleClass="ux-inline-fe40b18811" fx:id="commandPaletteOverlay" managed="false" visible="false" alignment="TOP_CENTER">
-        <VBox spacing="10" maxWidth="660" styleClass="command-palette-card ux-inline-03666b7226">
+        <VBox spacing="10" maxWidth="660" styleClass="command-palette-card,ux-inline-03666b7226">
             <HBox styleClass="ux-inline-d10a1c8686" spacing="10" alignment="CENTER_LEFT">
                 <Label styleClass="ux-inline-bfa169e50b" text="🔍"/>
                 <TextField styleClass="ux-inline-1f94a8378e" fx:id="commandSearchField" promptText="Type a command or search (e.g. aes, hash, jwt, shelf, cert)..." HBox.hgrow="ALWAYS"/>

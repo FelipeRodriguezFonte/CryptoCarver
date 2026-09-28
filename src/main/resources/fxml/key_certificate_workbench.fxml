@@ -10,12 +10,12 @@
     <Label styleClass="ux-inline-4524890664" text="Input (Paste PEM/JWK/Hex or load file)"/>
 
     <HBox spacing="10">
-        <Button text="Load from File..." onAction="#handleLoadFile" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-        <Button text="Load from Clipboard Shelf" onAction="#handleLoadFromShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+        <Button text="Load from File..." onAction="#handleLoadFile" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+        <Button text="Load from Clipboard Shelf" onAction="#handleLoadFromShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
         <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="storeTypeCombo"/>
         <PasswordField styleClass="ux-inline-ba9ea6419e" fx:id="workbenchPasswordField" promptText="Password (optional)"/>
         <Region HBox.hgrow="ALWAYS" />
-        <Button text="Detect &amp; Parse" onAction="#handleParse" styleClass="action-button ux-inline-ba9ea6419e" />
+        <Button text="Detect &amp; Parse" onAction="#handleParse" styleClass="action-button,ux-inline-ba9ea6419e" />
     </HBox>
 
     <TextArea styleClass="ux-inline-ea21460dc9" fx:id="workbenchInputArea" prefHeight="120" wrapText="true"
@@ -64,10 +64,10 @@
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Label styleClass="ux-inline-ba9ea6419e" text="Convert to:" />
         <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="convertToCombo" prefWidth="180"/>
-        <Button text="Convert" onAction="#handleConvert" styleClass="action-button ux-inline-ba9ea6419e" />
+        <Button text="Convert" onAction="#handleConvert" styleClass="action-button,ux-inline-ba9ea6419e" />
         <Region HBox.hgrow="ALWAYS" />
         <TextField styleClass="ux-inline-ba9ea6419e" fx:id="validationSecondaryInput" promptText="Secondary input for validation..." HBox.hgrow="ALWAYS"/>
-        <Button text="Validate Pair/Chain" onAction="#handleValidate" styleClass="secondary-button ux-inline-ba9ea6419e" />
+        <Button text="Validate Pair/Chain" onAction="#handleValidate" styleClass="secondary-button,ux-inline-ba9ea6419e" />
     </HBox>
 
     <Label styleClass="ux-inline-4524890664" text="Output"/>
@@ -75,8 +75,8 @@
     <TextArea styleClass="ux-inline-ea21460dc9" fx:id="workbenchOutputArea" prefHeight="150" wrapText="true" editable="false"/>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button text="Send to Clipboard Shelf" onAction="#handleSendToShelf" styleClass="secondary-button ux-inline-ba9ea6419e" />
-        <Button text="Copy to Clipboard" onAction="#handleCopyOutput" styleClass="secondary-button ux-inline-ba9ea6419e" />
+        <Button text="Send to Clipboard Shelf" onAction="#handleSendToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e" />
+        <Button text="Copy to Clipboard" onAction="#handleCopyOutput" styleClass="secondary-button,ux-inline-ba9ea6419e" />
     </HBox>
 
 </VBox>

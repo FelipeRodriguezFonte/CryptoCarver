@@ -12,7 +12,7 @@
             <TitledPane text="ASiC Containers" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="ASiC-S and ASiC-E containers with CAdES or XAdES baseline profiles" styleClass="helper-text"/>
-                    <Label text="Select a signature format and baseline level. T/LT/LTA require a TSA; LT/LTA also require local CRL/OCSP evidence or explicit online revocation." wrapText="true" styleClass="helper-text ux-inline-47dcc17db5"/>
+                    <Label text="Select a signature format and baseline level. T/LT/LTA require a TSA; LT/LTA also require local CRL/OCSP evidence or explicit online revocation." wrapText="true" styleClass="helper-text,ux-inline-47dcc17db5"/>
 
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
@@ -75,7 +75,7 @@
 
                     <Separator/>
 
-                    <Label text="ASiC-E — multiple payloads plus a SHA-256 manifest" wrapText="true" styleClass="form-label ux-inline-47dcc17db5"/>
+                    <Label text="ASiC-E — multiple payloads plus a SHA-256 manifest" wrapText="true" styleClass="form-label,ux-inline-47dcc17db5"/>
 
                     <HBox spacing="10">
                         <TextField fx:id="asicEPayloadsField" editable="false" promptText="No ASiC-E payload files selected" HBox.hgrow="ALWAYS" styleClass="form-field"/>

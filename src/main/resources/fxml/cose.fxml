@@ -15,7 +15,7 @@
 
     <Label text="COSE (RFC 9052/9053) — CBOR-binary sibling of JOSE" styleClass="helper-text"/>
     <Label text="COSE_Sign1/COSE_Mac0/COSE_Encrypt0 (single-signer/single-key profile, same shape JOSE Compact covers). ES256/384/512, PS256/384/512 and EdDSA (Ed25519) are supported for signing — EdDSA needed a small compatibility shim (COSE-java hardcodes an old JCA provider name) and hand-built keys, both documented in COSEOperations."
-           wrapText="true" styleClass="helper-text ux-inline-47dcc17db5"/>
+           wrapText="true" styleClass="helper-text,ux-inline-47dcc17db5"/>
 
     <!-- SIGN1 SECTION -->
     <VBox fx:id="sign1Section" spacing="14" managed="false" visible="false">

@@ -18,7 +18,7 @@
                     <Button text="Inspect EMV TLV" onAction="#handleInspectTlv" styleClass="action-button,primary-action" maxWidth="160"/>
                     <TextArea fx:id="emvTlvResultArea" prefHeight="180" editable="false" styleClass="result-area,monospace-field"/>
                     <Separator/>
-                    <Label text="CDOL/DDOL Builder" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="CDOL/DDOL Builder" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <TextField fx:id="emvDolTemplateField" promptText="DOL template, e.g. 9F02069F1A02" styleClass="monospace-field,form-field" maxWidth="Infinity"/>
                     <TextArea fx:id="emvDolValuesArea" prefHeight="70" promptText="9F02=000000000100&#10;9F1A=0978" styleClass="monospace-field"/>
                     <Button text="Build DOL Data" onAction="#handleBuildDol" styleClass="secondary-button" maxWidth="150"/>
@@ -29,7 +29,7 @@
             <!-- SESSION KEY DERIVATION -->
             <TitledPane text="🔑 Session Key Derivation" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Derive ICC Master Key" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="Derive ICC Master Key" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
@@ -55,7 +55,7 @@
 
                     <Separator/>
 
-                    <Label text="Derive Session Key (SK)" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="Derive Session Key (SK)" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                          <columnConstraints>
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
@@ -87,11 +87,11 @@
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
 
-                    <Label text="Terminal Data (Raw - Overrides fields below):" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="Terminal Data (Raw - Overrides fields below):" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <TextArea fx:id="arqcTerminalDataField" prefRowCount="2" wrapText="true"
                               promptText="Paste full terminal data hex string here to use it directly..." styleClass="monospace-field"/>
 
-                    <Label text="Transaction Data (Individual Fields):" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="Transaction Data (Individual Fields):" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
@@ -208,7 +208,7 @@
                         <Button text="Load Example" onAction="#handleSmLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     </HBox>
 
-                    <Label text="1. Card and session keys" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="1. Card and session keys" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="170" prefWidth="170"/>
@@ -247,7 +247,7 @@
                     </GridPane>
                     <Button text="Derive Session Keys" onAction="#handleSmDeriveSessionKeys" styleClass="action-button,primary-action" maxWidth="190"/>
 
-                    <Label text="2. PIN change data" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="2. PIN change data" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="170" prefWidth="170"/>
@@ -262,7 +262,7 @@
                     </GridPane>
                     <Button text="Encipher PIN" onAction="#handleSmEncipherPin" styleClass="action-button,primary-action" maxWidth="190"/>
 
-                    <Label text="3. Command MAC" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="3. Command MAC" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="170" prefWidth="170"/>
@@ -519,7 +519,7 @@
                     </HBox>
 
                     <Separator/>
-                    <Label text="Certificate chain" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="Certificate chain" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="210" prefWidth="210"/>
@@ -568,7 +568,7 @@
                     </GridPane>
 
                     <Separator/>
-                    <Label text="Signatures" styleClass="form-label ux-inline-689e8d50bc"/>
+                    <Label text="Signatures" styleClass="form-label,ux-inline-689e8d50bc"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="210" prefWidth="210"/>

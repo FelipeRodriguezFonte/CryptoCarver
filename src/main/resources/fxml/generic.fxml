@@ -28,8 +28,8 @@
                 <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                     <Label text="Apply Template:" styleClass="form-label"/>
                     <ComboBox fx:id="hashTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                    <Button text="Apply" onAction="#handleApplyHashTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
-                    <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
+                    <Button text="Apply" onAction="#handleApplyHashTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                    <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                         <items>
                             <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveHashTemplate"/>
                             <MenuItem text="Export Selected Template..." onAction="#handleExportHashTemplate"/>
@@ -37,7 +37,7 @@
                             <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteHashTemplate"/>
                         </items>
                     </MenuButton>
-                    <Button text="Reset Defaults" onAction="#handleResetHashDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
+                    <Button text="Reset Defaults" onAction="#handleResetHashDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                 </FlowPane>
 
                 <HBox spacing="8" alignment="CENTER_LEFT">
@@ -179,8 +179,8 @@
                  <FlowPane prefWrapLength="900" styleClass="template-toolbar">
                      <Label text="Apply Template:" styleClass="form-label"/>
                      <ComboBox fx:id="manualTemplateCombo" prefWidth="360" promptText="Select a template..." styleClass="form-field"/>
-                     <Button text="Apply" onAction="#handleApplyManualTemplate" styleClass="action-button-primary ux-inline-401c00305b"/>
-                     <MenuButton text="Manage Template" styleClass="secondary-button ux-inline-401c00305b">
+                     <Button text="Apply" onAction="#handleApplyManualTemplate" styleClass="action-button-primary,ux-inline-401c00305b"/>
+                     <MenuButton text="Manage Template" styleClass="secondary-button,ux-inline-401c00305b">
                          <items>
                              <MenuItem text="Save Current as Personal Template..." onAction="#handleSaveManualTemplate"/>
                              <MenuItem text="Export Selected Template..." onAction="#handleExportManualTemplate"/>
@@ -188,7 +188,7 @@
                              <MenuItem text="Delete Selected Personal Template" onAction="#handleDeleteManualTemplate"/>
                          </items>
                      </MenuButton>
-                     <Button text="Reset Defaults" onAction="#handleResetManualDefaults" styleClass="secondary-button ux-inline-401c00305b"/>
+                     <Button text="Reset Defaults" onAction="#handleResetManualDefaults" styleClass="secondary-button,ux-inline-401c00305b"/>
                  </FlowPane>
 
                  <HBox spacing="8" alignment="CENTER_LEFT">

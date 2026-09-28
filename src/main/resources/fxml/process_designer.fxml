@@ -67,10 +67,10 @@
             <Label styleClass="ux-inline-601a4c676b" fx:id="processStatusLabel" text="Ready"/>
         </HBox>
         <FlowPane prefWrapLength="980" styleClass="responsive-action-bar" hgap="6" vgap="6">
-            <Button text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button ux-inline-ab4da656fa"/>
-            <Button text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button ux-inline-ab4da656fa"/>
-            <Button text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button ux-inline-ab4da656fa"/>
-            <Button text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button ux-inline-ab4da656fa"/>
+            <Button text="Zoom in" onAction="#handleZoomIn" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button text="Zoom out" onAction="#handleZoomOut" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button text="Reset zoom" onAction="#handleResetZoom" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+            <Button text="Fit to content" onAction="#handleZoomFit" styleClass="secondary-button,ux-inline-ab4da656fa"/>
             <Label styleClass="ux-inline-7f1f518806" fx:id="zoomLevelLabel" text="100%"/>
             <CheckBox styleClass="ux-inline-ab4da656fa" fx:id="snapToGridCheck" text="Snap to grid" onAction="#handleSnapToGridToggled" selected="true"/>
         </FlowPane>

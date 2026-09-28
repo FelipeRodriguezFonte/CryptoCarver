@@ -115,8 +115,8 @@
                                         <VBox spacing="4" GridPane.rowIndex="12" GridPane.columnIndex="1">
                                             <TextField fx:id="keyLabDetailValueField" editable="false" styleClass="monospace-field"/>
                                             <HBox spacing="6">
-                                                <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button ux-inline-ab4da656fa"/>
-                                                <Button text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button ux-inline-ab4da656fa"/>
+                                                <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button,ux-inline-ab4da656fa"/>
+                                                <Button text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button,ux-inline-ab4da656fa"/>
                                             </HBox>
                                         </VBox>
                                     </GridPane>
@@ -162,7 +162,7 @@
                                 disable="true" styleClass="action-button,secondary-action"/>
                     </FlowPane>
 
-                    <VBox fx:id="generatedKeySummaryCard" visible="false" managed="false" spacing="8" styleClass="summary-card,info-card ux-inline-3733110c09">
+                    <VBox fx:id="generatedKeySummaryCard" visible="false" managed="false" spacing="8" styleClass="summary-card,info-card,ux-inline-3733110c09">
                         <HBox alignment="CENTER_LEFT" spacing="10">
                             <Label styleClass="ux-inline-ad77a4257f" text="Generated Key Summary"/>
                             <Label styleClass="ux-inline-d7b7368de8" fx:id="summarySavedStatusLabel" text=""/>
@@ -180,7 +180,7 @@
                             <Label fx:id="summaryLengthLabel" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
                             <Label text="Key Check Value (KCV):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
-                            <Label fx:id="summaryKcvLabel" styleClass="monospace-field ux-inline-689e8d50bc" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                            <Label fx:id="summaryKcvLabel" styleClass="monospace-field,ux-inline-689e8d50bc" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
                             <Label text="Fingerprint (SHA-256):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
                             <Label fx:id="summaryFingerprintLabel" styleClass="monospace-field" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
@@ -193,11 +193,11 @@
                         </GridPane>
 
                         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                            <Button fx:id="copyGeneratedKeyButton" text="Copy Key" onAction="#handleCopyGeneratedKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="copyGeneratedKcvButton" text="Copy KCV" onAction="#handleCopyGeneratedKcv" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="copyGeneratedSummaryButton" text="Copy Summary" onAction="#handleCopyGeneratedSummary" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="saveGeneratedSummaryButton" text="Save to Key Lab…" onAction="#handleSaveGeneratedKeyToLab" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="openValidationButton" text="Validate / Open Validation &amp; KCV" onAction="#handleOpenValidationAndKcv" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                            <Button fx:id="copyGeneratedKeyButton" text="Copy Key" onAction="#handleCopyGeneratedKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="copyGeneratedKcvButton" text="Copy KCV" onAction="#handleCopyGeneratedKcv" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="copyGeneratedSummaryButton" text="Copy Summary" onAction="#handleCopyGeneratedSummary" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="saveGeneratedSummaryButton" text="Save to Key Lab…" onAction="#handleSaveGeneratedKeyToLab" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="openValidationButton" text="Validate / Open Validation &amp; KCV" onAction="#handleOpenValidationAndKcv" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                         </FlowPane>
                     </VBox>
 
@@ -260,7 +260,7 @@
                         <TextField fx:id="keyStoreProfileNameField" promptText="Profile name (path/type only; no password)" HBox.hgrow="ALWAYS"/>
                         <Button text="Save Profile" onAction="#handleSaveKeyStoreProfile" styleClass="secondary-button"/>
                     </HBox>
-                    <Button text="Inspect KeyStore" onAction="#handleInspectKeyStore" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="160"/>
+                    <Button text="Inspect KeyStore" onAction="#handleInspectKeyStore" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="160"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyStoreReportArea" prefHeight="190" editable="false" wrapText="true"/>
                 </VBox>
             </TitledPane>
@@ -354,7 +354,7 @@
                     <Label styleClass="ux-inline-39414733db" text="Checks the pair cryptographically with a temporary signing challenge; it does not compare PEM text." wrapText="true"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyComparePublicArea" prefHeight="90" wrapText="true" promptText="Public key PEM or X.509 certificate PEM"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyComparePrivateArea" prefHeight="90" wrapText="true" promptText="Private key PEM"/>
-                    <Button text="Compare Pair" onAction="#handleCompareKeyPair" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="150"/>
+                    <Button text="Compare Pair" onAction="#handleCompareKeyPair" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="150"/>
                     <TextArea styleClass="ux-inline-e258d05449" fx:id="keyCompareResultArea" prefHeight="100" editable="false" wrapText="true"/>
                 </VBox>
             </TitledPane>
@@ -461,7 +461,7 @@
                             <HBox spacing="3" alignment="CENTER_LEFT">
                                 <Label styleClass="ux-inline-ab4da656fa" text="Salt:"/>
                                 <ComboBox styleClass="ux-inline-ab4da656fa" fx:id="kdfSaltFormatCombo" prefWidth="70"/>
-                                <Button text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button ux-inline-6786c7b45a"/>
+                                <Button text="Generate" onAction="#handleGenerateKdfSalt" styleClass="secondary-button,ux-inline-6786c7b45a"/>
                             </HBox>
                             <TextField styleClass="ux-inline-ab4da656fa" fx:id="kdfSaltField" promptText="Optional"/>
                             <Label fx:id="kdfSaltBadgeLabel" styleClass="material-field-badge" managed="true" visible="true"/>
@@ -478,7 +478,7 @@
                     </HBox>
 
                     <Button text="Derive Key" onAction="#handleDeriveKey"
-                            styleClass="action-button ux-inline-ba9ea6419e" maxWidth="150"/>
+                            styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="150"/>
                     <Label fx:id="kdfValidationLabel" visible="false" managed="false" wrapText="true"
                            styleClass="helper-text,field-error"/>
 
@@ -498,7 +498,7 @@
                     </HBox>
                     <TextField styleClass="ux-inline-ea21460dc9" fx:id="keyWrapKekField" promptText="KEK AES in hexadecimal (16, 24 or 32 bytes)"/>
                     <TextField styleClass="ux-inline-ea21460dc9" fx:id="keyWrapDataField" promptText="Key data / wrapped data in hexadecimal"/>
-                    <Button text="Execute Key Wrap" onAction="#handleAesKeyWrap" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="170"/>
+                    <Button text="Execute Key Wrap" onAction="#handleAesKeyWrap" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="170"/>
                     <TextArea styleClass="ux-inline-ea21460dc9" fx:id="keyWrapResultArea" prefHeight="150" editable="false" wrapText="true"
                               managed="false" visible="false"/>
                 </VBox>
@@ -547,7 +547,7 @@
                                 <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr31OptionalBlocksField"/>
 
                                 <Button text="Wrap Key (Export)" onAction="#handleTR31Export"
-                                        styleClass="action-button ux-inline-ba9ea6419e" maxWidth="180"/>
+                                        styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <HBox spacing="6">
                                     <Button text="Clear" onAction="#handleTR31Clear" styleClass="secondary-button"/>
                                     <Button text="Reset Defaults" onAction="#handleTR31Reset" styleClass="secondary-button"/>
@@ -575,9 +575,9 @@
 
                                 <HBox spacing="6">
                                     <Button text="Unwrap Key" onAction="#handleTR31Import"
-                                            styleClass="action-button ux-inline-ba9ea6419e" HBox.hgrow="ALWAYS"/>
+                                            styleClass="action-button,ux-inline-ba9ea6419e" HBox.hgrow="ALWAYS"/>
                                     <Button text="Parse Header" onAction="#handleTR31ParseHeader"
-                                            styleClass="action-button ux-inline-ba9ea6419e" HBox.hgrow="ALWAYS"/>
+                                            styleClass="action-button,ux-inline-ba9ea6419e" HBox.hgrow="ALWAYS"/>
                                 </HBox>
 
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="tr31ImportResultArea" prefHeight="120" editable="false" wrapText="true"
@@ -736,7 +736,7 @@
                                     <TextField styleClass="ux-inline-ba9ea6419e" fx:id="rsaKexKidField" promptText="Key ID (optional)"/>
                                     <TextField styleClass="ux-inline-ba9ea6419e" fx:id="rsaKexKeyVersionField" promptText="Key Version (optional)" prefWidth="140"/>
                                 </HBox>
-                                <Button text="Wrap Key (Export)" onAction="#handleRsaKexExport" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button text="Wrap Key (Export)" onAction="#handleRsaKexExport" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <HBox spacing="6">
                                     <Button text="Clear" onAction="#handleRsaKexClear" styleClass="secondary-button"/>
                                     <Button text="Reset Defaults" onAction="#handleRsaKexReset" styleClass="secondary-button"/>
@@ -761,8 +761,8 @@
                                     <Label styleClass="ux-inline-ba9ea6419e" text="Profile:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                                     <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="rsaKexImportProfileCombo" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
                                 </GridPane>
-                                <Label text="Ignored when the pasted data is already a Crypto Envelope — its own header is used instead." wrapText="true" styleClass="helper-text ux-inline-ab4da656fa"/>
-                                <Button text="Unwrap Key" onAction="#handleRsaKexImport" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Label text="Ignored when the pasted data is already a Crypto Envelope — its own header is used instead." wrapText="true" styleClass="helper-text,ux-inline-ab4da656fa"/>
+                                <Button text="Unwrap Key" onAction="#handleRsaKexImport" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="rsaKexImportResultArea" prefHeight="120" editable="false" wrapText="true"
                                           promptText="Import results will appear here..."/>
                             </VBox>
@@ -776,7 +776,7 @@
                 <VBox styleClass="ux-inline-1684f00703" spacing="6">
                     <Label text="TR-34-inspired laboratory key distribution" styleClass="helper-text"/>
                     <Label text="Signs then envelopes the key with CMS (RSA), the same mechanism TR-34 uses conceptually — including an optional two-pass binding nonce for replay protection. Not a byte-for-byte ANSI X9 TR-34-2019 implementation (no standards-exact ASN.1/PDU profile) and not verified against real KDH/KRD interop — do not use to load a production HSM."
-                           wrapText="true" styleClass="helper-text ux-inline-47dcc17db5"/>
+                           wrapText="true" styleClass="helper-text,ux-inline-47dcc17db5"/>
                     <TabPane tabClosingPolicy="UNAVAILABLE">
                         <Tab text="Distribute (Sender)">
                             <VBox styleClass="ux-inline-1684f00703" spacing="6">
@@ -796,7 +796,7 @@
                                 <Label styleClass="ux-inline-ba9ea6419e" text="Binding Nonce (optional, from receiver's challenge — two-pass):"/>
                                 <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr34BindingNonceField" promptText="Hex nonce from the Receive tab's Generate Challenge — leave blank for one-pass"/>
                                 <CheckBox styleClass="ux-inline-ba9ea6419e" fx:id="tr34IncludeEnvelopeCheck" text="Wrap key as Crypto Envelope before distributing"/>
-                                <Button text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button text="Distribute Key" onAction="#handleTr34Distribute" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <HBox spacing="6">
                                     <Button text="Clear" onAction="#handleTr34Clear" styleClass="secondary-button"/>
                                     <Button text="Reset Defaults" onAction="#handleTr34Reset" styleClass="secondary-button"/>
@@ -820,9 +820,9 @@
                                 <HBox spacing="6">
                                     <TextField styleClass="ux-inline-ea21460dc9" fx:id="tr34ChallengeNonceField" HBox.hgrow="ALWAYS"
                                               promptText="Hex nonce — generate here, copy into the Distribute tab's Binding Nonce, leave blank for one-pass"/>
-                                    <Button text="Generate Challenge" onAction="#handleTr34GenerateChallenge" styleClass="secondary-button ux-inline-ba9ea6419e"/>
+                                    <Button text="Generate Challenge" onAction="#handleTr34GenerateChallenge" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
                                 </HBox>
-                                <Button text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button ux-inline-ba9ea6419e" maxWidth="180"/>
+                                <Button text="Receive Key" onAction="#handleTr34Receive" styleClass="action-button,ux-inline-ba9ea6419e" maxWidth="180"/>
                                 <TextArea styleClass="ux-inline-ea21460dc9" fx:id="tr34ReceiveResultArea" prefHeight="120" editable="false" wrapText="true"
                                           promptText="Receive results will appear here..."/>
                             </VBox>
@@ -860,7 +860,7 @@
                         </HBox>
 
                         <!-- Block 3: Generated Key Pair Summary -->
-                        <VBox fx:id="rsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card ux-inline-3733110c09">
+                        <VBox fx:id="rsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card,ux-inline-3733110c09">
                             <HBox alignment="CENTER_LEFT" spacing="10">
                                 <Label styleClass="ux-inline-ad77a4257f" text="Generated RSA Key Pair Summary"/>
                                 <Label styleClass="ux-inline-d7b7368de8" fx:id="rsaSummarySavedStatusLabel" text=""/>
@@ -902,17 +902,17 @@
 
                         <!-- Block 4: Use or Export Actions -->
                         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                            <Button fx:id="rsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyRsaPublicKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyRsaPrivateKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyRsaSummary" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportRsaPublicPem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportRsaPrivatePem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendRsaPublicToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendRsaPrivateToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaUseCipherBtn" text="Use in RSA Cipher" onAction="#handleUseRsaInCipher" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseRsaInSignatures" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseRsaInCertificates" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="rsaClearBtn" text="Clear Pair" onAction="#handleClearRsa" styleClass="btn-danger ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyRsaPublicKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyRsaPrivateKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyRsaSummary" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportRsaPublicPem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportRsaPrivatePem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendRsaPublicToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendRsaPrivateToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaUseCipherBtn" text="Use in RSA Cipher" onAction="#handleUseRsaInCipher" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseRsaInSignatures" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseRsaInCertificates" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="rsaClearBtn" text="Clear Pair" onAction="#handleClearRsa" styleClass="btn-danger,ux-inline-ba9ea6419e"/>
                         </FlowPane>
                     </VBox>
                 </TitledPane>
@@ -934,7 +934,7 @@
                         </HBox>
 
                         <!-- Block 3: Summary -->
-                        <VBox fx:id="ecdsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card ux-inline-3733110c09">
+                        <VBox fx:id="ecdsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card,ux-inline-3733110c09">
                             <HBox alignment="CENTER_LEFT" spacing="10">
                                 <Label styleClass="ux-inline-ad77a4257f" text="Generated ECDSA Key Pair Summary"/>
                                 <Label styleClass="ux-inline-d7b7368de8" fx:id="ecdsaSummarySavedStatusLabel" text=""/>
@@ -975,17 +975,17 @@
 
                         <!-- Block 4: Actions -->
                         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                            <Button fx:id="ecdsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyEcdsaPublicKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyEcdsaPrivateKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyEcdsaSummary" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEcdsaPublicPem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEcdsaPrivatePem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEcdsaPublicToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendEcdsaPrivateToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEcdsaInSignatures" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEcdsaInCertificates" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="ecdsaClearBtn" text="Clear Pair" onAction="#handleClearEcdsa" styleClass="btn-danger ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyEcdsaPublicKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyEcdsaPrivateKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyEcdsaSummary" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEcdsaPublicPem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEcdsaPrivatePem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEcdsaPublicToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendEcdsaPrivateToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEcdsaInSignatures" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEcdsaInCertificates" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="ecdsaClearBtn" text="Clear Pair" onAction="#handleClearEcdsa" styleClass="btn-danger,ux-inline-ba9ea6419e"/>
                         </FlowPane>
                     </VBox>
                 </TitledPane>
@@ -1007,7 +1007,7 @@
                         </HBox>
 
                         <!-- Block 3: Summary -->
-                        <VBox fx:id="dsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card ux-inline-3733110c09">
+                        <VBox fx:id="dsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card,ux-inline-3733110c09">
                             <HBox alignment="CENTER_LEFT" spacing="10">
                                 <Label styleClass="ux-inline-ad77a4257f" text="Generated DSA Key Pair Summary"/>
                                 <Label styleClass="ux-inline-d7b7368de8" fx:id="dsaSummarySavedStatusLabel" text=""/>
@@ -1048,17 +1048,17 @@
 
                         <!-- Block 4: Actions -->
                         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                            <Button fx:id="dsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyDsaPublicKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyDsaPrivateKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyDsaSummary" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportDsaPublicPem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportDsaPrivatePem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendDsaPublicToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendDsaPrivateToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseDsaInSignatures" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseDsaInCertificates" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="dsaClearBtn" text="Clear Pair" onAction="#handleClearDsa" styleClass="btn-danger ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyDsaPublicKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyDsaPrivateKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyDsaSummary" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportDsaPublicPem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportDsaPrivatePem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendDsaPublicToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendDsaPrivateToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseDsaInSignatures" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseDsaInCertificates" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="dsaClearBtn" text="Clear Pair" onAction="#handleClearDsa" styleClass="btn-danger,ux-inline-ba9ea6419e"/>
                         </FlowPane>
                     </VBox>
                 </TitledPane>
@@ -1080,7 +1080,7 @@
                         </HBox>
 
                         <!-- Block 3: Summary -->
-                        <VBox fx:id="eddsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card ux-inline-3733110c09">
+                        <VBox fx:id="eddsaSummaryCard" visible="false" managed="false" spacing="6" styleClass="summary-card,info-card,ux-inline-3733110c09">
                             <HBox alignment="CENTER_LEFT" spacing="10">
                                 <Label styleClass="ux-inline-ad77a4257f" text="Generated Ed25519 Key Pair Summary"/>
                                 <Label styleClass="ux-inline-d7b7368de8" fx:id="eddsaSummarySavedStatusLabel" text=""/>
@@ -1121,17 +1121,17 @@
 
                         <!-- Block 4: Actions -->
                         <FlowPane prefWrapLength="900" styleClass="responsive-action-bar">
-                            <Button fx:id="eddsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyEddsaPublicKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyEddsaPrivateKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyEddsaSummary" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEddsaPublicPem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEddsaPrivatePem" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEddsaPublicToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendEddsaPrivateToShelf" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEddsaInSignatures" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEddsaInCertificates" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <Button fx:id="eddsaClearBtn" text="Clear Pair" onAction="#handleClearEd25519" styleClass="btn-danger ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaCopyPublicBtn" text="Copy Public Key" onAction="#handleCopyEddsaPublicKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaCopyPrivateBtn" text="Copy Private Key" onAction="#handleCopyEddsaPrivateKey" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaCopySummaryBtn" text="Copy Summary" onAction="#handleCopyEddsaSummary" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaExportPublicBtn" text="Export Public PEM…" onAction="#handleExportEddsaPublicPem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaExportPrivateBtn" text="Export Private PEM…" onAction="#handleExportEddsaPrivatePem" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaSendShelfBtn" text="Send Public to Shelf" onAction="#handleSendEddsaPublicToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaSendPrivateShelfBtn" text="Send Private to Shelf (session only)" onAction="#handleSendEddsaPrivateToShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaUseCipherBtn" text="Use in RSA Cipher" disable="true" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaUseSignaturesBtn" text="Use in Digital Signatures" onAction="#handleUseEddsaInSignatures" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaUseCertificatesBtn" text="Use for Certificate / CSR" onAction="#handleUseEddsaInCertificates" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
+                            <Button fx:id="eddsaClearBtn" text="Clear Pair" onAction="#handleClearEd25519" styleClass="btn-danger,ux-inline-ba9ea6419e"/>
                         </FlowPane>
                     </VBox>
                 </TitledPane>
