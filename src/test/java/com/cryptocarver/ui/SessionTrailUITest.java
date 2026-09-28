@@ -171,7 +171,7 @@ class SessionTrailUITest {
                 controller.publish(OperationResult.forOperation("Synthetic second operation").build());
                 controller.saveCurrentResultAsSessionStep("Synthetic second", "");
                 javafx.stage.Stage stage = new javafx.stage.Stage();
-                stage.setScene(new javafx.scene.Scene(root, 1280, 800));
+                stage.setScene(new javafx.scene.Scene(root, 1920, 1000));
                 stage.show();
                 root.applyCss();
                 root.layout();
