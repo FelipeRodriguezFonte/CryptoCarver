@@ -166,13 +166,16 @@ class SessionTrailUITest {
                 FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
                 javafx.scene.Parent root = loader.load();
                 ModernMainController controller = loader.getController();
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                javafx.scene.Scene scene = new javafx.scene.Scene(root, 1280, 800);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                scene.getStylesheets().add(getClass().getResource("/css/theme-light.css").toExternalForm());
+                stage.setScene(scene);
+                stage.show();
                 controller.publish(OperationResult.forOperation("Synthetic operation").build());
                 controller.saveCurrentResultAsSessionStep("Synthetic first", "");
                 controller.publish(OperationResult.forOperation("Synthetic second operation").build());
                 controller.saveCurrentResultAsSessionStep("Synthetic second", "");
-                javafx.stage.Stage stage = new javafx.stage.Stage();
-                stage.setScene(new javafx.scene.Scene(root, 1920, 1000));
-                stage.show();
                 root.applyCss();
                 root.layout();
                 positionRef.set(field(controller, "sessionTrailPositionLabel"));
@@ -185,6 +188,10 @@ class SessionTrailUITest {
             assertTrue(positionRef.get().getWidth() > 0, "position label should be laid out with visible width; label="
                     + positionRef.get().getWidth() + ", parent=" + positionRef.get().getParent().getBoundsInLocal());
             assertTrue(positionRef.get().getText().contains("2/2"));
+            // The generic `.label` rule used to paint the text with the header's own colour.
+            javafx.scene.paint.Paint background = ((javafx.scene.layout.Region) positionRef.get().getParent())
+                    .getBackground().getFills().get(0).getFill();
+            assertNotEquals(background, positionRef.get().getTextFill());
         } finally {
             runAndWait(() -> stageRef.get().close());
         }
