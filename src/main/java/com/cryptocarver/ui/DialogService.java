@@ -7,6 +7,7 @@ import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -56,6 +57,8 @@ public final class DialogService {
         ButtonType cancel = new ButtonType(i18n.text("dialog.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, nonBlank(consequence, ""), cancel, confirm);
         configure(alert, owner, title, null);
+        ((Button) alert.getDialogPane().lookupButton(cancel)).setDefaultButton(true);
+        ((Button) alert.getDialogPane().lookupButton(confirm)).setDefaultButton(false);
         focusButtonWhenShown(alert, cancel);
         return alert.showAndWait().filter(confirm::equals).isPresent();
     }

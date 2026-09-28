@@ -1,6 +1,8 @@
 package com.cryptocarver.ui;
 
 import javafx.scene.control.DialogPane;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.application.Platform;
 import javafx.stage.FileChooser;
 import org.junit.jupiter.api.BeforeAll;
@@ -25,6 +27,51 @@ class DialogServiceTest {
             started.countDown();
         }
         assertTrue(started.await(5, java.util.concurrent.TimeUnit.SECONDS));
+    }
+
+    @Test
+    void destructiveConfirmationMakesCancelDefaultAndConfirmNonDefault() throws Exception {
+        java.util.concurrent.CountDownLatch checked = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        Platform.runLater(() -> {
+            try {
+                Platform.runLater(() -> {
+                    javafx.scene.control.Button cancelButton = null;
+                    try {
+                        javafx.scene.control.DialogPane pane = javafx.stage.Window.getWindows().stream()
+                                .filter(javafx.stage.Stage.class::isInstance)
+                                .map(javafx.stage.Stage.class::cast)
+                                .filter(javafx.stage.Stage::isShowing)
+                                .map(javafx.stage.Stage::getScene)
+                                .filter(java.util.Objects::nonNull)
+                                .map(javafx.scene.Scene::getRoot)
+                                .filter(DialogPane.class::isInstance)
+                                .map(DialogPane.class::cast)
+                                .findFirst().orElseThrow();
+                        javafx.scene.control.ButtonType cancel = pane.getButtonTypes().stream()
+                                .filter(type -> type.getButtonData() == ButtonBar.ButtonData.CANCEL_CLOSE)
+                                .findFirst().orElseThrow();
+                        javafx.scene.control.ButtonType confirm = pane.getButtonTypes().stream()
+                                .filter(type -> type.getButtonData() == ButtonBar.ButtonData.OK_DONE)
+                                .findFirst().orElseThrow();
+                        cancelButton = (Button) pane.lookupButton(cancel);
+                        assertTrue(cancelButton.isDefaultButton());
+                        assertFalse(((Button) pane.lookupButton(confirm)).isDefaultButton());
+                    } catch (Throwable error) {
+                        failure.set(error);
+                    } finally {
+                        if (cancelButton != null) cancelButton.fire();
+                        checked.countDown();
+                    }
+                });
+                new DialogService().confirmDestructive("Synthetic title", "Synthetic consequence", "Confirm");
+            } catch (Throwable error) {
+                failure.compareAndSet(null, error);
+                checked.countDown();
+            }
+        });
+        assertTrue(checked.await(5, java.util.concurrent.TimeUnit.SECONDS));
+        if (failure.get() != null) throw new AssertionError(failure.get());
     }
 
     @Test
