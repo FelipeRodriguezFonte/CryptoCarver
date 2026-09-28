@@ -48,6 +48,39 @@ class SessionTrailUITest {
     }
 
     @Test
+    void productionFxmlGivesSessionTrailPositionLabelVisibleWidth() throws Exception {
+        AtomicReference<Label> positionRef = new AtomicReference<>();
+        AtomicReference<javafx.stage.Stage> stageRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                javafx.scene.Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controller.publish(OperationResult.forOperation("Synthetic operation").build());
+                controller.saveCurrentResultAsSessionStep("Synthetic first", "");
+                controller.publish(OperationResult.forOperation("Synthetic second operation").build());
+                controller.saveCurrentResultAsSessionStep("Synthetic second", "");
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setScene(new javafx.scene.Scene(root, 1280, 800));
+                stage.show();
+                root.applyCss();
+                root.layout();
+                positionRef.set(field(controller, "sessionTrailPositionLabel"));
+                stageRef.set(stage);
+            } catch (Exception exception) {
+                throw new AssertionError(exception);
+            }
+        });
+        try {
+            assertTrue(positionRef.get().getWidth() > 0, "position label should be laid out with visible width; label="
+                    + positionRef.get().getWidth() + ", parent=" + positionRef.get().getParent().getBoundsInLocal());
+            assertTrue(positionRef.get().getText().contains("2/2"));
+        } finally {
+            runAndWait(() -> stageRef.get().close());
+        }
+    }
+
+    @Test
     void savesLatestPublishedResultRendersItAndExportsTheTrail() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {

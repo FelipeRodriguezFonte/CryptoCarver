@@ -399,7 +399,7 @@
 
                 <HBox fx:id="sessionTrailNavigation" spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header" managed="false" visible="false">
                     <Button fx:id="inspectorPreviousSessionStepButton" styleClass="ux-inline-7c4e63cc14" text="‹" onAction="#handlePreviousSessionStep" accessibleText="Previous session step"/>
-                    <Label fx:id="sessionTrailPositionLabel" text="" minWidth="0" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="inspector-section-title"/>
+                    <Label fx:id="sessionTrailPositionLabel" text="" minWidth="0" prefWidth="0" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="inspector-section-title"/>
                     <Button fx:id="inspectorNextSessionStepButton" styleClass="ux-inline-7c4e63cc14" text="›" onAction="#handleNextSessionStep" accessibleText="Next session step"/>
                     <Button fx:id="inspectorOpenSessionStepButton" styleClass="ux-inline-7c4e63cc14" text="View data" onAction="#handleOpenSelectedSessionStep" accessibleText="View saved operation data"/>
                 </HBox>
