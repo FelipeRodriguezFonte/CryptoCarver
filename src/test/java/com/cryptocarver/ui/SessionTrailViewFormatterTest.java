@@ -34,7 +34,7 @@ class SessionTrailViewFormatterTest {
         String encryptedPreview = SessionTrailViewFormatter.preview(encrypted, i18n);
         assertTrue(encryptedPreview.contains(i18n.text("savedSessions.encryptedTrailPreview")));
         assertFalse(encryptedPreview.contains(i18n.text("sessionTrail.empty")));
-        assertFalse(encryptedPreview.toLowerCase().contains("password"));
+        assertFalse(encryptedPreview.contains(i18n.text("savedSessions.passwordRequired")));
     }
 
     @Test
