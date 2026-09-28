@@ -46,7 +46,9 @@ class ComputedStyleSnapshotTool {
     private static final String[] THEMES = {"theme-light.css", "theme-dark.css"};
     private static final String[] ROUTES = {"Hashing", "Symmetric Ciphers", "MAC", "Key Generation",
             "Recent Operations", "Saved Sessions", "Certificates", "JWT (Signed)", "PIN Generation",
-            "Clipboard Shelf"};
+            "Clipboard Shelf", "Manual Conversion", "EMV Tool", "Sign SOAP", "Process Designer",
+            "Key & Certificate Format Workbench", "Post-Quantum Key Generation", "COSE Sign1",
+            "OpenPGP", "PAdES PDF Signatures", "ASiC-S Containers"};
 
     @Test
     void writeSnapshot() throws Exception {
