@@ -44,3 +44,17 @@ Comprobación ejecutada sobre `src/main/resources/fxml`, `src/main/java` y `src/
 | `handleByteInspector` | FXML lo declara como `onAction="#handleByteInspector"` en el menú Herramientas | Se conserva |
 
 Se mantienen los contratos existentes `FxmlContractTest` y `ModernMainControllerFxmlStaticTest`: ambos validan que los `onAction` de los FXML resolvieron a métodos declarados en su controlador. Ningún `@FXML` se mueve fuera de `ModernMainController`.
+
+## Publicación de resultados y visores (Encargo 26)
+
+En `6f12595` el bloque efectivo ocupa `ModernMainController.java:2480–3055`: resolución/clasificación de áreas y protección de captura (`2480–2612`), publicación/limpieza e historial (`2614–2734`), menús contextuales/copia/Shelf (`2737–2943`), contratos de clasificación, navegación al portapapeles y visores de tablas (`2944–3055`). Los límites se verificaron con `rg -n` sobre cada declaración; las líneas anteriores son inclusivas aproximadas y pueden variar tras la extracción.
+
+| Área | Campos FXML directos | Entradas/llamadas verificadas | Destino |
+|---|---|---|---|
+| Publicación | `inspectorAddSessionStepButton`, `resultSummaryBar`, `resultOpLabel`, `resultAlgoLabel`, `resultSizeLabel`, `resultFormatLabel`, `resultStatusBadge`; usa además snapshot/estado del shell | `StatusReporter.publish` y módulos mediante `OperationNavigator`; `ModernMainControllerUITest`/`SessionTrailUITest` llaman `publish`; historial interno | `ResultPresentationPolicy` para bytes y detalles; publicación sigue como contrato delegado en el controlador |
+| Protección y clasificación | sin campo FXML propio; `TextArea` se obtiene de `ResultAreaTracker`/`mainPane` | menú/acciones internas; `handleAddCurrentOutputToShelf`; pruebas UI | política pura + coordinador JavaFX |
+| Menú, copia y Shelf | `mainPane`; acceso a `cipherController`, manager/servicio Shelf y `clipboardShelfController` | `installResultViewerSupport` durante inicialización; eventos del menú dinámico; `handleCopyOutput` y `handleAddCurrentOutputToShelf` vía FXML; tests UI de Shelf/copia | `ResultViewerCoordinator`; handlers públicos/FXML permanecen como adaptadores |
+| Visores expandido y de tablas | `mainPane`; estado `lastFocusedTable` y `expandedTableViewer` | `handleOpenExpandedResultViewer` vía FXML; instalación interna; menús contextuales en `TableView` | `ResultViewerCoordinator`; handler FXML permanece como adaptador |
+| Contratos públicos | — | `rg` localiza `publish` implementado por `StatusReporter`, `classifyPublishedResult` consultado por clasificación interna, `fillClipboardTarget` invocado por `ClipboardShelfController`, y `revealShelfEntry` desde flujos de Shelf/workbench | Se conservan y delegan; no eliminar por referencias indirectas |
+
+Evidencia de llamadas: `rg -n 'onAction="#(handleOpenExpandedResultViewer|handleAddCurrentOutputToShelf|handleCopyOutput)"' src/main/resources/fxml/main-view-modern.fxml`; `rg -n 'publish\\(|classifyPublishedResult\\(|fillClipboardTarget\\(|revealShelfEntry\\(' src/main/java/com/cryptocarver/ui`. El menú contextual no está declarado en FXML: se instala desde el tracker y enlaza acciones con eventos JavaFX. Los tests UI de caracterización deben complementar los tests de política pura.
