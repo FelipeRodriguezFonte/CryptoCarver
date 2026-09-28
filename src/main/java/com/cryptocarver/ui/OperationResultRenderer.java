@@ -4,9 +4,6 @@ import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.SecretVisibilityProfile;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
 /** Applies secret visibility and byte rendering rules to a normalized operation result. */
@@ -76,16 +73,15 @@ final class OperationResultRenderer {
     }
 
     static OperationDetail.Classification classification(OperationResult result) {
-        if (result == null) return OperationDetail.Classification.PUBLIC;
-        OperationDetail.Classification classification = max(
-                result.getOutputClassification(), result.getEnrichedOutputClassification());
-        return max(classification, classification(result.getDetails()));
+        return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(result);
     }
 
     static String renderBytes(byte[] bytes) {
-        if (bytes == null || bytes.length == 0) return "";
-        if (isPrintableUtf8(bytes)) return new String(bytes, StandardCharsets.UTF_8);
-        return hex(bytes);
+        return com.cryptocarver.model.ResultPresentationPolicy.renderBytesForDisplay(bytes);
+    }
+
+    static boolean isPrintableUtf8(byte[] bytes) {
+        return com.cryptocarver.model.ResultPresentationPolicy.isPrintableUtf8(bytes);
     }
 
     private static String hex(byte[] bytes) {
@@ -96,20 +92,6 @@ final class OperationResultRenderer {
             encoded[index * 2 + 1] = HEX[value & 0x0F];
         }
         return new String(encoded);
-    }
-
-    static boolean isPrintableUtf8(byte[] bytes) {
-        if (bytes == null) return false;
-        try {
-            String text = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes)).toString();
-            return text.codePoints().allMatch(codePoint -> !Character.isISOControl(codePoint)
-                    || codePoint == '\n' || codePoint == '\r' || codePoint == '\t');
-        } catch (CharacterCodingException ignored) {
-            return false;
-        }
     }
 
     private static String summary(OperationResult result, SecretVisibilityProfile policy) {

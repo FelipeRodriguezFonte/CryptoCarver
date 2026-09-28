@@ -50,7 +50,8 @@ public final class ResultPresentationPolicy {
         return isPrintableUtf8(bytes) ? new String(bytes, StandardCharsets.UTF_8) : toHex(bytes);
     }
 
-    private static boolean isPrintableUtf8(byte[] bytes) {
+    public static boolean isPrintableUtf8(byte[] bytes) {
+        if (bytes == null) return false;
         try {
             String text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();

@@ -59,7 +59,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private OperationInspectorPresenter inspectorPresenter;
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
     private ResultViewerCoordinator resultViewerCoordinator;
-    private ClipboardTargetNavigator clipboardTargetNavigator;
     private ResultPublicationCoordinator resultPublicationCoordinator;
     /**
      * Snapshot published by the latest completed operation.  It is deliberately
@@ -2698,14 +2697,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         clipboardTargetNavigator().fill(targetType, value, format, packageData);
     }
 
+    /**
+     * Built per call: module controllers load on demand, so a cached navigator
+     * would keep the null reference of a module that was not loaded yet.
+     */
     private ClipboardTargetNavigator clipboardTargetNavigator() {
-        if (clipboardTargetNavigator == null) clipboardTargetNavigator = new ClipboardTargetNavigator(
+        return new ClipboardTargetNavigator(
                 genericContainerController, cipherController, xmlSecurityContainerController, wssSecurityContainerController,
                 paymentsContainerController, keysController, joseController, this::navigateToModule,
                 this::expandGenericAccordionPane, this::expandCipherAccordionPane, this::expandXMLAccordionPane,
                 this::expandWssAccordionPane, this::expandPaymentsAccordionPane, this::expandAccordionPane,
                 this::showJOSE, this::updateStatus);
-        return clipboardTargetNavigator;
     }
 
     @FXML
