@@ -11,9 +11,7 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
@@ -169,7 +167,6 @@ public final class SessionTrailCoordinator {
             refresh(); status.accept(i18n.text("sessionTrail.cleared"));
         }
     }
-    public void clearPublishedResult() { state.clearPublishedResult(); refreshNavigation(); }
 
     private Map<String, Object> captureClearTextTrailParameters() {
         try {
