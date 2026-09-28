@@ -131,7 +131,9 @@ class HistorySelectorPolicyTest {
 
     private static boolean oldSensitive(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
-        if (lower.equals("certcnfield")) return false;
+        // Public certificate parameters deliberately stopped being secrets.
+        if (Set.of("certcnfield", "certvalidityfield", "certissuevalidityfield",
+                "certissuesignaturefield", "certissuepathlengthfield").contains(lower)) return false;
         return OLD_TOKENS.stream().anyMatch(lower::contains);
     }
 

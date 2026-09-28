@@ -248,4 +248,13 @@ class UiStateSnapshotTest {
                 Map.of("DummyController.algoCombo", "[REDACTED_SECRET]"));
         assertEquals("AES", controller.algoCombo.getValue());
     }
+
+    @org.junit.jupiter.api.Test
+    void publicCertificateParametersAreNotSecrets() {
+        for (String field : new String[] { "certCnField", "certValidityField", "certIssueValidityField",
+                "certIssueSignatureField", "certIssuePathLengthField" }) {
+            org.junit.jupiter.api.Assertions.assertFalse(UiStateSnapshot.isHistorySensitiveField(field), field);
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(UiStateSnapshot.isHistorySensitiveField("certIssueCsrArea"));
+    }
 }
