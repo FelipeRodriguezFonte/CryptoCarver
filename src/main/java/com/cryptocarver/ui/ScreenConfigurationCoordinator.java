@@ -147,8 +147,9 @@ public final class ScreenConfigurationCoordinator {
                             encrypted ? "*.ccconfig" : "*.json"));
             chooser.setInitialFileName("cryptocarver-" + safeFileName(configuration.operation())
                     + (encrypted ? ".ccconfig" : ".json"));
-            File file = chooser.showSaveDialog(owner.get());
-            if (file == null) return;
+            File chosen = chooser.showSaveDialog(owner.get());
+            if (chosen == null) return;
+            File file = withoutRepeatedExtension(chosen, encrypted ? ".ccconfig" : ".json");
             exportTo(file.toPath(), configuration, encrypted, password);
             status.accept(i18n.text("status.configuration.exported", file.getName()));
             dialogs.info(owner.get(), i18n.text("dialog.configuration.exportedTitle"), i18n.text(
@@ -272,6 +273,17 @@ public final class ScreenConfigurationCoordinator {
 
     static boolean isEncryptedConfigurationOption(String selectedOption, String encryptedOption) {
         return encryptedOption.equals(selectedOption);
+    }
+
+    /**
+     * The macOS save panel appends the filter's extension again when it does not
+     * recognise it, producing {@code name.ccconfig.ccconfig}.
+     */
+    static File withoutRepeatedExtension(File file, String extension) {
+        String name = file.getName();
+        String doubled = extension + extension;
+        if (!name.toLowerCase(Locale.ROOT).endsWith(doubled)) return file;
+        return new File(file.getParentFile(), name.substring(0, name.length() - extension.length()));
     }
 
     static boolean isLegacyKeyGenerationConfiguration(ScreenConfiguration configuration) {

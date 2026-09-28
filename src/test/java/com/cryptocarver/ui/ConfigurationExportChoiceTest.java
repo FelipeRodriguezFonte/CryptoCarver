@@ -36,4 +36,15 @@ class ConfigurationExportChoiceTest {
         assertEquals("Encrypted (.ccconfig)", encryptedOption);
         assertTrue(ModernMainController.isEncryptedConfigurationOption(encryptedOption, encryptedOption));
     }
+
+    @Test
+    void savePanelDuplicatedExtensionIsDropped() {
+        java.io.File dir = temporaryDirectory.toFile();
+        assertEquals("screen.ccconfig", ScreenConfigurationCoordinator.withoutRepeatedExtension(
+                new java.io.File(dir, "screen.ccconfig.ccconfig"), ".ccconfig").getName());
+        assertEquals("screen.ccconfig", ScreenConfigurationCoordinator.withoutRepeatedExtension(
+                new java.io.File(dir, "screen.ccconfig"), ".ccconfig").getName());
+        assertEquals("screen.json", ScreenConfigurationCoordinator.withoutRepeatedExtension(
+                new java.io.File(dir, "screen.json.json"), ".json").getName());
+    }
 }
