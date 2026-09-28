@@ -2,9 +2,9 @@
 
 ## Diagnóstico antes de corregir CSS
 
-La prueba cargó `main-view-modern.fxml` mediante `Fxml.loader`, mostró un `Stage` de 1400 × 900, aplicó `styles.css` más cada tema y midió tras `applyCss()`/`layout()`. Para módulos se navegó con `ModernMainController.navigateToModule`: Genérico, Claves (`Symmetric Keys`), Cifrado (`Symmetric Ciphers`), Histórico y Sesiones guardadas. Se calculó el ratio WCAG de `Label.getTextFill()` contra el relleno opaco de sí mismo cuando lo tiene o, en otro caso, contra el primer ancestro opaco. El tamaño se comprobó tras layout y se ignoraron nodos ocultos o sin área.
+La prueba cargó `main-view-modern.fxml` mediante `Fxml.loader`, mostró un `Stage` de 1400 × 900 (el tamaño usado por `ModuleHostVisibilityUITest`; no se ajustaron dimensiones ni umbrales), aplicó `styles.css` más cada tema y midió tras `applyCss()`/`layout()`. Para módulos se navegó con `ModernMainController.navigateToModule`: Genérico, Claves (`Symmetric Keys`), Cifrado (`Symmetric Ciphers`), Histórico y Sesiones guardadas. Se calculó el ratio WCAG de `Label.getTextFill()` contra el relleno opaco de sí mismo cuando lo tiene o, en otro caso, contra el primer ancestro opaco. El tamaño se comprobó tras layout y se ignoraron nodos ocultos o sin área.
 
-La tabla enumera cada etiqueta/clase una sola vez por tema; los módulos indican dónde fue visible. `label` sin `fx:id` se identifica por su contexto de contenedor en la salida diagnóstica: en claro era el badge experimental de la navegación (fondo ámbar); en oscuro eran los labels de botones del menú principal.
+La tabla enumera cada etiqueta/clase una sola vez por tema; los módulos indican dónde fue visible. `label` sin `fx:id` en tema claro era el badge experimental del `TreeCell` (fondo ámbar, 2.19:1); en tema oscuro eran los labels de botones del menú principal (1.15:1).
 
 | Tema | fx:id / clase | Ratio mínimo | Vistas |
 |---|---|---:|---|
@@ -15,14 +15,14 @@ La tabla enumera cada etiqueta/clase una sola vez por tema; los módulos indican
 | `theme-dark.css` | `#sessionTrailCountLabel `.label` ux-inline-cb001c4862` | 2.23:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
 | `theme-dark.css` | `#statusLabel `.label` status-label-main` | 1.00:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
 | `theme-dark.css` | `#statusLanguageLabel `.label` status-label-info` | 1.00:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
-| `theme-dark.css` | `label` | 1.15:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
+| `theme-dark.css` | `MenuBarButton > .label` | 1.15:1 | Shell y todas las vistas navegadas |
 | `theme-dark.css` | `label ux-inline-7917b6784a` | 1.15:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
 | `theme-light.css` | `#breadcrumbOperationLabel `.label` breadcrumb-current` | 1.46:1 | Generic, History, Symmetric Ciphers |
 | `theme-light.css` | `#breadcrumbSep1 `.label` breadcrumb-separator` | 1.46:1 | Generic, History, Symmetric Ciphers, Symmetric Keys |
 | `theme-light.css` | `#breadcrumbSep2 `.label` breadcrumb-separator` | 1.46:1 | Symmetric Ciphers |
 | `theme-light.css` | `#statusLabel `.label` status-label-main` | 1.00:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
 | `theme-light.css` | `#statusLanguageLabel `.label` status-label-info` | 1.00:1 | Generic, History, Saved Sessions, Shell, Symmetric Ciphers, Symmetric Keys |
-| `theme-light.css` | `label` | 2.19:1 | History, Symmetric Ciphers, Symmetric Keys |
+| `theme-light.css` | `.navigation-tree .tree-cell .label` (badge experimental) | 2.19:1 | Vistas con el árbol de navegación |
 | `theme-light.css` | `label ux-inline-0665f452ba` | 2.05:1 | Saved Sessions, Shell |
 | `theme-light.css` | `label ux-inline-98d654c0fb` | 1.12:1 | Saved Sessions, Shell |
 
@@ -136,6 +136,15 @@ Se añadió una prueba sintética para `FULL_LAB`, `MASKED` y `REDACTED`. FULL_L
 
 `docs/ENCARGO_23_MAPA.md` y `docs/CRYPTOCARVER_ROADMAP_EVOLUCION.md` no atribuyen la etiqueta del rastro a un problema de ancho. No fue necesario corregirlos.
 
+## Pruebas y comprobación manual
+
+`mvn -o -q test`: 2366 pruebas, 0 fallos, 0 errores, 1 omitida. `LabelContrastUITest`: 1/1; `UiStateSnapshotTest`: 10/10. No hice una prueba manual de la aplicación.
+
 ## Commits
 
-Se añadirá la lista final de hashes al cerrar el trabajo.
+- `ebfe1f2` — medición de contraste (diagnóstico inicial).
+- `a143462` — deduplicación de `components.css`.
+- `d96213c` — restauración de recetas FULL_LAB y foco bajo perfiles redactados.
+- `f16a7fb` — correcciones de contraste y regresión.
+- `6aca969` — casos históricos existentes declarados en REDACTED.
+- Se añade este informe final como commit documental.
