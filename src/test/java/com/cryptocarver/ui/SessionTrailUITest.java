@@ -48,6 +48,44 @@ class SessionTrailUITest {
     }
 
     @Test
+    void clearTrailButtonConfirmsAndReturnsToDisabledState() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                javafx.scene.Parent root = loader.load();
+                ModernMainController controller = loader.getController();
+                controllerRef.set(controller);
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setScene(new javafx.scene.Scene(root, 1920, 1000));
+                stage.show();
+                Button clear = field(controller, "inspectorClearSessionTrailButton");
+                assertTrue(clear.isDisabled());
+                controller.publish(OperationResult.forOperation("Synthetic operation").build());
+                controller.saveCurrentResultAsSessionStep("Synthetic step", "");
+                assertFalse(clear.isDisabled());
+                Platform.runLater(() -> javafx.stage.Window.getWindows().stream()
+                        .filter(javafx.stage.Stage.class::isInstance)
+                        .map(javafx.stage.Stage.class::cast)
+                        .filter(javafx.stage.Stage::isShowing)
+                        .map(javafx.stage.Stage::getScene)
+                        .filter(java.util.Objects::nonNull)
+                        .map(javafx.scene.Scene::getRoot)
+                        .filter(javafx.scene.control.DialogPane.class::isInstance)
+                        .map(javafx.scene.control.DialogPane.class::cast)
+                        .findFirst()
+                        .ifPresent(pane -> ((javafx.scene.control.Button) pane.lookupButton(javafx.scene.control.ButtonType.OK)).fire()));
+                clear.fire();
+                assertEquals(0, ((com.cryptocarver.model.SessionTrailState) field(controller, "sessionTrailState")).size());
+                assertTrue(clear.isDisabled());
+                stage.close();
+            } catch (Exception exception) {
+                throw new AssertionError(exception);
+            }
+        });
+    }
+
+    @Test
     void productionFxmlGivesSessionTrailPositionLabelVisibleWidth() throws Exception {
         AtomicReference<Label> positionRef = new AtomicReference<>();
         AtomicReference<javafx.stage.Stage> stageRef = new AtomicReference<>();

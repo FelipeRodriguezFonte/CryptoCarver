@@ -148,6 +148,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label inspectorSessionTrailTitle;
     @FXML private Button inspectorAddSessionStepButton;
     @FXML private Button inspectorExportSessionTrailButton;
+    @FXML private Button inspectorClearSessionTrailButton;
     @FXML private HBox sessionTrailNavigation;
     @FXML private Button inspectorPreviousSessionStepButton;
     @FXML private Button inspectorNextSessionStepButton;
@@ -769,9 +770,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         setText(inspectorSessionTrailTitle, "sessionTrail.title");
         setText(inspectorAddSessionStepButton, "sessionTrail.addCurrent");
         setText(inspectorExportSessionTrailButton, "sessionTrail.exportAll");
+        setText(inspectorClearSessionTrailButton, "sessionTrail.clearShort");
         setAccessibleText(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
         if (inspectorExportSessionTrailButton != null) {
             inspectorExportSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.exportTitle"));
+        }
+        if (inspectorClearSessionTrailButton != null) {
+            inspectorClearSessionTrailButton.setTooltip(new javafx.scene.control.Tooltip(i18n.text("sessionTrail.clear")));
+            inspectorClearSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.clear"));
         }
         setAccessibleText(inspectorPreviousSessionStepButton, "sessionTrail.previousStep");
         setAccessibleText(inspectorNextSessionStepButton, "sessionTrail.nextStep");
@@ -3438,7 +3444,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private SessionTrailCoordinator sessionTrailCoordinator() {
         if (sessionTrailCoordinator == null) sessionTrailCoordinator = new SessionTrailCoordinator(
-                sessionTrailState, sessionTrailCountLabel, sessionTrailPositionLabel, inspectorExportSessionTrailButton,
+                sessionTrailState, sessionTrailCountLabel, sessionTrailPositionLabel, inspectorExportSessionTrailButton, inspectorClearSessionTrailButton,
                 inspectorPreviousSessionStepButton, inspectorNextSessionStepButton, inspectorOpenSessionStepButton,
                 sessionTrailNavigation, dialogService, sessionStepViewer, () -> mainPane,
                 () -> lastPublishedResultSnapshot, this::captureActiveScreenConfiguration, this::captureUIState,

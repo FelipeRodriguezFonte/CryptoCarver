@@ -395,6 +395,7 @@
                 <HBox spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header">
                     <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorAddSessionStepButton" text="Add current" onAction="#handleSaveCurrentResultAsSessionStep" disable="true" accessibleText="Add the current operation to the session log"/>
                     <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorExportSessionTrailButton" text="Export all" onAction="#handleExportSessionTrail" disable="true" accessibleText="Export the full session log as text"/>
+                    <Button styleClass="ux-inline-7c4e63cc14" fx:id="inspectorClearSessionTrailButton" text="Clear" onAction="#handleClearSessionTrail" disable="true" accessibleText="Clear the session log"/>
                 </HBox>
 
                 <HBox fx:id="sessionTrailNavigation" spacing="6" alignment="CENTER_LEFT" styleClass="inspector-section-header" managed="false" visible="false">

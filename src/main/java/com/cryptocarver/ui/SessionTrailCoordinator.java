@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 public final class SessionTrailCoordinator {
     private final SessionTrailState state;
     private final Label countLabel, positionLabel;
-    private final Button exportButton, previousButton, nextButton, openButton;
+    private final Button exportButton, clearButton, previousButton, nextButton, openButton;
     private final javafx.scene.layout.HBox navigation;
     private final DialogService dialogs;
     private final ExpandedTextViewer stepViewer;
@@ -46,7 +46,7 @@ public final class SessionTrailCoordinator {
     private final I18nService i18n;
 
     public SessionTrailCoordinator(SessionTrailState state, Label countLabel, Label positionLabel,
-            Button exportButton, Button previousButton, Button nextButton, Button openButton,
+            Button exportButton, Button clearButton, Button previousButton, Button nextButton, Button openButton,
             javafx.scene.layout.HBox navigation, DialogService dialogs, ExpandedTextViewer stepViewer,
             Supplier<Node> ownerNode, Supplier<OperationResult> currentResult,
             Supplier<ScreenConfiguration> activeScreenConfiguration, Supplier<Map<String, Object>> fallbackUiState,
@@ -54,7 +54,7 @@ public final class SessionTrailCoordinator {
             Runnable clearInspector, Runnable revealInspector,
             Consumer<String> status, BiConsumer<String, String> warning, I18nService i18n) {
         this.state=state; this.countLabel=countLabel; this.positionLabel=positionLabel;
-        this.exportButton=exportButton; this.previousButton=previousButton; this.nextButton=nextButton;
+        this.exportButton=exportButton; this.clearButton=clearButton; this.previousButton=previousButton; this.nextButton=nextButton;
         this.openButton=openButton; this.navigation=navigation; this.dialogs=dialogs; this.stepViewer=stepViewer;
         this.ownerNode=ownerNode; this.currentResult=currentResult;
         this.activeScreenConfiguration=activeScreenConfiguration; this.fallbackUiState=fallbackUiState;
@@ -106,6 +106,7 @@ public final class SessionTrailCoordinator {
         int count = state.size();
         if (countLabel != null) { countLabel.setText(i18n.text("sessionTrail.compactCount", count)); countLabel.setAccessibleText(i18n.text("sessionTrail.count", count)); }
         if (exportButton != null) exportButton.setDisable(count == 0);
+        if (clearButton != null) clearButton.setDisable(count == 0);
         refreshNavigation();
     }
 
