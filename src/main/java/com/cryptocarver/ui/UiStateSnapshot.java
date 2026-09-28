@@ -122,7 +122,8 @@ public final class UiStateSnapshot {
         Map<String, Object> safe = new LinkedHashMap<>();
         state.forEach((key, value) -> {
             String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);
-            if (!isHistorySensitiveField(field) && !isResultField(field)) safe.put(key, value);
+            if (!isResultField(field) && (!isHistorySensitiveField(field)
+                    || "[REDACTED_SECRET]".equals(value))) safe.put(key, value);
         });
         return restore(rootController, safe);
     }
