@@ -58,7 +58,7 @@
                     <Button fx:id="saveToLabBtn" text="Save to Lab" onAction="#saveCurrentKeyToHsm" styleClass="secondary-button"/>
                     <Button text="Paste Key" onAction="#handlePasteSymKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
                     <Button text="Load Key…" onAction="#handleLoadSymKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                    <MenuButton fx:id="symKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button ux-inline-ba9ea6419e" onShowing="#handlePopulateSymKeyShelf"/>
+                    <MenuButton fx:id="symKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button,ux-inline-ba9ea6419e" onShowing="#handlePopulateSymKeyShelf"/>
                 </FlowPane>
                 <Label text="Note: Select 'Simulated HSM' to load keys securely from Key Lab, or enter raw hex key." styleClass="helper-text ux-inline-2b55dc6342" wrapText="true"/>
             </VBox>
@@ -236,7 +236,7 @@
                         <FlowPane styleClass="responsive-action-bar">
                             <Button text="Paste Public Key" onAction="#handlePastePublicKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
                             <Button text="Load from File..." onAction="#handleReadPublicKeyFile" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <MenuButton fx:id="cipherPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPubKeyShelf"/>
+                            <MenuButton fx:id="cipherPubKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button,ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPubKeyShelf"/>
                         </FlowPane>
                     </VBox>
                     <VBox spacing="5">
@@ -245,7 +245,7 @@
                         <FlowPane styleClass="responsive-action-bar">
                             <Button text="Paste Private Key" onAction="#handlePastePrivateKey" styleClass="secondary-button ux-inline-ba9ea6419e"/>
                             <Button text="Load from File..." onAction="#handleReadPrivateKeyFile" styleClass="secondary-button ux-inline-ba9ea6419e"/>
-                            <MenuButton fx:id="cipherPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPrivKeyShelf"/>
+                            <MenuButton fx:id="cipherPrivKeyShelfMenu" text="Use from Shelf" styleClass="secondary-button,ux-inline-ba9ea6419e" onShowing="#handlePopulateCipherPrivKeyShelf"/>
                         </FlowPane>
                     </VBox>
                     <Separator orientation="HORIZONTAL"/>

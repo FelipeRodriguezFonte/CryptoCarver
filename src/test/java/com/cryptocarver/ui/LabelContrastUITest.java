@@ -92,9 +92,26 @@ class LabelContrastUITest {
     private static Color effectiveBackground(Node node) {
         for (Node p=node; p!=null; p=p.getParent()) if (p instanceof javafx.scene.layout.Region r) {
             Background bg=r.getBackground();
-            if (bg!=null) for (BackgroundFill fill:bg.getFills()) if (fill.getFill() instanceof Color c && c.getOpacity() >= 1) return c;
+            // The last fill is painted on top; earlier ones are borders and shadows.
+            if (bg!=null) for (int i=bg.getFills().size()-1; i>=0; i--) {
+                Color c = paintColor(bg.getFills().get(i).getFill());
+                if (c != null && c.getOpacity() >= 1) return c;
+            }
         }
         return Color.WHITE;
+    }
+    /** A solid colour, or the average of a gradient's stops. */
+    private static Color paintColor(javafx.scene.paint.Paint paint) {
+        if (paint instanceof Color c) return c;
+        List<javafx.scene.paint.Stop> stops = paint instanceof javafx.scene.paint.LinearGradient g ? g.getStops()
+                : paint instanceof javafx.scene.paint.RadialGradient g ? g.getStops() : List.of();
+        if (stops.isEmpty()) return null;
+        double r=0, g=0, b=0, o=1;
+        for (javafx.scene.paint.Stop stop : stops) {
+            r+=stop.getColor().getRed(); g+=stop.getColor().getGreen(); b+=stop.getColor().getBlue();
+            o=Math.min(o, stop.getColor().getOpacity());
+        }
+        return new Color(r/stops.size(), g/stops.size(), b/stops.size(), o);
     }
     private static double contrast(Color a, Color b) {
         double x=luminance(a), y=luminance(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
