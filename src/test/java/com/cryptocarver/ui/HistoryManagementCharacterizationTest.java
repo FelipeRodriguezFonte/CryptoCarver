@@ -151,7 +151,7 @@ class HistoryManagementCharacterizationTest {
                         OperationDetail.publicDetail("Marker", "SYNTHETIC")));
                 HistoryCommand item = controller.getHistoryManager().getHistoryItems().get(0);
                 Stage stage = new Stage();
-                stage.setScene(new Scene(root, 1920, 1000));
+                stage.setScene(new Scene(root));
                 stage.show();
                 stageRef.set(stage);
                 controller.showRecentHistoryCommand(item);
@@ -179,7 +179,7 @@ class HistoryManagementCharacterizationTest {
                 ModernMainController controller = loader.getController();
                 useIsolatedHistory(controller, "reopen");
                 Stage stage = new Stage();
-                stage.setScene(new Scene(root, 1920, 1000));
+                stage.setScene(new Scene(root));
                 stage.show();
                 stageRef.set(stage);
                 itemRef.set(new HistoryCommand("Synthetic cipher result", "", Map.of(
