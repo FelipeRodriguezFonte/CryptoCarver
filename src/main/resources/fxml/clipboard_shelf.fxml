@@ -24,7 +24,7 @@
         <ComboBox fx:id="classFilterCombo" promptText="Any Classification" prefWidth="140"/>
         <Label styleClass="ux-inline-1e140b70f7" fx:id="itemCountLabel" text="0 / 100 items"/>
         <Button text="Open Copy Window" onAction="#handleOpenClipboardWindow"/>
-        <Button text="Clear Shelf" onAction="#handleClearShelf" styleClass="button,,danger-button"/>
+        <Button text="Clear Shelf" onAction="#handleClearShelf" styleClass="button,danger-button"/>
     </FlowPane>
 
     <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS" dividerPositions="0.6">
@@ -64,7 +64,7 @@
                 <Button fx:id="copyBtn" text="Copy" onAction="#handleCopy" disable="true"/>
                 <Button fx:id="expandBtn" text="Open Expanded" onAction="#handleOpenExpanded" disable="true"/>
                 <Button fx:id="renameBtn" text="Rename" onAction="#handleRename" disable="true"/>
-                <Button fx:id="deleteBtn" text="Delete" onAction="#handleDelete" disable="true" styleClass="button,,danger-button"/>
+                <Button fx:id="deleteBtn" text="Delete" onAction="#handleDelete" disable="true" styleClass="button,danger-button"/>
             </FlowPane>
             <TextArea styleClass="ux-inline-24c41c84cd" fx:id="detailsArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"/>
         </VBox>
