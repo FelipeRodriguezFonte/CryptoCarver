@@ -36,6 +36,18 @@ class I18nServiceTest {
     }
 
     @Test
+    void secretFieldNoticeAgreesInNumber() {
+        AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
+        I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
+                Locale.ENGLISH, getClass().getClassLoader());
+        assertEquals("1 field containing a secret was not saved.", service.text("savedSessions.redactedCount", 1L));
+        assertEquals("3 fields containing secrets were not saved.", service.text("savedSessions.redactedCount", 3L));
+        service.setPreference(LanguagePreference.ES);
+        assertEquals("No se guardó 1 campo con secretos.", service.text("savedSessions.redactedCount", 1L));
+        assertEquals("No se guardaron 12 campos con secretos.", service.text("savedSessions.redactedCount", 12L));
+    }
+
+    @Test
     void missingKeyFallsBackToEnglishThenToKey() {
         AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
         I18nService service = new I18nService(settings, "i18n.testmessages",
