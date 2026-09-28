@@ -76,3 +76,37 @@ Los campos FXML directos del bloque son `resultSaveStepButton`, `inspectorPanel`
 La captura de parámetros en claro y la exportación conservan la ruta de `ScreenConfiguration.toState()` con fallback a captura UI completa y `OperationSessionLog.toText()`. La prueba de caracterización verifica el resultado y un valor sintético de control de módulo en cada `SecretVisibilityProfile`. El controlador conserva los handlers FXML y contratos de `StatusReporter`; `SessionTrailCoordinator` sólo recibe controles, servicios, suppliers y callbacks pequeños, sin recibir ni almacenar un controlador de módulo.
 
 Evidencia de llamadas: `rg -n 'onAction="#(handleOpenExpandedResultViewer|handleAddCurrentOutputToShelf|handleCopyOutput)"' src/main/resources/fxml/main-view-modern.fxml`; `rg -n 'publish\\(|classifyPublishedResult\\(|fillClipboardTarget\\(|revealShelfEntry\\(' src/main/java/com/cryptocarver/ui`. El menú contextual no está declarado en FXML: se instala desde el tracker y enlaza acciones con eventos JavaFX. Los tests UI de caracterización deben complementar los tests de política pura.
+
+## Gestión del histórico (Encargo 29, inventario previo a extracción)
+
+Inventario verificado en `adb94ad` con `rg` sobre `src/main/java`, `src/main/resources/fxml` y `src/test/java`. La zona efectiva va de `reopenRecentHistoryCommand` (1515) a `showHistoryView` (2077), incluyendo `visibleOperationDetails`, reutilizado fuera del histórico. Los rangos cambiarán al extraer.
+
+| Método | Llamadores comprobados | Campos FXML / estado tocado | Destino o evidencia |
+|---|---|---|---|
+| `historyManager()` | `connectShellServices(HistoryController)`, `initializeHistory` | `historyManager`; entrega manager a panel y vista | Coordinador como dueño del almacenamiento compartido |
+| `initializeHistory` | `initialize()`, alta, `getHistoryManager`, `showHistoryView` | `sidePanel`, `historyViewController`, `historyManager` | Coordinador inicializa callback del panel y actualiza superficies |
+| `refreshHistoryUI` | init, alta, limpieza, apertura; test de reflexión | `historyViewController`, `sidePanel` | Coordinador; controlador de vista se resuelve tarde |
+| `refreshHistoryNavigation` | `refreshHistoryUI`; `HistoryController` mediante `OperationNavigator` | `sidePanel` | El método público permanece como delegado del contrato |
+| `addToHistory(String, Map)` | llamadas internas de Epoch Converter y JSON Formatter; `StatusReporter` aporta overload por defecto Map | captura, formatos, manager | Normaliza detalles y delega |
+| `addToHistory(String, List)` | `StatusReporter`, callback de `ResultPublicationCoordinator`, tests y módulos que invocan el contrato | `currentActiveOperation`, combos, captura, manager | Contrato público como delegado |
+| `addToHistory(operation, details, navigationOperation)` | overload de lista; callback de publicación | captura, formatos, manager | Coordinador registra; modelo crea `HistoryCommand` |
+| `addToHistoryManual` | `rg` solo encuentra la declaración | captura, combos, manager | Código muerto; eliminar aparte |
+| `effectiveNavigationTarget` | alta pública de lista y callback de publicación; también método muerto `addToHistoryManual` | lee `currentActiveOperation`; consulta `OperationRegistry` | Política pura decide ruta y fallback |
+| `getHistoryManager` | enlace diferido de `HistoryController` y tests | `historyManager` | API pública se conserva como delegado |
+| `restoreOperationState` | contrato `OperationNavigator`; `HistoryController`; varios tests UI | cambia ruta y restaura controles vía `UiStateSnapshot` | Contrato público; restauración coordinada sin cachear controladores |
+| `reopenRecentHistoryCommand` | solo declaración y llamada a `reopenHistoryOperation` | navegación indirecta | Alias público sin referencias observadas; conservar por compatibilidad |
+| `showRecentHistoryCommand` | callback configurado con `SidePanel.setOnHistoryItemSelected`; tests | controlador tardío de histórico, inspector y status | Coordinador consulta controlador al llamar; no restaura receta |
+| `reopenHistoryOperation` | `OperationNavigator`; botón/acción de `HistoryController`; tests y alias anterior | ruta y restauración de controles | Contrato público como delegado |
+| `visibleHistoryDetails` | mostrar y reabrir entrada; test de reflexión | usa `visibleOperationDetails` y perfil actual | Coordinador conserva proyección segura |
+| `captureHistoryState` | altas automática/manual; test de reflexión | captura receta con `UiStateSnapshot` | Pasar como `Supplier`, no cachear módulos |
+| `handleExportHistory` | `main-view-modern.fxml` `exportHistoryMenuItem`, `onAction="#handleExportHistory"` | `historyManager`, `mainPane`, perfil de visibilidad | Handler FXML delegado; extraer escritura a ruta testeable |
+| `handleClearHistory` | sin referencia en FXML principal; `history.fxml` enlaza a `HistoryController.handleClearHistory` | `historyManager`, `mainPane` | Código muerto en controlador principal |
+| `confirmClearHistory` | solo `handleClearHistory` principal | `mainPane`, `dialogService` | Muerto junto con handler; confirmación activa está en `HistoryController` |
+| `showHistoryView` | rama HISTORY de `handleItemSelected` | `historyView`, `historyViewController`, contenedor y cabecera | Mantener contrato de navegación; resolver módulo perezoso al invocar |
+| `formatRelativeTime` | `rg` solo encuentra la declaración | ninguno | Código muerto; borrado separado |
+
+### Campos y estado compartido
+
+Campos FXML del bloque: `sidePanel`, `historyView`, `historyViewController`, `mainPane`, `inputFormatCombo`, `outputFormatCombo`. `sidePanel`/`historyViewController` pueden materializarse tarde; recibirlos como proveedores y consultarlos por llamada. Estado adicional: `historyManager` (entradas), `currentActiveOperation` (destino candidato), combos (formatos serializados), y receta capturada por `captureHistoryState`. `connectShellServices` entrega manager y `OperationNavigator` a `HistoryController`; `initializeHistory` conecta manager y callback de selección en `SidePanel`.
+
+Evidencia puntual: `rg -n 'addToHistoryManual|formatRelativeTime\\(' src/main/java src/test/java src/main/resources/fxml` solo encuentra declaraciones; `rg -n 'handleClearHistory|confirmClearHistory|test\\.mode' ...` encuentra handler y bypass solo en el controlador principal, pero el FXML activo apunta al handler propio de `HistoryController`, con su confirmación y bypass propios. Por tanto, se borrarán `addToHistoryManual`, `formatRelativeTime`, `handleClearHistory` y `confirmClearHistory` en un commit aparte. Se conserva `reopenRecentHistoryCommand`: aunque no haya referencias de repo, es público y su alias puede ser compatibilidad fuente.
