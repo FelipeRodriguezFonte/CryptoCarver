@@ -114,10 +114,10 @@
                                         <Label text="Key Value:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
                                         <VBox spacing="4" GridPane.rowIndex="12" GridPane.columnIndex="1">
                                             <TextField fx:id="keyLabDetailValueField" editable="false" styleClass="monospace-field"/>
-                                            <HBox spacing="6">
-                                                <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-                                                <Button text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button,ux-inline-ab4da656fa"/>
-                                            </HBox>
+                                            <FlowPane hgap="6" vgap="4">
+                                                <Button fx:id="keyLabRevealBtn" text="Reveal Value" onAction="#handleKeyLabReveal" styleClass="secondary-button,ux-inline-ab4da656fa" minWidth="-Infinity"/>
+                                                <Button text="Copy ID" onAction="#handleKeyLabCopyId" styleClass="secondary-button,ux-inline-ab4da656fa" minWidth="-Infinity"/>
+                                            </FlowPane>
                                         </VBox>
                                     </GridPane>
                                     <Separator styleClass="ux-inline-28a1631d79"/>
