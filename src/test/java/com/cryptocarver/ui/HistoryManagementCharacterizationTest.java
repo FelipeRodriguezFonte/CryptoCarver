@@ -143,6 +143,7 @@ class HistoryManagementCharacterizationTest {
     void reopeningRedactedRecipeNavigatesPromptsAndFocusesFirstSecret() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         AtomicReference<Stage> stageRef = new AtomicReference<>();
+        AtomicReference<HistoryCommand> itemRef = new AtomicReference<>();
         onFx(() -> {
             try {
                 FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
@@ -153,15 +154,18 @@ class HistoryManagementCharacterizationTest {
                 stage.setScene(new Scene(root, 1920, 1000));
                 stage.show();
                 stageRef.set(stage);
-                HistoryCommand item = new HistoryCommand("Synthetic cipher result", "", Map.of(
+                itemRef.set(new HistoryCommand("Synthetic cipher result", "", Map.of(
                         "CipherController.symmetricKeyField", "[REDACTED_SECRET]"),
                         HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS,
-                        "Synthetic secret redacted", "Hex", "Base64", "Symmetric Ciphers");
-                controller.reopenHistoryOperation(item);
+                        "Synthetic secret redacted", "Hex", "Base64", "Symmetric Ciphers"));
                 controllerRef.set(controller);
             } catch (Exception exception) {
                 throw new AssertionError(exception);
             }
+        });
+        onFx(() -> {
+            stageRef.get().requestFocus();
+            controllerRef.get().reopenHistoryOperation(itemRef.get());
         });
         onFx(() -> { }); // Drain the queued focus request from restoreOperationState.
         ModernMainController controller = controllerRef.get();
@@ -170,8 +174,11 @@ class HistoryManagementCharacterizationTest {
         assertEquals("", key.getText());
         assertAll(
                 () -> assertTrue(((javafx.scene.control.Label) field(controller, "statusLabel")).getAccessibleText()
-                        .contains("Re-enter redacted sensitive values")),
-                () -> assertSame(key, stageRef.get().getScene().getFocusOwner()));
+                        .contains("Re-enter redacted sensitive values"),
+                        "status=" + ((javafx.scene.control.Label) field(controller, "statusLabel")).getAccessibleText()),
+                () -> assertSame(key, stageRef.get().getScene().getFocusOwner(),
+                        "visible=" + key.isVisible() + ", disabled=" + key.isDisabled()
+                                + ", traversable=" + key.isFocusTraversable() + ", scene=" + key.getScene()));
         onFx(() -> stageRef.get().close());
     }
 
