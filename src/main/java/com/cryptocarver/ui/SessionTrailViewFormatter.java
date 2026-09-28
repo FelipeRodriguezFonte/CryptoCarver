@@ -48,7 +48,9 @@ final class SessionTrailViewFormatter {
         text.append(session.getName()).append("\n")
                 .append(session.getTimestamp()).append(" · ").append(session.getOperation()).append("\n\n");
         OperationSessionLog log = session.getOperationLog();
-        if (log == null || log.isEmpty()) {
+        if (session.getProtectedFields() != null) {
+            text.append(i18n.text("savedSessions.encryptedTrailPreview"));
+        } else if (log == null || log.isEmpty()) {
             text.append(i18n.text("sessionTrail.empty"));
         } else {
             int index = 1;

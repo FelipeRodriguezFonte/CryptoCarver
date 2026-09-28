@@ -17,6 +17,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SessionTrailViewFormatterTest {
     @Test
+    void previewsEmptyPlaintextAndEncryptedTrailsDifferently() {
+        I18nService i18n = I18nService.getInstance();
+        SavedSession empty = new SavedSession("Synthetic empty", "Synthetic", Map.of());
+        assertTrue(SessionTrailViewFormatter.preview(empty, i18n).contains(i18n.text("sessionTrail.empty")));
+
+        OperationSessionLog log = new OperationSessionLog();
+        log.add(OperationResult.forOperation("Synthetic operation").build(), "Synthetic step", List.of(), Map.of());
+        SavedSession clear = new SavedSession("Synthetic clear", "Synthetic", Map.of(), log);
+        String clearPreview = SessionTrailViewFormatter.preview(clear, i18n);
+        assertTrue(clearPreview.contains("Synthetic step"));
+        assertFalse(clearPreview.contains(i18n.text("savedSessions.encryptedTrailPreview")));
+
+        SavedSession encrypted = new SavedSession("Synthetic encrypted", "Synthetic", Map.of(), null);
+        encrypted.setProtectedFields(new SavedSession.ProtectedFields("synthetic-kdf", 1, "salt", "nonce", "ciphertext"));
+        String encryptedPreview = SessionTrailViewFormatter.preview(encrypted, i18n);
+        assertTrue(encryptedPreview.contains(i18n.text("savedSessions.encryptedTrailPreview")));
+        assertFalse(encryptedPreview.contains(i18n.text("sessionTrail.empty")));
+        assertFalse(encryptedPreview.toLowerCase().contains("password"));
+    }
+
+    @Test
     void projectsSavedPayloadsAndParametersByVisibilityProfile() {
         OperationSessionLog log = new OperationSessionLog();
         SessionOperationStep step = log.add(OperationResult.forOperation("Calculate MAC")
