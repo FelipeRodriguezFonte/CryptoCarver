@@ -59,6 +59,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private OperationInspectorPresenter inspectorPresenter;
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
     private ResultViewerCoordinator resultViewerCoordinator;
+    private ClipboardTargetNavigator clipboardTargetNavigator;
+    private ResultPublicationCoordinator resultPublicationCoordinator;
     /**
      * Snapshot published by the latest completed operation.  It is deliberately
      * separate from the last focused text area: focus is a navigation concern,
@@ -2603,72 +2605,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      */
     @Override
     public void publish(com.cryptocarver.model.OperationResult result) {
-        if (result == null) {
-            return;
-        }
-        if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> publish(result));
-            return;
-        }
-        lastPublishedOperation = result.getOperation();
-        lastPublishedResultSnapshot = result;
-        selectedSessionStepIndex = -1;
-        unsavedInspectorResult = true;
-        updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails());
-        refreshSessionTrailNavigation();
-        addToHistory(result.getOperation(), detailsForHistory(result),
-                effectiveNavigationTarget(result.getOperation(), currentActiveOperation));
-        if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) {
-            updateStatus(result.getStatusMessage());
-        }
+        resultPublicationCoordinator().publish(result);
+    }
 
-        boolean isFailed = result.getStatusMessage() != null && result.getStatusMessage().toLowerCase(java.util.Locale.ROOT).contains("failed");
-        boolean hasPayload = (result.getOutput() != null && result.getOutput().length > 0)
-                || (result.getEnrichedOutput() != null && !result.getEnrichedOutput().isBlank());
-        boolean hasInspectableResult = hasPayload || !result.getDetails().isEmpty();
-        if (inspectorAddSessionStepButton != null) {
-            inspectorAddSessionStepButton.setDisable(isFailed || !hasInspectableResult);
-        }
-
-        if (resultSummaryBar != null) {
-            if (isFailed || !hasInspectableResult) {
-                resultSummaryBar.setManaged(false);
-                resultSummaryBar.setVisible(false);
-            } else {
-                resultSummaryBar.setManaged(true);
-                resultSummaryBar.setVisible(true);
-                if (resultOpLabel != null) resultOpLabel.setText(result.getOperation());
-
-                // Resolve algorithm
-                String algo = "N/A";
-                if (result.getDetails() != null) {
-                    for (com.cryptocarver.model.OperationDetail d : result.getDetails()) {
-                        if ("Algorithm".equalsIgnoreCase(d.name()) || "Type".equalsIgnoreCase(d.name())) {
-                            algo = d.value();
-                            break;
-                        }
-                    }
-                }
-                if (resultAlgoLabel != null) resultAlgoLabel.setText(algo);
-
-                // Resolve sizes
-                int inLen = result.getInput() != null ? result.getInput().length : 0;
-                int outLen = result.getOutput() != null ? result.getOutput().length : 0;
-                if (resultSizeLabel != null) resultSizeLabel.setText(i18n.text("result.size", inLen, outLen));
-
-                // Resolve output format
-                String outFormat = outputFormatCombo != null ? outputFormatCombo.getValue() : "HEX";
-                if (resultFormatLabel != null) resultFormatLabel.setText(outFormat);
-
-                // Success / Error status
-                if (resultStatusBadge != null) {
-                    resultStatusBadge.setText(i18n.text("result.success"));
-                    resultStatusBadge.getStyleClass().setAll("result-status-success");
-                    resultStatusBadge.setStyle("");
-                    resultStatusBadge.setAccessibleText(i18n.text("a11y.resultStatus", resultStatusBadge.getText()));
-                }
-            }
-        }
+    private ResultPublicationCoordinator resultPublicationCoordinator() {
+        if (resultPublicationCoordinator == null) resultPublicationCoordinator = new ResultPublicationCoordinator(
+                result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; selectedSessionStepIndex = -1; unsavedInspectorResult = true; },
+                result -> updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails()),
+                this::refreshSessionTrailNavigation,
+                (result, details) -> addToHistory(result.getOperation(), details, effectiveNavigationTarget(result.getOperation(), currentActiveOperation)),
+                this::updateStatus, inspectorAddSessionStepButton, resultSummaryBar, resultOpLabel, resultAlgoLabel,
+                resultSizeLabel, resultFormatLabel, resultStatusBadge, outputFormatCombo, i18n);
+        return resultPublicationCoordinator;
     }
 
     /** Clears the cached result whenever it no longer represents the visible UI state. */
@@ -2730,6 +2678,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (cipherController != null && cipherController.getFileResultArea() != null) {
             additionalAreas.add(cipherController.getFileResultArea());
         }
+        resultViewerCoordinator();
+        resultAreaTracker.install(mainPane, additionalAreas,
+                area -> area.setContextMenu(resultViewerCoordinator.createContextMenu(area)));
+    }
+
+    private ResultViewerCoordinator resultViewerCoordinator() {
         if (resultViewerCoordinator == null) {
             resultViewerCoordinator = new ResultViewerCoordinator(resultAreaTracker, expandedTableViewer,
                     area -> handleOpenExpandedResultViewer(),
@@ -2739,10 +2693,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     () -> currentActiveOperation, () -> lastPublishedResultSnapshot != null,
                     this::resolveResultText, this::classificationForResultArea, AppSettings::isFullLab,
                     this::updateStatus, this::copyToClipboard,
-                    entry -> { if (entry != null && clipboardShelfController != null) clipboardShelfController.refreshAndReveal(entry.getId()); });
+                    entry -> { if (entry != null && clipboardShelfController != null) clipboardShelfController.refreshAndReveal(entry.getId()); },
+                    new ResultViewerCoordinator.ShelfServices() {
+                        public String capture(TextArea area) { return resolveShelfCaptureText(area); }
+                        public boolean blockedByVisibility(TextArea area) { return isShelfCaptureBlockedByVisibility(area); }
+                        public boolean isCurrentSelection(TextArea area) { return resultAreaTracker.isCurrentSelection(area, lastPublishedResultSnapshot != null); }
+                        public com.cryptocarver.model.OperationResult snapshot() { return lastPublishedResultSnapshot; }
+                        public String activeOperation() { return currentActiveOperation; }
+                        public com.cryptocarver.model.ClipboardShelfManager manager() { return com.cryptocarver.model.ClipboardShelfManager.getInstance(); }
+                        public boolean isPrimaryCipherOutput(TextArea area) { return cipherController != null && cipherController.isPrimaryOutput(area); }
+                        public com.cryptocarver.model.ShelfPackage createCipherPackage() { return cipherController == null ? null : cipherController.createAuthenticatedCipherShelfPackage(); }
+                    });
         }
-        resultAreaTracker.install(mainPane, additionalAreas,
-                area -> area.setContextMenu(resultViewerCoordinator.createContextMenu(area)));
+        return resultViewerCoordinator;
     }
 
     private ContextMenu createResultContextMenu(TextArea area) { return resultViewerCoordinator.createContextMenu(area); }
@@ -2752,131 +2715,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void handleAddToClipboardShelfSecure(javafx.scene.control.TextArea area, String selectedText) {
-        String text;
-        if (selectedText != null) {
-            if (!resultAreaTracker.isCurrentSelection(area, lastPublishedResultSnapshot != null)) {
-                updateStatus("Action blocked: Cannot securely add selection from old or unknown result.");
-                return;
-            }
-            com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
-            boolean requiresFullLab = cls == com.cryptocarver.model.OperationDetail.Classification.SECRET
-                    || cls == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-            if (requiresFullLab
-                    && !AppSettings.isFullLab()) {
-                updateStatus("Action blocked: Cannot add partial selection of protected text in current visibility mode.");
-                return;
-            }
-            text = selectedText;
-        } else {
-            text = resolveShelfCaptureText(area);
-        }
-
-        if (text == null || text.isEmpty()) {
-             updateStatus(isShelfCaptureBlockedByVisibility(area)
-                     ? "Action blocked: output hidden by visibility policy."
-                     : "No current output available.");
-             return;
-        }
-
-        if (text.equals("***MASKED***") || isPrivateMaterialPlaceholder(text)) {
-             updateStatus(text.equals("***MASKED***")
-                     ? "Action blocked: output hidden by visibility policy."
-                     : "Action blocked: private output is not an explicit complete private-key area.");
-            return;
-        }
-
-        com.cryptocarver.model.ClipboardEntry.Format format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
-        com.cryptocarver.model.OperationDetail.Classification cls = classificationForResultArea(area);
-        // Raw asymmetric private-key material (a complete PEM block) gets a dedicated,
-        // deliberately non-persistent path below: it is never written to the Shelf's
-        // JSON file on disk, only held in memory for this session. The check is on the
-        // *content shape* (isCompletePrivateKeyMaterial), not just the source area's id
-        // — a private key pasted or rendered somewhere other than a designated
-        // "…PrivateKeyArea" still gets the same protection. Every other SECRET-classified
-        // result (derived/symmetric keys from KDF, wrapped keys, PIN blocks, CVVs, DUKPT
-        // outputs, etc.) falls through to the normal Shelf entry path further down —
-        // classification plus the visibility profile (FULL_LAB/MASKED/REDACTED, already
-        // applied above in resolveShelfCaptureText/renderResultArea) are the security
-        // levels this lab tool uses to gate secret exposure; an additional hard block on
-        // top of those was redundant and silently dropped legitimate lab results (e.g.
-        // Add to Shelf after a KDF derivation) with no path to fix it.
-        boolean privateKeyMaterial = selectedText == null
-                && (ResultAreaTracker.isPrivateKeyResultArea(area) || isCompletePrivateKeyMaterial(text));
-        if (cls == com.cryptocarver.model.OperationDetail.Classification.SECRET && privateKeyMaterial) {
-            if (isCompletePrivateKeyMaterial(text)
-                    && AppSettings.isFullLab()) {
-                String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation()
-                        : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
-                String algorithm = null;
-                if (lastPublishedResultSnapshot != null && lastPublishedResultSnapshot.getDetails() != null) {
-                    for (com.cryptocarver.model.OperationDetail detail : lastPublishedResultSnapshot.getDetails()) {
-                        if (detail != null && ("Algorithm".equalsIgnoreCase(detail.name())
-                                || "Type".equalsIgnoreCase(detail.name()))) {
-                            algorithm = detail.value();
-                            break;
-                        }
-                    }
-                }
-                com.cryptocarver.model.ClipboardEntry sessionEntry =
-                        com.cryptocarver.model.ClipboardShelfManager.getInstance()
-                                .addSessionOnlyPrivateKey(text, sourceOp, algorithm);
-                updateStatus(sessionEntry != null
-                        ? "Added private key to Clipboard Shelf (session only)."
-                        : "Action blocked: session-only private keys require FULL_LAB.");
-                revealShelfEntry(sessionEntry);
-                return;
-            }
-            updateStatus(isCompletePrivateKeyMaterial(text)
-                    ? "Action blocked: private keys can only be added to the Shelf (session only) under FULL_LAB visibility."
-                    : "Action blocked: private-key area does not contain complete, exportable key material.");
-            return;
-        }
-        String sourceOp = lastPublishedResultSnapshot != null ? lastPublishedResultSnapshot.getOperation() : (currentActiveOperation != null ? currentActiveOperation : "Unknown");
-        String algorithm = null;
-        if (lastPublishedResultSnapshot != null && lastPublishedResultSnapshot.getDetails() != null) {
-            for (com.cryptocarver.model.OperationDetail detail : lastPublishedResultSnapshot.getDetails()) {
-                if (detail != null && ("Algorithm".equalsIgnoreCase(detail.name())
-                        || "Type".equalsIgnoreCase(detail.name()))) {
-                    algorithm = detail.value();
-                    break;
-                }
-            }
-        }
-
-        java.util.Optional<com.cryptocarver.model.ClipboardEntry> duplicate = com.cryptocarver.model.ClipboardShelfManager.getInstance().findDuplicate(text, sourceOp);
-        if (duplicate.isPresent()) {
-            updateStatus("Item already in Clipboard Shelf: " + duplicate.get().getLabel());
-            return;
-        }
-
-        com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
-                "Copied from " + sourceOp,
-                text,
-                format,
-                cls,
-                sourceOp,
-                algorithm
-        );
-        // Full authenticated-cipher results are stored as a typed package.
-        // A partial selection deliberately remains the historical simple value.
-        if (selectedText == null && cipherController != null && cipherController.isPrimaryOutput(area)) {
-            com.cryptocarver.model.ShelfPackage packageData = cipherController.createAuthenticatedCipherShelfPackage();
-            if (packageData != null) {
-                text = packageData.artifact("ciphertext");
-                format = com.cryptocarver.model.ClipboardEntry.Format.inferFormat(text);
-                entry = new com.cryptocarver.model.ClipboardEntry(
-                        "Authenticated ciphertext from " + sourceOp, text, format, cls, sourceOp, algorithm)
-                        .withShelfPackage(packageData);
-            }
-        }
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
-        revealShelfEntry(entry);
-        updateStatus("Added public output to Clipboard Shelf.");
+        resultViewerCoordinator.addToClipboardShelfSecure(area, selectedText);
     }
 
-    void revealShelfEntry(com.cryptocarver.model.ClipboardEntry entry) {
-        if (resultViewerCoordinator != null) resultViewerCoordinator.revealShelfEntry(entry);
-    }
+    public void revealShelfEntry(com.cryptocarver.model.ClipboardEntry entry) { resultViewerCoordinator().revealShelfEntry(entry); }
 
     public com.cryptocarver.model.OperationDetail.Classification classifyPublishedResult(com.cryptocarver.model.OperationResult result) {
         return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(result);
@@ -2888,67 +2730,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void fillClipboardTarget(String targetType, String value, com.cryptocarver.model.ClipboardEntry.Format format,
                                     com.cryptocarver.model.ShelfPackage packageData) {
-        if (value == null) return;
-        switch (targetType) {
-            case "MANUAL_CONVERSION":
-                if (genericContainerController != null) {
-                    navigateToModule("Manual Conversion");
-                    genericContainerController.fillManualConversionInput(value, format);
-                    expandGenericAccordionPane("Manual Conversion");
-                }
-                break;
-            case "SYMMETRIC_CIPHER":
-                if (cipherController != null) {
-                    navigateToModule("Symmetric Ciphers");
-                    if (packageData != null) cipherController.fillSymmetricCipherPackage(packageData);
-                    else cipherController.fillSymmetricCipherInput(value, format);
-                    expandCipherAccordionPane("Symmetric Ciphers");
-                }
-                break;
-            case "HASHING":
-                if (genericContainerController != null) {
-                    navigateToModule("Hashing");
-                    genericContainerController.fillHashInput(value, format);
-                    expandGenericAccordionPane("Hashing");
-                }
-                break;
-            case "XML_SECURITY":
-                if (xmlSecurityContainerController != null) {
-                    navigateToModule("XML Security");
-                    xmlSecurityContainerController.fillClipboardInput(value);
-                    expandXMLAccordionPane("Inspect Signed XML");
-                }
-                break;
-            case "WSS_SECURITY":
-                if (wssSecurityContainerController != null) {
-                    navigateToModule("WSS Security");
-                    wssSecurityContainerController.fillClipboardInput(value);
-                    expandWssAccordionPane("Sign SOAP");
-                }
-                break;
-            case "PAYMENTS":
-                if (paymentsContainerController != null) {
-                    navigateToModule("Payments");
-                    paymentsContainerController.fillClipboardInput(value);
-                    expandPaymentsAccordionPane("Clear PIN Blocks");
-                }
-                break;
-            case "TR31":
-                if (keysController != null) {
-                    navigateToModule("TR-31 Key Blocks");
-                    keysController.fillTR31KeyBlockInput(value);
-                    expandAccordionPane("TR-31 Key Blocks");
-                }
-                break;
-            case "JOSE_JWT":
-                if (joseController != null) {
-                    joseController.fillJwtPayload(value);
-                    showJOSE();
-                }
-                break;
-            default:
-                updateStatus("Unsupported target: " + targetType);
-        }
+        clipboardTargetNavigator().fill(targetType, value, format, packageData);
+    }
+
+    private ClipboardTargetNavigator clipboardTargetNavigator() {
+        if (clipboardTargetNavigator == null) clipboardTargetNavigator = new ClipboardTargetNavigator(
+                genericContainerController, cipherController, xmlSecurityContainerController, wssSecurityContainerController,
+                paymentsContainerController, keysController, joseController, this::navigateToModule,
+                this::expandGenericAccordionPane, this::expandCipherAccordionPane, this::expandXMLAccordionPane,
+                this::expandWssAccordionPane, this::expandPaymentsAccordionPane, this::expandAccordionPane,
+                this::showJOSE, this::updateStatus);
+        return clipboardTargetNavigator;
     }
 
     @FXML
