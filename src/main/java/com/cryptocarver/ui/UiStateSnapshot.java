@@ -54,9 +54,10 @@ public final class UiStateSnapshot {
             // the crypto/payment modules, even when their id is generic.
             "input", "payload", "info", "verify", "tag"
     );
+    /** Lower-case field names: the subject field id is spelled certCNField. */
     private static final Set<String> PUBLIC_CERTIFICATE_PARAMETERS = Set.of(
-            "certCnField", "certValidityField", "certIssueValidityField",
-            "certIssueSignatureField", "certIssuePathLengthField"
+            "certcnfield", "certvalidityfield", "certissuevalidityfield",
+            "certissuesignaturefield", "certissuepathlengthfield"
     );
     private static final Set<String> LEGACY_SENSITIVE_TEXT_NAMES = Set.of(
             "smAcField", "derivePvvTargetPvvField", "derivePvvResultArea", "tr34ReceiveResultArea",
@@ -187,7 +188,7 @@ public final class UiStateSnapshot {
         if (isHistorySelector(fieldName, control)) return false;
         // Certificate subject, validity, signature algorithm and path length
         // are public metadata, unlike certificate PEM inputs and key material.
-        if (PUBLIC_CERTIFICATE_PARAMETERS.contains(fieldName)) return false;
+        if (fieldName != null && PUBLIC_CERTIFICATE_PARAMETERS.contains(fieldName.toLowerCase(java.util.Locale.ROOT))) return false;
         List<String> words = nameWords(fieldName);
         return HISTORY_SENSITIVE_TOKENS.stream().anyMatch(words::contains)
                 || LEGACY_SENSITIVE_TEXT_NAMES.contains(fieldName);

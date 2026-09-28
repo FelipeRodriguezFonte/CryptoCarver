@@ -251,7 +251,7 @@ class UiStateSnapshotTest {
 
     @org.junit.jupiter.api.Test
     void publicCertificateParametersAreNotSecrets() {
-        for (String field : new String[] { "certCnField", "certValidityField", "certIssueValidityField",
+        for (String field : new String[] { "certCNField", "certValidityField", "certIssueValidityField",
                 "certIssueSignatureField", "certIssuePathLengthField" }) {
             org.junit.jupiter.api.Assertions.assertFalse(UiStateSnapshot.isHistorySensitiveField(field), field);
         }
