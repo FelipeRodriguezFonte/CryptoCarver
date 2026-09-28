@@ -159,7 +159,10 @@ public final class UiStateSnapshot {
 
             Object captured = readControlValue(value);
             if (captured != null) {
-                if (redactSecrets && isHistorySensitiveField(field.getName(), value)) {
+                // Blank secret fields hold nothing to redact; marking them would flag the
+                // recipe as needing secrets and send the reopen focus to empty, hidden fields.
+                if (redactSecrets && isHistorySensitiveField(field.getName(), value)
+                        && !(captured instanceof String text && text.isBlank())) {
                     state.put(key(owner, field), "[REDACTED_SECRET]");
                 } else {
                     state.put(key(owner, field), captured);

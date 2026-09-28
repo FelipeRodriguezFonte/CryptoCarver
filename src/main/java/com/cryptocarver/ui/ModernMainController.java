@@ -1889,10 +1889,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         java.util.List<javafx.scene.Node> redacted = UiStateSnapshot.restoreHistoryRecipe(this, state);
         if (redacted != null && !redacted.isEmpty()) {
             updateStatus("Restored configuration for: " + operation + ". Re-enter redacted sensitive values.");
-            javafx.application.Platform.runLater(() -> redacted.get(0).requestFocus());
+            // Recipes span every module; focus the first redacted field on the reopened screen.
+            javafx.application.Platform.runLater(() -> redacted.stream().filter(ModernMainController::isShowing)
+                    .findFirst().ifPresent(javafx.scene.Node::requestFocus));
         } else {
             updateStatus("Restored state for: " + operation);
         }
+    }
+
+    private static boolean isShowing(javafx.scene.Node node) {
+        if (node.getScene() == null) return false;
+        for (javafx.scene.Node current = node; current != null; current = current.getParent()) {
+            if (!current.isVisible()) return false;
+        }
+        return true;
     }
 
     @FXML

@@ -80,8 +80,10 @@ class HistoryManagementCharacterizationTest {
             assertEquals("Hex", item.getInputFormat());
             assertEquals("Base64", item.getOutputFormat());
             assertEquals(HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS, item.getReproducibility());
-            assertTrue(item.getParameters().containsValue("[REDACTED_SECRET]"));
+            assertEquals("[REDACTED_SECRET]", item.getParameters().get("CipherController.symmetricKeyField"));
             assertFalse(item.getParameters().containsValue("SYNTHETIC-HISTORY-VALUE"));
+            // Empty secret fields of other modules are not reported as redacted secrets.
+            assertEquals("", item.getParameters().get("KeysController.keyInputField"));
         } finally {
             onFx(() -> AppSettings.getInstance().setSecretVisibilityProfile(previous));
         }
@@ -182,8 +184,11 @@ class HistoryManagementCharacterizationTest {
                 stage.setScene(new Scene(root));
                 stage.show();
                 stageRef.set(stage);
-                itemRef.set(new HistoryCommand("Synthetic cipher result", "", Map.of(
-                        "CipherController.symmetricKeyField", "[REDACTED_SECRET]"),
+                // A redacted field of a hidden module comes first, as in real recipes.
+                Map<String, Object> recipe = new java.util.LinkedHashMap<>();
+                recipe.put("KeysController.keyInputField", "[REDACTED_SECRET]");
+                recipe.put("CipherController.symmetricKeyField", "[REDACTED_SECRET]");
+                itemRef.set(new HistoryCommand("Synthetic cipher result", "", recipe,
                         HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS,
                         "Synthetic secret redacted", "Hex", "Base64", "Symmetric Ciphers"));
                 controllerRef.set(controller);
