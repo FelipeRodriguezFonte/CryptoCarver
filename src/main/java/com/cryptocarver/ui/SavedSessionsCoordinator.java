@@ -33,6 +33,7 @@ public final class SavedSessionsCoordinator {
     private final StatusReporter statusReporter;
     private final SavedSessionsManager manager;
     private final I18nService i18n;
+    private final DialogService dialogs;
     private final Supplier<Map<String, Object>> stateCapture;
     private final Consumer<Map<String, Object>> stateRestore;
     private final Consumer<String> operationSelection;
@@ -46,6 +47,7 @@ public final class SavedSessionsCoordinator {
 
     public SavedSessionsCoordinator(VBox container, VBox list, StatusReporter statusReporter,
                                     SavedSessionsManager manager, I18nService i18n,
+                                    DialogService dialogs,
                                     Supplier<Map<String, Object>> stateCapture,
                                     Consumer<Map<String, Object>> stateRestore,
                                     Consumer<String> operationSelection, Runnable trailRefresh,
@@ -58,6 +60,7 @@ public final class SavedSessionsCoordinator {
         this.statusReporter = statusReporter;
         this.manager = manager;
         this.i18n = i18n;
+        this.dialogs = dialogs;
         this.stateCapture = stateCapture;
         this.stateRestore = stateRestore;
         this.operationSelection = operationSelection;
@@ -118,13 +121,19 @@ public final class SavedSessionsCoordinator {
             load.getStyleClass().add("action-button");
             load.setStyle("-fx-font-size: 11px; -fx-padding: 5 10;");
             load.setOnAction(event -> previewAndLoad(session));
-            Button delete = new Button("Delete");
+            Button delete = new Button(i18n.text("savedSessions.delete"));
+            delete.setAccessibleText(i18n.text("savedSessions.delete"));
             delete.getStyleClass().add("secondary-button");
             delete.setStyle("-fx-font-size: 11px; -fx-padding: 5 10; -fx-text-fill: #fc8181;");
             delete.setOnAction(event -> {
+                Node ownerNode = ownerNodeSupplier.get();
+                javafx.stage.Window owner = ownerNode == null || ownerNode.getScene() == null
+                        ? null : ownerNode.getScene().getWindow();
+                if (!dialogs.confirmDestructive(owner, i18n.text("savedSessions.deleteTitle"),
+                        i18n.text("savedSessions.deleteConfirm", session.getName()), i18n.text("savedSessions.delete"))) return;
                 manager.removeSession(session);
                 refresh();
-                statusReporter.updateStatus("Deleted session");
+                statusReporter.updateStatus(i18n.text("savedSessions.deleted"));
             });
             item.getChildren().addAll(info, load, delete);
             list.getChildren().add(item);

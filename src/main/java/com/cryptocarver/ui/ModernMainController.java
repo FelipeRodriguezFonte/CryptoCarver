@@ -3345,7 +3345,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             com.cryptocarver.model.SavedSessionsManager manager =
                     com.cryptocarver.model.SavedSessionsManager.getInstance();
             savedSessionsCoordinator = new SavedSessionsCoordinator(
-                    savedSessionsContainer, savedSessionsList, this, manager, i18n,
+                    savedSessionsContainer, savedSessionsList, this, manager, i18n, dialogService,
                     this::captureUIState, this::restoreUIState, this::handleItemSelected,
                     this::refreshSessionTrailUI, this::showSessionStep, sessionTrailState,
                     () -> currentActiveOperation, () -> contentSubtitleLabel == null ? null : contentSubtitleLabel.getText(),

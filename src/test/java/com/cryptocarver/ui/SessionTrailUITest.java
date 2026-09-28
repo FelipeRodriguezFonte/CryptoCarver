@@ -48,6 +48,78 @@ class SessionTrailUITest {
     }
 
     @Test
+    void savedSessionDeleteRequiresConfirmation() throws Exception {
+        var constructor = com.cryptocarver.model.SavedSessionsManager.class.getDeclaredConstructor(Path.class);
+        constructor.setAccessible(true);
+        var manager = constructor.newInstance(temporaryDirectory.resolve("saved-sessions.json"));
+        var session = new com.cryptocarver.model.SavedSession("Synthetic delete test", "Synthetic", java.util.Map.of());
+        manager.addSession(session);
+        try {
+            runAndWait(() -> {
+                javafx.scene.layout.VBox list = new javafx.scene.layout.VBox();
+                javafx.scene.layout.VBox container = new javafx.scene.layout.VBox(list);
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setScene(new javafx.scene.Scene(container, 800, 400));
+                stage.show();
+                StatusReporter status = new StatusReporter() {
+                    @Override public void updateStatus(String message) { }
+                    @Override public void updateInspector(String operation, byte[] input, byte[] output,
+                            java.util.List<OperationDetail> details) { }
+                    @Override public void showError(String title, String message) { }
+                };
+                SavedSessionsCoordinator coordinator = new SavedSessionsCoordinator(container, list, status,
+                        manager, com.cryptocarver.service.I18nService.getInstance(), new DialogService(),
+                        java.util.Map::of, ignored -> { }, ignored -> { }, () -> { }, ignored -> { },
+                        new com.cryptocarver.model.SessionTrailState(), () -> "Synthetic", () -> "", () -> list);
+                coordinator.show();
+                try {
+                    javafx.scene.layout.HBox row = (javafx.scene.layout.HBox) list.getChildren().stream()
+                            .filter(javafx.scene.layout.HBox.class::isInstance)
+                            .filter(node -> ((javafx.scene.layout.HBox) node).getChildren().stream()
+                                    .filter(javafx.scene.layout.VBox.class::isInstance)
+                                    .map(javafx.scene.layout.VBox.class::cast)
+                                    .flatMap(info -> info.getChildren().stream())
+                                    .filter(Label.class::isInstance).map(Label.class::cast)
+                                    .anyMatch(label -> label.getText().equals(session.getName())))
+                            .findFirst().orElseThrow();
+                    Button delete = (Button) row.getChildren().get(2);
+                    Platform.runLater(() -> clickConfirmation(false));
+                    delete.fire();
+                    assertTrue(manager.getSessions().stream().anyMatch(saved -> session.getId().equals(saved.getId())));
+                    Platform.runLater(() -> clickConfirmation(true));
+                    delete.fire();
+                    assertFalse(manager.getSessions().stream().anyMatch(saved -> session.getId().equals(saved.getId())));
+                    assertTrue(list.getChildren().stream().filter(javafx.scene.layout.HBox.class::isInstance).noneMatch(node ->
+                            ((javafx.scene.layout.HBox) node).getChildren().stream().filter(javafx.scene.layout.VBox.class::isInstance)
+                                    .map(javafx.scene.layout.VBox.class::cast).flatMap(info -> info.getChildren().stream())
+                                    .filter(Label.class::isInstance).map(Label.class::cast)
+                                    .anyMatch(label -> label.getText().equals(session.getName()))));
+                    stage.close();
+                } finally {
+                    stage.close();
+                }
+            });
+        } finally {
+            manager.removeSession(session);
+        }
+    }
+
+    private static void clickConfirmation(boolean confirm) {
+        javafx.stage.Window.getWindows().stream().filter(javafx.stage.Stage.class::isInstance)
+                .map(javafx.stage.Stage.class::cast).filter(javafx.stage.Stage::isShowing)
+                .map(javafx.stage.Stage::getScene).filter(java.util.Objects::nonNull)
+                .map(javafx.scene.Scene::getRoot).filter(javafx.scene.control.DialogPane.class::isInstance)
+                .map(javafx.scene.control.DialogPane.class::cast).findFirst().ifPresent(pane -> {
+                    javafx.scene.control.ButtonType type = pane.getButtonTypes().stream()
+                            .filter(button -> confirm
+                                    ? button.getButtonData() == javafx.scene.control.ButtonBar.ButtonData.OK_DONE
+                                    : button.getButtonData() == javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE)
+                            .findFirst().orElseThrow();
+                    ((Button) pane.lookupButton(type)).fire();
+                });
+    }
+
+    @Test
     void clearTrailButtonConfirmsAndReturnsToDisabledState() throws Exception {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
