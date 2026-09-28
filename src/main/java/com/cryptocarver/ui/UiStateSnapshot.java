@@ -113,19 +113,31 @@ public final class UiStateSnapshot {
 
     /**
      * Restores a History recipe without rehydrating result panes or retaining
-     * secrets that may have been left in the live screen.  History is a safe
-     * configuration hand-off; it is not a result/session snapshot.
+     * secrets that may have been left in the live screen. FULL_LAB recipes restore
+     * their stored inputs; masked profiles keep sensitive inputs empty.
      */
     static List<Node> restoreHistoryRecipe(Object rootController, Map<String, Object> state) {
         clearHistorySensitiveControls(rootController);
         if (state == null || state.isEmpty()) return List.of();
         Map<String, Object> safe = new LinkedHashMap<>();
+        List<Node> redacted = new ArrayList<>();
+        boolean restoreSensitive = AppSettings.isFullLab();
+        visitControllers(rootController, (owner, field, value) -> {
+            Object stored = state.get(key(owner, field));
+            if (value instanceof Node node && ("[REDACTED_SECRET]".equals(stored)
+                    || (!restoreSensitive && holdsSecretValue(key(owner, field), stored)))) {
+                redacted.add(node);
+            }
+        });
         state.forEach((key, value) -> {
             String field = key == null ? "" : key.substring(key.lastIndexOf('.') + 1);
-            if (!isResultField(field) && (!isHistorySensitiveField(field)
-                    || "[REDACTED_SECRET]".equals(value))) safe.put(key, value);
+            if ("[REDACTED_SECRET]".equals(value)) return;
+            if (!isResultField(field) && (!isHistorySensitiveField(field) || restoreSensitive)) {
+                safe.put(key, value);
+            }
         });
-        return restore(rootController, safe);
+        restore(rootController, safe);
+        return List.copyOf(redacted);
     }
 
     /** Captures the controls belonging to one visible operation pane. */

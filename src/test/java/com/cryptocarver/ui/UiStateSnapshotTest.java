@@ -15,6 +15,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("ui")
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
@@ -212,6 +213,50 @@ class UiStateSnapshotTest {
         assertEquals("128", controller.tr31KeySizeCombo.getValue());
         assertEquals("HEX", controller.encodingFormatChoice.getValue());
         assertFalse(controller.algorithmModeCheck.isSelected());
+    }
+
+    @Test
+    void historyRecipeRestoresSensitiveValuesOnlyInFullLab() {
+        var settings = com.cryptocarver.model.AppSettings.getInstance();
+        var previous = settings.getSecretVisibilityProfile();
+        for (com.cryptocarver.model.SecretVisibilityProfile profile :
+                com.cryptocarver.model.SecretVisibilityProfile.values()) {
+            settings.setSecretVisibilityProfile(profile);
+            DummyController controller = new DummyController();
+            controller.keyField.setText("synthetic-key-value");
+            controller.dataField.setText("synthetic-public-input");
+            Map<String, Object> recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+            controller.keyField.setText("stale-live-value");
+
+            var redacted = UiStateSnapshot.restoreHistoryRecipe(controller, recipe);
+
+            if (profile == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+                assertEquals("synthetic-key-value", controller.keyField.getText());
+                assertTrue(redacted.isEmpty());
+            } else {
+                assertEquals("", controller.keyField.getText());
+                assertFalse(redacted.isEmpty());
+            }
+            assertEquals("synthetic-public-input", controller.dataField.getText());
+        }
+        settings.setSecretVisibilityProfile(previous);
+    }
+
+    @Test
+    void fullLabRecipeOpenedInRedactedProfileStaysBlankAndReturnsFocusTargets() {
+        var settings = com.cryptocarver.model.AppSettings.getInstance();
+        var previous = settings.getSecretVisibilityProfile();
+        settings.setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+        DummyController controller = new DummyController();
+        controller.keyField.setText("synthetic-key-value");
+        Map<String, Object> recipe = UiStateSnapshot.captureHistoryRecipe(controller);
+        settings.setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+
+        var redacted = UiStateSnapshot.restoreHistoryRecipe(controller, recipe);
+
+        assertEquals("", controller.keyField.getText());
+        assertTrue(redacted.contains(controller.keyField));
+        settings.setSecretVisibilityProfile(previous);
     }
 
     @Test
