@@ -58,7 +58,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
-    private TableView<?> lastFocusedTable;
+    private ResultViewerCoordinator resultViewerCoordinator;
     /**
      * Snapshot published by the latest completed operation.  It is deliberately
      * separate from the last focused text area: focus is a navigation concern,
@@ -2532,25 +2532,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private boolean isShelfCaptureBlockedByVisibility(TextArea area) {
-        com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
-        return !AppSettings.isFullLab()
-                && (classification == com.cryptocarver.model.OperationDetail.Classification.SECRET
-                || classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE);
+        return com.cryptocarver.model.ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
+                classificationForResultArea(area), com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
     }
 
     private boolean isPrivateMaterialPlaceholder(String text) {
-        if (text == null) return false;
-        String normalized = text.toUpperCase(java.util.Locale.ROOT);
-        return normalized.contains("PRIVATE KEY MATERIAL") && normalized.contains("NOT RECORDED");
+        return com.cryptocarver.model.ResultPresentationPolicy.isPrivateMaterialPlaceholder(text);
     }
 
     private boolean isCompletePrivateKeyMaterial(String text) {
-        if (text == null || isPrivateMaterialPlaceholder(text)) return false;
-        String normalized = text.toUpperCase(java.util.Locale.ROOT);
-        return normalized.contains("-----BEGIN ")
-                && normalized.contains("PRIVATE KEY-----")
-                && normalized.contains("-----END ")
-                && normalized.contains("PRIVATE KEY-----");
+        return com.cryptocarver.model.ResultPresentationPolicy.isCompletePrivateKeyMaterial(text);
     }
 
     private String renderResultArea(TextArea area) {
@@ -2698,7 +2689,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Renders bytes as strict UTF-8 where possible, otherwise as hexadecimal. */
     private String renderBytesForDisplay(byte[] bytes) {
-        return OperationResultRenderer.renderBytes(bytes);
+        return com.cryptocarver.model.ResultPresentationPolicy.renderBytesForDisplay(bytes);
     }
 
     private boolean isPrintableUtf8(byte[] bytes) {
@@ -2712,10 +2703,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      */
     private java.util.List<com.cryptocarver.model.OperationDetail> detailsForHistory(
             com.cryptocarver.model.OperationResult result) {
-        java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>(result.getDetails());
-        addPayloadDetail(details, "Input", result.getInput());
-        addPayloadDetail(details, "Output", result.getOutput());
-        return details;
+        return com.cryptocarver.model.ResultPresentationPolicy.detailsForHistory(result);
     }
 
     private void addPayloadDetail(java.util.List<com.cryptocarver.model.OperationDetail> details, String name, byte[] bytes) {
@@ -2742,42 +2730,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (cipherController != null && cipherController.getFileResultArea() != null) {
             additionalAreas.add(cipherController.getFileResultArea());
         }
+        if (resultViewerCoordinator == null) {
+            resultViewerCoordinator = new ResultViewerCoordinator(resultAreaTracker, expandedTableViewer,
+                    area -> handleOpenExpandedResultViewer(),
+                    area -> { String selected = area.getSelectedText(); handleAddToClipboardShelfSecure(area, selected != null && !selected.isEmpty() ? selected : null); },
+                    area -> handleCopySecure(area, null, false),
+                    area -> { String selected = area.getSelectedText(); boolean hasSelection = selected != null && !selected.isEmpty(); handleCopySecure(area, hasSelection ? selected : null, hasSelection); },
+                    () -> currentActiveOperation);
+        }
         resultAreaTracker.install(mainPane, additionalAreas,
-                area -> area.setContextMenu(createResultContextMenu(area)));
+                area -> area.setContextMenu(resultViewerCoordinator.createContextMenu(area)));
     }
 
-    private ContextMenu createResultContextMenu(TextArea area) {
-        MenuItem expand = new MenuItem("Open in Expanded Viewer");
-        expand.setOnAction(event -> {
-            resultAreaTracker.focus(area);
-            handleOpenExpandedResultViewer();
-        });
-
-        MenuItem addToShelf = new MenuItem("Add to Clipboard Shelf");
-        addToShelf.setOnAction(event -> {
-            resultAreaTracker.focus(area);
-            String selected = area.getSelectedText();
-            handleAddToClipboardShelfSecure(area, selected != null && !selected.isEmpty() ? selected : null);
-        });
-
-        MenuItem copyToSys = new MenuItem("Copy to System Clipboard");
-        copyToSys.setOnAction(event -> {
-            resultAreaTracker.focus(area);
-            handleCopySecure(area, null, false);
-        });
-
-        MenuItem copy = new MenuItem("Copy");
-        copy.setOnAction(event -> {
-            resultAreaTracker.focus(area);
-            String selected = area.getSelectedText();
-            boolean hasSelection = selected != null && !selected.isEmpty();
-            handleCopySecure(area, hasSelection ? selected : null, hasSelection);
-        });
-
-        MenuItem selectAll = new MenuItem("Select All");
-        selectAll.setOnAction(event -> area.selectAll());
-        return new ContextMenu(expand, addToShelf, copyToSys, new SeparatorMenuItem(), copy, selectAll);
-    }
+    private ContextMenu createResultContextMenu(TextArea area) { return resultViewerCoordinator.createContextMenu(area); }
 
     private void handleCopySecure(TextArea area, String textToCopy, boolean isSelection) {
         if (!isSelection) {
@@ -2942,7 +2907,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public com.cryptocarver.model.OperationDetail.Classification classifyPublishedResult(com.cryptocarver.model.OperationResult result) {
-        return OperationResultRenderer.classification(result);
+        return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(result);
     }
 
     public void fillClipboardTarget(String targetType, String value, com.cryptocarver.model.ClipboardEntry.Format format) {
@@ -3016,40 +2981,16 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleOpenExpandedTableViewer() {
-        if (lastFocusedTable == null) {
+        if (resultViewerCoordinator == null || !resultViewerCoordinator.hasFocusedTable()) {
             showInfo("No table selected", "Right-click a table or select a cell before opening its expanded view.");
             return;
         }
-        openExpandedTable(lastFocusedTable);
+        resultViewerCoordinator.openFocusedTable();
     }
 
     private void installTableViewerSupport() {
-        if (mainPane == null) {
-            return;
-        }
-        for (javafx.scene.Node node : mainPane.lookupAll(".table-view")) {
-            if (node instanceof TableView<?> table) {
-                attachTableViewerSupport(table);
-            }
-        }
-    }
-
-    private void attachTableViewerSupport(TableView<?> table) {
-        table.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
-            if (isFocused) {
-                lastFocusedTable = table;
-            }
-        });
-        MenuItem expand = new MenuItem("Open table in expanded viewer");
-        expand.setOnAction(event -> openExpandedTable(table));
-        table.setContextMenu(new ContextMenu(expand));
-    }
-
-    private void openExpandedTable(TableView<?> table) {
-        lastFocusedTable = table;
-        javafx.stage.Window owner = mainPane == null || mainPane.getScene() == null
-                ? null : mainPane.getScene().getWindow();
-        expandedTableViewer.show(owner, "Expanded Table — " + currentActiveOperation, table);
+        if (resultViewerCoordinator == null) installResultViewerSupport();
+        resultViewerCoordinator.installTables(mainPane);
     }
 
     private boolean isContainerVisible(javafx.scene.Node container) {
