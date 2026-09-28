@@ -229,6 +229,11 @@
     -fx-font-size: 13px;
 }
 
+/* A child Label otherwise wins over TreeCell's text colour via the generic .label rule. */
+.navigation-tree .tree-cell .label {
+    -fx-text-fill: -color-text-primary;
+}
+
 .navigation-tree .tree-cell:filled:selected {
     -fx-background-color: -cc-bg-sunken; /* Subtle selection */
     -fx-text-fill: -color-primary-dark;
@@ -372,6 +377,9 @@
 
 
 /* Labels */
+.label {
+    -fx-text-fill: -cc-text;
+}
 
 
 /* Scroll Pane */
@@ -475,6 +483,11 @@
     -fx-text-fill: -cc-text-secondary;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
+}
+
+.label.breadcrumb-separator,
+.label.breadcrumb-current {
+    -fx-text-fill: -cc-on-accent;
 }
 
 .breadcrumb-current {
@@ -707,7 +720,7 @@
 }
 
 .content-title-label {
-    -fx-text-fill: -color-text-light;
+    -fx-text-fill: -cc-text;
     -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
@@ -763,6 +776,16 @@
     -fx-font-size: 11px;
 }
 
+.label.inspector-label-small {
+    -fx-text-fill: -cc-text;
+}
+
+.ux-inline-8eb1b6eca4,
+.ux-inline-7917b6784a,
+.ux-inline-cb001c4862 {
+    -fx-text-fill: -cc-on-accent;
+}
+
 
 
 .inspector-value-small {
@@ -794,13 +817,13 @@
 
 /* Status Bar Labels */
 .status-label-main {
-    -fx-text-fill: -color-text-subtle;
+    -fx-text-fill: -cc-on-accent;
     -fx-font-size: 11px;
 }
 
 .status-label-info {
     -fx-font-size: 10px;
-    -fx-text-fill: -color-text-muted;
+    -fx-text-fill: -cc-on-accent;
 }
 
 /* Font Size Classes - Apply directly to TextArea */
@@ -829,7 +852,7 @@
 }
 
 .menu-bar > .container > .menu-button > .label {
-    -fx-text-fill: white;
+    -fx-text-fill: -cc-on-accent;
     -fx-font-size: 13px;
     -fx-font-weight: normal;
 }
@@ -1023,11 +1046,6 @@
     -fx-padding: 10;
 }
 
-/* Labels */
-.label {
-    -fx-text-fill: -cc-text;
-}
-
 /* Scroll Pane */
 .scroll-pane {
     -fx-background-color: transparent;
@@ -1050,7 +1068,7 @@
 /* Status Bar */
 #statusLabel {
     -fx-font-size: 12px;
-    -fx-text-fill: -cc-text;
+    -fx-text-fill: -cc-on-accent;
     -fx-font-weight: bold;
 }
 
@@ -1221,7 +1239,7 @@
     -fx-padding: 6 11 6 11;
 }
 
-.responsive-action-bar .menu-button > .label {
+.responsive-action-bar .menu-button .label {
     -fx-padding: 0;
     -fx-content-display: LEFT;
 }
@@ -1242,7 +1260,7 @@
 .secondary-button,
 .secondary-action {
     -fx-background-color: -cc-bg-sunken;
-    -fx-text-fill: -cc-text;
+    -fx-text-fill: -cc-palette-53;
     -fx-border-color: -cc-border;
 }
 
@@ -2090,7 +2108,7 @@
 }
 
 .ux-inline-0665f452ba {
-    -fx-text-fill: -cc-palette-13; -fx-font-size: 13px;
+    -fx-text-fill: -cc-text; -fx-font-size: 13px;
 }
 
 .ux-inline-0667959a20 {
@@ -2438,7 +2456,7 @@
 }
 
 .ux-inline-98d654c0fb {
-    -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -cc-palette-26;
+    -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -cc-text;
 }
 
 .ux-inline-9905c38219 {
@@ -2709,3 +2727,22 @@
 }
 .symmetric-config .form-group-box { -fx-padding: 10; -fx-spacing: 8; }
 .symmetric-config .form-group-title { -fx-padding: 0 0 4 0; }
+
+/* Late labels are intentionally more specific than compatibility utility classes. */
+.navigation-tree .tree-cell .label {
+    -fx-text-fill: -cc-text;
+}
+#inspectorTitleLabel.ux-inline-8eb1b6eca4,
+#sessionTrailCountLabel.ux-inline-cb001c4862,
+.inspector-section-header .ux-inline-7917b6784a {
+    -fx-text-fill: -cc-on-accent;
+}
+.responsive-action-bar .menu-button .label {
+    -fx-text-fill: -cc-palette-53;
+}
+#symKeyShelfMenu .label {
+    -fx-text-fill: -cc-palette-53;
+}
+#symKeyShelfMenu {
+    -fx-text-fill: -cc-palette-53;
+}

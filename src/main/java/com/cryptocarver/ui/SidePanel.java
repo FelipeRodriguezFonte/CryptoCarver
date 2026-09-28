@@ -135,7 +135,7 @@ public class SidePanel extends VBox {
 
                         if (item.descriptor.getStatus() == OperationDescriptor.Status.EXPERIMENTAL) {
                             Label expBadge = new Label(I18nService.getInstance().text("side.badge.experimental"));
-                            expBadge.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
+                            expBadge.setStyle("-fx-background-color: #f39c12; -fx-text-fill: #1e293b; -fx-font-size: 9px; -fx-padding: 1 3; -fx-background-radius: 3;");
                             content.getChildren().add(expBadge);
                         } else if (item.descriptor.getStatus() == OperationDescriptor.Status.PLANNED) {
                             Label planBadge = new Label(I18nService.getInstance().text("side.badge.planned"));

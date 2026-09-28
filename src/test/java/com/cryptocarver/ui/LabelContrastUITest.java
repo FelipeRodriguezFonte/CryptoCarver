@@ -59,7 +59,7 @@ class LabelContrastUITest {
                 stage.close();
             } catch (Exception e) { throw new RuntimeException(e); }
         });
-        findings.stream().distinct().forEach(f -> System.out.printf("CONTRAST %s | %s | %s | %.2f:1%n", f.theme, f.module, f.label, f.ratio));
+        assertTrue(findings.isEmpty(), "Visible labels below 3:1: " + findings.stream().distinct().toList());
     }
 
     private static void measure(Parent root, String theme, String module, List<Finding> findings) {
@@ -72,7 +72,16 @@ class LabelContrastUITest {
             double ratio = contrast(foreground, background);
             if (ratio < 3.0) {
                 String id = label.getId() == null ? "" : "#" + label.getId();
-                findings.add(new Finding(theme, module, id + label.getStyleClass(), ratio));
+                StringBuilder ownerPath = new StringBuilder();
+                for (Node p=label.getParent(); p!=null && p!=root; p=p.getParent()) {
+                    if (!ownerPath.isEmpty()) ownerPath.append(" <- ");
+                    ownerPath.append(p.getClass().getSimpleName());
+                    if (p.getId()!=null) ownerPath.append('#').append(p.getId());
+                    if (!p.getStyleClass().isEmpty()) ownerPath.append(p.getStyleClass());
+                }
+                String owner = ownerPath.toString();
+                findings.add(new Finding(theme, module, id + label.getStyleClass() + " parent=" + owner
+                        + " fg=" + foreground + " bg=" + background, ratio));
             }
         }
     }
