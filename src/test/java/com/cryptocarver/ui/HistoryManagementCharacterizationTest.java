@@ -106,6 +106,34 @@ class HistoryManagementCharacterizationTest {
     }
 
     @Test
+    void exportWritesToPathAndHonorsMaskedAndRedactedProfiles() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        onFx(() -> {
+            try {
+                ModernMainController controller = loadProductionController();
+                useIsolatedHistory(controller, "export");
+                HistoryCommand item = new HistoryCommand("Synthetic export", "", Map.of());
+                item.setStructuredDetails(List.of(OperationDetail.secretDetail(
+                        "Synthetic secret field", "SYNTHETIC_EXPORT_SECRET")));
+                controller.getHistoryManager().addHistoryItem(item);
+                controllerRef.set(controller);
+            } catch (Exception exception) {
+                throw new AssertionError(exception);
+            }
+        });
+        ModernMainController controller = controllerRef.get();
+        for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
+            Path target = tempDir.resolve("history-" + profile + ".json");
+            onFx(() -> {
+                try { controller.exportHistoryTo(target, profile); }
+                catch (Exception exception) { throw new AssertionError(exception); }
+            });
+            String json = java.nio.file.Files.readString(target);
+            assertFalse(json.contains("SYNTHETIC_EXPORT_SECRET"));
+        }
+    }
+
+    @Test
     void productionFxmlLoadsHistoryLazilyAndSelectionDoesNotRestoreRecipe() throws Exception {
         AtomicReference<Stage> stageRef = new AtomicReference<>();
         onFx(() -> {

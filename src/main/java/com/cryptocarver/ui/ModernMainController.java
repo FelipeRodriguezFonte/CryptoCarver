@@ -11,9 +11,7 @@ import javafx.scene.layout.*;
 import java.io.File;
 import java.util.Optional; // For Dialogs
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Base64;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import javafx.scene.text.TextFlow;
 import com.cryptocarver.model.AppDiagnostics;
@@ -224,6 +222,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
+    private HistoryCoordinator historyCoordinator;
     private SavedSessionsCoordinator savedSessionsCoordinator;
     private String currentActiveOperation = "Dashboard"; // Defaul
     private boolean processDesignerWorkspace;
@@ -1512,9 +1511,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         navigateToModule(targetRoute);
     }
 
-    public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
-        reopenHistoryOperation(item);
-    }
+    public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) { historyCoordinator().reopenHistoryOperation(item); }
 
     /**
      * Opens a recorded execution for inspection. Selecting an entry under
@@ -1522,34 +1519,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * explicit job of the Reopen button in the History view.
      */
     public void showRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
-        if (item == null) return;
-        navigateToModule("Recent Operations");
-        if (historyViewController != null) {
-            historyViewController.selectHistoryCommand(item);
-        }
-        updateInspector(item.getOperation(), null, null, visibleHistoryDetails(item));
-        updateStatus("Viewing historical execution: " + item.getOperation());
+        historyCoordinator().showRecentHistoryCommand(item);
     }
 
     @Override
     public void reopenHistoryOperation(com.cryptocarver.model.HistoryCommand item) {
-        if (item == null || item.getOperation() == null) return;
-        String navigationOperation = item.getNavigationOperation();
-        navigateToModule(navigationOperation);
-        restoreOperationState(item.getParameters(), navigationOperation);
-        updateInspector(item.getOperation(), null, null, visibleHistoryDetails(item));
-        updateStatus("Reopened historical execution: " + item.getOperation());
+        historyCoordinator().reopenHistoryOperation(item);
     }
 
     private java.util.List<com.cryptocarver.model.OperationDetail> visibleHistoryDetails(
             com.cryptocarver.model.HistoryCommand item) {
-        java.util.List<com.cryptocarver.model.OperationDetail> details = item.getStructuredDetails();
-        if (details == null || details.isEmpty()) {
-            if (item.getDetails() == null || item.getDetails().isBlank()) return java.util.List.of();
-            details = java.util.List.of(com.cryptocarver.model.OperationDetail.sensitiveDetail(
-                    "Legacy details", item.getDetails()));
-        }
-        return visibleOperationDetails(details);
+        return historyCoordinator().visibleHistoryDetails(item);
     }
 
     private java.util.List<com.cryptocarver.model.OperationDetail> visibleOperationDetails(
@@ -1843,14 +1823,23 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return historyManager;
     }
 
-    private void initializeHistory() {
-        if (sidePanel != null) {
-            sidePanel.setHistoryManager(historyManager());
-            sidePanel.setOnHistoryItemSelected(this::showRecentHistoryCommand);
+    private HistoryCoordinator historyCoordinator() {
+        if (historyCoordinator == null) {
+            historyCoordinator = new HistoryCoordinator(
+                    this::historyManager, () -> sidePanel, () -> historyViewController,
+                    this::captureHistoryState, () -> currentActiveOperation,
+                    () -> inputFormatCombo == null ? null : inputFormatCombo.getValue(),
+                    () -> outputFormatCombo == null ? null : outputFormatCombo.getValue(),
+                    this::navigateToModule, this::restoreHistoryRecipe,
+                    (operation, details) -> updateInspector(operation, null, null, details),
+                    this::visibleOperationDetails, this::updateStatus, () -> windowOf(mainPane),
+                    dialogService, i18n);
         }
-        // The History view and the Clipboard Shelf are deferred modules: they are wired in
-        // connectShellServices when they materialize, since both are still null here.
-        refreshHistoryUI();
+        return historyCoordinator;
+    }
+
+    private void initializeHistory() {
+        historyCoordinator().initialize();
     }
 
     /**
@@ -1861,17 +1850,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * it, the History module's table.
      */
     private void refreshHistoryUI() {
-        refreshHistoryNavigation();
-        if (historyViewController != null) {
-            historyViewController.refresh();
-        }
+        historyCoordinator().refresh();
     }
 
     @Override
     public void refreshHistoryNavigation() {
-        if (sidePanel != null) {
-            sidePanel.updateContent(sidePanel.getCurrentSection());
-        }
+        historyCoordinator().refreshNavigation();
     }
 
     private String formatRelativeTime(String timestampStr) {
@@ -1909,7 +1893,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @Override
     public void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        addToHistory(operation, details, effectiveNavigationTarget(operation, currentActiveOperation));
+        historyCoordinator().addToHistory(operation, details, currentActiveOperation);
     }
 
     /**
@@ -1921,50 +1905,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * module filter/category stays correct instead of collapsing to "Other".
      */
     private String effectiveNavigationTarget(String operation, String candidateNavigationOperation) {
-        if (candidateNavigationOperation != null && !candidateNavigationOperation.isBlank()
-                && com.cryptocarver.model.OperationRegistry.getInstance()
-                        .resolveNavigation(candidateNavigationOperation).isPresent()) {
-            return candidateNavigationOperation;
-        }
-        return operation;
+        return com.cryptocarver.model.HistoryCommandPolicy.effectiveNavigationTarget(operation,
+                candidateNavigationOperation, candidate -> com.cryptocarver.model.OperationRegistry.getInstance()
+                        .resolveNavigation(candidate).isPresent());
     }
 
     private void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details,
                               String navigationOperation) {
-        java.util.Map<String, Object> state = captureHistoryState();
-
-        String detailsJson = "";
-        if (details != null && !details.isEmpty()) {
-            try {
-                com.google.gson.Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping()
-                        .create();
-                detailsJson = gson.toJson(details);
-            } catch (Exception e) {
-                detailsJson = details.toString();
-            }
-        }
-
-        com.cryptocarver.model.HistoryCommand.Reproducibility rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITHOUT_SECRETS;
-        String reason = "All parameters are available.";
-        if (state.values().contains("[REDACTED_SECRET]")) {
-            rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS;
-            reason = "Sensitive secrets were redacted from the history recipe.";
-        }
-
-        String inFmt = inputFormatCombo != null ? inputFormatCombo.getValue() : null;
-        String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
-
-        com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
-                operation, detailsJson, state, rep, reason, inFmt, outFmt, navigationOperation);
-        item.setStructuredDetails(details);
-
-        if (historyManager == null) {
-            initializeHistory();
-        }
-
-        historyManager.addHistoryItem(item);
-
-        refreshHistoryUI();
+        historyCoordinator().addToHistory(operation, details, navigationOperation);
     }
 
     public void addToHistoryManual(String operation, String detailsString) {
@@ -1994,11 +1942,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     /** Exposes the shared history store to the FXML history module. */
     public com.cryptocarver.model.HistoryManager getHistoryManager() {
         if (historyManager == null) initializeHistory();
-        return historyManager;
+        return historyCoordinator().historyManager();
     }
 
     /** Restores an operation selected from the modular history view. */
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
+        historyCoordinator().restoreOperationState(state, operation);
+    }
+
+    private void restoreHistoryRecipe(java.util.Map<String, Object> state, String operation) {
         handleItemSelected(operation);
         java.util.List<javafx.scene.Node> redacted = UiStateSnapshot.restoreHistoryRecipe(this, state);
         if (redacted != null && !redacted.isEmpty()) {
@@ -2011,34 +1963,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleExportHistory() {
-        if (historyManager == null || historyManager.getHistoryItems().isEmpty()) {
-            Alert alert = LocalizedDialogSupport.alert(Alert.AlertType.INFORMATION,
-                    "dialog.exportHistory.title", "dialog.exportHistory.emptyHeader",
-                    i18n.text("dialog.exportHistory.emptyContent"));
-            alert.showAndWait();
-            return;
-        }
+        historyCoordinator().chooseAndExport();
+    }
 
-        FileChooser fileChooser = LocalizedDialogSupport.fileChooser(
-                "dialog.exportHistory.title", "dialog.exportHistory.filter", "JSON Files", "*.json");
-        fileChooser.setInitialFileName("cryptocarver-history-export.json");
-
-        File file = fileChooser.showSaveDialog(mainPane.getScene().getWindow());
-        if (file != null) {
-            try (PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
-                com.cryptocarver.model.SecretVisibilityProfile visibility = com.cryptocarver.model.AppSettings.getInstance()
-                        .getSecretVisibilityProfile();
-                String json = com.cryptocarver.utils.HistoryRecordExporter.toJson(
-                        historyManager.getHistoryItems(), visibility);
-                writer.write(json);
-
-                dialogService.info(i18n.text("dialog.exportHistory.success"),
-                        "History successfully exported using " + visibility + " policy to:\n" + file.getAbsolutePath());
-            } catch (IOException e) {
-                dialogService.error(i18n.text("dialog.exportHistory.failure"),
-                        i18n.text("dialog.exportHistory.saveFailure") + "\n" + e.getMessage());
-            }
-        }
+    void exportHistoryTo(java.nio.file.Path target,
+                         com.cryptocarver.model.SecretVisibilityProfile visibility) throws IOException {
+        historyCoordinator().exportTo(target, visibility);
     }
 
     @FXML
@@ -2070,9 +2000,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (historyView != null) {
             historyView.setManaged(true);
             historyView.setVisible(true);
-        }
-        if (historyViewController != null) {
-            historyViewController.refresh();
         }
         if (contentTitleLabel != null) {
             contentTitleLabel.setText("Cryptographic Operations");
