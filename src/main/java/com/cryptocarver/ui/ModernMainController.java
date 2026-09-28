@@ -1877,10 +1877,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     /** Exposes the shared history store to the FXML history module. */
-    public com.cryptocarver.model.HistoryManager getHistoryManager() {
-        if (historyManager == null) initializeHistory();
-        return historyCoordinator().historyManager();
-    }
+    public com.cryptocarver.model.HistoryManager getHistoryManager() { return historyCoordinator().historyManager(); }
 
     /** Restores an operation selected from the modular history view. */
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
@@ -1908,11 +1905,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         historyCoordinator().exportTo(target, visibility);
     }
 
-    /**
-     * Shows the modular Recent Operations view.  The old dynamic builder is
-     * retained below temporarily for binary/source compatibility while all
-     * navigation uses the FXML-backed controller.
-     */
+    /** Materializes and presents the modular Recent Operations view. */
     private void showHistoryView() {
         if (historyViewController == null) historyViewController = ensureModule(historyView, HistoryController.class);
         hideAllContainers();
