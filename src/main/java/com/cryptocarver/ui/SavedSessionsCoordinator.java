@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationSessionLog;
+import com.cryptocarver.model.SessionTrailState;
 import com.cryptocarver.model.SavedSession;
 import com.cryptocarver.model.SavedSessionsManager;
 import com.cryptocarver.service.I18nService;
@@ -37,8 +38,7 @@ public final class SavedSessionsCoordinator {
     private final Consumer<String> operationSelection;
     private final Runnable trailRefresh;
     private final Consumer<Integer> showTrailStep;
-    private final Supplier<OperationSessionLog> trailSupplier;
-    private final Consumer<OperationSessionLog> trailReplacement;
+    private final SessionTrailState trailState;
     private final Supplier<String> operationSupplier;
     private final Supplier<String> subtitleSupplier;
     private final Supplier<Node> ownerNodeSupplier;
@@ -50,8 +50,7 @@ public final class SavedSessionsCoordinator {
                                     Consumer<Map<String, Object>> stateRestore,
                                     Consumer<String> operationSelection, Runnable trailRefresh,
                                     Consumer<Integer> showTrailStep,
-                                    Supplier<OperationSessionLog> trailSupplier,
-                                    Consumer<OperationSessionLog> trailReplacement,
+                                    SessionTrailState trailState,
                                     Supplier<String> operationSupplier, Supplier<String> subtitleSupplier,
                                     Supplier<Node> ownerNodeSupplier) {
         this.container = container;
@@ -64,8 +63,7 @@ public final class SavedSessionsCoordinator {
         this.operationSelection = operationSelection;
         this.trailRefresh = trailRefresh;
         this.showTrailStep = showTrailStep;
-        this.trailSupplier = trailSupplier;
-        this.trailReplacement = trailReplacement == null ? ignored -> { } : trailReplacement;
+        this.trailState = trailState;
         this.operationSupplier = operationSupplier;
         this.subtitleSupplier = subtitleSupplier;
         this.ownerNodeSupplier = ownerNodeSupplier;
@@ -146,8 +144,8 @@ public final class SavedSessionsCoordinator {
         Map<String, Object> captured = stateCapture.get();
         long redacted = captured == null ? 0 : captured.entrySet().stream()
                 .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
-        if (trailSupplier.get() != null && !trailSupplier.get().isEmpty()) redacted++;
-        SavedSession source = new SavedSession(name, operation, captured, trailSupplier.get());
+        if (trailState.log() != null && !trailState.log().isEmpty()) redacted++;
+        SavedSession source = new SavedSession(name, operation, captured, trailState.log());
         manager.addSession(codec.prepareForStorage(source, password));
         if (redacted > 0) statusReporter.updateStatus(i18n.text("savedSessions.redactedCount", redacted));
         statusReporter.updateStatus("Session saved: " + name);
@@ -193,7 +191,7 @@ public final class SavedSessionsCoordinator {
         OperationSessionLog loadedLog = restored.getOperationLog();
         OperationSessionLog trail = loadedLog == null ? new OperationSessionLog() : loadedLog;
         // Replace the current trail through the supplied callback's controller-owned state.
-        trailReplacement.accept(trail);
+        trailState.replace(trail);
         operationSelection.accept(restored.getOperation());
         trailRefresh.run();
         if (!trail.isEmpty()) showTrailStep.accept(trail.size() - 1);

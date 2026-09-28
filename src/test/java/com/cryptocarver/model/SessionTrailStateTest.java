@@ -29,12 +29,13 @@ class SessionTrailStateTest {
         state.add(result("one"), "one", List.of(), Map.of());
         assertTrue(state.select(0));
         assertFalse(state.select(1));
+        state.resultPublished();
         OperationSessionLog replacement = new OperationSessionLog();
         replacement.add(result("loaded"), "loaded", List.of());
         state.replace(replacement);
         assertEquals(1, state.size());
         assertEquals(-1, state.selectedIndex());
-        assertFalse(state.hasUnsavedResult());
+        assertTrue(state.hasUnsavedResult());
         assertEquals("loaded", state.steps().get(0).getTitle());
         state.clear();
         assertEquals(0, state.size());

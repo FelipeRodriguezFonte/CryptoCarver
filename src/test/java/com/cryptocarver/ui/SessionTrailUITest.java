@@ -75,7 +75,7 @@ class SessionTrailUITest {
         });
 
         ModernMainController controller = controllerRef.get();
-        OperationSessionLog log = field(controller, "operationSessionLog");
+        OperationSessionLog log = ((com.cryptocarver.model.SessionTrailState) field(controller, "sessionTrailState")).log();
         Label count = field(controller, "sessionTrailCountLabel");
         Button add = field(controller, "inspectorAddSessionStepButton");
         Button export = field(controller, "inspectorExportSessionTrailButton");
@@ -202,7 +202,7 @@ class SessionTrailUITest {
                     }
                 });
                 ModernMainController controller = controllerRef.get();
-                OperationSessionLog log = field(controller, "operationSessionLog");
+                OperationSessionLog log = ((com.cryptocarver.model.SessionTrailState) field(controller, "sessionTrailState")).log();
                 assertEquals(0, log.size());
                 String exported = Files.readString(temporaryDirectory.resolve("trail-" + profile + ".txt"));
                 assertTrue(exported.contains("[1] Characterized step"));
@@ -215,6 +215,42 @@ class SessionTrailUITest {
         } finally {
             runAndWait(() -> AppSettings.getInstance().setSecretVisibilityProfile(previousProfile));
         }
+    }
+
+    @Test
+    void productionFxmlLazyModuleStateIsReadWhenSavingAfterCoordinatorConstruction() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        runAndWait(() -> {
+            try {
+                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                loader.load();
+                ModernMainController controller = loader.getController();
+                controllerRef.set(controller);
+                assertNotNull(field(controller, "sessionTrailCoordinator"));
+                var walletControllerField = controller.getClass().getDeclaredField("walletController");
+                walletControllerField.setAccessible(true);
+                walletControllerField.set(controller, null);
+                assertNull(walletControllerField.get(controller));
+                controller.navigateTo("SD-JWT VC");
+                WalletController module = field(controller, "walletController");
+                assertNotNull(module);
+                ((TextArea) field(module, "sdJwtClaimsArea")).setText("LAZY-MODULE-CAPTURE");
+                controller.publish(OperationResult.forOperation("Lazy module operation")
+                        .output(new byte[]{7}, OperationDetail.Classification.SECRET).build());
+                controller.saveCurrentResultAsSessionStep("Lazy module step", "lazy");
+            } catch (Exception exception) { throw new AssertionError(exception); }
+        });
+        ModernMainController controller = controllerRef.get();
+        com.cryptocarver.model.SessionTrailState state = field(controller, "sessionTrailState");
+        assertTrue(state.steps().get(0).getParameters().keySet().stream().anyMatch(key -> key.contains("WalletController.sdJwtClaimsArea")),
+                () -> state.steps().get(0).getParameters().keySet().toString());
+        Path report = temporaryDirectory.resolve("lazy-module-trail.txt");
+        runAndWait(() -> {
+            try { controller.exportSessionTrail(report); }
+            catch (Exception exception) { throw new AssertionError(exception); }
+        });
+        String exported = Files.readString(report);
+        assertTrue(exported.contains("LAZY-MODULE-CAPTURE"));
     }
 
     @Test

@@ -60,6 +60,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
     private ResultViewerCoordinator resultViewerCoordinator;
     private ResultPublicationCoordinator resultPublicationCoordinator;
+    private final com.cryptocarver.model.SessionTrailState sessionTrailState = new com.cryptocarver.model.SessionTrailState();
+    private SessionTrailCoordinator sessionTrailCoordinator;
     /**
      * Snapshot published by the latest completed operation.  It is deliberately
      * separate from the last focused text area: focus is a navigation concern,
@@ -222,10 +224,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
     private SavedSessionsCoordinator savedSessionsCoordinator;
-    private com.cryptocarver.model.OperationSessionLog operationSessionLog =
-            new com.cryptocarver.model.OperationSessionLog();
-    private int selectedSessionStepIndex = -1;
-    private boolean unsavedInspectorResult;
     private String currentActiveOperation = "Dashboard"; // Defaul
     private boolean processDesignerWorkspace;
     private boolean sidePanelVisibleBeforeProcessDesigner;
@@ -2605,12 +2603,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private ResultPublicationCoordinator resultPublicationCoordinator() {
         if (resultPublicationCoordinator == null) resultPublicationCoordinator = new ResultPublicationCoordinator(
-                result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; selectedSessionStepIndex = -1; unsavedInspectorResult = true; },
+                result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; },
                 result -> updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails()),
                 this::refreshSessionTrailNavigation,
                 (result, details) -> addToHistory(result.getOperation(), details, effectiveNavigationTarget(result.getOperation(), currentActiveOperation)),
                 this::updateStatus, inspectorAddSessionStepButton, resultSummaryBar, resultOpLabel, resultAlgoLabel,
-                resultSizeLabel, resultFormatLabel, resultStatusBadge, outputFormatCombo, i18n);
+                resultSizeLabel, resultFormatLabel, resultStatusBadge, outputFormatCombo, i18n, sessionTrailState);
         return resultPublicationCoordinator;
     }
 
@@ -2618,8 +2616,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void clearPublishedResultSnapshot() {
         lastPublishedOperation = "";
         lastPublishedResultSnapshot = null;
-        selectedSessionStepIndex = -1;
-        unsavedInspectorResult = false;
+        sessionTrailState.clearPublishedResult();
         refreshSessionTrailNavigation();
         resultAreaTracker.clearSelection();
         if (resultSummaryBar != null) {
@@ -3344,8 +3341,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             savedSessionsCoordinator = new SavedSessionsCoordinator(
                     savedSessionsContainer, savedSessionsList, this, manager, i18n,
                     this::captureUIState, this::restoreUIState, this::handleItemSelected,
-                    this::refreshSessionTrailUI, this::showSessionStep,
-                    () -> operationSessionLog, log -> operationSessionLog = log,
+                    this::refreshSessionTrailUI, this::showSessionStep, sessionTrailState,
                     () -> currentActiveOperation, () -> contentSubtitleLabel == null ? null : contentSubtitleLabel.getText(),
                     () -> mainPane);
         }
@@ -3363,7 +3359,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
         sessionStepViewer.hide();
-        if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
+        if (sessionTrailState.selectedIndex() >= 0) showSessionStep(sessionTrailState.selectedIndex());
         updateStatus("Visibility set to FULL_LAB (Debug/Learning)");
         refreshStatusBarContext();
         if (keysController != null) {
@@ -3376,7 +3372,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityMasked() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
         sessionStepViewer.hide();
-        if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
+        if (sessionTrailState.selectedIndex() >= 0) showSessionStep(sessionTrailState.selectedIndex());
         updateStatus("Visibility set to MASKED (Classroom/Demo)");
         refreshStatusBarContext();
         if (keysController != null) {
@@ -3389,7 +3385,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private void handleVisibilityRedacted() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         sessionStepViewer.hide();
-        if (selectedSessionStepIndex >= 0) showSessionStep(selectedSessionStepIndex);
+        if (sessionTrailState.selectedIndex() >= 0) showSessionStep(sessionTrailState.selectedIndex());
         updateStatus("Visibility set to REDACTED (Strict/Production)");
         refreshStatusBarContext();
         if (keysController != null) {
@@ -3413,231 +3409,45 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Adds the latest completed result to the current session's ordered trail. */
     @FXML
-    public void handleSaveCurrentResultAsSessionStep() {
-        if (lastPublishedResultSnapshot == null) {
-            showWarning(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.noResult"));
-            return;
-        }
-
-        boolean fullLab = !LabPrompt.SESSION_STEP.shouldShow();
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(i18n.text("sessionTrail.dialogTitle"));
-        if (!fullLab) dialog.setHeaderText(i18n.text("sessionTrail.dialogHeader"));
-        ButtonType saveButton = new ButtonType(i18n.text("sessionTrail.saveStep"),
-                ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButton, ButtonType.CANCEL);
-
-        TextField titleField = new TextField(lastPublishedResultSnapshot.getOperation());
-        titleField.setPromptText(i18n.text("sessionTrail.titlePrompt"));
-        TextField tagsField = new TextField();
-        tagsField.setPromptText(i18n.text("sessionTrail.tagsPrompt"));
-        Label unsafeWarning = new Label(i18n.text("sessionTrail.unsafeWarning"));
-        unsafeWarning.setWrapText(true);
-        unsafeWarning.setStyle("-fx-text-fill: #dc2626; -fx-font-weight: bold;");
-        CheckBox unsafeConfirmation = new CheckBox(i18n.text("sessionTrail.unsafeConfirm"));
-        unsafeConfirmation.setWrapText(true);
-        GridPane form = new GridPane();
-        form.setHgap(10);
-        form.setVgap(10);
-        form.add(new Label(i18n.text("sessionTrail.stepTitle")), 0, 0);
-        form.add(titleField, 1, 0);
-        form.add(new Label(i18n.text("sessionTrail.tags")), 0, 1);
-        form.add(tagsField, 1, 1);
-        if (!fullLab) {
-            form.add(unsafeWarning, 0, 2, 2, 1);
-            form.add(unsafeConfirmation, 0, 3, 2, 1);
-        }
-        GridPane.setHgrow(titleField, Priority.ALWAYS);
-        GridPane.setHgrow(tagsField, Priority.ALWAYS);
-        dialog.getDialogPane().setContent(form);
-        dialog.getDialogPane().setMinWidth(480);
-
-        Node saveNode = dialog.getDialogPane().lookupButton(saveButton);
-        if (fullLab) {
-            saveNode.disableProperty().bind(titleField.textProperty().isEmpty());
-        } else {
-            saveNode.disableProperty().bind(javafx.beans.binding.Bindings.or(
-                    titleField.textProperty().isEmpty(), unsafeConfirmation.selectedProperty().not()));
-        }
-        Platform.runLater(titleField::requestFocus);
-
-        Optional<ButtonType> selected = dialog.showAndWait();
-        if (selected.isPresent() && selected.get() == saveButton) {
-            saveCurrentResultAsSessionStep(titleField.getText(), tagsField.getText());
-        }
-    }
+    public void handleSaveCurrentResultAsSessionStep() { sessionTrailCoordinator().saveCurrentResultAsSessionStep(); }
 
     com.cryptocarver.model.SessionOperationStep saveCurrentResultAsSessionStep(String title, String commaSeparatedTags) {
-        if (lastPublishedResultSnapshot == null) {
-            throw new IllegalStateException("No completed operation result is available");
-        }
-        java.util.List<String> tags = commaSeparatedTags == null || commaSeparatedTags.isBlank()
-                ? java.util.List.of()
-                : java.util.Arrays.stream(commaSeparatedTags.split(","))
-                        .map(String::trim)
-                        .filter(value -> !value.isEmpty())
-                        .toList();
-        com.cryptocarver.model.SessionOperationStep step = operationSessionLog.add(
-                lastPublishedResultSnapshot, title, tags, captureClearTextTrailParameters());
-        unsavedInspectorResult = false;
-        refreshSessionTrailUI();
-        showSessionStep(operationSessionLog.size() - 1);
-        if (inspectorPanel != null && !inspectorPanel.isVisible()) {
-            inspectorPanel.setVisible(true);
-            inspectorPanel.setManaged(true);
-            inspectorHiddenForCompactLayout = false;
-        }
-        updateStatus(i18n.text("sessionTrail.saved", step.getTitle()));
-        return step;
+        return sessionTrailCoordinator().saveCurrentResultAsSessionStep(title, commaSeparatedTags);
     }
 
-    /**
-     * Captures the active operation's controls without applying the History
-     * redaction policy. This is intentionally unsafe and is called only after
-     * the Save Step dialog.
-     */
-    private java.util.Map<String, Object> captureClearTextTrailParameters() {
-        try {
-            return new java.util.LinkedHashMap<>(captureActiveScreenConfiguration().toState());
-        } catch (RuntimeException unsupportedRoute) {
-            LOG.debug("Falling back to full UI-state capture for session trail", unsupportedRoute);
-            return new java.util.LinkedHashMap<>(captureUIState());
-        }
-    }
-
-    private void refreshSessionTrailUI() {
-        int count = operationSessionLog == null ? 0 : operationSessionLog.size();
-        if (sessionTrailCountLabel != null) {
-            sessionTrailCountLabel.setText(i18n.text("sessionTrail.compactCount", count));
-            sessionTrailCountLabel.setAccessibleText(i18n.text("sessionTrail.count", count));
-        }
-        if (inspectorExportSessionTrailButton != null) {
-            inspectorExportSessionTrailButton.setDisable(count == 0);
-        }
-        refreshSessionTrailNavigation();
-    }
-
-    private void refreshSessionTrailNavigation() {
-        int count = operationSessionLog == null ? 0 : operationSessionLog.size();
-        if (selectedSessionStepIndex >= count) selectedSessionStepIndex = -1;
-        if (sessionTrailNavigation != null) {
-            sessionTrailNavigation.setVisible(count > 0);
-            sessionTrailNavigation.setManaged(count > 0);
-        }
-        if (inspectorPreviousSessionStepButton != null) {
-            inspectorPreviousSessionStepButton.setDisable(count == 0 || selectedSessionStepIndex == 0);
-        }
-        if (inspectorNextSessionStepButton != null) {
-            inspectorNextSessionStepButton.setDisable(count == 0 || selectedSessionStepIndex < 0
-                    || (selectedSessionStepIndex == count - 1 && !unsavedInspectorResult));
-        }
-        if (inspectorOpenSessionStepButton != null) {
-            inspectorOpenSessionStepButton.setDisable(selectedSessionStepIndex < 0);
-        }
-        if (sessionTrailPositionLabel != null) {
-            if (selectedSessionStepIndex >= 0) {
-                com.cryptocarver.model.SessionOperationStep step =
-                        operationSessionLog.getSteps().get(selectedSessionStepIndex);
-                sessionTrailPositionLabel.setText(i18n.text("sessionTrail.position",
-                        selectedSessionStepIndex + 1, count, step.getTitle()));
-                sessionTrailPositionLabel.setTooltip(new Tooltip(step.getTitle()));
-            } else {
-                sessionTrailPositionLabel.setText(i18n.text(lastPublishedResultSnapshot == null
-                        ? "sessionTrail.selectStep" : "sessionTrail.currentResult"));
-                sessionTrailPositionLabel.setTooltip(null);
-            }
-        }
-    }
-
-    private void showSessionStep(int index) {
-        java.util.List<com.cryptocarver.model.SessionOperationStep> steps = operationSessionLog.getSteps();
-        if (index < 0 || index >= steps.size()) return;
-        selectedSessionStepIndex = index;
-        com.cryptocarver.model.SessionOperationStep step = steps.get(index);
-        inspectorPresenter().presentSavedStep(step, visibleOperationDetails(step.getDetails()));
-        refreshSessionTrailNavigation();
-    }
+    private void refreshSessionTrailUI() { sessionTrailCoordinator().refresh(); }
+    private void refreshSessionTrailNavigation() { sessionTrailCoordinator().refreshNavigation(); }
+    private void showSessionStep(int index) { sessionTrailCoordinator().showSessionStep(index); }
 
     @FXML
-    private void handlePreviousSessionStep() {
-        showSessionStep(selectedSessionStepIndex < 0
-                ? operationSessionLog.size() - 1 : selectedSessionStepIndex - 1);
-    }
+    private void handlePreviousSessionStep() { sessionTrailCoordinator().previous(); }
 
     @FXML
-    private void handleNextSessionStep() {
-        if (selectedSessionStepIndex < 0) return;
-        if (selectedSessionStepIndex < operationSessionLog.size() - 1) {
-            showSessionStep(selectedSessionStepIndex + 1);
-        } else if (unsavedInspectorResult && lastPublishedResultSnapshot != null) {
-            selectedSessionStepIndex = -1;
-            inspectorPresenter().present(lastPublishedResultSnapshot.getOperation(),
-                    lastPublishedResultSnapshot.getInput(), lastPublishedResultSnapshot.getOutput(),
-                    lastPublishedResultSnapshot.getDetails());
-            refreshSessionTrailNavigation();
-        }
-    }
+    private void handleNextSessionStep() { sessionTrailCoordinator().next(); }
 
     @FXML
-    private void handleOpenSelectedSessionStep() {
-        if (selectedSessionStepIndex < 0 || selectedSessionStepIndex >= operationSessionLog.size()) return;
-        com.cryptocarver.model.SessionOperationStep step =
-                operationSessionLog.getSteps().get(selectedSessionStepIndex);
-        sessionStepViewer.show(windowOf(mainPane), i18n.text("sessionTrail.viewStepTitle", step.getTitle()),
-                SessionTrailViewFormatter.step(step,
-                        com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile(), i18n));
-    }
+    private void handleOpenSelectedSessionStep() { sessionTrailCoordinator().openSelected(); }
 
     @FXML
-    public void handleExportSessionTrail() {
-        if (operationSessionLog == null || operationSessionLog.isEmpty()) {
-            showWarning(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.nothingToExport"));
-            return;
-        }
-        FileChooser chooser = LocalizedDialogSupport.fileChooser(
-                "sessionTrail.exportTitle", "sessionTrail.textFiles", "Text files", "*.txt");
-        chooser.setInitialFileName("cryptocarver-session-trail-"
-                + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-                + ".txt");
-        Stage owner = mainPane != null && mainPane.getScene() != null
-                && mainPane.getScene().getWindow() instanceof Stage stage ? stage : null;
-        File selected = chooser.showSaveDialog(owner);
-        if (selected == null) return;
-        try {
-            exportSessionTrail(selected.toPath());
-            updateStatus(i18n.text("sessionTrail.exported", selected.getName()));
-        } catch (IOException e) {
-            LOG.error("Could not export session trail", e);
-            showWarning(i18n.text("sessionTrail.exportTitle"), e.getMessage());
-        }
-    }
+    public void handleExportSessionTrail() { sessionTrailCoordinator().handleExport(); }
 
-    void exportSessionTrail(java.nio.file.Path target) throws IOException {
-        if (target == null) throw new IllegalArgumentException("Export target is required");
-        java.nio.file.Path parent = target.toAbsolutePath().getParent();
-        if (parent != null) Files.createDirectories(parent);
-        Files.writeString(target, operationSessionLog.toText(), StandardCharsets.UTF_8);
-    }
+    void exportSessionTrail(java.nio.file.Path target) throws IOException { sessionTrailCoordinator().export(target); }
 
     @FXML
-    public void handleClearSessionTrail() {
-        if (operationSessionLog == null || operationSessionLog.isEmpty()) return;
-        if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
-                i18n.text("sessionTrail.title"), i18n.text("sessionTrail.clear"),
-                new Label(i18n.text("sessionTrail.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
-                .filter(ButtonType.OK::equals).isPresent()) {
-            operationSessionLog.clear();
-            selectedSessionStepIndex = -1;
-            if (lastPublishedResultSnapshot != null) {
-                inspectorPresenter().present(lastPublishedResultSnapshot.getOperation(),
-                        lastPublishedResultSnapshot.getInput(), lastPublishedResultSnapshot.getOutput(),
-                        lastPublishedResultSnapshot.getDetails());
-            } else {
-                updateInspector(currentActiveOperation);
-            }
-            refreshSessionTrailUI();
-            updateStatus(i18n.text("sessionTrail.cleared"));
-        }
+    public void handleClearSessionTrail() { sessionTrailCoordinator().clear(); }
+
+    private SessionTrailCoordinator sessionTrailCoordinator() {
+        if (sessionTrailCoordinator == null) sessionTrailCoordinator = new SessionTrailCoordinator(
+                sessionTrailState, sessionTrailCountLabel, sessionTrailPositionLabel, inspectorExportSessionTrailButton,
+                inspectorPreviousSessionStepButton, inspectorNextSessionStepButton, inspectorOpenSessionStepButton,
+                sessionTrailNavigation, dialogService, sessionStepViewer, () -> mainPane,
+                () -> lastPublishedResultSnapshot, this::captureActiveScreenConfiguration, this::captureUIState,
+                step -> inspectorPresenter().presentSavedStep(step, visibleOperationDetails(step.getDetails())),
+                result -> inspectorPresenter().present(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails()),
+                () -> updateInspector(currentActiveOperation),
+                () -> { if (inspectorPanel != null && !inspectorPanel.isVisible()) { inspectorPanel.setVisible(true); inspectorPanel.setManaged(true); inspectorHiddenForCompactLayout = false; } },
+                this::updateStatus, this::showWarning, i18n);
+        return sessionTrailCoordinator;
     }
 
     @FXML
@@ -3653,7 +3463,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 == com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
         long sensitiveCount = captureUIState().entrySet().stream()
                 .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
-        if (operationSessionLog != null && !operationSessionLog.isEmpty()) sensitiveCount++;
+        if (!sessionTrailState.log().isEmpty()) sensitiveCount++;
         final long secretsCount = sensitiveCount;
         Label secretNotice = new Label(i18n.text("savedSessions.redactedCount", secretsCount));
         secretNotice.setWrapText(true);

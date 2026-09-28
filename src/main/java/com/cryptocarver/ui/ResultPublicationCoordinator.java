@@ -2,6 +2,7 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
+import com.cryptocarver.model.SessionTrailState;
 import com.cryptocarver.service.I18nService;
 import javafx.application.Platform;
 import javafx.scene.control.Button;
@@ -23,20 +24,23 @@ final class ResultPublicationCoordinator {
     private final Label operation, algorithm, size, format, badge;
     private final ComboBox<String> outputFormat;
     private final I18nService i18n;
+    private final SessionTrailState trailState;
 
     ResultPublicationCoordinator(Consumer<OperationResult> accept, Consumer<OperationResult> inspector,
             Runnable refreshTrail, BiConsumer<OperationResult, List<OperationDetail>> history,
             Consumer<String> status, Button addSessionStep, HBox summary, Label operation, Label algorithm,
-            Label size, Label format, Label badge, ComboBox<String> outputFormat, I18nService i18n) {
+            Label size, Label format, Label badge, ComboBox<String> outputFormat, I18nService i18n,
+            SessionTrailState trailState) {
         this.accept=accept; this.inspector=inspector; this.refreshTrail=refreshTrail; this.history=history; this.status=status;
         this.addSessionStep=addSessionStep; this.summary=summary; this.operation=operation; this.algorithm=algorithm;
         this.size=size; this.format=format; this.badge=badge; this.outputFormat=outputFormat; this.i18n=i18n;
+        this.trailState = trailState;
     }
 
     void publish(OperationResult result) {
         if (result == null) return;
         if (!Platform.isFxApplicationThread()) { Platform.runLater(() -> publish(result)); return; }
-        accept.accept(result); inspector.accept(result); refreshTrail.run(); history.accept(result, com.cryptocarver.model.ResultPresentationPolicy.detailsForHistory(result));
+        accept.accept(result); trailState.resultPublished(); inspector.accept(result); refreshTrail.run(); history.accept(result, com.cryptocarver.model.ResultPresentationPolicy.detailsForHistory(result));
         if (result.getStatusMessage() != null && !result.getStatusMessage().isBlank()) status.accept(result.getStatusMessage());
         boolean failed = result.getStatusMessage() != null && result.getStatusMessage().toLowerCase(java.util.Locale.ROOT).contains("failed");
         boolean payload = (result.getOutput() != null && result.getOutput().length > 0)

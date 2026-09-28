@@ -48,6 +48,8 @@ public final class SessionTrailState {
         return true;
     }
 
+    public synchronized void showCurrentResult() { selectedIndex = -1; }
+
     public synchronized void clear() {
         log.clear();
         selectedIndex = -1;
@@ -56,6 +58,5 @@ public final class SessionTrailState {
     public synchronized void replace(OperationSessionLog replacement) {
         log = Objects.requireNonNullElseGet(replacement, OperationSessionLog::new);
         selectedIndex = -1;
-        unsavedResult = false;
     }
 }
