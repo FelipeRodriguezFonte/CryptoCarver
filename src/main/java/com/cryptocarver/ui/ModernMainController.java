@@ -2542,10 +2542,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return com.cryptocarver.model.ResultPresentationPolicy.isPrivateMaterialPlaceholder(text);
     }
 
-    private boolean isCompletePrivateKeyMaterial(String text) {
-        return com.cryptocarver.model.ResultPresentationPolicy.isCompletePrivateKeyMaterial(text);
-    }
-
     private String renderResultArea(TextArea area) {
         if (area == null || area.getText() == null || area.getText().isBlank()) {
             return "";
@@ -2634,37 +2630,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (inspectorAddSessionStepButton != null) inspectorAddSessionStepButton.setDisable(true);
     }
 
-
-    /** Renders bytes as strict UTF-8 where possible, otherwise as hexadecimal. */
-    private String renderBytesForDisplay(byte[] bytes) {
-        return com.cryptocarver.model.ResultPresentationPolicy.renderBytesForDisplay(bytes);
-    }
-
-    private boolean isPrintableUtf8(byte[] bytes) {
-        return OperationResultRenderer.isPrintableUtf8(bytes);
-    }
-
-    /**
-     * Keeps an operation's actual byte input/output alongside its declared
-     * details. They are marked SENSITIVE: visible in Unsafe lab, masked in
-     * normal exports and never treated as ordinary public metadata.
-     */
-    private java.util.List<com.cryptocarver.model.OperationDetail> detailsForHistory(
-            com.cryptocarver.model.OperationResult result) {
-        return com.cryptocarver.model.ResultPresentationPolicy.detailsForHistory(result);
-    }
-
-    private void addPayloadDetail(java.util.List<com.cryptocarver.model.OperationDetail> details, String name, byte[] bytes) {
-        if (bytes == null) {
-            return;
-        }
-        String rendered = renderBytesForDisplay(bytes);
-        String format = isPrintableUtf8(bytes) ? "UTF-8" : "Hex";
-        details.add(new com.cryptocarver.model.OperationDetail(
-                name + " (" + bytes.length + " bytes)", rendered,
-                com.cryptocarver.model.OperationDetail.Classification.SENSITIVE,
-                rendered.indexOf('\n') >= 0 || rendered.length() > 120, format));
-    }
 
     /**
      * Result areas can be opened directly even when their feature does not use the
