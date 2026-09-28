@@ -9,6 +9,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
@@ -145,6 +146,15 @@ public final class DialogService {
         alert.setHeaderText(header);
         alert.getDialogPane().getStyleClass().add("cc-dialog-pane");
         addThemeStylesheets(alert.getDialogPane());
+    }
+
+    /** Applies the application's theme to custom JavaFX dialogs as well as alerts. */
+    void configure(Dialog<?> dialog, Window owner, String title, String header) {
+        if (owner != null) dialog.initOwner(owner);
+        dialog.setTitle(nonBlank(title, i18n.text("dialog.confirm")));
+        dialog.setHeaderText(header);
+        dialog.getDialogPane().getStyleClass().add("cc-dialog-pane");
+        addThemeStylesheets(dialog.getDialogPane());
     }
 
     private void addThemeStylesheets(javafx.scene.control.DialogPane pane) {

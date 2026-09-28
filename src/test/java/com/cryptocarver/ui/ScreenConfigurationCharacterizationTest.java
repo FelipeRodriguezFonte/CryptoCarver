@@ -7,7 +7,6 @@ import com.cryptocarver.model.ScreenConfigurationFiles;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,9 +53,6 @@ class ScreenConfigurationCharacterizationTest {
 
     @AfterEach
     void resetSettings() { AppSettings.resetInstanceForTesting(); }
-
-    @AfterAll
-    static void stopToolkit() { Platform.exit(); }
 
     @Test
     void productionFxmlLoadsAndPortableCipherConfigurationCapturesAndApplies() throws Exception {
@@ -164,6 +160,52 @@ class ScreenConfigurationCharacterizationTest {
                 ScreenConfigurationCodec.decode(ScreenConfigurationFiles.read(encryptedFile), "WRONG-SYNTHETIC".toCharArray()));
         assertFalse(failure.getMessage().contains(synthetic));
         assertFalse(failure.getMessage().contains("WRONG-SYNTHETIC"));
+    }
+
+    @Test
+    void constructedCoordinatorDoesNotResolveAnUnloadedModuleUntilUse() throws Exception {
+        ModernMainController controller = loadController();
+        assertNull(getField(controller, "cipherContainerController"));
+        ScreenConfigurationCoordinator coordinator = onFx(controller::screenConfigurationCoordinator);
+        assertNull(getField(controller, "cipherContainerController"),
+                "Constructing the coordinator must not load or retain the module controller");
+
+        ScreenConfiguration configuration = new ScreenConfiguration("Symmetric Ciphers", "CIPHER",
+                Map.of("CipherController.cipherInputArea", "SYNTHETIC-LAZY-TARGET"),
+                SecretVisibilityProfile.FULL_LAB);
+        onFx(() -> { coordinator.applyScreenConfiguration(configuration); return null; });
+        CipherController cipher = getField(controller, "cipherContainerController");
+        assertNotNull(cipher);
+        assertEquals("SYNTHETIC-LAZY-TARGET",
+                ((javafx.scene.control.TextArea) getField(cipher, "cipherInputArea")).getText());
+    }
+
+    @Test
+    void coordinatorFilesystemBoundariesRoundTripAndWrongPasswordCannotReachApply() throws Exception {
+        ModernMainController controller = loadController();
+        ScreenConfigurationCoordinator coordinator = onFx(controller::screenConfigurationCoordinator);
+        ScreenConfiguration configuration = new ScreenConfiguration("Symmetric Ciphers", "CIPHER",
+                Map.of("CipherController.symmetricKeyField", "SYNTHETIC-FILE-SECRET"),
+                SecretVisibilityProfile.FULL_LAB);
+
+        Path plain = temp.resolve("coordinator.json");
+        coordinator.exportTo(plain, configuration, false, null);
+        assertFalse(java.nio.file.Files.readString(plain).contains("SYNTHETIC-FILE-SECRET"));
+        assertEquals("[REDACTED_SECRET]", coordinator.importFrom(plain, null).toState()
+                .get("CipherController.symmetricKeyField"));
+
+        Path encrypted = temp.resolve("coordinator.ccconfig");
+        coordinator.exportTo(encrypted, configuration, true, "SYNTHETIC-PASSWORD".toCharArray());
+        assertEquals("SYNTHETIC-FILE-SECRET", coordinator.importFrom(encrypted,
+                "SYNTHETIC-PASSWORD".toCharArray()).toState().get("CipherController.symmetricKeyField"));
+        java.util.concurrent.atomic.AtomicBoolean applied = new java.util.concurrent.atomic.AtomicBoolean();
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> {
+            ScreenConfiguration decoded = coordinator.importFrom(encrypted, "WRONG-SYNTHETIC".toCharArray());
+            onFx(() -> { coordinator.applyScreenConfiguration(decoded); applied.set(true); return null; });
+        });
+        assertFalse(failure.getMessage().contains("SYNTHETIC-FILE-SECRET"));
+        assertFalse(failure.getMessage().contains("WRONG-SYNTHETIC"));
+        assertFalse(applied.get(), "Decode must fail before the import flow can invoke apply");
     }
 
     private ModernMainController loadController() throws Exception {

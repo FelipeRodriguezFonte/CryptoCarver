@@ -1725,89 +1725,36 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     com.cryptocarver.model.ScreenConfiguration captureActiveScreenConfiguration() {
-        UiNavigationRegistry.Route route = activeConfigurationRoute();
-        ConfigurationTarget target = configurationTarget(route);
-        if (route == null || target == null) {
-            throw new IllegalStateException("The current screen does not expose a portable configuration");
-        }
-        java.util.Map<String, Object> state = new java.util.LinkedHashMap<>(
-                UiStateSnapshot.capturePortableConfiguration(target.controller(), target.root(), route.section()));
-        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) {
-            state.put("ModernMainController.inputFormatCombo", inputFormatCombo.getValue());
-        }
-        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) {
-            state.put("ModernMainController.outputFormatCombo", outputFormatCombo.getValue());
-        }
-        return new com.cryptocarver.model.ScreenConfiguration(
-                currentActiveOperation, route.module().name(), state,
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
+        return screenConfigurationCoordinator().captureActiveScreenConfiguration();
     }
 
     void applyScreenConfiguration(com.cryptocarver.model.ScreenConfiguration configuration) {
-        if (configuration == null) throw new IllegalArgumentException("Configuration is required");
-        String operation = com.cryptocarver.model.OperationRegistry.getInstance()
-                .resolveNavigation(configuration.operation())
-                .map(com.cryptocarver.model.OperationDescriptor::getNavigationPath)
-                .orElse(configuration.operation());
-        UiNavigationRegistry.Route route = UiNavigationRegistry.resolve(operation)
-                .orElseThrow(() -> new IllegalArgumentException("Unsupported configuration operation: " + operation));
-        if (!route.module().name().equals(configuration.module())) {
-            throw new IllegalArgumentException("Configuration module does not match its operation");
-        }
-
-        handleItemSelected(operation);
-        ConfigurationTarget target = configurationTarget(route);
-        if (target == null) throw new IllegalArgumentException("Configuration target is not available");
-
-        java.util.Set<String> allowed = new java.util.LinkedHashSet<>(
-                UiStateSnapshot.capturePortableConfiguration(
-                        target.controller(), target.root(), route.section()).keySet());
-        // Version 1 exported every control owned by a module, including hidden
-        // accordion panes. Accept those documents for backwards compatibility.
-        if (configuration.version() == 1) {
-            allowed.addAll(UiStateSnapshot.capturePortableConfiguration(target.controller()).keySet());
-        }
-        allowed.add("ModernMainController.inputFormatCombo");
-        allowed.add("ModernMainController.outputFormatCombo");
-        java.util.Map<String, Object> state = configuration.toState();
-        java.util.Set<String> unknown = new java.util.LinkedHashSet<>(state.keySet());
-        unknown.removeAll(allowed);
-        if (!unknown.isEmpty()) {
-            throw new IllegalArgumentException("Configuration contains fields outside the target screen: "
-                    + String.join(", ", unknown.stream().limit(5).toList()));
-        }
-        UiStateSnapshot.restore(this, state);
-        updateStatus("Screen configuration loaded: " + operation);
+        screenConfigurationCoordinator().applyScreenConfiguration(configuration);
     }
 
-    private UiNavigationRegistry.Route activeConfigurationRoute() {
-        String operation = currentActiveOperation;
-        if (operation != null && operation.startsWith("Hashing: ")) operation = "Hashing";
-        return UiNavigationRegistry.resolve(operation).orElse(null);
+    ScreenConfigurationCoordinator screenConfigurationCoordinator() {
+        return new ScreenConfigurationCoordinator(() -> currentActiveOperation,
+                () -> inputFormatCombo, () -> outputFormatCombo,
+                () -> com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile(),
+                module -> switch (module) {
+                    case JOSE -> new ScreenConfigurationCoordinator.ConfigurationTarget(joseController, jose);
+                    case COSE -> new ScreenConfigurationCoordinator.ConfigurationTarget(coseController, cose);
+                    case WALLET -> new ScreenConfigurationCoordinator.ConfigurationTarget(walletController, wallet);
+                    case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> new ScreenConfigurationCoordinator.ConfigurationTarget(keysContainerController, keysContainer);
+                    case CERTIFICATES -> new ScreenConfigurationCoordinator.ConfigurationTarget(certificatesContainerController, certificatesContainer);
+                    case GENERIC -> new ScreenConfigurationCoordinator.ConfigurationTarget(genericContainerController, genericContainer);
+                    case POST_QUANTUM -> new ScreenConfigurationCoordinator.ConfigurationTarget(postQuantumContainerController, postQuantumContainer);
+                    case XML_SECURITY -> new ScreenConfigurationCoordinator.ConfigurationTarget(xmlSecurityContainerController, xmlSecurityContainer);
+                    case WSS_SECURITY -> new ScreenConfigurationCoordinator.ConfigurationTarget(wssSecurityContainerController, wssSecurityContainer);
+                    case EMV -> new ScreenConfigurationCoordinator.ConfigurationTarget(emvContainerController, emvContainer);
+                    case CIPHER -> new ScreenConfigurationCoordinator.ConfigurationTarget(cipherContainerController, cipherContainer);
+                    case AUTHENTICATION -> new ScreenConfigurationCoordinator.ConfigurationTarget(authenticationContainerController, authenticationContainer);
+                    case PAYMENTS -> new ScreenConfigurationCoordinator.ConfigurationTarget(paymentsContainerController, paymentsContainer);
+                    case PROCESS_DESIGNER -> new ScreenConfigurationCoordinator.ConfigurationTarget(processDesignerContainerController, processDesignerContainer);
+                    default -> null;
+                }, this::handleItemSelected, state -> UiStateSnapshot.restore(this, state),
+                () -> windowOf(mainPane), dialogService, i18n, this::updateStatus);
     }
-
-    private ConfigurationTarget configurationTarget(UiNavigationRegistry.Route route) {
-        if (route == null) return null;
-        return switch (route.module()) {
-            case JOSE -> new ConfigurationTarget(joseController, jose);
-            case COSE -> new ConfigurationTarget(coseController, cose);
-            case WALLET -> new ConfigurationTarget(walletController, wallet);
-            case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> new ConfigurationTarget(keysContainerController, keysContainer);
-            case CERTIFICATES -> new ConfigurationTarget(certificatesContainerController, certificatesContainer);
-            case GENERIC -> new ConfigurationTarget(genericContainerController, genericContainer);
-            case POST_QUANTUM -> new ConfigurationTarget(postQuantumContainerController, postQuantumContainer);
-            case XML_SECURITY -> new ConfigurationTarget(xmlSecurityContainerController, xmlSecurityContainer);
-            case WSS_SECURITY -> new ConfigurationTarget(wssSecurityContainerController, wssSecurityContainer);
-            case EMV -> new ConfigurationTarget(emvContainerController, emvContainer);
-            case CIPHER -> new ConfigurationTarget(cipherContainerController, cipherContainer);
-            case AUTHENTICATION -> new ConfigurationTarget(authenticationContainerController, authenticationContainer);
-            case PAYMENTS -> new ConfigurationTarget(paymentsContainerController, paymentsContainer);
-            case PROCESS_DESIGNER -> new ConfigurationTarget(processDesignerContainerController, processDesignerContainer);
-            default -> null;
-        };
-    }
-
-    private record ConfigurationTarget(Object controller, javafx.scene.Parent root) { }
 
     private java.util.List<javafx.scene.Node> restoreUIState(java.util.Map<String, Object> state) {
         return UiStateSnapshot.restore(this, state);
@@ -3366,155 +3313,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
-    private void handleExportScreenConfiguration() {
-        final com.cryptocarver.model.ScreenConfiguration configuration;
-        try {
-            configuration = captureActiveScreenConfiguration();
-        } catch (Exception e) {
-            showWarning("Screen Configuration", e.getMessage());
-            return;
-        }
-
-        String encryptedOption = i18n.text("dialog.configuration.encryptedOption");
-        String plainOption = i18n.text("dialog.configuration.unencryptedJson");
-        ChoiceDialog<String> modeDialog = new ChoiceDialog<>(encryptedOption,
-                encryptedOption, plainOption);
-        modeDialog.setTitle(i18n.text("dialog.configuration.exportTitle"));
-        modeDialog.setHeaderText(i18n.text("dialog.configuration.exportHeader"));
-        modeDialog.setContentText(i18n.text("dialog.configuration.protectionPrompt"));
-        java.util.Optional<String> mode = modeDialog.showAndWait();
-        if (mode.isEmpty()) return;
-
-        boolean encrypted = isEncryptedConfigurationOption(mode.get(), encryptedOption);
-        char[] password = null;
-        if (encrypted) {
-            java.util.Optional<char[]> selected = promptConfigurationPassword(true);
-            if (selected.isEmpty()) return;
-            password = selected.get();
-        }
-
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle(i18n.text("dialog.configuration.exportTitle"));
-        chooser.setInitialFileName("cryptocarver-" + safeFileName(configuration.operation())
-                + (encrypted ? ".ccconfig" : ".json"));
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-                encrypted ? "Encrypted CryptoCarver Configuration" : "CryptoCarver Configuration JSON",
-                encrypted ? "*.ccconfig" : "*.json"));
-        File file = chooser.showSaveDialog(mainPane == null || mainPane.getScene() == null
-                ? null : mainPane.getScene().getWindow());
-        if (file == null) {
-            if (password != null) java.util.Arrays.fill(password, '\0');
-            return;
-        }
-        try {
-            String document = encrypted
-                    ? com.cryptocarver.model.ScreenConfigurationCodec.encodeEncrypted(configuration, password)
-                    : com.cryptocarver.model.ScreenConfigurationCodec.encodePlain(configuration);
-            com.cryptocarver.model.ScreenConfigurationFiles.writeAtomic(file.toPath(), document);
-            updateStatus("Screen configuration exported: " + file.getName());
-            showInfo(i18n.text("dialog.configuration.exportedTitle"), encrypted
-                    ? i18n.text("dialog.configuration.encryptedSaved")
-                    : i18n.text("dialog.configuration.plainSavedRedacted"));
-        } catch (Exception e) {
-            showError("Configuration Export", e.getMessage());
-        } finally {
-            if (password != null) java.util.Arrays.fill(password, '\0');
-        }
-    }
+    private void handleExportScreenConfiguration() { screenConfigurationCoordinator().exportScreenConfiguration(); }
 
     static boolean isEncryptedConfigurationOption(String selectedOption, String encryptedOption) {
-        return encryptedOption.equals(selectedOption);
+        return ScreenConfigurationCoordinator.isEncryptedConfigurationOption(selectedOption, encryptedOption);
     }
 
     @FXML
-    private void handleImportScreenConfiguration() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle(i18n.text("dialog.configuration.importTitle"));
-        chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter(i18n.text("dialog.configuration.filter"), "*.ccconfig", "*.json"),
-                new FileChooser.ExtensionFilter(i18n.text("dialog.allFiles"), "*.*"));
-        File file = chooser.showOpenDialog(mainPane == null || mainPane.getScene() == null
-                ? null : mainPane.getScene().getWindow());
-        if (file == null) return;
-        try {
-            String document = com.cryptocarver.model.ScreenConfigurationFiles.read(file.toPath());
-            char[] password = null;
-            if (com.cryptocarver.model.ScreenConfigurationCodec.isEncrypted(document)) {
-                java.util.Optional<char[]> selected = promptConfigurationPassword(false);
-                if (selected.isEmpty()) return;
-                password = selected.get();
-            }
-            com.cryptocarver.model.ScreenConfiguration configuration;
-            try {
-                configuration = com.cryptocarver.model.ScreenConfigurationCodec.decode(document, password);
-            } finally {
-                if (password != null) java.util.Arrays.fill(password, '\0');
-            }
-            if (dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
-                    "Import Screen Configuration", "Review portable configuration",
-                    new Label("Operation: " + configuration.operation()
-                            + "\nModule: " + configuration.module()
-                            + "\nFields: " + configuration.values().size()
-                            + "\nCreated: " + configuration.createdAt()
-                            + "\n\nImporting may place raw keys or passwords in the laboratory UI."),
-                    ButtonType.CANCEL, ButtonType.OK).orElse(ButtonType.CANCEL) != ButtonType.OK) return;
-            applyScreenConfiguration(configuration);
-            if (isLegacyKeyGenerationConfiguration(configuration)) {
-                showWarning("Generated Key Not Present",
-                        "The configuration settings were restored, but this file does not contain the generated key. "
-                                + "It was exported by a version that excluded read-only generated material, so the "
-                                + "original key cannot be reconstructed. Generate a new key and export the screen again.");
-            }
-        } catch (Exception e) {
-            showError("Configuration Import", e.getMessage());
-        }
-    }
+    private void handleImportScreenConfiguration() { screenConfigurationCoordinator().importScreenConfiguration(); }
 
     static boolean isLegacyKeyGenerationConfiguration(
             com.cryptocarver.model.ScreenConfiguration configuration) {
-        if (configuration == null || !"Key Generation".equals(configuration.operation())) return false;
-        com.cryptocarver.model.ScreenConfiguration.Value generated =
-                configuration.values().get("KeysController.generatedKeyField");
-        return generated == null || generated.value().isBlank();
+        return ScreenConfigurationCoordinator.isLegacyKeyGenerationConfiguration(configuration);
     }
-
-    private java.util.Optional<char[]> promptConfigurationPassword(boolean confirmationRequired) {
-        Dialog<char[]> dialog = new Dialog<>();
-        dialog.setTitle(confirmationRequired ? "Protect Configuration" : "Unlock Configuration");
-        dialog.setHeaderText(confirmationRequired
-                ? "Use at least 8 characters and share the password separately."
-                : "Enter the password used to protect this configuration.");
-        ButtonType accept = new ButtonType(confirmationRequired ? "Encrypt" : "Unlock", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CANCEL, accept);
-        PasswordField password = new PasswordField();
-        password.setPromptText("Password");
-        VBox fields = new VBox(8, new Label("Password:"), password);
-        PasswordField confirmation = null;
-        if (confirmationRequired) {
-            confirmation = new PasswordField();
-            confirmation.setPromptText("Repeat password");
-            fields.getChildren().addAll(new Label("Repeat password:"), confirmation);
-        }
-        dialog.getDialogPane().setContent(fields);
-        PasswordField confirmationField = confirmation;
-        javafx.scene.Node acceptButton = dialog.getDialogPane().lookupButton(accept);
-        acceptButton.disableProperty().bind(javafx.beans.binding.Bindings.createBooleanBinding(
-                () -> password.getText().length() < 8 || (confirmationField != null
-                        && !password.getText().equals(confirmationField.getText())),
-                confirmationField == null
-                        ? new javafx.beans.Observable[]{password.textProperty()}
-                        : new javafx.beans.Observable[]{password.textProperty(), confirmationField.textProperty()}));
-        dialog.setResultConverter(button -> button == accept ? password.getText().toCharArray() : null);
-        Platform.runLater(password::requestFocus);
-        return dialog.showAndWait();
-    }
-
-    private String safeFileName(String value) {
-        String safe = value == null ? "screen" : value.toLowerCase(java.util.Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
-        return safe.isBlank() ? "screen" : safe;
-    }
-
 
     @FXML
     private void handleImportKey() {
