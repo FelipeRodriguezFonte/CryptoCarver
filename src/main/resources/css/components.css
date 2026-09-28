@@ -3180,3 +3180,6 @@
     -fx-text-fill: -cc-text;
 }
 
+.dialog-pane .header-panel .label {
+    -fx-text-fill: -cc-on-accent;
+}
