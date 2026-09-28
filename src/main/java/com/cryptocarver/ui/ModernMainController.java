@@ -1858,31 +1858,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         historyCoordinator().refreshNavigation();
     }
 
-    private String formatRelativeTime(String timestampStr) {
-        if (timestampStr == null) return "";
-        try {
-            java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(
-                timestampStr,
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            );
-            java.time.ZonedDateTime zdt = ldt.atZone(java.time.ZoneId.systemDefault());
-            long timeMillis = zdt.toInstant().toEpochMilli();
-            long delta = System.currentTimeMillis() - timeMillis;
-            if (delta < 0) return "just now";
-            if (delta < 60000) {
-                return (delta / 1000) + "s ago";
-            } else if (delta < 3600000) {
-                return (delta / 60000) + "m ago";
-            } else if (delta < 86400000) {
-                return (delta / 3600000) + "h ago";
-            } else {
-                return (delta / 86400000) + "d ago";
-            }
-        } catch (Exception e) {
-            return timestampStr; // Fallback
-        }
-    }
-
     public void addToHistory(String operation, java.util.Map<String, String> details) {
         java.util.List<com.cryptocarver.model.OperationDetail> list = new java.util.ArrayList<>();
         if (details != null) {
@@ -1896,47 +1871,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         historyCoordinator().addToHistory(operation, details, currentActiveOperation);
     }
 
-    /**
-     * Picks the value used to reopen a history entry. The currently active screen is
-     * preferred (it disambiguates sub-operations that share a display name), but only
-     * when it actually resolves to a catalogued operation. Otherwise — e.g. history is
-     * recorded before any navigation happened, or from a stale/default screen name —
-     * fall back to the operation label itself so the entry stays reopenable and its
-     * module filter/category stays correct instead of collapsing to "Other".
-     */
-    private String effectiveNavigationTarget(String operation, String candidateNavigationOperation) {
-        return com.cryptocarver.model.HistoryCommandPolicy.effectiveNavigationTarget(operation,
-                candidateNavigationOperation, candidate -> com.cryptocarver.model.OperationRegistry.getInstance()
-                        .resolveNavigation(candidate).isPresent());
-    }
-
     private void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details,
                               String navigationOperation) {
         historyCoordinator().addToHistory(operation, details, navigationOperation);
-    }
-
-    public void addToHistoryManual(String operation, String detailsString) {
-        java.util.Map<String, Object> state = captureHistoryState();
-        com.cryptocarver.model.HistoryCommand.Reproducibility rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITHOUT_SECRETS;
-        String reason = "All parameters are available.";
-        if (state.values().contains("[REDACTED_SECRET]")) {
-            rep = com.cryptocarver.model.HistoryCommand.Reproducibility.REPRODUCIBLE_WITH_SECRETS;
-            reason = "Sensitive secrets were redacted from the history recipe.";
-        }
-
-        String inFmt = inputFormatCombo != null ? inputFormatCombo.getValue() : null;
-        String outFmt = outputFormatCombo != null ? outputFormatCombo.getValue() : null;
-
-        com.cryptocarver.model.HistoryCommand item = new com.cryptocarver.model.HistoryCommand(
-                operation, detailsString, state, rep, reason, inFmt, outFmt,
-                effectiveNavigationTarget(operation, currentActiveOperation));
-
-        if (historyManager == null) {
-            initializeHistory();
-        }
-
-        historyManager.addHistoryItem(item);
-        refreshHistoryUI();
     }
 
     /** Exposes the shared history store to the FXML history module. */
@@ -1969,23 +1906,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     void exportHistoryTo(java.nio.file.Path target,
                          com.cryptocarver.model.SecretVisibilityProfile visibility) throws IOException {
         historyCoordinator().exportTo(target, visibility);
-    }
-
-    @FXML
-    private void handleClearHistory() {
-        if (historyManager != null && (historyManager.getHistoryItems().isEmpty() || Boolean.getBoolean("test.mode")
-                || confirmClearHistory())) {
-            historyManager.clearHistory();
-            refreshHistoryUI();
-            updateStatus("History cleared");
-        }
-    }
-
-    private boolean confirmClearHistory() {
-        return dialogService.show(Alert.AlertType.CONFIRMATION, windowOf(mainPane),
-                i18n.text("module.history.clearTitle"), i18n.text("module.history.clearHeader"),
-                new Label(i18n.text("module.history.clearConfirm")), ButtonType.CANCEL, ButtonType.OK)
-                .orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     /**
@@ -2539,7 +2459,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; },
                 result -> updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails()),
                 this::refreshSessionTrailNavigation,
-                (result, details) -> addToHistory(result.getOperation(), details, effectiveNavigationTarget(result.getOperation(), currentActiveOperation)),
+                (result, details) -> addToHistory(result.getOperation(), details, currentActiveOperation),
                 this::updateStatus, inspectorAddSessionStepButton, resultSummaryBar, resultOpLabel, resultAlgoLabel,
                 resultSizeLabel, resultFormatLabel, resultStatusBadge, outputFormatCombo, i18n, sessionTrailState);
         return resultPublicationCoordinator;
