@@ -5711,6 +5711,37 @@ public class KeysController {
     }
 
     /** Entry point used only by ModernMainController's global Add to Shelf. */
+    /** Adds the symmetric key shown in Key Generation to the Clipboard Shelf. */
+    public void handleGlobalSymmetricShelfAction() {
+        byte[] key = lastGeneratedSymmetricKeyBytes;
+        if (key == null || key.length == 0) {
+            updateStatus("No generated symmetric key available for Clipboard Shelf.");
+            return;
+        }
+        if (com.cryptocarver.model.ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
+                com.cryptocarver.model.OperationDetail.Classification.SECRET,
+                AppSettings.getInstance().getSecretVisibilityProfile())) {
+            updateStatus("Action blocked: output hidden by visibility policy.");
+            return;
+        }
+        String keyHex = DataConverter.bytesToHex(key);
+        com.cryptocarver.model.ClipboardShelfManager shelf = com.cryptocarver.model.ClipboardShelfManager.getInstance();
+        java.util.Optional<com.cryptocarver.model.ClipboardEntry> duplicate =
+                shelf.findDuplicate(keyHex, "Generate Symmetric Key");
+        if (duplicate.isPresent()) {
+            updateStatus("Item already in Clipboard Shelf: " + duplicate.get().getLabel());
+            return;
+        }
+        com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
+                "Copied from Generate Symmetric Key", keyHex,
+                com.cryptocarver.model.ClipboardEntry.Format.HEX,
+                com.cryptocarver.model.OperationDetail.Classification.SECRET,
+                "Generate Symmetric Key", lastGeneratedSymmetricKeyType);
+        shelf.addEntry(entry);
+        revealShelfEntry(entry);
+        updateStatus("Added " + lastGeneratedSymmetricKeyType + " key to Clipboard Shelf.");
+    }
+
     public void handleGlobalAsymmetricShelfAction(String operation) {
         GeneratedAsymmetricKeySummary summary = summaryForGeneration(operation);
         TabPane tabs = tabsForGeneration(operation);

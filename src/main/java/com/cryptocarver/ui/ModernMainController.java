@@ -69,6 +69,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      */
     private String lastPublishedOperation = "";
     private com.cryptocarver.model.OperationResult lastPublishedResultSnapshot;
+    /** Screen that was active when {@link #lastPublishedResultSnapshot} was published. */
+    private String lastPublishedScreen;
 
     @FXML
     private BorderPane mainPane;
@@ -2219,6 +2221,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             keysController.handleGlobalAsymmetricShelfAction(currentActiveOperation);
             return;
         }
+        // The generated symmetric key lives in a TextField the result tracker does not capture.
+        if (keysController != null && "Key Generation".equals(currentActiveOperation)) {
+            keysController.handleGlobalSymmetricShelfAction();
+            return;
+        }
         // An explicitly focused/updated rendered result wins over a sibling
         // Workbench that happens to remain visible in the generic accordion.
         TextArea area = resultAreaTracker.shelfCaptureArea(null);
@@ -2324,13 +2331,23 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
             return visible;
         }
-        if (lastPublishedResultSnapshot == null) return "";
-        boolean hasArtifact = (lastPublishedResultSnapshot.getEnrichedOutput() != null
-                && !lastPublishedResultSnapshot.getEnrichedOutput().isBlank())
-                || (lastPublishedResultSnapshot.getOutput() != null
-                && lastPublishedResultSnapshot.getOutput().length > 0);
-        return hasArtifact ? renderPublishedResult(lastPublishedResultSnapshot,
+        com.cryptocarver.model.OperationResult snapshot = shelfSnapshot();
+        if (snapshot == null) return "";
+        boolean hasArtifact = (snapshot.getEnrichedOutput() != null
+                && !snapshot.getEnrichedOutput().isBlank())
+                || (snapshot.getOutput() != null
+                && snapshot.getOutput().length > 0);
+        return hasArtifact ? renderPublishedResult(snapshot,
                 com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()) : "";
+    }
+
+    /**
+     * The published result, but only while its screen is still the active one:
+     * after navigating elsewhere it must not be added to the Shelf under the
+     * new screen's name.
+     */
+    private com.cryptocarver.model.OperationResult shelfSnapshot() {
+        return java.util.Objects.equals(lastPublishedScreen, currentActiveOperation) ? lastPublishedResultSnapshot : null;
     }
 
     private boolean isShelfCaptureBlockedByVisibility(TextArea area) {
@@ -2406,7 +2423,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     private ResultPublicationCoordinator resultPublicationCoordinator() {
         if (resultPublicationCoordinator == null) resultPublicationCoordinator = new ResultPublicationCoordinator(
-                result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; },
+                result -> { lastPublishedOperation = result.getOperation(); lastPublishedResultSnapshot = result; lastPublishedScreen = currentActiveOperation; },
                 result -> updateInspector(result.getOperation(), result.getInput(), result.getOutput(), result.getDetails()),
                 this::refreshSessionTrailNavigation,
                 (result, details) -> addToHistory(result.getOperation(), details, currentActiveOperation),
@@ -2462,7 +2479,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                         public String capture(TextArea area) { return resolveShelfCaptureText(area); }
                         public boolean blockedByVisibility(TextArea area) { return isShelfCaptureBlockedByVisibility(area); }
                         public boolean isCurrentSelection(TextArea area) { return resultAreaTracker.isCurrentSelection(area, lastPublishedResultSnapshot != null); }
-                        public com.cryptocarver.model.OperationResult snapshot() { return lastPublishedResultSnapshot; }
+                        public com.cryptocarver.model.OperationResult snapshot() { return shelfSnapshot(); }
                         public String activeOperation() { return currentActiveOperation; }
                         public com.cryptocarver.model.ClipboardShelfManager manager() { return com.cryptocarver.model.ClipboardShelfManager.getInstance(); }
                         public boolean isPrimaryCipherOutput(TextArea area) { return cipherController != null && cipherController.isPrimaryOutput(area); }
