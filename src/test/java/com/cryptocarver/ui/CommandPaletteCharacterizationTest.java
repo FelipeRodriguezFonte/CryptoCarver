@@ -19,11 +19,14 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.Node;
+import javafx.event.Event;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -155,6 +158,55 @@ class CommandPaletteCharacterizationTest {
         });
         assertFalse(overlay.get().isVisible());
         assertEquals("Hashing", AppSettings.getInstance().getLastRoute());
+    }
+
+    @Test
+    void escapeFromFocusedSearchFieldAfterRealAcceleratorClosesPaletteAndRestoresFocus() throws Exception {
+        AtomicReference<Node> previousFocus = new AtomicReference<>();
+        AtomicReference<VBox> overlay = new AtomicReference<>();
+        AtomicReference<TextField> search = new AtomicReference<>();
+        runFx(() -> {
+            previousFocus.set(stage.getScene().getFocusOwner());
+            overlay.set(field(controller, "commandPaletteOverlay"));
+            search.set(field(controller, "commandSearchField"));
+            Runnable accelerator = stage.getScene().getAccelerators().get(
+                    new KeyCodeCombination(KeyCode.K, KeyCombination.SHORTCUT_DOWN));
+            assertNotNull(accelerator);
+            accelerator.run();
+            assertSame(search.get(), stage.getScene().getFocusOwner());
+            Event.fireEvent(stage.getScene().getFocusOwner(), key(KeyCode.ESCAPE));
+        });
+        assertFalse(overlay.get().isVisible());
+        runFx(() -> assertSame(previousFocus.get(), stage.getScene().getFocusOwner()));
+    }
+
+    @Test
+    void escapeFromSearchFieldAfterToolbarButtonOpensPalette() throws Exception {
+        AtomicReference<VBox> overlay = new AtomicReference<>();
+        AtomicReference<TextField> search = new AtomicReference<>();
+        runFx(() -> {
+            overlay.set(field(controller, "commandPaletteOverlay"));
+            search.set(field(controller, "commandSearchField"));
+            ((javafx.scene.control.Button) field(controller, "toolbarSearchButton")).fire();
+            assertSame(search.get(), stage.getScene().getFocusOwner());
+            Event.fireEvent(stage.getScene().getFocusOwner(), key(KeyCode.ESCAPE));
+        });
+        assertFalse(overlay.get().isVisible());
+    }
+
+    @Test
+    void escapeFromFocusedResultsListClosesPalette() throws Exception {
+        AtomicReference<VBox> overlay = new AtomicReference<>();
+        AtomicReference<ListView<?>> results = new AtomicReference<>();
+        runFx(() -> {
+            overlay.set(field(controller, "commandPaletteOverlay"));
+            results.set(field(controller, "commandResultsListView"));
+            controller.handleOpenCommandPalette();
+            results.get().requestFocus();
+            assertSame(results.get(), stage.getScene().getFocusOwner());
+            Event.fireEvent(stage.getScene().getFocusOwner(), key(KeyCode.ESCAPE));
+        });
+        assertFalse(overlay.get().isVisible());
     }
 
     @Test
