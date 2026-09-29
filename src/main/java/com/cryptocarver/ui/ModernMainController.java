@@ -59,6 +59,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
     private ResultViewerCoordinator resultViewerCoordinator;
     private ResultPublicationCoordinator resultPublicationCoordinator;
+    private CommandPaletteCoordinator commandPaletteCoordinator;
     private final com.cryptocarver.model.SessionTrailState sessionTrailState = new com.cryptocarver.model.SessionTrailState();
     private SessionTrailCoordinator sessionTrailCoordinator;
     /**
@@ -2980,9 +2981,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private ListView<com.cryptocarver.model.CommandItem> commandResultsListView;
     @FXML private Label commandEmptyLabel;
 
-    private java.util.List<com.cryptocarver.model.CommandItem> allPaletteCommands = new java.util.ArrayList<>();
-    private final javafx.collections.ObservableList<com.cryptocarver.model.CommandItem> filteredPaletteCommands = javafx.collections.FXCollections.observableArrayList();
-
     private void syncMenuBarAccelerators() {
         if (mainMenuBar == null) return;
         for (javafx.scene.control.Menu menu : mainMenuBar.getMenus()) {
@@ -2998,149 +2996,66 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void initializeCommandPalette() {
-        if (rootStackPane != null) {
-            rootStackPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
-                if (newScene != null) {
-                    newScene.getAccelerators().put(
-                            new javafx.scene.input.KeyCodeCombination(javafx.scene.input.KeyCode.K, javafx.scene.input.KeyCombination.SHORTCUT_DOWN),
-                            this::handleOpenCommandPalette
-                    );
-                }
-            });
-        }
-
-        if (commandResultsListView == null || commandSearchField == null) return;
-
-        allPaletteCommands = com.cryptocarver.model.CommandRegistry.buildCommands(this);
-        commandResultsListView.setItems(filteredPaletteCommands);
-
-        commandResultsListView.setCellFactory(lv -> new ListCell<>() {
-            @Override
-            protected void updateItem(com.cryptocarver.model.CommandItem item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    setStyle("");
-                } else {
-                    HBox row = new HBox(10);
-                    row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                    row.getStyleClass().add("command-palette-item");
-
-                    Label categoryBadge = new Label(item.getCategory());
-                    categoryBadge.getStyleClass().add("command-palette-category");
-
-                    VBox textContainer = new VBox(2);
-                    Label titleLabel = new Label(item.getTitle());
-                    titleLabel.getStyleClass().add("command-palette-item-title");
-
-                    Label descLabel = new Label(item.getDescription());
-                    descLabel.getStyleClass().add("command-palette-item-desc");
-
-                    textContainer.getChildren().addAll(titleLabel, descLabel);
-                    HBox.setHgrow(textContainer, Priority.ALWAYS);
-
-                    row.getChildren().addAll(categoryBadge, textContainer);
-
-                    if (item.getShortcut() != null && !item.getShortcut().isEmpty()) {
-                        Label shortcutLabel = new Label(item.getShortcut());
-                        shortcutLabel.getStyleClass().add("command-palette-shortcut");
-                        row.getChildren().add(shortcutLabel);
-                    }
-
-                    if (!item.isEnabled()) {
-                        row.setOpacity(0.45);
-                    } else {
-                        row.setOpacity(1.0);
-                    }
-
-                    setGraphic(row);
-                }
-            }
-        });
-
-        commandSearchField.textProperty().addListener((obs, oldVal, newVal) -> filterCommandPalette(newVal));
-
-        commandSearchField.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.DOWN) {
-                if (!filteredPaletteCommands.isEmpty()) {
-                    commandResultsListView.getSelectionModel().select(0);
-                    commandResultsListView.requestFocus();
-                }
-                e.consume();
-            } else if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                handleCloseCommandPalette();
-                e.consume();
-            } else if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                handleExecuteSelectedCommand();
-                e.consume();
-            }
-        });
-
-        commandResultsListView.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                handleCloseCommandPalette();
-                e.consume();
-            } else if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                handleExecuteSelectedCommand();
-                e.consume();
-            }
-        });
-
-        commandResultsListView.setOnMouseClicked(e -> {
-            if (e.getClickCount() == 2) {
-                handleExecuteSelectedCommand();
-            }
-        });
+        commandPaletteCoordinator().initialize(rootStackPane);
     }
 
     @FXML
     public void handleOpenCommandPalette() {
-        if (commandPaletteOverlay == null) return;
-
-        allPaletteCommands = com.cryptocarver.model.CommandRegistry.buildCommands(this);
-        commandPaletteOverlay.setManaged(true);
-        commandPaletteOverlay.setVisible(true);
-
-        if (commandSearchField != null) {
-            commandSearchField.setText("");
-            filterCommandPalette("");
-            commandSearchField.requestFocus();
-        }
+        commandPaletteCoordinator().open();
     }
 
     @FXML
     public void handleCloseCommandPalette() {
-        if (commandPaletteOverlay == null) return;
-        commandPaletteOverlay.setManaged(false);
-        commandPaletteOverlay.setVisible(false);
-        if (commandSearchField != null) {
-            commandSearchField.setText("");
-        }
+        commandPaletteCoordinator().close();
     }
 
     @FXML
     public void handleExecuteSelectedCommand() {
-        if (commandResultsListView == null) return;
-        com.cryptocarver.model.CommandItem selected = commandResultsListView.getSelectionModel().getSelectedItem();
-        if (selected != null && selected.isEnabled()) {
-            handleCloseCommandPalette();
-            selected.execute();
-        }
+        commandPaletteCoordinator().executeSelected();
     }
 
-    private void filterCommandPalette(String query) {
-        java.util.List<com.cryptocarver.model.CommandItem> matched = com.cryptocarver.model.CommandSearchEngine.search(allPaletteCommands, query);
-        filteredPaletteCommands.setAll(matched);
-
-        if (commandEmptyLabel != null) {
-            boolean empty = matched.isEmpty();
-            commandEmptyLabel.setManaged(empty);
-            commandEmptyLabel.setVisible(empty);
+    private CommandPaletteCoordinator commandPaletteCoordinator() {
+        if (commandPaletteCoordinator == null) {
+            commandPaletteCoordinator = new CommandPaletteCoordinator(commandPaletteOverlay, commandSearchField,
+                    commandResultsListView, commandEmptyLabel, this::paletteCommandActions);
         }
+        return commandPaletteCoordinator;
+    }
 
-        if (commandResultsListView != null && !matched.isEmpty()) {
-            commandResultsListView.getSelectionModel().select(0);
-        }
+    private com.cryptocarver.model.PaletteCommandCatalog.Actions paletteCommandActions() {
+        return new com.cryptocarver.model.PaletteCommandCatalog.Actions() {
+            @Override
+            public void showQuickStart() { ModernMainController.this.showQuickStart(); }
+
+            @Override
+            public void navigateToModule(String moduleName) { ModernMainController.this.navigateToModule(moduleName); }
+
+            @Override
+            public void toggleInspector() { ModernMainController.this.handleToggleInspector(); }
+
+            @Override
+            public void toggleSidePanel() { ModernMainController.this.handleToggleSidePanel(); }
+
+            @Override
+            public boolean hasCurrentResult() { return ModernMainController.this.hasCurrentResult(); }
+
+            @Override
+            public void openExpandedResultViewer() { ModernMainController.this.handleOpenExpandedResultViewer(); }
+
+            @Override
+            public void increaseFontSize() { ModernMainController.this.handleIncreaseFontSize(); }
+
+            @Override
+            public void decreaseFontSize() { ModernMainController.this.handleDecreaseFontSize(); }
+
+            @Override
+            public void copyOutput() { ModernMainController.this.handleCopyOutput(); }
+
+            @Override
+            public void addCurrentOutputToShelf() { ModernMainController.this.handleAddCurrentOutputToShelf(); }
+
+            @Override
+            public void toggleFavorite() { ModernMainController.this.handleToggleFavorite(); }
+        };
     }
 }
