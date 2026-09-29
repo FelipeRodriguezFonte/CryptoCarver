@@ -14,6 +14,7 @@
     <description>CryptoCarver - Advanced Cryptographic Test Tool with JavaFX GUI</description>
 
     <properties>
+        <surefire.cpuArgs></surefire.cpuArgs>
         <!-- The JavaFX suite runs in the default build. Pass -DrunUiTests=false to skip it
              on a machine with no display. -->
         <runUiTests>true</runUiTests>
@@ -333,7 +334,7 @@
                          the JVM resolves Locale.getDefault() during startup, before Surefire gets
                          the chance to set properties, so a late user.language is simply ignored.
                          Tests that care about translation select their locale explicitly. -->
-                    <argLine>-Duser.language=en -Duser.country=US -Xmx3g -XX:+UseSerialGC -XX:ActiveProcessorCount=4 -Dprism.order=sw -Dprism.verbose=false</argLine>
+                    <argLine>-Duser.language=en -Duser.country=US -Xmx3g ${surefire.cpuArgs}</argLine>
                 </configuration>
             </plugin>
 
@@ -386,6 +387,14 @@
     </build>
 
     <profiles>
+        <profile>
+            <!-- Opt-in CPU cap for the test JVM: mvn -o -q test -Plow-cpu.
+                 Roughly halves the speed of the suite, so it is not the default. -->
+            <id>low-cpu</id>
+            <properties>
+                <surefire.cpuArgs>-XX:+UseSerialGC -XX:ActiveProcessorCount=4 -Dprism.order=sw -Dprism.verbose=false</surefire.cpuArgs>
+            </properties>
+        </profile>
         <!-- -Xdock:* is understood only by the macOS java launcher; on Windows and
              Linux the JVM rejects it with "Unrecognized option" and never starts,
              so `mvn javafx:run` fails before any JavaFX code runs. -->

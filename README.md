@@ -292,6 +292,12 @@ Para ejecutar las pruebas con menor prioridad de CPU:
 nice -n 19 mvn -o -q test
 ```
 
+Para limitar además la CPU de la JVM de pruebas (dobla el tiempo de la suite, por eso es opcional):
+
+```bash
+nice -n 19 mvn -o -q test -Plow-cpu
+```
+
 O ejecutar el JAR directamente:
 ```bash
 java -jar target/cryptocarver-<version>.jar
