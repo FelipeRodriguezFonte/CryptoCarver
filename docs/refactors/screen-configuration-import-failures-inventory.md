@@ -62,4 +62,42 @@ These focused commands cover 56 tests total. The full suite is reserved for the 
 
 After the coordinator's first full-suite run exposed the shared-dialog test-mode regression, `DialogService.show()` was restored to its normal behavior and only screen-configuration imports were routed through `showForImport()`. Regression command: `mvn -o -q -DrunUiTests=true -Dtest=SessionTrailUITest,ScreenConfigurationImportUiCharacterizationTest,DialogServiceTest test`; 29 tests passed, 0 failures/errors, 20.5 seconds. The coordinator will rerun the full suite.
 
+## Coordinator final verification
+
+Branch: `luna/import-config-errors`, starting from `main` at `329d119`. No push and no manual test were performed.
+
+The first complete run found two failures in `SessionTrailUITest` caused by making shared confirmation dialogs return cancellation in test mode. Those tests were left unchanged; `c934254` restored shared dialog behavior. A subsequent complete run passed. After adding coverage of the unexpected-error fallback and separating the two valid-document characterization tests, the final complete run also passed:
+
+```text
+Command: mvn -o -q test
+Exit code: 0
+Tests run: 2483, Failures: 0, Errors: 0, Skipped: 1
+Approximate wall time: 256 seconds (4 min 16 s)
+```
+
+The counts above are the sum of the 362 Surefire XML reports. The final log is `target/encargo-40-full-suite-complete.log`. Maven quiet mode does not print a success summary, so the summary above is derived from the reports, not quoted from stdout.
+
+New tests: 47 across four new classes: codec characterization (8), typed failures (10), filesystem/coordinator boundary (10), production-FXML import flow (19). Existing codec assertions were updated to use the safe reason instead of the removed exception text; the localization test now checks every newly added key in both languages.
+
+The baseline dialog observation for each of the six failing UI cases was:
+
+```text
+SHOW_ERROR: Configuration Import - The screen configuration could not be imported.
+```
+
+Baseline execution summaries are recorded above (11 codec/existing tests, 7 FXML tests, 3 boundary tests). Final versions of those tests additionally verify the new behavior; the pre-change assertions remain available in commits `8edb30e` and `36112c9`.
+
+Commits, in chronological order:
+
+- `fa23a5f`: failure inventory.
+- `8edb30e`: codec characterization.
+- `8702a38`: typed import exception and codec translation.
+- `36112c9`: baseline FXML/boundary characterization with test injection points.
+- `2e0cfbf`: specific messages, password retry, validation before navigation, and tests.
+- `7b8be73`: initial report.
+- `c934254`: scope non-modal test dialogs to configuration imports; preserve session confirmations.
+- `3c2fff5`: route unexpected and legacy import notices through import dialogs; add fallback coverage.
+
+`git diff 329d119 --stat` confirms no CSS/FXML, crypto implementation, `pom.xml`, or `.mvn/` changes. `git diff --check` passed. This report update is documentation only.
+
 The import review, retry/cancel notice, specific failure, generic unexpected-failure fallback, and legacy-configuration notice all use `DialogService.showForImport()`. This keeps every import dialog non-modal under test mode while leaving the regular `DialogService.show()` modal behavior intact for unrelated flows such as clearing a session trail.
