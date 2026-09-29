@@ -55,8 +55,13 @@ class ScreenConfigurationImportCharacterizationTest {
     }
 
     @Test
-    void plainAndEncryptedValidDocumentsCurrentlyDecode() {
+    void validPlainDocumentCurrentlyDecodes() {
         assertDoesNotThrow(() -> ScreenConfigurationCodec.decode(ScreenConfigurationCodec.encodePlain(sample()), null));
-        assertDoesNotThrow(() -> ScreenConfigurationCodec.decode(ScreenConfigurationCodec.encodeEncrypted(sample(), PASSWORD.toCharArray()), PASSWORD.toCharArray()));
+    }
+
+    @Test
+    void validEncryptedDocumentCurrentlyDecodes() {
+        assertDoesNotThrow(() -> ScreenConfigurationCodec.decode(
+                ScreenConfigurationCodec.encodeEncrypted(sample(), PASSWORD.toCharArray()), PASSWORD.toCharArray()));
     }
 }

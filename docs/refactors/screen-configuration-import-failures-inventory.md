@@ -61,3 +61,5 @@ Post-change focused verification:
 These focused commands cover 56 tests total. The full suite is reserved for the coordinator and has not been run here.
 
 After the coordinator's first full-suite run exposed the shared-dialog test-mode regression, `DialogService.show()` was restored to its normal behavior and only screen-configuration imports were routed through `showForImport()`. Regression command: `mvn -o -q -DrunUiTests=true -Dtest=SessionTrailUITest,ScreenConfigurationImportUiCharacterizationTest,DialogServiceTest test`; 29 tests passed, 0 failures/errors, 20.5 seconds. The coordinator will rerun the full suite.
+
+The import review, retry/cancel notice, specific failure, generic unexpected-failure fallback, and legacy-configuration notice all use `DialogService.showForImport()`. This keeps every import dialog non-modal under test mode while leaving the regular `DialogService.show()` modal behavior intact for unrelated flows such as clearing a session trail.

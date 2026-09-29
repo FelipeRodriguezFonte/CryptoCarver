@@ -73,6 +73,19 @@ class ScreenConfigurationImportUiCharacterizationTest {
     }
 
     @Test
+    void unexpectedReviewFailureUsesGenericImportMessageAndDoesNotApply() throws Exception {
+        Path file = write("unexpected.json", ScreenConfigurationCodec.encodePlain(configurationWithMode("GCM")));
+        AtomicInteger calls = new AtomicInteger();
+        ImportOutcome outcome = runImport(file, confirmation -> Optional.empty(), buttons -> {
+            if (calls.getAndIncrement() == 0) throw new IllegalStateException("SYNTHETIC-UNEXPECTED");
+            return Optional.empty();
+        });
+        assertEquals(2, outcome.events().size());
+        assertSpecific(String.join("\n", outcome.events()), "dialog.configuration.importFailure");
+        assertEquals(outcome.activeOperationBefore(), outcome.activeOperationAfter());
+    }
+
+    @Test
     void wrongPasswordForValidEncryptedFileShowsSpecificRetryNotice() throws Exception {
         ScreenConfiguration configuration = sample();
         Path file = write("valid.ccconfig", ScreenConfigurationCodec.encodeEncrypted(configuration, "SYNTHETIC-PASSWORD".toCharArray()));

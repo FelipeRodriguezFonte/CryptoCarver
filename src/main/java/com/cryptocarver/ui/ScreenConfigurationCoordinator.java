@@ -184,8 +184,9 @@ public final class ScreenConfigurationCoordinator {
                     summary, cancel, proceed).filter(proceed::equals).isEmpty()) return;
             applyScreenConfiguration(configuration);
             if (isLegacyKeyGenerationConfiguration(configuration)) {
-                dialogs.warning(owner.get(), i18n.text("dialog.configuration.legacyTitle"),
-                        i18n.text("dialog.configuration.legacyMessage"));
+                dialogs.showForImport(Alert.AlertType.WARNING, owner.get(),
+                        i18n.text("dialog.configuration.legacyTitle"), i18n.text("dialog.configuration.legacyMessage"),
+                        null, ButtonType.OK);
             }
             status.accept(i18n.text("status.configuration.imported", configuration.operation()));
         } catch (ScreenConfigurationImportException failure) {
@@ -195,8 +196,9 @@ public final class ScreenConfigurationCoordinator {
         } catch (IllegalArgumentException failure) {
             showImportFailure(ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION, false);
         } catch (Exception failure) {
-            dialogs.error(owner.get(), i18n.text("dialog.configuration.importFailureTitle"),
-                    i18n.text("dialog.configuration.importFailure"));
+            dialogs.showForImport(Alert.AlertType.ERROR, owner.get(),
+                    i18n.text("dialog.configuration.importFailureTitle"), i18n.text("dialog.configuration.importFailure"),
+                    null, ButtonType.OK);
         }
     }
 
