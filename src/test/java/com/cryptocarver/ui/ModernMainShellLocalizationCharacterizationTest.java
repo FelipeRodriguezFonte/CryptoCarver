@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +17,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -30,14 +32,17 @@ class ModernMainShellLocalizationCharacterizationTest {
   private ModernMainController controller;
   private Stage stage;
   private LanguagePreference previousLanguage;
+  private String previousRoute;
 
   @BeforeEach
   void loadProductionFxmlInEnglish() throws Exception {
     startJavaFx();
     previousLanguage = AppSettings.getInstance().getLanguagePreference();
+    previousRoute = AppSettings.getInstance().getLastRoute();
     runFx(
         () -> {
           I18nService.getInstance().setPreference(LanguagePreference.EN);
+          AppSettings.getInstance().setLastRoute("Hashing");
           try {
             FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
             Parent root = loader.load();
@@ -57,6 +62,7 @@ class ModernMainShellLocalizationCharacterizationTest {
     runFx(
         () -> {
           I18nService.getInstance().setPreference(previousLanguage);
+          AppSettings.getInstance().setLastRoute(previousRoute);
           if (stage != null) {
             stage.close();
           }
@@ -126,11 +132,10 @@ class ModernMainShellLocalizationCharacterizationTest {
   @Test
   void loadedAndLazyModulesUseTheCurrentLanguage() throws Exception {
     AtomicReference<ModuleHost> cipherHost = new AtomicReference<>();
-    AtomicReference<ModuleHost> authenticationHost = new AtomicReference<>();
     runFx(
         () -> {
           cipherHost.set(field(controller, "cipherContainer"));
-          authenticationHost.set(field(controller, "authenticationContainer"));
+          assertNull(field(controller, "authenticationContainerController"));
           assertEquals("File", ((Menu) field(controller, "fileMenu")).getText());
           controller.navigateToModule("Symmetric Ciphers");
         });
@@ -231,6 +236,13 @@ class ModernMainShellLocalizationCharacterizationTest {
     for (Node child : root.getChildrenUnmodifiable()) {
       if (child instanceof TitledPane pane && expected.equals(pane.getText())) {
         return pane.getText();
+      }
+      if (child instanceof Accordion accordion) {
+        for (TitledPane pane : accordion.getPanes()) {
+          if (expected.equals(pane.getText())) {
+            return pane.getText();
+          }
+        }
       }
       if (child instanceof Parent parent) {
         try {
