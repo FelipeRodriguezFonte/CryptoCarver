@@ -28,9 +28,36 @@ class NavigationRouterCharacterizationTest {
     @Test void registeredModulesVariantsDynamicUnknownAndStartupRoutes() throws Exception {
         AtomicReference<ModernMainController> ref=new AtomicReference<>();
         fxRun(()->{try {var l=Fxml.loader("/fxml/main-view-modern.fxml");l.load();ref.set(l.getController());}catch(Exception e){throw new RuntimeException(e);}});
-        String[][] routes={{"JOSE","JWT (Signed)"},{"COSE","COSE Sign1"},{"WALLET","SD-JWT VC"},{"EPOCH_CONVERTER","Epoch Converter"},{"JSON_FORMATTER","JSON Formatter"},{"KEYS_SYMMETRIC","Key Generation"},{"KEYS_ASYMMETRIC","RSA Key Generation"},{"CERTIFICATES","Parse Certificate"},{"GENERIC","Hashing"},{"POST_QUANTUM","Post-Quantum Key Generation"},{"XML_SECURITY","Sign XML"},{"WSS_SECURITY","Sign SOAP"},{"EMV","EMV Tool"},{"HISTORY","Recent Operations"},{"CLIPBOARD_SHELF","Clipboard Shelf"},{"SAVED_SESSIONS","Saved Sessions"},{"CIPHER","Symmetric Ciphers"},{"AUTHENTICATION","Digital Signatures"},{"PAYMENTS","Payments"},{"PROCESS_DESIGNER","Process Designer"}};
+        fxRun(()->{ setField(ref.get(),"lastPublishedResultSnapshot",com.cryptocarver.model.OperationResult.forOperation("Hashing").output(new byte[]{1}).build()); setField(ref.get(),"lastPublishedScreen","Hashing"); ref.get().navigateToModule("Symmetric Ciphers"); });
+        assertNull(field(ref.get(),"lastPublishedResultSnapshot"),"navigation clears the published result snapshot");
+        String[][] routes={{"JOSE","JWT (Signed)"},{"COSE","COSE Sign1"},{"WALLET","SD-JWT VC"},{"EPOCH_CONVERTER","Epoch Converter"},{"JSON_FORMATTER","JSON Formatter"},{"KEYS_SYMMETRIC","Key Generation"},{"KEYS_ASYMMETRIC","RSA Key Generation"},{"CERTIFICATES","Parse Certificate"},{"GENERIC","Hashing"},{"POST_QUANTUM","PQC Key Generation"},{"XML_SECURITY","XML Security"},{"WSS_SECURITY","WSS Security"},{"EMV","EMV Tool"},{"HISTORY","Recent Operations"},{"CLIPBOARD_SHELF","Clipboard Shelf"},{"SAVED_SESSIONS","Saved Sessions"},{"CIPHER","Symmetric Ciphers"},{"AUTHENTICATION","Digital Signatures"},{"PAYMENTS","Payments"},{"PROCESS_DESIGNER","Process Designer"}};
         List<Executable> routeChecks=new ArrayList<>();
-        for(String[] pair:routes) routeChecks.add(()->{fxRun(()->ref.get().navigateToModule(pair[1])); assertEquals(pair[1],field(ref.get(),"currentActiveOperation")); if(!pair[0].equals("EPOCH_CONVERTER")&&!pair[0].equals("JSON_FORMATTER")) assertTrue(((Node)field(ref.get(),hostField(pair[0]))).isVisible(),pair[0]);});
+        for(String[] pair:routes) routeChecks.add(()->{
+            fxRun(()->ref.get().navigateToModule(pair[1]));
+            assertEquals(pair[1],field(ref.get(),"currentActiveOperation"));
+            if(!pair[0].equals("EPOCH_CONVERTER")&&!pair[0].equals("JSON_FORMATTER")) {
+                Node host=(Node)field(ref.get(),hostField(pair[0]));
+                assertTrue(host.isVisible(),pair[0]);
+                var route=UiNavigationRegistry.resolve(pair[1]).orElseThrow();
+                if(pair[0].equals("CIPHER")) assertTrue(((CipherController)field(ref.get(),"cipherController")).symmetricWorkspaceProperty().get());
+                if(pair[0].equals("PROCESS_DESIGNER")) assertTrue((boolean)field(ref.get(),"processDesignerWorkspace"));
+                if(route.section()!=null && host instanceof ModuleHost && !pair[0].equals("CIPHER") && !pair[0].equals("PROCESS_DESIGNER")) {
+                    var accordion=findAccordion(host);
+                    assertNotNull(accordion,pair[0]+" accordion");
+                    assertNotNull(accordion.getExpandedPane(),pair[0]+" expanded section");
+                    var catalog=switch(pair[0]) {
+                        case "KEYS_SYMMETRIC","KEYS_ASYMMETRIC" -> ModuleTextCatalog.keys();
+                        case "CERTIFICATES" -> ModuleTextCatalog.certificates(); case "GENERIC" -> ModuleTextCatalog.generic();
+                        case "POST_QUANTUM" -> ModuleTextCatalog.pqc(); case "XML_SECURITY" -> ModuleTextCatalog.xmlSecurity();
+                        case "WSS_SECURITY" -> ModuleTextCatalog.wssSecurity(); case "EMV" -> ModuleTextCatalog.emv();
+                        case "CIPHER" -> ModuleTextCatalog.cipher(); case "AUTHENTICATION" -> ModuleTextCatalog.authentication();
+                        case "PAYMENTS" -> ModuleTextCatalog.payments(); case "PROCESS_DESIGNER" -> ModuleTextCatalog.processDesigner();
+                        default -> java.util.Map.<String,String>of();
+                    };
+                    assertTrue(ModulePaneMatcher.matches(accordion.getExpandedPane(),route.section(),catalog),pair[0]+" section "+route.section());
+                }
+            }
+        });
         fxRun(()->ref.get().navigateToModule("ASN.1 Encode")); assertEquals("ASN.1 Encode",field(ref.get(),"currentActiveOperation"));
         fxRun(()->ref.get().navigateToModule("ASN.1 Decode")); assertEquals("ASN.1 Decode",field(ref.get(),"currentActiveOperation"));
         fxRun(()->ref.get().navigateToModule("Export History")); assertEquals("Export History",field(ref.get(),"currentActiveOperation"));
@@ -41,7 +68,9 @@ class NavigationRouterCharacterizationTest {
         assertAll("module routes",routeChecks);
     }
     private static String hostField(String m){return switch(m){case "JOSE"->"jose";case "COSE"->"cose";case "WALLET"->"wallet";case "EPOCH_CONVERTER"->"epochConverter";case "JSON_FORMATTER"->"jsonFormatter";case "KEYS_SYMMETRIC"->"keysContainer";case "KEYS_ASYMMETRIC"->"keysContainer";case "CERTIFICATES"->"certificatesContainer";case "GENERIC"->"genericContainer";case "POST_QUANTUM"->"postQuantumContainer";case "XML_SECURITY"->"xmlSecurityContainer";case "WSS_SECURITY"->"wssSecurityContainer";case "EMV"->"emvContainer";case "HISTORY"->"historyView";case "CLIPBOARD_SHELF"->"clipboardShelf";case "SAVED_SESSIONS"->"savedSessionsContainer";case "CIPHER"->"cipherContainer";case "AUTHENTICATION"->"authenticationContainer";case "PAYMENTS"->"paymentsContainer";default->"processDesignerContainer";};}
+    private static javafx.scene.control.Accordion findAccordion(Node n){if(n instanceof javafx.scene.control.Accordion a)return a;if(n instanceof javafx.scene.Parent p)for(Node child:p.getChildrenUnmodifiable()){var a=findAccordion(child);if(a!=null)return a;}return null;}
     private static Object field(Object o,String n){try{Field f=o.getClass().getDeclaredField(n);f.setAccessible(true);return f.get(o);}catch(Exception e){throw new AssertionError(e);}}
+    private static void setField(Object o,String n,Object value){try{Field f=o.getClass().getDeclaredField(n);f.setAccessible(true);f.set(o,value);}catch(Exception e){throw new AssertionError(e);}}
     private static void invoke(Object o,String n){try{var m=o.getClass().getDeclaredMethod(n);m.setAccessible(true);m.invoke(o);}catch(Exception e){throw new AssertionError(e);}}
     private static void fxRun(Runnable r)throws Exception{CountDownLatch l=new CountDownLatch(1);AtomicReference<Throwable> e=new AtomicReference<>();Platform.runLater(()->{try{r.run();}catch(Throwable t){e.set(t);}finally{l.countDown();}});assertTrue(l.await(30,TimeUnit.SECONDS));if(e.get()!=null)throw new AssertionError(e.get());}
 }
