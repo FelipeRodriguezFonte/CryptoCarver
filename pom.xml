@@ -306,6 +306,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <forkCount>1</forkCount>
+                    <reuseForks>true</reuseForks>
                     <excludedGroups>integration,benchmark</excludedGroups>
                     <useSystemClassLoader>true</useSystemClassLoader>
                     <systemPropertyVariables>
@@ -331,7 +333,7 @@
                          the JVM resolves Locale.getDefault() during startup, before Surefire gets
                          the chance to set properties, so a late user.language is simply ignored.
                          Tests that care about translation select their locale explicitly. -->
-                    <argLine>-Duser.language=en -Duser.country=US</argLine>
+                    <argLine>-Duser.language=en -Duser.country=US -Xmx1g -XX:+UseSerialGC -XX:ActiveProcessorCount=3 -XX:TieredStopAtLevel=1 -Dprism.order=sw -Dprism.verbose=false</argLine>
                 </configuration>
             </plugin>
 
