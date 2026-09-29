@@ -5,6 +5,7 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.KeyboardShortcutEntry;
 import com.cryptocarver.model.KeyboardShortcutRegistry;
 import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.model.PlatformShortcuts;
 import com.cryptocarver.service.I18nService;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -113,8 +114,9 @@ class ModernShellCharacterizationUITest {
         AtomicReference<ModernMainController> spanishController = new AtomicReference<>();
         runOnFxThread(() -> spanishController.set(loadProductionController()));
         List<String> spanish = verifyShortcutEntries(spanishController.get(), Locale.forLanguageTag("es"));
-        assertEquals(english, spanish);
-        assertTrue(english.stream().anyMatch(line -> line.contains("Keyboard Shortcuts")));
+        List<String> expectedEnglishCatalog = expectedShortcutCatalog();
+        assertEquals(expectedEnglishCatalog, english);
+        assertEquals(expectedEnglishCatalog, spanish);
     }
 
     @Test
@@ -192,6 +194,32 @@ class ModernShellCharacterizationUITest {
             checked.add(entry.getDisplayCombination() + " | " + entry.getActionName() + " | " + entry.getDescription());
         }
         return checked;
+    }
+
+    private static List<String> expectedShortcutCatalog() {
+        return List.of(
+                expectedShortcut("Shortcut+K", "Command Palette", "Open operation search and quick palette"),
+                expectedShortcut("F1", "Keyboard Shortcuts", "Show application keyboard shortcuts reference"),
+                expectedShortcut("Shortcut+S", "Save Session", "Save current workspace state to session file"),
+                expectedShortcut("Shortcut+O", "Import Key", "Import cryptographic key or certificate file"),
+                expectedShortcut("Shortcut+Q", "Exit Application", "Close CryptoCarver workbench"),
+                expectedShortcut("Shortcut+Shift+O", "Clear Output", "Clear output results in active view"),
+                expectedShortcut("Shortcut+Shift+C", "Copy Output", "Copy operation result text to system clipboard"),
+                expectedShortcut("Shortcut+B", "Toggle Side Panel", "Show/hide navigation sidebar"),
+                expectedShortcut("Shortcut+I", "Toggle Inspector", "Show/hide result inspector panel"),
+                expectedShortcut("Shortcut+Shift+E", "Expand Result", "Open expanded result text viewer"),
+                expectedShortcut("Shortcut+Shift+T", "Expand Table", "Open expanded table data viewer"),
+                expectedShortcut("Shortcut+PLUS", "Zoom In (Font)", "Increase application interface font size"),
+                expectedShortcut("Shortcut+MINUS", "Zoom Out (Font)", "Decrease application interface font size"),
+                expectedShortcut("Shortcut+T", "Epoch Converter", "Open Unix timestamp epoch conversion tool"),
+                expectedShortcut("Shortcut+J", "JSON Formatter", "Open JSON formatter and validator tool"),
+                expectedShortcut("Shortcut+Shift+H", "Quick Start", "Navigate to Laboratory Quick Start dashboard"),
+                expectedShortcut("Shortcut+Shift+V", "Clipboard Shelf", "Open and refresh the integrated Clipboard Shelf"),
+                expectedShortcut("Shortcut+Shift+F", "Toggle Favorite", "Toggle favorite star for current operation"));
+    }
+
+    private static String expectedShortcut(String combination, String action, String description) {
+        return PlatformShortcuts.display(combination) + " | " + action + " | " + description;
     }
 
     private static ModernMainController loadProductionController() {

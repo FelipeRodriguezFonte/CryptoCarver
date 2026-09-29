@@ -30,12 +30,20 @@ Inventario preparado sobre `cf90f68` antes de cambiar producción. La clase tien
 Los avisos informativos `showInfo` se delegan a `DialogService.info`, que crea `Alert(INFORMATION, detail, ButtonType.OK)`. `configure` añade `cc-dialog-pane` y carga `styles.css` más el tema activo. `styles.css` importa `components.css`, donde `.button` da padding horizontal de 15 px por lado; el skin de JavaFX `ButtonBar` conserva un mínimo de 70 px. No había una regla de `min-width` para el botón OK del diálogo.
 
 
-La medición del test antes del arreglo fue: texto localizado «Aceptar», ancho natural de botón 75,018 px, ancho renderizado 76 px y `ButtonBar` mínimo 70 px. El ancho final se redondeaba y dejaba menos de 1 px de holgura. Por eso el label quedaba al borde y podía cortarse. No intervenían un `ButtonType` personalizado ni las reglas de fondo/cabecera `.dialog-pane`. La caracterización exigió dos píxeles de margen adicional; el primer resultado fue 4 pruebas, 3 aprobadas y solo este caso en rojo.
+La medición del test antes del arreglo fue: texto localizado «Aceptar», ancho natural de botón 75,018 px, ancho renderizado 76 px y `ButtonBar` mínimo 70 px. El ancho final se redondeaba y dejaba menos de 1 px de holgura. Por eso el label quedaba al borde y podía cortarse. No intervenían un `ButtonType` personalizado ni las reglas de fondo/cabecera `.dialog-pane`. La caracterización exigió dos píxeles de margen adicional. La salida textual conservada de esa ejecución previa a la producción fue:
+
+```text
+[ERROR] Tests run: 4, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 2.251 s <<< FAILURE! -- in com.cryptocarver.ui.ModernShellCharacterizationUITest
+[ERROR] com.cryptocarver.ui.ModernShellCharacterizationUITest.informationalAlertOkButtonFitsItsLocalizedLabel -- Time elapsed: 0.268 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Informational Alert clips the localized OK label ==> expected: <true> but was: <false>
+[ERROR] Tests run: 4, Failures: 1, Errors: 0, Skipped: 0
+```
 
 ## Caracterización, extracción y reparación
 
 - El informe de `AppDiagnostics` ya era una clase pura; se añadió `DiagnosticsReportBuilder` sin JavaFX como entrada del coordinador y para escribir el reporte. El catálogo de atajos ya residía en `KeyboardShortcutRegistry`, también puro.
 - `ModernMainController` conserva sus contratos y handlers. Los handlers de atajos, About y diagnóstico, y los avisos públicos, delegan al `ShellDialogCoordinator`.
+- El registro de atajos fija actualmente nombres y descripciones en inglés y no contiene traducciones. La caracterización compara los 18 textos exactos con el resultado del catálogo tanto con preferencia inglesa como española, además de comprobar sus aceleradores en la escena de producción.
 - La reparación añade `cc-info-dialog-pane` únicamente al Alert informativo y establece 80 px mínimos para sus botones en el bloque final `Legibility overrides` de `styles.css`. Se usa CSS porque el `ButtonBar` crea/recalcula el tamaño de sus botones al montar el skin; asignar `Button.setMinWidth` antes de mostrar el diálogo no sobrevive a ese cálculo. No se cambió FXML.
 - Capturas `ComputedStyleSnapshotTool`: `Hashing` con `theme-light.css` y `theme-dark.css`, `user.home` limpio. El diff antes/después de Parte C fue vacío en ambos temas. El diff de la captura shell después de Parte D también fue vacío; la regla nueva solo coincide dentro del Alert informativo.
 - La ejecución dirigida posterior pasó: caracterización UI 4/4; `DiagnosticsReportBuilderTest` 2/2; contrato anterior `ModernMainControllerDiagnosticsTest` 1/1; `DialogServiceTest` 3/3.
