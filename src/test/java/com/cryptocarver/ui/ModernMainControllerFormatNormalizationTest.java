@@ -15,6 +15,16 @@ class ModernMainControllerFormatNormalizationTest {
     }
 
     @Test
+    void derivesBreadcrumbPathPartsWithoutControlsOrLocalization() {
+        var path = com.cryptocarver.model.BreadcrumbPathPolicy.fromRoute(
+                "Symmetric Ciphers", "CIPHER", "Symmetric Cipher");
+        assertEquals("bread.ciphers", path.sectionKey());
+        assertEquals("Symmetric Cipher", path.moduleLabel());
+        assertEquals("Symmetric Cipher", path.modulePath());
+        assertEquals("Symmetric Ciphers", path.operationLabel());
+    }
+
+    @Test
     void preservesCanonicalAndTechnicalFormatNames() {
         assertEquals("Text (UTF-8)", ModernMainController.normalizeToolbarFormat("Text (UTF-8)"));
         assertEquals("Hexadecimal", ModernMainController.normalizeToolbarFormat("Hexadecimal"));

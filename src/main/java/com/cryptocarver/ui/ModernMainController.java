@@ -85,6 +85,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private SidePanel sidePanel;
     private NavigationController navigationController;
+    private NavigationChromeCoordinator navigationChrome;
     @FXML
     private VBox mainContentArea;
     @FXML
@@ -597,6 +598,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void initialize() {
         configureDeferredModules();
+        navigationChrome = new NavigationChromeCoordinator(inputFormatCombo, outputFormatCombo, inputFormatLabel,
+                contractOperationLabel, contentTitleLabel, contentSubtitleLabel, breadcrumbContainer,
+                breadcrumbSectionBtn, breadcrumbSep1, breadcrumbModuleBtn, breadcrumbSep2,
+                breadcrumbOperationLabel, favoriteToggleBtn, FAVORITE_SHORTCUT, key -> {
+                    if (genericContainerController != null) genericContainerController.setActiveFormatContractOperation(key);
+                }, this::selectBreadcrumbSection, this::navigateToModule);
         // Module reporters are wired in connectShellServices as each module materializes.
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
@@ -1131,45 +1138,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         handleItemSelected(operation);
     }
 
-    @Override
-    public void setInputFormat(String format) {
-        if (inputFormatCombo != null) {
-            setToolbarFormat(inputFormatCombo, format);
-        }
-    }
-
-    @Override
-    public void setOutputFormat(String format) {
-        if (outputFormatCombo != null) {
-            setToolbarFormat(outputFormatCombo, format);
-        }
-    }
-
-    private static void setToolbarFormat(ComboBox<String> combo, String format) {
-        String canonical = normalizeToolbarFormat(format);
-        if (canonical == null) {
-            combo.setValue(null);
-        } else if (combo.getItems().contains(canonical)) {
-            combo.setValue(canonical);
-        } else if (!combo.isDisabled()) {
-            // Do not leave a previous format selected when a template value is
-            // not representable by the active operation contract.
-            combo.setValue(null);
-        }
-    }
-
-    /**
-     * Keeps legacy module labels compatible with the canonical values exposed by
-     * the shared format toolbar. A ComboBox silently retains its previous value
-     * when assigned an item that it does not contain, which previously made a
-     * text template run with a stale hexadecimal input format.
-     */
-    static String normalizeToolbarFormat(String format) {
-        if ("Plain Text".equalsIgnoreCase(format) || "Text".equalsIgnoreCase(format)) {
-            return "Text (UTF-8)";
-        }
-        return format;
-    }
+    @Override public void setInputFormat(String format) { if (navigationChrome != null) navigationChrome.setInputFormat(format); }
+    @Override public void setOutputFormat(String format) { if (navigationChrome != null) navigationChrome.setOutputFormat(format); }
+    static String normalizeToolbarFormat(String format) { return com.cryptocarver.model.FormatProfilePolicy.normalize(format); }
 
     public void navigateToModule(String moduleName) {
         handleItemSelected(moduleName);
@@ -1332,46 +1303,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void updateContentHeader(String itemName) {
-        // Determine section and subsection
-        String section = "Cryptographic Operations";
-        String subsection = itemName;
-        java.util.Optional<com.cryptocarver.model.OperationDescriptor> descriptor =
-                com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(itemName);
-        if (descriptor.isPresent()) {
-            com.cryptocarver.model.OperationDescriptor operation = descriptor.get();
-            subsection = operation.getTitle() + " · " + operationStatusSummary(operation);
-        }
-
-        if (itemName.contains("Post-Quantum") || itemName.contains("PQC")
-                || itemName.contains("ML-KEM") || itemName.contains("ML-DSA")
-                || itemName.contains("SLH-DSA") || itemName.contains("Kyber")
-                || itemName.contains("Dilithium") || itemName.contains("SPHINCS")) {
-            section = "Post-Quantum";
-        } else if (itemName.contains("XML") || itemName.contains("XAdES")) {
-            section = "XML Security";
-        } else if (itemName.contains("RSA") || itemName.contains("ECDSA") || itemName.contains("DSA")) {
-            section = "Asymmetric Keys";
-        } else if (itemName.contains("Key")) {
-            section = "Symmetric Keys";
-        } else if (itemName.contains("Certificate") || itemName.contains("CMS")) {
-            section = "Certificates";
-        } else if (itemName.contains("EMV") || itemName.contains("TR-31")) {
-            section = "Payments";
-        }
-
-        if (contentTitleLabel != null) contentTitleLabel.setText(localizedSectionText(section));
-        if (contentSubtitleLabel != null) contentSubtitleLabel.setText(subsection);
-
-        // UX-07: Update Breadcrumbs, Favorites & Last Route
-        updateBreadcrumbs(itemName);
-        updateFavoriteToggleState(itemName);
-        com.cryptocarver.model.AppSettings.getInstance().setLastRoute(itemName);
-
-        // Update format profile in the toolbar
-        if (contractOperationLabel != null) {
-            contractOperationLabel.setText(subsection);
-        }
-        applyOperationFormatProfile(itemName);
+        if (navigationChrome != null) navigationChrome.updateHeader(itemName);
     }
 
     private void restoreStartupLastRoute() {
@@ -1388,101 +1320,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void updateBreadcrumbs(String operationName) {
-        if (breadcrumbContainer == null || operationName == null) return;
-
-        String sectionLabel = i18n.text("bread.section");
-        String moduleLabel = i18n.text("bread.module");
-        String operationLabel = operationName;
-        String canonicalModulePath = operationName;
-
-        java.util.Optional<UiNavigationRegistry.Route> resolved = UiNavigationRegistry.resolve(operationName);
-        if (resolved.isPresent()) {
-            UiNavigationRegistry.Route route = resolved.get();
-            sectionLabel = switch (route.module()) {
-                case KEYS_SYMMETRIC -> i18n.text("bread.symmetricKeys");
-                case KEYS_ASYMMETRIC -> i18n.text("bread.asymmetricKeys");
-                case CIPHER -> i18n.text("bread.ciphers");
-                case AUTHENTICATION -> i18n.text("bread.signaturesMac");
-                case CERTIFICATES -> i18n.text("bread.certificatesCms");
-                case JOSE -> i18n.text("bread.joseJwt");
-                case COSE -> i18n.text("bread.coseSign1");
-                case WALLET -> i18n.text("bread.wallet");
-                case POST_QUANTUM -> i18n.text("bread.postQuantumPqc");
-                case XML_SECURITY -> i18n.text("bread.xmlSecurity");
-                case WSS_SECURITY -> i18n.text("bread.wssSecurity");
-                case EMV -> i18n.text("bread.emvSmartcards");
-                case PAYMENTS -> i18n.text("bread.paymentCryptography");
-                case GENERIC -> i18n.text("bread.utilities");
-                case HISTORY -> i18n.text("bread.history");
-                case CLIPBOARD_SHELF -> i18n.text("bread.clipboardShelf");
-                case SAVED_SESSIONS -> i18n.text("bread.savedSessions");
-                case PROCESS_DESIGNER -> i18n.text("nav.processDesigner");
-                default -> i18n.text("bread.section");
-            };
-
-            if (route.section() != null && !route.section().isBlank()) {
-                moduleLabel = route.section();
-                canonicalModulePath = route.section();
-            } else {
-                moduleLabel = route.module().name();
-                canonicalModulePath = operationName;
-            }
-        } else {
-            java.util.Optional<com.cryptocarver.model.OperationDescriptor> descriptor =
-                    com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(operationName);
-            if (descriptor.isPresent()) {
-                com.cryptocarver.model.OperationDescriptor op = descriptor.get();
-                sectionLabel = op.getCategory() != null ? localizedSectionText(op.getCategory()) : i18n.text("bread.section");
-                moduleLabel = sectionLabel;
-                operationLabel = op.getTitle();
-                canonicalModulePath = op.getNavigationPath() != null ? op.getNavigationPath() : op.getTitle();
-            }
-        }
-
-        if (breadcrumbSectionBtn != null) {
-            breadcrumbSectionBtn.setText(sectionLabel);
-            breadcrumbSectionBtn.setUserData(resolved.isPresent() ? resolved.get().module() : sectionLabel);
-            breadcrumbSectionBtn.setAccessibleText(i18n.text("bread.navigateSection", sectionLabel));
-            breadcrumbSectionBtn.setTooltip(new Tooltip(i18n.text("bread.navigateSection", sectionLabel)));
-        }
-
-        String localizedModule = localizedModuleText(moduleLabel);
-        boolean showModule = resolved.isPresent()
-                && resolved.get().section() != null
-                && !resolved.get().section().isBlank()
-                && !localizedModule.equalsIgnoreCase(sectionLabel)
-                && !localizedModule.equalsIgnoreCase(operationLabel);
-        boolean showOperation = !operationLabel.equalsIgnoreCase(sectionLabel);
-
-        if (breadcrumbModuleBtn != null) {
-            breadcrumbModuleBtn.setText(localizedModule);
-            breadcrumbModuleBtn.setUserData(canonicalModulePath);
-            breadcrumbModuleBtn.setAccessibleText(i18n.text("bread.navigateModule", localizedModule));
-            breadcrumbModuleBtn.setTooltip(new Tooltip(i18n.text("bread.navigateModule", localizedModule)));
-            breadcrumbModuleBtn.setVisible(showModule);
-            breadcrumbModuleBtn.setManaged(showModule);
-        }
-
-        if (breadcrumbOperationLabel != null) {
-            breadcrumbOperationLabel.setText(operationLabel);
-            breadcrumbOperationLabel.setVisible(showOperation);
-            breadcrumbOperationLabel.setManaged(showOperation);
-        }
-        if (breadcrumbSep1 != null) {
-            boolean visible = showModule || showOperation;
-            breadcrumbSep1.setVisible(visible);
-            breadcrumbSep1.setManaged(visible);
-        }
-        if (breadcrumbSep2 != null) {
-            breadcrumbSep2.setVisible(showModule && showOperation);
-            breadcrumbSep2.setManaged(showModule && showOperation);
-        }
+        if (navigationChrome != null) navigationChrome.updateBreadcrumbOnly(operationName);
     }
 
     @FXML
     public void handleBreadcrumbSectionClick() {
-        if (breadcrumbSectionBtn == null) return;
-        if (breadcrumbSectionBtn.getUserData() instanceof UiNavigationRegistry.Module module) {
+        if (navigationChrome != null) navigationChrome.handleBreadcrumbSectionClick();
+        else if (breadcrumbSectionBtn != null) selectBreadcrumbSection(breadcrumbSectionBtn.getUserData());
+    }
+
+    private void selectBreadcrumbSection(Object sectionTarget) {
+        if (sectionTarget instanceof UiNavigationRegistry.Module module) {
             switch (module) {
                 case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> navigationRail.selectSection(NavigationRail.Section.KEYS);
                 case CIPHER -> navigationRail.selectSection(NavigationRail.Section.CIPHER);
@@ -1507,10 +1355,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void handleBreadcrumbModuleClick() {
-        if (breadcrumbModuleBtn == null) return;
-        Object data = breadcrumbModuleBtn.getUserData();
-        String targetRoute = data instanceof String s && !s.isBlank() ? s : breadcrumbModuleBtn.getText();
-        navigateToModule(targetRoute);
+        if (navigationChrome != null) navigationChrome.handleBreadcrumbModuleClick();
+        else if (breadcrumbModuleBtn != null) navigateToModule(breadcrumbModuleBtn.getText());
     }
 
     public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) { historyCoordinator().reopenHistoryOperation(item); }
@@ -1555,32 +1401,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }).toList();
     }
 
-    @FXML
-    public void handleToggleFavorite() {
+    @FXML public void handleToggleFavorite() {
         if (currentActiveOperation == null || currentActiveOperation.isBlank()) return;
-        com.cryptocarver.model.AppSettings.getInstance().toggleFavorite(currentActiveOperation);
-        updateFavoriteToggleState(currentActiveOperation);
-        if (sidePanel != null && sidePanel.isVisible()) {
-            sidePanel.updateContent(sidePanel.getCurrentSection());
-        }
+        if (navigationChrome != null) navigationChrome.toggleFavorite(currentActiveOperation);
+        if (sidePanel != null && sidePanel.isVisible()) sidePanel.updateContent(sidePanel.getCurrentSection());
     }
-
     private void updateFavoriteToggleState(String operationName) {
-        if (favoriteToggleBtn == null || operationName == null) return;
-        boolean isFav = com.cryptocarver.model.AppSettings.getInstance().isFavorite(operationName);
-        if (isFav) {
-            favoriteToggleBtn.setText("★");
-            if (!favoriteToggleBtn.getStyleClass().contains("active")) {
-                favoriteToggleBtn.getStyleClass().add("active");
-            }
-            favoriteToggleBtn.setAccessibleText(i18n.text("favorite.remove", operationName));
-            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.active", FAVORITE_SHORTCUT)));
-        } else {
-            favoriteToggleBtn.setText("☆");
-            favoriteToggleBtn.getStyleClass().remove("active");
-            favoriteToggleBtn.setAccessibleText(i18n.text("favorite.add", operationName));
-            favoriteToggleBtn.setTooltip(new Tooltip(i18n.text("favorite.tooltip", FAVORITE_SHORTCUT)));
-        }
+        if (navigationChrome != null) navigationChrome.updateFavoriteOnly(operationName);
     }
 
     @FXML
@@ -1588,99 +1415,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         showQuickStart();
     }
 
-    private void applyOperationFormatProfile(String itemName) {
-        String profileOperation = formatProfileOperation(itemName);
-        com.cryptocarver.model.OperationFormatProfile profile = com.cryptocarver.model.OperationFormatRegistry.getInstance().getProfile(profileOperation);
-
-        String rememberedInput = rememberedInputFormats.get(profileOperation);
-        applyFormatToCombo(inputFormatCombo, profile.allowedInputFormats(), profile.defaultInputFormat(), rememberedInput);
-
-        String rememberedOutput = rememberedOutputFormats.get(profileOperation);
-        applyFormatToCombo(outputFormatCombo, profile.allowedOutputFormats(), profile.defaultOutputFormat(), rememberedOutput);
-        currentFormatProfileOperation = profileOperation;
-
-        if (genericContainerController != null) {
-            genericContainerController.setActiveFormatContractOperation(profileOperation);
-        }
-
-        if (contractOperationLabel != null) {
-            String opText = "Operation";
-            java.util.Optional<com.cryptocarver.model.OperationDescriptor> op = com.cryptocarver.model.OperationRegistry.getInstance().resolveNavigation(itemName);
-            if (op.isPresent()) {
-                opText = op.get().getTitle();
-            } else {
-                opText = itemName;
-            }
-            contractOperationLabel.setText(opText);
-
-            // Add a tooltip for the contract description
-            String defaultPayloadTooltip = i18n.text("toolbar.payloadTooltip");
-            if (profile.contractDescription() != null && !profile.contractDescription().isEmpty()) {
-                Tooltip tooltipObj = new Tooltip(profile.contractDescription());
-                contractOperationLabel.setTooltip(tooltipObj);
-                if (inputFormatCombo != null) {
-                    inputFormatCombo.setTooltip(new Tooltip(defaultPayloadTooltip + "\n" + profile.contractDescription()));
-                }
-                if (outputFormatCombo != null) {
-                    outputFormatCombo.setTooltip(tooltipObj);
-                }
-            } else {
-                contractOperationLabel.setTooltip(null);
-                if (inputFormatCombo != null) {
-                    inputFormatCombo.setTooltip(new Tooltip(defaultPayloadTooltip));
-                }
-                if (outputFormatCombo != null) {
-                    outputFormatCombo.setTooltip(null);
-                }
-            }
-        }
-    }
-
-    private String formatProfileOperation(String operation) {
-        return operation != null && operation.startsWith("Hashing:") ? "Hashing" : operation;
-    }
-
-    private void applyFormatToCombo(ComboBox<String> combo, java.util.List<String> allowedFormats, String defaultFormat, String remembered) {
-        if (combo == null) return;
-
-        if (allowedFormats == null || allowedFormats.isEmpty()) {
-            // Operations without a shared byte-format contract must not mutate
-            // the last meaningful toolbar selection while navigating.
-            combo.setDisable(true);
-            return;
-        }
-
-        combo.setDisable(false);
-        combo.getItems().setAll(allowedFormats);
-
-        if (remembered != null && allowedFormats.contains(remembered)) {
-            combo.setValue(remembered);
-        } else if (defaultFormat != null && allowedFormats.contains(defaultFormat)) {
-            combo.setValue(defaultFormat);
-        } else if (!allowedFormats.isEmpty()) {
-            combo.setValue(allowedFormats.get(0));
-        }
-    }
-
-    private String operationStatusSummary(com.cryptocarver.model.OperationDescriptor operation) {
-        String status = operation.getStatus() == com.cryptocarver.model.OperationDescriptor.Status.EXPERIMENTAL
-                ? "Experimental" : "Stable";
-        return switch (operation.getSecretRisk()) {
-            case NONE -> status;
-            case LOW -> status + " · Low sensitivity";
-            case HIGH -> status + " · Sensitive material";
-            case EXTREME -> status + " · Highly sensitive material";
-        };
-    }
-
-    private void updateContentSubtitle(String subtitle) {
-        if (contentSubtitleLabel != null) {
-            contentSubtitleLabel.setText(subtitle);
-            boolean hasText = subtitle != null && !subtitle.isEmpty();
-            contentSubtitleLabel.setVisible(hasText);
-            contentSubtitleLabel.setManaged(hasText);
-        }
-    }
+    private String formatProfileOperation(String operation) { return com.cryptocarver.model.FormatProfilePolicy.operation(operation); }
+    private void updateContentSubtitle(String subtitle) { if (navigationChrome != null) navigationChrome.updateSubtitle(subtitle); }
 
     // deleted duplicate cmsKeyArea and syntax error
 
