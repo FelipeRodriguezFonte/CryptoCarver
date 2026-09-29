@@ -219,9 +219,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private HBox formatFlowBar;
 
-    private final java.util.Map<String, String> rememberedInputFormats = new java.util.HashMap<>();
-    private final java.util.Map<String, String> rememberedOutputFormats = new java.util.HashMap<>();
-    private String currentFormatProfileOperation = "Dashboard";
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
@@ -1182,12 +1179,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 .resolveNavigation(itemName)
                 .map(com.cryptocarver.model.OperationDescriptor::getNavigationPath)
                 .orElse(itemName);
-
-        // Save current formats before switching
-        if (this.currentFormatProfileOperation != null) {
-            rememberedInputFormats.put(this.currentFormatProfileOperation, inputFormatCombo.getValue());
-            rememberedOutputFormats.put(this.currentFormatProfileOperation, outputFormatCombo.getValue());
-        }
 
         this.currentActiveOperation = itemName;
         if (!"Process Designer".equals(itemName)) {
