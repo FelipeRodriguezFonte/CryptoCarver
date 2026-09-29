@@ -1,0 +1,230 @@
+package com.cryptocarver.ui;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.model.SecretVisibilityProfile;
+import com.cryptocarver.service.I18nService;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.Node;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class CommandPaletteCharacterizationTest {
+    private ModernMainController controller;
+    private Stage stage;
+    private LanguagePreference previousLanguage;
+    private SecretVisibilityProfile previousVisibility;
+    private List<String> previousFavorites;
+    private String previousRoute;
+
+    @BeforeAll
+    static void initializeJavaFxOnce() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        try {
+            Platform.startup(() -> {
+                Platform.setImplicitExit(false);
+                latch.countDown();
+            });
+        } catch (IllegalStateException alreadyStarted) {
+            latch.countDown();
+        }
+        if (!latch.await(15, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("JavaFX startup timed out");
+        }
+    }
+
+    @BeforeEach
+    void loadProductionShell() throws Exception {
+        previousLanguage = AppSettings.getInstance().getLanguagePreference();
+        previousVisibility = AppSettings.getInstance().getSecretVisibilityProfile();
+        previousFavorites = AppSettings.getInstance().getFavorites();
+        previousRoute = AppSettings.getInstance().getLastRoute();
+        runFx(() -> {
+            System.setProperty("test.mode", "true");
+            System.setProperty("user.home", "target/test-home");
+            I18nService.getInstance().setPreference(LanguagePreference.EN);
+            AppSettings.getInstance().setLastRoute("Hashing");
+            try {
+                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                Parent root = loader.load();
+                controller = loader.getController();
+                stage = new Stage();
+                stage.setScene(new Scene(root, 1400, 900));
+                stage.show();
+            } catch (Exception exception) {
+                throw new RuntimeException(exception);
+            }
+        });
+    }
+
+    @AfterEach
+    void restoreSettingsAndCloseShell() throws Exception {
+        runFx(() -> {
+            I18nService.getInstance().setPreference(previousLanguage);
+            AppSettings.getInstance().setLanguagePreference(previousLanguage);
+            AppSettings.getInstance().setSecretVisibilityProfile(previousVisibility);
+            AppSettings.getInstance().setLastRoute(previousRoute);
+            for (String favorite : AppSettings.getInstance().getFavorites()) {
+                AppSettings.getInstance().toggleFavorite(favorite);
+            }
+            for (String favorite : previousFavorites) {
+                if (!AppSettings.getInstance().isFavorite(favorite)) {
+                    AppSettings.getInstance().toggleFavorite(favorite);
+                }
+            }
+            if (stage != null) {
+                stage.close();
+            }
+        });
+    }
+
+    @Test
+    void openingAndClosingPaletteControlsVisibilityAndFocus() throws Exception {
+        AtomicReference<Node> previousFocus = new AtomicReference<>();
+        AtomicReference<VBox> overlay = new AtomicReference<>();
+        AtomicReference<TextField> search = new AtomicReference<>();
+        runFx(() -> {
+            previousFocus.set(stage.getScene().getFocusOwner());
+            if (previousFocus.get() == null) {
+                ((Parent) stage.getScene().getRoot()).requestFocus();
+                previousFocus.set(stage.getScene().getFocusOwner());
+            }
+            overlay.set(field(controller, "commandPaletteOverlay"));
+            search.set(field(controller, "commandSearchField"));
+            controller.handleOpenCommandPalette();
+        });
+        assertTrue(overlay.get().isVisible());
+        assertNotNull(search.get());
+        runFx(() -> controller.handleCloseCommandPalette());
+        assertFalse(overlay.get().isVisible());
+        runFx(() -> assertSame(previousFocus.get(), stage.getScene().getFocusOwner()));
+    }
+
+    @Test
+    void hashSearchRanksHashingFirstAndNoMatchClearsResults() throws Exception {
+        AtomicReference<ListView<?>> results = new AtomicReference<>();
+        runFx(() -> {
+            controller.handleOpenCommandPalette();
+            TextField search = field(controller, "commandSearchField");
+            results.set(field(controller, "commandResultsListView"));
+            search.setText("hash");
+        });
+        assertEquals("Hashing", ((com.cryptocarver.model.CommandItem) results.get().getItems().get(0)).getTitle());
+        runFx(() -> ((TextField) field(controller, "commandSearchField")).setText("nothing-matches-xyz"));
+        assertTrue(results.get().getItems().isEmpty());
+    }
+
+    @Test
+    void enterExecutesSelectedRouteAndEscapeClosesOnly() throws Exception {
+        AtomicReference<VBox> overlay = new AtomicReference<>();
+        runFx(() -> {
+            overlay.set(field(controller, "commandPaletteOverlay"));
+            controller.handleOpenCommandPalette();
+            TextField search = field(controller, "commandSearchField");
+            search.setText("hash");
+            search.fireEvent(key(KeyCode.ENTER));
+        });
+        assertFalse(overlay.get().isVisible());
+        assertEquals("Hashing", AppSettings.getInstance().getLastRoute());
+        runFx(() -> {
+            controller.handleOpenCommandPalette();
+            ((TextField) field(controller, "commandSearchField")).fireEvent(key(KeyCode.ESCAPE));
+        });
+        assertFalse(overlay.get().isVisible());
+        assertEquals("Hashing", AppSettings.getInstance().getLastRoute());
+    }
+
+    @Test
+    void paletteRefreshesLocalizedCommandTitlesAndLaboratoryMenu() throws Exception {
+        AtomicReference<ListView<?>> results = new AtomicReference<>();
+        AtomicReference<Menu> lab = new AtomicReference<>();
+        runFx(() -> {
+            controller.handleOpenCommandPalette();
+            results.set(field(controller, "commandResultsListView"));
+            MenuBar menuBar = field(controller, "mainMenuBar");
+            lab.set(menuBar.getMenus().stream().filter(menu -> "laboratory".equals(menu.getUserData())).findFirst().orElseThrow());
+            I18nService.getInstance().setPreference(LanguagePreference.ES);
+        });
+        assertEquals("Laboratorio", lab.get().getText());
+        assertEquals("Inicio rápido", lab.get().getItems().get(0).getText());
+        runFx(() -> controller.handleOpenCommandPalette());
+        assertTrue(results.get().getItems().stream().map(item -> ((com.cryptocarver.model.CommandItem) item).getTitle()).anyMatch(title -> title.contains("Hash")));
+    }
+
+    @Test
+    void restrictedVisibilityDoesNotIntroduceSecretsIntoCatalogAndFavoritesRestore() throws Exception {
+        SecretVisibilityProfile previous = AppSettings.getInstance().getSecretVisibilityProfile();
+        try {
+            runFx(() -> {
+                AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.REDACTED);
+                controller.handleOpenCommandPalette();
+                ListView<?> results = field(controller, "commandResultsListView");
+                assertTrue(results.getItems().stream().map(Object::toString).noneMatch(item -> item.contains("password-value")));
+            });
+        } finally {
+            runFx(() -> AppSettings.getInstance().setSecretVisibilityProfile(previous));
+        }
+    }
+
+    private static KeyEvent key(KeyCode code) {
+        return new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, false, false, false);
+    }
+
+    private static void runFx(Runnable action) throws Exception {
+        if (Platform.isFxApplicationThread()) {
+            action.run();
+            return;
+        }
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Platform.runLater(() -> {
+            try {
+                action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                latch.countDown();
+            }
+        });
+        if (!latch.await(30, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("JavaFX action timed out");
+        }
+        if (failure.get() != null) {
+            throw new RuntimeException(failure.get());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T field(Object instance, String name) {
+        try {
+            java.lang.reflect.Field field = instance.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return (T) field.get(instance);
+        } catch (ReflectiveOperationException exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+}

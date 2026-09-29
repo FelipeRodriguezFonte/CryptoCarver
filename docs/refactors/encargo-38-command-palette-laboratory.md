@@ -26,7 +26,7 @@ Separación: `LaboratoryMenuCoordinator` posee creación/presentación de items,
 
 ## Caracterización previa
 
-Pendiente de ejecutar y completar antes de extraer la implementación.
+`CommandPaletteCharacterizationTest` se ejecutó antes de cambiar producción con `mvn -o -q -Dmaven.repo.local=/Users/feliperodriguezfonte/.m2/repository -Duser.home=target/test-home -Dtest=CommandPaletteCharacterizationTest test`. Resultado: 5 pruebas, 0 fallos, 1 error intencional y 0 omitidas. La única aserción roja confirma que tras abrir y cerrar el overlay el foco permanece en `commandSearchField`, en vez de volver al anterior (`TitledPane` de Hashing). Búsqueda/ranking, resultados vacíos, Enter/Escape y actualización localizada del menú pasaron. No se registraron datos de usuario ni secretos.
 
 ## Instantáneas visuales
 
