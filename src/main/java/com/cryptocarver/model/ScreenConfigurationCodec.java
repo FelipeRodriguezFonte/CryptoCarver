@@ -46,16 +46,38 @@ public final class ScreenConfigurationCodec {
     }
 
     public static ScreenConfiguration decode(String document, char[] password) {
-        if (document == null || document.isBlank()) throw new IllegalArgumentException("Configuration document is empty");
-        if (!isEncrypted(document)) return ScreenConfiguration.fromJson(document);
-        requirePassword(password);
+        if (document == null || document.isBlank()) {
+            throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.EMPTY);
+        }
+        if (!isEncrypted(document)) {
+            try {
+                return ScreenConfiguration.fromJson(document);
+            } catch (IllegalArgumentException failure) {
+                ScreenConfigurationImportException.Reason reason = failure.getMessage() != null
+                        && failure.getMessage().contains("Unsupported configuration version")
+                        ? ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION
+                        : ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION;
+                throw new ScreenConfigurationImportException(reason);
+            } catch (RuntimeException failure) {
+                throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION);
+            }
+        }
+        try {
+            requirePassword(password);
+        } catch (IllegalArgumentException failure) {
+            throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED);
+        }
         Envelope envelope;
         try {
             envelope = new Gson().fromJson(document, Envelope.class);
             validate(envelope);
         } catch (RuntimeException e) {
             java.util.Arrays.fill(password, '\0');
-            throw new IllegalArgumentException("Invalid encrypted configuration envelope", e);
+            ScreenConfigurationImportException.Reason reason = e.getMessage() != null
+                    && e.getMessage().contains("Unsupported encrypted configuration format")
+                    ? ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION
+                    : ScreenConfigurationImportException.Reason.UNREADABLE;
+            throw new ScreenConfigurationImportException(reason);
         }
         byte[] plaintext;
         try {
@@ -64,14 +86,24 @@ public final class ScreenConfigurationCodec {
             byte[] ciphertext = Base64.getDecoder().decode(envelope.ciphertext);
             plaintext = PasswordFieldCipher.decrypt(password, salt, nonce, ciphertext, envelope.iterations, aad());
         } catch (AEADBadTagException e) {
-            throw new IllegalArgumentException("Incorrect password or modified configuration file");
+            throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED);
         } catch (GeneralSecurityException | IllegalArgumentException e) {
-            throw new IllegalArgumentException("Unable to decrypt configuration file", e);
+            throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.UNREADABLE);
         } finally {
             java.util.Arrays.fill(password, '\0');
         }
         try {
-            return ScreenConfiguration.fromJson(new String(plaintext, StandardCharsets.UTF_8));
+            try {
+                return ScreenConfiguration.fromJson(new String(plaintext, StandardCharsets.UTF_8));
+            } catch (IllegalArgumentException failure) {
+                ScreenConfigurationImportException.Reason reason = failure.getMessage() != null
+                        && failure.getMessage().contains("Unsupported configuration version")
+                        ? ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION
+                        : ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION;
+                throw new ScreenConfigurationImportException(reason);
+            } catch (RuntimeException failure) {
+                throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION);
+            }
         } finally {
             java.util.Arrays.fill(plaintext, (byte) 0);
         }
