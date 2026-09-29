@@ -60,6 +60,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private ResultViewerCoordinator resultViewerCoordinator;
     private ResultPublicationCoordinator resultPublicationCoordinator;
     private CommandPaletteCoordinator commandPaletteCoordinator;
+    private LaboratoryMenuCoordinator laboratoryMenuCoordinator;
     private final com.cryptocarver.model.SessionTrailState sessionTrailState = new com.cryptocarver.model.SessionTrailState();
     private SessionTrailCoordinator sessionTrailCoordinator;
     /**
@@ -2826,75 +2827,15 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
 
     private void setupLaboratoryMenu() {
-        if (mainMenuBar == null) return;
-        boolean hasLabMenu = mainMenuBar.getMenus().stream().anyMatch(m -> "laboratory".equals(m.getUserData()));
-        if (!hasLabMenu) {
-            javafx.scene.control.Menu labMenu = new javafx.scene.control.Menu("Laboratory");
-            labMenu.setUserData("laboratory");
-            labMenu.setStyle("-fx-text-fill: white;");
+        laboratoryMenuCoordinator().setup();
+    }
 
-            javafx.scene.control.MenuItem quickStartItem = new javafx.scene.control.MenuItem("Quick Start");
-            quickStartItem.setOnAction(e -> showQuickStart());
-            labMenu.getItems().add(quickStartItem);
-            labMenu.getItems().add(new javafx.scene.control.SeparatorMenuItem());
-            for (com.cryptocarver.model.payments.PaymentProfile p : com.cryptocarver.model.payments.PaymentProfileManager.getAllProfiles()) {
-                // Si el perfil no tiene aún pantalla funcional, no incluirlo en Laboratory hasta que la tenga.
-                // Currently only TR31, EMV, DUKPT_TDES, DUKPT_AES, PIN and SECURE_MESSAGING have UI or are going to have UI via EMV/Payments/Keys controllers.
-                // We will add all but let's make sure loadProfile handles them.
-
-                javafx.scene.control.Menu profileMenu = new javafx.scene.control.Menu(p.getType().name() + " - " + p.getName());
-
-                javafx.scene.control.MenuItem loadItem = new javafx.scene.control.MenuItem("Load Data");
-                loadItem.setOnAction(e -> {
-                    // Modern UI navigation to the relevant section
-                    if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.TR31) {
-                        handleItemSelected("Symmetric Keys");
-                        if (keysController != null) keysController.loadProfile(p);
-                    } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.EMV) {
-                        handleItemSelected("EMV Tool");
-                        if (emvController != null) emvController.loadProfile(p);
-                    } else {
-                        handleItemSelected("Payments");
-                        if (paymentsController != null) paymentsController.loadProfile(p);
-                    }
-                    System.out.println("Loaded profile: " + p.getName());
-                });
-
-                javafx.scene.control.MenuItem verifyItem = new javafx.scene.control.MenuItem("Run and Verify");
-                verifyItem.setOnAction(e -> {
-                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                    alert.setTitle("Laboratory Verification");
-                    alert.setHeaderText(p.getName());
-
-                    com.cryptocarver.crypto.VerificationResult result = com.cryptocarver.crypto.PaymentProfileVerifier.verify(p);
-
-                    StringBuilder content = new StringBuilder();
-                    content.append(result.getMessage()).append("\n\n");
-                    content.append("--- Profile Details ---\n");
-                    content.append("Parameters: ").append(p.getParameters()).append("\n");
-                    content.append("Inputs: ").append(p.getInputs()).append("\n");
-                    content.append("Expected Outputs: ").append(p.getOutputs()).append("\n");
-
-                    if (result.isSuccess()) {
-                        alert.setAlertType(javafx.scene.control.Alert.AlertType.INFORMATION);
-                    } else {
-                        alert.setAlertType(javafx.scene.control.Alert.AlertType.ERROR);
-                    }
-                    alert.setContentText(content.toString());
-
-                    if (!System.getProperty("java.awt.headless", "false").equals("true") && !Boolean.getBoolean("test.mode")) {
-                        alert.showAndWait();
-                    } else {
-                        // In test mode or headless mode, print to console to avoid blocking UI tests
-                        System.out.println("TEST MODE: Alert suppressed. Result: " + result.isSuccess() + ", Message: " + result.getMessage());
-                    }
-                });
-
-                profileMenu.getItems().addAll(loadItem, verifyItem);
-                labMenu.getItems().add(profileMenu);
-            }
-            mainMenuBar.getMenus().add(labMenu);
+    private LaboratoryMenuCoordinator laboratoryMenuCoordinator() {
+        if (laboratoryMenuCoordinator == null) {
+            laboratoryMenuCoordinator = new LaboratoryMenuCoordinator(mainMenuBar, this::showQuickStart,
+                    this::handleItemSelected, () -> keysController, () -> emvController, () -> paymentsController);
         }
+        return laboratoryMenuCoordinator;
     }
 
     @FXML private HBox readinessPanel;

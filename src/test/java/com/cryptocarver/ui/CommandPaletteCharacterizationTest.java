@@ -158,6 +158,62 @@ class CommandPaletteCharacterizationTest {
     }
 
     @Test
+    void arrowKeysMoveTheSelectedCommand() throws Exception {
+        AtomicReference<ListView<?>> results = new AtomicReference<>();
+        AtomicReference<TextField> search = new AtomicReference<>();
+        runFx(() -> {
+            controller.handleOpenCommandPalette();
+            results.set(field(controller, "commandResultsListView"));
+            search.set(field(controller, "commandSearchField"));
+            search.get().fireEvent(key(KeyCode.DOWN));
+        });
+        assertEquals(0, results.get().getSelectionModel().getSelectedIndex());
+        runFx(() -> results.get().fireEvent(key(KeyCode.DOWN)));
+        assertEquals(1, results.get().getSelectionModel().getSelectedIndex());
+        runFx(() -> results.get().fireEvent(key(KeyCode.UP)));
+        assertEquals(0, results.get().getSelectionModel().getSelectedIndex());
+    }
+
+    @Test
+    void laboratoryQuickStartItemNavigatesToItsScreen() throws Exception {
+        AtomicReference<Menu> lab = new AtomicReference<>();
+        AtomicReference<VBox> quickStart = new AtomicReference<>();
+        runFx(() -> {
+            MenuBar menuBar = field(controller, "mainMenuBar");
+            lab.set(menuBar.getMenus().stream().filter(menu -> "laboratory".equals(menu.getUserData())).findFirst().orElseThrow());
+            quickStart.set(field(controller, "quickStartContainer"));
+            lab.get().getItems().get(0).fire();
+        });
+        assertTrue(quickStart.get().isVisible());
+    }
+
+    @Test
+    void laboratoryFallbackMenuLocalizesAndRoutesEveryProfile() throws Exception {
+        AtomicReference<Menu> lab = new AtomicReference<>();
+        List<String> routes = new java.util.ArrayList<>();
+        runFx(() -> {
+            I18nService.getInstance().setPreference(LanguagePreference.ES);
+            MenuBar menuBar = new MenuBar();
+            LaboratoryMenuCoordinator coordinator = new LaboratoryMenuCoordinator(menuBar, () -> { }, routes::add,
+                    () -> null, () -> null, () -> null);
+            coordinator.setup();
+            lab.set(menuBar.getMenus().get(0));
+            assertEquals("Laboratorio", lab.get().getText());
+            assertEquals("Inicio rápido", lab.get().getItems().get(0).getText());
+            for (javafx.scene.control.MenuItem item : lab.get().getItems()) {
+                if (item instanceof Menu profileMenu) {
+                    assertEquals("Cargar datos", profileMenu.getItems().get(0).getText());
+                    assertEquals("Ejecutar y verificar", profileMenu.getItems().get(1).getText());
+                    profileMenu.getItems().get(0).fire();
+                }
+            }
+        });
+        assertTrue(routes.contains("Symmetric Keys"));
+        assertTrue(routes.contains("EMV Tool"));
+        assertTrue(routes.contains("Payments"));
+    }
+
+    @Test
     void paletteRefreshesLocalizedCommandTitlesAndLaboratoryMenu() throws Exception {
         AtomicReference<ListView<?>> results = new AtomicReference<>();
         AtomicReference<Menu> lab = new AtomicReference<>();
