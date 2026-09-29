@@ -343,6 +343,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Button toolbarCopyButton;
     @FXML private Label outputFormatLabel;
     private final I18nService i18n = I18nService.getInstance();
+    private final ShellTextResolver shellTextResolver = new ShellTextResolver(i18n::text);
+    private final ShellLocalizationCoordinator shellLocalizationCoordinator =
+            new ShellLocalizationCoordinator(i18n);
     private java.util.function.Consumer<java.util.Locale> i18nListener;
 
     // Async Progress UI
@@ -771,292 +774,179 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Applies shell strings without changing operation names, routes or technical values. */
     public void applyLocalization() {
-        Node focusOwner = mainPane != null && mainPane.getScene() != null
-                ? mainPane.getScene().getFocusOwner() : null;
-        setText(fileMenu, "menu.file");
-        setText(editMenu, "menu.edit");
-        setText(viewMenu, "menu.view");
-        setText(securityMenu, "menu.security");
-        setText(toolsMenu, "menu.tools");
-        setText(helpMenu, "menu.help");
-        setText(laboratoryMenu, "menu.laboratory");
-        setText(languageMenu, "menu.language");
-        setText(appearanceMenu, "menu.appearance");
-
-        setText(importKeyMenuItem, "menu.importKey");
-        setText(exportScreenMenuItem, "menu.exportScreen");
-        setText(importScreenMenuItem, "menu.importScreen");
-        setText(saveSessionMenuItem, "menu.saveSession");
-        setText(exportSessionTrailMenuItem, "menu.exportSessionTrail");
-        setText(exportHistoryMenuItem, "menu.exportHistory");
-        setText(exitMenuItem, "menu.exit");
-        setText(clearInputMenuItem, "menu.clearInput");
-        setText(clearOutputMenuItem, "menu.clearOutput");
-        setText(copyOutputMenuItem, "menu.copyOutput");
-        setText(addToShelfMenuItem, "menu.addToShelf");
-        setText(quickStartMenuItem, "menu.quickStart");
-        setText(clipboardShelfMenuItem, "menu.clipboardShelf");
-        setText(commandPaletteMenuItem, "menu.commandPalette");
-        setText(toggleSidePanelMenuItem, "menu.toggleSidePanel");
-        setText(toggleInspectorMenuItem, "menu.toggleInspector");
-        setText(expandResultMenuItem, "menu.expandResult");
-        setText(expandTableMenuItem, "menu.expandTable");
-        setText(zoomInMenuItem, "menu.zoomIn");
-        setText(zoomOutMenuItem, "menu.zoomOut");
-        setText(resetViewMenuItem, "menu.resetView");
-        setText(visibilityFullLabMenuItem, "menu.visibility.full");
-        setText(visibilityMaskedMenuItem, "menu.visibility.masked");
-        setText(visibilityRedactedMenuItem, "menu.visibility.redacted");
-        setText(epochMenuItem, "menu.epoch");
-        setText(jsonMenuItem, "menu.json");
-        setText(byteInspectorMenuItem, "menu.byteInspector");
-        setText(clearKeyCacheMenuItem, "menu.clearKeyCache");
-        setText(shortcutsMenuItem, "menu.shortcuts");
-        setText(diagnosticsMenuItem, "menu.diagnostics");
-        setText(aboutMenuItem, "menu.about");
-        setText(laboratoryQuickStartMenuItem, "menu.quickStart");
-        if (mainMenuBar != null) {
-            mainMenuBar.getMenus().stream()
-                    .filter(menu -> "laboratory".equals(menu.getUserData()))
-                    .findFirst()
-                    .ifPresent(this::localizeLaboratoryMenu);
-        }
-
-        setText(languageSystemMenuItem, "app.language.system");
-        setText(languageEsMenuItem, "app.language.es");
-        setText(languageEnMenuItem, "app.language.en");
-        setText(themeSystemMenuItem, "app.theme.system");
-        setText(themeLightMenuItem, "app.theme.light");
-        setText(themeDarkMenuItem, "app.theme.dark");
-        LanguagePreference selected = i18n.getPreference();
-        if (languageSystemMenuItem != null) languageSystemMenuItem.setSelected(selected == LanguagePreference.SYSTEM);
-        if (languageEsMenuItem != null) languageEsMenuItem.setSelected(selected == LanguagePreference.ES);
-        if (languageEnMenuItem != null) languageEnMenuItem.setSelected(selected == LanguagePreference.EN);
-        com.cryptocarver.model.ThemePreference theme = com.cryptocarver.model.AppSettings.getInstance().getThemePreference();
-        if (themeSystemMenuItem != null) themeSystemMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.SYSTEM);
-        if (themeLightMenuItem != null) themeLightMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.LIGHT);
-        if (themeDarkMenuItem != null) themeDarkMenuItem.setSelected(theme == com.cryptocarver.model.ThemePreference.DARK);
-
-        if (toolbarSearchButton != null) {
-            toolbarSearchButton.setText(i18n.text("toolbar.search", COMMAND_PALETTE_SHORTCUT));
-        }
-        setText(toolbarSaveSessionButton, "menu.saveSession");
-        setText(toolbarClearButton, "toolbar.clear");
-        setText(toolbarExpandButton, "toolbar.expand");
-        setText(toolbarShelfButton, "toolbar.addShelf");
-        setText(toolbarCopyButton, "toolbar.copy");
-        setAccessibleText(toolbarSearchButton);
-        setAccessibleText(toolbarSaveSessionButton);
-        setAccessibleText(toolbarClearButton);
-        setAccessibleText(toolbarExpandButton);
-        setAccessibleText(toolbarShelfButton);
-        setAccessibleText(toolbarCopyButton);
-        setText(inputFormatLabel, "toolbar.payloadFormat");
-        setText(outputFormatLabel, "toolbar.output");
-        setAccessibleText(resultExpandButton, "a11y.resultExpand");
-        setAccessibleText(resultShelfButton, "a11y.resultShelf");
-        setAccessibleText(resultCopyButton, "a11y.resultCopy");
-        setText(resultSaveStepButton, "sessionTrail.saveStep");
-        setAccessibleText(resultSaveStepButton, "a11y.sessionTrailSaveStep");
-        setText(inspectorSessionTrailTitle, "sessionTrail.title");
-        setText(inspectorAddSessionStepButton, "sessionTrail.addCurrent");
-        setText(inspectorExportSessionTrailButton, "sessionTrail.exportAll");
-        setText(inspectorClearSessionTrailButton, "sessionTrail.clearShort");
-        setAccessibleText(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
-        if (inspectorExportSessionTrailButton != null) {
-            inspectorExportSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.exportTitle"));
-        }
-        if (inspectorClearSessionTrailButton != null) {
-            inspectorClearSessionTrailButton.setTooltip(new javafx.scene.control.Tooltip(i18n.text("sessionTrail.clear")));
-            inspectorClearSessionTrailButton.setAccessibleText(i18n.text("sessionTrail.clear"));
-        }
-        setAccessibleText(inspectorPreviousSessionStepButton, "sessionTrail.previousStep");
-        setAccessibleText(inspectorNextSessionStepButton, "sessionTrail.nextStep");
-        setText(inspectorOpenSessionStepButton, "sessionTrail.viewData");
-        setAccessibleText(inspectorOpenSessionStepButton, "sessionTrail.viewData");
-        refreshSessionTrailNavigation();
-        setAccessibleText(inspectorToggleButton, "a11y.inspectorToggle");
-        setAccessibleText(errorBannerCloseBtn, "a11y.errorClose");
-        if (inputFormatCombo != null) {
-            inputFormatCombo.setAccessibleText(i18n.text("a11y.payloadFormat"));
-            inputFormatCombo.setAccessibleHelp(i18n.text("toolbar.payloadTooltip"));
-        }
-        if (outputFormatCombo != null) {
-            outputFormatCombo.setAccessibleText(i18n.text("a11y.outputFormat"));
-            outputFormatCombo.setAccessibleHelp(i18n.text("a11y.outputFormat"));
-        }
-        if (commandSearchField != null) {
-            commandSearchField.setAccessibleText(i18n.text("a11y.commandSearch"));
-            commandSearchField.setAccessibleHelp(i18n.text("command.prompt"));
-        }
-        if (favoriteToggleBtn != null) {
-            favoriteToggleBtn.setAccessibleText(i18n.text("a11y.favorite"));
-            favoriteToggleBtn.setAccessibleHelp(i18n.text("favorite.tooltip", FAVORITE_SHORTCUT));
-        }
-        if (inputFormatLabel != null) inputFormatLabel.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
-        if (inputFormatCombo != null) inputFormatCombo.setTooltip(new Tooltip(i18n.text("toolbar.payloadTooltip")));
-
-        setText(resultLastLabel, "result.last");
-        setText(resultAlgorithmStaticLabel, "result.algorithm");
-        if (resultStatusBadge != null) resultStatusBadge.setAccessibleText(i18n.text("result.status"));
-        setText(errorBannerTitle, "error.failed");
-        setText(errorBannerRemedy, "error.remedy");
-        setText(errorBannerGoToFieldBtn, "error.goToField");
-        setText(errorBannerCopyDetailsBtn, "error.copyDetails");
-        if (errorBannerTitle != null) {
-            errorBannerTitle.setAccessibleHelp(i18n.text("a11y.errorTitle"));
-        }
-        if (errorBannerRemedy != null) {
-            errorBannerRemedy.setAccessibleHelp(i18n.text("a11y.errorRemedy"));
-        }
-        if (errorBannerGoToFieldBtn != null) {
-            errorBannerGoToFieldBtn.setAccessibleText(i18n.text("a11y.errorGoToField"));
-            errorBannerGoToFieldBtn.setAccessibleHelp(i18n.text("a11y.errorGoToFieldHelp"));
-        }
-        if (errorBannerCopyDetailsBtn != null) {
-            errorBannerCopyDetailsBtn.setAccessibleText(i18n.text("a11y.errorCopyDetails"));
-            errorBannerCopyDetailsBtn.setAccessibleHelp(i18n.text("a11y.errorCopyDetailsHelp"));
-        }
-        if (errorBannerCloseBtn != null) {
-            errorBannerCloseBtn.setAccessibleText(i18n.text("a11y.errorClose"));
-            errorBannerCloseBtn.setAccessibleHelp(i18n.text("a11y.errorCloseHelp"));
-        }
-        setText(guideBackBtn, "guide.back");
-        setText(guideNextBtn, "guide.next");
-        setText(guideSkipBtn, "guide.skip");
-        setText(guideExitBtn, "guide.exit");
-        setText(asyncProgressLabel, "progress.working");
-        setText(asyncCancelBtn, "progress.cancel");
-        setAccessibleText(asyncCancelBtn);
-        setText(inspectorTitleLabel, "inspector.title");
-        setText(inspectorInputBytesTitle, "inspector.inputBytes");
-        setText(inspectorOutputBytesTitle, "inspector.outputBytes");
-        setText(inspectorAlgorithmTitle, "inspector.algorithm");
-        setText(inspectorSecurityTipsTitle, "inspector.securityTips");
-        setText(inspectorWarningTitle, "inspector.warning");
-        setText(inspectorHistoryTitle, "inspector.history");
-        setText(inspectorExportJsonButton, "inspector.exportJson");
-        setText(inspectorClearHistoryButton, "toolbar.clear");
-        if (inspectorExportJsonButton != null) {
-            inspectorExportJsonButton.setTooltip(new Tooltip(i18n.text("inspector.exportJsonTooltip")));
-        }
-        if (commandSearchField != null) commandSearchField.setPromptText(i18n.text("command.prompt"));
-        setText(commandEscapeLabel, "command.escape");
-        setText(commandEmptyLabel, "command.empty");
-        setText(commandNavigateLabel, "command.navigate");
-        setText(commandSelectLabel, "command.select");
-        setText(commandCancelLabel, "command.cancel");
-        setText(commandTitleLabel, "command.title");
-
-        if (navigationRail != null) navigationRail.refreshLocalizedText();
-        if (sidePanel != null) sidePanel.refreshLocalizedText();
-        updateBreadcrumbs(currentActiveOperation);
-        updateFavoriteToggleState(currentActiveOperation);
-        if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
-                || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
-            statusBarPresenter.showStatus(i18n.text("status.ready"));
-        }
-        if (statusBarPresenter != null) {
-            statusBarPresenter.refreshContext(com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
-        }
-        if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
-            inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
-                    rootStackPane != null ? rootStackPane : mainPane);
-        }
-        restoreFocusAfterLocalization(focusOwner);
+        shellLocalizationCoordinator.applyLocalization(localizationView());
     }
 
-    private void setText(javafx.scene.control.MenuItem item, String key) {
-        if (item != null) item.setText(i18n.text(key));
-    }
-
-    private void setText(javafx.scene.control.Menu menu, String key) {
-        if (menu != null) menu.setText(i18n.text(key));
-    }
-
-    private void setText(javafx.scene.control.Button button, String key) {
-        if (button != null) button.setText(i18n.text(key));
-    }
-
-    private void setText(javafx.scene.control.Label label, String key) {
-        if (label != null) label.setText(i18n.text(key));
-    }
-
-    private void localizeLaboratoryMenu(javafx.scene.control.Menu menu) {
-        menu.setText(i18n.text("menu.laboratory"));
-        if (!menu.getItems().isEmpty()) setText(menu.getItems().get(0), "menu.quickStart");
-        for (javafx.scene.control.MenuItem item : menu.getItems()) {
-            if (item instanceof javafx.scene.control.Menu profile) {
-                for (javafx.scene.control.MenuItem profileItem : profile.getItems()) {
-                    if ("Load Data".equals(profileItem.getText()) || "Cargar datos".equals(profileItem.getText())) {
-                        setText(profileItem, "menu.loadData");
-                    } else if ("Run and Verify".equals(profileItem.getText()) || "Ejecutar y verificar".equals(profileItem.getText())) {
-                        setText(profileItem, "menu.runVerify");
-                    }
-                }
+    private ShellLocalizationCoordinator.View localizationView() {
+        ShellLocalizationCoordinator.View view = new ShellLocalizationCoordinator.View(mainPane);
+        view.text(fileMenu, "menu.file");
+        view.text(editMenu, "menu.edit");
+        view.text(viewMenu, "menu.view");
+        view.text(securityMenu, "menu.security");
+        view.text(toolsMenu, "menu.tools");
+        view.text(helpMenu, "menu.help");
+        view.text(laboratoryMenu, "menu.laboratory");
+        view.text(languageMenu, "menu.language");
+        view.text(appearanceMenu, "menu.appearance");
+        view.text(importKeyMenuItem, "menu.importKey");
+        view.text(exportScreenMenuItem, "menu.exportScreen");
+        view.text(importScreenMenuItem, "menu.importScreen");
+        view.text(saveSessionMenuItem, "menu.saveSession");
+        view.text(exportSessionTrailMenuItem, "menu.exportSessionTrail");
+        view.text(exportHistoryMenuItem, "menu.exportHistory");
+        view.text(exitMenuItem, "menu.exit");
+        view.text(clearInputMenuItem, "menu.clearInput");
+        view.text(clearOutputMenuItem, "menu.clearOutput");
+        view.text(copyOutputMenuItem, "menu.copyOutput");
+        view.text(addToShelfMenuItem, "menu.addToShelf");
+        view.text(quickStartMenuItem, "menu.quickStart");
+        view.text(clipboardShelfMenuItem, "menu.clipboardShelf");
+        view.text(commandPaletteMenuItem, "menu.commandPalette");
+        view.text(toggleSidePanelMenuItem, "menu.toggleSidePanel");
+        view.text(toggleInspectorMenuItem, "menu.toggleInspector");
+        view.text(expandResultMenuItem, "menu.expandResult");
+        view.text(expandTableMenuItem, "menu.expandTable");
+        view.text(zoomInMenuItem, "menu.zoomIn");
+        view.text(zoomOutMenuItem, "menu.zoomOut");
+        view.text(resetViewMenuItem, "menu.resetView");
+        view.text(visibilityFullLabMenuItem, "menu.visibility.full");
+        view.text(visibilityMaskedMenuItem, "menu.visibility.masked");
+        view.text(visibilityRedactedMenuItem, "menu.visibility.redacted");
+        view.text(epochMenuItem, "menu.epoch");
+        view.text(jsonMenuItem, "menu.json");
+        view.text(byteInspectorMenuItem, "menu.byteInspector");
+        view.text(clearKeyCacheMenuItem, "menu.clearKeyCache");
+        view.text(shortcutsMenuItem, "menu.shortcuts");
+        view.text(diagnosticsMenuItem, "menu.diagnostics");
+        view.text(aboutMenuItem, "menu.about");
+        view.text(laboratoryQuickStartMenuItem, "menu.quickStart");
+        view.text(languageSystemMenuItem, "app.language.system");
+        view.text(languageEsMenuItem, "app.language.es");
+        view.text(languageEnMenuItem, "app.language.en");
+        view.text(themeSystemMenuItem, "app.theme.system");
+        view.text(themeLightMenuItem, "app.theme.light");
+        view.text(themeDarkMenuItem, "app.theme.dark");
+        view.text(toolbarSaveSessionButton, "menu.saveSession");
+        view.text(toolbarClearButton, "toolbar.clear");
+        view.text(toolbarExpandButton, "toolbar.expand");
+        view.text(toolbarShelfButton, "toolbar.addShelf");
+        view.text(toolbarCopyButton, "toolbar.copy");
+        view.text(inputFormatLabel, "toolbar.payloadFormat");
+        view.text(outputFormatLabel, "toolbar.output");
+        view.text(resultSaveStepButton, "sessionTrail.saveStep");
+        view.text(inspectorSessionTrailTitle, "sessionTrail.title");
+        view.text(inspectorAddSessionStepButton, "sessionTrail.addCurrent");
+        view.text(inspectorExportSessionTrailButton, "sessionTrail.exportAll");
+        view.text(inspectorClearSessionTrailButton, "sessionTrail.clearShort");
+        view.text(inspectorOpenSessionStepButton, "sessionTrail.viewData");
+        view.text(resultLastLabel, "result.last");
+        view.text(resultAlgorithmStaticLabel, "result.algorithm");
+        view.text(errorBannerTitle, "error.failed");
+        view.text(errorBannerRemedy, "error.remedy");
+        view.text(errorBannerGoToFieldBtn, "error.goToField");
+        view.text(errorBannerCopyDetailsBtn, "error.copyDetails");
+        view.text(guideBackBtn, "guide.back");
+        view.text(guideNextBtn, "guide.next");
+        view.text(guideSkipBtn, "guide.skip");
+        view.text(guideExitBtn, "guide.exit");
+        view.text(asyncProgressLabel, "progress.working");
+        view.text(asyncCancelBtn, "progress.cancel");
+        view.text(inspectorTitleLabel, "inspector.title");
+        view.text(inspectorInputBytesTitle, "inspector.inputBytes");
+        view.text(inspectorOutputBytesTitle, "inspector.outputBytes");
+        view.text(inspectorAlgorithmTitle, "inspector.algorithm");
+        view.text(inspectorSecurityTipsTitle, "inspector.securityTips");
+        view.text(inspectorWarningTitle, "inspector.warning");
+        view.text(inspectorHistoryTitle, "inspector.history");
+        view.text(inspectorExportJsonButton, "inspector.exportJson");
+        view.text(inspectorClearHistoryButton, "toolbar.clear");
+        view.text(commandEscapeLabel, "command.escape");
+        view.text(commandEmptyLabel, "command.empty");
+        view.text(commandNavigateLabel, "command.navigate");
+        view.text(commandSelectLabel, "command.select");
+        view.text(commandCancelLabel, "command.cancel");
+        view.text(commandTitleLabel, "command.title");
+        view.laboratoryMenu(laboratoryMenu);
+        view.languageItems(languageSystemMenuItem, languageEsMenuItem, languageEnMenuItem);
+        view.themeItems(themeSystemMenuItem, themeLightMenuItem, themeDarkMenuItem,
+                AppSettings.getInstance().getThemePreference());
+        view.toolbarSearch(toolbarSearchButton, COMMAND_PALETTE_SHORTCUT);
+        view.accessible(toolbarSearchButton);
+        view.accessible(toolbarSaveSessionButton);
+        view.accessible(toolbarClearButton);
+        view.accessible(toolbarExpandButton);
+        view.accessible(toolbarShelfButton);
+        view.accessible(toolbarCopyButton);
+        view.accessible(asyncCancelBtn);
+        view.accessible(resultExpandButton, "a11y.resultExpand");
+        view.accessible(resultShelfButton, "a11y.resultShelf");
+        view.accessible(resultCopyButton, "a11y.resultCopy");
+        view.accessible(resultSaveStepButton, "a11y.sessionTrailSaveStep");
+        view.accessible(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
+        view.accessible(inspectorPreviousSessionStepButton, "sessionTrail.previousStep");
+        view.accessible(inspectorNextSessionStepButton, "sessionTrail.nextStep");
+        view.accessible(inspectorOpenSessionStepButton, "sessionTrail.viewData");
+        view.accessible(inspectorToggleButton, "a11y.inspectorToggle");
+        view.accessible(errorBannerCloseBtn, "a11y.errorClose");
+        view.accessible(inspectorExportSessionTrailButton, "sessionTrail.exportTitle");
+        view.accessible(inspectorClearSessionTrailButton, "sessionTrail.clear");
+        view.accessible(inputFormatCombo, "a11y.payloadFormat");
+        view.accessible(outputFormatCombo, "a11y.outputFormat");
+        view.accessible(commandSearchField, "a11y.commandSearch");
+        view.accessible(favoriteToggleBtn, "a11y.favorite");
+        view.accessible(resultStatusBadge, "result.status");
+        view.accessible(errorBannerGoToFieldBtn, "a11y.errorGoToField");
+        view.accessible(errorBannerCopyDetailsBtn, "a11y.errorCopyDetails");
+        view.accessibleHelp(inputFormatCombo, "toolbar.payloadTooltip");
+        view.accessibleHelp(outputFormatCombo, "a11y.outputFormat");
+        view.accessibleHelp(commandSearchField, "command.prompt");
+        view.accessibleHelp(errorBannerTitle, "a11y.errorTitle");
+        view.accessibleHelp(errorBannerRemedy, "a11y.errorRemedy");
+        view.accessibleHelp(errorBannerGoToFieldBtn, "a11y.errorGoToFieldHelp");
+        view.accessibleHelp(errorBannerCopyDetailsBtn, "a11y.errorCopyDetailsHelp");
+        view.accessibleHelp(errorBannerCloseBtn, "a11y.errorCloseHelp");
+        view.accessibleHelp(favoriteToggleBtn, "favorite.tooltip", FAVORITE_SHORTCUT);
+        view.tooltip(inputFormatLabel, "toolbar.payloadTooltip");
+        view.tooltip(inputFormatCombo, "toolbar.payloadTooltip");
+        view.tooltip(inspectorExportJsonButton, "inspector.exportJsonTooltip");
+        view.tooltip(inspectorClearSessionTrailButton, "sessionTrail.clear");
+        view.prompt(commandSearchField, "command.prompt");
+        view.finishPainting(() -> {
+            refreshSessionTrailNavigation();
+            if (navigationRail != null) {
+                navigationRail.refreshLocalizedText();
             }
-        }
-    }
-
-    private void setAccessibleText(javafx.scene.control.ButtonBase control) {
-        if (control != null && control.getText() != null) {
-            control.setAccessibleText(control.getText());
-        }
-    }
-
-    private void setAccessibleText(javafx.scene.control.ButtonBase control, String key) {
-        if (control != null && key != null) {
-            control.setAccessibleText(i18n.text(key));
-        }
-    }
-
-    private void restoreFocusAfterLocalization(Node focusOwner) {
-        if (focusOwner == null) return;
-        Platform.runLater(() -> {
-            if (focusOwner.getScene() != null && focusOwner.isVisible()
-                    && !focusOwner.isDisabled() && focusOwner.isFocusTraversable()) {
-                focusOwner.requestFocus();
+            if (sidePanel != null) {
+                sidePanel.refreshLocalizedText();
+            }
+            updateBreadcrumbs(currentActiveOperation);
+            updateFavoriteToggleState(currentActiveOperation);
+            if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
+                    || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
+                statusBarPresenter.showStatus(i18n.text("status.ready"));
+            }
+            if (statusBarPresenter != null) {
+                statusBarPresenter.refreshContext(AppSettings.getInstance().getSecretVisibilityProfile());
+            }
+            if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
+                inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
+                        rootStackPane != null ? rootStackPane : mainPane);
             }
         });
+        return view;
     }
 
     private String localizedSectionText(String value) {
-        if (value == null) return "";
-        return switch (value) {
-            case "Cryptographic Operations" -> i18n.text("bread.cryptoOperations");
-            case "Symmetric Keys" -> i18n.text("bread.symmetricKeys");
-            case "Asymmetric Keys" -> i18n.text("bread.asymmetricKeys");
-            case "Ciphers" -> i18n.text("bread.ciphers");
-            case "Signatures & MAC" -> i18n.text("bread.signaturesMac");
-            case "Certificates", "Certificates & CMS" -> i18n.text("bread.certificatesCms");
-            case "JOSE / JWT" -> i18n.text("bread.joseJwt");
-            case "Post-Quantum", "Post-Quantum PQC" -> i18n.text("bread.postQuantumPqc");
-            case "XML Security" -> i18n.text("bread.xmlSecurity");
-            case "WSS Security" -> i18n.text("bread.wssSecurity");
-            case "EMV & Smartcards" -> i18n.text("bread.emvSmartcards");
-            case "Payment Cryptography" -> i18n.text("bread.paymentCryptography");
-            case "Utilities" -> i18n.text("bread.utilities");
-            case "History" -> i18n.text("bread.history");
-            case "Clipboard Shelf" -> i18n.text("bread.clipboardShelf");
-            case "Saved Sessions" -> i18n.text("bread.savedSessions");
-            default -> value;
-        };
+        return shellTextResolver.localizedSectionText(value);
     }
 
     private String localizedModuleText(String value) {
-        if (value == null) return "";
-        return switch (value) {
-            case "Symmetric" -> i18n.text("bread.symmetric");
-            case "Asymmetric" -> i18n.text("bread.asymmetric");
-            case "Tools" -> i18n.text("bread.tools");
-            case "General" -> i18n.text("bread.module");
-            default -> value;
-        };
+        return shellTextResolver.localizedModuleText(value);
     }
 
-    @FXML private void handleLanguageSystem() { i18n.setPreference(LanguagePreference.SYSTEM); }
-    @FXML private void handleLanguageEs() { i18n.setPreference(LanguagePreference.ES); }
-    @FXML private void handleLanguageEn() { i18n.setPreference(LanguagePreference.EN); }
+    @FXML private void handleLanguageSystem() { shellLocalizationCoordinator.setLanguage(LanguagePreference.SYSTEM); }
+    @FXML private void handleLanguageEs() { shellLocalizationCoordinator.setLanguage(LanguagePreference.ES); }
+    @FXML private void handleLanguageEn() { shellLocalizationCoordinator.setLanguage(LanguagePreference.EN); }
     @FXML private void handleThemeSystem() { setTheme(com.cryptocarver.model.ThemePreference.SYSTEM); }
     @FXML private void handleThemeLight() { setTheme(com.cryptocarver.model.ThemePreference.LIGHT); }
     @FXML private void handleThemeDark() { setTheme(com.cryptocarver.model.ThemePreference.DARK); }
@@ -2411,23 +2301,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private UserFacingError localizedError(UserFacingError error) {
-        if (error == null) return null;
-        String title = error.title() == null ? "" : error.title().toLowerCase(java.util.Locale.ROOT);
-        String keyPrefix = null;
-        if (title.contains("authentication tag") || title.contains("tag verification") || title.contains("autenticación")) keyPrefix = "error.wrap.tag";
-        else if (title.contains("padding")) keyPrefix = "error.wrap.padding";
-        else if (title.contains("key parameter") || title.contains("parámetro de clave")) keyPrefix = "error.wrap.key";
-        else if (title.contains("hexadecimal")) keyPrefix = "error.wrap.hex";
-        else if (title.contains("base64")) keyPrefix = "error.wrap.base64";
-        else if ((title.contains("certificate") || title.contains("certificado") || title.contains("key format"))
-                && !title.startsWith("missing ") && !title.startsWith("falta ")) keyPrefix = "error.wrap.cert";
-        else if (title.contains("timestamp authority") || title.contains("sellado de tiempo")) keyPrefix = "error.wrap.tsa";
-        if (keyPrefix == null) return error;
-        return new UserFacingError(
-                i18n.text(keyPrefix + ".title"),
-                i18n.text(keyPrefix + ".detail"),
-                i18n.text(keyPrefix + ".remedy"),
-                error.fieldKey(), error.cause());
+        return shellTextResolver.localizedError(error);
     }
 
     @Override

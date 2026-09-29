@@ -29,6 +29,7 @@ final class NavigationChromeCoordinator {
     private final Consumer<String> breadcrumbModuleSelected;
     private final String favoriteShortcut;
     private final I18nService i18n = I18nService.getInstance();
+    private final ShellTextResolver textResolver = new ShellTextResolver(i18n::text);
     private final Map<String, String> rememberedInput = new HashMap<>(), rememberedOutput = new HashMap<>();
     private String currentProfileOperation = "Dashboard";
 
@@ -144,19 +145,6 @@ final class NavigationChromeCoordinator {
         String status=op.getStatus()==OperationDescriptor.Status.EXPERIMENTAL?"Experimental":"Stable";
         return switch(op.getSecretRisk()){case NONE->status;case LOW->status+" · Low sensitivity";case HIGH->status+" · Sensitive material";case EXTREME->status+" · Highly sensitive material";};
     }
-    private String localizedSectionText(String v) {
-        if(v==null)return "";
-        return switch(v) {
-            case "Cryptographic Operations" -> i18n.text("bread.cryptoOperations"); case "Symmetric Keys" -> i18n.text("bread.symmetricKeys");
-            case "Asymmetric Keys" -> i18n.text("bread.asymmetricKeys"); case "Ciphers" -> i18n.text("bread.ciphers"); case "Signatures & MAC" -> i18n.text("bread.signaturesMac");
-            case "Certificates", "Certificates & CMS" -> i18n.text("bread.certificatesCms"); case "JOSE / JWT" -> i18n.text("bread.joseJwt");
-            case "Post-Quantum", "Post-Quantum PQC" -> i18n.text("bread.postQuantumPqc"); case "XML Security" -> i18n.text("bread.xmlSecurity");
-            case "WSS Security" -> i18n.text("bread.wssSecurity"); case "EMV & Smartcards" -> i18n.text("bread.emvSmartcards");
-            case "Payment Cryptography" -> i18n.text("bread.paymentCryptography"); case "Utilities" -> i18n.text("bread.utilities"); case "History" -> i18n.text("bread.history");
-            case "Clipboard Shelf" -> i18n.text("bread.clipboardShelf"); case "Saved Sessions" -> i18n.text("bread.savedSessions"); default -> v;
-        };
-    }
-    private String localizedModuleText(String v) {
-        if(v==null)return ""; return switch(v) { case "Symmetric" -> i18n.text("bread.symmetric"); case "Asymmetric" -> i18n.text("bread.asymmetric"); case "Tools" -> i18n.text("bread.tools"); case "General" -> i18n.text("bread.module"); default -> v; };
-    }
+    private String localizedSectionText(String value) { return textResolver.localizedSectionText(value); }
+    private String localizedModuleText(String value) { return textResolver.localizedModuleText(value); }
 }
