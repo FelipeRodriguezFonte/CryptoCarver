@@ -15,5 +15,5 @@ Characterization command and output:
 
 ```text
 $ nice -n 19 mvn -o -q -Dtest=ModernMainReadinessCharacterizationTest test
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
 ```

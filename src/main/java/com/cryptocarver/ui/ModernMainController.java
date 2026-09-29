@@ -195,8 +195,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         ENCRYPT, HASH, SIGN, CERT, CONVERT
     }
 
-    private GuidedOperation currentGuidedOp;
-    private int currentGuidedStep = 1;
+    private ReadinessPanelCoordinator readinessPanelCoordinator;
 
 
 
@@ -1297,9 +1296,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         // An untouched form is naturally incomplete. Do not make that the
         // first thing users see; reveal the checklist after an edit, a real
         // warning, or an attempted execution.
-        readinessPanelActivated = false;
-        readinessShowDetails = false;
-        refreshReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
+        readinessPanelCoordinator().onOperationSelected();
     }
 
     private boolean activateNavigationRoute(String operation) { return navigationRouter.activate(operation); }
@@ -1406,7 +1403,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         showQuickStart();
     }
 
-    private String formatProfileOperation(String operation) { return com.cryptocarver.model.FormatProfilePolicy.operation(operation); }
     private void updateContentSubtitle(String subtitle) { if (navigationChrome != null) navigationChrome.updateSubtitle(subtitle); }
 
     // deleted duplicate cmsKeyArea and syntax error
@@ -2990,113 +2986,35 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void startGuidedWorkflow(GuidedOperation op) {
-        this.currentGuidedOp = op;
-        this.currentGuidedStep = 1;
-        switch (op) {
-            case ENCRYPT -> handleItemSelected("Symmetric Encryption");
-            case HASH -> handleItemSelected("Hashing");
-            case SIGN -> handleItemSelected("Digital Signatures");
-            case CERT -> handleItemSelected("Parse Certificate");
-            case CONVERT -> handleItemSelected("Manual Conversion");
-        }
-        if (guidedFlowPanel != null) {
-            guidedFlowPanel.setVisible(true);
-            guidedFlowPanel.setManaged(true);
-            setupGuidedFlowKeyboardAndTooltips();
-        }
-        updateGuidedStepUI();
+        readinessPanelCoordinator().startGuidedWorkflow(op);
     }
 
     @FXML
     private void handleGuideNext() {
-        if (currentGuidedStep < 5) {
-            currentGuidedStep++;
-            updateGuidedStepUI();
-        }
+        readinessPanelCoordinator().handleGuideNext();
     }
 
     @FXML
     private void handleGuideBack() {
-        if (currentGuidedStep > 1) {
-            currentGuidedStep--;
-            updateGuidedStepUI();
-        }
+        readinessPanelCoordinator().handleGuideBack();
     }
 
     @FXML
     private void handleGuideSkip() {
-        currentGuidedStep = 4;
-        updateGuidedStepUI();
+        readinessPanelCoordinator().handleGuideSkip();
     }
 
     @FXML
     private void handleGuideExit() {
-        if (guidedFlowPanel != null) {
-            guidedFlowPanel.setVisible(false);
-            guidedFlowPanel.setManaged(false);
-        }
+        readinessPanelCoordinator().handleGuideExit();
     }
 
     private void updateGuidedStepUI() {
-        if (guideStepTitleLabel == null || guideStepDescLabel == null || currentGuidedOp == null) return;
-
-        if (guideBackBtn != null) guideBackBtn.setDisable(currentGuidedStep <= 1);
-        if (guideNextBtn != null) guideNextBtn.setDisable(currentGuidedStep >= 5);
-
-        switch (currentGuidedStep) {
-            case 1 -> {
-                guideStepTitleLabel.setText("Step 1 of 5: Choose data/input format");
-                guideStepDescLabel.setText("Configure the input encoding on the format flow bar (UTF-8, Hex, Base64).");
-                if (inputFormatCombo != null) inputFormatCombo.requestFocus();
-            }
-            case 2 -> {
-                guideStepTitleLabel.setText("Step 2 of 5: Choose algorithm & settings (or Start from a Template)");
-                switch (currentGuidedOp) {
-                    case ENCRYPT -> guideStepDescLabel.setText("Select cipher algorithm (e.g. AES-256), mode (GCM/CBC), or Apply a safe template.");
-                    case HASH -> guideStepDescLabel.setText("Select digest algorithm (e.g. SHA-256, SHA-512) or Apply a safe template.");
-                    case SIGN -> guideStepDescLabel.setText("Select signature scheme (e.g. RSA-SHA256, ECDSA) or Apply a safe template.");
-                    case CERT -> guideStepDescLabel.setText("Configure certificate format options or Apply a safe template.");
-                    case CONVERT -> guideStepDescLabel.setText("Select target output encoding (Base64, Hex, EBCDIC) or Apply a template.");
-                }
-            }
-            case 3 -> {
-                guideStepTitleLabel.setText("Step 3 of 5: Provide key / material");
-                switch (currentGuidedOp) {
-                    case ENCRYPT -> guideStepDescLabel.setText("Select key source (Manual, Key Lab, HSM). For GCM/CBC, click Generate for a fresh IV/nonce. (Applying a template does not auto-advance or supply keys).");
-                    case HASH -> guideStepDescLabel.setText("Enter or paste the input payload to hash.");
-                    case SIGN -> guideStepDescLabel.setText("Select Private key (to sign) or Public key/cert (to verify).");
-                    case CERT -> guideStepDescLabel.setText("Paste PEM certificate text into input area.");
-                    case CONVERT -> guideStepDescLabel.setText("Enter input data to convert.");
-                }
-            }
-            case 4 -> {
-                guideStepTitleLabel.setText("Step 4 of 5: Review & execute");
-                guideStepDescLabel.setText("Review your configuration and click the Execute/Run button to process data safely.");
-            }
-            case 5 -> {
-                guideStepTitleLabel.setText("Step 5 of 5: Inspect, copy & save");
-                guideStepDescLabel.setText("Inspect output bytes in summary bar or inspector. Copy or send to Clipboard Shelf.");
-            }
-        }
+        readinessPanelCoordinator().updateGuidedStepUI();
     }
 
     private void setupGuidedFlowKeyboardAndTooltips() {
-        if (guidedFlowPanel == null) return;
-
-        if (guideBackBtn != null) guideBackBtn.setTooltip(new Tooltip(i18n.text("guide.backTooltip")));
-        if (guideNextBtn != null) guideNextBtn.setTooltip(new Tooltip(i18n.text("guide.nextTooltip")));
-
-        guidedFlowPanel.setOnKeyPressed(event -> {
-            if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                handleGuideExit();
-                event.consume();
-            } else if (event.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                if (currentGuidedStep < 4) {
-                    handleGuideNext();
-                    event.consume();
-                }
-            }
-        });
+        readinessPanelCoordinator().setupGuidedFlowKeyboardAndTooltips();
     }
 
 
@@ -3179,284 +3097,57 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML private Label readinessSummaryLabel;
     @FXML private FlowPane readinessChecksContainer;
     @FXML private Button readinessToggleDetailsBtn;
-    private boolean readinessShowDetails = false;
-    private boolean readinessPanelActivated = false;
     private com.cryptocarver.model.PreflightReport currentPreflightReport;
     private boolean currentPreflightEncrypt = true;
 
     @FXML
     private void handleToggleReadinessDetails() {
-        readinessShowDetails = !readinessShowDetails;
-        if (readinessToggleDetailsBtn != null) {
-            readinessToggleDetailsBtn.setText(readinessShowDetails ? "Hide Details" : "Show Details");
-        }
-        updateReadinessPanelUI();
+        readinessPanelCoordinator().toggleReadinessDetails();
     }
 
     @Override
     public boolean checkPreflightReadiness(String operation, boolean isEncrypt) {
-        updateReadinessPanelForOperation(operation, isEncrypt);
-        if (currentPreflightReport != null && !currentPreflightReport.isExecutable()) {
-            com.cryptocarver.model.PreflightCheck firstIssue = currentPreflightReport.getFirstNonReadyCheck();
-            if (firstIssue != null && firstIssue.getTargetControlKey() != null) {
-                focusControl(firstIssue.getTargetControlKey());
-            }
-            if (readinessPanel != null) {
-                readinessPanel.setManaged(true);
-                readinessPanel.setVisible(true);
-            }
-            String msg = firstIssue != null ? localizedPreflightMessage(firstIssue) : i18n.text("preflight.remedy.generic");
-            String fieldKey = firstIssue != null ? firstIssue.getTargetControlKey() : null;
-            showError(new UserFacingError(i18n.text("preflight.title"), msg,
-                    localizedPreflightRemedy(firstIssue), fieldKey));
-            return false;
-        }
-        return true;
+        return readinessPanelCoordinator().checkPreflightReadiness(operation, isEncrypt);
     }
 
     public void updateReadinessPanel() {
-        refreshReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
+        readinessPanelCoordinator().updateReadinessPanel();
     }
 
     public void updateReadinessPanelForOperation(String operation, boolean isEncrypt) {
-        readinessPanelActivated = true;
-        refreshReadinessPanelForOperation(operation, isEncrypt);
-    }
-
-    private void refreshReadinessPanelForOperation(String operation, boolean isEncrypt) {
-        if (readinessPanel == null) return;
-        currentPreflightEncrypt = isEncrypt;
-
-        com.cryptocarver.model.PreflightReport report = evaluatePreflightForOperation(operation, isEncrypt);
-        currentPreflightReport = report;
-        if (report == null) {
-            readinessPanel.setManaged(false);
-            readinessPanel.setVisible(false);
-            return;
-        }
-
-        if (report.isExecutable()) {
-            readinessPanelActivated = false;
-        }
-
-        // Keep validation out of the user's way while they type. The panel is
-        // a recovery aid after an attempted execution was blocked, not a
-        // permanent header banner for every partially completed form.
-        boolean showPanel = readinessPanelActivated && !report.isExecutable();
-        readinessPanel.setManaged(showPanel);
-        readinessPanel.setVisible(showPanel);
-        if (!showPanel) return;
-        updateReadinessPanelUI();
+        readinessPanelCoordinator().updateReadinessPanelForOperation(operation, isEncrypt);
     }
 
     private void updateReadinessPanelUI() {
-        if (currentPreflightReport == null || readinessStatusBadge == null || readinessSummaryLabel == null || readinessChecksContainer == null) return;
+        readinessPanelCoordinator().updateReadinessPanelUI();
+    }
 
-        com.cryptocarver.model.PreflightStatus status = currentPreflightReport.getOverallStatus();
-        switch (status) {
-            case READY -> {
-                readinessStatusBadge.setText("✔ READY");
-                readinessStatusBadge.getStyleClass().setAll("readiness-status-ready");
-                readinessStatusBadge.setStyle("");
-            }
-            case WARNING -> {
-                readinessStatusBadge.setText("⚠️ WARNING");
-                readinessStatusBadge.getStyleClass().setAll("readiness-status-warning");
-                readinessStatusBadge.setStyle("");
-            }
-            case INCOMPLETE -> {
-                readinessStatusBadge.setText("❓ INCOMPLETE");
-                readinessStatusBadge.getStyleClass().setAll("readiness-status-incomplete");
-                readinessStatusBadge.setStyle("");
-            }
-            case BLOCKED -> {
-                readinessStatusBadge.setText("⛔ BLOCKED");
-                readinessStatusBadge.getStyleClass().setAll("readiness-status-blocked");
-                readinessStatusBadge.setStyle("");
-            }
+    private ReadinessPanelCoordinator readinessPanelCoordinator() {
+        if (readinessPanelCoordinator == null) {
+            readinessPanelCoordinator = new ReadinessPanelCoordinator(
+                    () -> currentActiveOperation,
+                    () -> cipherContainerController,
+                    () -> genericContainerController,
+                    () -> authenticationContainerController,
+                    () -> inputFormatCombo,
+                    () -> readinessPanel,
+                    () -> readinessStatusBadge,
+                    () -> readinessSummaryLabel,
+                    () -> readinessChecksContainer,
+                    () -> readinessToggleDetailsBtn,
+                    () -> guidedFlowPanel,
+                    () -> guideStepTitleLabel,
+                    () -> guideStepDescLabel,
+                    () -> guideBackBtn,
+                    () -> guideNextBtn,
+                    () -> currentPreflightReport,
+                    report -> currentPreflightReport = report,
+                    encrypt -> currentPreflightEncrypt = encrypt,
+                    this::focusControl,
+                    this::showError,
+                    this::handleItemSelected);
         }
-
-        readinessSummaryLabel.setText(localizedPreflightSummary(currentPreflightReport));
-
-        readinessChecksContainer.getChildren().clear();
-        java.util.List<com.cryptocarver.model.PreflightCheck> checks = currentPreflightReport.getChecks();
-        int maxVisible = readinessShowDetails ? checks.size() : Math.min(3, checks.size());
-
-        for (int i = 0; i < maxVisible; i++) {
-            com.cryptocarver.model.PreflightCheck check = checks.get(i);
-            Button checkBtn = new Button();
-            String icon = switch (check.getStatus()) {
-                case READY -> "✔ ";
-                case WARNING -> "⚠️ ";
-                case INCOMPLETE -> "❓ ";
-                case BLOCKED -> "⛔ ";
-            };
-            checkBtn.setText(icon + check.getName() + ": " + localizedPreflightMessage(check));
-            checkBtn.getStyleClass().add("readiness-check-button");
-            checkBtn.setOnAction(e -> {
-                if (check.getTargetControlKey() != null) {
-                    focusControl(check.getTargetControlKey());
-                }
-            });
-            readinessChecksContainer.getChildren().add(checkBtn);
-        }
-    }
-
-    private String localizedPreflightSummary(com.cryptocarver.model.PreflightReport report) {
-        long issues = report.getChecks().stream()
-                .filter(check -> check.getStatus() != com.cryptocarver.model.PreflightStatus.READY)
-                .count();
-        return switch (report.getOverallStatus()) {
-            case READY -> i18n.text("preflight.summary.ready");
-            case BLOCKED -> i18n.text("preflight.summary.blocked", issues);
-            case INCOMPLETE -> i18n.text("preflight.summary.incomplete", issues);
-            case WARNING -> i18n.text("preflight.summary.warning", issues);
-        };
-    }
-
-    private String localizedPreflightMessage(com.cryptocarver.model.PreflightCheck check) {
-        if (check == null) return i18n.text("preflight.remedy.generic");
-        String message = check.getMessage() == null ? "" : check.getMessage();
-        String lower = message.toLowerCase(java.util.Locale.ROOT);
-        String target = check.getTargetControlKey() == null ? "" : check.getTargetControlKey().toLowerCase(java.util.Locale.ROOT);
-        if (lower.contains("empty") || lower.contains("required") || lower.contains("missing")) {
-            if (target.contains("tag")) return i18n.text("preflight.tag.required");
-            if (target.contains("signature")) return i18n.text("preflight.signature.required");
-            if (target.contains("algorithm")) return i18n.text("preflight.algorithm.required");
-            if (target.contains("mode")) return i18n.text("preflight.mode.required");
-            if (target.contains("key")) return i18n.text("preflight.key.required");
-            if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.iv.required");
-            return i18n.text("preflight.input.required");
-        }
-        if (lower.contains("non-hexadecimal") || lower.contains("invalid characters")) {
-            if (target.contains("key")) return i18n.text("preflight.key.invalid");
-            if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.iv.invalid");
-            if (target.contains("tag")) return i18n.text("preflight.tag.invalid");
-            return i18n.text("preflight.input.hex.invalid");
-        }
-        if (lower.contains("odd number")) return i18n.text("preflight.input.hex.odd");
-        if (lower.contains("base64")) return i18n.text("preflight.input.base64.invalid");
-        return message;
-    }
-
-    private String localizedPreflightRemedy(com.cryptocarver.model.PreflightCheck check) {
-        if (check == null || check.getTargetControlKey() == null) return i18n.text("preflight.remedy.generic");
-        String target = check.getTargetControlKey().toLowerCase(java.util.Locale.ROOT);
-        if (target.contains("algorithm")) return i18n.text("preflight.remedy.algorithm");
-        if (target.contains("mode")) return i18n.text("preflight.remedy.mode");
-        if (target.contains("key")) return i18n.text("preflight.remedy.key");
-        if (target.contains("iv") || target.contains("nonce")) return i18n.text("preflight.remedy.iv");
-        if (target.contains("tag")) return i18n.text("preflight.remedy.tag");
-        if (target.contains("input") || target.contains("data")) return i18n.text("preflight.remedy.input");
-        return i18n.text("preflight.remedy.generic");
-    }
-
-    private com.cryptocarver.model.PreflightReport evaluatePreflightForOperation(String operation, boolean isEncrypt) {
-        if (operation == null) return null;
-        String opName = formatProfileOperation(operation);
-
-        if ("Symmetric Ciphers".equals(opName)) {
-            if (cipherContainerController == null) return null;
-            return com.cryptocarver.model.OperationPreflightEngine.checkSymmetricCipher(
-                    getFieldText(cipherContainerController, "cipherInputArea"),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text (UTF-8)",
-                    getComboValue(cipherContainerController, "symmetricAlgorithmCombo"),
-                    getComboValue(cipherContainerController, "cipherModeCombo"),
-                    getComboValue(cipherContainerController, "paddingCombo"),
-                    getComboValue(cipherContainerController, "symKeySourceCombo"),
-                    getFieldText(cipherContainerController, "symmetricKeyField"),
-                    getComboValue(cipherContainerController, "symHsmKeyCombo"),
-                    isHsmKeyMetadataOnly(getComboValue(cipherContainerController, "symHsmKeyCombo")),
-                    getFieldText(cipherContainerController, "ivField"),
-                    getFieldText(cipherContainerController, "gcmTagField"),
-                    getFieldText(cipherContainerController, "aadField"),
-                    isEncrypt
-            );
-        } else if ("Hashing".equals(opName)) {
-            return com.cryptocarver.model.OperationPreflightEngine.checkHashing(
-                    getFieldText(genericContainerController, "hashInputArea"),
-                    inputFormatCombo != null ? inputFormatCombo.getValue() : "Text (UTF-8)",
-                    getComboValue(genericContainerController, "hashAlgorithmCombo")
-            );
-        } else if ("Digital Signatures".equals(opName)) {
-            String keyText = isEncrypt ? getFieldText(authenticationContainerController, "signaturePrivateKeyArea") : getFieldText(authenticationContainerController, "signaturePublicKeyArea");
-            String verifyText = getFieldText(authenticationContainerController, "signatureVerifyField");
-            return com.cryptocarver.model.OperationPreflightEngine.checkDigitalSignature(
-                    getFieldText(authenticationContainerController, "authInputArea"),
-                    getComboValue(authenticationContainerController, "signatureAlgorithmCombo"),
-                    keyText,
-                    verifyText,
-                    false,
-                    isEncrypt
-            );
-        } else if ("Message Authentication Codes".equals(opName)) {
-            String keySource = getComboValue(authenticationContainerController, "macKeySourceCombo");
-            String keyReference = getComboValue(authenticationContainerController, "macHsmKeyCombo");
-            String macVerifyText = getFieldText(authenticationContainerController, "authMacVerifyField");
-            return com.cryptocarver.model.OperationPreflightEngine.checkMac(
-                    getFieldText(authenticationContainerController, "authInputArea"),
-                    getComboValue(authenticationContainerController, "authMacAlgorithmCombo"),
-                    keySource,
-                    getFieldText(authenticationContainerController, "authMacKeyField"),
-                    keyReference,
-                    macVerifyText,
-                    isEncrypt,
-                    "Simulated HSM".equalsIgnoreCase(keySource) && isHsmKeyMetadataOnly(keyReference)
-            );
-        } else if ("Asymmetric Ciphers".equals(opName)) {
-            String keyText = isEncrypt ? getFieldText(cipherContainerController, "publicKeyArea") : getFieldText(cipherContainerController, "privateKeyArea");
-            if ((keyText == null || keyText.isBlank())
-                    && cipherContainerController != null
-                    && cipherContainerController.hasAsymmetricKeyAvailable(isEncrypt)) {
-                keyText = "[loaded key pair]";
-            }
-            return com.cryptocarver.model.OperationPreflightEngine.checkAsymmetricCipher(
-                    getFieldText(cipherContainerController, "cipherInputArea"),
-                    keyText,
-                    false,
-                    getComboValue(cipherContainerController, "rsaPaddingCombo"),
-                    isEncrypt
-            );
-        }
-
-        return null;
-    }
-
-    private boolean isHsmKeyMetadataOnly(String keyId) {
-        if (keyId == null || keyId.isEmpty()) return false;
-        try {
-            var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
-            return km != null && !km.hasKeyMaterial();
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private String getFieldText(Object controllerObj, String fieldName) {
-        if (controllerObj == null || fieldName == null) return "";
-        try {
-            java.lang.reflect.Field field = controllerObj.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            Object val = field.get(controllerObj);
-            if (val instanceof TextInputControl tic) {
-                return tic.getText();
-            }
-        } catch (Exception ignored) {}
-        return "";
-    }
-
-    private String getComboValue(Object controllerObj, String fieldName) {
-        if (controllerObj == null || fieldName == null) return null;
-        try {
-            java.lang.reflect.Field field = controllerObj.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            Object val = field.get(controllerObj);
-            if (val instanceof ComboBox<?> cb) {
-                Object selected = cb.getValue();
-                return selected != null ? selected.toString() : null;
-            }
-        } catch (Exception ignored) {}
-        return null;
+        return readinessPanelCoordinator;
     }
 
     public void focusControl(String controlKey) {
