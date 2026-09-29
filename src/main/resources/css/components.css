@@ -3183,3 +3183,7 @@
 .dialog-pane .header-panel .label {
     -fx-text-fill: -cc-on-accent;
 }
+
+.cc-info-dialog-pane > .button-bar > .container > .button {
+    -fx-min-width: 80px;
+}

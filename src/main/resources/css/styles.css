@@ -2,8 +2,3 @@
 @import "tokens.css";
 @import "theme-light.css";
 @import "components.css";
-
-/* Legibility overrides */
-.cc-info-dialog-pane > .button-bar > .container > .button {
-    -fx-min-width: 80px;
-}
