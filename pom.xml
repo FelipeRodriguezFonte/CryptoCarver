@@ -333,7 +333,7 @@
                          the JVM resolves Locale.getDefault() during startup, before Surefire gets
                          the chance to set properties, so a late user.language is simply ignored.
                          Tests that care about translation select their locale explicitly. -->
-                    <argLine>-Duser.language=en -Duser.country=US -Xmx3g -XX:+UseSerialGC -XX:ActiveProcessorCount=3 -XX:TieredStopAtLevel=1 -Dprism.order=sw -Dprism.verbose=false</argLine>
+                    <argLine>-Duser.language=en -Duser.country=US -Xmx3g -XX:+UseSerialGC -XX:ActiveProcessorCount=4 -Dprism.order=sw -Dprism.verbose=false</argLine>
                 </configuration>
             </plugin>
 
