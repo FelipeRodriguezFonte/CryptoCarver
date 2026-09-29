@@ -50,4 +50,4 @@ Snapshots were generated with `ComputedStyleSnapshotTool` before and after. The 
 
 - `mvn -o -q test -Dtest=NavigationRouterCharacterizationTest`: passed before extraction and after extraction.
 - `mvn -o -q test`: 2,383 tests, 0 failures, 0 errors, 1 skipped.
-- Manual navigation / relaunch is not covered by the automated FXML characterization.
+- Manual run on 2026-09-29: side-panel navigation succeeded for Generic, Cipher, Keys, Certificates, ASN.1 Decode and Encode, Payments, EMV, JOSE, History, and Process Designer. ⌘K search for `Hashing` opened the Generic Hashing route. The module breadcrumb rendered disabled in the UI, so it could not be activated. Closing and reopening the app restored the last route (`Hashing`).
