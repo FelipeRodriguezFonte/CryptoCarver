@@ -31,7 +31,6 @@ class NavigationRouterCharacterizationTest {
         String[][] routes={{"JOSE","JWT (Signed)"},{"COSE","COSE Sign1"},{"WALLET","SD-JWT VC"},{"EPOCH_CONVERTER","Epoch Converter"},{"JSON_FORMATTER","JSON Formatter"},{"KEYS_SYMMETRIC","Key Generation"},{"KEYS_ASYMMETRIC","RSA Key Generation"},{"CERTIFICATES","Parse Certificate"},{"GENERIC","Hashing"},{"POST_QUANTUM","Post-Quantum Key Generation"},{"XML_SECURITY","Sign XML"},{"WSS_SECURITY","Sign SOAP"},{"EMV","EMV Tool"},{"HISTORY","Recent Operations"},{"CLIPBOARD_SHELF","Clipboard Shelf"},{"SAVED_SESSIONS","Saved Sessions"},{"CIPHER","Symmetric Ciphers"},{"AUTHENTICATION","Digital Signatures"},{"PAYMENTS","Payments"},{"PROCESS_DESIGNER","Process Designer"}};
         List<Executable> routeChecks=new ArrayList<>();
         for(String[] pair:routes) routeChecks.add(()->{fxRun(()->ref.get().navigateToModule(pair[1])); assertEquals(pair[1],field(ref.get(),"currentActiveOperation")); if(!pair[0].equals("EPOCH_CONVERTER")&&!pair[0].equals("JSON_FORMATTER")) assertTrue(((Node)field(ref.get(),hostField(pair[0]))).isVisible(),pair[0]);});
-        assertAll("module routes",routeChecks);
         fxRun(()->ref.get().navigateToModule("ASN.1 Encode")); assertEquals("ASN.1 Encode",field(ref.get(),"currentActiveOperation"));
         fxRun(()->ref.get().navigateToModule("ASN.1 Decode")); assertEquals("ASN.1 Decode",field(ref.get(),"currentActiveOperation"));
         fxRun(()->ref.get().navigateToModule("Export History")); assertEquals("Export History",field(ref.get(),"currentActiveOperation"));
@@ -39,6 +38,7 @@ class NavigationRouterCharacterizationTest {
         fxRun(()->ref.get().navigateTo("no such route")); assertEquals("no such route",field(ref.get(),"currentActiveOperation"));
         fxRun(()->{ settings.setLastRoute("JWT (Signed)"); invoke(ref.get(),"restoreStartupLastRoute"); }); assertEquals("JWT (Signed)",field(ref.get(),"currentActiveOperation"));
         fxRun(()->{ settings.setLastRoute("invalid"); invoke(ref.get(),"restoreStartupLastRoute"); }); assertEquals("JWT (Signed)",field(ref.get(),"currentActiveOperation"));
+        assertAll("module routes",routeChecks);
     }
     private static String hostField(String m){return switch(m){case "JOSE"->"jose";case "COSE"->"cose";case "WALLET"->"wallet";case "EPOCH_CONVERTER"->"epochConverter";case "JSON_FORMATTER"->"jsonFormatter";case "KEYS_SYMMETRIC"->"keysContainer";case "KEYS_ASYMMETRIC"->"keysContainer";case "CERTIFICATES"->"certificatesContainer";case "GENERIC"->"genericContainer";case "POST_QUANTUM"->"postQuantumContainer";case "XML_SECURITY"->"xmlSecurityContainer";case "WSS_SECURITY"->"wssSecurityContainer";case "EMV"->"emvContainer";case "HISTORY"->"historyView";case "CLIPBOARD_SHELF"->"clipboardShelf";case "SAVED_SESSIONS"->"savedSessionsContainer";case "CIPHER"->"cipherContainer";case "AUTHENTICATION"->"authenticationContainer";case "PAYMENTS"->"paymentsContainer";default->"processDesignerContainer";};}
     private static Object field(Object o,String n){try{Field f=o.getClass().getDeclaredField(n);f.setAccessible(true);return f.get(o);}catch(Exception e){throw new AssertionError(e);}}
