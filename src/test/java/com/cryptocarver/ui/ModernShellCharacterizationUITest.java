@@ -26,7 +26,6 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.text.Text;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,7 +35,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("ui")
@@ -152,22 +150,25 @@ class ModernShellCharacterizationUITest {
             alert.getDialogPane().getStyleClass().add("cc-dialog-pane");
             alert.getDialogPane().getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
             alert.getDialogPane().getStylesheets().add(getClass().getResource("/css/theme-light.css").toExternalForm());
+            DialogService.prepareInformationalDialog(alert);
             alert.show();
             alertReference.set(alert);
         });
         AtomicReference<Boolean> buttonFits = new AtomicReference<>(false);
+        AtomicReference<String> buttonGeometry = new AtomicReference<>("");
         runOnFxThread(() -> {
             Alert alert = alertReference.get();
             alert.getDialogPane().applyCss();
             alert.getDialogPane().layout();
             Button button = (Button) alert.getDialogPane().lookupButton(alert.getDialogPane().getButtonTypes().get(0));
-            Text text = (Text) button.lookup(".text");
-            assertNotNull(text);
-            double requiredWidth = text.getLayoutBounds().getWidth() + button.getInsets().getLeft() + button.getInsets().getRight() + 2;
-            buttonFits.set(button.getWidth() >= requiredWidth);
+            ButtonBar buttonBar = (ButtonBar) alert.getDialogPane().lookup(".button-bar");
+            double requiredWidth = Math.ceil(button.prefWidth(-1)) + 2;
+            buttonFits.set(button.getWidth() >= requiredWidth && button.getWidth() >= 80);
+            buttonGeometry.set("actual=" + button.getWidth() + ", preferred=" + button.prefWidth(-1) + ", minimum=" + button.getMinWidth()
+                    + ", barMinimum=" + buttonBar.getButtonMinWidth() + ", paneClasses=" + alert.getDialogPane().getStyleClass());
             alert.close();
         });
-        assertTrue(buttonFits.get(), "Informational Alert clips the localized OK label");
+        assertTrue(buttonFits.get(), "Informational Alert clips the localized OK label: " + buttonGeometry.get());
     }
 
     private static List<String> verifyShortcutEntries(ModernMainController controller, Locale locale) throws Exception {

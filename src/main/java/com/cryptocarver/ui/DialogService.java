@@ -71,7 +71,12 @@ public final class DialogService {
     public void info(Window owner, String title, String detail) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, nonBlank(detail, ""), ButtonType.OK);
         configure(alert, owner, title, null);
+        prepareInformationalDialog(alert);
         alert.showAndWait();
+    }
+
+    static void prepareInformationalDialog(Alert alert) {
+        alert.getDialogPane().getStyleClass().add("cc-info-dialog-pane");
     }
 
     public void warning(Window owner, String title, String detail) {
