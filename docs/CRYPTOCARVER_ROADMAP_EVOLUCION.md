@@ -731,3 +731,8 @@ Una mejora se considera terminada cuando:
 Este documento debe revisarse al inicio de cada versión y al cerrar cada sprint. Las nuevas ideas se añaden primero al backlog, con valor, esfuerzo, riesgo y dependencia. Solo pasan a una fase cuando tienen criterio de aceptación y un responsable de validación.
 
 La regla principal del roadmap es sencilla: **cada nueva capacidad debe hacer CryptoCarver más fiable, más explicable o más reutilizable; idealmente las tres cosas.**
+
+### Refactor ModernMainController
+
+- **Encargo 33:** presentación de navegación extraída a `NavigationChromeCoordinator`; contratos FXML y de módulos delegan desde el controlador. Caracterización FXML previa/posterior, formatos puros en `FormatProfilePolicy` y snapshot visual sin diferencias. Mapa: [`ENCARGO_33_MAPA.md`](ENCARGO_33_MAPA.md).
+- **Encargo 34 (siguiente):** extraer el enrutado (`navigateTo`, `navigateToModule`, `handleItemSelected`, `activateNavigationRoute`, `restoreStartupLastRoute`) sin moverlo en el encargo 33.
