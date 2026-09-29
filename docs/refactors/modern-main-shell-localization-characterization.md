@@ -22,4 +22,16 @@ Archivos base temporales:
 - `/tmp/encargo36-before-light.txt`
 - `/tmp/encargo36-before-dark.txt`
 
-Las capturas posteriores a la extracción se compararán contra esos archivos.
+Las capturas posteriores a la extracción se compararon contra esos archivos.
+
+## Extracción y validación final
+
+`ShellLocalizationCoordinator` aplica las claves a los controles JavaFX, actualiza accesibilidad y tooltips, localiza el menú Laboratorio y restaura el foco. `ModernMainController.applyLocalization()` delega en una línea y construye una vista de controles por llamada. La clase no guarda controladores de módulos. `ShellTextResolver` concentra la resolución de secciones, módulos y errores; no importa JavaFX. `NavigationChromeCoordinator` reutiliza ese resolver para evitar mantener una segunda tabla de traducciones.
+
+La prueba unitaria de `ShellTextResolver` cubre traducciones conocidas, valores sin traducción y errores mapeados/no mapeados. La pasada dirigida final informó 7 casos de FXML y 6 unitarios: 13 pruebas, sin fallos ni errores.
+
+Las instantáneas posteriores se tomaron con la misma ruta (`Hashing`), tema y `user.home` limpio en cada captura. Los dos comandos `diff -u` no produjeron salida: diferencias vacías en `theme-light.css` y `theme-dark.css`.
+
+La suite completa se ejecutó al final con `mvn -o -q test`: 2407 pruebas, 0 fallos, 0 errores y 1 omitida; tiempo real medido: 215,50 s. No apareció `Java heap space`. No hice una prueba manual.
+
+`ModernMainController` pasa de 3342 a 3216 líneas.
