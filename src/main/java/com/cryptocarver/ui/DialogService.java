@@ -86,6 +86,10 @@ public final class DialogService {
     }
 
     public void error(Window owner, String title, String detail) {
+        if (Boolean.getBoolean("test.mode")) {
+            System.out.println("SHOW_ERROR: " + nonBlank(title, i18n.text("dialog.confirm")) + " - " + nonBlank(detail, ""));
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.ERROR, nonBlank(detail, ""), ButtonType.OK);
         configure(alert, owner, title, null);
         alert.showAndWait();
@@ -98,6 +102,11 @@ public final class DialogService {
     /** Shows a themed alert with optional custom content and buttons. */
     public Optional<ButtonType> show(Alert.AlertType type, Window owner, String title,
                                      String header, Node content, ButtonType... buttons) {
+        if (Boolean.getBoolean("test.mode")) {
+            System.out.println("SHOW_DIALOG: " + nonBlank(title, i18n.text("dialog.confirm"))
+                    + " - " + nonBlank(header, ""));
+            return Optional.empty();
+        }
         ButtonType[] safeButtons = buttons == null || buttons.length == 0
                 ? new ButtonType[]{ButtonType.OK} : buttons;
         Alert alert = new Alert(type, "", safeButtons);

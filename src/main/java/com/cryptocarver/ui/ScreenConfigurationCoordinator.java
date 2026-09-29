@@ -43,6 +43,8 @@ public final class ScreenConfigurationCoordinator {
     private final DialogService dialogs;
     private final I18nService i18n;
     private final Consumer<String> status;
+    private java.util.function.Supplier<File> importFileSupplier;
+    private Function<Boolean, Optional<char[]>> passwordPrompt;
 
     public ScreenConfigurationCoordinator(Supplier<String> activeOperation,
             Supplier<ComboBox<String>> inputFormat, Supplier<ComboBox<String>> outputFormat,
@@ -61,6 +63,8 @@ public final class ScreenConfigurationCoordinator {
         this.dialogs = dialogs;
         this.i18n = i18n;
         this.status = status;
+        this.importFileSupplier = this::chooseImportFile;
+        this.passwordPrompt = this::showPasswordPrompt;
     }
 
     public ScreenConfiguration captureActiveScreenConfiguration() {
@@ -163,11 +167,7 @@ public final class ScreenConfigurationCoordinator {
     }
 
     public void importScreenConfiguration() {
-        FileChooser chooser = dialogs.createFileChooser("screen-configuration",
-                i18n.text("dialog.configuration.importTitle"),
-                new FileChooser.ExtensionFilter(i18n.text("dialog.configuration.filter"), "*.ccconfig", "*.json"),
-                new FileChooser.ExtensionFilter(i18n.text("dialog.allFiles"), "*.*"));
-        File file = chooser.showOpenDialog(owner.get());
+        File file = importFileSupplier.get();
         if (file == null) return;
         try {
             String document = readDocument(file.toPath());
@@ -200,6 +200,26 @@ public final class ScreenConfigurationCoordinator {
             dialogs.error(owner.get(), i18n.text("dialog.configuration.importFailureTitle"),
                     i18n.text("dialog.configuration.importFailure"));
         }
+    }
+
+    void setImportFileSupplierForTesting(java.util.function.Supplier<File> supplier) {
+        importFileSupplier = supplier;
+    }
+
+    void setPasswordPromptForTesting(Function<Boolean, Optional<char[]>> prompt) {
+        passwordPrompt = prompt;
+    }
+
+    private File chooseImportFile() {
+        FileChooser chooser = dialogs.createFileChooser("screen-configuration",
+                i18n.text("dialog.configuration.importTitle"),
+                new FileChooser.ExtensionFilter(i18n.text("dialog.configuration.filter"), "*.ccconfig", "*.json"),
+                new FileChooser.ExtensionFilter(i18n.text("dialog.allFiles"), "*.*"));
+        return chooser.showOpenDialog(owner.get());
+    }
+
+    private Optional<char[]> showPasswordPrompt(boolean confirmationRequired) {
+        return createPasswordDialog(confirmationRequired).showAndWait();
     }
 
     /** Testable filesystem boundary; callers own the dialog/choice flow. */
@@ -268,7 +288,7 @@ public final class ScreenConfigurationCoordinator {
     }
 
     private Optional<char[]> promptConfigurationPassword(boolean confirmationRequired) {
-        return createPasswordDialog(confirmationRequired).showAndWait();
+        return passwordPrompt.apply(confirmationRequired);
     }
 
     static boolean isEncryptedConfigurationOption(String selectedOption, String encryptedOption) {
