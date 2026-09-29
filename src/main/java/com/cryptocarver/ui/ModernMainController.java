@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.Base64;
 import java.nio.file.Files;
 import javafx.scene.text.TextFlow;
-import com.cryptocarver.model.AppDiagnostics;
+import com.cryptocarver.model.DiagnosticsReportBuilder;
 import com.cryptocarver.model.AppSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             com.cryptocarver.model.PlatformShortcuts.display("Shortcut+Shift+F");
 
     static void writeDiagnosticsReport(java.nio.file.Path report, String content) throws Exception {
-        java.nio.file.Files.writeString(report, content);
+        DiagnosticsReportBuilder.write(report, content);
     }
 
     @FXML private javafx.scene.control.Label contentPlaceholderLabel;
@@ -53,6 +53,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ExpandedTextViewer expandedTextViewer = new ExpandedTextViewer();
     private final ExpandedTextViewer sessionStepViewer = new ExpandedTextViewer();
     private final DialogService dialogService = new DialogService();
+    private ShellDialogCoordinator shellDialogCoordinator;
     private final ExpandedTableViewer expandedTableViewer = new ExpandedTableViewer();
     private OperationInspectorPresenter inspectorPresenter;
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
@@ -682,6 +683,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void initialize() {
+        shellDialogCoordinator = new ShellDialogCoordinator(dialogService, () -> windowOf(mainPane));
         configureDeferredModules();
         navigationRouter = createNavigationRouter();
         navigationChrome = new NavigationChromeCoordinator(inputFormatCombo, outputFormatCombo, inputFormatLabel,
@@ -2183,60 +2185,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     public void handleShowKeyboardShortcuts() {
-        VBox contentBox = new VBox(10);
-        contentBox.setPrefWidth(540);
-        contentBox.setStyle("-fx-padding: 10;");
-
-        Label intro = new Label("System Keyboard Shortcuts:");
-        intro.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
-        contentBox.getChildren().add(intro);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(15);
-        grid.setVgap(8);
-        grid.getStyleClass().add("quick-start-card");
-
-        int row = 0;
-        for (com.cryptocarver.model.KeyboardShortcutEntry shortcut : com.cryptocarver.model.KeyboardShortcutRegistry.getShortcuts()) {
-            Label comboLabel = new Label(shortcut.getDisplayCombination());
-            comboLabel.getStyleClass().add("quick-start-title");
-
-            Label actionLabel = new Label(shortcut.getActionName());
-            actionLabel.getStyleClass().add("heading-text");
-            actionLabel.setStyle("-fx-font-size: 12px;");
-
-            Label descLabel = new Label(shortcut.getDescription());
-            descLabel.getStyleClass().add("quick-start-description");
-
-            grid.add(comboLabel, 0, row);
-            grid.add(actionLabel, 1, row);
-            grid.add(descLabel, 2, row);
-            row++;
-        }
-
-        ScrollPane scrollPane = new ScrollPane(grid);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setPrefHeight(340);
-        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
-
-        contentBox.getChildren().add(scrollPane);
-        dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane),
-                "Keyboard Shortcuts", "CryptoCarver Keyboard Shortcuts", contentBox, ButtonType.OK);
+        shellDialogCoordinator.showKeyboardShortcuts();
     }
 
     @FXML
     private void handleAbout() {
-        dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane), "About CryptoCarver", "CryptoCarver",
-                new Label("A comprehensive tool for cryptographic operations.\n\n" +
-                "Version: 1.0.0\n" +
-                "Author: Felipe Rodríguez Fonte\n" +
-                "Contact: felipe.rodriguez.fonte@gmail.com\n\n" +
-                "Features:\n" +
-                "- Symmetric & Asymmetric Encryption\n" +
-                "- Digital Signatures & Certificates\n" +
-                "- Payments (EMV, PIN, CVV)\n" +
-                "- JOSE (JWT, JWE, JWK)\n" +
-                "- ASN.1 Analysis"), ButtonType.OK);
+        shellDialogCoordinator.showAbout();
     }
 
     /**
@@ -2256,23 +2210,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleDiagnostics() {
-        String diagnosticText = AppDiagnostics.report(describePrimaryDisplay());
-        TextArea report = new TextArea(diagnosticText);
-        report.setEditable(false);
-        report.setWrapText(false);
-        report.setPrefColumnCount(68);
-        report.setPrefRowCount(15);
-        report.setStyle("-fx-font-family: monospace; -fx-font-size: 11px;");
-
-        ButtonType copyButton = new ButtonType("Copy report", ButtonBar.ButtonData.LEFT);
-        java.util.Optional<ButtonType> selected = dialogService.show(Alert.AlertType.INFORMATION, windowOf(mainPane),
-                "CryptoCarver diagnostics", "Runtime information (safe to copy)", report, copyButton, ButtonType.OK);
-        if (selected.isPresent() && selected.get() == copyButton) {
-            javafx.scene.input.ClipboardContent clipboard = new javafx.scene.input.ClipboardContent();
-            clipboard.putString(diagnosticText);
-            javafx.scene.input.Clipboard.getSystemClipboard().setContent(clipboard);
-            updateStatus("Diagnostics copied to clipboard");
-        }
+        shellDialogCoordinator.showDiagnostics(ModernMainController::describePrimaryDisplay, this::updateStatus);
     }
 
     // ============================================================
@@ -2332,20 +2270,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     public void showWarning(String title, String message) {
-        if ("true".equals(System.getProperty("test.mode"))) {
-            System.out.println("SHOW_WARNING: " + title + " - " + message);
-            return;
-        }
-        dialogService.warning(windowOf(mainPane), title, message);
+        shellDialogCoordinator.warning(title, message);
     }
 
     @Override
     public void showInfo(String title, String message) {
-        if ("true".equals(System.getProperty("test.mode"))) {
-            System.out.println("SHOW_INFO: " + title + " - " + message);
-            return;
-        }
-        dialogService.info(windowOf(mainPane), title, message);
+        shellDialogCoordinator.info(title, message);
     }
 
     // Generic module initialized by FXML include
