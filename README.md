@@ -286,6 +286,12 @@ mvn clean package
 mvn javafx:run
 ```
 
+Para ejecutar las pruebas con menor prioridad de CPU:
+
+```bash
+nice -n 19 mvn -o -q test
+```
+
 O ejecutar el JAR directamente:
 ```bash
 java -jar target/cryptocarver-<version>.jar

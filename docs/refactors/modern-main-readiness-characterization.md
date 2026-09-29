@@ -1,6 +1,7 @@
 # Readiness and guided flow characterization
 
 The characterization loads the production `/fxml/main-view-modern.fxml` using `Fxml.loader`. Maven supplies `user.home=target/test-home`. The Spanish/English case stores the prior `AppSettings` language preference and restores it in `@AfterEach`.
+Each case navigates to the operation before reading its module controls because the main screen materializes module controllers lazily.
 
 `ModernMainReadinessCharacterizationTest` covers each behavior in a separate test:
 
