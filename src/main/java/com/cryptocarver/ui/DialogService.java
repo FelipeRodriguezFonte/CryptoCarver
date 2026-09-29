@@ -36,6 +36,8 @@ public final class DialogService {
 
     private final I18nService i18n;
     private final Map<String, File> lastDirectories = new LinkedHashMap<>();
+    private java.util.function.Consumer<String> testModeObserver = System.out::println;
+    private java.util.function.Function<ButtonType[], Optional<ButtonType>> testModeSelection;
 
     public DialogService() {
         this(I18nService.getInstance());
@@ -69,6 +71,10 @@ public final class DialogService {
     }
 
     public void info(Window owner, String title, String detail) {
+        if (Boolean.getBoolean("test.mode")) {
+            System.out.println("SHOW_INFO: " + title + " - " + nonBlank(detail, ""));
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.INFORMATION, nonBlank(detail, ""), ButtonType.OK);
         configure(alert, owner, title, null);
         prepareInformationalDialog(alert);
@@ -80,6 +86,10 @@ public final class DialogService {
     }
 
     public void warning(Window owner, String title, String detail) {
+        if (Boolean.getBoolean("test.mode")) {
+            System.out.println("SHOW_WARNING: " + title + " - " + nonBlank(detail, ""));
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.WARNING, nonBlank(detail, ""), ButtonType.OK);
         configure(alert, owner, title, null);
         alert.showAndWait();
@@ -87,7 +97,7 @@ public final class DialogService {
 
     public void error(Window owner, String title, String detail) {
         if (Boolean.getBoolean("test.mode")) {
-            System.out.println("SHOW_ERROR: " + nonBlank(title, i18n.text("dialog.confirm")) + " - " + nonBlank(detail, ""));
+            testModeObserver.accept("SHOW_ERROR: " + nonBlank(title, i18n.text("dialog.confirm")) + " - " + nonBlank(detail, ""));
             return;
         }
         Alert alert = new Alert(Alert.AlertType.ERROR, nonBlank(detail, ""), ButtonType.OK);
@@ -102,13 +112,13 @@ public final class DialogService {
     /** Shows a themed alert with optional custom content and buttons. */
     public Optional<ButtonType> show(Alert.AlertType type, Window owner, String title,
                                      String header, Node content, ButtonType... buttons) {
-        if (Boolean.getBoolean("test.mode")) {
-            System.out.println("SHOW_DIALOG: " + nonBlank(title, i18n.text("dialog.confirm"))
-                    + " - " + nonBlank(header, ""));
-            return Optional.empty();
-        }
         ButtonType[] safeButtons = buttons == null || buttons.length == 0
                 ? new ButtonType[]{ButtonType.OK} : buttons;
+        if (Boolean.getBoolean("test.mode")) {
+            testModeObserver.accept("SHOW_DIALOG: " + nonBlank(title, i18n.text("dialog.confirm"))
+                    + " - " + nonBlank(header, ""));
+            return testModeSelection == null ? Optional.empty() : testModeSelection.apply(safeButtons);
+        }
         Alert alert = new Alert(type, "", safeButtons);
         configure(alert, owner, title, header);
         if (content != null) alert.getDialogPane().setContent(content);
@@ -152,6 +162,14 @@ public final class DialogService {
                 lastDirectories.put(key, parent);
             }
         }
+    }
+
+    void setTestModeObserverForTesting(java.util.function.Consumer<String> observer) {
+        testModeObserver = Objects.requireNonNull(observer);
+    }
+
+    void setTestModeSelectionForTesting(java.util.function.Function<ButtonType[], Optional<ButtonType>> selection) {
+        testModeSelection = selection;
     }
 
     private void configure(Alert alert, Window owner, String title, String header) {

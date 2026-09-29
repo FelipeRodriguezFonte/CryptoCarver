@@ -1356,22 +1356,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return new ScreenConfigurationCoordinator(() -> currentActiveOperation,
                 () -> inputFormatCombo, () -> outputFormatCombo,
                 () -> com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile(),
-                module -> switch (module) {
-                    case JOSE -> new ScreenConfigurationCoordinator.ConfigurationTarget(joseController, jose);
-                    case COSE -> new ScreenConfigurationCoordinator.ConfigurationTarget(coseController, cose);
-                    case WALLET -> new ScreenConfigurationCoordinator.ConfigurationTarget(walletController, wallet);
-                    case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> new ScreenConfigurationCoordinator.ConfigurationTarget(keysContainerController, keysContainer);
-                    case CERTIFICATES -> new ScreenConfigurationCoordinator.ConfigurationTarget(certificatesContainerController, certificatesContainer);
-                    case GENERIC -> new ScreenConfigurationCoordinator.ConfigurationTarget(genericContainerController, genericContainer);
-                    case POST_QUANTUM -> new ScreenConfigurationCoordinator.ConfigurationTarget(postQuantumContainerController, postQuantumContainer);
-                    case XML_SECURITY -> new ScreenConfigurationCoordinator.ConfigurationTarget(xmlSecurityContainerController, xmlSecurityContainer);
-                    case WSS_SECURITY -> new ScreenConfigurationCoordinator.ConfigurationTarget(wssSecurityContainerController, wssSecurityContainer);
-                    case EMV -> new ScreenConfigurationCoordinator.ConfigurationTarget(emvContainerController, emvContainer);
-                    case CIPHER -> new ScreenConfigurationCoordinator.ConfigurationTarget(cipherContainerController, cipherContainer);
-                    case AUTHENTICATION -> new ScreenConfigurationCoordinator.ConfigurationTarget(authenticationContainerController, authenticationContainer);
-                    case PAYMENTS -> new ScreenConfigurationCoordinator.ConfigurationTarget(paymentsContainerController, paymentsContainer);
-                    case PROCESS_DESIGNER -> new ScreenConfigurationCoordinator.ConfigurationTarget(processDesignerContainerController, processDesignerContainer);
-                    default -> null;
+                module -> {
+                    Object controller = resolveNavigationController(module);
+                    javafx.scene.Node host = navigationHost(module);
+                    return controller != null && host instanceof Parent root
+                            ? new ScreenConfigurationCoordinator.ConfigurationTarget(controller, root) : null;
                 }, this::handleItemSelected, state -> UiStateSnapshot.restore(this, state),
                 () -> windowOf(mainPane), dialogService, i18n, this::updateStatus);
     }

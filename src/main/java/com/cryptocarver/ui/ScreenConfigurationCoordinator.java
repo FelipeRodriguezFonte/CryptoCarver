@@ -4,6 +4,7 @@ import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.ScreenConfiguration;
 import com.cryptocarver.model.ScreenConfigurationCodec;
 import com.cryptocarver.model.ScreenConfigurationFiles;
+import com.cryptocarver.model.ScreenConfigurationImportException;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.service.I18nService;
 import javafx.application.Platform;
@@ -45,6 +46,7 @@ public final class ScreenConfigurationCoordinator {
     private final Consumer<String> status;
     private java.util.function.Supplier<File> importFileSupplier;
     private Function<Boolean, Optional<char[]>> passwordPrompt;
+    private boolean passwordPromptInjectedForTesting;
 
     public ScreenConfigurationCoordinator(Supplier<String> activeOperation,
             Supplier<ComboBox<String>> inputFormat, Supplier<ComboBox<String>> outputFormat,
@@ -95,14 +97,12 @@ public final class ScreenConfigurationCoordinator {
             throw new IllegalArgumentException(i18n.text("dialog.configuration.moduleMismatch"));
         }
 
-        navigate.accept(operation);
         ConfigurationTarget target = targetProvider.apply(route.module());
         if (target == null || target.controller() == null || target.root() == null) {
             throw new IllegalArgumentException(i18n.text("dialog.configuration.targetUnavailable"));
         }
         Set<String> allowed = new LinkedHashSet<>(UiStateSnapshot.capturePortableConfiguration(
                 target.controller(), target.root(), route.section()).keySet());
-        // Version 1 documents contain every portable control in the module, even hidden accordion panes.
         if (configuration.version() == 1) {
             allowed.addAll(UiStateSnapshot.capturePortableConfiguration(target.controller()).keySet());
         }
@@ -115,6 +115,8 @@ public final class ScreenConfigurationCoordinator {
             throw new IllegalArgumentException(i18n.text("dialog.configuration.fieldsOutsideScreen")
                     + String.join(", ", unknown.stream().limit(5).toList()));
         }
+
+        navigate.accept(operation);
         restore.accept(state);
         status.accept(i18n.text("status.configuration.loaded", operation));
     }
@@ -171,18 +173,8 @@ public final class ScreenConfigurationCoordinator {
         if (file == null) return;
         try {
             String document = readDocument(file.toPath());
-            char[] password = null;
-            ScreenConfiguration configuration;
-            try {
-                if (ScreenConfigurationCodec.isEncrypted(document)) {
-                    Optional<char[]> selected = promptConfigurationPassword(false);
-                    if (selected.isEmpty()) return;
-                    password = selected.get();
-                }
-                configuration = decodeDocument(document, password);
-            } finally {
-                if (password != null) Arrays.fill(password, '\0');
-            }
+            ScreenConfiguration configuration = decodeImportDocument(document);
+            if (configuration == null) return;
             Label summary = new Label(configurationSummary(configuration));
             summary.setWrapText(true);
             ButtonType cancel = new ButtonType(i18n.text("dialog.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -196,6 +188,12 @@ public final class ScreenConfigurationCoordinator {
                         i18n.text("dialog.configuration.legacyMessage"));
             }
             status.accept(i18n.text("status.configuration.imported", configuration.operation()));
+        } catch (ScreenConfigurationImportException failure) {
+            showImportFailure(failure.reason(), false);
+        } catch (IOException failure) {
+            showImportFailure(ScreenConfigurationImportException.Reason.UNREADABLE, false);
+        } catch (IllegalArgumentException failure) {
+            showImportFailure(ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION, false);
         } catch (Exception failure) {
             dialogs.error(owner.get(), i18n.text("dialog.configuration.importFailureTitle"),
                     i18n.text("dialog.configuration.importFailure"));
@@ -208,6 +206,15 @@ public final class ScreenConfigurationCoordinator {
 
     void setPasswordPromptForTesting(Function<Boolean, Optional<char[]>> prompt) {
         passwordPrompt = prompt;
+        passwordPromptInjectedForTesting = true;
+    }
+
+    void setDialogObserverForTesting(java.util.function.Consumer<String> observer) {
+        dialogs.setTestModeObserverForTesting(observer);
+    }
+
+    void setDialogSelectionForTesting(Function<ButtonType[], Optional<ButtonType>> selection) {
+        dialogs.setTestModeSelectionForTesting(selection);
     }
 
     private File chooseImportFile() {
@@ -234,7 +241,56 @@ public final class ScreenConfigurationCoordinator {
         return decodeDocument(readDocument(source), password);
     }
 
-    String readDocument(Path source) throws IOException { return ScreenConfigurationFiles.read(source); }
+    String readDocument(Path source) throws IOException {
+        try {
+            return ScreenConfigurationFiles.read(source);
+        } catch (IOException | IllegalArgumentException failure) {
+            throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.UNREADABLE);
+        }
+    }
+
+    private ScreenConfiguration decodeImportDocument(String document) {
+        if (!ScreenConfigurationCodec.isEncrypted(document)) return decodeDocument(document, null);
+        try {
+            return decodeDocument(document, null);
+        } catch (ScreenConfigurationImportException failure) {
+            if (failure.reason() != ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED) throw failure;
+        }
+        for (int attempt = 0; attempt < 3; attempt++) {
+            Optional<char[]> selected = promptConfigurationPassword(false);
+            if (selected.isEmpty()) return null;
+            char[] password = selected.get();
+            try {
+                return decodeDocument(document, password);
+            } catch (ScreenConfigurationImportException failure) {
+                if (failure.reason() != ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED) throw failure;
+                if (!showImportFailure(failure.reason(), attempt < 2)) return null;
+            } finally {
+                Arrays.fill(password, '\0');
+            }
+        }
+        return null;
+    }
+
+    private boolean showImportFailure(ScreenConfigurationImportException.Reason reason, boolean canRetry) {
+        String key = "dialog.configuration.importFailure." + switch (reason) {
+            case WRONG_PASSWORD_OR_TAMPERED -> "wrongPasswordOrTampered";
+            case NOT_A_CONFIGURATION -> "notAConfiguration";
+            case UNSUPPORTED_VERSION -> "unsupportedVersion";
+            case UNREADABLE -> "unreadable";
+            case EMPTY -> "empty";
+        };
+        String message = i18n.text(key);
+        if (!canRetry) {
+            dialogs.error(owner.get(), i18n.text("dialog.configuration.importFailureTitle"), message);
+            return false;
+        }
+        ButtonType cancel = new ButtonType(i18n.text("dialog.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType retry = new ButtonType(i18n.text("dialog.configuration.retryPassword"), ButtonBar.ButtonData.OK_DONE);
+        return dialogs.show(Alert.AlertType.ERROR, owner.get(),
+                i18n.text("dialog.configuration.importFailureTitle"), message, null, cancel, retry)
+                .filter(retry::equals).isPresent();
+    }
 
     ScreenConfiguration decodeDocument(String document, char[] password) {
         return ScreenConfigurationCodec.decode(document, password);
@@ -288,6 +344,7 @@ public final class ScreenConfigurationCoordinator {
     }
 
     private Optional<char[]> promptConfigurationPassword(boolean confirmationRequired) {
+        if (Boolean.getBoolean("test.mode") && !passwordPromptInjectedForTesting) return Optional.empty();
         return passwordPrompt.apply(confirmationRequired);
     }
 

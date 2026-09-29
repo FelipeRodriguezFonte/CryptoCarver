@@ -43,10 +43,9 @@ class ScreenConfigurationCodecTest {
         assertEquals("00112233445566778899AABBCCDDEEFF",
                 decoded.toState().get("CipherController.symmetricKeyField"));
 
-        IllegalArgumentException wrongPassword = assertThrows(IllegalArgumentException.class,
+        ScreenConfigurationImportException wrongPassword = assertThrows(ScreenConfigurationImportException.class,
                 () -> ScreenConfigurationCodec.decode(encrypted, "wrong password".toCharArray()));
-        assertTrue(wrongPassword.getMessage().contains("password")
-                || wrongPassword.getMessage().contains("modified"));
+        assertEquals(ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED, wrongPassword.reason());
 
         String marker = "\"ciphertext\": \"";
         int ciphertextStart = encrypted.indexOf(marker) + marker.length();
@@ -56,8 +55,9 @@ class ScreenConfigurationCodecTest {
         String modified = encrypted.substring(0, ciphertextStart)
                 + replacement
                 + encrypted.substring(ciphertextStart + 1);
-        assertThrows(IllegalArgumentException.class,
+        ScreenConfigurationImportException tampered = assertThrows(ScreenConfigurationImportException.class,
                 () -> ScreenConfigurationCodec.decode(modified, "correct horse".toCharArray()));
+        assertEquals(ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED, tampered.reason());
     }
 
     @Test

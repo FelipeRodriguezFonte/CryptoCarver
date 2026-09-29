@@ -2,6 +2,8 @@ package com.cryptocarver.model;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import javax.crypto.AEADBadTagException;
 import java.nio.charset.StandardCharsets;
@@ -49,35 +51,35 @@ public final class ScreenConfigurationCodec {
         if (document == null || document.isBlank()) {
             throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.EMPTY);
         }
-        if (!isEncrypted(document)) {
+        if (!isEncrypted(document) && !looksLikeEncryptedDocument(document)) {
             try {
                 return ScreenConfiguration.fromJson(document);
             } catch (IllegalArgumentException failure) {
-                ScreenConfigurationImportException.Reason reason = failure.getMessage() != null
-                        && failure.getMessage().contains("Unsupported configuration version")
+                throw new ScreenConfigurationImportException(plainDocumentHasUnsupportedVersion(document)
                         ? ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION
-                        : ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION;
-                throw new ScreenConfigurationImportException(reason);
+                        : ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION);
             } catch (RuntimeException failure) {
                 throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION);
             }
+        }
+        Envelope envelope;
+        try {
+            envelope = new Gson().fromJson(document, Envelope.class);
+            if (unsupportedEncryptedVersion(document)) {
+                throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION);
+            }
+            validate(envelope);
+        } catch (ScreenConfigurationImportException failure) {
+            clearPassword(password);
+            throw failure;
+        } catch (RuntimeException failure) {
+            clearPassword(password);
+            throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.UNREADABLE);
         }
         try {
             requirePassword(password);
         } catch (IllegalArgumentException failure) {
             throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.WRONG_PASSWORD_OR_TAMPERED);
-        }
-        Envelope envelope;
-        try {
-            envelope = new Gson().fromJson(document, Envelope.class);
-            validate(envelope);
-        } catch (RuntimeException e) {
-            java.util.Arrays.fill(password, '\0');
-            ScreenConfigurationImportException.Reason reason = e.getMessage() != null
-                    && e.getMessage().contains("Unsupported encrypted configuration format")
-                    ? ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION
-                    : ScreenConfigurationImportException.Reason.UNREADABLE;
-            throw new ScreenConfigurationImportException(reason);
         }
         byte[] plaintext;
         try {
@@ -96,11 +98,10 @@ public final class ScreenConfigurationCodec {
             try {
                 return ScreenConfiguration.fromJson(new String(plaintext, StandardCharsets.UTF_8));
             } catch (IllegalArgumentException failure) {
-                ScreenConfigurationImportException.Reason reason = failure.getMessage() != null
-                        && failure.getMessage().contains("Unsupported configuration version")
+                throw new ScreenConfigurationImportException(plainDocumentHasUnsupportedVersion(
+                        new String(plaintext, StandardCharsets.UTF_8))
                         ? ScreenConfigurationImportException.Reason.UNSUPPORTED_VERSION
-                        : ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION;
-                throw new ScreenConfigurationImportException(reason);
+                        : ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION);
             } catch (RuntimeException failure) {
                 throw new ScreenConfigurationImportException(ScreenConfigurationImportException.Reason.NOT_A_CONFIGURATION);
             }
@@ -114,6 +115,44 @@ public final class ScreenConfigurationCodec {
         try {
             Header header = new Gson().fromJson(document, Header.class);
             return header != null && ENVELOPE_FORMAT.equals(header.format);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean looksLikeEncryptedDocument(String document) {
+        try {
+            JsonObject object = JsonParser.parseString(document).getAsJsonObject();
+            if (ScreenConfiguration.FORMAT.equals(object.has("format")
+                    ? object.get("format").getAsString() : null)) return false;
+            int protectedFields = (object.has("salt") ? 1 : 0)
+                    + (object.has("nonce") ? 1 : 0) + (object.has("ciphertext") ? 1 : 0);
+            return protectedFields >= 2 || (object.has("encryption") && protectedFields >= 1);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static void clearPassword(char[] password) {
+        if (password != null) java.util.Arrays.fill(password, '\0');
+    }
+
+    private static boolean plainDocumentHasUnsupportedVersion(String document) {
+        try {
+            JsonObject object = JsonParser.parseString(document).getAsJsonObject();
+            if (!ScreenConfiguration.FORMAT.equals(object.has("format")
+                    ? object.get("format").getAsString() : null) || !object.has("version")) return false;
+            int version = object.get("version").getAsInt();
+            return version < 1 || version > ScreenConfiguration.CURRENT_VERSION;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean unsupportedEncryptedVersion(String document) {
+        try {
+            Envelope envelope = new Gson().fromJson(document, Envelope.class);
+            return envelope != null && ENVELOPE_FORMAT.equals(envelope.format) && envelope.version != VERSION;
         } catch (RuntimeException ignored) {
             return false;
         }

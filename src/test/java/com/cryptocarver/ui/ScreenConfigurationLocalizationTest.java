@@ -32,6 +32,14 @@ class ScreenConfigurationLocalizationTest {
         assertFalse(keys.isEmpty(), "No i18n keys found in " + SOURCE);
         ResourceBundle english = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
         ResourceBundle spanish = ResourceBundle.getBundle("i18n.messages", Locale.forLanguageTag("es"));
+        keys.addAll(Set.of(
+                "dialog.configuration.importFailure.wrongPasswordOrTampered",
+                "dialog.configuration.importFailure.notAConfiguration",
+                "dialog.configuration.importFailure.unsupportedVersion",
+                "dialog.configuration.importFailure.unreadable",
+                "dialog.configuration.importFailure.empty",
+                "dialog.configuration.retryPassword",
+                "dialog.configuration.retryPasswordHeader"));
         for (String key : keys) {
             assertTrue(english.containsKey(key), "English bundle is missing " + key);
             assertTrue(spanish.containsKey(key), "Spanish bundle is missing " + key);
