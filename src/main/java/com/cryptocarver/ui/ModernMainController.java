@@ -85,6 +85,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     private SidePanel sidePanel;
     private NavigationController navigationController;
+    private NavigationRouter navigationRouter;
     private NavigationChromeCoordinator navigationChrome;
     @FXML
     private VBox mainContentArea;
@@ -376,6 +377,91 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 xmlSecurityContainer, wssSecurityContainer, processDesignerContainer};
     }
 
+    private NavigationRouter createNavigationRouter() {
+        java.util.EnumMap<UiNavigationRegistry.Module, java.util.function.BiConsumer<UiNavigationRegistry.Route,Object>> callbacks = new java.util.EnumMap<>(UiNavigationRegistry.Module.class);
+        callbacks.put(UiNavigationRegistry.Module.JOSE, (r,c) -> { if(c instanceof JOSEController x) x.showSection(currentActiveOperation); });
+        callbacks.put(UiNavigationRegistry.Module.COSE, (r,c) -> { if(c instanceof COSEController x) x.showSection(currentActiveOperation); });
+        callbacks.put(UiNavigationRegistry.Module.WALLET, (r,c) -> { if(c instanceof WalletController x) x.showSection(currentActiveOperation); });
+        callbacks.put(UiNavigationRegistry.Module.EPOCH_CONVERTER, (r,c) -> handleEpochConverter());
+        callbacks.put(UiNavigationRegistry.Module.JSON_FORMATTER, (r,c) -> handleJsonFormatter());
+        callbacks.put(UiNavigationRegistry.Module.KEYS_SYMMETRIC, (r,c) -> { loadSymmetricKeysContent(); if(keysController!=null) keysController.showSymmetricSection(); expandAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.KEYS_ASYMMETRIC, (r,c) -> { loadSymmetricKeysContent(); if(keysController!=null) keysController.showAsymmetricSection(); expandAsymmetricAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.CERTIFICATES, (r,c) -> {
+            expandCertificatesAccordionPane(r.section());
+            if(c instanceof CertificatesController x) {
+                if(r.variant()==UiNavigationRegistry.Variant.ASN1_DECODE) x.selectAsn1DecodeTab();
+                else if(r.variant()==UiNavigationRegistry.Variant.ASN1_ENCODE) x.selectAsn1EncodeTab();
+            }
+        });
+        callbacks.put(UiNavigationRegistry.Module.GENERIC, (r,c) -> NavigationRouter.expandByTitle(genericContainer, r.section(), ModuleTextCatalog.generic(), this::revealExpandedPane));
+        callbacks.put(UiNavigationRegistry.Module.POST_QUANTUM, (r,c) -> { loadPostQuantumContent(); expandPQCAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.XML_SECURITY, (r,c) -> { loadXMLSecurityContent(); expandXMLAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.WSS_SECURITY, (r,c) -> { loadWssSecurityContent(); expandWssAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.EMV, (r,c) -> { loadEMVContent(); expandEMVAccordionPane(r.section()); updateContentHeader("EMV Operations"); updateContentSubtitle("Session keys, ARQC/ARPC, and Track 2 data"); });
+        callbacks.put(UiNavigationRegistry.Module.CLIPBOARD_SHELF, (r,c) -> { if(c instanceof ClipboardShelfController x) x.refresh(); });
+        callbacks.put(UiNavigationRegistry.Module.HISTORY, (r,c) -> {
+            if(r.variant()==UiNavigationRegistry.Variant.HISTORY_EXPORT) {
+                if(c instanceof HistoryController x) x.focusExportActions();
+                updateStatus("Choose Export Visible JSON or Export JSON Record in Recent Operations.");
+            }
+        });
+        callbacks.put(UiNavigationRegistry.Module.CIPHER, (r,c) -> { loadCipherContent(); expandCipherAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.AUTHENTICATION, (r,c) -> { loadAuthenticationContent(); expandAuthenticationAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.PAYMENTS, (r,c) -> { loadPaymentsContent(); expandPaymentsAccordionPane(r.section()); });
+        callbacks.put(UiNavigationRegistry.Module.SAVED_SESSIONS, (r,c) -> { savedSessionsCoordinator().show(); updateContentHeader("Saved Sessions"); updateContentSubtitle("Load or manage your saved workspaces"); });
+        callbacks.put(UiNavigationRegistry.Module.PROCESS_DESIGNER, (r,c) -> {
+            enterProcessDesignerWorkspace();
+            if(processDesignerContainer != null && processDesignerContainer.root() instanceof TitledPane pane) pane.setExpanded(true);
+            updateContentHeader("Process Designer");
+            updateContentSubtitle("Visual workflow builder and execution engine");
+        });
+        return new NavigationRouter(
+                () -> java.util.Arrays.stream(moduleHosts()).filter(java.util.Objects::nonNull).map(n -> (javafx.scene.Node)n).toList(),
+                () -> java.util.stream.Stream.concat(contentContainer.getChildren().stream().filter(n -> n instanceof Label), java.util.stream.Stream.of(quickStartContainer, savedSessionsContainer)).filter(java.util.Objects::nonNull).toList(),
+                this::navigationHost,
+                this::resolveNavigationController,
+                callbacks,
+                this::exitProcessDesignerWorkspace,
+                this::handleItemSelectedImpl);
+    }
+
+    private javafx.scene.Node navigationHost(UiNavigationRegistry.Module module) {
+        return switch(module) {
+            case JOSE -> jose; case COSE -> cose; case WALLET -> wallet;
+            case EPOCH_CONVERTER, JSON_FORMATTER -> null;
+            case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> keysContainer;
+            case CERTIFICATES -> certificatesContainer; case GENERIC -> genericContainer;
+            case POST_QUANTUM -> postQuantumContainer; case XML_SECURITY -> xmlSecurityContainer;
+            case WSS_SECURITY -> wssSecurityContainer; case EMV -> emvContainer;
+            case HISTORY -> historyView; case CLIPBOARD_SHELF -> clipboardShelf;
+            case SAVED_SESSIONS -> savedSessionsContainer; case CIPHER -> cipherContainer;
+            case AUTHENTICATION -> authenticationContainer; case PAYMENTS -> paymentsContainer;
+            case PROCESS_DESIGNER -> processDesignerContainer;
+        };
+    }
+
+    private Object resolveNavigationController(UiNavigationRegistry.Module module) {
+        return switch(module) {
+            case JOSE -> joseController = ensureModule(jose, JOSEController.class);
+            case COSE -> coseController = ensureModule(cose, COSEController.class);
+            case WALLET -> walletController = ensureModule(wallet, WalletController.class);
+            case EPOCH_CONVERTER, JSON_FORMATTER, SAVED_SESSIONS -> null;
+            case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> keysController = keysContainerController = ensureModule(keysContainer, KeysController.class);
+            case CERTIFICATES -> certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
+            case GENERIC -> genericContainerController = ensureModule(genericContainer, GenericController.class);
+            case POST_QUANTUM -> postQuantumContainerController = ensureModule(postQuantumContainer, PostQuantumController.class);
+            case XML_SECURITY -> xmlSecurityContainerController = ensureModule(xmlSecurityContainer, XMLSignatureController.class);
+            case WSS_SECURITY -> wssSecurityContainerController = ensureModule(wssSecurityContainer, WssSecurityController.class);
+            case EMV -> emvController = emvContainerController = ensureModule(emvContainer, EMVController.class);
+            case HISTORY -> historyViewController = ensureModule(historyView, HistoryController.class);
+            case CLIPBOARD_SHELF -> clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
+            case CIPHER -> cipherController = cipherContainerController = ensureModule(cipherContainer, CipherController.class);
+            case AUTHENTICATION -> authenticationContainerController = ensureModule(authenticationContainer, AuthenticationController.class);
+            case PAYMENTS -> paymentsController = paymentsContainerController = ensureModule(paymentsContainer, PaymentsController.class);
+            case PROCESS_DESIGNER -> processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
+        };
+    }
+
     private void configureDeferredModules() {
         java.util.concurrent.Executor direct = Runnable::run;
         for (ModuleHost host : moduleHosts()) {
@@ -595,6 +681,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     @FXML
     public void initialize() {
         configureDeferredModules();
+        navigationRouter = createNavigationRouter();
         navigationChrome = new NavigationChromeCoordinator(inputFormatCombo, outputFormatCombo, inputFormatLabel,
                 contractOperationLabel, contentTitleLabel, contentSubtitleLabel, breadcrumbContainer,
                 breadcrumbSectionBtn, breadcrumbSep1, breadcrumbModuleBtn, breadcrumbSep2,
@@ -1131,17 +1218,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // ============================================================
 
     @Override
-    public void navigateTo(String operation) {
-        handleItemSelected(operation);
-    }
+    public void navigateTo(String operation) { navigationRouter.handleItemSelected(operation); }
 
     @Override public void setInputFormat(String format) { if (navigationChrome != null) navigationChrome.setInputFormat(format); }
     @Override public void setOutputFormat(String format) { if (navigationChrome != null) navigationChrome.setOutputFormat(format); }
     static String normalizeToolbarFormat(String format) { return com.cryptocarver.model.FormatProfilePolicy.normalize(format); }
 
-    public void navigateToModule(String moduleName) {
-        handleItemSelected(moduleName);
-    }
+    public void navigateToModule(String moduleName) { navigationRouter.handleItemSelected(moduleName); }
 
     /** Opens the integrated Shelf view and refreshes its in-session contents. */
     @FXML
@@ -1173,7 +1256,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    public void handleItemSelected(String itemName) {
+    public void handleItemSelected(String itemName) { navigationRouter.handleItemSelected(itemName); }
+
+    private void handleItemSelectedImpl(String itemName) {
         String requestedItem = itemName;
         itemName = com.cryptocarver.model.OperationRegistry.getInstance()
                 .resolveNavigation(itemName)
@@ -1217,98 +1302,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         refreshReadinessPanelForOperation(currentActiveOperation, currentPreflightEncrypt);
     }
 
-    private boolean activateNavigationRoute(String operation) {
-        java.util.Optional<UiNavigationRegistry.Route> resolved = UiNavigationRegistry.resolve(operation);
-        if (resolved.isEmpty()) return false;
-
-        UiNavigationRegistry.Route route = resolved.get();
-        switch (route.module()) {
-            case JOSE -> showJOSE();
-            case COSE -> showCOSE();
-            case WALLET -> showWallet();
-            case EPOCH_CONVERTER -> handleEpochConverter();
-            case JSON_FORMATTER -> handleJsonFormatter();
-            case KEYS_SYMMETRIC -> {
-                showSymmetricKeys();
-                expandAccordionPane(route.section());
-            }
-            case KEYS_ASYMMETRIC -> {
-                showAsymmetricKeys();
-                expandAsymmetricAccordionPane(route.section());
-            }
-            case CERTIFICATES -> {
-                showCertificates();
-                expandCertificatesAccordionPane(route.section());
-                if (certificatesContainerController != null) {
-                    if (route.variant() == UiNavigationRegistry.Variant.ASN1_DECODE) {
-                        certificatesContainerController.selectAsn1DecodeTab();
-                    } else if (route.variant() == UiNavigationRegistry.Variant.ASN1_ENCODE) {
-                        certificatesContainerController.selectAsn1EncodeTab();
-                    }
-                }
-            }
-            case GENERIC -> {
-                showGeneric();
-                expandGenericAccordionPane(route.section());
-            }
-            case POST_QUANTUM -> {
-                showPostQuantum();
-                expandPQCAccordionPane(route.section());
-            }
-            case XML_SECURITY -> {
-                showXMLSecurity();
-                expandXMLAccordionPane(route.section());
-            }
-            case WSS_SECURITY -> {
-                showWssSecurity();
-                expandWssAccordionPane(route.section());
-            }
-            case EMV -> {
-                showEMV();
-                expandEMVAccordionPane(route.section());
-            }
-            case HISTORY -> {
-                showHistoryView();
-                if (route.variant() == UiNavigationRegistry.Variant.HISTORY_EXPORT) {
-                    if (historyViewController != null) historyViewController.focusExportActions();
-                    updateStatus("Choose Export Visible JSON or Export JSON Record in Recent Operations.");
-                }
-            }
-            case CLIPBOARD_SHELF -> showClipboardShelf();
-            case SAVED_SESSIONS -> showSavedSessions();
-            case CIPHER -> {
-                showCipher();
-                expandCipherAccordionPane(route.section());
-            }
-            case AUTHENTICATION -> {
-                showAuthentication();
-                expandAuthenticationAccordionPane(route.section());
-            }
-            case PAYMENTS -> {
-                showPayments();
-                expandPaymentsAccordionPane(route.section());
-            }
-            case PROCESS_DESIGNER -> showProcessDesigner();
-        }
-        return true;
-    }
+    private boolean activateNavigationRoute(String operation) { return navigationRouter.activate(operation); }
 
     private void updateContentHeader(String itemName) {
         if (navigationChrome != null) navigationChrome.updateHeader(itemName);
     }
 
-    private void restoreStartupLastRoute() {
-        try {
-            String lastRoute = com.cryptocarver.model.AppSettings.getInstance().getLastRoute();
-            if (lastRoute != null && !lastRoute.isBlank()) {
-                if (UiNavigationRegistry.resolve(lastRoute).isPresent()) {
-                    navigateToModule(lastRoute);
-                }
-            }
-        } catch (Exception ignored) {
-            // Preferences must never fail application startup
-        }
-    }
+    private void restoreStartupLastRoute() { navigationRouter.restoreStartupLastRoute(() -> com.cryptocarver.model.AppSettings.getInstance().getLastRoute(), this::navigateToModule); }
 
     private void updateBreadcrumbs(String operationName) {
         if (navigationChrome != null) navigationChrome.updateBreadcrumbOnly(operationName);
@@ -1592,75 +1592,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     /** Materializes and presents the modular Recent Operations view. */
-    private void showHistoryView() {
-        if (historyViewController == null) historyViewController = ensureModule(historyView, HistoryController.class);
-        hideAllContainers();
-        initializeHistory();
-        if (historyView != null) {
-            historyView.setManaged(true);
-            historyView.setVisible(true);
-        }
-        if (contentTitleLabel != null) {
-            contentTitleLabel.setText("Cryptographic Operations");
-        }
-    }
-
-    private void showClipboardShelf() {
-        if (clipboardShelfController == null) clipboardShelfController = ensureModule(clipboardShelf, ClipboardShelfController.class);
-        hideAllContainers();
-        if (clipboardShelf != null) {
-            clipboardShelf.setManaged(true);
-            clipboardShelf.setVisible(true);
-        }
-        if (clipboardShelfController != null) {
-            clipboardShelfController.refresh();
-        }
-    }
-
-    private void showSymmetricKeys() {
-        hideAllContainers();
-        if (keysContainer != null) {
-            keysContainer.setManaged(true);
-            keysContainer.setVisible(true);
-        }
-        if (keysController != null) keysController.showSymmetricSection();
-    }
-
-    private void showAsymmetricKeys() {
-        hideAllContainers();
-
-        if (contentTitleLabel != null) {
-            contentTitleLabel.setText("Asymmetric Keys");
-        }
-
-        if (keysContainer != null) {
-            keysContainer.setManaged(true);
-            keysContainer.setVisible(true);
-        }
-        if (keysController != null) keysController.showAsymmetricSection();
-    }
-
-    private void showCertificates() {
-        if (certificatesContainerController == null) certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
-        hideAllContainers();
-
-        // Show certificates accordion
-        if (certificatesContainer != null) {
-            certificatesContainer.setManaged(true);
-            certificatesContainer.setVisible(true);
-        }
-    }
-
-    private void showCipher() {
-        loadCipherContent();
-        hideAllContainers();
-
-        if (cipherContainer != null) {
-            cipherContainer.setManaged(true);
-            cipherContainer.setVisible(true);
-        }
-    }
-
     /**
      * The accordion of a materialized module, wherever it sits under its host.
      *
@@ -1740,16 +1671,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void showAuthentication() {
-        loadAuthenticationContent();
-        hideAllContainers();
-
-        if (authenticationContainer != null) {
-            authenticationContainer.setManaged(true);
-            authenticationContainer.setVisible(true);
-        }
-    }
-
     private void expandAuthenticationAccordionPane(String itemName) {
         Accordion accordion = moduleAccordion(authenticationContainer);
 
@@ -1769,16 +1690,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     break;
                 }
             }
-        }
-    }
-
-    private void showPayments() {
-        loadPaymentsContent();
-        hideAllContainers();
-
-        if (paymentsContainer != null) {
-            paymentsContainer.setManaged(true);
-            paymentsContainer.setVisible(true);
         }
     }
 
@@ -2597,100 +2508,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     // EVENT HANDLERS - Payments Operations
     // ============================================================
 
-    private void hideAllContainers() {
-        contentContainer.getChildren().stream()
-                .filter(node -> node instanceof Label)
-                .forEach(node -> {
-                    node.setManaged(false);
-                    node.setVisible(false);
-                });
+    private void hideAllContainers() { navigationRouter.hideAllContainers(); }
 
-        if (keysContainer != null) {
-            keysContainer.setVisible(false);
-            keysContainer.setManaged(false);
-        }
-        if (certificatesContainer != null) {
-            certificatesContainer.setVisible(false);
-            certificatesContainer.setManaged(false);
-        }
-        if (cipherContainer != null) {
-            cipherContainer.setVisible(false);
-            cipherContainer.setManaged(false);
-        }
-        if (authenticationContainer != null) {
-            authenticationContainer.setVisible(false);
-            authenticationContainer.setManaged(false);
-        }
-        if (paymentsContainer != null) {
-            paymentsContainer.setVisible(false);
-            paymentsContainer.setManaged(false);
-        }
-        if (emvContainer != null) {
-            emvContainer.setVisible(false);
-            emvContainer.setManaged(false);
-        }
-        if (jose != null) {
-            jose.setVisible(false);
-            jose.setManaged(false);
-        }
-        if (cose != null) {
-            cose.setVisible(false);
-            cose.setManaged(false);
-        }
-        if (wallet != null) {
-            wallet.setVisible(false);
-            wallet.setManaged(false);
-        }
-        if (genericContainer != null) {
-            genericContainer.setVisible(false);
-            genericContainer.setManaged(false);
-        }
-        if (historyView != null) {
-            historyView.setVisible(false);
-            historyView.setManaged(false);
-        }
-        if (clipboardShelf != null) {
-            clipboardShelf.setVisible(false);
-            clipboardShelf.setManaged(false);
-        }
-        if (postQuantumContainer != null) {
-            postQuantumContainer.setVisible(false);
-            postQuantumContainer.setManaged(false);
-        }
-        if (xmlSecurityContainer != null) {
-            xmlSecurityContainer.setVisible(false);
-            xmlSecurityContainer.setManaged(false);
-        }
-        if (wssSecurityContainer != null) {
-            wssSecurityContainer.setVisible(false);
-            wssSecurityContainer.setManaged(false);
-        }
-        if (quickStartContainer != null) {
-            quickStartContainer.setVisible(false);
-            quickStartContainer.setManaged(false);
-        }
-        if (savedSessionsContainer != null) {
-            savedSessionsContainer.setVisible(false);
-            savedSessionsContainer.setManaged(false);
-        }
-        if (processDesignerContainer != null) {
-            processDesignerContainer.setVisible(false);
-            processDesignerContainer.setManaged(false);
-        }
-    }
+    private void showSymmetricKeys() { navigationRouter.showContainer(UiNavigationRegistry.Module.KEYS_SYMMETRIC); if(keysController!=null) keysController.showSymmetricSection(); }
+    private void showJOSE() { navigationRouter.activate("JWT (Signed)"); }
 
-    public void showProcessDesigner() {
-        if (processDesignerContainerController == null) processDesignerContainerController = ensureModule(processDesignerContainer, ProcessDesignerController.class);
-        hideAllContainers();
-        enterProcessDesignerWorkspace();
-        if (processDesignerContainer != null) {
-            processDesignerContainer.setManaged(true);
-            processDesignerContainer.setVisible(true);
-            if (processDesignerContainer.root() instanceof TitledPane pane) pane.setExpanded(true);
-            updateContentHeader("Process Designer");
-            updateContentSubtitle("Visual workflow builder and execution engine");
-        }
-    }
+    public void showProcessDesigner() { navigationRouter.activate("Process Designer"); }
 
     /** Gives the designer its own canvas without permanently changing shell panels. */
     private void enterProcessDesignerWorkspace() {
@@ -2729,66 +2552,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return processDesignerContainerController;
     }
 
-    private void showGeneric() {
-        if (genericContainerController == null) genericContainerController = ensureModule(genericContainer, GenericController.class);
-        hideAllContainers();
-
-        if (genericContainer != null) {
-            genericContainer.setManaged(true);
-            genericContainer.setVisible(true);
-        }
-
-    }
-
-    private void showJOSE() {
-        if (joseController == null) joseController = ensureModule(jose, JOSEController.class);
-        hideAllContainers();
-        if (jose != null) {
-            jose.setManaged(true);
-            jose.setVisible(true);
-        }
-        if (joseController != null) {
-            joseController.showSection(currentActiveOperation);
-        }
-    }
-
-    private void showWallet() {
-        if (walletController == null) walletController = ensureModule(wallet, WalletController.class);
-        hideAllContainers();
-        if (wallet != null) {
-            wallet.setManaged(true);
-            wallet.setVisible(true);
-        }
-        if (walletController != null) {
-            walletController.showSection(currentActiveOperation);
-        }
-    }
-
-    private void showCOSE() {
-        if (coseController == null) coseController = ensureModule(cose, COSEController.class);
-        hideAllContainers();
-        if (cose != null) {
-            cose.setManaged(true);
-            cose.setVisible(true);
-        }
-        if (coseController != null) {
-            coseController.showSection(currentActiveOperation);
-        }
-    }
-
-    private void expandGenericAccordionPane(String paneName) {
-        Accordion accordion = moduleAccordion(genericContainer);
-        if (paneName == null || paneName.isBlank() || accordion == null || accordion.getPanes().isEmpty())
-            return;
-
-        for (TitledPane pane : accordion.getPanes()) {
-            if (ModulePaneMatcher.matches(pane, paneName, ModuleTextCatalog.generic())) {
-                accordion.setExpandedPane(pane);
-                revealExpandedPane(pane);
-                break;
-            }
-        }
-    }
+    private void expandGenericAccordionPane(String paneName) { NavigationRouter.expandByTitle(genericContainer, paneName, ModuleTextCatalog.generic(), this::revealExpandedPane); }
 
     // Helper methods
     private byte[] hexToBytes(String hex) {
@@ -2817,22 +2581,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             sb.append(String.format("%02X", b));
         }
         return sb.toString();
-    }
-
-    private void showEMV() {
-        hideAllContainers();
-
-        if (emvContainer != null) {
-            emvContainer.setManaged(true);
-            emvContainer.setVisible(true);
-            updateContentHeader("EMV Operations");
-            updateContentSubtitle("Session keys, ARQC/ARPC, and Track 2 data");
-        }
-
-        // Initialize if not already done
-        if (emvController == null) {
-            loadEMVContent();
-        }
     }
 
     private void expandEMVAccordionPane(String title) {
@@ -2893,13 +2641,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                     () -> mainPane);
         }
         return savedSessionsCoordinator;
-    }
-
-    private void showSavedSessions() {
-        hideAllContainers();
-        savedSessionsCoordinator().show();
-        updateContentHeader("Saved Sessions");
-        updateContentSubtitle("Load or manage your saved workspaces");
     }
 
     @FXML
@@ -3177,16 +2918,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void showPostQuantum() {
-        loadPostQuantumContent();
-        hideAllContainers();
-        if (postQuantumContainer != null) {
-            postQuantumContainer.setManaged(true);
-            postQuantumContainer.setVisible(true);
-        }
-        if (mainScrollPane != null) mainScrollPane.setVvalue(0);
-    }
-
     private void expandPQCAccordionPane(String itemName) {
         if (postQuantumContainerController != null) {
             postQuantumContainerController.expandAccordionPane(itemName);
@@ -3204,16 +2935,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void showXMLSecurity() {
-        loadXMLSecurityContent();
-        hideAllContainers();
-        if (xmlSecurityContainer != null) {
-            xmlSecurityContainer.setManaged(true);
-            xmlSecurityContainer.setVisible(true);
-        }
-        if (mainScrollPane != null) mainScrollPane.setVvalue(0);
-    }
-
     private void expandXMLAccordionPane(String itemName) {
         if (xmlSecurityContainerController != null) {
             xmlSecurityContainerController.expandAccordionPane(itemName);
@@ -3225,16 +2946,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (wssSecurityContainerController != null) {
             wssSecurityContainerController.initModule(this);
         }
-    }
-
-    private void showWssSecurity() {
-        loadWssSecurityContent();
-        hideAllContainers();
-        if (wssSecurityContainer != null) {
-            wssSecurityContainer.setManaged(true);
-            wssSecurityContainer.setVisible(true);
-        }
-        if (mainScrollPane != null) mainScrollPane.setVvalue(0);
     }
 
     private void expandWssAccordionPane(String itemName) {
