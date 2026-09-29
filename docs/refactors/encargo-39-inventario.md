@@ -97,3 +97,15 @@ Los coordinadores no capturarán controladores de módulos; las acciones y valor
 - Epoch: navegar y comprobar host visible junto al contenido inicial de ventana.
 - JSON: navegar y comprobar host visible junto al contenido inicial de ventana.
 - Las pruebas que usan `~/.cryptocarver` deben aislar `user.home` en `target/test-home`, limpiar lo creado y restaurar los valores anteriores de `AppSettings`.
+
+## Resultado de caracterización previa
+
+Comando ejecutado: `mvn -o -q test -Dtest=ModernMainLooseActionsCharacterizationTest`.
+
+Salida de Surefire: `Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.951 s`.
+
+Los tres casos de guardado verifican nombre guardado, rechazo de nombre vacío y cancelación. El caso positivo coloca `SYNTHETIC_REDACTION_MARKER` en `GenericController.batchKeyField`, sin material real, y comprueba que el archivo solo conserva el marcador `[REDACTED_SECRET]`.
+
+La ruta de Epoch y JSON no tiene hosts JavaFX declarados en el FXML: `navigationHost` devuelve `null` y sus callbacks abren una `Stage`. Por ello la caracterización comprueba la ruta activa y el contenido inicial de esas ventanas. En Epoch el timestamp inicial se convierte inmediatamente en fecha UTC; en JSON ambos controles empiezan vacíos y el campo de entrada muestra `Paste JSON here...`.
+
+La prueba aísla `user.home` en `target/test-home` y restaura todos los archivos presentes allí antes de cada caso al terminar. En el primer intento falló el arnés, porque ocultar ventanas mientras se recorría la lista viva `Window.getWindows()` invalidaba sus índices; además, los datos de sesión creados sobrevivieron a esa limpieza fallida. La prueba ahora itera una copia de ventanas y usa un nombre sintético único por ejecución. No se cambió producción para hacer pasar la caracterización.
