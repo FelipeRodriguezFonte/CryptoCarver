@@ -96,10 +96,6 @@ public final class DialogService {
     }
 
     public void error(Window owner, String title, String detail) {
-        if (Boolean.getBoolean("test.mode")) {
-            testModeObserver.accept("SHOW_ERROR: " + nonBlank(title, i18n.text("dialog.confirm")) + " - " + nonBlank(detail, ""));
-            return;
-        }
         Alert alert = new Alert(Alert.AlertType.ERROR, nonBlank(detail, ""), ButtonType.OK);
         configure(alert, owner, title, null);
         alert.showAndWait();
@@ -114,15 +110,23 @@ public final class DialogService {
                                      String header, Node content, ButtonType... buttons) {
         ButtonType[] safeButtons = buttons == null || buttons.length == 0
                 ? new ButtonType[]{ButtonType.OK} : buttons;
-        if (Boolean.getBoolean("test.mode")) {
-            testModeObserver.accept("SHOW_DIALOG: " + nonBlank(title, i18n.text("dialog.confirm"))
-                    + " - " + nonBlank(header, ""));
-            return testModeSelection == null ? Optional.empty() : testModeSelection.apply(safeButtons);
-        }
         Alert alert = new Alert(type, "", safeButtons);
         configure(alert, owner, title, header);
         if (content != null) alert.getDialogPane().setContent(content);
         return alert.showAndWait();
+    }
+
+    /** Import-only dialog path with non-modal, scripted behavior in test mode. */
+    public Optional<ButtonType> showForImport(Alert.AlertType type, Window owner, String title,
+                                             String header, Node content, ButtonType... buttons) {
+        if (Boolean.getBoolean("test.mode")) {
+            ButtonType[] safeButtons = buttons == null || buttons.length == 0
+                    ? new ButtonType[]{ButtonType.OK} : buttons;
+            testModeObserver.accept("SHOW_DIALOG: " + nonBlank(title, i18n.text("dialog.confirm"))
+                    + " - " + nonBlank(header, ""));
+            return testModeSelection == null ? Optional.empty() : testModeSelection.apply(safeButtons);
+        }
+        return show(type, owner, title, header, content, buttons);
     }
 
     /**

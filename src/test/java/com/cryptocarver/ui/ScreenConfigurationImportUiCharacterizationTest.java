@@ -163,8 +163,8 @@ class ScreenConfigurationImportUiCharacterizationTest {
             return Optional.of("SYNTHETIC-WRONG".toCharArray());
         }, buttons -> responses.getAndIncrement() < 2 ? Optional.of(buttons[1]) : Optional.empty());
         assertEquals(3, prompts.get());
-        assertEquals(2, responses.get());
-        assertTrue(outcome.events().stream().anyMatch(event -> event.startsWith("SHOW_ERROR:")));
+        assertEquals(3, responses.get());
+        assertEquals(3, outcome.events().stream().filter(event -> event.startsWith("SHOW_DIALOG:")).count());
         assertEquals(outcome.activeOperationBefore(), outcome.activeOperationAfter());
     }
 

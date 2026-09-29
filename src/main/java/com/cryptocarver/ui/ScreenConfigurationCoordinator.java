@@ -179,7 +179,7 @@ public final class ScreenConfigurationCoordinator {
             summary.setWrapText(true);
             ButtonType cancel = new ButtonType(i18n.text("dialog.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
             ButtonType proceed = new ButtonType(i18n.text("dialog.configuration.importAction"), ButtonBar.ButtonData.OK_DONE);
-            if (dialogs.show(Alert.AlertType.CONFIRMATION, owner.get(),
+            if (dialogs.showForImport(Alert.AlertType.CONFIRMATION, owner.get(),
                     i18n.text("dialog.configuration.importTitle"), i18n.text("dialog.configuration.reviewTitle"),
                     summary, cancel, proceed).filter(proceed::equals).isEmpty()) return;
             applyScreenConfiguration(configuration);
@@ -281,15 +281,13 @@ public final class ScreenConfigurationCoordinator {
             case EMPTY -> "empty";
         };
         String message = i18n.text(key);
-        if (!canRetry) {
-            dialogs.error(owner.get(), i18n.text("dialog.configuration.importFailureTitle"), message);
-            return false;
-        }
         ButtonType cancel = new ButtonType(i18n.text("dialog.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         ButtonType retry = new ButtonType(i18n.text("dialog.configuration.retryPassword"), ButtonBar.ButtonData.OK_DONE);
-        return dialogs.show(Alert.AlertType.ERROR, owner.get(),
-                i18n.text("dialog.configuration.importFailureTitle"), message, null, cancel, retry)
-                .filter(retry::equals).isPresent();
+        ButtonType acknowledge = new ButtonType(i18n.text("dialog.ok"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType[] buttons = canRetry ? new ButtonType[]{cancel, retry} : new ButtonType[]{acknowledge};
+        Optional<ButtonType> selected = dialogs.showForImport(Alert.AlertType.ERROR, owner.get(),
+                i18n.text("dialog.configuration.importFailureTitle"), message, null, buttons);
+        return canRetry && selected.filter(retry::equals).isPresent();
     }
 
     ScreenConfiguration decodeDocument(String document, char[] password) {
