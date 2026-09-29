@@ -9,7 +9,6 @@ import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.io.File;
-import java.util.Optional; // For Dialogs
 import java.io.IOException;
 import java.util.Base64;
 import java.nio.file.Files;
@@ -227,6 +226,8 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private com.cryptocarver.model.HistoryManager historyManager;
     private HistoryCoordinator historyCoordinator;
     private SavedSessionsCoordinator savedSessionsCoordinator;
+    private SaveSessionCoordinator saveSessionCoordinator;
+    private UtilityToolsCoordinator utilityToolsCoordinator;
     private String currentActiveOperation = "Dashboard"; // Defaul
     private boolean processDesignerWorkspace;
     private boolean sidePanelVisibleBeforeProcessDesigner;
@@ -2445,6 +2446,22 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return savedSessionsCoordinator;
     }
 
+    private SaveSessionCoordinator saveSessionCoordinator() {
+        if (saveSessionCoordinator == null) {
+            saveSessionCoordinator = new SaveSessionCoordinator(i18n, this::captureUIState,
+                    () -> sessionTrailState, this::savedSessionsCoordinator, this::showWarning);
+        }
+        return saveSessionCoordinator;
+    }
+
+    private UtilityToolsCoordinator utilityToolsCoordinator() {
+        if (utilityToolsCoordinator == null) {
+            utilityToolsCoordinator = new UtilityToolsCoordinator(() -> mainPane == null ? null : mainPane.getScene(),
+                    this::addToHistory, this::showError);
+        }
+        return utilityToolsCoordinator;
+    }
+
     @FXML
     private void handleVisibilityFullLab() {
         com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
@@ -2541,63 +2558,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
-    public void handleSaveSession() {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(i18n.text("dialog.saveSession.title"));
-        dialog.setHeaderText(i18n.text("dialog.saveSession.header"));
-        TextField nameField = new TextField("My Session");
-        nameField.setPromptText(i18n.text("dialog.saveSession.prompt"));
-        CheckBox includeSecrets = new CheckBox(i18n.text("savedSessions.includeSecrets"));
-        includeSecrets.setSelected(false);
-        includeSecrets.setDisable(AppSettings.getInstance().getSecretVisibilityProfile()
-                == com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
-        long sensitiveCount = captureUIState().entrySet().stream()
-                .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
-        if (!sessionTrailState.log().isEmpty()) sensitiveCount++;
-        final long secretsCount = sensitiveCount;
-        Label secretNotice = new Label(i18n.text("savedSessions.redactedCount", secretsCount));
-        secretNotice.setWrapText(true);
-        secretNotice.setVisible(secretsCount > 0);
-        secretNotice.setManaged(secretsCount > 0);
-        includeSecrets.selectedProperty().addListener((obs, wasSelected, selected) -> {
-            secretNotice.setText(selected ? i18n.text("savedSessions.secretsEncrypted")
-                    : i18n.text("savedSessions.redactedCount", secretsCount));
-            secretNotice.setVisible(selected || secretsCount > 0);
-            secretNotice.setManaged(selected || secretsCount > 0);
-        });
-        VBox content = new VBox(10, new Label(i18n.text("dialog.saveSession.prompt")), nameField,
-                includeSecrets, secretNotice);
-        dialog.getDialogPane().setContent(content);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        java.util.Optional<ButtonType> result = dialog.showAndWait();
-        if (result.orElse(ButtonType.CANCEL) != ButtonType.OK || nameField.getText().trim().isEmpty()) return;
-        char[] password = null;
-        if (includeSecrets.isSelected()) {
-            PasswordField field = new PasswordField();
-            field.setPromptText(i18n.text("savedSessions.passwordPrompt"));
-            PasswordField confirmation = new PasswordField();
-            confirmation.setPromptText(i18n.text("savedSessions.passwordConfirmPrompt"));
-            Dialog<ButtonType> passwordDialog = new Dialog<>();
-            passwordDialog.setTitle(i18n.text("savedSessions.passwordTitle"));
-            passwordDialog.setHeaderText(i18n.text("savedSessions.passwordRequired"));
-            passwordDialog.getDialogPane().setContent(new VBox(8, field, confirmation));
-            passwordDialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            boolean accepted = passwordDialog.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
-            password = field.getText().toCharArray();
-            char[] repeated = confirmation.getText().toCharArray();
-            field.clear();
-            confirmation.clear();
-            boolean matches = java.util.Arrays.equals(password, repeated);
-            java.util.Arrays.fill(repeated, '\0');
-            if (!accepted || !matches || password.length < 8) {
-                java.util.Arrays.fill(password, '\0');
-                if (accepted) showWarning(i18n.text("savedSessions.passwordTitle"),
-                        i18n.text(matches ? "savedSessions.passwordTooShort" : "savedSessions.passwordMismatch"));
-                return;
-            }
-        }
-        savedSessionsCoordinator().save(nameField.getText(), password);
-    }
+    public void handleSaveSession() { saveSessionCoordinator().handleSaveSession(); }
 
     @FXML
     private void handleExportScreenConfiguration() { screenConfigurationCoordinator().exportScreenConfiguration(); }
@@ -2622,87 +2583,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     @FXML
-    private void handleEpochConverter() {
-        try {
-            javafx.stage.Stage stage = new javafx.stage.Stage();
-            stage.setTitle("Epoch Converter");
-            javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(10);
-            root.setPadding(new javafx.geometry.Insets(20));
-
-            Label l1 = new Label("Unix Timestamp (seconds):");
-            TextField tf = new TextField(String.valueOf(java.time.Instant.now().getEpochSecond()));
-            Label l2 = new Label("Human Date (UTC):");
-            TextField tfDate = new TextField();
-            tfDate.setEditable(false);
-            Button btn = new Button("Convert");
-
-            btn.setOnAction(e -> {
-                try {
-                    long ts = Long.parseLong(tf.getText().trim());
-                    String res = java.time.Instant.ofEpochSecond(ts).toString();
-                    tfDate.setText(res);
-                    // History (Manual log since popup)
-                    java.util.Map<String, String> details = new java.util.HashMap<>();
-                    details.put("Timestamp", tf.getText());
-                    details.put("Result", res);
-                    addToHistory("Epoch Converter", details);
-                } catch (Exception ex) {
-                    tfDate.setText("Invalid input");
-                }
-            });
-            btn.fire(); // ini
-
-            root.getChildren().addAll(l1, tf, btn, l2, tfDate);
-            javafx.scene.Scene scene = new javafx.scene.Scene(root, 300, 250);
-            // Apply current CSS if possible
-            if (mainPane.getScene() != null) {
-                scene.getStylesheets().addAll(mainPane.getScene().getStylesheets());
-            }
-            stage.setScene(scene);
-            stage.show();
-        } catch (Exception e) {
-            showError("Tool Error", e.getMessage());
-        }
-    }
+    private void handleEpochConverter() { utilityToolsCoordinator().handleEpochConverter(); }
 
     @FXML
-    private void handleJsonFormatter() {
-        try {
-            javafx.stage.Stage stage = new javafx.stage.Stage();
-            stage.setTitle("JSON Formatter");
-            javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(10);
-            root.setPadding(new javafx.geometry.Insets(10));
-            javafx.scene.layout.VBox.setVgrow(root, javafx.scene.layout.Priority.ALWAYS);
-
-            TextArea input = new TextArea();
-            input.setPromptText("Paste JSON here...");
-            TextArea output = new TextArea();
-            output.setEditable(false);
-
-            Button btn = new Button("Format");
-            btn.setOnAction(e -> {
-                try {
-                    com.google.gson.Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
-                    Object json = gson.fromJson(input.getText(), Object.class);
-                    output.setText(gson.toJson(json));
-                    // History
-                    addToHistory("JSON Formatter", new java.util.HashMap<>());
-                } catch (Exception ex) {
-                    output.setText("Invalid JSON: " + ex.getMessage());
-                }
-            });
-
-            root.getChildren().addAll(new Label("Input:"), input, btn, new Label("Output:"), output);
-            javafx.scene.Scene scene = new javafx.scene.Scene(root, 600, 400);
-            if (mainPane.getScene() != null) {
-                scene.getStylesheets().addAll(mainPane.getScene().getStylesheets());
-            }
-            stage.setScene(scene);
-            stage.show();
-        } catch (Exception e) {
-            showError("Tool Error", e.getMessage());
-        }
-    }
+    private void handleJsonFormatter() { utilityToolsCoordinator().handleJsonFormatter(); }
 
     @FXML
     private void handleByteInspector() {
