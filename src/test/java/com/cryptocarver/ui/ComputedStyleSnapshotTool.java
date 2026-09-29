@@ -60,7 +60,15 @@ class ComputedStyleSnapshotTool {
         CountDownLatch done = new CountDownLatch(1);
         Platform.runLater(() -> {
             try {
-                for (String theme : THEMES) for (String route : ROUTES) snapshot(theme, route, lines);
+                String selectedTheme = System.getProperty("styleSnapshotTheme");
+                String selectedRoute = System.getProperty("styleSnapshotRoute");
+                String[] themes = selectedTheme == null ? THEMES : new String[] {selectedTheme};
+                String[] routes = selectedRoute == null ? ROUTES : new String[] {selectedRoute};
+                for (String theme : themes) {
+                    for (String route : routes) {
+                        snapshot(theme, route, lines);
+                    }
+                }
             } catch (Throwable error) {
                 failure.set(error);
             } finally {
