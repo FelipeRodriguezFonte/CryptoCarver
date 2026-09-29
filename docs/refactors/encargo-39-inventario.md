@@ -109,3 +109,40 @@ Los tres casos de guardado verifican nombre guardado, rechazo de nombre vacío y
 La ruta de Epoch y JSON no tiene hosts JavaFX declarados en el FXML: `navigationHost` devuelve `null` y sus callbacks abren una `Stage`. Por ello la caracterización comprueba la ruta activa y el contenido inicial de esas ventanas. En Epoch el timestamp inicial se convierte inmediatamente en fecha UTC; en JSON ambos controles empiezan vacíos y el campo de entrada muestra `Paste JSON here...`.
 
 La prueba aísla `user.home` en `target/test-home` y restaura todos los archivos presentes allí antes de cada caso al terminar. En el primer intento falló el arnés, porque ocultar ventanas mientras se recorría la lista viva `Window.getWindows()` invalidaba sus índices; además, los datos de sesión creados sobrevivieron a esa limpieza fallida. La prueba ahora itera una copia de ventanas y usa un nombre sintético único por ejecución. No se cambió producción para hacer pasar la caracterización.
+
+## Parte C: extracción completada
+
+- `SaveSessionCoordinator` posee la presentación del diálogo, la validación del flujo de contraseña y el enlace al proveedor de `SavedSessionsCoordinator`.
+- `UtilityToolsCoordinator` posee las dos ventanas utilitarias y recibe la escena, el registro de historial y el presentador de errores mediante proveedores/callbacks.
+- `EpochTimestampConverter` convierte segundos Unix en UTC sin JavaFX.
+- `JsonTextFormatter` analiza y serializa JSON con pretty printing sin JavaFX.
+- Los handlers FXML `handleSaveSession`, `handleEpochConverter` y `handleJsonFormatter` delegan en una línea; se preservan sus visibilidades/contratos anteriores.
+- No se cambió `CommandRegistry`, FXML, CSS, `pom.xml` ni `.mvn/`.
+
+Los tests puros nuevos comprueban conversión epoch, whitespace, input inválido, JSON indentado, `null` y JSON inválido. La expectativa `1.0` se ajustó tras observar que la implementación anterior con Gson deserializaba números como `Double` y los volvía a serializar así; la prueba conserva ese comportamiento observable.
+
+## Instantáneas de estilo
+
+Se capturó `Hashing` por separado con `theme-light.css` y `theme-dark.css`, antes y después de Parte C. Cada captura se hizo con `user.home` limpio en `target/test-home`.
+
+Las cuatro capturas tienen 412 líneas. `diff -u` no produjo salida para claro ni oscuro; ambos diffs están vacíos. En ambos ciclos apareció la misma advertencia JavaFX previa de conversión CSS de `-fx-background-radius` y `-fx-border-radius`; no hay una diferencia de estilo asociada a la extracción.
+
+## Suite completa y tamaño del controlador
+
+Suite ejecutada: `mvn -o -q test`.
+
+Surefire reporta 2437 tests, 0 fallos, 0 errores y 1 omitido en 359 clases; la suma de los tiempos informados por las clases es 197.18 s y el tiempo de pared fue aproximadamente 3 min 15 s.
+
+Se añadieron 14 tests: 3 de Escape/foco, 5 de caracterización de handlers y 6 tests unitarios puros.
+
+`ModernMainController` pasó de 3002 a 2886 líneas, una reducción de 116.
+
+No se hizo la prueba manual solicitada; queda por comprobar Esc en la aplicación real con teclado físico y con la herramienta manual de control.
+
+## Commits
+
+- `ee132e7` — prueba de Escape en controles con foco.
+- `e3b68c7` — inventario de acciones sueltas.
+- `01dfa1c` — caracterización previa.
+- `bf6ea3c` — extracción de coordinadores y lógica pura.
+- El cierre documental queda en un commit posterior.
