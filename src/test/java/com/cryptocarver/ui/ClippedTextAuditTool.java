@@ -99,6 +99,15 @@ class ClippedTextAuditTool {
         return false;
     }
 
+    /** Drain deferred shell initialization before inspecting the settled UI. */
+    static void settle() {
+        for (int pass = 0; pass < 2; pass++) {
+            Object loop = new Object();
+            Platform.runLater(() -> Platform.exitNestedEventLoop(loop, null));
+            Platform.enterNestedEventLoop(loop);
+        }
+    }
+
     static void withScreen(String route, String theme, java.util.function.Consumer<Parent> action) throws Exception {
         var loader = Fxml.loader("/fxml/main-view-modern.fxml");
         Parent root = loader.load();
@@ -110,6 +119,7 @@ class ClippedTextAuditTool {
             scene.getStylesheets().add(ClippedTextAuditTool.class.getResource("/css/theme-" + theme + ".css").toExternalForm());
             stage.setScene(scene); stage.show();
             controller.navigateToModule(route);
+            settle();
             root.applyCss(); root.layout();
             action.accept(root);
         } finally {
@@ -208,7 +218,11 @@ class ClippedTextAuditTool {
                 I18nService.getInstance().setPreference(LanguagePreference.valueOf(locale.toUpperCase(Locale.ROOT)));
                 return null;
             });
+            String selection = System.getProperty("clippedTextAuditRoutes", "");
+            Set<String> selected = selection.isBlank() ? Set.of() : Set.of(selection.split("\\|"));
+            if (!routes.values().containsAll(selected)) throw new IllegalArgumentException("Unknown audit route");
             for (String route : new TreeSet<>(routes.values())) {
+                if (!selected.isEmpty() && !selected.contains(route)) continue;
                 onFx(() -> {
                     withScreen(route, theme, root -> auditStates(route, root, lines, findings, exclusions));
                     return null;
@@ -231,6 +245,7 @@ class ClippedTextAuditTool {
                 return null;
             });
         }
+        Collections.sort(lines);
         lines.add("TOTAL = " + findings.size());
         lines.add("\nFINDINGS (skin truncation; off-viewport alone is never a finding):");
         findings.stream().sorted(Comparator.comparing(Finding::screen).thenComparing(Finding::path))

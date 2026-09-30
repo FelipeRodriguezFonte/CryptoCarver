@@ -93,6 +93,7 @@ class ComputedStyleSnapshotTool {
         stage.setScene(scene);
         stage.show();
         controller.navigateToModule(route);
+        ClippedTextAuditTool.settle();
         root.applyCss();
         root.layout();
         walk(root, theme + " " + route + " ", lines);
