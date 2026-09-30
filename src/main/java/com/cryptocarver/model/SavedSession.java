@@ -78,11 +78,25 @@ public class SavedSession implements Serializable {
         private String salt;
         private String nonce;
         private String ciphertext;
+        private int aadVersion;
+        private boolean protectedTrail;
 
         public ProtectedFields() { }
         public ProtectedFields(String kdf, int iterations, String salt, String nonce, String ciphertext) {
-            this.kdf = kdf; this.iterations = iterations; this.salt = salt; this.nonce = nonce; this.ciphertext = ciphertext;
+            this.kdf = kdf;
+            this.iterations = iterations;
+            this.salt = salt;
+            this.nonce = nonce;
+            this.ciphertext = ciphertext;
         }
+        public ProtectedFields(String kdf, int iterations, String salt, String nonce, String ciphertext,
+                               int aadVersion, boolean protectedTrail) {
+            this(kdf, iterations, salt, nonce, ciphertext);
+            this.aadVersion = aadVersion;
+            this.protectedTrail = protectedTrail;
+        }
+        public int getAadVersion() { return aadVersion; }
+        public boolean hasProtectedTrail() { return protectedTrail; }
         public String getKdf() { return kdf; }
         public int getIterations() { return iterations; }
         public String getSalt() { return salt; }

@@ -48,15 +48,18 @@ public final class SavedSessionCodec {
             else safe.put(key, value);
         });
         boolean encrypt = password != null && (secrets.size() > 0 || source.getOperationLog() != null);
+        secrets.keySet().forEach(key -> safe.put(key, MARKER));
+        stored.setUiState(safe);
         if (encrypt) {
             byte[] salt = PasswordFieldCipher.randomBytes(PasswordFieldCipher.SALT_BYTES);
             byte[] nonce = PasswordFieldCipher.randomBytes(PasswordFieldCipher.NONCE_BYTES);
             byte[] plain = writer.toJson(new ProtectedPayload(secrets, source.getOperationLog())).getBytes(StandardCharsets.UTF_8);
             try {
-                byte[] cipher = PasswordFieldCipher.encrypt(password, salt, nonce, plain, PasswordFieldCipher.ITERATIONS);
+                byte[] cipher = PasswordFieldCipher.encrypt(password, salt, nonce, plain, PasswordFieldCipher.ITERATIONS,
+                        SavedSessionAad.encode(stored, source.getOperationLog() != null));
                 stored.setProtectedFields(new SavedSession.ProtectedFields(PasswordFieldCipher.KDF,
-                        PasswordFieldCipher.ITERATIONS, b64(salt), b64(nonce), b64(cipher)));
-                secrets.keySet().forEach(key -> safe.put(key, MARKER));
+                        PasswordFieldCipher.ITERATIONS, b64(salt), b64(nonce), b64(cipher),
+                        SavedSessionAad.VERSION, source.getOperationLog() != null));
             } catch (GeneralSecurityException e) {
                 throw new IllegalArgumentException("Unable to protect saved session secrets", e);
             } finally {
@@ -64,7 +67,6 @@ public final class SavedSessionCodec {
                 java.util.Arrays.fill(password, '\0');
             }
         } else {
-            secrets.forEach((key, value) -> safe.put(key, MARKER));
             OperationSessionLog trail = source.getOperationLog();
             if (trail != null && !trail.isEmpty()) {
                 stored.setOperationLog(RedactedTrail.from(trail));
@@ -144,7 +146,8 @@ public final class SavedSessionCodec {
         Map<String, Object> secrets;
         OperationSessionLog operationLog;
         ProtectedPayload(Map<String, Object> secrets, OperationSessionLog operationLog) {
-            this.secrets = secrets; this.operationLog = operationLog;
+            this.secrets = secrets;
+            this.operationLog = operationLog;
         }
     }
 }
