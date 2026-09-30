@@ -17,9 +17,12 @@ class ClippedTextAuditToolTest {
                     <?import javafx.scene.control.Button?>
                     <?import javafx.scene.control.TitledPane?>
                     <?import javafx.scene.control.Label?>
+                    <?import javafx.scene.control.MenuButton?>
                     <VBox xmlns:fx="http://javafx.com/fxml/1">
                       <Button fx:id="clipped" text="A very long interface caption that cannot fit" minWidth="0" prefWidth="70" maxWidth="70"/>
                       <Button fx:id="fits" text="OK" minWidth="100"/>
+                      <MenuButton fx:id="clippedMenu" text="A very long menu caption that cannot fit" minWidth="0" prefWidth="70" maxWidth="70"/>
+                      <Label fx:id="lblFingerprint" text="DATA_OUTPUT" minWidth="0" prefWidth="10" maxWidth="10"/>
                       <TitledPane text="Header" expanded="true">
                         <Label text="A different content caption"/>
                       </TitledPane>
@@ -34,8 +37,10 @@ class ClippedTextAuditToolTest {
             try {
                 stage.setScene(new Scene(root, 300, 300)); stage.show();
                 var result = ClippedTextAuditTool.inspect("synthetic", root);
-                assertEquals(1, result.findings().size());
+                assertEquals(2, result.findings().size());
                 assertTrue(result.findings().get(0).path().contains("#clipped"));
+                assertTrue(result.findings().stream().anyMatch(f -> f.path().contains("#clippedMenu")));
+                assertTrue(result.exclusions().stream().anyMatch(e -> e.contains("data output label")));
                 assertNotEquals(result.findings().get(0).full(), result.findings().get(0).visible());
                 assertTrue(result.exclusions().stream().anyMatch(e -> e.contains("collapsed TitledPane content")));
             } finally { stage.close(); stage.setScene(null); }

@@ -24,6 +24,9 @@ import java.util.concurrent.*;
  */
 @EnabledIfSystemProperty(named = "clippedTextAuditOut", matches = ".+")
 class ClippedTextAuditTool {
+    // Workbench output values are data, not interface captions. Do not read their text.
+    private static final Set<String> DATA_OUTPUT_IDS = Set.of("lblFormat", "lblAlgorithm", "lblHasPrivate",
+            "lblSubject", "lblKeySize", "lblFingerprint", "lblValidity");
     record Finding(String screen, String path, String type, String classes, String full,
                    String visible, double width, double preferred, String parent) {
         String line() {
@@ -60,6 +63,9 @@ class ClippedTextAuditTool {
             excluded.add(screen + " | " + key + " | collapsed TitledPane content"); return;
         }
         if (!node.isVisible()) { excluded.add(screen + " | " + key + " | hidden subtree"); return; }
+        if (node instanceof Labeled && node.getId() != null && DATA_OUTPUT_IDS.contains(node.getId())) {
+            excluded.add(screen + " | " + key + " | data output label (text not read)"); return;
+        }
         if (node instanceof Labeled label && label.getText() != null && !label.getText().isBlank()) {
             // Cells are data, including combo selections and list/tree/table content.
             // Header Labels and Tab header Labels remain eligible: their skins expose LabeledText.
