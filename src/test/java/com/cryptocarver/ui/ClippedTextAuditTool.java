@@ -109,11 +109,24 @@ class ClippedTextAuditTool {
     }
 
     static void withScreen(String route, String theme, java.util.function.Consumer<Parent> action) throws Exception {
-        var loader = Fxml.loader("/fxml/main-view-modern.fxml");
-        Parent root = loader.load();
-        ModernMainController controller = loader.getController();
+        var settings = AppSettings.getInstance();
+        double tree = settings.getWorkspaceTreeDividerPosition();
+        double inspector = settings.getWorkspaceInspectorDividerPosition();
+        String last = settings.getLastRoute(), startup = settings.getStartupRoute();
+        double scale = settings.getTextScale();
+        boolean compact = settings.isCompactDensity();
+        var visibility = settings.getSecretVisibilityProfile();
         Stage stage = new Stage();
+        ModernMainController controller = null;
         try {
+            settings.setWorkspaceTreeDividerPosition(0.22);
+            settings.setWorkspaceInspectorDividerPosition(0.78);
+            settings.setLastRoute(""); settings.setStartupRoute("");
+            settings.setTextScale(1.0); settings.setCompactDensity(false);
+            settings.setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+            var loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            Parent root = loader.load();
+            controller = loader.getController();
             Scene scene = new Scene(root, 1400, 900);
             scene.getStylesheets().add(ClippedTextAuditTool.class.getResource("/css/styles.css").toExternalForm());
             scene.getStylesheets().add(ClippedTextAuditTool.class.getResource("/css/theme-" + theme + ".css").toExternalForm());
@@ -123,7 +136,14 @@ class ClippedTextAuditTool {
             root.applyCss(); root.layout();
             action.accept(root);
         } finally {
-            stage.close(); controller.shutdown(); stage.setScene(null);
+            stage.close();
+            if (controller != null) controller.shutdown();
+            stage.setScene(null);
+            settings.setWorkspaceTreeDividerPosition(tree);
+            settings.setWorkspaceInspectorDividerPosition(inspector);
+            settings.setLastRoute(last); settings.setStartupRoute(startup);
+            settings.setTextScale(scale); settings.setCompactDensity(compact);
+            settings.setSecretVisibilityProfile(visibility);
         }
     }
 

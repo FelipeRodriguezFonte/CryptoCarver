@@ -89,6 +89,8 @@ class ComputedStyleSnapshotTool {
         scene.getStylesheets().add(getClass().getResource("/css/" + theme).toExternalForm());
         Stage stage = new Stage();
         String previousRoute = com.cryptocarver.model.AppSettings.getInstance().getLastRoute();
+        double previousTree = com.cryptocarver.model.AppSettings.getInstance().getWorkspaceTreeDividerPosition();
+        double previousInspector = com.cryptocarver.model.AppSettings.getInstance().getWorkspaceInspectorDividerPosition();
         try {
         stage.setScene(scene);
         stage.show();
@@ -100,6 +102,8 @@ class ComputedStyleSnapshotTool {
         } finally {
             stage.close(); controller.shutdown(); stage.setScene(null);
             com.cryptocarver.model.AppSettings.getInstance().setLastRoute(previousRoute);
+            com.cryptocarver.model.AppSettings.getInstance().setWorkspaceTreeDividerPosition(previousTree);
+            com.cryptocarver.model.AppSettings.getInstance().setWorkspaceInspectorDividerPosition(previousInspector);
         }
     }
 
