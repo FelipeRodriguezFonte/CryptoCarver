@@ -155,6 +155,7 @@ public final class SavedSessionsCoordinator {
                 .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
         if (trailState.log() != null && !trailState.log().isEmpty()) redacted++;
         SavedSession source = new SavedSession(name, operation, captured, trailState.log());
+        source.setTrailRedacted(trailState.isTrailRedacted());
         manager.addSession(codec.prepareForStorage(source, password));
         if (redacted > 0) statusReporter.updateStatus(i18n.text("savedSessions.redactedCount", redacted));
         statusReporter.updateStatus("Session saved: " + name);
@@ -200,7 +201,7 @@ public final class SavedSessionsCoordinator {
         OperationSessionLog loadedLog = restored.getOperationLog();
         OperationSessionLog trail = loadedLog == null ? new OperationSessionLog() : loadedLog;
         // Replace the current trail through the supplied callback's controller-owned state.
-        trailState.replace(trail);
+        trailState.replace(trail, restored.isTrailRedacted());
         operationSelection.accept(restored.getOperation());
         trailRefresh.run();
         if (!trail.isEmpty()) showTrailStep.accept(trail.size() - 1);

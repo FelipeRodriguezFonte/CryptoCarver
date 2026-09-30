@@ -48,7 +48,7 @@ class SessionTrailUITest {
     }
 
     @Test
-    void productionFxmlPasswordlessSaveAndLoadCurrentlyReplacesTrailWithAnEmptyLog() throws Exception {
+    void productionFxmlPasswordlessSaveAndLoadRestoresTheRedactedTrail() throws Exception {
         assertEquals("true", System.getProperty("test.mode"));
         assertTrue(Path.of(System.getProperty("user.home")).endsWith(Path.of("target", "test-home")));
         SecretVisibilityProfile previousProfile = AppSettings.getInstance().getSecretVisibilityProfile();
@@ -79,13 +79,22 @@ class SessionTrailUITest {
                     assertEquals(1, state.size());
                     var stored = manager.getSessions().stream().filter(session -> !previousIds.contains(session.getId()))
                             .findFirst().orElseThrow();
-                    assertNull(stored.getOperationLog());
+                    assertEquals(1, stored.getOperationLog().size());
+                    assertTrue(stored.isTrailRedacted());
+                    assertTrue(SessionTrailViewFormatter.preview(stored, com.cryptocarver.service.I18nService.getInstance())
+                            .contains(com.cryptocarver.service.I18nService.getInstance().text("sessionTrail.redacted")));
                     SavedSessionsCoordinator saved = field(controller, "savedSessionsCoordinator");
                     var loadMethod = saved.getClass().getDeclaredMethod("previewAndLoad", com.cryptocarver.model.SavedSession.class);
                     loadMethod.setAccessible(true);
                     Platform.runLater(() -> clickConfirmation(true));
                     loadMethod.invoke(saved, stored);
-                    assertEquals(0, state.size());
+                    assertEquals(1, state.size());
+                    assertTrue(state.isTrailRedacted());
+                    assertNull(state.steps().get(0).getInputText());
+                    assertEquals("public-ui-output-41", state.steps().get(0).getOutputText());
+                    Label count = field(controller, "sessionTrailCountLabel");
+                    assertTrue(count.getText().contains(com.cryptocarver.service.I18nService.getInstance()
+                            .text("sessionTrail.redacted")));
                 } catch (Exception exception) {
                     throw new AssertionError(exception);
                 } finally {

@@ -104,7 +104,11 @@ public final class SessionTrailCoordinator {
 
     public void refresh() {
         int count = state.size();
-        if (countLabel != null) { countLabel.setText(i18n.text("sessionTrail.compactCount", count)); countLabel.setAccessibleText(i18n.text("sessionTrail.count", count)); }
+        if (countLabel != null) {
+            String notice = state.isTrailRedacted() ? " · " + i18n.text("sessionTrail.redacted") : "";
+            countLabel.setText(i18n.text("sessionTrail.compactCount", count) + notice);
+            countLabel.setAccessibleText(i18n.text("sessionTrail.count", count) + notice);
+        }
         if (exportButton != null) exportButton.setDisable(count == 0);
         if (clearButton != null) clearButton.setDisable(count == 0);
         refreshNavigation();
@@ -144,7 +148,8 @@ public final class SessionTrailCoordinator {
         int index = state.selectedIndex(); if (index < 0 || index >= state.size()) return;
         SessionOperationStep step = state.steps().get(index);
         stepViewer.show(windowOf(ownerNode.get()), i18n.text("sessionTrail.viewStepTitle", step.getTitle()),
-                SessionTrailViewFormatter.step(step, AppSettings.getInstance().getSecretVisibilityProfile(), i18n));
+                SessionTrailViewFormatter.step(step, AppSettings.getInstance().getSecretVisibilityProfile(), i18n,
+                        state.isTrailRedacted()));
     }
     public void handleExport() {
         if (state.log().isEmpty()) { warning.accept(i18n.text("sessionTrail.title"), i18n.text("sessionTrail.nothingToExport")); return; }

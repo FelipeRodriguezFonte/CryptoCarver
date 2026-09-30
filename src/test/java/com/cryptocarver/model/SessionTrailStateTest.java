@@ -42,6 +42,20 @@ class SessionTrailStateTest {
         assertEquals(-1, state.selectedIndex());
     }
 
+    @Test
+    void replacingOrClearingATrailResetsItsRedactionNotice() {
+        SessionTrailState state = new SessionTrailState();
+        OperationSessionLog log = new OperationSessionLog();
+        log.add(result("public"), "public", List.of());
+        state.replace(log, true);
+        assertTrue(state.isTrailRedacted());
+        state.replace(log);
+        assertFalse(state.isTrailRedacted());
+        state.replace(log, true);
+        state.clear();
+        assertFalse(state.isTrailRedacted());
+    }
+
     private static OperationResult result(String value) {
         return OperationResult.forOperation(value).output(value.getBytes()).build();
     }

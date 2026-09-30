@@ -72,4 +72,23 @@ class SessionTrailViewFormatterTest {
         assertFalse(preview.contains("INPUT-SECRET"));
         assertFalse(preview.contains("PARAMETER-SECRET"));
     }
+    @Test
+    void redactedPreviewAndStepExplainOmittedValuesEvenInFullLab() {
+        I18nService i18n = I18nService.getInstance();
+        SavedSession stored = new com.cryptocarver.model.SavedSessionCodec().prepareForStorage(
+                new SavedSession("Redacted", "MAC", Map.of(), secretLog()), null);
+        assertTrue(SessionTrailViewFormatter.preview(stored, i18n).contains(i18n.text("sessionTrail.redacted")));
+        String step = SessionTrailViewFormatter.step(stored.getOperationLog().getSteps().get(0),
+                SecretVisibilityProfile.FULL_LAB, i18n, stored.isTrailRedacted());
+        assertTrue(step.contains(i18n.text("sessionTrail.redacted")));
+        assertTrue(step.contains(i18n.text("sessionTrail.redactedValue")));
+        assertFalse(step.contains("INPUT-SECRET"));
+    }
+
+    private OperationSessionLog secretLog() {
+        OperationSessionLog log = new OperationSessionLog();
+        log.add(OperationResult.forOperation("MAC").input("INPUT-SECRET".getBytes(StandardCharsets.UTF_8))
+                .build(), "Synthetic step", List.of());
+        return log;
+    }
 }

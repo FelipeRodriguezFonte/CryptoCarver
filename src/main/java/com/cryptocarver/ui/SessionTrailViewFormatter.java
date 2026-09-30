@@ -12,7 +12,13 @@ final class SessionTrailViewFormatter {
     private SessionTrailViewFormatter() { }
 
     static String step(SessionOperationStep step, SecretVisibilityProfile visibility, I18nService i18n) {
+        return step(step, visibility, i18n, false);
+    }
+
+    static String step(SessionOperationStep step, SecretVisibilityProfile visibility, I18nService i18n,
+                       boolean redacted) {
         StringBuilder text = new StringBuilder();
+        if (redacted) text.append(i18n.text("sessionTrail.redacted")).append("\n\n");
         text.append(step.getTitle()).append("\n")
                 .append(step.getOperation()).append(" · ").append(step.getTimestamp()).append("\n");
         if (step.getStatus() != null && !step.getStatus().isBlank()) {
@@ -53,6 +59,7 @@ final class SessionTrailViewFormatter {
         } else if (log == null || log.isEmpty()) {
             text.append(i18n.text("sessionTrail.empty"));
         } else {
+            if (session.isTrailRedacted()) text.append(i18n.text("sessionTrail.redacted")).append("\n\n");
             int index = 1;
             for (SessionOperationStep step : log.getSteps()) {
                 text.append(index++).append(". ").append(step.getTitle())
@@ -69,6 +76,8 @@ final class SessionTrailViewFormatter {
         text.append("\n").append(title).append("\n");
         if (!present) {
             text.append(i18n.text("sessionTrail.notPresent")).append("\n");
+        } else if (utf8 == null && hex == null) {
+            text.append(i18n.text("sessionTrail.redactedValue")).append("\n");
         } else if (visibility != SecretVisibilityProfile.FULL_LAB
                 && classification != OperationDetail.Classification.PUBLIC) {
             text.append(project("", classification, visibility)).append("\n");

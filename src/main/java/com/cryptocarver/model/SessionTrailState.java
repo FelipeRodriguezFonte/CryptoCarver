@@ -8,10 +8,12 @@ public final class SessionTrailState {
     private OperationSessionLog log = new OperationSessionLog();
     private int selectedIndex = -1;
     private boolean unsavedResult;
+    private boolean trailRedacted;
 
     public synchronized OperationSessionLog log() { return log; }
     public synchronized int selectedIndex() { return selectedIndex; }
     public synchronized boolean hasUnsavedResult() { return unsavedResult; }
+    public synchronized boolean isTrailRedacted() { return trailRedacted; }
     public synchronized int size() { return log.size(); }
     public synchronized List<SessionOperationStep> steps() { return log.getSteps(); }
 
@@ -52,11 +54,17 @@ public final class SessionTrailState {
 
     public synchronized void clear() {
         log.clear();
+        trailRedacted = false;
         selectedIndex = -1;
     }
 
     public synchronized void replace(OperationSessionLog replacement) {
+        replace(replacement, false);
+    }
+
+    public synchronized void replace(OperationSessionLog replacement, boolean redacted) {
         log = Objects.requireNonNullElseGet(replacement, OperationSessionLog::new);
+        trailRedacted = redacted && !log.isEmpty();
         selectedIndex = -1;
     }
 }
