@@ -49,9 +49,26 @@ class SavedSessionTrailStorageTest {
     @Test
     void passwordlessJsonContainsNoSyntheticSensitiveValuesOrTheirHexEncoding() {
         String json = codec.serialize(List.of(codec.prepareForStorage(source(), null)));
+        assertNoSensitiveValues(com.google.gson.JsonParser.parseString(json));
+    }
+
+    private void assertNoSensitiveValues(com.google.gson.JsonElement element) {
+        if (element.isJsonArray()) {
+            element.getAsJsonArray().forEach(this::assertNoSensitiveValues);
+        } else if (element.isJsonObject()) {
+            element.getAsJsonObject().entrySet().forEach(entry -> {
+                assertNoSensitiveText(entry.getKey());
+                assertNoSensitiveValues(entry.getValue());
+            });
+        } else if (element.isJsonPrimitive()) {
+            assertNoSensitiveText(element.getAsString());
+        }
+    }
+
+    private void assertNoSensitiveText(String text) {
         for (String value : SYNTHETIC_VALUES) {
-            assertFalse(json.contains(value), "Synthetic sensitive value leaked");
-            assertFalse(json.contains(java.util.HexFormat.of().withUpperCase()
+            assertFalse(text.contains(value), "Synthetic sensitive value leaked");
+            assertFalse(text.contains(java.util.HexFormat.of().withUpperCase()
                     .formatHex(value.getBytes(StandardCharsets.UTF_8))), "Synthetic sensitive bytes leaked");
         }
     }
@@ -80,6 +97,15 @@ class SavedSessionTrailStorageTest {
         SavedSession stored = codec.deserialize("[{\"name\":\"Old\",\"version\":1,\"operationLog\":null}]").get(0);
         assertNull(codec.restore(stored, null).getOperationLog());
         assertFalse(stored.isTrailRedacted());
+    }
+
+    @Test
+    void encryptingAPreviouslyRedactedTrailKeepsItsRedactionMarker() {
+        SavedSession redacted = codec.prepareForStorage(source(), null);
+        SavedSession encrypted = codec.prepareForStorage(redacted, "invented-password-41".toCharArray());
+        SavedSession restored = codec.restore(encrypted, "invented-password-41".toCharArray());
+        assertTrue(restored.isTrailRedacted());
+        assertEquals(codec.serialize(List.of(redacted)), codec.serialize(List.of(restored)));
     }
 
     static SavedSession source() {

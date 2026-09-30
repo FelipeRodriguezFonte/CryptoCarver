@@ -62,4 +62,16 @@ class SavedSessionsManagerTest {
                 .getUiState().get("CipherController.passwordField"));
         assertFalse(Files.readString(file).contains("invented-legacy-secret"));
     }
+    @Test
+    void passwordlessTrailSurvivesRepeatedPreparationAndDiskReload() {
+        Path file = temp.resolve("redacted-sessions.json");
+        SavedSessionCodec codec = new SavedSessionCodec();
+        SavedSession prepared = codec.prepareForStorage(SavedSessionTrailStorageTest.source(), null);
+        SavedSessionsManager manager = new SavedSessionsManager(file);
+        manager.addSession(prepared);
+        SavedSession reloaded = new SavedSessionsManager(file).getSessions().get(0);
+        assertEquals(codec.serialize(java.util.List.of(prepared)), codec.serialize(java.util.List.of(reloaded)));
+        assertTrue(reloaded.isTrailRedacted());
+        assertTrue(reloaded.getOperationLog().verifyChain());
+    }
 }

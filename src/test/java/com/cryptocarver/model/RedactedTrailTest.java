@@ -56,6 +56,25 @@ class RedactedTrailTest {
         assertEquals(gson.toJson(safe), gson.toJson(RedactedTrail.from(safe)));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(OperationDetail.Classification.class)
+    void retainsOnlyPublicOutputAndEnrichedOutput(OperationDetail.Classification classification) {
+        OperationSessionLog original = new OperationSessionLog();
+        original.add(OperationResult.forOperation("Synthetic")
+                .output("invented-result-41".getBytes(StandardCharsets.UTF_8), classification)
+                .enrichedOutput("invented-enriched-41", classification).build(), "Synthetic", List.of());
+        SessionOperationStep safe = RedactedTrail.from(original).getSteps().get(0);
+        if (classification == OperationDetail.Classification.PUBLIC) {
+            assertEquals("invented-result-41", safe.getOutputText());
+            assertNotNull(safe.getOutputHex());
+            assertEquals("invented-enriched-41", safe.getEnrichedOutput());
+        } else {
+            assertNull(safe.getOutputText());
+            assertNull(safe.getOutputHex());
+            assertNull(safe.getEnrichedOutput());
+        }
+    }
+
     @Test
     void emptyAndAbsentTrailsRemainEmptyAndAbsent() {
         assertNull(RedactedTrail.from(null));
