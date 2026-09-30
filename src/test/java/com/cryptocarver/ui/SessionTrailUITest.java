@@ -48,6 +48,61 @@ class SessionTrailUITest {
     }
 
     @Test
+    void productionFxmlPasswordlessSaveAndLoadCurrentlyReplacesTrailWithAnEmptyLog() throws Exception {
+        assertEquals("true", System.getProperty("test.mode"));
+        assertTrue(Path.of(System.getProperty("user.home")).endsWith(Path.of("target", "test-home")));
+        SecretVisibilityProfile previousProfile = AppSettings.getInstance().getSecretVisibilityProfile();
+        var manager = com.cryptocarver.model.SavedSessionsManager.getInstance();
+        var previousIds = manager.getSessions().stream().map(com.cryptocarver.model.SavedSession::getId).toList();
+        Path sessionsFile = Path.of(System.getProperty("user.home"), ".cryptocarver", "saved_sessions.json");
+        byte[] previousFile = Files.exists(sessionsFile) ? Files.readAllBytes(sessionsFile) : null;
+        try {
+            runAndWait(() -> {
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                try {
+                    AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
+                    FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                    javafx.scene.Parent root = loader.load();
+                    ModernMainController controller = loader.getController();
+                    stage.setScene(new javafx.scene.Scene(root, 1100, 800));
+                    stage.show();
+                    controller.publish(OperationResult.forOperation("Synthetic")
+                            .input("invented-ui-input-41".getBytes(StandardCharsets.UTF_8))
+                            .output("public-ui-output-41".getBytes(StandardCharsets.UTF_8)).build());
+                    controller.saveCurrentResultAsSessionStep("Synthetic UI step", "synthetic");
+                    var saveMethod = controller.getClass().getDeclaredMethod("saveSessionCoordinator");
+                    saveMethod.setAccessible(true);
+                    SaveSessionCoordinator save = (SaveSessionCoordinator) saveMethod.invoke(controller);
+                    Platform.runLater(() -> clickConfirmation(true));
+                    save.handleSaveSession();
+                    var state = (com.cryptocarver.model.SessionTrailState) field(controller, "sessionTrailState");
+                    assertEquals(1, state.size());
+                    var stored = manager.getSessions().stream().filter(session -> !previousIds.contains(session.getId()))
+                            .findFirst().orElseThrow();
+                    assertNull(stored.getOperationLog());
+                    SavedSessionsCoordinator saved = field(controller, "savedSessionsCoordinator");
+                    var loadMethod = saved.getClass().getDeclaredMethod("previewAndLoad", com.cryptocarver.model.SavedSession.class);
+                    loadMethod.setAccessible(true);
+                    Platform.runLater(() -> clickConfirmation(true));
+                    loadMethod.invoke(saved, stored);
+                    assertEquals(0, state.size());
+                } catch (Exception exception) {
+                    throw new AssertionError(exception);
+                } finally {
+                    stage.close();
+                }
+            });
+        } finally {
+            for (var session : manager.getSessions()) {
+                if (!previousIds.contains(session.getId())) manager.removeSession(session);
+            }
+            if (previousFile == null) Files.deleteIfExists(sessionsFile);
+            else Files.write(sessionsFile, previousFile);
+            runAndWait(() -> AppSettings.getInstance().setSecretVisibilityProfile(previousProfile));
+        }
+    }
+
+    @Test
     void savedSessionDeleteRequiresConfirmation() throws Exception {
         var constructor = com.cryptocarver.model.SavedSessionsManager.class.getDeclaredConstructor(Path.class);
         constructor.setAccessible(true);
