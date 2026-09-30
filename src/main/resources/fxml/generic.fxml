@@ -45,7 +45,7 @@
                     <ComboBox fx:id="hashAlgorithmCombo" prefWidth="200" styleClass="form-field"/>
                 </HBox>
 
-                <Label text="Input:" styleClass="form-label"/>
+                <Label text="Input:" styleClass="form-label" minWidth="-Infinity"/>
                 <TextArea fx:id="hashInputArea" prefRowCount="3" wrapText="true" styleClass="monospace-field"/>
 
                 <Button text="Calculate Hash" onAction="#handleCalculateHash"
@@ -62,13 +62,13 @@
             <VBox spacing="12" styleClass="module-pane-content">
                 <Label text="Runs safe, deterministic transformations. Input must contain an input column; no secret keys are accepted." wrapText="true" styleClass="helper-text"/>
                 <HBox spacing="8" alignment="CENTER_LEFT">
-                    <Label text="Input:" styleClass="form-label"/>
+                    <Label text="Input:" styleClass="form-label" minWidth="-Infinity"/>
                     <ComboBox fx:id="batchInputFormatCombo" prefWidth="90" styleClass="form-field"/>
-                    <Label text="Operation:" styleClass="form-label"/>
+                    <Label text="Operation:" styleClass="form-label" minWidth="-Infinity"/>
                     <ComboBox fx:id="batchOperationCombo" HBox.hgrow="ALWAYS" styleClass="form-field"/>
-                    <Label text="Src Col:" styleClass="form-label"/>
+                    <Label text="Src Col:" styleClass="form-label" minWidth="-Infinity"/>
                     <TextField fx:id="batchColumnField" text="input" prefWidth="60" styleClass="form-field"/>
-                    <Label text="Out Col:" styleClass="form-label"/>
+                    <Label text="Out Col:" styleClass="form-label" minWidth="-Infinity"/>
                     <TextField fx:id="batchOutputColumnField" text="result" prefWidth="60" styleClass="form-field"/>
                 </HBox>
                 <VBox styleClass="ux-inline-afb8c30032" fx:id="batchCryptoConfigBox" managed="false" visible="false" spacing="8">
@@ -161,11 +161,11 @@
                     <Button text="Convert File" onAction="#handleConvertFile"
                             maxWidth="180" styleClass="action-button,primary-action"/>
                     <Button text="Compare Files (streaming)" onAction="#handleCompareFiles"
-                            maxWidth="180" styleClass="secondary-button"/>
+                            maxWidth="180" styleClass="secondary-button" minWidth="-Infinity"/>
                     <Button text="Hash File SHA-256 (streaming)" onAction="#handleHashFileStreaming"
                             maxWidth="200" styleClass="secondary-button"/>
                     <Button text="Preview First 4 KiB" onAction="#handlePreviewFileStreaming"
-                            maxWidth="180" styleClass="secondary-button"/>
+                            maxWidth="180" styleClass="secondary-button" minWidth="-Infinity"/>
                 </FlowPane>
 
                 <TextArea fx:id="fileResultArea" prefRowCount="2" editable="false"
@@ -192,7 +192,7 @@
                  </FlowPane>
 
                  <HBox spacing="8" alignment="CENTER_LEFT">
-                     <Label text="Input:" styleClass="form-label"/>
+                     <Label text="Input:" styleClass="form-label" minWidth="-Infinity"/>
                      <ComboBox fx:id="manualInputFormatCombo" prefWidth="150" styleClass="form-field"/>
                  </HBox>
                  <TextArea fx:id="manualInputArea" prefRowCount="3" wrapText="true" styleClass="monospace-field"/>
@@ -299,7 +299,7 @@
                 </HBox>
 
                 <HBox spacing="8" alignment="CENTER_LEFT">
-                    <Label text="Input:" styleClass="form-label"/>
+                    <Label text="Input:" styleClass="form-label" minWidth="-Infinity"/>
                     <TextField fx:id="checkDigitInput" promptText="Enter number" styleClass="form-field" prefWidth="300"/>
                 </HBox>
 
@@ -324,7 +324,7 @@
                         <ColumnConstraints hgrow="ALWAYS"/>
                     </columnConstraints>
 
-                    <Label text="Operation:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="Operation:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" minWidth="-Infinity"/>
                     <ComboBox fx:id="modOperationCombo" prefWidth="200" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
                     <Label text="Operand A (Hex):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>

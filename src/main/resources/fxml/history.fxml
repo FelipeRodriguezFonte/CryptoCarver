@@ -23,16 +23,16 @@
     <!-- Header: split in rows so every action stays readable on ordinary window widths. -->
     <VBox spacing="7">
         <HBox alignment="CENTER_LEFT" spacing="10">
-            <Label styleClass="ux-inline-c7cf31c907" text="Recent Operations" />
-            <Label styleClass="ux-inline-aaca1a5100" fx:id="historySummaryLabel" text="0 operations" />
+            <Label styleClass="ux-inline-c7cf31c907" text="Recent Operations"  minWidth="-Infinity"/>
+            <Label styleClass="ux-inline-aaca1a5100" fx:id="historySummaryLabel" text="0 operations"  minWidth="-Infinity"/>
             <Region HBox.hgrow="ALWAYS" />
-            <Label text="Values:" />
+            <Label text="Values:"  minWidth="-Infinity"/>
             <ComboBox fx:id="visibilityCombo" prefWidth="215.0">
                 <tooltip>
                     <Tooltip text="Choose Unsafe lab to reveal all values. This also controls report and recipe export." />
                 </tooltip>
             </ComboBox>
-            <Label styleClass="ux-inline-d8d7ab2893" fx:id="unsafeVisibilityWarningLabel" text="⚠ Unsafe lab: sensitive values are visible" />
+            <Label styleClass="ux-inline-d8d7ab2893" fx:id="unsafeVisibilityWarningLabel" text="⚠ Unsafe lab: sensitive values are visible"  wrapText="true" minHeight="-Infinity"/>
         </HBox>
 
         <FlowPane alignment="CENTER_LEFT" prefWrapLength="900.0" styleClass="responsive-action-bar">
