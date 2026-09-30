@@ -1,0 +1,118 @@
+screen	en-light	en-dark	es-light	es-dark
+AES Encryption	0	0	0	0
+AES Key Wrap	0	0	0	0
+AKB	0	0	0	0
+ARPC Generation	0	0	0	0
+ARQC Generation	0	0	0	0
+ASN.1	0	0	0	0
+ASN.1 / tabs 0:1	0	0	0	0
+ASN.1 Decoder	0	0	0	0
+ASN.1 Decoder / tabs 0:1	0	0	0	0
+ASN.1 Encode	0	0	0	0
+ASN.1 Encode / tabs 0:0	0	0	0	0
+ASiC	0	0	0	0
+AdES Validation	0	0	0	0
+Add UsernameToken (WSS)	0	0	0	0
+Asymmetric Ciphers	0	0	0	0
+Batch Runner	0	0	0	0
+CMS Decrypt	0	0	0	0
+CMS Decrypt / tabs 0:1	0	0	0	0
+CMS Inspector	0	0	0	0
+COSE Decrypt0	0	0	0	0
+CVV Generation	0	0	0	0
+Certificate Chain	0	0	0	0
+Check Digits	0	0	0	0
+Clear PIN Blocks	0	0	0	0
+Clipboard Shelf	0	0	0	0
+Combine Components	0	0	0	0
+Combine Components / tabs 0:1	0	0	0	0
+Compare Certificates	0	0	0	0
+Compare Public / Private Key	0	0	0	0
+Compressed Hex (2-row)	0	0	0	0
+Crypto Envelope Inspector	0	0	0	0
+DSA Key Generation	0	0	0	0
+DSA Key Generation / tabs 0:1	0	0	0	0
+DUKPT TDES	0	0	0	0
+Decode EBCDIC	0	0	0	0
+Decrypt JWE	0	0	0	0
+Decrypt SOAP Body (WSS)	0	0	0	0
+Derive Key	0	0	0	0
+Digital Signatures	0	0	0	0
+Digital Signatures / tabs 0:1	0	0	0	0
+Dilithium (ML-DSA)	0	0	0	0
+Dilithium (ML-DSA) / tabs 0:1	0	0	0	0
+Dilithium (ML-DSA) / tabs 0:2	0	0	0	0
+ECDSA Key Generation	0	0	0	0
+ECDSA Key Generation / tabs 0:1	0	0	0	0
+EMV Offline Data Authentication	0	0	0	0
+EMV Operations	0	0	0	0
+EMV TLV Inspector	0	0	0	0
+EdDSA Key Generation	0	0	0	0
+EdDSA Key Generation / tabs 0:1	0	0	0	0
+Encoding/Conversion	0	0	0	0
+Encrypt SOAP Body (WSS)	0	0	0	0
+Encrypted PIN Block Decoded	0	0	0	0
+Epoch Converter	0	0	0	0
+Export History	0	0	0	0
+File Cipher (Streaming)	0	0	0	0
+Format-Preserving Encryption	0	0	0	0
+GPG	0	0	0	0
+Generate Certificate	0	0	0	0
+Generate MAC	0	0	0	0
+Generate PIN	0	0	0	0
+Generate RSA Key	0	0	0	0
+Generate RSA Key / tabs 0:1	0	0	0	0
+Generate Symmetric Key	0	0	0	0
+Generate UUID	0	0	0	0
+Hashing	0	0	0	0
+ICSF / CCA Batch Analysis	0	0	0	0
+ICSF / CCA Batch Analysis / tabs 0:1	0	0	0	0
+ICSF / CCA Batch Analysis / tabs 0:2	0	0	0	0
+ICSF / CCA Batch Analysis / tabs 0:3	0	0	0	0
+ICSF / CCA Key Export / Import	0	0	0	0
+ICSF / CCA Key Export / Import / tabs 0:1	0	0	0	0
+ICSF / CCA Key Export / Import / tabs 0:2	0	0	0	0
+ICSF / CCA Key Export / Import / tabs 0:3	0	0	0	0
+ICSF / CCA Key Token Analyzer	0	0	0	0
+ISO 8583	0	0	0	0
+Information dialog	0	0	0	0
+Inspect Signed XML	0	0	0	0
+Issue Certificate from CSR	0	0	0	0
+JSON Formatter	0	0	0	0
+Key & Certificate Format Workbench	0	0	0	0
+Key & Certificate Format Workbench / store headers	0	0	0	0
+Key Lab	0	0	0	0
+Key Material Inspector	0	0	0	0
+KeyStore Inspector	0	0	0	0
+ML-KEM Decapsulate	0	0	0	0
+Modular Arithmetic	0	0	0	0
+PAdES	0	0	0	0
+PKCS#11 Profiles	0	0	0	0
+PKCS#11 Token	0	0	0	0
+PQC Sign	0	0	0	0
+Parse Certificate	0	0	0	0
+Process Designer	0	0	0	0
+Process Designer / inspector hidden	0	0	0	0
+RFC 3161 Timestamp	0	0	0	0
+RSA Key Exchange	0	0	0	0
+RSA Key Exchange / tabs 0:1	0	0	0	0
+Random Generation	0	0	0	0
+Recent Operations	0	0	0	0
+Save XAdES XML	0	0	0	0
+Saved Sessions	0	0	0	0
+Sign SOAP (WSS)	0	0	0	0
+TR-31 Export	0	0	0	0
+TR-31 Export / tabs 0:1	0	0	0	0
+TR-34 Key Distribution	0	0	0	0
+TR-34 Key Distribution / tabs 0:1	0	0	0	0
+Track 2 Decoding	0	0	0	0
+Track 2 Decoding / tabs 0:1	0	0	0	0
+Validate Certificate	0	0	0	0
+Validate Symmetric Key	0	0	0	0
+Verify SOAP (WSS)	0	0	0	0
+Verify UsernameToken (WSS)	0	0	0	0
+Verify XML (XAdES)	0	0	0	0
+[legacy] Host Command Bank	0	0	0	0
+[legacy] Key Block	0	0	0	0
+[legacy] Variant LMK	0	0	0	0
+TOTAL	0	0	0	0
