@@ -48,20 +48,27 @@ public final class SaveSessionCoordinator {
                 == SecretVisibilityProfile.REDACTED);
         long sensitiveCount = stateCapture.get().entrySet().stream()
                 .filter(entry -> UiStateSnapshot.holdsSecretValue(entry.getKey(), entry.getValue())).count();
-        if (!trailStateSupplier.get().log().isEmpty()) sensitiveCount++;
+        boolean hasTrail = !trailStateSupplier.get().log().isEmpty();
+        if (hasTrail) sensitiveCount++;
         final long secretsCount = sensitiveCount;
         Label secretNotice = new Label(i18n.text("savedSessions.redactedCount", secretsCount));
         secretNotice.setWrapText(true);
         secretNotice.setVisible(secretsCount > 0);
         secretNotice.setManaged(secretsCount > 0);
+        Label trailNotice = new Label(i18n.text("savedSessions.redactedTrailNotice"));
+        trailNotice.setWrapText(true);
+        trailNotice.setVisible(hasTrail);
+        trailNotice.setManaged(hasTrail);
         includeSecrets.selectedProperty().addListener((obs, wasSelected, selected) -> {
             secretNotice.setText(selected ? i18n.text("savedSessions.secretsEncrypted")
                     : i18n.text("savedSessions.redactedCount", secretsCount));
             secretNotice.setVisible(selected || secretsCount > 0);
             secretNotice.setManaged(selected || secretsCount > 0);
+            trailNotice.setVisible(hasTrail && !selected);
+            trailNotice.setManaged(hasTrail && !selected);
         });
         VBox content = new VBox(10, new Label(i18n.text("dialog.saveSession.prompt")), nameField,
-                includeSecrets, secretNotice);
+                includeSecrets, secretNotice, trailNotice);
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         Optional<ButtonType> result = dialog.showAndWait();

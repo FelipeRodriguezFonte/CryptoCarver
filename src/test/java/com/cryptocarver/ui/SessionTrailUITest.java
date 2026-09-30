@@ -73,8 +73,31 @@ class SessionTrailUITest {
                     var saveMethod = controller.getClass().getDeclaredMethod("saveSessionCoordinator");
                     saveMethod.setAccessible(true);
                     SaveSessionCoordinator save = (SaveSessionCoordinator) saveMethod.invoke(controller);
-                    Platform.runLater(() -> clickConfirmation(true));
+                    AtomicReference<String> saveNotice = new AtomicReference<>();
+                    AtomicReference<Boolean> encryptedNoticeHidden = new AtomicReference<>();
+                    Platform.runLater(() -> {
+                        try {
+                            javafx.scene.control.DialogPane pane = javafx.stage.Window.getWindows().stream()
+                                    .filter(window -> window.isShowing() && window.getScene() != null)
+                                    .map(window -> window.getScene().getRoot())
+                                    .filter(javafx.scene.control.DialogPane.class::isInstance)
+                                    .map(javafx.scene.control.DialogPane.class::cast).findFirst().orElseThrow();
+                            javafx.scene.layout.VBox content = (javafx.scene.layout.VBox) pane.getContent();
+                            Label notice = (Label) content.getChildren().get(content.getChildren().size() - 1);
+                            saveNotice.set(notice.isVisible() && notice.isManaged() ? notice.getText() : "");
+                            javafx.scene.control.CheckBox include = (javafx.scene.control.CheckBox) content.getChildren()
+                                    .stream().filter(javafx.scene.control.CheckBox.class::isInstance).findFirst().orElseThrow();
+                            include.setSelected(true);
+                            encryptedNoticeHidden.set(!notice.isVisible() && !notice.isManaged());
+                            include.setSelected(false);
+                        } finally {
+                            clickConfirmation(true);
+                        }
+                    });
                     save.handleSaveSession();
+                    assertEquals(com.cryptocarver.service.I18nService.getInstance().text("savedSessions.redactedTrailNotice"),
+                            saveNotice.get());
+                    assertEquals(Boolean.TRUE, encryptedNoticeHidden.get());
                     var state = (com.cryptocarver.model.SessionTrailState) field(controller, "sessionTrailState");
                     assertEquals(1, state.size());
                     var stored = manager.getSessions().stream().filter(session -> !previousIds.contains(session.getId()))
