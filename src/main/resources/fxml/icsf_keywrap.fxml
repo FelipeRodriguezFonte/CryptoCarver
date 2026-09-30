@@ -9,10 +9,10 @@
     <VBox fx:id="icsfKeyWrapRoot" spacing="10" styleClass="module-pane-content">
 
         <Label text="Reproduces in the clear what the host does with the CCA native verbs: Key Export (CSNBKEX / CSNBDKX) and Key Import (CSNBKIM / CSNBDKM). These are the native verbs, not TR-31 / X9.143. Nothing here talks to a coprocessor: it exists so that what leaves the host can be compared byte for byte against what the receiving system expects."
-               wrapText="true" styleClass="helper-text"/>
+               wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
         <Label fx:id="icsfKeyWrapSecurityLabel"
                text="⚠ Key material is handled IN THE CLEAR here, because that is what reproducing the host's arithmetic requires. Use test keys. The reports this writes carry whole keys and whole tokens in hexadecimal."
-               wrapText="true" styleClass="helper-text"/>
+               wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
 
         <TabPane fx:id="icsfKeyWrapTabs" tabClosingPolicy="UNAVAILABLE" prefHeight="330">
 
@@ -94,7 +94,7 @@
             <Tab fx:id="icsfKeyWrapInspectTab" text="Inspect (no KEK)">
                 <VBox styleClass="ux-inline-31b3bfce5a" spacing="8">
                     <Label text="Reads everything a token says about itself when the KEK is not to hand: scope, wrapping method, key length, Control Vector and TVV. No key comes out of an enciphered token."
-                           wrapText="true" styleClass="helper-text"/>
+                           wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
                     <Label text="Token (hex):"/>
                     <TextArea styleClass="ux-inline-00bdf36a65" fx:id="icsfInspectInputArea" prefHeight="80" wrapText="true"
                               promptText="paste the 64-byte token"/>
@@ -109,7 +109,7 @@
             <Tab fx:id="icsfKeyWrapResolveTab" text="Resolve scheme">
                 <VBox styleClass="ux-inline-31b3bfce5a" spacing="8">
                     <Label text="Tries every reasonable combination of KEK variant, cipher mode and Control Vector, and says which one reproduces the key. This is the diagnostic to run when the key does not match on the other side."
-                           wrapText="true" styleClass="helper-text"/>
+                           wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
                     <GridPane hgap="8" vgap="6">
                         <columnConstraints>
                             <ColumnConstraints minWidth="150" prefWidth="180"/>
@@ -137,7 +137,7 @@
             </Tab>
         </TabPane>
 
-        <Label fx:id="icsfKeyWrapFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>
+        <Label fx:id="icsfKeyWrapFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
 
         <Label text="Result:"/>
         <TextArea styleClass="ux-inline-ea21460dc9" fx:id="icsfKeyWrapReportArea" prefHeight="260" editable="false" wrapText="false"

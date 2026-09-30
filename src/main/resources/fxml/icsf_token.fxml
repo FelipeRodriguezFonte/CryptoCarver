@@ -9,10 +9,10 @@
     <VBox fx:id="icsfTokenRoot" spacing="10" styleClass="module-pane-content">
 
         <Label text="Analyses one IBM z/OS ICSF / CCA native key token: scope, algorithm, key type, length and effective strength, key material state, wrapping, exportability, Control Vector, TVV, MKVP and pedigree. These are CCA native tokens, not TR-31 key blocks."
-               wrapText="true" styleClass="helper-text"/>
+               wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
         <Label fx:id="icsfTokenSecurityLabel"
                text="⚠ This analysis decrypts nothing: protected key material is only recoverable inside the cryptographic coprocessor, under its master key. Reports saved from here do carry the token in full in hexadecimal, so handle them with the same care as the dump they came from."
-               wrapText="true" styleClass="helper-text"/>
+               wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
 
         <GridPane hgap="8" vgap="6">
             <columnConstraints>
@@ -30,7 +30,7 @@
         </GridPane>
         <Label fx:id="icsfTokenOriginHelpLabel"
                text="Provenance is not derivable from the bytes, so it is declared, not detected. It changes how an absent MKVP or TVV is read: normal in a raw non-KDSR CKDS record, anomalous in one returned by Key Record Read."
-               wrapText="true" styleClass="helper-text"/>
+               wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
 
         <Label styleClass="ux-inline-689e8d50bc" text="Key token (hexadecimal):"/>
         <TextArea fx:id="icsfTokenInputArea" prefHeight="90" wrapText="true"
@@ -52,7 +52,7 @@
             <Button text="PKA RSA 2048" onAction="#handleSamplePkaRsa" styleClass="secondary-button"/>
         </FlowPane>
 
-        <Label fx:id="icsfTokenFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text"/>
+        <Label fx:id="icsfTokenFeedbackLabel" text="Ready" wrapText="true" styleClass="helper-text" minHeight="-Infinity"/>
 
         <Label styleClass="ux-inline-689e8d50bc" text="Summary card:"/>
         <TableView fx:id="icsfTokenSummaryTable" prefHeight="230" prefWidth="400" VBox.vgrow="SOMETIMES">

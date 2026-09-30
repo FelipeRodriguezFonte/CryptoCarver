@@ -24,7 +24,7 @@
                         <TextField fx:id="certOrgField" promptText="Crypto Org" maxWidth="Infinity"
                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Org. Unit:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Org. Unit:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="certOUField" promptText="IT Security" maxWidth="Infinity"
                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
 
@@ -32,7 +32,7 @@
                         <TextField fx:id="certCountryField" promptText="ES" prefWidth="60"
                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="State:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="State:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="certStateField" promptText="State/Province" maxWidth="Infinity"
                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="form-field"/>
 
@@ -52,7 +52,7 @@
                         <ComboBox fx:id="certKeyTypeCombo" prefWidth="150"
                                   GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Sign Algorithm:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Sign Algorithm:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="certSignAlgoCombo" prefWidth="200"
                                   GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="form-field"/>
 
