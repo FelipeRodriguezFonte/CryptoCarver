@@ -1,5 +1,6 @@
 package com.cryptocarver.model;
 
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -27,7 +28,8 @@ class SavedSessionAadCharacterizationTest {
         SavedSession original = source();
         SavedSession stored = codec.prepareForStorage(original, PASSWORD.toCharArray());
         SavedSession restored = codec.restore(stored, PASSWORD.toCharArray());
-        assertEquals(codec.serialize(List.of(original)), codec.serialize(List.of(restored)));
+        assertEquals(JsonParser.parseString(codec.serialize(List.of(original))),
+                JsonParser.parseString(codec.serialize(List.of(restored))));
     }
 
     @Test
@@ -36,19 +38,20 @@ class SavedSessionAadCharacterizationTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> codec.restore(stored, "invented-wrong-password-42".toCharArray()));
         assertEquals("Incorrect password or modified saved session", error.getMessage());
+        assertFalse(error.getMessage().contains("invented-wrong-password-42"));
+        assertFalse(error.getMessage().contains(PASSWORD));
+        assertNull(error.getCause());
     }
 
     @Test
-    void transplantedProtectedFieldsDecryptWithoutBinding_currentBehavior() {
+    void transplantedProtectedFieldsAreRejectedWithSessionBinding() {
         SavedSession donor = codec.prepareForStorage(source(), PASSWORD.toCharArray());
         SavedSession recipient = new SavedSession("Invented recipient", "Different operation",
                 Map.of(KEY, "[REDACTED_SECRET]"));
         recipient.setProtectedFields(donor.getProtectedFields());
-        SavedSession restored = codec.restore(recipient, PASSWORD.toCharArray());
-        assertEquals(VALUE, restored.getUiState().get(KEY));
-        assertEquals("Different operation", restored.getOperation());
-        assertEquals(recipient.getId(), restored.getId());
-        assertEquals(1, restored.getOperationLog().size());
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> codec.restore(recipient, PASSWORD.toCharArray()));
+        assertEquals("Incorrect password or modified saved session", error.getMessage());
     }
 
     @Test

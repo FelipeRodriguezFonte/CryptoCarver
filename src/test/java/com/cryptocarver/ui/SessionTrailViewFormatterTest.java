@@ -4,6 +4,7 @@ import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.OperationSessionLog;
 import com.cryptocarver.model.SavedSession;
+import com.cryptocarver.model.SavedSessionCodec;
 import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.model.SessionOperationStep;
 import com.cryptocarver.service.I18nService;
@@ -83,6 +84,27 @@ class SessionTrailViewFormatterTest {
         assertTrue(step.contains(i18n.text("sessionTrail.redacted")));
         assertTrue(step.contains(i18n.text("sessionTrail.redactedValue")));
         assertFalse(step.contains("INPUT-SECRET"));
+    }
+
+    @Test
+    void legacyAndAadEncryptedSessionsKeepTheSamePreviewContract() throws Exception {
+        SavedSessionCodec codec = new SavedSessionCodec();
+        I18nService i18n = I18nService.getInstance();
+        String fixture;
+        try (var input = getClass().getResourceAsStream("/com/cryptocarver/model/saved-session-no-aad.json")) {
+            assertNotNull(input);
+            fixture = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        SavedSession legacy = codec.deserialize(fixture).get(0);
+        SavedSession clear = codec.restore(legacy, "invented-password-42".toCharArray());
+        SavedSession current = codec.prepareForStorage(clear, "invented-password-42".toCharArray());
+        assertEquals(0, legacy.getProtectedFields().getAadVersion());
+        assertEquals(1, current.getProtectedFields().getAadVersion());
+        String preview = SessionTrailViewFormatter.preview(legacy, i18n);
+        assertEquals(preview, SessionTrailViewFormatter.preview(current, i18n));
+        assertTrue(preview.contains(i18n.text("savedSessions.encryptedTrailPreview")));
+        assertFalse(preview.contains("invented-value-42"));
+        assertFalse(preview.contains("invented-input-41"));
     }
 
     private OperationSessionLog secretLog() {

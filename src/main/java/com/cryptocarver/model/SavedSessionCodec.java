@@ -89,6 +89,9 @@ public final class SavedSessionCodec {
         SavedSession.ProtectedFields fields = source.getProtectedFields();
         byte[] plain = null;
         try {
+            if (fields.getAadVersion() != 0 && fields.getAadVersion() != SavedSessionAad.VERSION) {
+                throw new IllegalArgumentException("Unsupported saved session binding");
+            }
             if (!PasswordFieldCipher.KDF.equals(fields.getKdf()) || fields.getIterations() < PasswordFieldCipher.ITERATIONS
                     || fields.getIterations() > 2_000_000) throw new IllegalArgumentException("Invalid protected session parameters");
             byte[] salt = Base64.getDecoder().decode(fields.getSalt());
@@ -96,7 +99,9 @@ public final class SavedSessionCodec {
             byte[] ciphertext = Base64.getDecoder().decode(fields.getCiphertext());
             if (salt.length != PasswordFieldCipher.SALT_BYTES || nonce.length != PasswordFieldCipher.NONCE_BYTES)
                 throw new IllegalArgumentException("Invalid protected session parameters");
-            plain = PasswordFieldCipher.decrypt(password, salt, nonce, ciphertext, fields.getIterations());
+            byte[] aad = fields.getAadVersion() == 0 ? null
+                    : SavedSessionAad.encode(source, fields.hasProtectedTrail());
+            plain = PasswordFieldCipher.decrypt(password, salt, nonce, ciphertext, fields.getIterations(), aad);
             ProtectedPayload payload = reader.fromJson(new String(plain, StandardCharsets.UTF_8), ProtectedPayload.class);
             Map<String, Object> merged = new LinkedHashMap<>(source.getUiState() == null ? Map.of() : source.getUiState());
             if (payload != null && payload.secrets != null) merged.putAll(payload.secrets);
@@ -107,12 +112,9 @@ public final class SavedSessionCodec {
             restored.setVersion(source.getVersion());
             restored.setTrailRedacted(source.isTrailRedacted());
             return restored;
-        } catch (GeneralSecurityException e) {
-            throw new IllegalArgumentException("Incorrect password or modified saved session", e);
-        } catch (RuntimeException e) {
-            if (e instanceof IllegalArgumentException && e.getMessage() != null
-                    && e.getMessage().startsWith("Incorrect password")) throw e;
-            throw new IllegalArgumentException("Unable to restore protected session", e);
+        } catch (GeneralSecurityException | RuntimeException error) {
+            // Do not expose parser diagnostics, field names, values, or credentials through causes.
+            throw new IllegalArgumentException("Incorrect password or modified saved session");
         } finally {
             if (plain != null) java.util.Arrays.fill(plain, (byte) 0);
             if (password != null) java.util.Arrays.fill(password, '\0');
