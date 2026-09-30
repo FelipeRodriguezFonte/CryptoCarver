@@ -82,7 +82,7 @@
                     <TextField styleClass="ux-inline-ab4da656fa" fx:id="paletteSearchField" promptText="Search palette…"/>
                     <ScrollPane styleClass="ux-inline-062b25176d" fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS">
                         <content>
-                            <VBox styleClass="ux-inline-1193ccbe1f" fx:id="paletteItemsContainer" spacing="3"/>
+                            <VBox styleClass="ux-inline-1193ccbe1f" fx:id="paletteItemsContainer" spacing="3" minHeight="-Infinity"/>
                         </content>
                     </ScrollPane>
                 </VBox>

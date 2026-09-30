@@ -3187,3 +3187,12 @@
 .cc-info-dialog-pane > .button-bar > .container > .button {
     -fx-min-width: 80px;
 }
+
+/* Process Designer: preserve palette icons and wrap captions in the narrow column. */
+#paletteItemsContainer > HBox > .label {
+    -fx-min-width: 18px;
+}
+#paletteItemsContainer > HBox > VBox > .label,
+#paletteItemsContainer > .label {
+    -fx-wrap-text: true;
+}

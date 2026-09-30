@@ -163,15 +163,15 @@
                 <!-- Content Header with Breadcrumbs & Favorite Star Toggle -->
                 <HBox styleClass="content-header" alignment="CENTER_LEFT" spacing="10">
                     <HBox fx:id="breadcrumbContainer" alignment="CENTER_LEFT" spacing="4" styleClass="breadcrumb-container" HBox.hgrow="ALWAYS">
-                        <Button fx:id="breadcrumbSectionBtn" text="Keys" styleClass="breadcrumb-button" onAction="#handleBreadcrumbSectionClick" accessibleText="Navigate to Section"/>
+                        <Button fx:id="breadcrumbSectionBtn" text="Keys" styleClass="breadcrumb-button" onAction="#handleBreadcrumbSectionClick" accessibleText="Navigate to Section" minWidth="-Infinity"/>
                         <Label text="›" styleClass="breadcrumb-separator" fx:id="breadcrumbSep1"/>
-                        <Button fx:id="breadcrumbModuleBtn" text="Symmetric" styleClass="breadcrumb-button" onAction="#handleBreadcrumbModuleClick" accessibleText="Navigate to Module"/>
+                        <Button fx:id="breadcrumbModuleBtn" text="Symmetric" styleClass="breadcrumb-button" onAction="#handleBreadcrumbModuleClick" accessibleText="Navigate to Module" minWidth="-Infinity"/>
                         <Label text="›" styleClass="breadcrumb-separator" fx:id="breadcrumbSep2"/>
-                        <Label fx:id="breadcrumbOperationLabel" text="Symmetric Ciphers" styleClass="breadcrumb-current"/>
+                        <Label fx:id="breadcrumbOperationLabel" text="Symmetric Ciphers" styleClass="breadcrumb-current" wrapText="true" minHeight="-Infinity"/>
                     </HBox>
                     <Label fx:id="contentTitleLabel" text="Symmetric Keys" styleClass="content-title-label" managed="false" visible="false"/>
-                    <Label fx:id="contentSubtitleLabel" text="Key Derivation (KDF)" styleClass="content-subtitle-label" managed="false" visible="false"/>
-                    <Button fx:id="favoriteToggleBtn" text="☆" onAction="#handleToggleFavorite" styleClass="favorite-toggle-button" accessibleText="Toggle Favorite for current operation"/>
+                    <Label fx:id="contentSubtitleLabel" text="Key Derivation (KDF)" styleClass="content-subtitle-label" managed="false" visible="false" wrapText="true" minHeight="-Infinity"/>
+                    <Button fx:id="favoriteToggleBtn" text="☆" onAction="#handleToggleFavorite" styleClass="favorite-toggle-button" accessibleText="Toggle Favorite for current operation" minWidth="-Infinity"/>
                 </HBox>
 
                 <!-- Result Summary Bar (Compact header) -->
