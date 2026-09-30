@@ -13,12 +13,12 @@
         <panes>
             <TitledPane text="🔬 EMV TLV Inspector">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="BER-TLV hexadecimal:" styleClass="form-label"/>
+                    <Label text="BER-TLV hexadecimal:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="emvTlvInputArea" prefHeight="100" promptText="9F02060000000001005F2A020978" styleClass="monospace-field"/>
                     <Button text="Inspect EMV TLV" onAction="#handleInspectTlv" styleClass="action-button,primary-action" maxWidth="160"/>
                     <TextArea fx:id="emvTlvResultArea" prefHeight="180" editable="false" styleClass="result-area,monospace-field"/>
                     <Separator/>
-                    <Label text="CDOL/DDOL Builder" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="CDOL/DDOL Builder" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <TextField fx:id="emvDolTemplateField" promptText="DOL template, e.g. 9F02069F1A02" styleClass="monospace-field,form-field" maxWidth="Infinity"/>
                     <TextArea fx:id="emvDolValuesArea" prefHeight="70" promptText="9F02=000000000100&#10;9F1A=0978" styleClass="monospace-field"/>
                     <Button text="Build DOL Data" onAction="#handleBuildDol" styleClass="secondary-button" maxWidth="150"/>
@@ -29,39 +29,39 @@
             <!-- SESSION KEY DERIVATION -->
             <TitledPane text="🔑 Session Key Derivation" expanded="true">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Derive ICC Master Key" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="Derive ICC Master Key" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="IMK (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="IMK (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="imkField" promptText="Issuer Master Key (16 bytes)" maxWidth="Infinity"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="PAN:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="PAN:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="panFieldSession" promptText="Primary Account Number" maxWidth="Infinity"
                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="PAN Seq:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="PAN Seq:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="panSeqFieldSession" promptText="00-99" prefWidth="60"
                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Derivation method:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Derivation method:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="iccMethodCombo" maxWidth="Infinity" GridPane.rowIndex="3"
                                   GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Separator/>
 
-                    <Label text="Derive Session Key (SK)" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="Derive Session Key (SK)" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                          <columnConstraints>
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="ATC (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ATC (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="emvAtcField" promptText="Application Transaction Counter (2 bytes)" maxWidth="Infinity"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
@@ -82,64 +82,64 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Session Key (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Session Key (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="skARQCField" promptText="16 bytes Session Key" maxWidth="Infinity"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
 
-                    <Label text="Terminal Data (Raw - Overrides fields below):" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="Terminal Data (Raw - Overrides fields below):" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="arqcTerminalDataField" prefRowCount="2" wrapText="true"
                               promptText="Paste full terminal data hex string here to use it directly..." styleClass="monospace-field"/>
 
-                    <Label text="Transaction Data (Individual Fields):" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="Transaction Data (Individual Fields):" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="120" prefWidth="120"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Amount:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Amount:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="amountField" promptText="000000000100" maxWidth="Infinity"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Amount Other:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Amount Other:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="amountOtherField" promptText="000000000000" maxWidth="Infinity"
                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Currency:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Currency:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="currencyField" promptText="0978 (EUR)" maxWidth="Infinity"
                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="countryField" promptText="0724 (ES)" maxWidth="Infinity"
                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
                         <!-- ATC Field retained for UI context but excluded from the default external tool structure unless user adds it to Raw Data -->
-                        <Label text="ATC (Info):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ATC (Info):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="atcARQCField" promptText="0001" maxWidth="Infinity"
                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="TVR:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TVR:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="tvrField" promptText="0000000000" maxWidth="Infinity"
                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Date (YYMMDD):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Date (YYMMDD):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="txDateField" promptText="250101" maxWidth="Infinity"
                                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Type:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Type:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="txTypeField" promptText="00" maxWidth="Infinity"
                                   GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="UN:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="UN:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="unField" promptText="Unpredictable Number (4 bytes)" maxWidth="Infinity"
                                   GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="ICC Data:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ICC Data:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="iccDataField" promptText="Optional (Tag 9F10?)" maxWidth="Infinity"
                                   GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Padding:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Padding:" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="arqcPaddingMethodCombo" prefWidth="250"
                                   GridPane.rowIndex="10" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
@@ -161,27 +161,27 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Session Key (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Session Key (Hex):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="skARPCField" promptText="16 bytes Session Key" maxWidth="Infinity"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="ARQC (from card):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ARQC (from card):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="arqcField" promptText="8 bytes ARQC" maxWidth="Infinity"
                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Response Code (ARC):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Response Code (ARC):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="arcField" promptText="e.g. 3030 (Approved)" maxWidth="Infinity"
                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="CSU (Optional):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="CSU (Optional):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="csuField" promptText="4 bytes Card Status Update" maxWidth="Infinity"
                                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Prop. Auth. Data (Opt):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Prop. Auth. Data (Opt):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="propAuthDataField" promptText="Proprietary Authentication Data (Hex)" maxWidth="Infinity"
                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Method:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Method:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="arpcMethodCombo" prefWidth="250"
                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
@@ -201,77 +201,77 @@
             <!-- ISSUER SCRIPT SECURE MESSAGING -->
             <TitledPane text="🔐 Secure Messaging (Issuer Script)">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Session keys, the enciphered PIN of a PIN change command and the command MAC, Mastercard or Visa. Each step fills the fields of the next; all of them stay editable." wrapText="true" styleClass="form-label"/>
+                    <Label text="Session keys, the enciphered PIN of a PIN change command and the command MAC, Mastercard or Visa. Each step fills the fields of the next; all of them stay editable." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="Scheme:" styleClass="form-label"/>
+                        <Label text="Scheme:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="smSchemeCombo" prefWidth="180" styleClass="form-field"/>
                         <Button text="Load Example" onAction="#handleSmLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     </HBox>
 
-                    <Label text="1. Card and session keys" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="1. Card and session keys" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="170" prefWidth="170"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="MK-SMI (Mastercard):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="MK-SMI (Mastercard):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smMkSmiField" promptText="Issuer MAC master key, 16 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="MK-SMC (Mastercard):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="MK-SMC (Mastercard):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smMkSmcField" promptText="Issuer encryption master key, 16 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="PAN/SqNr (Mastercard):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="PAN/SqNr (Mastercard):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smPanSeqField" promptText="16 digits of PAN and sequence number" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="UDK MAC (SMI):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="UDK MAC (SMI):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smUdkSmiField" promptText="Card MAC key, 16 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="UDK ENC (SMC):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="UDK ENC (SMC):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smUdkSmcField" promptText="Card encryption key, 16 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smAcField" promptText="Application cryptogram, 8 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Command nr (Mastercard):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Command nr (Mastercard):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smCommandNumberField" promptText="0" maxWidth="Infinity"
                                    GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="ATC:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ATC:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smAtcField" promptText="2 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="SK MAC:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="SK MAC:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smSkMacField" promptText="Filled by Derive Session Keys" maxWidth="Infinity"
                                    GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="SK ENC:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="SK ENC:" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smSkEncField" promptText="Filled by Derive Session Keys" maxWidth="Infinity"
                                    GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Derive Session Keys" onAction="#handleSmDeriveSessionKeys" styleClass="action-button,primary-action" maxWidth="190"/>
 
-                    <Label text="2. PIN change data" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="2. PIN change data" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="170" prefWidth="170"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="New PIN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="New PIN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <PasswordField fx:id="smPinField" promptText="4 to 12 digits" maxWidth="Infinity"
                                        GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="UDK A (Visa):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="UDK A (Visa):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smUdkAField" promptText="Card key the Visa PIN block is bound to, 16 bytes" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Encipher PIN" onAction="#handleSmEncipherPin" styleClass="action-button,primary-action" maxWidth="190"/>
 
-                    <Label text="3. Command MAC" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="3. Command MAC" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="170" prefWidth="170"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="CLA INS P1 P2 Lc:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="CLA INS P1 P2 Lc:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smHeaderField" promptText="5 bytes, e.g. 8424000210" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Command data:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Command data:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="smDataField" promptText="Filled by Encipher PIN" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
@@ -285,81 +285,81 @@
             <!-- VISA HCE -->
             <TitledPane text="📱 Visa HCE">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Derive a limited-use key, then calculate MSD and qVSDC values. Each result remains editable in the next step." wrapText="true" styleClass="form-label"/>
+                    <Label text="Derive a limited-use key, then calculate MSD and qVSDC values. Each result remains editable in the next step." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
                     <Button text="Load Example" onAction="#handleHceLoadExample" styleClass="secondary-button" maxWidth="140"/>
-                    <Label text="1. Limited-use key (LUK)" styleClass="form-label"/>
+                    <Label text="1. Limited-use key (LUK)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="UDK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="UDK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceUdkField" promptText="16 bytes of card key in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Year:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Year:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceYearField" promptText="1 or 2 decimal digits" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Hours since January 1:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Hours since January 1:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceHoursField" promptText="4 decimal digits" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Hourly counter:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Hourly counter:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceCounterField" promptText="2 decimal digits" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Derive LUK" onAction="#handleHceLuk" styleClass="action-button,primary-action"/>
-                    <Label text="2. MSD verification value" styleClass="form-label"/>
+                    <Label text="2. MSD verification value" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="LUK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="LUK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceMsdLukField" promptText="16-byte LUK in hex; filled by step 1" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="ATC:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ATC:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceMsdAtcField" promptText="2 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Device type:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Device type:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceDeviceTypeField" promptText="8 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Calculate MSD" onAction="#handleHceMsd" styleClass="action-button,primary-action"/>
-                    <Label text="3. qVSDC cryptogram" styleClass="form-label"/>
-                    <Label text="Terminal data" styleClass="form-label"/>
+                    <Label text="3. qVSDC cryptogram" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
+                    <Label text="Terminal data" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="LUK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="LUK:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceQvsdcLukField" promptText="16-byte LUK in hex; filled by step 1" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="9F02 Amount:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="9F02 Amount:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceAmountField" promptText="6 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="9F03 Other amount:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="9F03 Other amount:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceOtherAmountField" promptText="6 bytes in hex (other amount)" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="9F1A Terminal country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="9F1A Terminal country:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceCountryField" promptText="2 bytes in hex (country)" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="95 TVR:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="95 TVR:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceTvrField" promptText="5 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="5F2A Transaction currency:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="5F2A Transaction currency:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceCurrencyField" promptText="2 bytes in hex (currency)" maxWidth="Infinity"
                                    GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="9A Transaction date:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="9A Transaction date:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceDateField" promptText="3 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="9C Transaction type:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="9C Transaction type:" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceTypeField" promptText="1 byte in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="9F37 Unpredictable number:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="9F37 Unpredictable number:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceUnField" promptText="4 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
-                    <Label text="Chip data" styleClass="form-label"/>
+                    <Label text="Chip data" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="82 AIP:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="82 AIP:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceAipField" promptText="2 bytes in hex (AIP)" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="ATC:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ATC:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceQvsdcAtcField" promptText="2 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="CVR:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="CVR:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="hceCvrField" promptText="4 bytes in hex (CVR)" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
@@ -371,49 +371,49 @@
             <!-- MASTERCARD DATA STORAGE -->
             <TitledPane text="💾 Mastercard Data Storage">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Derive the DS partial key, calculate its OWHF2 digest and the DS Summary (OWHF1)." wrapText="true" styleClass="form-label"/>
+                    <Label text="Derive the DS partial key, calculate its OWHF2 digest and the DS Summary (OWHF1)." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
                     <Button text="Load Example" onAction="#handleDsLoadExample" styleClass="secondary-button" maxWidth="140"/>
-                    <Label text="1. DS partial key (DSPK)" styleClass="form-label"/>
+                    <Label text="1. DS partial key (DSPK)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="DS ID:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="DS ID:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsIdField" promptText="At least 6 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Derive DSPK" onAction="#handleDsDspk" styleClass="action-button,primary-action"/>
-                    <Label text="2. Digest (OWHF2)" styleClass="form-label"/>
+                    <Label text="2. Digest (OWHF2)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="Operator ID:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Operator ID:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsOperatorIdField" promptText="8-byte operator ID in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="DS input:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="DS input:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsInputField" promptText="8-byte DS input in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Calculate digest" onAction="#handleDsDigest" styleClass="action-button,primary-action"/>
-                    <Label text="3. Summary (OWHF1)" styleClass="form-label"/>
+                    <Label text="3. Summary (OWHF1)" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="DS Summary 1:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="DS Summary 1:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsSummary1Field" promptText="8 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Amount authorized:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Amount authorized:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsAmountField" promptText="12 digits" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Currency code:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Currency code:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsCurrencyField" promptText="3 digits" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Reference control parameter:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Reference control parameter:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsRcpField" promptText="1 byte in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Generate AC indicator:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Generate AC indicator:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsGacField" promptText="01 first, 02 second" maxWidth="Infinity"
                                    GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="DS unpredictable number:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="DS unpredictable number:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsDsUnField" promptText="4 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="Unpredictable number:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Unpredictable number:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="dsUnField" promptText="4 bytes in hex" maxWidth="Infinity"
                                    GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
@@ -425,14 +425,14 @@
             <!-- ICC DYNAMIC NUMBER -->
             <TitledPane text="ICC Dynamic Number">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Calculate the Mastercard ICC Dynamic Number from MK-DN, PAN/PSN, ATC and UN." wrapText="true" styleClass="form-label"/>
+                    <Label text="Calculate the Mastercard ICC Dynamic Number from MK-DN, PAN/PSN, ATC and UN." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
                     <Button text="Load Example" onAction="#handleIccDnLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="MK-DN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/><PasswordField fx:id="dnMkField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="PAN field (16 digits):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="dnPanField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="ATC:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="dnAtcField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="UN:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="dnUnField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="MK-DN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><PasswordField fx:id="dnMkField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="PAN field (16 digits):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="dnPanField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="dnAtcField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="UN:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="dnUnField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Calculate dynamic number" onAction="#handleIccDnCalculate" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="dnResultArea" prefHeight="80" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
@@ -442,17 +442,17 @@
             <!-- CAP TOKEN -->
             <TitledPane text="CAP Token">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Compresses token data with the IPB. The PAN sequence number is included only when IAF bit 40 is set." wrapText="true" styleClass="form-label"/>
+                    <Label text="Compresses token data with the IPB. The PAN sequence number is included only when IAF bit 40 is set." wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
                     <Button text="Load Example" onAction="#handleCapLoadExample" styleClass="secondary-button" maxWidth="140"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints><ColumnConstraints minWidth="210" prefWidth="210"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
-                        <Label text="IPB:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capIpbField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="IAF:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capIafField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="PAN sequence number:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capPanSnField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="CID:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capCidField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="ATC:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capAtcField" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capAcField" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
-                        <Label text="IAD:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/><TextField fx:id="capIadField" GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="IPB:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capIpbField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="IAF:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capIafField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="PAN sequence number:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capPanSnField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="CID:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capCidField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="ATC:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capAtcField" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="AC:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capAcField" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
+                        <Label text="IAD:" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/><TextField fx:id="capIadField" GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
                     </GridPane>
                     <Button text="Calculate CAP token" onAction="#handleCapCalculate" styleClass="action-button,primary-action"/>
                     <TextArea fx:id="capResultArea" prefHeight="130" editable="false" wrapText="true" styleClass="result-area,monospace-field" managed="false" visible="false"/>
@@ -470,19 +470,19 @@
                                         <ColumnConstraints minWidth="140" prefWidth="140"/>
                                         <ColumnConstraints hgrow="ALWAYS"/>
                                     </columnConstraints>
-                                    <Label text="PAN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <Label text="PAN:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                                     <TextField fx:id="panTrack2Field" promptText="Primary Account Number" maxWidth="Infinity"
                                               GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                                    <Label text="Expiry (YYMM):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <Label text="Expiry (YYMM):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                                     <TextField fx:id="expiryTrack2Field" promptText="2512" maxWidth="Infinity"
                                               GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                                    <Label text="Service Code:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <Label text="Service Code:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                                     <TextField fx:id="serviceCodeFieldTrack2" promptText="201" maxWidth="Infinity"
                                               GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                                    <Label text="Discretionary Data:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <Label text="Discretionary Data:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                                     <TextField fx:id="discretionaryDataField" promptText="Optional" maxWidth="Infinity"
                                               GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
                                 </GridPane>
@@ -493,7 +493,7 @@
                         </Tab>
                         <Tab text="Decode">
                             <VBox spacing="12" styleClass="module-pane-content">
-                                <Label text="Track 2 Hex / String:" styleClass="form-label"/>
+                                <Label text="Track 2 Hex / String:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                                 <TextField fx:id="track2InputField" promptText="Paste Track 2 data" maxWidth="Infinity" styleClass="monospace-field,form-field"/>
 
                                 <Button text="Decode Track 2" onAction="#handleDecodeTrack2"
@@ -510,7 +510,7 @@
             <TitledPane text="🧾 Offline Data Authentication (SDA/DDA/CDA)">
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Each key is recovered from the certificate above it: the CA key opens tag 90, the issuer key it yields opens tag 9F46, and the ICC key that yields checks the dynamic signature. The static data is part of the ICC certificate's own hash, so an AFL assembled wrongly fails while recovering the key, not where anyone looks for it. SDA proves an issuer signed this data once and nothing about the card in front of you."
-                           wrapText="true" styleClass="form-label"/>
+                           wrapText="true" styleClass="form-label" minHeight="-Infinity"/>
 
                     <HBox spacing="8">
                         <Button text="Issue Test Card" onAction="#handleOdaIssueTestCard"
@@ -519,79 +519,79 @@
                     </HBox>
 
                     <Separator/>
-                    <Label text="Certificate chain" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="Certificate chain" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="210" prefWidth="210"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="CA public key modulus:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="CA public key modulus:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaCaModulusArea" prefHeight="48" wrapText="true" promptText="Terminal CA key for this RID and index (8F)"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field"/>
 
-                        <Label text="CA public key exponent:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="CA public key exponent:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaCaExponentField" promptText="03 or 010001" maxWidth="Infinity"
                                    GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Issuer certificate (90):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Issuer certificate (90):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaIssuerCertificateArea" prefHeight="48" wrapText="true" promptText="As long as the CA modulus"
                                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field"/>
 
-                        <Label text="Issuer key remainder (92):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Issuer key remainder (92):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaIssuerRemainderField" promptText="Only when the key did not fit" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Issuer key exponent (9F32):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Issuer key exponent (9F32):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaIssuerExponentField" promptText="03 or 010001" maxWidth="Infinity"
                                    GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="ICC certificate (9F46):" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ICC certificate (9F46):" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaIccCertificateArea" prefHeight="48" wrapText="true" promptText="As long as the issuer modulus"
                                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="monospace-field"/>
 
-                        <Label text="ICC key remainder (9F48):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ICC key remainder (9F48):" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaIccRemainderField" promptText="Only when the key did not fit" maxWidth="Infinity"
                                    GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="ICC key exponent (9F47):" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="ICC key exponent (9F47):" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaIccExponentField" promptText="03 or 010001" maxWidth="Infinity"
                                    GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Static data to be authenticated:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Static data to be authenticated:" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaStaticDataArea" prefHeight="48" wrapText="true" promptText="AFL records in the order they were read, then the AIP if tag 9F4A asks for it"
                                   GridPane.rowIndex="8" GridPane.columnIndex="1" styleClass="monospace-field"/>
 
-                        <Label text="Application PAN (optional):" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Application PAN (optional):" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaPanField" promptText="Checked against the issuer identifier and the ICC certificate" maxWidth="Infinity"
                                    GridPane.rowIndex="9" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Separator/>
-                    <Label text="Signatures" styleClass="form-label,ux-inline-689e8d50bc"/>
+                    <Label text="Signatures" styleClass="form-label,ux-inline-689e8d50bc" wrapText="true" minHeight="-Infinity"/>
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
                         <columnConstraints>
                             <ColumnConstraints minWidth="210" prefWidth="210"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Signed static data (93):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Signed static data (93):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaSsadArea" prefHeight="48" wrapText="true" promptText="As long as the issuer modulus"
                                   GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="monospace-field"/>
 
-                        <Label text="Signed dynamic data (9F4B):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Signed dynamic data (9F4B):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaSdadArea" prefHeight="48" wrapText="true" promptText="As long as the ICC modulus"
                                   GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field"/>
 
-                        <Label text="DDOL data, or the Unpredictable Number for CDA:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="DDOL data, or the Unpredictable Number for CDA:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaTerminalDataField" promptText="DDA hashes the whole DDOL; CDA hashes only tag 9F37" maxWidth="Infinity"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Cryptogram Information Data (9F27):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Cryptogram Information Data (9F27):" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="odaCidField" promptText="From the GENERATE AC response, for the CDA cross-check" maxWidth="Infinity"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="monospace-field,form-field"/>
 
-                        <Label text="Transaction data for the CDA hash:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Transaction data for the CDA hash:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextArea fx:id="odaTransactionDataArea" prefHeight="48" wrapText="true" promptText="PDOL values, CDOL1 values, then the tags, lengths and values the card returned except 9F4B"
                                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="monospace-field"/>
                     </GridPane>

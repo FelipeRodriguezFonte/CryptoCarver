@@ -18,13 +18,13 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="XML File to Sign:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="XML File to Sign:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="xmlSignInputPathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose XML to sign" onAction="#handleBrowseXMLSignInput"/>
                         </HBox>
 
-                        <Label text="Signature Source:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Signature Source:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <fx:define>
                                 <ToggleGroup fx:id="xmlSignSourceToggleGroup"/>
@@ -40,13 +40,13 @@
                                 <ColumnConstraints minWidth="160" prefWidth="160"/>
                                 <ColumnConstraints hgrow="ALWAYS"/>
                             </columnConstraints>
-                            <Label fx:id="xmlSignKeyPathLabel" text="PKCS#12 / JKS / PEM KeyStore:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="xmlSignKeyPathLabel" text="PKCS#12 / JKS / PEM KeyStore:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <TextField fx:id="xmlSignKeyPathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                                 <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose XML signing key" onAction="#handleBrowseXMLKey"/>
                             </HBox>
 
-                            <Label fx:id="xmlSignKeyPasswordLabel" text="KeyStore Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label fx:id="xmlSignKeyPasswordLabel" text="KeyStore Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <PasswordField fx:id="xmlSignKeyPasswordField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
                         </GridPane>
                     </VBox>
@@ -56,16 +56,16 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Key Alias (Select Key):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Key Alias (Select Key):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <ComboBox fx:id="xmlSignKeyAliasCombo" prefWidth="250" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button text="Load Keys" onAction="#handleLoadXMLKeys" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="Signature Level:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Signature Level:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="xmlSignLevelCombo" prefWidth="250" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Signature Packaging:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Signature Packaging:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="xmlSignPackagingCombo" prefWidth="250" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
@@ -77,28 +77,28 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="TSA (required for T/LT/LTA):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TSA (required for T/LT/LTA):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <ComboBox fx:id="xmlSignTsaUrlText" editable="true" promptText="Select a preset or enter your corporate TSA URL" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button text="Save TSA" onAction="#handleSaveTSA" styleClass="secondary-button"/>
                             <Button text="Test TSA" onAction="#handleTestTSA" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="TSA Auth:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TSA Auth:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <ComboBox fx:id="xmlSignTsaAuthTypeCombo" promptText="Auth Type" prefWidth="100" styleClass="form-field"/>
                             <TextField fx:id="xmlSignTsaUserField" promptText="User" prefWidth="100" styleClass="form-field"/>
                             <PasswordField fx:id="xmlSignTsaPasswordField" promptText="Password/Token (Ephemeral)" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                         </HBox>
 
-                        <Label text="TSA Profile:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TSA Profile:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="2" GridPane.columnIndex="1">
                             <ComboBox fx:id="xmlSignTsaProfileCombo" promptText="Saved TSA profile" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button text="Load" onAction="#handleLoadTSASavedProfile" styleClass="secondary-button"/>
                             <Button text="Delete" onAction="#handleDeleteTSASavedProfile" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="Save New Profile:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Save New Profile:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="3" GridPane.columnIndex="1">
                             <TextField fx:id="xmlSignTsaProfileNameField" promptText="Profile name" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button text="Save Profile" onAction="#handleSaveTSASavedProfile" styleClass="secondary-button"/>
@@ -107,7 +107,7 @@
 
                     <Button text="Sign XML" onAction="#handleSignXML" styleClass="action-button,primary-action" maxWidth="180"/>
 
-                    <Label text="Signed XML Output:" styleClass="form-label"/>
+                    <Label text="Signed XML Output:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="xmlSignOutputArea" prefHeight="200" styleClass="result-area,monospace-field"/>
                     <Button text="Save Signed XML..." onAction="#handleSaveSignedXML" styleClass="secondary-button" maxWidth="180"/>
                 </VBox>
@@ -115,13 +115,13 @@
 
             <TitledPane text="🔬 Inspect Signed XML">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Signed XML to inspect (local structural analysis, no validation):" styleClass="form-label"/>
+                    <Label text="Signed XML to inspect (local structural analysis, no validation):" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="xmlInspectInputArea" prefHeight="180" styleClass="monospace-field"/>
                     <HBox spacing="8">
                         <Button text="Open XML..." onAction="#handleBrowseXMLInspectorInput" styleClass="secondary-button"/>
                         <Button text="Inspect Signed XML" onAction="#handleInspectSignedXML" styleClass="action-button,primary-action"/>
                     </HBox>
-                    <Label text="Signature structure report:" styleClass="form-label"/>
+                    <Label text="Signature structure report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="xmlInspectReportArea" prefHeight="280" editable="false" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
@@ -133,16 +133,16 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="File to timestamp:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="File to timestamp:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="xmlTimestampFileField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button styleClass="ux-inline-7023c1077f" text="Open..." onAction="#handleBrowseTimestampFile"/>
                         </HBox>
 
-                        <Label text="Imprint hash:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Imprint hash:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="xmlTimestampHashCombo" prefWidth="180" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="TSA URL:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TSA URL:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="xmlTimestampUrlField" promptText="https://your-tsa.example/" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
@@ -158,13 +158,13 @@
                             <ColumnConstraints minWidth="160" prefWidth="160"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
-                        <Label text="Saved token to inspect (opt):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Saved token to inspect (opt):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <TextField fx:id="xmlTimestampTokenField" promptText="Path to .tsq/.tst" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button styleClass="ux-inline-7023c1077f" text="Open..." onAction="#handleBrowseTimestampToken"/>
                         </HBox>
 
-                        <Label text="TrustStore (optional):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TrustStore (optional):" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="xmlTimestampTrustStoreField" promptText="Truststore path" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose timestamp trust store" onAction="#handleBrowseTimestampTrustStore"/>
@@ -176,14 +176,14 @@
                         <Button text="Inspect Token" onAction="#handleInspectTimestampToken" styleClass="secondary-button"/>
                         <Button text="Validate Token" onAction="#handleValidateTimestampToken" styleClass="action-button,primary-action"/>
                     </HBox>
-                    <Label text="RFC 3161 token report:" styleClass="form-label"/>
+                    <Label text="RFC 3161 token report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="xmlTimestampReportArea" prefHeight="220" editable="false" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
 
             <TitledPane text="🔍 Verify XML (XAdES)">
                 <VBox spacing="12" styleClass="module-pane-content">
-                    <Label text="Paste Signed XML Content:" styleClass="form-label"/>
+                    <Label text="Paste Signed XML Content:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="xmlVerifyInputArea" prefHeight="200" styleClass="monospace-field"/>
 
                     <GridPane hgap="10" vgap="9" styleClass="form-grid">
@@ -192,25 +192,25 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="TrustStore Profile (opt):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TrustStore Profile (opt):" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                             <ComboBox fx:id="xmlVerifyTrustStoreProfileCombo" promptText="Saved KeyStore profile" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button text="Load" onAction="#handleLoadXMLTrustStoreProfile" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="TrustStore Path:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TrustStore Path:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="8" GridPane.rowIndex="1" GridPane.columnIndex="1">
                             <TextField fx:id="xmlVerifyTrustStorePathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                             <Button styleClass="ux-inline-7023c1077f" text="..." accessibleText="Choose XML trust store" onAction="#handleBrowseXMLTrustStore"/>
                         </HBox>
 
-                        <Label text="TrustStore Password:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="TrustStore Password:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <PasswordField fx:id="xmlVerifyTrustStorePasswordField" promptText="TrustStore password" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Button text="Verify XML" onAction="#handleVerifyXML" styleClass="action-button,primary-action" maxWidth="180"/>
 
-                    <Label text="Verification Report:" styleClass="form-label"/>
+                    <Label text="Verification Report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="xmlVerifyReportArea" prefHeight="150" editable="false" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>

@@ -14,7 +14,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="SOAP 1.1/1.2 · X.509 BinarySecurityToken + SecurityTokenReference" wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="SOAP XML to Sign:" styleClass="form-label"/>
+                    <Label text="SOAP XML to Sign:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssSignInputArea" prefRowCount="4" promptText="Paste SOAP XML here..." styleClass="monospace-field"/>
                     <Button text="Load from File..." onAction="#handleBrowseWssSignInput" styleClass="secondary-button"/>
 
@@ -24,15 +24,15 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Signature Algorithm:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Signature Algorithm:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="wssSignAlgorithmCombo" prefWidth="250" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Timestamp Options:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Timestamp Options:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <HBox spacing="12" alignment="CENTER_LEFT" GridPane.rowIndex="1" GridPane.columnIndex="1">
-                            <CheckBox fx:id="wssIncludeTimestampCheck" text="Add wsu:Timestamp"/>
-                            <Label text="Validity (min):"/>
+                            <CheckBox fx:id="wssIncludeTimestampCheck" text="Add wsu:Timestamp" minWidth="-Infinity"/>
+                            <Label text="Validity (min):" minWidth="-Infinity"/>
                             <Spinner fx:id="wssTimestampValiditySpinner" prefWidth="90"/>
-                            <CheckBox fx:id="wssSignTimestampCheck" text="Protect Timestamp" selected="true"/>
+                            <CheckBox fx:id="wssSignTimestampCheck" text="Protect Timestamp" selected="true" minWidth="-Infinity"/>
                         </HBox>
                     </GridPane>
 
@@ -44,30 +44,30 @@
                             </columnConstraints>
 
                             <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
-                                <Label text="KeyStore (JKS/PKCS12):" styleClass="form-label"/>
+                                <Label text="KeyStore (JKS/PKCS12):" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             </VBox>
                             <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <TextField fx:id="wssSignKeyPathField" HBox.hgrow="ALWAYS" styleClass="form-field"/>
                                 <Button text="..." accessibleText="Choose signing key" onAction="#handleBrowseWssKey" styleClass="secondary-button"/>
                             </HBox>
 
-                            <Label text="KeyStore Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label text="KeyStore Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <PasswordField fx:id="wssSignKeyPasswordField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                            <Label text="Key Alias:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label text="Key Alias:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <HBox spacing="10" GridPane.rowIndex="2" GridPane.columnIndex="1">
                                 <ComboBox fx:id="wssSignKeyAliasCombo" prefWidth="250" styleClass="form-field" HBox.hgrow="ALWAYS"/>
                                 <Button text="Load Keys" onAction="#handleLoadWssKeys" styleClass="secondary-button"/>
                             </HBox>
 
-                            <Label text="Private Key Password:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                            <Label text="Private Key Password:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <PasswordField fx:id="wssSignPrivateKeyPasswordField" promptText="Leave blank if same as KeyStore" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
                         </GridPane>
                     </VBox>
 
                     <Button text="Sign SOAP Body" onAction="#handleSignWSS" styleClass="action-button,primary-action"/>
 
-                    <Label text="Signed SOAP Output:" styleClass="form-label"/>
+                    <Label text="Signed SOAP Output:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssSignOutputArea" prefRowCount="5" styleClass="result-area,monospace-field" editable="false"/>
                     <Button text="Save Signed XML..." onAction="#handleSaveSignedWss" styleClass="secondary-button"/>
                 </VBox>
@@ -77,7 +77,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="The SOAP version and embedded X.509 token are detected automatically." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="Paste Signed SOAP XML Content:" styleClass="form-label"/>
+                    <Label text="Paste Signed SOAP XML Content:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssVerifyInputArea" prefRowCount="4" styleClass="monospace-field"/>
                     <Button text="Load from File..." onAction="#handleBrowseWssVerifyInput" styleClass="secondary-button"/>
 
@@ -88,7 +88,7 @@
                         </columnConstraints>
 
                         <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
-                            <Label text="Trusted Certificate:" styleClass="form-label"/>
+                            <Label text="Trusted Certificate:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <Label text="(Optional)" styleClass="helper-text,ux-inline-be0503c907"/>
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
@@ -99,7 +99,7 @@
 
                     <Button text="Verify SOAP Signature" onAction="#handleVerifyWSS" styleClass="action-button,primary-action"/>
 
-                    <Label text="Verification Report:" styleClass="form-label"/>
+                    <Label text="Verification Report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssVerifyReportArea" prefRowCount="4" editable="false" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
@@ -108,7 +108,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Adds credentials to wsse:Security. This is authentication data, not a cryptographic signature." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="SOAP XML:" styleClass="form-label"/>
+                    <Label text="SOAP XML:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssUsernameCreateInputArea" prefRowCount="3" styleClass="monospace-field"/>
                     <Button text="Load from File..." onAction="#handleBrowseUsernameCreateInput" styleClass="secondary-button"/>
 
@@ -118,20 +118,20 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Username:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Username:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="wssUsernameCreateNameField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <PasswordField fx:id="wssUsernameCreatePasswordField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Password format:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Password format:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="wssUsernamePasswordTypeCombo" prefWidth="250" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Label fx:id="wssUsernameWarningLabel" wrapText="true" styleClass="helper-text"/>
                     <Button text="Add UsernameToken" onAction="#handleAddUsernameToken" styleClass="action-button,primary-action"/>
 
-                    <Label text="SOAP Output:" styleClass="form-label"/>
+                    <Label text="SOAP Output:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssUsernameCreateOutputArea" prefRowCount="4" styleClass="result-area,monospace-field" editable="false"/>
                     <Button text="Save SOAP XML..." onAction="#handleSaveUsernameTokenXml" styleClass="secondary-button"/>
                 </VBox>
@@ -141,7 +141,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Checks username/password, nonce encoding and Created freshness. It does not validate a SOAP signature or TLS." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="SOAP XML with UsernameToken:" styleClass="form-label"/>
+                    <Label text="SOAP XML with UsernameToken:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssUsernameVerifyInputArea" prefRowCount="3" styleClass="monospace-field"/>
                     <Button text="Load from File..." onAction="#handleBrowseUsernameVerifyInput" styleClass="secondary-button"/>
 
@@ -151,19 +151,19 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Expected username:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Expected username:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <TextField fx:id="wssUsernameExpectedNameField" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Expected password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Expected password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <PasswordField fx:id="wssUsernameExpectedPasswordField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Max token age (sec):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Max token age (sec):" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <Spinner fx:id="wssUsernameMaxAgeSpinner" prefWidth="110" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                     </GridPane>
 
                     <Button text="Verify UsernameToken" onAction="#handleVerifyUsernameToken" styleClass="action-button,primary-action"/>
 
-                    <Label text="Verification Report:" styleClass="form-label"/>
+                    <Label text="Verification Report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssUsernameVerifyReportArea" prefRowCount="4" editable="false" styleClass="result-area,monospace-field"/>
                 </VBox>
             </TitledPane>
@@ -172,7 +172,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Encrypts the SOAP Body content with a fresh AES key and transports that key with the recipient RSA certificate." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="SOAP XML:" styleClass="form-label"/>
+                    <Label text="SOAP XML:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssEncryptInputArea" prefRowCount="3" styleClass="monospace-field"/>
                     <Button text="Load from File..." onAction="#handleBrowseWssEncryptInput" styleClass="secondary-button"/>
 
@@ -183,7 +183,7 @@
                         </columnConstraints>
 
                         <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
-                            <Label text="Recipient Certificate:" styleClass="form-label"/>
+                            <Label text="Recipient Certificate:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <Label text="(PEM/DER)" styleClass="helper-text,ux-inline-be0503c907"/>
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
@@ -191,20 +191,20 @@
                             <Button text="..." accessibleText="Choose encryption certificate" onAction="#handleBrowseWssEncryptCertificate" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="Data encryption:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Data encryption:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="wssEncryptDataAlgorithmCombo" prefWidth="250" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Key transport:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Key transport:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <ComboBox fx:id="wssEncryptKeyTransportCombo" prefWidth="280" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Label fx:id="wssEncryptAlgorithmWarningLabel" wrapText="true" styleClass="helper-text"/>
                     <Button text="Encrypt SOAP Body" onAction="#handleEncryptSoapBody" styleClass="action-button,primary-action"/>
 
-                    <Label text="Encrypted SOAP Output:" styleClass="form-label"/>
+                    <Label text="Encrypted SOAP Output:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssEncryptOutputArea" prefRowCount="4" styleClass="result-area,monospace-field" editable="false"/>
 
-                    <Label text="Encryption Report:" styleClass="form-label"/>
+                    <Label text="Encryption Report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssEncryptReportArea" prefRowCount="3" editable="false" styleClass="result-area,monospace-field"/>
                     <Button text="Save Encrypted XML..." onAction="#handleSaveEncryptedSoap" styleClass="secondary-button"/>
                 </VBox>
@@ -214,7 +214,7 @@
                 <VBox spacing="12" styleClass="module-pane-content">
                     <Label text="Decrypts EncryptedKey and EncryptedData using an RSA private key from PKCS#12/JKS." wrapText="true" styleClass="helper-text"/>
 
-                    <Label text="Encrypted SOAP XML:" styleClass="form-label"/>
+                    <Label text="Encrypted SOAP XML:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssDecryptInputArea" prefRowCount="3" styleClass="monospace-field"/>
                     <Button text="Load from File..." onAction="#handleBrowseWssDecryptInput" styleClass="secondary-button"/>
 
@@ -225,7 +225,7 @@
                         </columnConstraints>
 
                         <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0">
-                            <Label text="Decryption KeyStore:" styleClass="form-label"/>
+                            <Label text="Decryption KeyStore:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                             <Label text="(PKCS#12/JKS)" styleClass="helper-text,ux-inline-be0503c907"/>
                         </VBox>
                         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
@@ -233,19 +233,19 @@
                             <Button text="..." accessibleText="Choose decryption key store" onAction="#handleBrowseWssDecryptKeyStore" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="KeyStore password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="KeyStore password:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <PasswordField fx:id="wssDecryptKeyStorePasswordField" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
 
-                        <Label text="Private key password:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                        <Label text="Private key password:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                         <PasswordField fx:id="wssDecryptPrivateKeyPasswordField" promptText="If different" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
                     </GridPane>
 
                     <Button text="Decrypt SOAP Body" onAction="#handleDecryptSoapBody" styleClass="action-button,primary-action"/>
 
-                    <Label text="Decrypted SOAP Output:" styleClass="form-label"/>
+                    <Label text="Decrypted SOAP Output:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssDecryptOutputArea" prefRowCount="4" styleClass="result-area,monospace-field" editable="false"/>
 
-                    <Label text="Decryption Report:" styleClass="form-label"/>
+                    <Label text="Decryption Report:" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
                     <TextArea fx:id="wssDecryptReportArea" prefRowCount="3" editable="false" styleClass="result-area,monospace-field"/>
                     <Button text="Save Decrypted XML..." onAction="#handleSaveDecryptedSoap" styleClass="secondary-button"/>
                 </VBox>

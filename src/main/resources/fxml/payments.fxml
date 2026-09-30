@@ -235,7 +235,7 @@
                         <ComboBox fx:id="dukptAesUsageCombo" prefWidth="205" styleClass="form-field"/>
                         <ComboBox fx:id="dukptAesKeyTypeCombo" prefWidth="100" styleClass="form-field"/>
                     </HBox>
-                    <Button text="Inspect KSN / Derive Key" onAction="#handleInspectDukpt" styleClass="action-button,primary-action" maxWidth="200"/>
+                    <Button text="Inspect KSN / Derive Key" onAction="#handleInspectDukpt" styleClass="action-button,primary-action" maxWidth="-Infinity" minWidth="-Infinity"/>
 
                     <VBox fx:id="dukptAesPinBox" spacing="12" styleClass="module-pane-content">
                         <Separator/>
