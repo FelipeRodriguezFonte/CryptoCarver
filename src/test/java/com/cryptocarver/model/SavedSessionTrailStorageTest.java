@@ -15,10 +15,14 @@ class SavedSessionTrailStorageTest {
             "invented-output-41", "invented-enriched-41", "invented-sensitive-detail-41");
 
     @Test
-    void passwordlessStorageCurrentlyDiscardsTheTrail() {
+    void passwordlessStorageRestoresAPublicOnlyRedactedTrail() {
         SavedSession stored = codec.prepareForStorage(source(), null);
-        assertNull(stored.getOperationLog());
-        assertNull(codec.restore(stored, null).getOperationLog());
+        assertTrue(stored.isTrailRedacted());
+        SavedSession restored = codec.restore(codec.deserialize(codec.serialize(List.of(stored))).get(0), null);
+        assertTrue(restored.isTrailRedacted());
+        assertEquals(1, restored.getOperationLog().size());
+        assertEquals("Synthetic step", restored.getOperationLog().getSteps().get(0).getTitle());
+        assertTrue(restored.getOperationLog().verifyChain());
     }
 
     @Test
@@ -38,6 +42,7 @@ class SavedSessionTrailStorageTest {
                 + "\"version\":1,\"uiState\":{\"format\":\"Hex\"}}]").get(0);
         SavedSession restored = codec.restore(stored, null);
         assertNull(restored.getOperationLog());
+        assertFalse(restored.isTrailRedacted());
         assertEquals("Hex", restored.getUiState().get("format"));
     }
 
@@ -49,6 +54,32 @@ class SavedSessionTrailStorageTest {
             assertFalse(json.contains(java.util.HexFormat.of().withUpperCase()
                     .formatHex(value.getBytes(StandardCharsets.UTF_8))), "Synthetic sensitive bytes leaked");
         }
+    }
+
+    @Test
+    void absentAndEmptyTrailsDoNotAddRedactedLogs() {
+        SavedSession absent = codec.prepareForStorage(new SavedSession("Empty", "Synthetic", Map.of()), null);
+        SavedSession empty = codec.prepareForStorage(new SavedSession("Empty", "Synthetic", Map.of(),
+                new OperationSessionLog()), null);
+        assertNull(absent.getOperationLog());
+        assertNull(empty.getOperationLog());
+        assertFalse(absent.isTrailRedacted());
+        assertFalse(empty.isTrailRedacted());
+    }
+
+    @Test
+    void preparingAnAlreadyRedactedSessionPreservesItsLogAndMarker() {
+        SavedSession once = codec.prepareForStorage(source(), null);
+        SavedSession twice = codec.prepareForStorage(once, null);
+        assertEquals(codec.serialize(List.of(once)), codec.serialize(List.of(twice)));
+        assertEquals(1, twice.getVersion());
+    }
+
+    @Test
+    void explicitNullLegacyLogRemainsAbsentAndUnredacted() {
+        SavedSession stored = codec.deserialize("[{\"name\":\"Old\",\"version\":1,\"operationLog\":null}]").get(0);
+        assertNull(codec.restore(stored, null).getOperationLog());
+        assertFalse(stored.isTrailRedacted());
     }
 
     static SavedSession source() {

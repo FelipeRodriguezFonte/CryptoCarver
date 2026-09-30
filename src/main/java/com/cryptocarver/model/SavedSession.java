@@ -15,6 +15,7 @@ public class SavedSession implements Serializable {
     private String operation; // The content header/operation name when saved
     private Map<String, Object> uiState;
     private OperationSessionLog operationLog;
+    private boolean trailRedacted;
     private int version = 1;
     private ProtectedFields protectedFields;
 
@@ -58,6 +59,13 @@ public class SavedSession implements Serializable {
     public OperationSessionLog getOperationLog() {
         return operationLog == null ? null : operationLog.copy();
     }
+
+    public void setOperationLog(OperationSessionLog operationLog) {
+        this.operationLog = operationLog == null ? null : operationLog.copy();
+    }
+
+    public boolean isTrailRedacted() { return trailRedacted; }
+    public void setTrailRedacted(boolean trailRedacted) { this.trailRedacted = trailRedacted; }
 
     public int getVersion() { return version; }
     public void setVersion(int version) { this.version = version; }

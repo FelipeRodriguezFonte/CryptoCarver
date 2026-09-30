@@ -39,6 +39,7 @@ public final class SavedSessionCodec {
         stored.setId(source.getId());
         stored.setTimestamp(source.getTimestamp());
         stored.setVersion(1);
+        stored.setTrailRedacted(source.isTrailRedacted());
         Map<String, Object> safe = new LinkedHashMap<>();
         Map<String, Object> secrets = new LinkedHashMap<>();
         if (source.getUiState() != null) source.getUiState().forEach((key, value) -> {
@@ -64,6 +65,13 @@ public final class SavedSessionCodec {
             }
         } else {
             secrets.forEach((key, value) -> safe.put(key, MARKER));
+            OperationSessionLog trail = source.getOperationLog();
+            if (trail != null && !trail.isEmpty()) {
+                stored.setOperationLog(RedactedTrail.from(trail));
+                stored.setTrailRedacted(true);
+            } else {
+                stored.setTrailRedacted(false);
+            }
             if (password != null) java.util.Arrays.fill(password, '\0');
         }
         stored.setUiState(safe);
@@ -95,6 +103,7 @@ public final class SavedSessionCodec {
             restored.setId(source.getId());
             restored.setTimestamp(source.getTimestamp());
             restored.setVersion(source.getVersion());
+            restored.setTrailRedacted(source.isTrailRedacted());
             return restored;
         } catch (GeneralSecurityException e) {
             throw new IllegalArgumentException("Incorrect password or modified saved session", e);
