@@ -56,6 +56,9 @@ class ClippedTextAuditTool {
 
     private static void walk(String screen, Node node, String path, List<Finding> out, List<String> excluded) {
         String key = path + "/" + node.getClass().getSimpleName() + (node.getId() == null ? "" : "#" + node.getId());
+        if (collapsedContent(node)) {
+            excluded.add(screen + " | " + key + " | collapsed TitledPane content"); return;
+        }
         if (!node.isVisible()) { excluded.add(screen + " | " + key + " | hidden subtree"); return; }
         if (node instanceof Labeled label && label.getText() != null && !label.getText().isBlank()) {
             // Cells are data, including combo selections and list/tree/table content.
@@ -63,7 +66,8 @@ class ClippedTextAuditTool {
             if (!label.isManaged()) excluded.add(screen + " | " + key + " | unmanaged caption");
             else if (label instanceof Cell<?>) excluded.add(screen + " | " + key + " | data cell (text omitted)");
             else {
-                Node skinText = label.lookup(".text");
+                Node skinText = label.lookupAll(".text").stream()
+                        .filter(n -> n instanceof Text && ownsSkinText(label, n)).findFirst().orElse(null);
                 if (skinText instanceof Text text && text.getClass().getSimpleName().equals("LabeledText")) {
                     String full = label.getText();
                     if (label.isMnemonicParsing()) full = full.replace("__", "\u0000").replace("_", "").replace("\u0000", "_");
@@ -79,6 +83,20 @@ class ClippedTextAuditTool {
             int i = 0;
             for (Node child : parent.getChildrenUnmodifiable()) walk(screen, child, key + "[" + i++ + "]", out, excluded);
         }
+    }
+
+    private static boolean ownsSkinText(Labeled owner, Node text) {
+        for (Node n = text.getParent(); n != null; n = n.getParent()) {
+            if (n instanceof Labeled) return n == owner;
+        }
+        return false;
+    }
+
+    private static boolean collapsedContent(Node node) {
+        for (Node n = node.getParent(); n != null; n = n.getParent()) {
+            if (n instanceof TitledPane pane && !pane.isExpanded() && pane.getContent() == node) return true;
+        }
+        return false;
     }
 
     static void withScreen(String route, String theme, java.util.function.Consumer<Parent> action) throws Exception {
@@ -99,6 +117,73 @@ class ClippedTextAuditTool {
         }
     }
 
+    static void auditStates(String route, Parent root, List<String> counts,
+                            List<Finding> findings, List<String> exclusions) {
+        collect(route, root, counts, findings, exclusions);
+        // Reveal each tab independently, restoring its original selection. This covers
+        // alternate FXML panels without multiplying every possible tab combination.
+        List<TabPane> tabs = root.lookupAll(".tab-pane").stream().filter(n -> n instanceof TabPane)
+                .map(n -> (TabPane) n).filter(ClippedTextAuditTool::visibleThroughParents)
+                .sorted(Comparator.comparing(n -> Objects.toString(n.getId(), ""))).toList();
+        int paneIndex = 0;
+        for (TabPane pane : tabs) {
+            int original = pane.getSelectionModel().getSelectedIndex();
+            try {
+                for (int index = 0; index < pane.getTabs().size(); index++) {
+                    if (index == original || pane.getTabs().get(index).isDisable()) continue;
+                    pane.getSelectionModel().select(index);
+                    collect(route + " / tabs " + paneIndex + ":" + index, root, counts, findings, exclusions);
+                }
+            } finally { pane.getSelectionModel().select(original); }
+            paneIndex++;
+        }
+        if (route.equals("Process Designer")) {
+            Button toggle = (Button) root.lookup("#inspectorToggleButton");
+            toggle.fire();
+            try { collect(route + " / inspector hidden", root, counts, findings, exclusions); }
+            finally { toggle.fire(); }
+        }
+        if (route.equals("Key & Certificate Format Workbench")) {
+            Node table = root.lookup("#keystoreTable");
+            Node grid = root.lookup("#singleItemGrid");
+            boolean tv = table.isVisible(), tm = table.isManaged(), gv = grid.isVisible(), gm = grid.isManaged();
+            try {
+                grid.setVisible(false); grid.setManaged(false);
+                table.setVisible(true); table.setManaged(true);
+                collect(route + " / store headers", root, counts, findings, exclusions);
+            } finally {
+                table.setVisible(tv); table.setManaged(tm); grid.setVisible(gv); grid.setManaged(gm);
+            }
+        }
+    }
+
+    private static boolean visibleThroughParents(Node node) {
+        for (Node n = node; n != null; n = n.getParent()) if (!n.isVisible()) return false;
+        return true;
+    }
+
+    static Audit infoDialog(String theme) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.getButtonTypes().setAll(new ButtonType(I18nService.getInstance().text("dialog.ok"), ButtonBar.ButtonData.OK_DONE));
+        new DialogService().configure(alert, null, "Information", null);
+        DialogService.prepareInformationalDialog(alert);
+        alert.getDialogPane().getStylesheets().setAll(
+                ClippedTextAuditTool.class.getResource("/css/styles.css").toExternalForm(),
+                ClippedTextAuditTool.class.getResource("/css/theme-" + theme + ".css").toExternalForm());
+        alert.setContentText("Information");
+        try {
+            alert.show();
+            return inspect("Information dialog", alert.getDialogPane());
+        } finally { alert.close(); }
+    }
+
+    private static void collect(String route, Parent root, List<String> counts,
+                                List<Finding> findings, List<String> exclusions) {
+        Audit audit = inspect(safe(route), root);
+        findings.addAll(audit.findings()); exclusions.addAll(audit.exclusions());
+        counts.add(safe(route) + " = " + audit.findings().size());
+    }
+
     static String safe(String text) {
         // Keep the published audit independent of product/vendor names in legacy routes.
         return text.replaceAll("(?i)thales|payshield", "[legacy]").replace("\n", "\\n").replace("\r", "\\r");
@@ -115,25 +200,37 @@ class ClippedTextAuditTool {
         List<String> lines = new ArrayList<>();
         List<Finding> findings = new ArrayList<>();
         List<String> exclusions = new ArrayList<>();
-        onFx(() -> {
-            var settings = AppSettings.getInstance();
-            var language = settings.getLanguagePreference();
-            String last = settings.getLastRoute();
-            try {
+        var settings = AppSettings.getInstance();
+        var language = settings.getLanguagePreference();
+        String last = settings.getLastRoute();
+        try {
+            onFx(() -> {
                 I18nService.getInstance().setPreference(LanguagePreference.valueOf(locale.toUpperCase(Locale.ROOT)));
-                for (String route : new TreeSet<>(routes.values())) {
-                    withScreen(route, theme, root -> {
-                        Audit audit = inspect(safe(route), root);
-                        findings.addAll(audit.findings()); exclusions.addAll(audit.exclusions());
-                        lines.add(safe(route) + " = " + audit.findings().size());
-                    });
-                }
-            } finally {
+                return null;
+            });
+            for (String route : new TreeSet<>(routes.values())) {
+                onFx(() -> {
+                    withScreen(route, theme, root -> auditStates(route, root, lines, findings, exclusions));
+                    return null;
+                });
+                // Let window/pulse cleanup execute between screens; do not retain a whole
+                // registry's scenes on one FX event. Collection bounds native skin pressure.
+                onFx(() -> null);
+                System.gc();
+            }
+            onFx(() -> {
+                Audit audit = infoDialog(theme);
+                findings.addAll(audit.findings()); exclusions.addAll(audit.exclusions());
+                lines.add("Information dialog = " + audit.findings().size());
+                return null;
+            });
+        } finally {
+            onFx(() -> {
                 settings.setLastRoute(last);
                 I18nService.getInstance().setPreference(language);
-            }
-            return null;
-        });
+                return null;
+            });
+        }
         lines.add("TOTAL = " + findings.size());
         lines.add("\nFINDINGS (skin truncation; off-viewport alone is never a finding):");
         findings.stream().sorted(Comparator.comparing(Finding::screen).thenComparing(Finding::path))

@@ -53,7 +53,7 @@ class ComputedStyleSnapshotTool {
     @Test
     void writeSnapshot() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
-        try { Platform.startup(started::countDown); } catch (IllegalStateException alreadyStarted) { started.countDown(); }
+        try { Platform.startup(() -> { Platform.setImplicitExit(false); started.countDown(); }); } catch (IllegalStateException alreadyStarted) { started.countDown(); }
         assertTrue(started.await(15, TimeUnit.SECONDS));
         List<String> lines = new ArrayList<>();
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -88,13 +88,18 @@ class ComputedStyleSnapshotTool {
         scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
         scene.getStylesheets().add(getClass().getResource("/css/" + theme).toExternalForm());
         Stage stage = new Stage();
+        String previousRoute = com.cryptocarver.model.AppSettings.getInstance().getLastRoute();
+        try {
         stage.setScene(scene);
         stage.show();
         controller.navigateToModule(route);
         root.applyCss();
         root.layout();
         walk(root, theme + " " + route + " ", lines);
-        stage.close();
+        } finally {
+            stage.close(); controller.shutdown(); stage.setScene(null);
+            com.cryptocarver.model.AppSettings.getInstance().setLastRoute(previousRoute);
+        }
     }
 
     private void walk(Node node, String path, List<String> lines) {
@@ -106,11 +111,16 @@ class ComputedStyleSnapshotTool {
             value.append(" bg=").append(fills(region.getBackground()))
                     .append(" border=").append(borders(region.getBorder()))
                     .append(" pad=").append(region.getPadding())
+                    .append(" minW=").append(region.getMinWidth())
+                    .append(" prefW=").append(region.getPrefWidth())
+                    .append(" maxW=").append(region.getMaxWidth())
                     .append(" minH=").append(region.getMinHeight())
                     .append(" prefH=").append(region.getPrefHeight());
         }
         if (node instanceof Labeled labeled) {
-            value.append(" fg=").append(labeled.getTextFill())
+            value.append(" wrap=").append(labeled.isWrapText())
+                    .append(" overrun=").append(labeled.getTextOverrun())
+                    .append(" fg=").append(labeled.getTextFill())
                     .append(" font=").append(labeled.getFont().getSize()).append(' ').append(labeled.getFont().getStyle());
         }
         value.append(" opacity=").append(node.getOpacity());
