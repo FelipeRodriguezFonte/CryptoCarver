@@ -40,6 +40,19 @@ public final class OperationSessionLog implements Serializable {
         }
     }
 
+    static OperationSessionLog publicSnapshot(OperationSessionLog source) {
+        OperationSessionLog safe = new OperationSessionLog();
+        safe.id = source.id;
+        safe.createdAt = source.createdAt;
+        String previous = SessionOperationStep.GENESIS_HASH;
+        for (SessionOperationStep step : source.getSteps()) {
+            SessionOperationStep redacted = SessionOperationStep.publicSnapshot(step, previous);
+            safe.steps.add(redacted);
+            previous = redacted.getEntryHash();
+        }
+        return safe;
+    }
+
     public synchronized SessionOperationStep add(OperationResult result, String title, List<String> tags) {
         return add(result, title, tags, Map.of());
     }

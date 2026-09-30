@@ -133,6 +133,38 @@ public final class SessionOperationStep implements Serializable {
         return copy;
     }
 
+    /** Explicit allowlist: never copy source payload fingerprints, lengths or parameters. */
+    static SessionOperationStep publicSnapshot(SessionOperationStep source, String previousHash) {
+        SessionOperationStep safe = new SessionOperationStep();
+        safe.id = source.id;
+        safe.timestamp = source.timestamp;
+        safe.title = source.title;
+        safe.tags = normalizedTags(source.tags);
+        safe.operation = source.operation;
+        safe.status = source.status;
+        safe.inputPresent = source.inputPresent;
+        safe.outputPresent = source.outputPresent;
+        safe.outputClassification = source.getOutputClassification();
+        safe.enrichedOutputClassification = source.getEnrichedOutputClassification();
+        if (safe.outputClassification == OperationDetail.Classification.PUBLIC) {
+            safe.outputText = source.outputText;
+            safe.outputHex = source.outputHex;
+        }
+        if (safe.enrichedOutputClassification == OperationDetail.Classification.PUBLIC) {
+            safe.enrichedOutput = source.enrichedOutput;
+        }
+        safe.details = new ArrayList<>();
+        for (OperationDetail detail : source.getDetails()) {
+            if (detail != null && detail.classification() == OperationDetail.Classification.PUBLIC) {
+                safe.details.add(detail);
+            }
+        }
+        safe.parameters = new LinkedHashMap<>();
+        safe.previousHash = validPreviousHash(previousHash);
+        safe.entryHash = safe.calculateHash();
+        return safe;
+    }
+
     boolean hasValidHash(String expectedPreviousHash) {
         return validPreviousHash(expectedPreviousHash).equals(previousHash)
                 && entryHash != null
