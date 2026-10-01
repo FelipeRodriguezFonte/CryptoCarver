@@ -42,6 +42,10 @@ final class NavigationChromeCoordinator {
         this.title=title; this.subtitle=subtitle; this.breadcrumb=breadcrumb; this.sectionButton=sectionButton;
         this.sep1=sep1; this.moduleButton=moduleButton; this.sep2=sep2; this.operation=operation;
         this.favoriteButton=favoriteButton; this.favoriteShortcut=favoriteShortcut;
+        if (contractLabel != null) {
+            contractLabel.setWrapText(true);
+            contractLabel.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        }
         this.profileOperationChanged=profileOperationChanged;
         this.breadcrumbSectionSelected=breadcrumbSectionSelected; this.breadcrumbModuleSelected=breadcrumbModuleSelected;
     }

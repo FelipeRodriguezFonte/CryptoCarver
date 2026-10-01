@@ -141,6 +141,25 @@ public class NavigationRail extends VBox {
         return label.substring(0, 9) + "…";
     }
 
+    @Override
+    protected void layoutChildren() {
+        // Compact captions follow the actual platform font metrics, not character counts.
+        for (var node : getChildren()) {
+            if (node instanceof ToggleButton button && button.getUserData() instanceof Section section) {
+                String caption = compactLabel(section);
+                javafx.scene.text.Text measure = new javafx.scene.text.Text(caption);
+                measure.setFont(button.getFont());
+                double available = 60 - button.getInsets().getLeft() - button.getInsets().getRight() - 2;
+                while (measure.getLayoutBounds().getWidth() > available && caption.length() > 2) {
+                    caption = caption.substring(0, caption.endsWith("…") ? caption.length() - 2 : caption.length() - 1) + "…";
+                    measure.setText(caption);
+                }
+                if (!caption.equals(button.getText())) button.setText(caption);
+            }
+        }
+        super.layoutChildren();
+    }
+
     private boolean isGroupStart(Section section) {
         // Work | Cryptography | Formats and standards | Domain | History (UXP-21).
         return switch (section) {

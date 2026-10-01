@@ -31,6 +31,20 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 public class MaterialFieldBadgeTest {
 
+    private com.cryptocarver.model.SecretVisibilityProfile previousProfile;
+
+    @org.junit.jupiter.api.BeforeEach
+    void selectRedactedHistoryProfile() {
+        var settings = com.cryptocarver.model.AppSettings.getInstance();
+        previousProfile = settings.getSecretVisibilityProfile();
+        settings.setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void restoreHistoryProfile() {
+        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(previousProfile);
+    }
+
     public static class TestCryptoController {
         @FXML public TextField kdfSaltField = new TextField("1234567890abcdef");
         @FXML public TextField kdfInfoField = new TextField("app-context");

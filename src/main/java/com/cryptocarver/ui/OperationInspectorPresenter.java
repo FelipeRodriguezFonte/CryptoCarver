@@ -22,6 +22,7 @@ final class OperationInspectorPresenter {
     OperationInspectorPresenter(Label operationLabel, Label inputBytesLabel, Label outputBytesLabel,
                                 Label securityTipLabel, VBox detailsContainer) {
         this.operationLabel = operationLabel;
+        if (operationLabel != null) operationLabel.setWrapText(true);
         this.inputBytesLabel = inputBytesLabel;
         this.outputBytesLabel = outputBytesLabel;
         this.securityTipLabel = securityTipLabel;

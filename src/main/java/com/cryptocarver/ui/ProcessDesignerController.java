@@ -147,6 +147,15 @@ public class ProcessDesignerController {
         };
         I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         configureExecutionStatusTable();
+        // The narrow inspector must accommodate localized captions on GTK and macOS.
+        if (nodeInspector != null) {
+            for (var node : nodeInspector.lookupAll(".button")) {
+                if (node instanceof Button button) {
+                    button.setWrapText(true);
+                    button.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+                }
+            }
+        }
 
         // Canvas Scale & Zoom setup
         if (workflowCanvas != null) {
@@ -278,6 +287,7 @@ public class ProcessDesignerController {
 
                 Label iconLabel = new Label(d.icon());
                 iconLabel.setStyle("-fx-font-size: 13px;");
+                iconLabel.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
 
                 VBox textBox = new VBox(1);
                 Label titleLabel = new Label(t(d.labelKey()));

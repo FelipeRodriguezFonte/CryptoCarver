@@ -164,8 +164,10 @@ class ModernShellCharacterizationUITest {
             alert.getDialogPane().layout();
             Button button = (Button) alert.getDialogPane().lookupButton(alert.getDialogPane().getButtonTypes().get(0));
             ButtonBar buttonBar = (ButtonBar) alert.getDialogPane().lookup(".button-bar");
-            double requiredWidth = Math.ceil(button.prefWidth(-1)) + 2;
-            buttonFits.set(button.getWidth() >= requiredWidth && button.getWidth() >= 80);
+            // GTK can allocate exactly prefWidth; measure the skin's displayed text,
+            // rather than demand arbitrary extra pixels beyond the preferred size.
+            javafx.scene.text.Text rendered = (javafx.scene.text.Text) button.lookup(".text");
+            buttonFits.set(rendered != null && button.getText().equals(rendered.getText()) && button.getWidth() >= 80);
             buttonGeometry.set("actual=" + button.getWidth() + ", preferred=" + button.prefWidth(-1) + ", minimum=" + button.getMinWidth()
                     + ", barMinimum=" + buttonBar.getButtonMinWidth() + ", paneClasses=" + alert.getDialogPane().getStyleClass());
             alert.close();
