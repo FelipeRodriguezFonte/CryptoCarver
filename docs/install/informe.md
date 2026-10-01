@@ -108,8 +108,22 @@ Logs confirmados del [run original](https://github.com/FelipeRodriguezFonte/Cryp
 La reproducción sobre el escritorio usa sus opciones Maven sin Xvfb:
 `mvn -o -q -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw test`.
 La ejecución focalizada añade `-Dtest=MaterialFieldBadgeTest,ModernShellCharacterizationUITest,ClippedTextRegressionUITest`.
+La reproducción completa del comando original, en Java 21 y con renderizado software,
+agotó el heap: `OutOfMemoryError` en `InvokeLaterDispatcher` y en el hilo de Surefire.
+Se terminó esa ejecución al quedar sin progreso; no es una suite completada.
+Se probó inicialmente `-DreuseForks=false`, pero el POM fijaba literalmente `true`:
+los XML demostraban un único launcher y se repitió el OOM. Se parametriza esa opción
+como `surefire.reuseForks`, con valor predeterminado `true`.
+El job de interfaz ahora selecciona `-Dgroups=ui` y usa `-Dsurefire.reuseForks=false`: cada clase
+libera su toolkit y estado de renderizado al terminar el proceso. El heap de 3 GiB,
+los timeouts y el `mvn test` predeterminado no cambian. La nueva reproducción local es:
+`mvn -o -q -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test`.
+
 Los comandos Linux apt-get, dpkg, readlink -f y timeout deben verificarse en GitHub.
 No se ejecutó GitHub Actions y no se puede asegurar aquí el resultado GTK/Xvfb.
+Los comandos `gh release create/upload` no se ejecutan localmente: publicar o alterar
+releases está expresamente fuera de este encargo. Se comprueba su sintaxis de shell,
+y su funcionamiento con GITHUB_TOKEN deberá verificarse en el job de publicación.
 
 ## Releases
 
@@ -182,5 +196,37 @@ La instalación del clon `clean`, con `env -i` y `-Dmaven.repo.local=/tmp/crypto
 inicialmente vacío, ejecutó literalmente `clean package`: **2.532 tests, 0 fallos, 0 errores,
 1 omitido, BUILD SUCCESS, 5 min 24 s**, incluida la descarga de dependencias.
 La repetición `javafx:run` y el JAR del clon `source` arrancaron correctamente, como se indica arriba.
+El DMG local `CryptoCarver-2.4.0.dmg` se generó con `PACKAGE_TYPE=dmg PACKAGE_SKIP_BUILD=true`,
+~84 MiB. `hdiutil verify` informó `checksum ... is VALID`.
 
-Los resultados de la suite sobre los cambios finales y la lista de commits se añaden al terminarla.
+| Comprobación | Resultado | Tiempo |
+|---|---|---:|
+| Compilación/tests de release, sin interfaz | 2.532 tests; 350 omitidos, 0 fallos/errores (2.182 ejecutados) | 106,36 s |
+| JavaFX de CI, con forks separados por clase | 375 tests; 0 fallos/errores/omitidos; 73 launchers distintos | 222,38 s |
+| Suite completa predeterminada (`mvn -o -q test`) | 2.532 tests; 0 fallos/errores, 1 omitido; un único launcher | 242,97 s |
+| Doctor, Bash, YAML/actionlint, manifiesto y DMG | Correctos; se conserva el fallo de presupuesto de emojis | — |
+
+Las suites finales se ejecutan con Temurin 21.0.8, sin perfil low-cpu y con los
+argumentos JVM existentes. Los comandos Maven de CI se probaron con `-o` para usar
+la caché local; solo se sustituye Xvfb por el escritorio macOS.
+
+
+## Commits
+
+| Commit | Cambio |
+|---|---|
+| `3a1095f` | docs(install): diagnose macOS setup and failed CI jobs |
+| `2d51e89` | fix(install): select portable Maven and JDK 17 toolchains |
+| `02c96aa` | feat(install): add read-only environment doctor |
+| `99f2d14` | fix(ci): run hygiene budgets without ripgrep |
+| `bdf2643` | fix(ci): ignore binary metadata in hygiene counts |
+| `792c006` | fix(ci): make JavaFX geometry and history tests portable |
+| `af13f72` | ci(pkcs11): upgrade checkout and Java setup actions |
+| `4d571fb` | feat(release): build native macOS DMGs and draft releases |
+| `e857a31` | docs(install): explain macOS releases, source builds and validation |
+| `125eda6` | fix(ui): preserve palette glyph width after CSS application |
+| `be89479` | fix(ci): isolate JavaFX software rendering between test classes |
+| `1d5472d` | fix(ci): make Surefire fork reuse configurable for UI isolation |
+
+La actualización final de este informe se guarda en un commit de documentación adicional.
+El historial completo se consulta con `git log --oneline 92e7b3b..luna/github-install`.
