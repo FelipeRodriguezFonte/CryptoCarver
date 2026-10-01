@@ -160,6 +160,8 @@ class ModernMainControllerUITest {
 
     @Test
     void symmetricWorkspaceKeepsActionsVisibleAndPreservesOtherRoutes() throws Exception {
+        AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
+        AtomicReference<javafx.scene.layout.Region> rootRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
                 FXMLLoader loader = UiTestFxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
@@ -167,67 +169,107 @@ class ModernMainControllerUITest {
                 javafx.scene.Scene scene = new javafx.scene.Scene(root, 1600, 1000);
                 scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
                 ModernMainController controller = loader.getController();
-                controller.navigateTo("Symmetric Ciphers");
-                CipherController cipher = getField(controller, "cipherContainerController");
-                VBox dock = getField(controller, "cipherActionDock");
-                javafx.scene.control.ScrollPane scroll = getField(controller, "mainScrollPane");
-                VBox config = getField(cipher, "symmetricConfig");
-                VBox io = getField(cipher, "cipherIoCard");
-                javafx.scene.control.Accordion accordion = getField(cipher, "cipherAccordion");
-                root.resize(1600, 1000);
-                root.applyCss();
-                root.layout();
-                root.layout();
-                assertTrue(dock.isVisible());
-                assertFalse(accordion.isManaged());
-                assertTrue(config.isManaged());
-                Node encrypt = dock.lookup("#symmetricEncryptButton");
-                assertNotNull(encrypt);
-                double actionY = encrypt.localToScene(encrypt.getBoundsInLocal()).getMinY();
-                scroll.setVvalue(1);
-                root.layout();
-                assertEquals(actionY, encrypt.localToScene(encrypt.getBoundsInLocal()).getMinY(), 0.1,
-                        "Execution must remain in place while the form scrolls");
-                assertTrue(encrypt.localToScene(encrypt.getBoundsInLocal()).getMaxY() <= scene.getHeight());
-                javafx.scene.layout.GridPane workbench = getField(cipher, "cipherWorkbench");
-                workbench.resize(1000, workbench.getHeight());
-                assertEquals(1, javafx.scene.layout.GridPane.getColumnIndex(io));
-                workbench.resize(550, workbench.getHeight());
-                assertEquals(0, javafx.scene.layout.GridPane.getColumnIndex(io));
-                assertEquals(1, javafx.scene.layout.GridPane.getRowIndex(io));
-                for (String route : java.util.List.of("File Cipher (Streaming)", "Asymmetric Ciphers", "Format-Preserving Encryption")) {
-                    controller.navigateTo(route);
-                    assertFalse(dock.isVisible(), route);
-                    assertFalse(config.isManaged(), route);
-                    assertTrue(accordion.isVisible(), route);
-                    assertNotNull(accordion.getExpandedPane(), route);
-                }
-                controller.navigateTo("Hashing");
-                assertFalse(dock.isVisible());
-                controller.navigateTo("Symmetric Ciphers");
-                assertTrue(dock.isVisible());
-                assertEquals(0, scroll.getVvalue());
-
-                if (Boolean.getBoolean("cipher.ux.snapshot")) {
-                    for (int width : new int[]{1600, 1100}) {
-                        root.resize(width, 1000);
-                        root.applyCss();
-                        root.layout();
-                        root.layout();
-                        scroll.setVvalue(0);
-                        javafx.scene.image.WritableImage image = root.snapshot(null, null);
-                        java.awt.image.BufferedImage png = new java.awt.image.BufferedImage(
-                                (int) image.getWidth(), (int) image.getHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
-                        for (int y = 0; y < png.getHeight(); y++) {
-                            for (int x = 0; x < png.getWidth(); x++) png.setRGB(x, y, image.getPixelReader().getArgb(x, y));
-                        }
-                        javax.imageio.ImageIO.write(png, "png", new java.io.File("target/cipher-ux-" + width + ".png"));
-                    }
-                }
+                controllerRef.set(controller);
+                rootRef.set(root);
             } catch (Exception exception) {
                 throw new RuntimeException(exception);
             }
         });
+        try {
+            runAndWait(() -> {
+                controllerRef.get().navigateTo("Symmetric Ciphers");
+                rootRef.get().resize(1600, 1000);
+                rootRef.get().applyCss();
+            });
+            runAndWait(() -> rootRef.get().layout());
+            runAndWait(() -> {
+                try {
+                    ModernMainController controller = controllerRef.get();
+                    javafx.scene.layout.Region root = rootRef.get();
+                    javafx.scene.Scene scene = root.getScene();
+                    CipherController cipher = getField(controller, "cipherContainerController");
+                    VBox dock = getField(controller, "cipherActionDock");
+                    javafx.scene.control.ScrollPane scroll = getField(controller, "mainScrollPane");
+                    VBox config = getField(cipher, "symmetricConfig");
+                    VBox io = getField(cipher, "cipherIoCard");
+                    javafx.scene.control.Accordion accordion = getField(cipher, "cipherAccordion");
+                    root.layout();
+                    assertTrue(dock.isVisible());
+                    assertFalse(accordion.isManaged());
+                    assertTrue(config.isManaged());
+                    Node encrypt = dock.lookup("#symmetricEncryptButton");
+                    assertNotNull(encrypt);
+                    double actionY = encrypt.localToScene(encrypt.getBoundsInLocal()).getMinY();
+                    scroll.setVvalue(1);
+                    root.layout();
+                    assertEquals(actionY, encrypt.localToScene(encrypt.getBoundsInLocal()).getMinY(), 0.1,
+                            "Execution must remain in place while the form scrolls");
+                    assertTrue(encrypt.localToScene(encrypt.getBoundsInLocal()).getMaxY() <= scene.getHeight());
+                    javafx.scene.layout.GridPane workbench = getField(cipher, "cipherWorkbench");
+                    workbench.resize(1000, workbench.getHeight());
+                    assertEquals(1, javafx.scene.layout.GridPane.getColumnIndex(io));
+                    workbench.resize(550, workbench.getHeight());
+                    assertEquals(0, javafx.scene.layout.GridPane.getColumnIndex(io));
+                    assertEquals(1, javafx.scene.layout.GridPane.getRowIndex(io));
+                } catch (Exception exception) {
+                    throw new RuntimeException(exception);
+                }
+            });
+            // Keep each navigation assertion in its own FX turn. Loading and laying
+            // out every route in one turn exceeded 10 s under Linux emulation.
+            for (String route : java.util.List.of("File Cipher (Streaming)", "Asymmetric Ciphers", "Format-Preserving Encryption")) {
+                runAndWait(() -> {
+                    try {
+                        ModernMainController controller = controllerRef.get();
+                        VBox dock = getField(controller, "cipherActionDock");
+                        CipherController cipher = getField(controller, "cipherContainerController");
+                        VBox config = getField(cipher, "symmetricConfig");
+                        javafx.scene.control.Accordion accordion = getField(cipher, "cipherAccordion");
+                        controller.navigateTo(route);
+                        assertFalse(dock.isVisible(), route);
+                        assertFalse(config.isManaged(), route);
+                        assertTrue(accordion.isVisible(), route);
+                        assertNotNull(accordion.getExpandedPane(), route);
+                    } catch (Exception exception) {
+                        throw new RuntimeException(exception);
+                    }
+                });
+            }
+            runAndWait(() -> {
+                try {
+                    ModernMainController controller = controllerRef.get();
+                    javafx.scene.layout.Region root = rootRef.get();
+                    javafx.scene.control.ScrollPane scroll = getField(controller, "mainScrollPane");
+                    VBox dock = getField(controller, "cipherActionDock");
+                    controller.navigateTo("Hashing");
+                    assertFalse(dock.isVisible());
+                    controller.navigateTo("Symmetric Ciphers");
+                    assertTrue(dock.isVisible());
+                    assertEquals(0, scroll.getVvalue());
+
+                    if (Boolean.getBoolean("cipher.ux.snapshot")) {
+                        for (int width : new int[]{1600, 1100}) {
+                            root.resize(width, 1000);
+                            root.applyCss();
+                            root.layout();
+                            root.layout();
+                            scroll.setVvalue(0);
+                            javafx.scene.image.WritableImage image = root.snapshot(null, null);
+                            java.awt.image.BufferedImage png = new java.awt.image.BufferedImage(
+                                    (int) image.getWidth(), (int) image.getHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                            for (int y = 0; y < png.getHeight(); y++) {
+                                for (int x = 0; x < png.getWidth(); x++) png.setRGB(x, y, image.getPixelReader().getArgb(x, y));
+                            }
+                            javax.imageio.ImageIO.write(png, "png", new java.io.File("target/cipher-ux-" + width + ".png"));
+                        }
+                    }
+                } catch (Exception exception) {
+                    throw new RuntimeException(exception);
+                }
+            });
+        } finally {
+            runAndWait(() -> controllerRef.get().shutdown());
+        }
     }
 
     @Test
@@ -3077,88 +3119,160 @@ class ModernMainControllerUITest {
         });
         ModernMainController controller = controllerRef.get();
 
-        runAndWait(() -> {
-            try {
-                KeysController keys = getField(controller, "keysController");
-                assertNotNull(keys);
+        try {
+            withVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB, () -> {
+                runAndWait(() -> {
+                    try {
+                        KeysController keys = getField(controller, "keysController");
+                        assertNotNull(keys);
 
-                javafx.scene.layout.VBox rsaCard = getField(keys, "rsaSummaryCard");
-                javafx.scene.layout.VBox ecdsaCard = getField(keys, "ecdsaSummaryCard");
-                javafx.scene.layout.VBox dsaCard = getField(keys, "dsaSummaryCard");
-                javafx.scene.layout.VBox eddsaCard = getField(keys, "eddsaSummaryCard");
+                        javafx.scene.layout.VBox rsaCard = getField(keys, "rsaSummaryCard");
+                        javafx.scene.layout.VBox ecdsaCard = getField(keys, "ecdsaSummaryCard");
+                        javafx.scene.layout.VBox dsaCard = getField(keys, "dsaSummaryCard");
+                        javafx.scene.layout.VBox eddsaCard = getField(keys, "eddsaSummaryCard");
 
-                assertFalse(rsaCard.isVisible());
-                assertFalse(ecdsaCard.isVisible());
-                assertFalse(dsaCard.isVisible());
-                assertFalse(eddsaCard.isVisible());
+                        assertFalse(rsaCard.isVisible());
+                        assertFalse(ecdsaCard.isVisible());
+                        assertFalse(dsaCard.isVisible());
+                        assertFalse(eddsaCard.isVisible());
 
-                // RSA Generation
-                javafx.scene.control.ComboBox<Integer> rsaCombo = getField(keys, "rsaKeySizeCombo");
-                rsaCombo.setValue(2048);
-                keys.handleGenerateRSA();
+                        // RSA Generation
+                        javafx.scene.control.ComboBox<Integer> rsaCombo = getField(keys, "rsaKeySizeCombo");
+                        rsaCombo.setValue(2048);
+                    } catch (Exception e) { fail(e); }
+                });
+                awaitAsymmetricGeneration(controller, "rsaSummaryCard", () -> {
+                    try { ((KeysController) getField(controller, "keysController")).handleGenerateRSA(); }
+                    catch (Exception e) { throw new RuntimeException(e); }
+                });
+                runAndWait(() -> {
+                    try {
+                        KeysController keys = getField(controller, "keysController");
+                        javafx.scene.layout.VBox rsaCard = getField(keys, "rsaSummaryCard");
+                        javafx.scene.layout.VBox ecdsaCard = getField(keys, "ecdsaSummaryCard");
+                        javafx.scene.layout.VBox dsaCard = getField(keys, "dsaSummaryCard");
+                        javafx.scene.layout.VBox eddsaCard = getField(keys, "eddsaSummaryCard");
 
-                assertTrue(rsaCard.isVisible());
-                assertTrue(rsaCard.isManaged());
+                        assertTrue(rsaCard.isVisible());
+                        assertTrue(rsaCard.isManaged());
 
-                javafx.scene.control.Label rsaAlgoLbl = getField(keys, "rsaSummaryAlgoLabel");
-                javafx.scene.control.Label rsaFpLbl = getField(keys, "rsaSummaryFingerprintLabel");
-                assertEquals("RSA (2048 bits)", rsaAlgoLbl.getText());
-                assertEquals(16, rsaFpLbl.getText().length());
+                        javafx.scene.control.Label rsaAlgoLbl = getField(keys, "rsaSummaryAlgoLabel");
+                        javafx.scene.control.Label rsaFpLbl = getField(keys, "rsaSummaryFingerprintLabel");
+                        assertEquals("RSA (2048 bits)", rsaAlgoLbl.getText());
+                        assertEquals(16, rsaFpLbl.getText().length());
 
-                javafx.scene.control.Button rsaUseCipherBtn = getField(keys, "rsaUseCipherBtn");
-                assertFalse(rsaUseCipherBtn.isDisable(), "RSA must enable Use in RSA Cipher button");
+                        javafx.scene.control.Button rsaUseCipherBtn = getField(keys, "rsaUseCipherBtn");
+                        assertFalse(rsaUseCipherBtn.isDisable(), "RSA must enable Use in RSA Cipher button");
 
-                keys.handleUseRsaInCipher();
-                assertEquals("Asymmetric Ciphers", getField(controller, "currentActiveOperation"),
-                        "Use in RSA Cipher must open the asymmetric cipher workspace");
+                        keys.handleUseRsaInCipher();
+                        assertEquals("Asymmetric Ciphers", getField(controller, "currentActiveOperation"),
+                                "Use in RSA Cipher must open the asymmetric cipher workspace");
 
-                keys.handleUseRsaInSignatures();
-                AuthenticationController authentication = getField(controller, "authenticationContainerController");
-                javafx.scene.control.TextArea signaturePrivate = getField(authentication, "signaturePrivateKeyArea");
-                javafx.scene.control.TextArea signaturePublic = getField(authentication, "signaturePublicKeyArea");
-                assertFalse(signaturePrivate.getText().isBlank(), "Use in Digital Signatures must prepare the private key");
-                assertFalse(signaturePublic.getText().isBlank(), "Use in Digital Signatures must prepare the public key");
+                        keys.handleUseRsaInSignatures();
+                        AuthenticationController authentication = getField(controller, "authenticationContainerController");
+                        javafx.scene.control.TextArea signaturePrivate = getField(authentication, "signaturePrivateKeyArea");
+                        javafx.scene.control.TextArea signaturePublic = getField(authentication, "signaturePublicKeyArea");
+                        assertFalse(signaturePrivate.getText().isBlank(), "Use in Digital Signatures must prepare the private key");
+                        assertFalse(signaturePublic.getText().isBlank(), "Use in Digital Signatures must prepare the public key");
 
-                // ECDSA Generation
-                javafx.scene.control.ComboBox<String> ecdsaCombo = getField(keys, "ecdsaCurveCombo");
-                ecdsaCombo.setValue("secp256r1");
-                keys.handleGenerateECDSA();
+                        // ECDSA Generation
+                        javafx.scene.control.ComboBox<String> ecdsaCombo = getField(keys, "ecdsaCurveCombo");
+                        ecdsaCombo.setValue("secp256r1");
+                        keys.handleGenerateECDSA();
 
-                assertTrue(ecdsaCard.isVisible());
-                javafx.scene.control.Button ecdsaUseCipherBtn = getField(keys, "ecdsaUseCipherBtn");
-                assertTrue(ecdsaUseCipherBtn.isDisable(), "ECDSA must disable Use in RSA Cipher button");
+                        assertTrue(ecdsaCard.isVisible());
+                        javafx.scene.control.Button ecdsaUseCipherBtn = getField(keys, "ecdsaUseCipherBtn");
+                        assertTrue(ecdsaUseCipherBtn.isDisable(), "ECDSA must disable Use in RSA Cipher button");
 
-                // DSA Generation
-                javafx.scene.control.ComboBox<String> dsaCombo = getField(keys, "dsaKeySizeCombo");
-                dsaCombo.setValue("2048");
-                keys.handleGenerateDSA();
-                assertTrue(dsaCard.isVisible());
+                        // DSA Generation
+                        javafx.scene.control.ComboBox<String> dsaCombo = getField(keys, "dsaKeySizeCombo");
+                        dsaCombo.setValue("2048");
+                    } catch (Exception e) { fail(e); }
+                });
+                awaitAsymmetricGeneration(controller, "dsaSummaryCard", () -> {
+                    try { ((KeysController) getField(controller, "keysController")).handleGenerateDSA(); }
+                    catch (Exception e) { throw new RuntimeException(e); }
+                });
+                runAndWait(() -> {
+                    try {
+                        KeysController keys = getField(controller, "keysController");
+                        javafx.scene.layout.VBox rsaCard = getField(keys, "rsaSummaryCard");
+                        javafx.scene.layout.VBox dsaCard = getField(keys, "dsaSummaryCard");
+                        javafx.scene.layout.VBox eddsaCard = getField(keys, "eddsaSummaryCard");
+                        assertTrue(dsaCard.isVisible());
 
-                // Ed25519 Generation
-                keys.handleGenerateEdDSA();
-                assertTrue(eddsaCard.isVisible());
+                        // Ed25519 Generation
+                        keys.handleGenerateEdDSA();
+                        assertTrue(eddsaCard.isVisible());
 
-                // Security Visibility Profile Test
-                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
-                keys.handleCopyRsaPrivateKey(); // Should block copying raw private key under MASKED
-                keys.handleCopyRsaSummary();
-                String summaryMasked = javafx.scene.input.Clipboard.getSystemClipboard().getString();
-                assertTrue(summaryMasked.contains("***MASKED***"));
+                        // Security Visibility Profile Test
+                        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.MASKED);
+                        keys.handleCopyRsaPrivateKey(); // Should block copying raw private key under MASKED
+                        keys.handleCopyRsaSummary();
+                        String summaryMasked = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                        assertTrue(summaryMasked.contains("***MASKED***"));
 
-                com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
-                keys.handleCopyRsaSummary();
-                String summaryFull = javafx.scene.input.Clipboard.getSystemClipboard().getString();
-                assertFalse(summaryFull.contains("***MASKED***"));
+                        com.cryptocarver.model.AppSettings.getInstance().setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
+                        keys.handleCopyRsaSummary();
+                        String summaryFull = javafx.scene.input.Clipboard.getSystemClipboard().getString();
+                        assertFalse(summaryFull.contains("***MASKED***"));
 
-                // Clear RSA pair
-                keys.handleClearRsa();
-                assertFalse(rsaCard.isVisible());
+                        // Clear RSA pair
+                        keys.handleClearRsa();
+                        assertFalse(rsaCard.isVisible());
 
-            } catch (Exception e) {
-                fail(e);
-            }
-        });
+                    } catch (Exception e) {
+                        fail(e);
+                    }
+                });
+            });
+        } finally {
+            runAndWait(controller::shutdown);
+        }
     }
+
+    /** Exercise the production worker while keeping non-modal test diagnostics enabled. */
+    private void awaitAsymmetricGeneration(ModernMainController controller, String cardField, Runnable generate) throws Exception {
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicReference<javafx.beans.value.ChangeListener<Boolean>> listenerRef = new AtomicReference<>();
+        AtomicReference<javafx.scene.layout.VBox> cardRef = new AtomicReference<>();
+        try {
+            runAndWait(() -> {
+                try {
+                    KeysController keys = getField(controller, "keysController");
+                    javafx.scene.layout.VBox card = getField(keys, cardField);
+                    cardRef.set(card);
+                    javafx.beans.value.ChangeListener<Boolean> listener = (observable, before, visible) -> {
+                        if (visible) completed.countDown();
+                    };
+                    listenerRef.set(listener);
+                    card.visibleProperty().addListener(listener);
+                    String previous = System.getProperty("test.mode");
+                    try {
+                        // The switch is read when execute() starts. Restore it before any
+                        // worker callback so errors continue to use non-modal diagnostics.
+                        System.setProperty("test.mode", "false");
+                        generate.run();
+                        assertEquals(OperationExecutor.State.RUNNING, controller.getOperationExecutor().getState());
+                    } finally {
+                        if (previous == null) System.clearProperty("test.mode");
+                        else System.setProperty("test.mode", previous);
+                    }
+                } catch (Exception e) { throw new RuntimeException(e); }
+            });
+            // Completion condition, with a generous failure guard for prime search on
+            // slow CI. The 10-second FX-action guard above stays unchanged.
+            assertTrue(completed.await(90, TimeUnit.SECONDS), cardField + " generation did not complete");
+            runAndWait(() -> assertEquals(OperationExecutor.State.IDLE, controller.getOperationExecutor().getState()));
+        } finally {
+            runAndWait(() -> {
+                if (cardRef.get() != null && listenerRef.get() != null) {
+                    cardRef.get().visibleProperty().removeListener(listenerRef.get());
+                }
+            });
+        }
+    }
+
 
     @Test
     void testAsyncProgressUIElementsFormattingAndAccessibility() throws Exception {
