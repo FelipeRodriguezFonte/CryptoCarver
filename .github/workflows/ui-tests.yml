@@ -30,8 +30,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          inline_matches="$(grep -r -o 'style="' src/main/resources/fxml || test "$?" -eq 1)"
-          emoji_matches="$(grep -r -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml || test "$?" -eq 1)"
+          inline_matches="$(grep -r -I -o 'style="' src/main/resources/fxml || test "$?" -eq 1)"
+          emoji_matches="$(grep -r -I -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml || test "$?" -eq 1)"
           inline_count="$(printf '%s' "$inline_matches" | awk 'END {print NR}')"
           emoji_count="$(printf '%s' "$emoji_matches" | awk 'END {print NR}')"
           test "${inline_count}" -eq 0 || { echo "Inline FXML styles are forbidden: ${inline_count}" >&2; exit 1; }
