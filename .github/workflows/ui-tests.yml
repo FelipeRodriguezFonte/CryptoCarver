@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up Java and Maven cache
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -30,8 +30,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          inline_count="$(rg -l 'style="' src/main/resources/fxml | xargs -r rg -o 'style="' | wc -l | tr -d ' ')"
-          emoji_count="$(rg -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml 2>/dev/null | wc -l | tr -d ' ')"
+          inline_matches="$(grep -r -o 'style="' src/main/resources/fxml || test "$?" -eq 1)"
+          emoji_matches="$(grep -r -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml || test "$?" -eq 1)"
+          inline_count="$(printf '%s' "$inline_matches" | awk 'END {print NR}')"
+          emoji_count="$(printf '%s' "$emoji_matches" | awk 'END {print NR}')"
           test "${inline_count}" -eq 0 || { echo "Inline FXML styles are forbidden: ${inline_count}" >&2; exit 1; }
           test "${emoji_count}" -le 12 || { echo "UI emoji budget exceeded: ${emoji_count}" >&2; exit 1; }
           echo "UI hygiene budgets: inline=${inline_count}, emoji=${emoji_count}"
