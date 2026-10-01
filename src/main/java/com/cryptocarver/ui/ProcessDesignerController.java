@@ -287,7 +287,10 @@ public class ProcessDesignerController {
 
                 Label iconLabel = new Label(d.icon());
                 iconLabel.setStyle("-fx-font-size: 13px;");
-                iconLabel.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                // Bind the preferred-size sentinel so the legacy 18 px CSS minimum
+                // cannot override it after applyCss on platforms with wider glyphs.
+                iconLabel.minWidthProperty().bind(new javafx.beans.property.SimpleDoubleProperty(
+                        javafx.scene.layout.Region.USE_PREF_SIZE));
 
                 VBox textBox = new VBox(1);
                 Label titleLabel = new Label(t(d.labelKey()));
