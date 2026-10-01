@@ -15,7 +15,9 @@
 
     <properties>
         <surefire.cpuArgs></surefire.cpuArgs>
-        <surefire.reuseForks>true</surefire.reuseForks>
+        <!-- JavaFX caches native skins and CSS across classes. Match the Xvfb suite's
+             per-class toolkit lifetime in the default suite as well. -->
+        <surefire.reuseForks>false</surefire.reuseForks>
         <!-- The JavaFX suite runs in the default build. Pass -DrunUiTests=false to skip it
              on a machine with no display. -->
         <runUiTests>true</runUiTests>

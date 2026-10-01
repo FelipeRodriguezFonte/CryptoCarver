@@ -78,7 +78,7 @@ class ClippedTextAuditTool {
                     String full = label.getText();
                     if (label.isMnemonicParsing()) full = full.replace("__", "\u0000").replace("_", "").replace("\u0000", "_");
                     if (Boolean.getBoolean("clippedTextMetrics")) {
-                        System.out.println("CAPTION " + new Finding(screen, key, label.getClass().getSimpleName(),
+                        System.out.println("CAPTION wrap=" + label.isWrapText() + " height=" + label.getHeight() + " prefH=" + label.getPrefHeight() + " " + new Finding(screen, key, label.getClass().getSimpleName(),
                                 label.getStyleClass().toString(), full, text.getText(), label.getWidth(), label.prefWidth(-1),
                                 node.getParent() == null ? "none" : node.getParent().getClass().getSimpleName()).line());
                     }

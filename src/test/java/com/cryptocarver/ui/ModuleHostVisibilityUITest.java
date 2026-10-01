@@ -73,7 +73,10 @@ class ModuleHostVisibilityUITest {
                 root[0] = loader.load();
                 shell[0] = loader.getController();
                 Stage stage = new Stage();
-                stage.setScene(new Scene(root[0], 1400, 900));
+                Scene scene = new Scene(root[0], 1400, 900);
+                // Match the production bootstrap before the first CSS/layout pass.
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.setScene(scene);
                 stage.show();
             } catch (Exception failure) {
                 throw new RuntimeException(failure);

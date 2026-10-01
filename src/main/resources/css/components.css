@@ -3196,3 +3196,21 @@
 #paletteItemsContainer > .label {
     -fx-wrap-text: true;
 }
+
+/* JavaFX's compound radius converter cannot consume numeric looked-up tokens. */
+.result-panel {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+.metadata-chip {
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+}
+
+/* Preserve Modena's measured arrow paints without a lookup on recycled cells. */
+.tree-cell > .tree-disclosure-node > .arrow {
+    -fx-background-color: #333333;
+}
+.tree-view:focused .tree-cell:filled:selected > .tree-disclosure-node > .arrow {
+    -fx-background-color: #ffffff;
+}

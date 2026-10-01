@@ -75,7 +75,9 @@ class CommandPaletteCharacterizationTest {
                 Parent root = loader.load();
                 controller = loader.getController();
                 stage = new Stage();
-                stage.setScene(new Scene(root, 1400, 900));
+                Scene scene = new Scene(root, 1400, 900);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.setScene(scene);
                 stage.show();
             } catch (Exception exception) {
                 throw new RuntimeException(exception);

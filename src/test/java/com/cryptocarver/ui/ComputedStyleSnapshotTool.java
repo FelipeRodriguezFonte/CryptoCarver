@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Writes the computed style of every visible node for a fixed set of screens and
+ * Writes the computed style of visible nodes (and transiently hidden scrollbar skin
+ * nodes) for a fixed set of screens and
  * both themes, so two builds can be compared with a plain {@code diff}.
  *
  * <p>Not a regression test: it only runs when {@code -DstyleSnapshotOut=<file>} is
@@ -68,6 +69,8 @@ class ComputedStyleSnapshotTool {
                     for (String route : routes) {
                         snapshot(theme, route, lines);
                     }
+                    snapshotDialog(theme, lines);
+                    snapshotTree(theme, lines);
                 }
             } catch (Throwable error) {
                 failure.set(error);
@@ -98,6 +101,9 @@ class ComputedStyleSnapshotTool {
         ClippedTextAuditTool.settle();
         root.applyCss();
         root.layout();
+        root.applyCss(); root.layout();
+        neutralizePointerAndFocus(root);
+        root.applyCss(); root.layout();
         walk(root, theme + " " + route + " ", lines);
         } finally {
             stage.close(); controller.shutdown(); stage.setScene(null);
@@ -107,10 +113,69 @@ class ComputedStyleSnapshotTool {
         }
     }
 
+    private void snapshotDialog(String theme, List<String> lines) {
+        javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
+        new DialogService().configure(dialog, null, "Style snapshot", null);
+        var pane = dialog.getDialogPane();
+        pane.getStylesheets().setAll(getClass().getResource("/css/styles.css").toExternalForm(),
+                getClass().getResource("/css/" + theme).toExternalForm());
+        pane.getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
+        var chip = new javafx.scene.control.Label("Metadata");
+        chip.getStyleClass().addAll("metadata-chip", "metadata-chip-neutral");
+        pane.setContent(new javafx.scene.layout.VBox(new javafx.scene.control.Button("Action"),
+                new javafx.scene.control.TextField(), new javafx.scene.control.TextArea(),
+                new javafx.scene.control.ComboBox<>(), chip));
+        try {
+            dialog.show();
+            pane.applyCss(); pane.layout();
+            neutralizePointerAndFocus(pane);
+            pane.applyCss(); pane.layout();
+            walk(pane, theme + " Scoped dialog", lines);
+        } finally { dialog.close(); }
+    }
+
+    private void snapshotTree(String theme, List<String> lines) {
+        var item = new javafx.scene.control.TreeItem<String>("Category");
+        item.getChildren().add(new javafx.scene.control.TreeItem<>("Synthetic caption"));
+        var tree = new javafx.scene.control.TreeView<>(item);
+        tree.getStyleClass().add("navigation-tree");
+        var root = new javafx.scene.layout.VBox(tree);
+        var scene = new Scene(root, 400, 300);
+        scene.getStylesheets().addAll(getClass().getResource("/css/styles.css").toExternalForm(),
+                getClass().getResource("/css/" + theme).toExternalForm());
+        var stage = new Stage();
+        try {
+            stage.setScene(scene); stage.show();
+            tree.getSelectionModel().clearSelection();
+            tree.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("focused"), false);
+            root.applyCss(); root.layout();
+            walk(tree, theme + " Tree unselected", lines);
+            tree.getSelectionModel().select(item);
+            root.applyCss(); root.layout();
+            walk(tree, theme + " Tree selected", lines);
+            tree.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("focused"), true);
+            root.applyCss(); root.layout();
+            walk(tree, theme + " Tree selected focused", lines);
+        } finally { stage.close(); stage.setScene(null); }
+    }
+
+    private static void neutralizePointerAndFocus(Parent root) {
+        // The desktop pointer/window activation must not choose snapshot states.
+        java.util.List<Node> nodes = new ArrayList<>(root.lookupAll("*"));
+        nodes.add(root);
+        for (Node node : nodes) {
+            node.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("hover"), false);
+            node.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("focused"), false);
+        }
+    }
+
     private void walk(Node node, String path, List<String> lines) {
         String type = node.getClass().getSimpleName().isEmpty() ? node.getClass().getName() : node.getClass().getSimpleName();
         String key = path + "/" + type + (node.getId() == null ? "" : "#" + node.getId());
-        if (!node.isVisible()) return;
+        // ScrollBarSkin toggles arrow visibility during its first layout/pulse.
+        // Compare their CSS in both states rather than dropping transiently hidden
+        // skin nodes from one snapshot. No caption/audit exclusions are changed.
+        if (!node.isVisible() && !insideScrollBar(node)) return;
         StringBuilder value = new StringBuilder(" classes=").append(node.getStyleClass());
         if (node instanceof Region region) {
             value.append(" bg=").append(fills(region.getBackground()))
@@ -121,6 +186,12 @@ class ComputedStyleSnapshotTool {
                     .append(" maxW=").append(region.getMaxWidth())
                     .append(" minH=").append(region.getMinHeight())
                     .append(" prefH=").append(region.getPrefHeight());
+        }
+        if (node instanceof javafx.scene.control.TreeView<?>) {
+            // Paints only: no virtualized cell text, identity or private data.
+            value.append(" treeArrowPaints=").append(node.lookupAll(".tree-disclosure-node > .arrow").stream()
+                    .filter(n -> n instanceof Region).map(n -> fills(((Region) n).getBackground()))
+                    .sorted().toList());
         }
         if (node instanceof Labeled labeled) {
             value.append(" wrap=").append(labeled.isWrapText())
@@ -136,6 +207,13 @@ class ComputedStyleSnapshotTool {
             int index = 0;
             for (Node child : parent.getChildrenUnmodifiable()) walk(child, key + "[" + index++ + "]", lines);
         }
+    }
+
+    private static boolean insideScrollBar(Node node) {
+        for (Node parent = node; parent != null; parent = parent.getParent()) {
+            if (parent instanceof javafx.scene.control.ScrollBar) return true;
+        }
+        return false;
     }
 
     private static String fills(Background background) {

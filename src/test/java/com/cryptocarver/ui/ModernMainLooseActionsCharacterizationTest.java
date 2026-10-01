@@ -91,7 +91,9 @@ class ModernMainLooseActionsCharacterizationTest {
                 Parent root = loader.load();
                 controller = loader.getController();
                 mainStage = new Stage();
-                mainStage.setScene(new Scene(root, 1400, 900));
+                Scene scene = new Scene(root, 1400, 900);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                mainStage.setScene(scene);
                 mainStage.show();
             } catch (Exception exception) {
                 throw new RuntimeException(exception);

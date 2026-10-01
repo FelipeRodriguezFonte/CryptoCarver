@@ -153,7 +153,9 @@ class HistoryManagementCharacterizationTest {
                         OperationDetail.publicDetail("Marker", "SYNTHETIC")));
                 HistoryCommand item = controller.getHistoryManager().getHistoryItems().get(0);
                 Stage stage = new Stage();
-                stage.setScene(new Scene(root));
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.setScene(scene);
                 stage.show();
                 stageRef.set(stage);
                 controller.showRecentHistoryCommand(item);
@@ -181,7 +183,9 @@ class HistoryManagementCharacterizationTest {
                 ModernMainController controller = loader.getController();
                 useIsolatedHistory(controller, "reopen");
                 Stage stage = new Stage();
-                stage.setScene(new Scene(root));
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.setScene(scene);
                 stage.show();
                 stageRef.set(stage);
                 // A redacted field of a hidden module comes first, as in real recipes.

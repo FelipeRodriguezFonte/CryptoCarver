@@ -1,5 +1,5 @@
 /* Oscuro: solo redefiniciones de tokens. */
-.root {
+.root, #rootStackPane, .cc-dialog-pane {
     -cc-bg-app: #17212b;
     -cc-bg-surface: #22303d;
     -cc-bg-surface-raised: #2c3e50;
