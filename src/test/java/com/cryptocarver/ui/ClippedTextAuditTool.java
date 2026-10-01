@@ -77,6 +77,11 @@ class ClippedTextAuditTool {
                 if (skinText instanceof Text text && text.getClass().getSimpleName().equals("LabeledText")) {
                     String full = label.getText();
                     if (label.isMnemonicParsing()) full = full.replace("__", "\u0000").replace("_", "").replace("\u0000", "_");
+                    if (Boolean.getBoolean("clippedTextMetrics")) {
+                        System.out.println("CAPTION " + new Finding(screen, key, label.getClass().getSimpleName(),
+                                label.getStyleClass().toString(), full, text.getText(), label.getWidth(), label.prefWidth(-1),
+                                node.getParent() == null ? "none" : node.getParent().getClass().getSimpleName()).line());
+                    }
                     if (!full.equals(text.getText())) out.add(new Finding(screen, key, label.getClass().getSimpleName(),
                             label.getStyleClass().toString(), full, text.getText(), label.getWidth(), label.prefWidth(-1),
                             node.getParent() == null ? "none" : node.getParent().getClass().getSimpleName()));
@@ -140,6 +145,16 @@ class ClippedTextAuditTool {
             controller.navigateToModule(route);
             settle();
             root.applyCss(); root.layout();
+            double fontScale = Double.parseDouble(System.getProperty("clippedTextFontScale", "1.0"));
+            if (fontScale != 1.0) {
+                // Freeze each computed font size after CSS, approximating wider Linux glyphs.
+                for (Node node : root.lookupAll("*")) {
+                    if (node instanceof Labeled label && !label.styleProperty().isBound()) {
+                        label.setStyle(label.getStyle() + "; -fx-font-size: " + (label.getFont().getSize() * fontScale) + "px;");
+                    }
+                }
+                root.applyCss(); root.layout();
+            }
             action.accept(root);
         } finally {
             stage.close();

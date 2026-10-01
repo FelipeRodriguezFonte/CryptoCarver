@@ -140,11 +140,11 @@ class ComputedStyleSnapshotTool {
 
     private static String fills(Background background) {
         if (background == null) return "[]";
-        return background.getFills().stream().map(fill -> String.valueOf(fill.getFill())).toList().toString();
+        return background.getFills().stream().map(fill -> String.valueOf(fill.getFill()) + " radii=" + fill.getRadii()).toList().toString();
     }
 
     private static String borders(Border border) {
         if (border == null) return "[]";
-        return border.getStrokes().stream().map(stroke -> String.valueOf(stroke.getTopStroke())).toList().toString();
+        return border.getStrokes().stream().map(stroke -> String.valueOf(stroke.getTopStroke()) + " radii=" + stroke.getRadii()).toList().toString();
     }
 }
