@@ -28,6 +28,9 @@ jobs:
           mvn -q -Dtest=I18nServiceTest,AccessibilitySupportTest,PreferencesServiceTest,LocalHelpServiceTest,Ux47ReleaseQualityGateTest test
       - name: Check UI hygiene budgets
         shell: bash
+        # The runner's default C locale rejects the emoji range as an invalid collation.
+        env:
+          LC_ALL: C.UTF-8
         run: |
           set -euo pipefail
           inline_matches="$(grep -r -I -o 'style="' src/main/resources/fxml || test "$?" -eq 1)"
