@@ -15,6 +15,7 @@
 
     <properties>
         <surefire.cpuArgs></surefire.cpuArgs>
+        <surefire.reuseForks>true</surefire.reuseForks>
         <!-- The JavaFX suite runs in the default build. Pass -DrunUiTests=false to skip it
              on a machine with no display. -->
         <runUiTests>true</runUiTests>
@@ -308,7 +309,7 @@
                 <version>3.2.5</version>
                 <configuration>
                     <forkCount>1</forkCount>
-                    <reuseForks>true</reuseForks>
+                    <reuseForks>${surefire.reuseForks}</reuseForks>
                     <excludedGroups>integration,benchmark</excludedGroups>
                     <useSystemClassLoader>true</useSystemClassLoader>
                     <systemPropertyVariables>
