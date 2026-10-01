@@ -28,15 +28,12 @@ jobs:
           mvn -q -Dtest=I18nServiceTest,AccessibilitySupportTest,PreferencesServiceTest,LocalHelpServiceTest,Ux47ReleaseQualityGateTest test
       - name: Check UI hygiene budgets
         shell: bash
-        # The runner's default C locale rejects the emoji range as an invalid collation.
-        env:
-          LC_ALL: C.UTF-8
         run: |
           set -euo pipefail
           inline_matches="$(grep -r -I -o 'style="' src/main/resources/fxml || test "$?" -eq 1)"
-          emoji_matches="$(grep -r -I -o '[😀-🙏🌀-🫿]' src/main/java src/main/resources/fxml || test "$?" -eq 1)"
           inline_count="$(printf '%s' "$inline_matches" | awk 'END {print NR}')"
-          emoji_count="$(printf '%s' "$emoji_matches" | awk 'END {print NR}')"
+          # Count by code point in Python: GNU grep rejects this range as a collation.
+          emoji_count="$(python3 -c 'import pathlib,re; p=re.compile("[\U0001F600-\U0001F64F\U0001F300-\U0001FAFF]"); print(sum(len(p.findall(f.read_text(encoding="utf-8", errors="ignore"))) for d in ("src/main/java","src/main/resources/fxml") for f in pathlib.Path(d).rglob("*") if f.is_file()))')"
           test "${inline_count}" -eq 0 || { echo "Inline FXML styles are forbidden: ${inline_count}" >&2; exit 1; }
           # Ratchet: the gate never ran before (ripgrep was missing on the runner) and the
           # module icons already use 325 glyphs. Only lower this number, never raise it.
