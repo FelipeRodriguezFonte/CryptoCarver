@@ -9,14 +9,11 @@ OUTPUT_DIR="${PACKAGE_OUTPUT_DIR:-dist}"
 PACKAGE_TYPE="${PACKAGE_TYPE:-app-image}"
 ICON_PATH="src/main/resources/icons/app-icon.png"
 
-MAVEN_BIN="${MAVEN_BIN:-$(command -v mvn || true)}"
-if [ -z "$MAVEN_BIN" ] && [ -x /opt/homebrew/bin/mvn ]; then
-  MAVEN_BIN=/opt/homebrew/bin/mvn
-fi
-if [ -z "$MAVEN_BIN" ]; then
-  echo "Maven was not found. Set MAVEN_BIN or add mvn to PATH." >&2
-  exit 1
-fi
+cd "$(dirname "$0")"
+source scripts/toolchain.sh
+find_java
+find_maven
+
 
 JPACKAGE="${JPACKAGE:-$(command -v jpackage || true)}"
 if [ -z "$JPACKAGE" ]; then

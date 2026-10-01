@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+cd "$(dirname "$0")"
 # set -x # Uncomment for debug
 
 if ! command -v sips &> /dev/null; then

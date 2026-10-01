@@ -1,13 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
 echo "================================================"
 echo "  CryptoCarver - MODERN UI"
 echo "================================================"
 echo ""
 echo "Rebuilding and launching modern UI..."
-MAVEN_BIN="${MAVEN_BIN:-$(command -v mvn || true)}"
-if [ -z "$MAVEN_BIN" ] && [ -x /opt/homebrew/bin/mvn ]; then MAVEN_BIN=/opt/homebrew/bin/mvn; fi
-if [ -z "$MAVEN_BIN" ]; then echo "Maven was not found. Set MAVEN_BIN or add mvn to PATH." >&2; exit 127; fi
+cd "$(dirname "$0")"
+source scripts/toolchain.sh
+find_java
+find_maven
 
 # Finder can recreate target/.DS_Store while maven-clean-plugin is deleting
 # target, making an otherwise valid rebuild fail with "Failed to delete target".

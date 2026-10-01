@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source scripts/toolchain.sh
+[ "$(uname -s)" = Darwin ] || { echo "Este script requiere macOS." >&2; exit 1; }
+find_java
+find_maven
 
 # Configuration
 APP_NAME="CryptoCarver"
@@ -8,44 +14,9 @@ ICON_TARGET="src/main/resources/icons/app-icon.icns"
 OUTPUT_DIR="${PACKAGE_OUTPUT_DIR:-dist}"
 PACKAGE_TYPE="${PACKAGE_TYPE:-app-image}"
 
-# Ensure JAVA_HOME is set
-if [ -z "$JAVA_HOME" ]; then
-    echo "JAVA_HOME not set. Attempting to detect..."
-    export JAVA_HOME=$(/usr/libexec/java_home)
-    echo "Detected JAVA_HOME: $JAVA_HOME"
-fi
-
-if [ -z "$JAVA_HOME" ]; then
-    echo "Error: JAVA_HOME could not be detected."
-    echo "Please set JAVA_HOME to your JDK 21+ installation."
-    exit 1
-fi
-
 JPACKAGE="$JAVA_HOME/bin/jpackage"
-
-# Check if jpackage exists
 if [ ! -x "$JPACKAGE" ]; then
-    echo "Error: jpackage not found at $JPACKAGE"
-    echo "Please ensure you are using JDK 17 or later (e.g., from SDKMAN or Homebrew)."
-    exit 1
-fi
-
-JAVA_VERSION=$("$JPACKAGE" --version 2>&1 | awk '{print $1}')
-JAVA_MAJOR=$(echo "$JAVA_VERSION" | cut -d'.' -f1)
-if [ -z "$JAVA_MAJOR" ] || [ "$JAVA_MAJOR" -lt 17 ]; then
-    echo "Error: Detected JDK version $JAVA_VERSION, but JDK 17 or higher is required." >&2
-    echo "Please install JDK 17+ and ensure it is in PATH (or JAVA_HOME)." >&2
-    exit 1
-fi
-
-echo "=========================================="
-echo "  Building CryptoCarver (macOS)"
-echo "=========================================="
-
-MAVEN_BIN="${MAVEN_BIN:-$(command -v mvn || true)}"
-if [ -z "$MAVEN_BIN" ] && [ -x /opt/homebrew/bin/mvn ]; then MAVEN_BIN=/opt/homebrew/bin/mvn; fi
-if [ -z "$MAVEN_BIN" ]; then
-    echo "Error: Maven was not found. Set MAVEN_BIN or add mvn to PATH."
+    echo "Error: se necesita jpackage, incluido en un JDK 17+. Revisa JAVA_HOME." >&2
     exit 1
 fi
 
@@ -55,6 +26,19 @@ if [ -z "$APP_VERSION" ]; then
     exit 1
 fi
 MAIN_JAR="target/cryptocarver-${APP_VERSION}.jar"
+
+# 1. Build with Maven
+echo "Warning: This script performs a clean build. Do not run it concurrently with an active development instance."
+echo "[1/3] Building project with Maven..."
+if [ "${PACKAGE_SKIP_BUILD:-false}" != true ]; then
+    "$MAVEN_BIN" clean package -DskipTests
+fi
+
+if [ ! -f "$MAIN_JAR" ]; then
+    echo "Error: Build failed. $MAIN_JAR not found."
+    exit 1
+fi
+
 
 # 0. Icon Generation
 echo "[0/3] Checking icons..."
@@ -82,9 +66,9 @@ elif [ -f "$ICON_SOURCE" ]; then
     sips -z 1024 1024 "$ICON_SOURCE" --out "$ICONSET_DIR/icon_512x512@2x.png" > /dev/null
     
     # Create icns
-    if iconutil -c icns "$ICONSET_DIR" -o "$ICON_TARGET"; then
+    if iconutil -c icns "$ICONSET_DIR" -o target/app-icon.icns; then
         echo "Successfully generated $ICON_TARGET"
-        APP_ICON="$ICON_TARGET"
+        APP_ICON="target/app-icon.icns"
     else
         echo "Error: Failed to generate the required macOS ICNS icon." >&2
         exit 1
@@ -94,16 +78,6 @@ else
     exit 1
 fi
 
-
-# 1. Build with Maven
-echo "Warning: This script performs a clean build. Do not run it concurrently with an active development instance."
-echo "[1/3] Building project with Maven..."
-"$MAVEN_BIN" clean package -DskipTests
-
-if [ ! -f "$MAIN_JAR" ]; then
-    echo "Error: Build failed. $MAIN_JAR not found."
-    exit 1
-fi
 
 # 2. Cleanup previous build is skipped to be non-destructive
 echo "[2/3] Skipping cleanup to preserve previous releases..."
@@ -125,21 +99,24 @@ cleanup_jpackage_work_dir() {
 }
 trap cleanup_jpackage_work_dir EXIT
 
+# Solo el JAR ejecutable; excluir tests, informes y el JAR sin sombrear.
+mkdir -p "$JPACKAGE_WORK_DIR/input" "$JPACKAGE_WORK_DIR/output"
+cp "$MAIN_JAR" "$JPACKAGE_WORK_DIR/input/"
+
 # Build jpackage arguments
 JPACKAGE_ARGS=(
   --name "$APP_NAME"
   --app-version "$APP_VERSION"
-  --input target
+  --input "$JPACKAGE_WORK_DIR/input"
   --main-jar "$(basename "$MAIN_JAR")"
   --main-class "$MAIN_CLASS"
   --type "$PACKAGE_TYPE"
-  --dest "$JPACKAGE_WORK_DIR"
+  --dest "$JPACKAGE_WORK_DIR/output"
   # jpackage's automatic jdeps scan of the shaded uber-jar does not reliably
   # detect every JDK module the app touches at runtime (AWT/Taskbar, ImageIO,
   # PKCS#11, XML DOM, JAAS, etc.), so the full set is listed explicitly here
   # rather than relying on that detection alone.
   --add-modules "java.se,jdk.charsets,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.unsupported.desktop,jdk.security.auth,jdk.accessibility,jdk.xml.dom,jdk.naming.dns"
-  --java-options "--enable-preview"
   --java-options "-Xmx512m"
   --verbose
 )
@@ -154,7 +131,7 @@ JPACKAGE_EXIT=$?
 if [ $JPACKAGE_EXIT -eq 0 ]; then
     mkdir -p "$OUTPUT_DIR"
     if [ "$PACKAGE_TYPE" = "app-image" ]; then
-        BUILT_BUNDLE="$JPACKAGE_WORK_DIR/${APP_NAME}.app"
+        BUILT_BUNDLE="$JPACKAGE_WORK_DIR/output/${APP_NAME}.app"
         if [ ! -d "$BUILT_BUNDLE" ]; then
             echo "FAILED. Expected app bundle not found: $BUILT_BUNDLE" >&2
             exit 1
@@ -176,7 +153,7 @@ if [ $JPACKAGE_EXIT -eq 0 ]; then
         echo "Open $APP_BUNDLE to let macOS identify the application as CryptoCarver."
     else
         echo "[INFO] Copying ${PACKAGE_TYPE} output into $OUTPUT_DIR ..."
-        cp -R "$JPACKAGE_WORK_DIR"/. "$OUTPUT_DIR"/
+        cp -R "$JPACKAGE_WORK_DIR/output"/. "$OUTPUT_DIR"/
         echo ""
         echo "SUCCESS! macOS ${PACKAGE_TYPE} built in: $OUTPUT_DIR"
     fi
