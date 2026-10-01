@@ -20,7 +20,10 @@ XVFB_SERVER_ARGS="${XVFB_SERVER_ARGS:--screen 0 1920x1080x24}"
 # UI tests must not open modal JavaFX dialogs: they block the FX thread and
 # make the suite depend on manual interaction. Controllers expose test.mode
 # specifically to emit non-modal diagnostics instead.
-MAVEN_ARGS=(-q -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw test)
+# Each class releases its toolkit/native rendering state when its fork exits.
+# A reused Java 21 software-rendering fork exhausted the existing 3 GiB heap
+# across the complete UI suite. Keep the heap and timeouts unchanged.
+MAVEN_ARGS=(-q -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -DreuseForks=false test)
 if (($# > 0)); then
   MAVEN_ARGS+=("$@")
 fi
