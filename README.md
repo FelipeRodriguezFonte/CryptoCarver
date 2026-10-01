@@ -8,27 +8,9 @@
 
 ---
 
-## Instalación en macOS
+## Instalación (compilar desde el código fuente)
 
-1. Abre [GitHub Releases](https://github.com/FelipeRodriguezFonte/CryptoCarver/releases)
-   y descarga el `.dmg` de tu arquitectura: `CryptoCarver-<versión>-macos-arm64.dmg`
-   para Apple Silicon, o `CryptoCarver-<versión>-macos-x64.dmg` para Intel.
-   Compruébalo en **menú Apple → Acerca de este Mac**: «Chip Apple» corresponde
-   a arm64 y «Procesador Intel» a x64. Los instaladores estarán disponibles cuando
-   se publique la primera release; mientras tanto, compila desde fuentes.
-2. Abre el DMG y arrastra **CryptoCarver** a **Aplicaciones**. Incluye su runtime:
-   para usar esta aplicación no necesitas instalar Java ni Maven.
-3. La aplicación se distribuye sin firma Developer ID ni notarización. La primera
-   vez, usa **clic derecho → Abrir**. Si macOS mantiene el bloqueo, verifica que
-   descargaste el instalador de este repositorio y permite su apertura en
-   **Ajustes del Sistema → Privacidad y seguridad**. También puedes quitar la
-   cuarentena de esa aplicación concreta:
-
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/CryptoCarver.app
-   ```
-
-## Compilar desde el código fuente
+No se publican ejecutables: cada usuario genera el suyo en su máquina.
 
 Requisitos: **JDK 17 o superior** (Temurin LTS recomendado), **Maven 3.8+** y
 acceso a los repositorios de dependencias. En macOS instala un JDK desde
@@ -52,17 +34,17 @@ Instalar desde fuentes no ejecuta tests. `doctor.sh` comprueba el entorno, la re
 y el disco; no instala nada. `run.sh` usa el JAR compilado, y solo requiere Maven
 si aún no existe. Para recompilar y lanzar desde fuentes usa `./run-modern.sh`.
 El JAR contiene nativos de JavaFX de la plataforma y arquitectura donde se compiló:
-no copies un JAR arm64 a un Mac Intel. Compila en el destino o usa su instalador.
+no copies un JAR arm64 a un Mac Intel. Compila en el destino.
 
 En redes corporativas, configura el proxy de Maven en `~/.m2/settings.xml`
 mediante `<proxies>` (consulta la [guía de Maven](https://maven.apache.org/guides/mini/guide-proxies.html)).
-No guardes credenciales de proxy en este repositorio. Usar un instalador de Releases
-publicado evita tener que descargar dependencias de Maven.
+No guardes credenciales de proxy en este repositorio.
 
 Para crear tu aplicación macOS autocontenida: `./package_macos.sh` genera
 `dist/CryptoCarver.app`; `PACKAGE_TYPE=dmg ./package_macos.sh` genera un DMG.
 Necesitas `jpackage`, incluido en JDK 17+, y las herramientas de macOS `sips` e
 `iconutil` si no hay un icono ICNS. Cada arquitectura se empaqueta en su propio Mac.
+La aplicación no está firmada: la primera vez ábrela con **clic derecho → Abrir**.
 
 ## Desarrollo
 
@@ -80,10 +62,7 @@ bash scripts/run-ui-tests.sh
 ```
 
 `-o` usa exclusivamente la caché local; omítelo en la primera ejecución.
-El workflow `release.yml` compila y prueba sin UI, crea DMG nativos arm64/x64 y
-prepara una **release en borrador** al enviar una etiqueta `v<versión>` que coincida
-con `pom.xml`. El disparo manual requiere una etiqueta existente sobre el mismo commit.
-Revisa ambos instaladores antes de publicar el borrador. Véanse el
+Véanse el
 [diagnóstico](docs/install/diagnostico.md) y el [informe de validación](docs/install/informe.md).
 
 ---
