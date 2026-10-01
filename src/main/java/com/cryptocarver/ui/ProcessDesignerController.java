@@ -151,6 +151,7 @@ public class ProcessDesignerController {
         if (nodeInspector != null) {
             for (var node : nodeInspector.lookupAll(".button")) {
                 if (node instanceof Button button) {
+                    button.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
                     button.setWrapText(true);
                     button.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
                 }
@@ -1396,7 +1397,7 @@ public class ProcessDesignerController {
         nodeInspector.setManaged(inspectorVisible);
         nodeInspector.setVisible(inspectorVisible);
         if (inspectorVisible) {
-            nodeInspector.setMinWidth(250);
+            nodeInspector.setMinWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
             nodeInspector.setPrefWidth(280);
             nodeInspector.setMaxWidth(Double.MAX_VALUE);
             if (designerSplitPane != null) designerSplitPane.setDividerPositions(0.18, 0.76);

@@ -9,14 +9,13 @@
 
     <Label styleClass="ux-inline-4524890664" text="Input (Paste PEM/JWK/Hex or load file)"/>
 
-    <HBox spacing="10">
+    <FlowPane hgap="10" vgap="8" prefWrapLength="900">
         <Button text="Load from File..." onAction="#handleLoadFile" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
         <Button text="Load from Clipboard Shelf" onAction="#handleLoadFromShelf" styleClass="secondary-button,ux-inline-ba9ea6419e"/>
         <ComboBox styleClass="ux-inline-ba9ea6419e" fx:id="storeTypeCombo"/>
         <PasswordField styleClass="ux-inline-ba9ea6419e" fx:id="workbenchPasswordField" promptText="Password (optional)"/>
-        <Region HBox.hgrow="ALWAYS" />
         <Button text="Detect &amp; Parse" onAction="#handleParse" styleClass="action-button,ux-inline-ba9ea6419e" />
-    </HBox>
+    </FlowPane>
 
     <TextArea styleClass="ux-inline-ea21460dc9" fx:id="workbenchInputArea" prefHeight="120" wrapText="true"
               promptText="-----BEGIN CERTIFICATE-----... or {...} or Base64/Hex DER"/>

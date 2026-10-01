@@ -95,7 +95,7 @@
                 </ScrollPane>
 
                 <!-- Dynamic Descriptor Inspector -->
-                <VBox styleClass="ux-inline-66ce195191" fx:id="nodeInspector" spacing="6" minWidth="250" prefWidth="280">
+                <VBox styleClass="ux-inline-66ce195191" fx:id="nodeInspector" spacing="6" minWidth="-1" prefWidth="280">
                     <Label styleClass="ux-inline-601a4c676b" fx:id="selectedNodeLabel" wrapText="true"/>
                     <Label styleClass="ux-inline-25e6beb3a5" fx:id="inputContractLabel" managed="false" visible="false"/>
                     <Label styleClass="ux-inline-25e6beb3a5" fx:id="outputContractLabel" managed="false" visible="false"/>
