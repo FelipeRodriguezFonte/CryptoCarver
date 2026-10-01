@@ -8,6 +8,86 @@
 
 ---
 
+## Instalación en macOS
+
+1. Abre [GitHub Releases](https://github.com/FelipeRodriguezFonte/CryptoCarver/releases)
+   y descarga el `.dmg` de tu arquitectura: `CryptoCarver-<versión>-macos-arm64.dmg`
+   para Apple Silicon, o `CryptoCarver-<versión>-macos-x64.dmg` para Intel.
+   Compruébalo en **menú Apple → Acerca de este Mac**: «Chip Apple» corresponde
+   a arm64 y «Procesador Intel» a x64. Los instaladores estarán disponibles cuando
+   se publique la primera release; mientras tanto, compila desde fuentes.
+2. Abre el DMG y arrastra **CryptoCarver** a **Aplicaciones**. Incluye su runtime:
+   para usar esta aplicación no necesitas instalar Java ni Maven.
+3. La aplicación se distribuye sin firma Developer ID ni notarización. La primera
+   vez, usa **clic derecho → Abrir**. Si macOS mantiene el bloqueo, verifica que
+   descargaste el instalador de este repositorio y permite su apertura en
+   **Ajustes del Sistema → Privacidad y seguridad**. También puedes quitar la
+   cuarentena de esa aplicación concreta:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/CryptoCarver.app
+   ```
+
+## Compilar desde el código fuente
+
+Requisitos: **JDK 17 o superior** (Temurin LTS recomendado), **Maven 3.8+** y
+acceso a los repositorios de dependencias. En macOS instala un JDK desde
+[Adoptium](https://adoptium.net/) y Maven desde [Apache Maven](https://maven.apache.org/)
+o, si ya usas Homebrew, `brew install maven`.
+
+```bash
+git clone https://github.com/FelipeRodriguezFonte/CryptoCarver.git
+cd CryptoCarver
+./scripts/doctor.sh
+# Selecciona el JDK también para invocar Maven directamente en macOS.
+export JAVA_HOME=$(/usr/libexec/java_home -v '17+')
+export PATH="$JAVA_HOME/bin:$PATH"
+mvn clean package -DskipTests
+./run.sh
+# Alternativa: sustituye <versión> por la versión del pom.xml.
+# java -jar target/cryptocarver-<versión>.jar
+```
+
+Instalar desde fuentes no ejecuta tests. `doctor.sh` comprueba el entorno, la red
+y el disco; no instala nada. `run.sh` usa el JAR compilado, y solo requiere Maven
+si aún no existe. Para recompilar y lanzar desde fuentes usa `./run-modern.sh`.
+El JAR contiene nativos de JavaFX de la plataforma y arquitectura donde se compiló:
+no copies un JAR arm64 a un Mac Intel. Compila en el destino o usa su instalador.
+
+En redes corporativas, configura el proxy de Maven en `~/.m2/settings.xml`
+mediante `<proxies>` (consulta la [guía de Maven](https://maven.apache.org/guides/mini/guide-proxies.html)).
+No guardes credenciales de proxy en este repositorio. Usar un instalador de Releases
+publicado evita tener que descargar dependencias de Maven.
+
+Para crear tu aplicación macOS autocontenida: `./package_macos.sh` genera
+`dist/CryptoCarver.app`; `PACKAGE_TYPE=dmg ./package_macos.sh` genera un DMG.
+Necesitas `jpackage`, incluido en JDK 17+, y las herramientas de macOS `sips` e
+`iconutil` si no hay un icono ICNS. Cada arquitectura se empaqueta en su propio Mac.
+
+## Desarrollo
+
+Los tests JavaFX permanecen activados por defecto en `mvn test` y requieren una
+sesión gráfica. Ejecuta una sola instancia de Maven a la vez:
+
+```bash
+mvn -o -q test
+# Opcional, si la CPU está saturada; alarga la suite:
+nice -n 19 mvn -o -q test -Plow-cpu
+# Entorno sin pantalla / tests para instaladores:
+mvn test -DrunUiTests=false
+# Linux con Xvfb instalado:
+bash scripts/run-ui-tests.sh
+```
+
+`-o` usa exclusivamente la caché local; omítelo en la primera ejecución.
+El workflow `release.yml` compila y prueba sin UI, crea DMG nativos arm64/x64 y
+prepara una **release en borrador** al enviar una etiqueta `v<versión>` que coincida
+con `pom.xml`. El disparo manual requiere una etiqueta existente sobre el mismo commit.
+Revisa ambos instaladores antes de publicar el borrador. Véanse el
+[diagnóstico](docs/install/diagnostico.md) y el [informe de validación](docs/install/informe.md).
+
+---
+
 ## 📖 Sobre el Proyecto
 
 CryptoCarver es una aplicación para explorar, comprobar y documentar operaciones
@@ -269,40 +349,6 @@ explícitos entre laboratorio y producción se recogen en
 El catálogo exacto de representaciones, charsets y EBCDIC está en
 [docs/FORMATS_AND_CHARSETS.md](docs/FORMATS_AND_CHARSETS.md).
 
-### Requisitos
-- **Java 17** o superior (LTS recomendado)
-- **Maven 3.8+**
-
-### Compilar y Ejecutar
-
-```bash
-# Clonar o descargar el proyecto
-cd CryptoCarver
-
-# Compilar con Maven
-mvn clean package
-
-# Ejecutar la aplicación
-mvn javafx:run
-```
-
-Para ejecutar las pruebas con menor prioridad de CPU:
-
-```bash
-nice -n 19 mvn -o -q test
-```
-
-Para limitar además la CPU de la JVM de pruebas (dobla el tiempo de la suite, por eso es opcional):
-
-```bash
-nice -n 19 mvn -o -q test -Plow-cpu
-```
-
-O ejecutar el JAR directamente:
-```bash
-java -jar target/cryptocarver-<version>.jar
-```
-
 Consulta la [guía operativa](docs/GUIA_OPERATIVA_CRYPTOCARVER.md) para EBCDIC, XAdES/TSA, histórico, diagnóstico y logs.
 
 ### Tutoriales guiados
@@ -355,7 +401,7 @@ curl -s -X POST http://127.0.0.1:8787/v1/sha256 -H 'Content-Type: application/js
 
 La aplicación funciona en:
 - ✅ **Windows** (10/11)
-- ✅ **macOS** (10.15+)
+- ✅ **macOS** (compilación e instaladores nativos para Apple Silicon e Intel)
 - ✅ **Linux** (Ubuntu, Debian, Fedora, etc.)
 
 En Windows puedes ejecutarla desde fuentes con `run.bat`, desde un JAR ya compilado
