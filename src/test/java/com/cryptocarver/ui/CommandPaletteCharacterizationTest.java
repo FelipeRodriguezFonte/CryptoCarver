@@ -197,6 +197,26 @@ class CommandPaletteCharacterizationTest {
     }
 
     @Test
+    void clickOnTheBackdropClosesButClickOnTheCardDoesNot() throws Exception {
+        AtomicReference<VBox> overlay = new AtomicReference<>();
+        runFx(() -> {
+            overlay.set(field(controller, "commandPaletteOverlay"));
+            controller.handleOpenCommandPalette();
+            Node card = overlay.get().getChildren().get(0);
+            Event.fireEvent(card, click(card));
+            assertTrue(overlay.get().isVisible());
+            Event.fireEvent(overlay.get(), click(overlay.get()));
+        });
+        assertFalse(overlay.get().isVisible());
+    }
+
+    private static javafx.scene.input.MouseEvent click(Node target) {
+        return new javafx.scene.input.MouseEvent(target, target, javafx.scene.input.MouseEvent.MOUSE_CLICKED,
+                1, 1, 1, 1, javafx.scene.input.MouseButton.PRIMARY, 1,
+                false, false, false, false, true, false, false, true, false, false, null);
+    }
+
+    @Test
     void escapeFromFocusedResultsListClosesPalette() throws Exception {
         AtomicReference<VBox> overlay = new AtomicReference<>();
         AtomicReference<ListView<?>> results = new AtomicReference<>();

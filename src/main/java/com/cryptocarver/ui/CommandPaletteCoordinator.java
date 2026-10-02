@@ -48,6 +48,15 @@ public final class CommandPaletteCoordinator {
                 }
             });
         }
+        if (overlay != null) {
+            // A click on the dimmed backdrop (not on the card) closes the palette.
+            overlay.setOnMouseClicked(event -> {
+                if (event.getTarget() == overlay) {
+                    close();
+                    event.consume();
+                }
+            });
+        }
         if (results == null || searchField == null) {
             return;
         }
