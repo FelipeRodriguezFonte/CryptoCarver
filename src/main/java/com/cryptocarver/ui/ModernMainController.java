@@ -651,6 +651,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     public void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
             detachWindowLifecycleListeners();
+            expandedTextViewer.dispose();
+            sessionStepViewer.dispose();
+            expandedTableViewer.dispose();
             if (clipboardShelfController != null) {
                 clipboardShelfController.dispose();
             }

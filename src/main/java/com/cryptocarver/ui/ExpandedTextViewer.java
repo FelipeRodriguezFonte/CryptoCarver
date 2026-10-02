@@ -66,6 +66,25 @@ final class ExpandedTextViewer {
         if (stage != null) stage.hide();
     }
 
+    /** Releases the closed viewer's scene and snapshot; the next show builds a fresh window. */
+    void dispose() {
+        Stage closing = stage;
+        stage = null;
+        if (closing != null) {
+            closing.setOnHidden(null);
+            closing.hide();
+            closing.setScene(null);
+        }
+        if (contentArea != null) contentArea.clear();
+        contentArea = null;
+        searchField = null;
+        metricsLabel = null;
+        findStatusLabel = null;
+        maximizeButton = null;
+        matches = List.of();
+        activeMatch = -1;
+    }
+
     private void createStage(Window owner) {
         contentArea = new TextArea();
         contentArea.setEditable(false);
@@ -119,6 +138,7 @@ final class ExpandedTextViewer {
                     ? java.util.List.of() : owner.getScene().getStylesheets());
         }
         stage.setScene(scene);
+        stage.setOnHidden(event -> dispose());
         stage.setMinWidth(640);
         stage.setMinHeight(420);
         stage.maximizedProperty().addListener((observable, wasMaximized, isMaximized) ->

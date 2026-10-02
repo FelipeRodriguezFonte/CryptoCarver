@@ -56,6 +56,24 @@ final class ExpandedTableViewer {
         stage.requestFocus();
     }
 
+    /** Drops table snapshots and the scene when the window is dismissed. */
+    void dispose() {
+        Stage closing = stage;
+        stage = null;
+        if (closing != null) {
+            closing.setOnHidden(null);
+            closing.hide();
+            closing.setScene(null);
+        }
+        if (expandedTable != null) expandedTable.getItems().clear();
+        expandedTable = null;
+        metricsLabel = null;
+        filterField = null;
+        maximizeButton = null;
+        headers = List.of();
+        allRows = List.of();
+    }
+
     private void createStage(Window owner) {
         expandedTable = new TableView<>();
         expandedTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -100,6 +118,7 @@ final class ExpandedTableViewer {
             }
         }
         stage.setScene(scene);
+        stage.setOnHidden(event -> dispose());
         stage.setMinWidth(720);
         stage.setMinHeight(450);
         stage.maximizedProperty().addListener((observable, wasMaximized, isMaximized) ->
