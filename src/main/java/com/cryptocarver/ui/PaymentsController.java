@@ -100,12 +100,6 @@ public class PaymentsController {
     @FXML private ComboBox<String> cvvTypeCombo;
     @FXML private TextArea cvvResultArea;
 
-    // MAC controls
-    private ComboBox<String> macAlgorithmCombo;
-    private TextField macKeyField;
-    private TextArea macDataField;
-    private TextArea macResultArea;
-
     // Additional PIN fields for Encrypted PIN Blocks (Generic)
     @FXML private ComboBox<String> encPinBlockFormatCombo;
     @FXML private TextField encPinField;
@@ -513,7 +507,6 @@ public class PaymentsController {
                 pinBlockFormatCombo, pinBlockFormatDecodeCombo, pinBlockResultArea,
                 cvkAField, cvkBField, panFieldCvv, expiryDateField, serviceCodeField,
                 atcField, cvvTypeCombo, cvvResultArea,
-                null, null, null, null,
                 encPinBlockFormatCombo, encPinField, encPanFieldEncode, encPinBlockKeyField,
                 encPinBlockFieldDecode, encPanFieldDecode, encPinBlockKeyFieldDecode, encResultArea,
                 genOffsetPvkField, genOffsetDecTableField, genOffsetPanField, genOffsetPinField,
@@ -743,10 +736,6 @@ public class PaymentsController {
             TextField atcField,
             ComboBox<String> cvvTypeCombo,
             TextArea cvvResultArea,
-            ComboBox<String> macAlgorithmCombo,
-            TextField macKeyField,
-            TextArea macDataField,
-            TextArea macResultArea,
             // New Encrypted PIN Fields (Generic)
             ComboBox<String> encPinBlockFormatCombo,
             TextField encPinField,
@@ -794,10 +783,6 @@ public class PaymentsController {
         this.atcField = atcField;
         this.cvvTypeCombo = cvvTypeCombo;
         this.cvvResultArea = cvvResultArea;
-        this.macAlgorithmCombo = macAlgorithmCombo;
-        this.macKeyField = macKeyField;
-        this.macDataField = macDataField;
-        this.macResultArea = macResultArea;
 
         // Assign generic Encrypted PIN fields
         this.encPinBlockFormatCombo = encPinBlockFormatCombo;
@@ -838,9 +823,6 @@ public class PaymentsController {
         if (cvvTypeCombo != null) {
             setupCvvTypes();
         }
-        if (macAlgorithmCombo != null) {
-            setupMacAlgorithms();
-        }
 
         // Initialize Encrypted PIN Block Format Combo if available
         if (encPinBlockFormatCombo != null) {
@@ -859,23 +841,6 @@ public class PaymentsController {
                 "iCVV (Chip)",
                 "dCVV (Dynamic)");
         cvvTypeCombo.getSelectionModel().selectFirst();
-    }
-
-    private void setupMacAlgorithms() {
-        if (macAlgorithmCombo == null) {
-            return; // Safety check
-        }
-        macAlgorithmCombo.getItems().addAll(
-                "Retail MAC (ISO 9797-1 Alg 3)",
-                "CBC-MAC (ISO 9797-1 Alg 1)",
-                "ISO-9797-1-ALG2",
-                "ISO-9797-1-ALG4",
-                "ISO-9797-1-ALG6",
-                "CMAC-TDES (ISO 9797-1 Alg 5)",
-                "CMAC-AES (ISO 9797-1 Alg 5)",
-                "HMAC-SHA256",
-                "AS2805.4 (1985)");
-        macAlgorithmCombo.getSelectionModel().selectFirst();
     }
 
     @FXML
@@ -1116,59 +1081,6 @@ public class PaymentsController {
             cvvResultArea.setText(t("module.payments.error.operation", t("module.payments.result.cvvVerificationTitle"), e.getMessage()));
             updateStatus(t("module.payments.error.operation", t("module.payments.result.cvvVerificationTitle"), e.getMessage()));
         }
-    }
-
-    // ==================== MAC HANDLERS ====================
-
-    public void handleGenerateMac() {
-        try {
-            String algorithm = macAlgorithmCombo.getSelectionModel().getSelectedItem();
-            String macKey = macKeyField.getText().trim().replaceAll("\\s+", "");
-            String data = macDataField.getText().trim().replaceAll("\\s+", "");
-
-            // Validate inputs
-            if (macKey.isEmpty() || data.isEmpty()) {
-                macResultArea.setText(t("module.payments.error.macRequired"));
-                return;
-            }
-
-            if (!macKey.matches("[0-9A-Fa-f]{32}")) {
-                macResultArea.setText(t("module.payments.error.macKeyInvalid"));
-                return;
-            }
-
-            if (!data.matches("[0-9A-Fa-f]+")) {
-                macResultArea.setText(t("module.payments.error.macDataHex"));
-                return;
-            }
-
-            // Generate MAC
-            String mac = PaymentOperations.generateMAC(macKey, data, algorithm);
-
-            // Display result
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append(t("module.payments.result.macGenerationTitle")).append("\n");
-            result.append("========================================\n\n");
-            result.append(t("module.common.algorithm")).append(" ").append(algorithm).append("\n");
-            result.append("Key:       ").append(macKey.toUpperCase()).append("\n");
-            result.append("Data:      ").append(data.toUpperCase()).append("\n");
-            result.append("           (").append(data.length() / 2).append(" bytes)\n\n");
-            result.append("MAC:       ").append(mac).append("\n");
-            result.append("========================================\n");
-
-            macResultArea.setText(result.toString());
-            updateStatus(t("module.payments.status.success"));
-
-        } catch (Exception e) {
-            macResultArea.setText(t("module.payments.error.operation", t("module.payments.result.macGenerationTitle"), e.getMessage()));
-            updateStatus(t("module.payments.error.operation", t("module.payments.result.macGenerationTitle"), e.getMessage()));
-        }
-    }
-
-    public void handleVerifyMac() {
-        macResultArea.setText(t("module.payments.status.macVerificationComingSoon"));
-        updateStatus(t("module.payments.status.comingSoon"));
     }
 
     /**
@@ -1709,18 +1621,6 @@ public class PaymentsController {
             }
             updateStatus(t("module.payments.status.profileLoaded", "PIN - " + p.getName()));
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
-            if (macKeyField != null && p.getInputs().containsKey("sessionKey")) macKeyField.setText(p.getInputs().get("sessionKey"));
-            if (macDataField != null && p.getInputs().containsKey("apdu")) macDataField.setText(p.getInputs().get("apdu"));
-            if (macAlgorithmCombo != null && p.getParameters().containsKey("algorithm")) {
-                String algoStr = p.getParameters().get("algorithm");
-                if (algoStr.contains("Algorithm 3")) {
-                    macAlgorithmCombo.setValue("Retail MAC (ISO 9797-1 Alg 3)");
-                } else {
-                    for (String item : macAlgorithmCombo.getItems()) {
-                        if (item.contains(algoStr)) { macAlgorithmCombo.setValue(item); break; }
-                    }
-                }
-            }
             updateStatus(t("module.payments.status.profileLoaded", "Secure Messaging - " + p.getName()));
         }
     }

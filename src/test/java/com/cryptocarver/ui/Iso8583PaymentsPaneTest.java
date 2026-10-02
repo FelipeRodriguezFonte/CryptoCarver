@@ -39,12 +39,14 @@ class Iso8583PaymentsPaneTest {
 
     @Test
     void paymentsPanelExposesReviewedPaymentAlgorithms() throws Exception {
-        String controller = Files.readString(Path.of("src/main/java/com/cryptocarver/ui/PaymentsController.java"));
         assertTrue(com.cryptocarver.crypto.PinBlockFormat.displayNames().contains("VISA-2"));
         assertTrue(com.cryptocarver.crypto.PinBlockFormat.displayNames().contains("ECI-2 (no PAN binding)"));
-        assertTrue(controller.contains("ISO-9797-1-ALG2"));
-        assertTrue(controller.contains("ISO-9797-1-ALG4"));
-        assertTrue(controller.contains("ISO-9797-1-ALG6"));
+        // The ISO 9797-1 MACs are offered by the Authentication MAC panel, which lists these algorithms.
+        String authentication = Files.readString(Path.of("src/main/java/com/cryptocarver/ui/AuthenticationController.java"));
+        assertTrue(authentication.contains("MACOperations.SUPPORTED_ALGORITHMS"));
+        assertTrue(java.util.Arrays.asList(com.cryptocarver.crypto.MACOperations.SUPPORTED_ALGORITHMS).contains("ISO-9797-1-ALG2"));
+        assertTrue(java.util.Arrays.asList(com.cryptocarver.crypto.MACOperations.SUPPORTED_ALGORITHMS).contains("ISO-9797-1-ALG4"));
+        assertTrue(java.util.Arrays.asList(com.cryptocarver.crypto.MACOperations.SUPPORTED_ALGORITHMS).contains("ISO-9797-1-ALG6"));
         String generic = Files.readString(Path.of("src/main/resources/fxml/generic.fxml"));
         assertTrue(generic.contains("onAction=\"#handleExtractTraceHex\""));
         assertTrue(generic.contains("onAction=\"#handleShiftLeft\""));

@@ -40,9 +40,6 @@ class PaymentsValidationHeadlessTest {
         expectedTechnicalAnchor.put("module.payments.error.serviceCodeInvalid", "service");
         expectedTechnicalAnchor.put("module.payments.error.atcRequired", "ATC");
         expectedTechnicalAnchor.put("module.payments.error.atcInvalid", "ATC");
-        expectedTechnicalAnchor.put("module.payments.error.macRequired", "MAC");
-        expectedTechnicalAnchor.put("module.payments.error.macKeyInvalid", "MAC");
-        expectedTechnicalAnchor.put("module.payments.error.macDataHex", "MAC");
 
         AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
         I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
@@ -87,7 +84,6 @@ class PaymentsValidationHeadlessTest {
                 "module.payments.dialog.verifyCvvHeader",
                 "module.payments.status.cvvValid",
                 "module.payments.status.cvvInvalid",
-                "module.payments.status.macVerificationComingSoon",
                 "module.payments.status.dukptInspected",
                 "module.payments.status.aesDukptDerived",
                 "module.payments.status.aesPinBlockProcessed",
@@ -96,7 +92,6 @@ class PaymentsValidationHeadlessTest {
                 "module.payments.result.pinBlockDecodingTitle",
                 "module.payments.result.cvvGenerationTitle",
                 "module.payments.result.cvvVerificationTitle",
-                "module.payments.result.macGenerationTitle",
                 "module.payments.result.aesDukptNote"
         };
 
