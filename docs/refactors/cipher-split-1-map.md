@@ -56,3 +56,22 @@ destapó tres fallos, corregidos después:
 - Cifrar o descifrar sin clave mostraba «Formato hexadecimal no válido»: el aviso de la
   ventana principal clasifica por palabras y el mensaje decía «hexadecimal». Ahora pide la
   clave o una entrada de Key Lab.
+
+## Fase 4: estados de campos, origen de clave y FPE
+
+- `SymmetricFieldsPresenter`: qué filas usa cada algoritmo y modo (IV/nonce, tag, AAD), aviso
+  de ECB, nota AEAD, bloqueo de modo y relleno, insignias de longitud y «Generate» del IV.
+- `LabKeySelector`: clave manual o de Key Lab, lista de claves por nombre, algoritmo y KCV,
+  selección desde Key Lab, «Inspect» y «Save to Lab».
+- `FpeCoordinator`: FF1 y FF3-1 con los alfabetos predefinidos.
+- El controlador queda como cableado de FXML, salida compartida, preparación y análisis
+  de ficheros.
+
+`CipherFieldsCharacterizationUITest` destapó tres fallos, corregidos después:
+
+- Tras elegir ECB, «Generate» no rellenaba el nonce de Salsa20, ChaCha20 ni XChaCha20, y la
+  ayuda decía «0 bytes»: el modo ECB, deshabilitado para estos algoritmos, anulaba la longitud.
+- Pasar por GCM, CTR u otro modo sin relleno dejaba «NoPadding» al volver a CBC o ECB. Ahora
+  vuelve el relleno anterior si el usuario no eligió otro.
+- El campo AAD se marcaba en rojo con texto ASCII, aunque el cifrado lo acepta y su insignia
+  lo daba por válido. La ayuda ahora dice «Hex or ASCII».

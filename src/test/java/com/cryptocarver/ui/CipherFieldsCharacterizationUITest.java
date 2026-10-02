@@ -89,7 +89,7 @@ class CipherFieldsCharacterizationUITest {
                 transcript.add(panel.fields(each[0] + "/" + each[1]));
             }
         });
-        assertEquals("60ef83d903f13bb95648bb3d1a631d58afbf14fef9314aff78cd4bc0a5e13648", digest(transcript), String.join("\n", transcript));
+        assertEquals("703db4ddb5a2d2d7a0d5311a569f4e22ac0122d2896648da05adf7e59710ad26", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -115,7 +115,7 @@ class CipherFieldsCharacterizationUITest {
             panel.field("symmetricKeyField").setText("XYZ");
             transcript.add(panel.fields("bad hex key"));
         });
-        assertEquals("05bf23115ca0057a606e01cf1359ebe2e6df3af83ae1d94662f1d779d5be7c2c", digest(transcript), String.join("\n", transcript));
+        assertEquals("6472afcd8b2070c55011e5d504c957a3cc72e15e9597e4244343362c054460dc", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -132,7 +132,51 @@ class CipherFieldsCharacterizationUITest {
                 transcript.add(each[0] + "/" + each[1] + " iv bytes " + panel.field("ivField").getText().length() / 2);
             }
         });
-        assertEquals("9e4d67c805997d0dd86029afb23c901cb1a5485346368b77df3380129182a095", digest(transcript), String.join("\n", transcript));
+        assertEquals("19b6c86845b300b6c50d337f24e5542220ccb2f121f831f8efbf704c2c13a70c", digest(transcript), String.join("\n", transcript));
+    }
+
+    @Test
+    void streamCiphersGetTheirNonceEvenAfterEcbWasSelected() throws Exception {
+        withPanel(panel -> {
+            panel.combo("symmetricAlgorithmCombo").setValue("AES-128");
+            panel.combo("cipherModeCombo").setValue("ECB");
+            panel.combo("symmetricAlgorithmCombo").setValue("ChaCha20");
+            assertEquals("Hex Nonce (12 bytes recommended for ChaCha20)", panel.field("ivField").getPromptText());
+            panel.controller().generateIV();
+            assertEquals(24, panel.field("ivField").getText().length());
+            panel.combo("symmetricAlgorithmCombo").setValue("Salsa20");
+            panel.controller().generateIV();
+            assertEquals(16, panel.field("ivField").getText().length());
+        });
+    }
+
+    @Test
+    void leavingAModeWithoutPaddingGivesTheChosenPaddingBack() throws Exception {
+        withPanel(panel -> {
+            panel.combo("cipherModeCombo").setValue("CBC");
+            panel.combo("paddingCombo").setValue("PKCS5Padding");
+            panel.combo("cipherModeCombo").setValue("GCM");
+            assertEquals("NoPadding", panel.combo("paddingCombo").getValue());
+            panel.combo("cipherModeCombo").setValue("CBC");
+            assertEquals("PKCS5Padding", panel.combo("paddingCombo").getValue());
+
+            panel.combo("cipherModeCombo").setValue("CTR");
+            panel.combo("cipherModeCombo").setValue("ECB");
+            panel.combo("paddingCombo").setValue("ISO10126Padding");
+            panel.combo("cipherModeCombo").setValue("CBC");
+            assertEquals("ISO10126Padding", panel.combo("paddingCombo").getValue());
+        });
+    }
+
+    @Test
+    void asciiAadIsNotMarkedAsAnError() throws Exception {
+        withPanel(panel -> {
+            panel.combo("cipherModeCombo").setValue("GCM");
+            panel.field("aadField").setText("header.v1");
+            assertTrue(!panel.field("aadField").getStyleClass().contains("field-error"));
+            panel.field("ivField").setText("XYZ");
+            assertTrue(panel.field("ivField").getStyleClass().contains("field-error"));
+        });
     }
 
     @Test
@@ -169,7 +213,7 @@ class CipherFieldsCharacterizationUITest {
             panel.controller().saveCurrentKeyToHsm();
             transcript.add(panel.reporter().drain());
         });
-        assertEquals("30fa5599e3306385dee4bb11e6eedb590977cd80a1a053c43565eda563d93ad8", digest(transcript), String.join("\n", transcript));
+        assertEquals("e06a39351c65a92a8a5ea6c13d2dc5300dbed5ba2d7a450f22e5f94e34049a08", digest(transcript), String.join("\n", transcript));
     }
 
     @Test

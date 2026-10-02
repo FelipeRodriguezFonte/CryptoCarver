@@ -57,6 +57,8 @@ final class SymmetricFieldsPresenter {
     private final Label ivBadgeLabel;
     private final Label gcmTagBadgeLabel;
     private final Label aadBadgeLabel;
+    /** Padding chosen before a mode without padding forced NoPadding. */
+    private String paddingBeforeLock;
 
     SymmetricFieldsPresenter(View view) {
         this.symmetricAlgorithmCombo = view.algorithm();
@@ -94,7 +96,7 @@ final class SymmetricFieldsPresenter {
 
         String algorithm = symmetricAlgorithmCombo.getValue();
         String mode = cipherModeCombo.getValue();
-        int ivLength = SymmetricCipher.getRecommendedIvLength(algorithm, mode);
+        int ivLength = recommendedIvLength(algorithm, mode);
         if (ivLength == 0) return;
 
         byte[] iv = new byte[ivLength];
@@ -176,7 +178,7 @@ final class SymmetricFieldsPresenter {
                 ivField.setManaged(true);
                 ivField.setDisable(false);
                 if (isStreamCipher) {
-                    ivField.setPromptText("Hex Nonce (" + SymmetricCipher.getRecommendedIvLength(algo, mode)
+                    ivField.setPromptText("Hex Nonce (" + recommendedIvLength(algo, mode)
                             + " bytes recommended for " + algo + ")");
                 } else {
                     ivField.setPromptText("Hex IV (required for " + mode + " mode)...");
@@ -267,7 +269,7 @@ final class SymmetricFieldsPresenter {
             symKeyBadge.updateState();
         }
 
-        int expectedNonceBytes = SymmetricCipher.getRecommendedIvLength(algo, mode);
+        int expectedNonceBytes = recommendedIvLength(algo, mode);
         if (ivBadge != null) {
             if (expectedNonceBytes > 0) ivBadge.setExpectedBytes(expectedNonceBytes);
             ivBadge.updateState();
@@ -308,11 +310,25 @@ final class SymmetricFieldsPresenter {
             if (supportsPadding) {
                 paddingCombo.setDisable(false);
                 paddingCombo.setStyle("-fx-opacity: 1.0;");
+                // Give back the padding a GCM/CTR-style mode replaced, unless the user chose another.
+                if (paddingBeforeLock != null && "NoPadding".equals(paddingCombo.getValue())) {
+                    paddingCombo.setValue(paddingBeforeLock);
+                }
+                paddingBeforeLock = null;
             } else {
                 paddingCombo.setDisable(true);
                 paddingCombo.setStyle("-fx-opacity: 0.5;");
+                if (paddingCombo.getValue() != null && !"NoPadding".equals(paddingCombo.getValue())) {
+                    paddingBeforeLock = paddingCombo.getValue();
+                }
                 paddingCombo.setValue("NoPadding");
             }
         }
+    }
+
+    /** Stream ciphers ignore the (disabled) mode selector, so a leftover ECB must not zero their nonce. */
+    private static int recommendedIvLength(String algorithm, String mode) {
+        boolean stream = algorithm != null && SymmetricCipher.isStreamCipher(algorithm);
+        return SymmetricCipher.getRecommendedIvLength(algorithm, stream ? null : mode);
     }
 }

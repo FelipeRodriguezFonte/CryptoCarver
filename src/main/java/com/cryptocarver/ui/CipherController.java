@@ -199,7 +199,6 @@ public class CipherController {
         setupHexValidation(symmetricKeyField);
         setupHexValidation(ivField);
         setupHexValidation(gcmTagField);
-        setupHexValidation(aadField);
 
         IngestionUIHelper.bindField(symmetricKeyField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(ivField, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
@@ -676,7 +675,7 @@ public class CipherController {
 
     public void setAADField(TextField field) {
         this.aadField = field;
-        aadField.setPromptText("AAD (Hex) - for GCM/Poly1305");
+        aadField.setPromptText("AAD (Hex or ASCII) - for GCM/Poly1305");
         fields().updateModeAndAlgorithmVisibility();
     }
 
