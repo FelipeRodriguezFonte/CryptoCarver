@@ -171,7 +171,7 @@ final class DukptCoordinator {
             }
             dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true);
             updateStatus(t("module.payments.status.dukptInspected"));
-        } catch (Exception e) { showError(t("module.payments.error.dukptTitle"), t("module.payments.error.operation", t("module.payments.error.dukptTitle"), e.getMessage())); }
+        } catch (Exception e) { showError(t("module.payments.error.dukptTitle"), e.getMessage()); }
     }
 
     private void inspectAesDukpt() throws Exception {
@@ -195,6 +195,14 @@ final class DukptCoordinator {
 
             result += "\n\n[Final Derivation Data]\n  └─ " + derived.derivationDataHex().toUpperCase();
             result += "\n\n[Working Key]\n  └─ " + derived.workingKeyHex().toUpperCase();
+            if (loadedDukptProfileName != null) {
+                result += "\n\n[Laboratory Profile]\n  └─ " + loadedDukptProfileName;
+            }
+            if (loadedDukptExpectedWorkingKey != null) {
+                boolean matches = loadedDukptExpectedWorkingKey.equalsIgnoreCase(derived.workingKeyHex());
+                result += "\n\n[Laboratory Expected Key]\n  └─ " + loadedDukptExpectedWorkingKey.toUpperCase();
+                result += "\n[" + t("module.payments.result.vectorCheck") + "]\n  └─ " + t(matches ? "module.payments.status.match" : "module.payments.status.mismatch");
+            }
         }
 
         dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus(t("module.payments.status.aesDukptDerived"));
@@ -233,7 +241,7 @@ final class DukptCoordinator {
                     + "\n" + t("module.payments.result.outputBlock", decrypt ? "formatted" : "encrypted") + " " + output
                     + "\n\n" + t("module.payments.result.aesDukptNote"));
             updateStatus(t("module.payments.status.aesPinBlockProcessed"));
-        } catch (Exception e) { showError(t("module.payments.operation.aesPinBlock"), t("module.payments.error.operation", t("module.payments.operation.aesPinBlock"), e.getMessage())); }
+        } catch (Exception e) { showError(t("module.payments.operation.aesPinBlock"), e.getMessage()); }
     }
 
     /** Fills the DUKPT panel from a TDES laboratory profile and remembers its expected working key. */
@@ -246,7 +254,7 @@ final class DukptCoordinator {
         loadedDukptExpectedWorkingKey = p.getOutputs().get("workingKey");
         if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
         if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
-        updateStatus(t("module.payments.status.profileLoaded", "DUKPT TDES - " + p.getName()));
+        updateStatus(t("module.payments.status.profileLoaded", p.getName()));
     }
 
     /** Fills the DUKPT panel from an AES laboratory profile and remembers its expected working key. */
@@ -262,6 +270,6 @@ final class DukptCoordinator {
         }
         if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
         if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
-        updateStatus(t("module.payments.status.profileLoaded", "DUKPT AES - " + p.getName()));
+        updateStatus(t("module.payments.status.profileLoaded", p.getName()));
     }
 }

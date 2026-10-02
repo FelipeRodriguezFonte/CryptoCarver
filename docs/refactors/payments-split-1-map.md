@@ -75,3 +75,28 @@ usaba el código muerto.
   nada (Pagos no tiene ese formulario); ahora lo dice y remite a «Ejecutar y verificar».
 - Un bloque PIN en claro con caracteres no hexadecimales da su propio mensaje, no el de
   longitud.
+
+# Fase 3: CVV, DUKPT, comandos de host e ISO 8583
+
+- `CvvCoordinator`: CVV, CVV2, iCVV y dCVV. La verificación pregunta el valor mediante un
+  proveedor inyectable (el controlador abre el diálogo), así que ahora tiene test.
+- `DukptCoordinator`: inspección TDES y AES con su árbol de derivación, bloque PIN AES DUKPT y
+  carga de perfiles de laboratorio.
+- `HsmHostCommandCoordinator`: componer y analizar tramas de comandos de host, todo local.
+- `Iso8583Coordinator`: analizar y construir mensajes ISO 8583.
+- El `initialize` de 40 parámetros, al que solo llamaba `initialize()`, se integra en él.
+- `PaymentsController` queda en unas 410 líneas: cableado del FXML, panel de resultados y carga
+  de perfiles. Caracterizado antes con `PaymentsToolsCharacterizationUITest`.
+
+## Fallos destapados y corregidos
+
+- Los perfiles DUKPT AES cargaban su clave esperada pero la inspección AES no la comparaba;
+  ahora muestra el perfil y la comprobación del vector, como en TDES.
+- Mensajes duplicados: «Error in DUKPT Error: …», «Error in AES DUKPT PIN block: Error: …» y
+  «DUKPT TDES - DUKPT TDES - Basic PIN profile loaded».
+- El resultado de dCVV decía que el código de servicio no se usaba, pero el cálculo sí lo usa.
+
+## Pendiente (en `crypto/`)
+
+- El informe de ISO 8583 lista los campos en orden aleatorio: `Iso8583Operations.Message`
+  copia los campos con `Map.copyOf`, que no conserva el orden. El test los ordena.

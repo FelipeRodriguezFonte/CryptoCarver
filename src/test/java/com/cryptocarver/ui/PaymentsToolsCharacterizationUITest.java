@@ -100,6 +100,43 @@ class PaymentsToolsCharacterizationUITest {
     }
 
     @Test
+    void cvvVerificationComparesTheAnsweredValue() throws Exception {
+        withPanel(panel -> {
+            panel.combo("cvvTypeCombo").setValue("CVV (Magnetic Stripe)");
+            panel.set("cvkAField", CVK_A);
+            panel.set("cvkBField", CVK_B);
+            panel.set("panFieldCvv", PAN);
+            panel.set("expiryDateField", "2512");
+            panel.set("serviceCodeField", "101");
+            panel.controller().handleGenerateCvv();
+            String generated = panel.text("cvvResultArea").lines().filter(line -> line.startsWith("CVV:"))
+                    .map(line -> line.substring(line.lastIndexOf(' ') + 1)).findFirst().orElseThrow();
+            panel.reporter().drain();
+
+            panel.controller().cvvPrompt = () -> java.util.Optional.of(generated);
+            panel.controller().handleVerifyCvv();
+            assertTrue(panel.reporter().drain().contains("Result=VALID"));
+            panel.controller().cvvPrompt = () -> java.util.Optional.of("000");
+            panel.controller().handleVerifyCvv();
+            assertTrue(panel.reporter().drain().contains("Result=INVALID"));
+            panel.controller().cvvPrompt = java.util.Optional::empty;
+            panel.controller().handleVerifyCvv();
+            assertEquals("", panel.reporter().drain());
+        });
+    }
+
+    @Test
+    void aesProfilesAreCheckedAgainstTheirExpectedWorkingKey() throws Exception {
+        withPanel(panel -> {
+            PaymentProfile profile = PaymentProfileManager.getProfilesByType(PaymentProfile.ProfileType.DUKPT_AES).get(0);
+            panel.controller().loadProfile(profile);
+            panel.controller().handleInspectDukpt();
+            String report = panel.text("dukptResultArea");
+            assertTrue(report.contains("[Laboratory Profile]") && report.contains("[Laboratory Expected Key]"), report);
+        });
+    }
+
+    @Test
     void dukptInspectionDerivationAndProfiles() throws Exception {
         List<String> transcript = new ArrayList<>();
         withPanel(panel -> {
@@ -153,7 +190,7 @@ class PaymentsToolsCharacterizationUITest {
                 transcript.add(panel.step("profile inspect", "dukptResultArea"));
             }
         });
-        assertEquals("ccbbed3a4ee18abafa0d400a7dc2f2acaf7fc22dbf3296fe870bf493ae6c4616", digest(transcript), String.join("\n", transcript));
+        assertEquals("0d9fe20724fde8e1f985dc39944835326f8f925c6e23df06ff5b4068159521a7", digest(transcript), String.join("\n", transcript));
     }
 
     @Test

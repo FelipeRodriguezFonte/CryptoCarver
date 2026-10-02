@@ -388,7 +388,7 @@ public class PaymentsController {
                     if (panFieldDecode != null && p.getInputs().containsKey("pan")) panFieldDecode.setText(p.getInputs().get("pan"));
                 }
             }
-            updateStatus(t("module.payments.status.profileLoaded", "PIN - " + p.getName()));
+            updateStatus(t("module.payments.status.profileLoaded", p.getName()));
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
             // The Payments screen has no secure-messaging form to fill; say so instead of "loaded".
             updateStatus(t("module.payments.status.profileNoForm", p.getName()));

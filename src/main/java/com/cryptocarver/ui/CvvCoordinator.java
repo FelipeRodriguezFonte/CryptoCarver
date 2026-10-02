@@ -175,13 +175,11 @@ final class CvvCoordinator {
             result.append(t("module.payments.result.pan")).append("          ").append(pan).append("\n");
             result.append(t("module.payments.result.expiry")).append("       ").append(expiry).append("\n");
 
-            // Always show Service Code, but note usage
+            // Always show the service code; CVV2 and iCVV force their own, dCVV uses it as entered.
             result.append(t("module.payments.result.serviceCode")).append(" ").append(serviceCode);
             if (cvvType != null) {
                 if (cvvType.contains("CVV2") || cvvType.contains("iCVV")) {
                     result.append(" ").append(t("module.payments.result.forcedCalculation", serviceCodeForCalc));
-                } else if (cvvType.contains("dCVV")) {
-                    result.append(" ").append(t("module.payments.result.notUsedDcvv"));
                 }
             }
             result.append("\n");
