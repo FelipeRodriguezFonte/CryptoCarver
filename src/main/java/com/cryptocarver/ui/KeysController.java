@@ -213,6 +213,16 @@ public class KeysController {
         return cmsCoordinator;
     }
 
+    private CertificateChainCoordinator certificateChainCoordinator;
+
+    private CertificateChainCoordinator certificateChainCoordinator() {
+        if (certificateChainCoordinator == null) {
+            certificateChainCoordinator = new CertificateChainCoordinator(
+                    () -> mainController, this::showError, this::updateStatus, this::t);
+        }
+        return certificateChainCoordinator;
+    }
+
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
@@ -614,9 +624,6 @@ public class KeysController {
     private TextArea valCertInput;
     private TextArea valIssuerInput;
     private TextArea valResultArea;
-    private TextArea chainInputArea;
-    private TextArea chainCrlInputArea;
-    private TextArea chainResultArea;
 
     // Store last generated key pair for certificate generation
     private KeyPair lastGeneratedKeyPair;
@@ -1820,11 +1827,7 @@ public class KeysController {
         }
     }
 
-    public void initializeCertificateChainValidation(TextArea chainArea, TextArea trustAnchorArea, TextArea resultArea) {
-        this.chainInputArea = chainArea;
-        this.chainCrlInputArea = trustAnchorArea;
-        this.chainResultArea = resultArea;
-    }
+    public void initializeCertificateChainValidation(TextArea chainArea, TextArea trustAnchorArea, TextArea resultArea) { certificateChainCoordinator().initialize(new CertificateChainCoordinator.View(chainArea, trustAnchorArea, resultArea)); }
 
     public void handleIssueCertificateFromCsr() {
         try {
@@ -3330,101 +3333,9 @@ public class KeysController {
     // CERTIFICATE CHAIN VALIDATION
     // ============================================================================
 
-    public void initializeCertificateChain(TextArea inputArea, TextArea crlArea, TextArea resultArea) {
-        this.chainInputArea = inputArea;
-        this.chainCrlInputArea = crlArea;
-        this.chainResultArea = resultArea;
-    }
+    public void initializeCertificateChain(TextArea inputArea, TextArea crlArea, TextArea resultArea) { certificateChainCoordinator().initialize(new CertificateChainCoordinator.View(inputArea, crlArea, resultArea)); }
 
-    public void handleValidateCertificateChain() {
-        try {
-            String chainStr = chainInputArea.getText().trim();
-
-            if (chainStr.isEmpty()) {
-                showError("Input Error", "Certificate Chain PEM is required");
-                return;
-            }
-
-            updateStatus("Validating chain...");
-
-            // Extract multiple certificates from PEM sequence
-            List<String> pemCerts = new ArrayList<>();
-            String[] parts = chainStr.split("-----BEGIN CERTIFICATE-----");
-
-            for (String part : parts) {
-                if (part.trim().isEmpty())
-                    continue;
-                String pem = "-----BEGIN CERTIFICATE-----" + part;
-                int endIndex = pem.indexOf("-----END CERTIFICATE-----");
-                if (endIndex != -1) {
-                    pem = pem.substring(0, endIndex + 25);
-                    pemCerts.add(pem);
-                }
-            }
-
-            if (pemCerts.isEmpty()) {
-                showError("Input Error", "No valid PEM certificates found");
-                return;
-            }
-
-            List<X509Certificate> chain = new ArrayList<>();
-            for (String pem : pemCerts) {
-                chain.add(CertificateGenerator.parseCertificate(pem));
-            }
-
-            List<java.security.cert.X509CRL> crls = null;
-            if (chainCrlInputArea != null && !chainCrlInputArea.getText().trim().isEmpty()) {
-                crls = new ArrayList<>();
-                String crlsStr = chainCrlInputArea.getText().trim();
-                String[] crlParts = crlsStr.split("-----BEGIN X509 CRL-----");
-                for (String part : crlParts) {
-                    if (part.trim().isEmpty()) continue;
-                    String pem = "-----BEGIN X509 CRL-----" + part;
-                    int endIndex = pem.indexOf("-----END X509 CRL-----");
-                    if (endIndex != -1) {
-                        pem = pem.substring(0, endIndex + 22);
-                        crls.add(RevocationOperations.parseCrlPem(pem));
-                    }
-                }
-            }
-
-            // Validate
-            CertificateGenerator.ChainValidationResult result = CertificateGenerator.validateCertificateChain(chain, crls);
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("CHAIN VALIDATION: ").append(result.isValid ? "✅ VALID" : "❌ INVALID").append("\n\n");
-
-            if (result.message != null) {
-                sb.append("Message: ").append(result.message).append("\n\n");
-            }
-
-            sb.append("DETAILS:\n");
-            for (String detail : result.details) {
-                sb.append("- ").append(detail).append("\n");
-            }
-
-            String outputText = sb.toString();
-            chainResultArea.setText(outputText);
-            chainResultArea.setVisible(true);
-            chainResultArea.setManaged(true);
-
-            updateStatus("Chain validation complete: " + (result.isValid ? "Valid" : "Invalid"));
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Validate Chain")
-                    .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Chain Length", String.valueOf(chain.size()), com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
-                        new com.cryptocarver.model.OperationDetail("Result", result.isValid ? "Valid" : "Invalid", com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
-                    ))
-                    .status("Certificate chain validation completed")
-                    .build());
-            }
-
-        } catch (Exception e) {
-            showError("Validation Error", "Error validating chain: " + e.getMessage());
-            LOG.warn("Key operation failed", e);
-        }
-    }
+    public void handleValidateCertificateChain() { certificateChainCoordinator().handleValidateCertificateChain(); }
 
     // --- Global Helper Methods ---
 
