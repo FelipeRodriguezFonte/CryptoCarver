@@ -20,6 +20,36 @@ abstract class KeysCoordinatorSupport {
         this.text = text;
     }
 
+    protected final DialogService dialogService = new DialogService();
+
+    KeysCoordinatorSupport(Supplier<StatusReporter> reporter) {
+        this(reporter,
+                (title, message) -> {
+                    StatusReporter current = reporter.get();
+                    if (current != null) current.showError(title, message);
+                },
+                message -> {
+                    StatusReporter current = reporter.get();
+                    if (current != null) current.updateStatus(message);
+                },
+                (key, args) -> com.cryptocarver.service.I18nService.getInstance().text(key, args));
+    }
+
+    final void showError(UserFacingError error) {
+        StatusReporter current = reporter();
+        if (current != null) current.showError(error);
+    }
+
+    final void showError(Throwable cause, String title, String fieldKey) {
+        StatusReporter current = reporter();
+        if (current != null) current.showError(cause, title, fieldKey);
+    }
+
+    final void showInfo(String title, String message) {
+        StatusReporter current = reporter();
+        if (current != null) current.showInfo(title, message);
+    }
+
     final StatusReporter reporter() { return reporter.get(); }
     final void showError(String title, String message) { errors.accept(title, message); }
     final void updateStatus(String message) { status.accept(message); }

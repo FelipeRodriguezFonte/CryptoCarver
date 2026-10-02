@@ -34,6 +34,43 @@ public class KeysController {
     private final KeysWorkspaceState workspace = new KeysWorkspaceState();
     private final DialogService dialogService = new DialogService();
 
+    private PaymentKeyBlockCoordinator paymentKeyBlockCoordinator;
+
+    private PaymentKeyBlockCoordinator paymentKeyBlockCoordinator() {
+        if (paymentKeyBlockCoordinator == null) {
+            paymentKeyBlockCoordinator = new PaymentKeyBlockCoordinator(
+                    () -> new PaymentKeyBlockCoordinator.View(
+                            thalesLmkField,
+                            thalesKeyTypeField,
+                            thalesSchemeCombo,
+                            thalesClearKeyField,
+                            thalesCryptogramField,
+                            thalesCheckValueField,
+                            thalesComponentCheck,
+                            thalesResultArea,
+                            keyBlockInputArea,
+                            keyBlockResultArea,
+                            keyBlockLmkField,
+                            atallaTemplateCombo,
+                            atalla0Combo,
+                            atalla1Combo,
+                            atalla2Combo,
+                            atalla3Combo,
+                            atalla4Combo,
+                            atalla5Combo,
+                            atalla6Combo,
+                            atalla7Combo,
+                            atallaHeaderField,
+                            atallaMeaningArea,
+                            atallaMfkField,
+                            atallaKeyField,
+                            atallaBlockArea,
+                            atallaResultArea),
+                    () -> mainController, workspace);
+        }
+        return paymentKeyBlockCoordinator;
+    }
+
     private Tr31Coordinator tr31Coordinator;
 
     private Tr31Coordinator tr31Coordinator() {
@@ -4392,51 +4429,22 @@ public class KeysController {
     @FXML private TextArea thalesResultArea;
 
     /** Clause 7.2.3 — the worked example, every value taken from the manual. */
-    private static final String MANUAL_LMK_28_29 = "1A1A1A1A1A1A1A1A1C1C1C1C1C1C1C1C";
-    private static final String MANUAL_MK_SMI = "F1F1F1F1F1F1F1F1C1C1C1C1C1C1C1C1";
-    private static final String MANUAL_CRYPTOGRAM = "5178C9D3D1052B15BF6AEC458B4A4564";
-    private static final String MANUAL_CHECK_VALUE = "8357D9";
+
+
+
+
 
     @FXML
-    public void handleThalesEncrypt() {
-        runThales(() -> {
-            ThalesLmkOperations.WrappedKey wrapped = ThalesLmkOperations.encrypt(
-                    thalesText(thalesClearKeyField), thalesKeyTypeCode(), thalesScheme(), thalesLmk(),
-                    thalesComponentCheck != null && thalesComponentCheck.isSelected());
-            if (thalesCryptogramField != null) thalesCryptogramField.setText(wrapped.cryptogram());
-            if (thalesCheckValueField != null) thalesCheckValueField.setText(wrapped.checkValue());
-            return ThalesLmkOperations.describe(wrapped, thalesLmk());
-        }, "Thales LMK Encrypt");
-    }
+    public void handleThalesEncrypt() { paymentKeyBlockCoordinator().handleThalesEncrypt(); }
 
     @FXML
-    public void handleThalesDecrypt() {
-        runThales(() -> {
-            ThalesLmkOperations.WrappedKey recovered = ThalesLmkOperations.decrypt(
-                    thalesText(thalesCryptogramField), thalesKeyTypeCode(), thalesScheme(), thalesLmk(),
-                    thalesComponentCheck != null && thalesComponentCheck.isSelected());
-            if (thalesClearKeyField != null) thalesClearKeyField.setText(recovered.cryptogram());
-            if (thalesCheckValueField != null) thalesCheckValueField.setText(recovered.checkValue());
-            return "Recovered key: " + recovered.cryptogram()
-                    + "\nCheck value  : " + recovered.checkValue() + "\n";
-        }, "Thales LMK Decrypt");
-    }
+    public void handleThalesDecrypt() { paymentKeyBlockCoordinator().handleThalesDecrypt(); }
 
     @FXML
-    public void handleThalesDescribe() {
-        runThales(() -> ThalesLmkOperations.describe(
-                ThalesLmkOperations.encrypt(thalesText(thalesClearKeyField), thalesKeyTypeCode(),
-                        thalesScheme(), thalesLmk(),
-                        thalesComponentCheck != null && thalesComponentCheck.isSelected()),
-                thalesLmk()), "Thales LMK");
-    }
+    public void handleThalesDescribe() { paymentKeyBlockCoordinator().handleThalesDescribe(); }
 
     @FXML
-    public void handleThalesLookup() {
-        runThales(() -> ThalesLmkOperations.describe(ThalesLmkOperations.lookup(
-                thalesText(thalesCryptogramField), thalesText(thalesCheckValueField), thalesLmk())),
-                "Thales Key Type Lookup");
-    }
+    public void handleThalesLookup() { paymentKeyBlockCoordinator().handleThalesLookup(); }
 
     /**
      * Fills the pane with the manual's worked example.
@@ -4446,71 +4454,26 @@ public class KeysController {
      * this pane produces. If they differ, this bench is wrong, not the HSM.</p>
      */
     @FXML
-    public void handleThalesLoadExample() {
-        if (thalesLmkField != null) thalesLmkField.setText(MANUAL_LMK_28_29);
-        if (thalesKeyTypeField != null) thalesKeyTypeField.setText("209");
-        if (thalesSchemeCombo != null) thalesSchemeCombo.setValue("U");
-        if (thalesClearKeyField != null) thalesClearKeyField.setText(MANUAL_MK_SMI);
-        if (thalesCryptogramField != null) thalesCryptogramField.setText(MANUAL_CRYPTOGRAM);
-        if (thalesCheckValueField != null) thalesCheckValueField.setText(MANUAL_CHECK_VALUE);
-        if (thalesComponentCheck != null) thalesComponentCheck.setSelected(false);
-        if (thalesResultArea != null) {
-            thalesResultArea.setText(t("module.keys.thales.exampleLoaded"));
-        }
-    }
+    public void handleThalesLoadExample() { paymentKeyBlockCoordinator().handleThalesLoadExample(); }
 
     /**
      * The scheme list is the variant schemes only. X and Y are the ANSI X9.17
      * schemes and S is a Key Block: different formats, so offering them here
      * would be offering to produce something this code does not produce.
      */
-    private void initializeThalesControls() {
-        if (thalesSchemeCombo == null) {
-            return;
-        }
-        thalesSchemeCombo.getItems().setAll("U", "T", "Z");
-        thalesSchemeCombo.getSelectionModel().selectFirst();
-    }
+    private void initializeThalesControls() { paymentKeyBlockCoordinator().initializeThalesControls(); }
 
-    private ThalesLmkOperations.Lmk thalesLmk() {
-        return ThalesLmkOperations.Lmk.of(thalesText(thalesLmkField));
-    }
 
-    private String thalesKeyTypeCode() {
-        String code = thalesText(thalesKeyTypeField);
-        return code.isEmpty() ? "000" : code;
-    }
 
-    private ThalesLmkOperations.Scheme thalesScheme() {
-        String value = thalesSchemeCombo == null || thalesSchemeCombo.getValue() == null
-                ? "U" : thalesSchemeCombo.getValue().trim();
-        return ThalesLmkOperations.Scheme.of(value.isEmpty() ? 'U' : value.charAt(0));
-    }
 
-    private static String thalesText(TextInputControl field) {
-        return field == null || field.getText() == null ? "" : field.getText().trim();
-    }
 
-    private interface ThalesStep {
-        String run() throws Exception;
-    }
 
-    private void runThales(ThalesStep step, String operation) {
-        try {
-            String report = step.run();
-            if (thalesResultArea != null) thalesResultArea.setText(report);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation(operation)
-                        .output(report.getBytes(StandardCharsets.UTF_8))
-                        .status(t("module.keys.thales.status"))
-                        .build());
-            }
-        } catch (Exception e) {
-            if (thalesResultArea != null) {
-                thalesResultArea.setText(t("module.keys.thales.error", String.valueOf(e.getMessage())));
-            }
-        }
-    }
+
+
+
+
+
+
 
     // =====================================================================
     // Thales Key Block — payShield 10K Host Programmer's Manual, chapter 8
@@ -4523,29 +4486,12 @@ public class KeysController {
     /** Clause 8.5.1.8, the header the manual works through, padded out to the
      *  72 characters it declares. */
     /** payShield manual clause 8.8.1: the published 3DES Key Block test LMK. */
-    private static final String KEY_BLOCK_TEST_LMK = "0123456789ABCDEF8080808080808080FEDCBA9876543210";
+
     /** A real block under that LMK, generated with an external tool and pinned in the tests. */
-    private static final String BP_TOOLS_KEY_BLOCK =
-            "S00072B0TN00E000256A37F894FD49E61DD3FA27FDE8919D07F7AA966F8BF39AB31D00034";
+
 
     @FXML
-    public void handleKeyBlockInspect() {
-        try {
-            String report = ThalesKeyBlockOperations.describe(
-                    ThalesKeyBlockOperations.parse(thalesText(keyBlockInputArea)));
-            if (keyBlockResultArea != null) keyBlockResultArea.setText(report);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("Thales Key Block")
-                        .output(report.getBytes(StandardCharsets.UTF_8))
-                        .status(t("module.keys.keyBlock.status"))
-                        .build());
-            }
-        } catch (Exception e) {
-            if (keyBlockResultArea != null) {
-                keyBlockResultArea.setText(t("module.keys.keyBlock.error", String.valueOf(e.getMessage())));
-            }
-        }
-    }
+    public void handleKeyBlockInspect() { paymentKeyBlockCoordinator().handleKeyBlockInspect(); }
 
     /**
      * Unwraps with the Key Block LMK, which the manual never explains how to
@@ -4553,30 +4499,10 @@ public class KeysController {
      * the external tool and is pinned by a test; see ThalesKeyBlockOperations.
      */
     @FXML
-    public void handleKeyBlockUnwrap() {
-        try {
-            String report = ThalesKeyBlockOperations.describe(ThalesKeyBlockOperations.unwrap(
-                    thalesText(keyBlockLmkField), thalesText(keyBlockInputArea)));
-            if (keyBlockResultArea != null) keyBlockResultArea.setText(report);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("Thales Key Block Unwrap")
-                        .output(report.getBytes(StandardCharsets.UTF_8))
-                        .status(t("module.keys.keyBlock.status"))
-                        .build());
-            }
-        } catch (Exception e) {
-            if (keyBlockResultArea != null) {
-                keyBlockResultArea.setText(t("module.keys.keyBlock.error", String.valueOf(e.getMessage())));
-            }
-        }
-    }
+    public void handleKeyBlockUnwrap() { paymentKeyBlockCoordinator().handleKeyBlockUnwrap(); }
 
     @FXML
-    public void handleKeyBlockExample() {
-        if (keyBlockInputArea != null) keyBlockInputArea.setText(BP_TOOLS_KEY_BLOCK);
-        if (keyBlockLmkField != null) keyBlockLmkField.setText(KEY_BLOCK_TEST_LMK);
-        if (keyBlockResultArea != null) keyBlockResultArea.setText(t("module.keys.keyBlock.exampleLoaded"));
-    }
+    public void handleKeyBlockExample() { paymentKeyBlockCoordinator().handleKeyBlockExample(); }
 
     // =====================================================================
     // Atalla Key Block — Utimaco AJ560-9004A
@@ -4598,131 +4524,27 @@ public class KeysController {
     @FXML private TextArea atallaBlockArea;
     @FXML private TextArea atallaResultArea;
 
-    private boolean atallaSyncing;
 
-    private List<ComboBox<AtallaAkbHeader.Option>> atallaCombos() {
-        return Arrays.asList(atalla0Combo, atalla1Combo, atalla2Combo, atalla3Combo,
-                atalla4Combo, atalla5Combo, atalla6Combo, atalla7Combo);
-    }
 
-    private void initializeAtalla() {
-        if (atallaHeaderField == null || atalla0Combo == null) {
-            return;
-        }
-        List<ComboBox<AtallaAkbHeader.Option>> combos = atallaCombos();
-        for (int at = 0; at < combos.size(); at++) {
-            combos.get(at).getItems().setAll(AtallaAkbHeader.options(at));
-            combos.get(at).valueProperty().addListener((obs, old, now) -> atallaHeaderFromCombos());
-        }
-        if (atallaTemplateCombo != null) {
-            atallaTemplateCombo.getItems().setAll(AtallaAkbHeader.templates());
-            atallaTemplateCombo.valueProperty().addListener((obs, old, now) -> {
-                if (now != null) {
-                    atallaHeaderField.setText(now.header());
-                }
-            });
-        }
-        atallaHeaderField.textProperty().addListener((obs, old, now) -> atallaCombosFromHeader(now));
-        atallaHeaderField.setText("1PUNE000");
-    }
 
-    private void atallaHeaderFromCombos() {
-        if (atallaSyncing) {
-            return;
-        }
-        String current = atallaHeaderField.getText() == null ? "" : atallaHeaderField.getText();
-        StringBuilder header = new StringBuilder();
-        List<ComboBox<AtallaAkbHeader.Option>> combos = atallaCombos();
-        for (int at = 0; at < combos.size(); at++) {
-            AtallaAkbHeader.Option option = combos.get(at).getValue();
-            header.append(option != null ? option.code() : at < current.length() ? current.charAt(at) : '0');
-        }
-        atallaSyncing = true;
-        try {
-            atallaHeaderField.setText(header.toString());
-        } finally {
-            atallaSyncing = false;
-        }
-        atallaExplainHeader(header.toString());
-    }
 
-    private void atallaCombosFromHeader(String header) {
-        if (!atallaSyncing) {
-            atallaSyncing = true;
-            try {
-                List<ComboBox<AtallaAkbHeader.Option>> combos = atallaCombos();
-                for (int at = 0; at < combos.size(); at++) {
-                    AtallaAkbHeader.Option match = null;
-                    if (header != null && header.length() == AtallaAkbOperations.HEADER_LENGTH) {
-                        for (AtallaAkbHeader.Option option : combos.get(at).getItems()) {
-                            if (option.code() == header.charAt(at)) {
-                                match = option;
-                                break;
-                            }
-                        }
-                    }
-                    combos.get(at).setValue(match);
-                }
-            } finally {
-                atallaSyncing = false;
-            }
-        }
-        atallaExplainHeader(header);
-    }
+    private void initializeAtalla() { paymentKeyBlockCoordinator().initializeAtalla(); }
 
-    private void atallaExplainHeader(String header) {
-        if (atallaMeaningArea == null) {
-            return;
-        }
-        if (header == null || header.length() != AtallaAkbOperations.HEADER_LENGTH) {
-            atallaMeaningArea.setText("The header is " + AtallaAkbOperations.HEADER_LENGTH + " characters.");
-            return;
-        }
-        atallaMeaningArea.setText(AtallaAkbHeader.decode(header));
-    }
+
+
+
+
+
 
     @FXML
-    public void handleAtallaGenerate() {
-        try {
-            String header = thalesText(atallaHeaderField);
-            String block = AtallaAkbOperations.wrap(thalesText(atallaMfkField), header, thalesText(atallaKeyField));
-            String report = "AKB: " + block + "\n\n" + AtallaAkbOperations.describe(
-                    AtallaAkbOperations.unwrap(thalesText(atallaMfkField), block));
-            atallaPublish("Atalla AKB Generate", report);
-        } catch (Exception e) {
-            if (atallaResultArea != null) atallaResultArea.setText("Error: " + e.getMessage());
-        }
-    }
+    public void handleAtallaGenerate() { paymentKeyBlockCoordinator().handleAtallaGenerate(); }
 
     @FXML
-    public void handleAtallaUnwrap() {
-        try {
-            String text = thalesText(atallaBlockArea);
-            AtallaAkbOperations.Unwrapped unwrapped = AtallaAkbOperations.unwrap(thalesText(atallaMfkField), text);
-            atallaHeaderField.setText(unwrapped.akb().header());
-            atallaPublish("Atalla AKB Unwrap", AtallaAkbOperations.describe(unwrapped));
-        } catch (Exception e) {
-            if (atallaResultArea != null) atallaResultArea.setText("Error: " + e.getMessage());
-        }
-    }
+    public void handleAtallaUnwrap() { paymentKeyBlockCoordinator().handleAtallaUnwrap(); }
 
     /** The external tool vector for a 24-byte key, pinned in AtallaAkbOperationsTest. */
     @FXML
-    public void handleAtallaExample() {
-        atallaHeaderField.setText("1PUNE000");
-        atallaMfkField.setText(KEY_BLOCK_TEST_LMK);
-        atallaKeyField.setText("00112233445566778899AABBCCDDEEFF0123456789ABCDEF");
-        atallaBlockArea.setText("1PUNE000,23AE722410BC25C24BB6AD0C900A16F085927D34A8C06EB0,DA3BB9004654010D");
-        if (atallaResultArea != null) atallaResultArea.setText("Example loaded: external tool vector.");
-    }
+    public void handleAtallaExample() { paymentKeyBlockCoordinator().handleAtallaExample(); }
 
-    private void atallaPublish(String operation, String report) {
-        if (atallaResultArea != null) atallaResultArea.setText(report);
-        if (mainController != null) {
-            mainController.publish(OperationResult.forOperation(operation)
-                    .output(report.getBytes(StandardCharsets.UTF_8))
-                    .status("Atalla Key Block")
-                    .build());
-        }
-    }
+
 }
