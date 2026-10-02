@@ -12,7 +12,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Owns the KeyStoreCoordinator workbench; views and shell are resolved on demand. */
+/** Key material, keystore inspection and token operations. */
 final class KeyStoreCoordinator extends KeysCoordinatorSupport {
     record View(
             VBox keysRoot,
@@ -62,13 +62,11 @@ final class KeyStoreCoordinator extends KeysCoordinatorSupport {
             TextArea pkcs11UnwrapResultArea) { }
 
     private final java.util.function.Supplier<View> view;
-    private final KeysWorkspaceState workspace;
     private final Runnable refreshHsm;
 
-    KeyStoreCoordinator(java.util.function.Supplier<View> view, java.util.function.Supplier<StatusReporter> reporter, KeysWorkspaceState workspace, Runnable refreshHsm) {
+    KeyStoreCoordinator(java.util.function.Supplier<View> view, java.util.function.Supplier<StatusReporter> reporter, Runnable refreshHsm) {
         super(reporter);
         this.view = view;
-        this.workspace = workspace;
         this.refreshHsm = refreshHsm;
     }
 
@@ -98,9 +96,15 @@ final class KeyStoreCoordinator extends KeysCoordinatorSupport {
 
     void handleChoosePkcs11Library() { choosePkcs11Library(); }
 
-    void handleConnectPkcs11() { connectPkcs11(); refreshHsm.run(); }
+    void handleConnectPkcs11() {
+        connectPkcs11();
+        refreshHsm.run();
+    }
 
-    void handleDisconnectPkcs11() { disconnectPkcs11(); refreshHsm.run(); }
+    void handleDisconnectPkcs11() {
+        disconnectPkcs11();
+        refreshHsm.run();
+    }
 
     void handlePkcs11Sign() { signWithPkcs11(); }
 
@@ -582,8 +586,6 @@ final class KeyStoreCoordinator extends KeysCoordinatorSupport {
         }
     }
 
-
-
     void generatePkcs11Jwt() {
         try {
             String alias = requirePkcs11SigningAlias();
@@ -801,8 +803,5 @@ final class KeyStoreCoordinator extends KeysCoordinatorSupport {
         view().keyStoreProfileCombo().getItems().setAll(AppSettings.getInstance().getTrustStoreProfiles().stream()
                 .map(AppSettings.TrustStoreProfile::name).sorted(String.CASE_INSENSITIVE_ORDER).toList());
     }
-
-
-
 
 }

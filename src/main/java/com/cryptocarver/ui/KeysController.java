@@ -2,26 +2,12 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.*;
 import com.cryptocarver.crypto.hsm.KeyMaterial;
-import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.model.AppSettings;
-import com.cryptocarver.model.GeneratedKeySummary;
-import com.cryptocarver.model.GeneratedAsymmetricKeySummary;
-import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Controller for Keys tab - Enhanced with asymmetric cryptography
@@ -30,9 +16,7 @@ import org.slf4j.LoggerFactory;
  */
 public class KeysController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(KeysController.class);
     private final KeysWorkspaceState workspace = new KeysWorkspaceState();
-    private final DialogService dialogService = new DialogService();
 
     private PaymentKeyBlockCoordinator paymentKeyBlockCoordinator;
 
@@ -40,33 +24,14 @@ public class KeysController {
         if (paymentKeyBlockCoordinator == null) {
             paymentKeyBlockCoordinator = new PaymentKeyBlockCoordinator(
                     () -> new PaymentKeyBlockCoordinator.View(
-                            thalesLmkField,
-                            thalesKeyTypeField,
-                            thalesSchemeCombo,
-                            thalesClearKeyField,
-                            thalesCryptogramField,
-                            thalesCheckValueField,
-                            thalesComponentCheck,
-                            thalesResultArea,
-                            keyBlockInputArea,
-                            keyBlockResultArea,
-                            keyBlockLmkField,
-                            atallaTemplateCombo,
-                            atalla0Combo,
-                            atalla1Combo,
-                            atalla2Combo,
-                            atalla3Combo,
-                            atalla4Combo,
-                            atalla5Combo,
-                            atalla6Combo,
-                            atalla7Combo,
-                            atallaHeaderField,
-                            atallaMeaningArea,
-                            atallaMfkField,
-                            atallaKeyField,
-                            atallaBlockArea,
+                            thalesLmkField, thalesKeyTypeField, thalesSchemeCombo, thalesClearKeyField,
+                            thalesCryptogramField, thalesCheckValueField, thalesComponentCheck,
+                            thalesResultArea, keyBlockInputArea, keyBlockResultArea, keyBlockLmkField,
+                            atallaTemplateCombo, atalla0Combo, atalla1Combo, atalla2Combo, atalla3Combo,
+                            atalla4Combo, atalla5Combo, atalla6Combo, atalla7Combo, atallaHeaderField,
+                            atallaMeaningArea, atallaMfkField, atallaKeyField, atallaBlockArea,
                             atallaResultArea),
-                    () -> mainController, workspace);
+                    () -> mainController);
         }
         return paymentKeyBlockCoordinator;
     }
@@ -77,40 +42,16 @@ public class KeysController {
         if (keyLabCoordinator == null) {
             keyLabCoordinator = new KeyLabCoordinator(
                     () -> new KeyLabCoordinator.View(
-                            keyLabPane,
-                            keyLabSearchField,
-                            keyLabStatusFilterCombo,
-                            keyLabTable,
-                            keyLabNewNameField,
-                            keyLabNewAlgoCombo,
-                            keyLabNewSizeCombo,
-                            keyLabImportBytesField,
-                            keyLabImportBtn,
-                            keyLabDetailIdField,
-                            keyLabDetailNameField,
-                            keyLabDetailAlgoLabel,
-                            keyLabDetailBitsLabel,
-                            keyLabUsageEncryptCheck,
-                            keyLabUsageDecryptCheck,
-                            keyLabUsageMacCheck,
-                            keyLabUsageWrapCheck,
-                            keyLabUsageUnwrapCheck,
-                            keyLabDetailExportabilityLabel,
-                            keyLabDetailKcvLabel,
-                            keyLabDetailFingerprintLabel,
-                            keyLabDetailOriginLabel,
-                            keyLabDetailCreatedLabel,
-                            keyLabDetailModifiedLabel,
-                            keyLabDetailStatusLabel,
-                            keyLabDetailValueField,
-                            keyLabRevealBtn,
-                            keyLabArchiveBtn,
-                            keyLabUseCipherBtn,
-                            keyLabUseMacBtn,
-                            summarySavedStatusLabel,
-                            rsaSendPrivateShelfBtn,
-                            ecdsaSendPrivateShelfBtn,
-                            dsaSendPrivateShelfBtn,
+                            keyLabPane, keyLabSearchField, keyLabStatusFilterCombo, keyLabTable,
+                            keyLabNewNameField, keyLabNewAlgoCombo, keyLabNewSizeCombo, keyLabImportBytesField,
+                            keyLabImportBtn, keyLabDetailIdField, keyLabDetailNameField, keyLabDetailAlgoLabel,
+                            keyLabDetailBitsLabel, keyLabUsageEncryptCheck, keyLabUsageDecryptCheck,
+                            keyLabUsageMacCheck, keyLabUsageWrapCheck, keyLabUsageUnwrapCheck,
+                            keyLabDetailExportabilityLabel, keyLabDetailKcvLabel, keyLabDetailFingerprintLabel,
+                            keyLabDetailOriginLabel, keyLabDetailCreatedLabel, keyLabDetailModifiedLabel,
+                            keyLabDetailStatusLabel, keyLabDetailValueField, keyLabRevealBtn, keyLabArchiveBtn,
+                            keyLabUseCipherBtn, keyLabUseMacBtn, summarySavedStatusLabel,
+                            rsaSendPrivateShelfBtn, ecdsaSendPrivateShelfBtn, dsaSendPrivateShelfBtn,
                             eddsaSendPrivateShelfBtn),
                     () -> mainController, workspace, () -> hsmRefreshCallback.run(), this::selectedKcvLength);
         }
@@ -123,48 +64,17 @@ public class KeysController {
         if (keySummaryCoordinator == null) {
             keySummaryCoordinator = new KeySummaryCoordinator(
                     () -> new KeySummaryCoordinator.View(
-                            keyTypeCombo,
-                            saveGeneratedKeyButton,
-                            rsaKeySizeCombo,
-                            ecdsaCurveCombo,
-                            dsaKeySizeCombo,
-                            ecdsaPublicKeyArea,
-                            ecdsaPrivateKeyArea,
-                            eddsaPublicKeyArea,
-                            eddsaPrivateKeyArea,
-                            rsaKeyMaterialTabs,
-                            ecdsaKeyMaterialTabs,
-                            dsaKeyMaterialTabs,
-                            eddsaKeyMaterialTabs,
-                            generatedKeyField,
-                            generatedKeySummaryCard,
-                            summaryAlgoLabel,
-                            summaryLengthLabel,
-                            summaryKcvLabel,
-                            summaryFingerprintLabel,
-                            summaryParityLabel,
-                            summaryOriginLabel,
-                            summarySavedStatusLabel,
-                            validationPane,
-                            useFourByteKcvCheck,
-                            rsaSummaryCard,
-                            ecdsaSummaryCard,
-                            dsaSummaryCard,
-                            eddsaSummaryCard,
-                            keyInputField,
-                            validationResultArea,
-                            componentResultsArea,
-                            component1Field,
-                            component2Field,
-                            component3Field,
-                            rsaPublicKeyArea,
-                            rsaPrivateKeyArea,
-                            dsaPublicKeyArea,
-                            dsaPrivateKeyArea,
-                            ecdsaFpPublicKeyArea,
-                            ecdsaFpPrivateKeyArea,
-                            ed25519PublicKeyArea,
-                            ed25519PrivateKeyArea),
+                            keyTypeCombo, saveGeneratedKeyButton, rsaKeySizeCombo, ecdsaCurveCombo,
+                            dsaKeySizeCombo, ecdsaPublicKeyArea, ecdsaPrivateKeyArea, eddsaPublicKeyArea,
+                            eddsaPrivateKeyArea, rsaKeyMaterialTabs, ecdsaKeyMaterialTabs, dsaKeyMaterialTabs,
+                            eddsaKeyMaterialTabs, generatedKeyField, generatedKeySummaryCard, summaryAlgoLabel,
+                            summaryLengthLabel, summaryKcvLabel, summaryFingerprintLabel, summaryParityLabel,
+                            summaryOriginLabel, summarySavedStatusLabel, validationPane, useFourByteKcvCheck,
+                            rsaSummaryCard, ecdsaSummaryCard, dsaSummaryCard, eddsaSummaryCard, keyInputField,
+                            validationResultArea, componentResultsArea, component1Field, component2Field,
+                            component3Field, rsaPublicKeyArea, rsaPrivateKeyArea, dsaPublicKeyArea,
+                            dsaPrivateKeyArea, ecdsaFpPublicKeyArea, ecdsaFpPrivateKeyArea,
+                            ed25519PublicKeyArea, ed25519PrivateKeyArea),
                     () -> mainController, workspace, this::handleValidateKey);
         }
         return keySummaryCoordinator;
@@ -176,20 +86,10 @@ public class KeysController {
         if (symmetricKeyCoordinator == null) {
             symmetricKeyCoordinator = new SymmetricKeyCoordinator(
                     () -> new SymmetricKeyCoordinator.View(
-                            keyTypeCombo,
-                            forceOddParityCheck,
-                            generatedKeyField,
-                            saveGeneratedKeyButton,
-                            keyInputField,
-                            validationResultArea,
-                            numComponentsCombo,
-                            keyToSplitField,
-                            componentResultsArea,
-                            component1Field,
-                            component2Field,
-                            component3Field,
-                            component4Field,
-                            component5Field),
+                            keyTypeCombo, forceOddParityCheck, generatedKeyField, saveGeneratedKeyButton,
+                            keyInputField, validationResultArea, numComponentsCombo, keyToSplitField,
+                            componentResultsArea, component1Field, component2Field, component3Field,
+                            component4Field, component5Field),
                     () -> mainController, workspace, this::updateGeneratedKeySummaryCard, this::selectedKcvLength);
         }
         return symmetricKeyCoordinator;
@@ -201,54 +101,44 @@ public class KeysController {
         if (keyStoreCoordinator == null) {
             keyStoreCoordinator = new KeyStoreCoordinator(
                     () -> new KeyStoreCoordinator.View(
-                            keysRoot,
-                            pkcs11ProfilesController,
-                            icsfTokenPaneController,
-                            icsfBatchPaneController,
-                            icsfKeyWrapPaneController,
-                            keyMaterialInputArea,
-                            keyMaterialReportArea,
-                            keyComparePublicArea,
-                            keyComparePrivateArea,
-                            keyCompareResultArea,
-                            keyStoreTypeCombo,
-                            keyStorePasswordField,
-                            keyStoreUnsafeExtractCheck,
-                            keyStorePathField,
-                            keyStoreReportArea,
-                            keyStoreProfileCombo,
-                            keyStoreProfileNameField,
-                            pkcs11NameField,
-                            pkcs11LibraryField,
-                            pkcs11SlotField,
-                            pkcs11PinField,
-                            pkcs11ProfileCombo,
-                            pkcs11ReportArea,
-                            pkcs11SigningKeyCombo,
-                            pkcs11SignatureAlgorithmCombo,
-                            pkcs11DataArea,
-                            pkcs11SignatureArea,
-                            pkcs11CertificateAliasCombo,
-                            pkcs11CertificateArea,
-                            pkcs11JwtAlgorithmCombo,
-                            pkcs11JwtPayloadArea,
-                            pkcs11JwtOutputArea,
-                            pkcs11CmsDataArea,
-                            pkcs11CmsDetachedCheck,
-                            pkcs11CmsOutputArea,
-                            pkcs11WrappingKeyCombo,
-                            pkcs11WrapKeyCombo,
-                            pkcs11WrapTransformationCombo,
-                            pkcs11WrapResultArea,
-                            pkcs11UnwrappingKeyCombo,
-                            pkcs11UnwrapDataArea,
-                            pkcs11UnwrapTransformationCombo,
-                            pkcs11UnwrapAlgorithmField,
-                            pkcs11UnwrapTypeCombo,
-                            pkcs11UnwrapResultArea),
-                    () -> mainController, workspace, () -> hsmRefreshCallback.run());
+                            keysRoot, pkcs11ProfilesController, icsfTokenPaneController,
+                            icsfBatchPaneController, icsfKeyWrapPaneController, keyMaterialInputArea,
+                            keyMaterialReportArea, keyComparePublicArea, keyComparePrivateArea,
+                            keyCompareResultArea, keyStoreTypeCombo, keyStorePasswordField,
+                            keyStoreUnsafeExtractCheck, keyStorePathField, keyStoreReportArea,
+                            keyStoreProfileCombo, keyStoreProfileNameField, pkcs11NameField,
+                            pkcs11LibraryField, pkcs11SlotField, pkcs11PinField, pkcs11ProfileCombo,
+                            pkcs11ReportArea, pkcs11SigningKeyCombo, pkcs11SignatureAlgorithmCombo,
+                            pkcs11DataArea, pkcs11SignatureArea, pkcs11CertificateAliasCombo,
+                            pkcs11CertificateArea, pkcs11JwtAlgorithmCombo, pkcs11JwtPayloadArea,
+                            pkcs11JwtOutputArea, pkcs11CmsDataArea, pkcs11CmsDetachedCheck,
+                            pkcs11CmsOutputArea, pkcs11WrappingKeyCombo, pkcs11WrapKeyCombo,
+                            pkcs11WrapTransformationCombo, pkcs11WrapResultArea, pkcs11UnwrappingKeyCombo,
+                            pkcs11UnwrapDataArea, pkcs11UnwrapTransformationCombo, pkcs11UnwrapAlgorithmField,
+                            pkcs11UnwrapTypeCombo, pkcs11UnwrapResultArea),
+                    () -> mainController, () -> hsmRefreshCallback.run());
         }
         return keyStoreCoordinator;
+    }
+
+    private CertificateCoordinator certificateCoordinator;
+
+    private CertificateCoordinator certificateCoordinator() {
+        if (certificateCoordinator == null) {
+            certificateCoordinator = new CertificateCoordinator(
+                    () -> new CertificateCoordinator.View(
+                            certCNField, certOrgField, certOUField, certLocalityField, certStateField,
+                            certCountryField, certEmailField, certValidityField, certKeyTypeCombo,
+                            certSignAlgoCombo, certOutputArea, certSanDnsField, certSanIpField,
+                            certRootCaCheck, certInputArea, certParseResultArea, certCompareLeftArea,
+                            certCompareRightArea, certCompareResultArea, certIssueCsrArea, certIssueCaCertArea,
+                            certIssueCaKeyArea, certIssueValidityField, certIssueSignatureField,
+                            certIssueResultArea, certIssueProfileCombo, certIssuePathLengthField,
+                            crlIssuerCertArea, crlIssuerKeyArea, crlExistingCrlArea, crlRevokeSerialField,
+                            crlRevokeReasonCombo, crlResultArea, valCertInput, valIssuerInput, valResultArea),
+                    () -> mainController, this::requirePkcs11SigningAlias);
+        }
+        return certificateCoordinator;
     }
 
     private Tr31Coordinator tr31Coordinator;
@@ -257,20 +147,10 @@ public class KeysController {
         if (tr31Coordinator == null) {
             tr31Coordinator = new Tr31Coordinator(
                     () -> new Tr31Coordinator.View(
-                            tr31KbpkExportField,
-                            tr31KeyToWrapField,
-                            tr31UsageCombo,
-                            tr31AlgorithmCombo,
-                            tr31ModeCombo,
-                            tr31VersionCombo,
-                            tr31ExportabilityCombo,
-                            tr31OptionalBlocksField,
-                            tr31OptionalBlockCombo,
-                            tr31ExportResultArea,
-                            tr31KbpkImportField,
-                            tr31KeyBlockField,
-                            tr31KeyLengthField,
-                            tr31ImportResultArea),
+                            tr31KbpkExportField, tr31KeyToWrapField, tr31UsageCombo, tr31AlgorithmCombo,
+                            tr31ModeCombo, tr31VersionCombo, tr31ExportabilityCombo, tr31OptionalBlocksField,
+                            tr31OptionalBlockCombo, tr31ExportResultArea, tr31KbpkImportField,
+                            tr31KeyBlockField, tr31KeyLengthField, tr31ImportResultArea),
                     () -> mainController, this::updateStatus, this::t);
         }
         return tr31Coordinator;
@@ -282,18 +162,10 @@ public class KeysController {
         if (rsaKexCoordinator == null) {
             rsaKexCoordinator = new RsaKeyExchangeCoordinator(
                     () -> new RsaKeyExchangeCoordinator.View(
-                            rsaKexRecipientPemArea,
-                            rsaKexKeyToWrapField,
-                            rsaKexExportProfileCombo,
-                            rsaKexIncludeEnvelopeCheck,
-                            rsaKexEnvelopeFieldsBox,
-                            rsaKexKidField,
-                            rsaKexKeyVersionField,
-                            rsaKexExportResultArea,
-                            rsaKexPrivateKeyArea,
-                            rsaKexWrappedDataArea,
-                            rsaKexImportProfileCombo,
-                            rsaKexImportResultArea),
+                            rsaKexRecipientPemArea, rsaKexKeyToWrapField, rsaKexExportProfileCombo,
+                            rsaKexIncludeEnvelopeCheck, rsaKexEnvelopeFieldsBox, rsaKexKidField,
+                            rsaKexKeyVersionField, rsaKexExportResultArea, rsaKexPrivateKeyArea,
+                            rsaKexWrappedDataArea, rsaKexImportProfileCombo, rsaKexImportResultArea),
                     () -> mainController, this::updateStatus, this::t);
         }
         return rsaKexCoordinator;
@@ -305,18 +177,10 @@ public class KeysController {
         if (tr34Coordinator == null) {
             tr34Coordinator = new Tr34Coordinator(
                     () -> new Tr34Coordinator.View(
-                            tr34SenderPrivateKeyArea,
-                            tr34SenderCertArea,
-                            tr34ReceiverCertArea,
-                            tr34KeyToDistributeField,
-                            tr34KeyIdField,
-                            tr34BindingNonceField,
-                            tr34IncludeEnvelopeCheck,
-                            tr34DistributeResultArea,
-                            tr34ReceiverPrivateKeyArea,
-                            tr34ExpectedSenderCertArea,
-                            tr34DistributedDataArea,
-                            tr34ChallengeNonceField,
+                            tr34SenderPrivateKeyArea, tr34SenderCertArea, tr34ReceiverCertArea,
+                            tr34KeyToDistributeField, tr34KeyIdField, tr34BindingNonceField,
+                            tr34IncludeEnvelopeCheck, tr34DistributeResultArea, tr34ReceiverPrivateKeyArea,
+                            tr34ExpectedSenderCertArea, tr34DistributedDataArea, tr34ChallengeNonceField,
                             tr34ReceiveResultArea),
                     () -> mainController, this::updateStatus, this::t);
         }
@@ -329,47 +193,19 @@ public class KeysController {
         if (asymmetricKeyGenerationCoordinator == null) {
             asymmetricKeyGenerationCoordinator = new AsymmetricKeyGenerationCoordinator(
                     () -> new AsymmetricKeyGenerationCoordinator.View(
-                            rsaSummaryCard,
-                            rsaSummaryAlgoLabel,
-                            rsaSummaryFingerprintLabel,
-                            rsaSummaryPubLenLabel,
-                            rsaSummaryPrivLenLabel,
-                            rsaSummaryCreatedLabel,
-                            rsaSummarySavedStatusLabel,
-                            ecdsaSummaryCard,
-                            ecdsaSummaryAlgoLabel,
-                            ecdsaSummaryFingerprintLabel,
-                            ecdsaSummaryPubLenLabel,
-                            ecdsaSummaryPrivLenLabel,
-                            ecdsaSummaryCreatedLabel,
-                            ecdsaSummarySavedStatusLabel,
-                            dsaSummaryCard,
-                            dsaSummaryAlgoLabel,
-                            dsaSummaryFingerprintLabel,
-                            dsaSummaryPubLenLabel,
-                            dsaSummaryPrivLenLabel,
-                            dsaSummaryCreatedLabel,
-                            dsaSummarySavedStatusLabel,
-                            eddsaSummaryCard,
-                            eddsaSummaryAlgoLabel,
-                            eddsaSummaryFingerprintLabel,
-                            eddsaSummaryPubLenLabel,
-                            eddsaSummaryPrivLenLabel,
-                            eddsaSummaryCreatedLabel,
-                            eddsaSummarySavedStatusLabel,
-                            rsaKeySizeCombo,
-                            rsaPublicKeyArea,
-                            rsaPrivateKeyArea,
-                            dsaKeySizeCombo,
-                            dsaPublicKeyArea,
-                            dsaPrivateKeyArea,
-                            ecdsaFpCurveCombo,
-                            ecdsaFpPublicKeyArea,
-                            ecdsaFpPrivateKeyArea,
-                            ed25519PublicKeyArea,
-                            ed25519PrivateKeyArea,
-                            rsaGenerateBtn,
-                            dsaGenerateBtn),
+                            rsaSummaryCard, rsaSummaryAlgoLabel, rsaSummaryFingerprintLabel,
+                            rsaSummaryPubLenLabel, rsaSummaryPrivLenLabel, rsaSummaryCreatedLabel,
+                            rsaSummarySavedStatusLabel, ecdsaSummaryCard, ecdsaSummaryAlgoLabel,
+                            ecdsaSummaryFingerprintLabel, ecdsaSummaryPubLenLabel, ecdsaSummaryPrivLenLabel,
+                            ecdsaSummaryCreatedLabel, ecdsaSummarySavedStatusLabel, dsaSummaryCard,
+                            dsaSummaryAlgoLabel, dsaSummaryFingerprintLabel, dsaSummaryPubLenLabel,
+                            dsaSummaryPrivLenLabel, dsaSummaryCreatedLabel, dsaSummarySavedStatusLabel,
+                            eddsaSummaryCard, eddsaSummaryAlgoLabel, eddsaSummaryFingerprintLabel,
+                            eddsaSummaryPubLenLabel, eddsaSummaryPrivLenLabel, eddsaSummaryCreatedLabel,
+                            eddsaSummarySavedStatusLabel, rsaKeySizeCombo, rsaPublicKeyArea, rsaPrivateKeyArea,
+                            dsaKeySizeCombo, dsaPublicKeyArea, dsaPrivateKeyArea, ecdsaFpCurveCombo,
+                            ecdsaFpPublicKeyArea, ecdsaFpPrivateKeyArea, ed25519PublicKeyArea,
+                            ed25519PrivateKeyArea, rsaGenerateBtn, dsaGenerateBtn),
                     () -> mainController, this::showError, this::updateStatus, this::t, this::acceptAsymmetricGeneration);
         }
         return asymmetricKeyGenerationCoordinator;
@@ -383,29 +219,12 @@ public class KeysController {
         if (kdfKeyWrapCoordinator == null) {
             kdfKeyWrapCoordinator = new KdfKeyWrapCoordinator(
                     () -> new KdfKeyWrapCoordinator.View(
-                            kdfAlgorithmCombo,
-                            kdfInputFormatCombo,
-                            kdfSaltFormatCombo,
-                            kdfInfoFormatCombo,
-                            kdfInputField,
-                            kdfSaltField,
-                            kdfInfoField,
-                            kdfIterationsField,
-                            kdfOutputLengthField,
-                            kdfResultArea,
-                            kdfInputHelpLabel,
-                            kdfValidationLabel,
-                            kdfIterationsLabel,
-                            kdfSaltBox,
-                            kdfInfoBox,
-                            kdfInputBadgeLabel,
-                            kdfSaltBadgeLabel,
-                            kdfInfoBadgeLabel,
-                            keyWrapModeCombo,
-                            keyWrapUnwrapCheck,
-                            keyWrapKekField,
-                            keyWrapDataField,
-                            keyWrapResultArea),
+                            kdfAlgorithmCombo, kdfInputFormatCombo, kdfSaltFormatCombo, kdfInfoFormatCombo,
+                            kdfInputField, kdfSaltField, kdfInfoField, kdfIterationsField,
+                            kdfOutputLengthField, kdfResultArea, kdfInputHelpLabel, kdfValidationLabel,
+                            kdfIterationsLabel, kdfSaltBox, kdfInfoBox, kdfInputBadgeLabel, kdfSaltBadgeLabel,
+                            kdfInfoBadgeLabel, keyWrapModeCombo, keyWrapUnwrapCheck, keyWrapKekField,
+                            keyWrapDataField, keyWrapResultArea),
                     () -> mainController, this::showError, this::updateStatus, this::t);
         }
         return kdfKeyWrapCoordinator;
@@ -438,8 +257,6 @@ public class KeysController {
     @FXML private VBox keysRoot;
     @FXML private TitledPane pkcs11Profiles;
     @FXML private Pkcs11ProfilesController pkcs11ProfilesController;
-    // ICSF / CCA native key tokens: an included, self-contained pane in the manner of
-    // the PKCS#11 one. No ICSF logic lives in this controller.
     @FXML private TitledPane icsfTokenPane;
     @FXML private IcsfTokenController icsfTokenPaneController;
     @FXML private TitledPane icsfBatchPane;
@@ -460,7 +277,6 @@ public class KeysController {
     @FXML private TabPane dsaKeyMaterialTabs;
     @FXML private TabPane eddsaKeyMaterialTabs;
 
-    // Key Lab FXML fields
     @FXML private TitledPane keyLabPane;
     @FXML private TextField keyLabSearchField;
     @FXML private ComboBox<String> keyLabStatusFilterCombo;
@@ -495,19 +311,11 @@ public class KeysController {
     private StatusReporter mainController;
     private Runnable hsmRefreshCallback = () -> { };
 
-    // Symmetric Key Generation components
-    @FXML
-    private ComboBox<String> keyTypeCombo;
-    @FXML
-    private javafx.scene.control.CheckBox forceOddParityCheck;
-    @FXML
-    private TextArea generatedKeyField;
-    @FXML
-    private Button saveGeneratedKeyButton;
+    @FXML private ComboBox<String> keyTypeCombo;
+    @FXML private javafx.scene.control.CheckBox forceOddParityCheck;
+    @FXML private TextArea generatedKeyField;
+    @FXML private Button saveGeneratedKeyButton;
 
-
-
-    // Generated Key Summary components
     @FXML private VBox generatedKeySummaryCard;
     @FXML private Label summaryAlgoLabel;
     @FXML private Label summaryLengthLabel;
@@ -524,9 +332,6 @@ public class KeysController {
     @FXML private Button saveGeneratedSummaryButton;
     @FXML private Button openValidationButton;
 
-
-
-    // Asymmetric Key Generation summary components
     @FXML private VBox rsaSummaryCard;
     @FXML private Label rsaSummaryAlgoLabel;
     @FXML private Label rsaSummaryFingerprintLabel;
@@ -603,193 +408,99 @@ public class KeysController {
     @FXML private Button eddsaUseCertificatesBtn;
     @FXML private Button eddsaClearBtn;
 
+    @FXML private TextField keyInputField;
+    @FXML private TextArea validationResultArea;
 
+    @FXML private TextArea keyMaterialInputArea;
+    @FXML private TextArea keyMaterialReportArea;
+    @FXML private TextArea keyComparePublicArea;
+    @FXML private TextArea keyComparePrivateArea;
+    @FXML private TextArea keyCompareResultArea;
+    @FXML private ComboBox<String> keyStoreTypeCombo;
+    @FXML private PasswordField keyStorePasswordField;
+    @FXML private CheckBox keyStoreUnsafeExtractCheck;
+    @FXML private TextField keyStorePathField;
+    @FXML private TextArea keyStoreReportArea;
+    @FXML private ComboBox<String> keyStoreProfileCombo;
+    @FXML private TextField keyStoreProfileNameField;
+    @FXML private TextField pkcs11NameField;
+    @FXML private TextField pkcs11LibraryField;
+    @FXML private TextField pkcs11SlotField;
+    @FXML private PasswordField pkcs11PinField;
+    @FXML private ComboBox<String> pkcs11ProfileCombo;
+    @FXML private TextArea pkcs11ReportArea;
+    @FXML private ComboBox<String> pkcs11SigningKeyCombo;
+    @FXML private ComboBox<String> pkcs11SignatureAlgorithmCombo;
+    @FXML private TextArea pkcs11DataArea;
+    @FXML private TextArea pkcs11SignatureArea;
+    @FXML private ComboBox<String> pkcs11CertificateAliasCombo;
+    @FXML private TextArea pkcs11CertificateArea;
+    @FXML private ComboBox<String> pkcs11JwtAlgorithmCombo;
+    @FXML private TextArea pkcs11JwtPayloadArea;
+    @FXML private TextArea pkcs11JwtOutputArea;
+    @FXML private TextArea pkcs11CmsDataArea;
+    @FXML private CheckBox pkcs11CmsDetachedCheck;
+    @FXML private TextArea pkcs11CmsOutputArea;
+    @FXML private ComboBox<String> pkcs11WrappingKeyCombo;
+    @FXML private ComboBox<String> pkcs11WrapKeyCombo;
+    @FXML private ComboBox<String> pkcs11WrapTransformationCombo;
+    @FXML private TextArea pkcs11WrapResultArea;
+    @FXML private ComboBox<String> pkcs11UnwrappingKeyCombo;
+    @FXML private TextArea pkcs11UnwrapDataArea;
+    @FXML private ComboBox<String> pkcs11UnwrapTransformationCombo;
+    @FXML private TextField pkcs11UnwrapAlgorithmField;
+    @FXML private ComboBox<String> pkcs11UnwrapTypeCombo;
+    @FXML private TextArea pkcs11UnwrapResultArea;
 
+    @FXML private ComboBox<String> numComponentsCombo;
+    @FXML private TextArea keyToSplitField;
+    @FXML private TextArea componentResultsArea;
+    @FXML private TextField component1Field;
+    @FXML private TextField component2Field;
+    @FXML private TextField component3Field;
+    @FXML private TextField component4Field;
+    @FXML private TextField component5Field;
 
+    @FXML private ComboBox<String> kdfAlgorithmCombo;
+    @FXML private ComboBox<String> kdfInputFormatCombo;
+    @FXML private ComboBox<String> kdfSaltFormatCombo;
+    @FXML private ComboBox<String> kdfInfoFormatCombo;
+    @FXML private TextField kdfInputField;
+    @FXML private TextField kdfSaltField;
+    @FXML private TextField kdfInfoField;
+    @FXML private TextField kdfIterationsField;
+    @FXML private TextField kdfOutputLengthField;
+    @FXML private TextArea kdfResultArea;
+    @FXML private Label kdfInputHelpLabel;
+    @FXML private Label kdfValidationLabel;
+    @FXML private Label kdfIterationsLabel;
+    @FXML private VBox kdfSaltBox;
+    @FXML private VBox kdfInfoBox;
+    @FXML private Label kdfInputBadgeLabel;
+    @FXML private Label kdfSaltBadgeLabel;
+    @FXML private Label kdfInfoBadgeLabel;
 
+    @FXML private ComboBox<String> keyWrapModeCombo;
+    @FXML private CheckBox keyWrapUnwrapCheck;
+    @FXML private TextField keyWrapKekField;
+    @FXML private TextField keyWrapDataField;
+    @FXML private TextArea keyWrapResultArea;
 
-    // Key Validation components
-    @FXML
-    private TextField keyInputField;
-    @FXML
-    private TextArea validationResultArea;
+    @FXML private ComboBox<Integer> rsaKeySizeCombo;
+    @FXML private TextArea rsaPublicKeyArea;
+    @FXML private TextArea rsaPrivateKeyArea;
 
-    // Key material inspection
-    @FXML
-    private TextArea keyMaterialInputArea;
-    @FXML
-    private TextArea keyMaterialReportArea;
-    @FXML
-    private TextArea keyComparePublicArea;
-    @FXML
-    private TextArea keyComparePrivateArea;
-    @FXML
-    private TextArea keyCompareResultArea;
-    @FXML
-    private ComboBox<String> keyStoreTypeCombo;
-    @FXML
-    private PasswordField keyStorePasswordField;
-    @FXML
-    private CheckBox keyStoreUnsafeExtractCheck;
-    @FXML
-    private TextField keyStorePathField;
-    @FXML
-    private TextArea keyStoreReportArea;
-    @FXML
-    private ComboBox<String> keyStoreProfileCombo;
-    @FXML
-    private TextField keyStoreProfileNameField;
-    @FXML
-    private TextField pkcs11NameField;
-    @FXML
-    private TextField pkcs11LibraryField;
-    @FXML
-    private TextField pkcs11SlotField;
-    @FXML
-    private PasswordField pkcs11PinField;
-    @FXML
-    private ComboBox<String> pkcs11ProfileCombo;
-    @FXML
-    private TextArea pkcs11ReportArea;
-    @FXML
-    private ComboBox<String> pkcs11SigningKeyCombo;
-    @FXML
-    private ComboBox<String> pkcs11SignatureAlgorithmCombo;
-    @FXML
-    private TextArea pkcs11DataArea;
-    @FXML
-    private TextArea pkcs11SignatureArea;
-    @FXML
-    private ComboBox<String> pkcs11CertificateAliasCombo;
-    @FXML
-    private TextArea pkcs11CertificateArea;
-    @FXML
-    private ComboBox<String> pkcs11JwtAlgorithmCombo;
-    @FXML
-    private TextArea pkcs11JwtPayloadArea;
-    @FXML
-    private TextArea pkcs11JwtOutputArea;
-    @FXML
-    private TextArea pkcs11CmsDataArea;
-    @FXML
-    private CheckBox pkcs11CmsDetachedCheck;
-    @FXML
-    private TextArea pkcs11CmsOutputArea;
-    @FXML
-    private ComboBox<String> pkcs11WrappingKeyCombo;
-    @FXML
-    private ComboBox<String> pkcs11WrapKeyCombo;
-    @FXML
-    private ComboBox<String> pkcs11WrapTransformationCombo;
-    @FXML
-    private TextArea pkcs11WrapResultArea;
-    @FXML
-    private ComboBox<String> pkcs11UnwrappingKeyCombo;
-    @FXML
-    private TextArea pkcs11UnwrapDataArea;
-    @FXML
-    private ComboBox<String> pkcs11UnwrapTransformationCombo;
-    @FXML
-    private TextField pkcs11UnwrapAlgorithmField;
-    @FXML
-    private ComboBox<String> pkcs11UnwrapTypeCombo;
-    @FXML
-    private TextArea pkcs11UnwrapResultArea;
+    @FXML private ComboBox<String> dsaKeySizeCombo;
+    @FXML private TextArea dsaPublicKeyArea;
+    @FXML private TextArea dsaPrivateKeyArea;
 
-    // Key Sharing components
-    @FXML
-    private ComboBox<String> numComponentsCombo;
-    @FXML
-    private TextArea keyToSplitField;
-    @FXML
-    private TextArea componentResultsArea;
-    @FXML
-    private TextField component1Field;
-    @FXML
-    private TextField component2Field;
-    @FXML
-    private TextField component3Field;
-    @FXML
-    private TextField component4Field;
-    @FXML
-    private TextField component5Field;
-
-    // Key Derivation components
-    @FXML
-    private ComboBox<String> kdfAlgorithmCombo;
-    @FXML
-    private ComboBox<String> kdfInputFormatCombo;
-    @FXML
-    private ComboBox<String> kdfSaltFormatCombo;
-    @FXML
-    private ComboBox<String> kdfInfoFormatCombo;
-    @FXML
-    private TextField kdfInputField;
-    @FXML
-    private TextField kdfSaltField;
-    @FXML
-    private TextField kdfInfoField;
-    @FXML
-    private TextField kdfIterationsField;
-    @FXML
-    private TextField kdfOutputLengthField;
-    @FXML
-    private TextArea kdfResultArea;
-    @FXML
-    private Label kdfInputHelpLabel;
-    @FXML
-    private Label kdfValidationLabel;
-    @FXML
-    private Label kdfIterationsLabel;
-    @FXML
-    private VBox kdfSaltBox;
-    @FXML
-    private VBox kdfInfoBox;
-    @FXML
-    private Label kdfInputBadgeLabel;
-    @FXML
-    private Label kdfSaltBadgeLabel;
-    @FXML
-    private Label kdfInfoBadgeLabel;
-
-    // AES Key Wrap components
-    @FXML
-    private ComboBox<String> keyWrapModeCombo;
-    @FXML
-    private CheckBox keyWrapUnwrapCheck;
-    @FXML
-    private TextField keyWrapKekField;
-    @FXML
-    private TextField keyWrapDataField;
-    @FXML
-    private TextArea keyWrapResultArea;
-
-    // RSA Generation components
-    @FXML
-    private ComboBox<Integer> rsaKeySizeCombo;
-    @FXML
-    private TextArea rsaPublicKeyArea;
-    @FXML
-    private TextArea rsaPrivateKeyArea;
-
-    // DSA Generation components
-    @FXML
-    private ComboBox<String> dsaKeySizeCombo;
-    @FXML
-    private TextArea dsaPublicKeyArea;
-    @FXML
-    private TextArea dsaPrivateKeyArea;
-
-    // ECDSA F(p) components
     private ComboBox<String> ecdsaFpCurveCombo;
     private TextArea ecdsaFpPublicKeyArea;
     private TextArea ecdsaFpPrivateKeyArea;
 
-    // Ed25519 components
     private TextArea ed25519PublicKeyArea;
     private TextArea ed25519PrivateKeyArea;
 
-    // Certificate Generation components
     private TextField certCNField;
     private TextField certOrgField;
     private TextField certOUField;
@@ -805,7 +516,6 @@ public class KeysController {
     private TextField certSanIpField;
     private CheckBox certRootCaCheck;
 
-    // Certificate Parsing components
     private TextArea certInputArea;
     private TextArea certParseResultArea;
     private TextArea certCompareLeftArea;
@@ -820,7 +530,6 @@ public class KeysController {
     private ComboBox<String> certIssueProfileCombo;
     private TextField certIssuePathLengthField;
 
-    // CRL Management components
     private TextArea crlIssuerCertArea;
     private TextArea crlIssuerKeyArea;
     private TextArea crlExistingCrlArea;
@@ -828,14 +537,9 @@ public class KeysController {
     private ComboBox<String> crlRevokeReasonCombo;
     private TextArea crlResultArea;
 
-    // Validate Certificate components
     private TextArea valCertInput;
     private TextArea valIssuerInput;
     private TextArea valResultArea;
-
-    // Store last generated key pair for certificate generation
-
-
 
     public KeyPair getLastGeneratedKeyPair() {
         return workspace.lastGeneratedKeyPair;
@@ -916,16 +620,6 @@ public class KeysController {
         return symmetricKeysContainer != null && symmetricKeysContainer.isVisible();
     }
 
-    /**
-     * Opens the named symmetric pane and returns it, so the caller can scroll it into view.
-     *
-     * <p>PKCS#11 Profiles and the two ICSF / CCA panes are included siblings that follow the
-     * accordion rather than members of it, so nothing collapsed the accordion when one of them
-     * opened. With a pane as tall as Key Generation expanded above them they landed below the
-     * fold and navigating there changed nothing the user could see. Opening one now closes the
-     * accordion and the other includes, which is the exclusivity the accordion panes already
-     * had among themselves.</p>
-     */
     public TitledPane expandSymmetricPane(String paneName) {
         if (paneName == null || paneName.isBlank()) return null;
         if (paneName.contains("PKCS#11 Profiles")) {
@@ -951,7 +645,6 @@ public class KeysController {
         return expandPane(asymmetricKeysContainer, paneName);
     }
 
-    /** The symmetric panes keys.fxml includes rather than owns, in layout order. */
     private List<TitledPane> includedSymmetricPanes() {
         List<TitledPane> panes = new ArrayList<>();
         if (pkcs11Profiles != null) panes.add(pkcs11Profiles);
@@ -1043,17 +736,10 @@ public class KeysController {
         if (mainController != null) mainController.showError(cause, contextTitle, fieldKey);
     }
 
-    private void showInfo(String title, String message) {
-        if (mainController != null) mainController.showInfo(title, message);
-    }
-
     private void updateStatus(String message) {
         if (mainController != null) mainController.updateStatus(message);
     }
 
-    /**
-     * Initialize the controller - Symmetric keys
-     */
     public void initialize(StatusReporter mainController,
             ComboBox<String> keyTypeCombo,
             javafx.scene.control.CheckBox forceOddParityCheck,
@@ -1121,7 +807,6 @@ public class KeysController {
         keyStoreCoordinator().initializePkcs11Inspector();
     }
 
-    /** Initializes direct token signing controls. Data and signatures are hexadecimal. */
     public void initializePkcs11Signing(ComboBox<String> keyCombo, ComboBox<String> algorithmCombo,
             TextArea dataArea, TextArea signatureArea) {
         this.pkcs11SigningKeyCombo = keyCombo;
@@ -1168,7 +853,6 @@ public class KeysController {
         keyStoreCoordinator().initializePkcs11Wrap();
     }
 
-    /** Opens a real JDK SunPKCS11 session. The PIN is used once and never persisted. */
     public void connectPkcs11() { keyStoreCoordinator().connectPkcs11(); }
 
     public void disconnectPkcs11() { keyStoreCoordinator().disconnectPkcs11(); }
@@ -1179,35 +863,19 @@ public class KeysController {
 
     public void handleDeletePkcs11Profile() { keyStoreCoordinator().handleDeletePkcs11Profile(); }
 
-
-
-
-
-
-
-
-
     public void refreshPkcs11SigningKeys() { keyStoreCoordinator().refreshPkcs11SigningKeys(); }
 
     public void refreshPkcs11CertificateAliases() { keyStoreCoordinator().refreshPkcs11CertificateAliases(); }
 
-    /** Wrapping/unwrapping key aliases can be any object on the token (private, public or
-     *  secret), unlike the signing combo which only lists private keys with a certificate. */
     public void refreshPkcs11WrapKeyAliases() { keyStoreCoordinator().refreshPkcs11WrapKeyAliases(); }
-
-
 
     public void wrapWithPkcs11() { keyStoreCoordinator().wrapWithPkcs11(); }
 
     public void unwrapWithPkcs11() { keyStoreCoordinator().unwrapWithPkcs11(); }
 
-
-
     public void showPkcs11CertificateChain() { keyStoreCoordinator().showPkcs11CertificateChain(); }
 
     public void handleUpdatePkcs11CertificateChain() { keyStoreCoordinator().handleUpdatePkcs11CertificateChain(); }
-
-
 
     public void generatePkcs11Jwt() { keyStoreCoordinator().generatePkcs11Jwt(); }
 
@@ -1219,11 +887,6 @@ public class KeysController {
 
     private String requirePkcs11SigningAlias() { return keyStoreCoordinator().requirePkcs11SigningAlias(); }
 
-
-
-
-
-    /** Inspects PEM keys and certificates without modifying them. */
     public void handleInspectKeyMaterial() { keyStoreCoordinator().handleInspectKeyMaterial(); }
 
     public void handleCompareKeyPair() { keyStoreCoordinator().handleCompareKeyPair(); }
@@ -1236,15 +899,6 @@ public class KeysController {
 
     public void loadKeyStoreProfile() { keyStoreCoordinator().loadKeyStoreProfile(); }
 
-
-
-
-
-    private java.security.PrivateKey parsePrivateMaterial(String pem) throws Exception { return KeysMaterialSupport.parsePrivateMaterial(pem); }
-
-    /**
-     * Initialize RSA components
-     */
     public void initializeRSA(ComboBox<Integer> keySizeCombo, TextArea publicArea, TextArea privateArea) {
         this.rsaKeySizeCombo = keySizeCombo;
         this.rsaPublicKeyArea = publicArea;
@@ -1252,9 +906,6 @@ public class KeysController {
         asymmetricKeyGenerationCoordinator().initializeRSA();
     }
 
-    /**
-     * Initialize DSA components
-     */
     public void initializeDSA(ComboBox<String> keySizeCombo, TextArea publicArea, TextArea privateArea) {
         this.dsaKeySizeCombo = keySizeCombo;
         this.dsaPublicKeyArea = publicArea;
@@ -1262,9 +913,6 @@ public class KeysController {
         asymmetricKeyGenerationCoordinator().initializeDSA();
     }
 
-    /**
-     * Initialize ECDSA F(p) components
-     */
     public void initializeECDSAFp(ComboBox<String> curveCombo, TextArea publicArea, TextArea privateArea) {
         this.ecdsaFpCurveCombo = curveCombo;
         this.ecdsaFpPublicKeyArea = publicArea;
@@ -1272,28 +920,17 @@ public class KeysController {
         asymmetricKeyGenerationCoordinator().initializeECDSAFp();
     }
 
-    /**
-     * Initialize Ed25519 components
-     */
     public void initializeEd25519(TextArea publicArea, TextArea privateArea) {
         this.ed25519PublicKeyArea = publicArea;
         this.ed25519PrivateKeyArea = privateArea;
         asymmetricKeyGenerationCoordinator().initializeEd25519();
     }
 
-    /**
-     * Initialize ECDSA F(2^m) components
-     */
-
-    /**
-     * Initialize Certificate Generator components
-     */
     public void initializeCertificateGen(
             TextField cnField, TextField orgField, TextField ouField,
             TextField localityField, TextField stateField, TextField countryField,
             TextField emailField, TextField validityField, ComboBox<String> keyTypeCombo,
             ComboBox<String> signAlgoCombo, TextArea outputArea, TextField sanDnsField, TextField sanIpField, CheckBox rootCaCheck) {
-
         this.certCNField = cnField;
         this.certOrgField = orgField;
         this.certOUField = ouField;
@@ -1308,17 +945,9 @@ public class KeysController {
         this.certSanDnsField = sanDnsField;
         this.certSanIpField = sanIpField;
         this.certRootCaCheck = rootCaCheck;
-
-        certKeyTypeCombo.getItems().addAll("RSA-2048", "RSA-4096", "ECDSA-P256", "ECDSA-P384", "Local PEM (Parse Area)", "PKCS#11 Active Alias");
-        certKeyTypeCombo.setValue("RSA-2048");
-
-        certSignAlgoCombo.getItems().addAll("SHA256withRSA", "SHA384withRSA", "SHA512withRSA");
-        certSignAlgoCombo.setValue("SHA256withRSA");
-
-        certValidityField.setText("365");
+        certificateCoordinator().initializeCertificateGen();
     }
 
-    /** Compatibility entry point for the classic UI, which has no SAN controls. */
     public void initializeCertificateGen(
             TextField cnField, TextField orgField, TextField ouField,
             TextField localityField, TextField stateField, TextField countryField,
@@ -1328,18 +957,17 @@ public class KeysController {
                 validityField, keyTypeCombo, signAlgoCombo, outputArea, null, null, null);
     }
 
-    /**
-     * Initialize Certificate Parsing components
-     */
     public void initializeCertificateParse(TextArea inputArea, TextArea resultArea) {
         this.certInputArea = inputArea;
         this.certParseResultArea = resultArea;
+        certificateCoordinator().initializeCertificateParse();
     }
 
     public void initializeCertificateComparator(TextArea leftArea, TextArea rightArea, TextArea resultArea) {
         this.certCompareLeftArea = leftArea;
         this.certCompareRightArea = rightArea;
         this.certCompareResultArea = resultArea;
+        certificateCoordinator().initializeCertificateComparator();
     }
 
     public void initializeCertificateIssuer(TextArea csrArea, TextArea caCertArea, TextArea caKeyArea,
@@ -1353,12 +981,7 @@ public class KeysController {
         this.certIssueResultArea = resultArea;
         this.certIssueProfileCombo = profileCombo;
         this.certIssuePathLengthField = pathLengthField;
-
-        if (certIssueProfileCombo != null) {
-            certIssueProfileCombo.getItems().setAll(Arrays.stream(CertificateAuthorityOperations.IssuanceProfile.values())
-                .map(Enum::name).toList());
-            certIssueProfileCombo.setValue(CertificateAuthorityOperations.IssuanceProfile.TLS_SERVER.name());
-        }
+        certificateCoordinator().initializeCertificateIssuer();
     }
 
     public void initializeCrlManagement(TextArea issuerCertArea, TextArea issuerKeyArea, TextArea existingCrlArea,
@@ -1369,182 +992,34 @@ public class KeysController {
         this.crlRevokeSerialField = serialField;
         this.crlRevokeReasonCombo = reasonCombo;
         this.crlResultArea = resultArea;
-
-        if (crlRevokeReasonCombo != null) {
-            crlRevokeReasonCombo.getItems().setAll(
-                "UNSPECIFIED", "KEY_COMPROMISE", "CA_COMPROMISE", "AFFILIATION_CHANGED",
-                "SUPERSEDED", "CESSATION_OF_OPERATION", "CERTIFICATE_HOLD", "PRIVILEGE_WITHDRAWN"
-            );
-            crlRevokeReasonCombo.setValue("UNSPECIFIED");
-        }
+        certificateCoordinator().initializeCrlManagement();
     }
 
     public void initializeCertificateChainValidation(TextArea chainArea, TextArea trustAnchorArea, TextArea resultArea) { certificateChainCoordinator().initialize(new CertificateChainCoordinator.View(chainArea, trustAnchorArea, resultArea)); }
 
-    public void handleIssueCertificateFromCsr() {
-        try {
-            String csrPem = certIssueCsrArea.getText().trim();
-            String compact = csrPem.replaceAll("-----[^-]+-----|\\s", "");
-            var csr = new org.bouncycastle.pkcs.PKCS10CertificationRequest(java.util.Base64.getDecoder().decode(compact));
-            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
-            var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
-                    certIssueCaCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-            var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(certIssueCaKeyArea.getText().trim());
-            int validityDays = Integer.parseInt(certIssueValidityField.getText().trim());
-            String overrideAlgorithm = certIssueSignatureField.getText().trim();
-            if ("Automatic".equalsIgnoreCase(overrideAlgorithm)) overrideAlgorithm = null;
-            if (overrideAlgorithm == null || overrideAlgorithm.isBlank()) {
-                overrideAlgorithm = CertificateAuthorityOperations.suggestSignatureAlgorithm(issuerKey);
-            }
+    public void handleIssueCertificateFromCsr() { certificateCoordinator().handleIssueCertificateFromCsr(); }
 
-            CertificateAuthorityOperations.IssuanceProfile profile = CertificateAuthorityOperations.IssuanceProfile.TLS_SERVER;
-            if (certIssueProfileCombo != null && certIssueProfileCombo.getValue() != null) {
-                profile = CertificateAuthorityOperations.IssuanceProfile.valueOf(certIssueProfileCombo.getValue());
-            }
+    public void handleGenerateCrl() { certificateCoordinator().handleGenerateCrl(); }
 
-            int pathLength = -1;
-            if (profile == CertificateAuthorityOperations.IssuanceProfile.INTERMEDIATE_CA) {
-                try {
-                    pathLength = Integer.parseInt(certIssuePathLengthField.getText().trim());
-                } catch (NumberFormatException ignored) {}
-            }
+    public void handleRevokeCrl() { certificateCoordinator().handleRevokeCrl(); }
 
-            var issued = CertificateAuthorityOperations.issueFromCsr(csr, issuerCert, issuerKey, validityDays, overrideAlgorithm, profile, pathLength);
-            String outputText = "=== ISSUED CERTIFICATE ===\n\n"
-                    + CertificateGenerator.getCertificateInfo(issued)
-                    + "\n\n" + CertificateGenerator.exportCertificatePEM(issued);
-            certIssueResultArea.setText(outputText);
-            updateStatus("Certificate issued from validated CSR");
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Issue CA Certificate")
-                    .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Target", issued.getSubjectX500Principal().getName(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
-                    ))
-                    .build());
-            }
-        } catch (Exception e) {
-            showError("Issue Certificate", "Cannot issue certificate: " + e.getMessage());
-        }
-    }
+    public void handleCompareCertificates() { certificateCoordinator().handleCompareCertificates(); }
 
-    public void handleGenerateCrl() {
-        try {
-            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
-            var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
-                    crlIssuerCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-            var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(crlIssuerKeyArea.getText().trim());
-
-            var crl = RevocationOperations.generateEmptyCrl(issuerCert, issuerKey);
-            String outputText = RevocationOperations.exportCrlToPem(crl);
-            crlResultArea.setText(outputText);
-            updateStatus("Empty CRL generated successfully");
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("Generate CRL")
-                        .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .detail(com.cryptocarver.model.OperationDetail.publicDetail(
-                                "Issuer", issuerCert.getSubjectX500Principal().getName()))
-                        .status("Empty CRL generated successfully")
-                        .build());
-            }
-        } catch (Exception e) {
-            showError("Generate CRL", "Failed to generate CRL: " + e.getMessage());
-        }
-    }
-
-    public void handleRevokeCrl() {
-        try {
-            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
-            var issuerCert = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
-                    crlIssuerCertArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-            var issuerKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(crlIssuerKeyArea.getText().trim());
-            String existingCrlStr = crlExistingCrlArea.getText().trim();
-            java.security.cert.X509CRL existingCrl = null;
-            if (!existingCrlStr.isEmpty()) {
-                existingCrl = RevocationOperations.parseCrlPem(existingCrlStr);
-            }
-
-            String serialStr = crlRevokeSerialField.getText().trim();
-            if (serialStr.isEmpty()) throw new IllegalArgumentException("Serial number required for revocation");
-            java.math.BigInteger serial = new java.math.BigInteger(serialStr, 16);
-
-            String reasonStr = crlRevokeReasonCombo.getValue();
-            int reason = org.bouncycastle.asn1.x509.CRLReason.unspecified;
-            if (reasonStr != null) {
-                switch (reasonStr) {
-                    case "KEY_COMPROMISE": reason = org.bouncycastle.asn1.x509.CRLReason.keyCompromise; break;
-                    case "CA_COMPROMISE": reason = org.bouncycastle.asn1.x509.CRLReason.cACompromise; break;
-                    case "AFFILIATION_CHANGED": reason = org.bouncycastle.asn1.x509.CRLReason.affiliationChanged; break;
-                    case "SUPERSEDED": reason = org.bouncycastle.asn1.x509.CRLReason.superseded; break;
-                    case "CESSATION_OF_OPERATION": reason = org.bouncycastle.asn1.x509.CRLReason.cessationOfOperation; break;
-                    case "CERTIFICATE_HOLD": reason = org.bouncycastle.asn1.x509.CRLReason.certificateHold; break;
-                    case "PRIVILEGE_WITHDRAWN": reason = org.bouncycastle.asn1.x509.CRLReason.privilegeWithdrawn; break;
-                }
-            }
-
-            var crl = RevocationOperations.appendRevocation(existingCrl, issuerCert, issuerKey, serial, reason, new java.util.Date());
-            String outputText = RevocationOperations.exportCrlToPem(crl);
-            crlResultArea.setText(outputText);
-            updateStatus("CRL updated successfully");
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("Update CRL")
-                        .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .detail(com.cryptocarver.model.OperationDetail.publicDetail("Revoked Serial", serial.toString(16)))
-                        .status("CRL updated successfully")
-                        .build());
-            }
-        } catch (Exception e) {
-            showError("Update CRL", "Failed to update CRL: " + e.getMessage());
-        }
-    }
-
-    public void handleCompareCertificates() {
-        try {
-            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
-            var left = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
-                    certCompareLeftArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-            var right = (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(
-                    certCompareRightArea.getText().trim().getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-            String outputText = CertificateComparator.compare(left, right);
-            certCompareResultArea.setText(outputText);
-            updateStatus("Certificates compared");
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("Compare Certificates")
-                        .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .status("Certificates compared")
-                        .build());
-            }
-        } catch (Exception e) {
-            showError("Compare Certificates", "Cannot compare certificates: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Initialize Validate Certificate components
-     */
     public void initializeValidateCertificate(TextArea valCertInput, TextArea valIssuerInput, TextArea valResultArea) {
         this.valCertInput = valCertInput;
         this.valIssuerInput = valIssuerInput;
         this.valResultArea = valResultArea;
+        certificateCoordinator().initializeValidateCertificate();
     }
 
-    /**
-     * Initialize Validate Chain components
-     */
     public void initializeValidateChain() {
         // No components to initialize for now
     }
 
-    /**
-     * Generate a random key
-     */
     public void handleGenerateKey() { symmetricKeyCoordinator().handleGenerateKey(); }
 
     @FXML
     public void handleSaveGeneratedKeyToLab() { keyLabCoordinator().handleSaveGeneratedKeyToLab(); }
-
-    private void hideGeneratedKeySummary() { keySummaryCoordinator().hideGeneratedKeySummary(); }
 
     private void updateGeneratedKeySummaryCard(com.cryptocarver.model.GeneratedKeySummary summary) { keySummaryCoordinator().updateGeneratedKeySummaryCard(summary); }
 
@@ -1565,421 +1040,49 @@ public class KeysController {
 
     private int selectedKcvLength() { return keySummaryCoordinator().selectedKcvLength(); }
 
-
-
-    /**
-     * Validate a key and calculate all KCVs
-     */
     public void handleValidateKey() { symmetricKeyCoordinator().handleValidateKey(); }
 
-    /**
-     * Split a key into components
-     */
     public void handleSplitKey() { symmetricKeyCoordinator().handleSplitKey(); }
 
-    /**
-     * Combine key components back into original key
-     */
     public void handleCombineComponents() { symmetricKeyCoordinator().handleCombineComponents(); }
 
-    // ============================================================================
-    // ADVANCED ASYMMETRIC KEY GENERATION
-    // ============================================================================
     @FXML private Button rsaGenerateBtn;
     @FXML private Button dsaGenerateBtn;
 
-    /**
-     * Generate RSA key pair.
-     * Note: JCA KeyPairGenerator executes internal prime-finding loops that do not check Thread.interrupted().
-     * Cancellation here is UI/Interface Best-Effort cancellation: the UI thread detaches instantly, hides progress,
-     * re-enables controls, and discards all output/history, while the JCA background task completes off the UI thread.
-     */
     public void handleGenerateRSA() { asymmetricKeyGenerationCoordinator().handleGenerateRSA(); }
 
-    /**
-     * Generate DSA key pair
-     */
     public void handleGenerateDSA() { asymmetricKeyGenerationCoordinator().handleGenerateDSA(); }
 
-    /**
-     * Generate ECDSA F(p) key pair
-     */
     public void handleGenerateECDSAFp() { asymmetricKeyGenerationCoordinator().handleGenerateECDSAFp(); }
 
-    /**
-     * Generate Ed25519 key pair
-     */
     public void handleGenerateEd25519() { asymmetricKeyGenerationCoordinator().handleGenerateEd25519(); }
 
-    /**
-     * Alias for handleGenerateEd25519 for Modern UI
-     */
     public void handleGenerateEdDSA() { asymmetricKeyGenerationCoordinator().handleGenerateEdDSA(); }
 
-    /**
-     * Generate ECDSA F(2^m) key pair
-     */
+    public void handleGenerateCertificate() { certificateCoordinator().handleGenerateCertificate(); }
 
-    /**
-     * Generate self-signed X.509 certificate
-     */
-    public void handleGenerateCertificate() {
-        try {
-            // Validate inputs
-            String cn = certCNField.getText().trim();
-            if (cn.isEmpty()) {
-                showError("Input Error", "Common Name (CN) is required");
-                return;
-            }
+    public void handleGenerateCSR() { certificateCoordinator().handleGenerateCSR(); }
 
-            int validity;
-            try {
-                validity = Integer.parseInt(certValidityField.getText().trim());
-                if (validity <= 0)
-                    throw new NumberFormatException();
-            } catch (NumberFormatException e) {
-                showError("Input Error", "Validity must be a positive number of days");
-                return;
-            }
+    public void handleParseCertificate() { certificateCoordinator().handleParseCertificate(); }
 
-            updateStatus("Generating certificate and key pair...");
+    public void handleValidateCertificate() { certificateCoordinator().handleValidateCertificate(); }
 
-            // Generate or use existing key pair
-            KeyPair keyPair;
-            String keyTypeDesc;
-
-            String certKeyType = certKeyTypeCombo.getValue();
-            if (certKeyType.startsWith("RSA")) {
-                int keySize = Integer.parseInt(certKeyType.substring(4));
-                keyPair = AsymmetricKeyOperations.generateRSAKeyPair(keySize);
-                keyTypeDesc = "RSA-" + keySize;
-            } else if (certKeyType.startsWith("ECDSA")) {
-                String curve = certKeyType.equals("ECDSA-P256") ? "secp256r1" : "secp384r1";
-                keyPair = AsymmetricKeyOperations.generateECDSAFpKeyPair(curve);
-                keyTypeDesc = "ECDSA-" + curve;
-            } else {
-                showError("Input Error", "Invalid key type selected");
-                return;
-            }
-
-            // Build certificate configuration
-            CertificateGenerator.CertificateConfig config = new CertificateGenerator.CertificateConfig();
-            config.commonName = cn;
-            config.organization = certOrgField != null ? certOrgField.getText().trim() : "Crypto Org";
-            config.organizationalUnit = certOUField != null ? certOUField.getText().trim() : "IT Security";
-            config.locality = certLocalityField != null ? certLocalityField.getText().trim() : "Madrid";
-            config.state = certStateField != null ? certStateField.getText().trim() : "Madrid";
-            config.country = certCountryField != null ? certCountryField.getText().trim() : "ES";
-            config.validityDays = validity;
-            config.signatureAlgorithm = certSignAlgoCombo.getValue();
-            applySanConfiguration(config);
-
-            // Email is optional - only add if provided
-            String email = certEmailField != null ? certEmailField.getText().trim() : "";
-            config.email = email.isEmpty() ? null : email;
-
-            // Generate certificate
-            boolean rootCa = certRootCaCheck != null && certRootCaCheck.isSelected();
-            X509Certificate certificate = rootCa
-                    ? CertificateGenerator.generateRootCA(keyPair, config, 1)
-                    : CertificateGenerator.generateSelfSignedCertificate(keyPair, config);
-
-            // Build output
-            StringBuilder output = new StringBuilder();
-            output.append(rootCa ? "=== SELF-SIGNED ROOT CA (LABORATORY) ===\n\n" : "=== SELF-SIGNED X.509 CERTIFICATE ===\n\n");
-            output.append(CertificateGenerator.getCertificateInfo(certificate));
-            output.append("\n\n=== CERTIFICATE (PEM) ===\n");
-            output.append(CertificateGenerator.exportCertificatePEM(certificate));
-            output.append("\n=== PRIVATE KEY (PEM) ===\n");
-            output.append(AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-            output.append("\n=== PUBLIC KEY (PEM) ===\n");
-            output.append(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-            certOutputArea.setText(output.toString());
-            certOutputArea.setVisible(true);
-            certOutputArea.setManaged(true);
-
-            updateStatus("Certificate generated successfully with " + keyTypeDesc);
-
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Generate Certificate - " + keyTypeDesc)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "CN=" + cn + ", Validity=" + validity + " days", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", output.toString(), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-
-        } catch (Exception e) {
-            showError("Generation Error", "Error generating certificate: " + e.getMessage());
-            LOG.warn("Certificate generation failed", e);
-        }
-    }
-
-    /** Generates a PKCS#10 request and a fresh laboratory key pair using the certificate form parameters. */
-    public void handleGenerateCSR() {
-        try {
-            String cn = certCNField.getText().trim();
-            if (cn.isEmpty()) throw new IllegalArgumentException("Common Name (CN) is required");
-            String selected = certKeyTypeCombo.getValue();
-            CertificateGenerator.CertificateConfig config = new CertificateGenerator.CertificateConfig();
-            config.commonName = cn;
-            config.organization = certOrgField.getText().trim();
-            config.organizationalUnit = certOUField.getText().trim();
-            config.locality = certLocalityField.getText().trim();
-            config.state = certStateField.getText().trim();
-            config.country = certCountryField.getText().trim();
-            config.email = certEmailField.getText().trim().isEmpty() ? null : certEmailField.getText().trim();
-            config.signatureAlgorithm = certSignAlgoCombo.getValue();
-            applySanConfiguration(config);
-
-            String csrPem;
-            String keyDesc = "";
-
-            if ("Local PEM (Parse Area)".equals(selected)) {
-                String pem = certInputArea != null ? certInputArea.getText().trim() : "";
-                if (pem.isEmpty()) throw new IllegalArgumentException("Please paste a private key in the 'Parse Certificate / Key' area");
-                PrivateKey privateKey = parsePrivateMaterial(pem);
-                PublicKey publicKey = AsymmetricKeyOperations.derivePublicKey(privateKey);
-                KeyPair pair = new KeyPair(publicKey, privateKey);
-                csrPem = CertificateGenerator.generateCSR(pair, config);
-                keyDesc = "Local PEM Key";
-            } else if ("PKCS#11 Active Alias".equals(selected)) {
-                String alias = requirePkcs11SigningAlias();
-                csrPem = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().generateCsr(alias, config);
-                keyDesc = "PKCS#11 Token (Alias: " + alias + ")";
-            } else {
-                KeyPair pair;
-                if (selected.startsWith("RSA")) pair = AsymmetricKeyOperations.generateRSAKeyPair(Integer.parseInt(selected.substring(4)));
-                else if (selected.startsWith("ECDSA")) pair = AsymmetricKeyOperations.generateECDSAFpKeyPair(selected.equals("ECDSA-P256") ? "secp256r1" : "secp384r1");
-                else throw new IllegalArgumentException("Unsupported CSR key type");
-                csrPem = CertificateGenerator.generateCSR(pair, config);
-                keyDesc = "Generated " + selected + "\n\n=== PRIVATE KEY (LABORATORY ONLY) ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(pair.getPrivate());
-            }
-
-            String outputText = "=== PKCS#10 CERTIFICATE SIGNING REQUEST ===\n\n" + csrPem
-                    + "\n" + (keyDesc.startsWith("Generated") ? keyDesc : "Source: " + keyDesc);
-            certOutputArea.setText(outputText);
-            certOutputArea.setManaged(true);
-            certOutputArea.setVisible(true);
-            updateStatus("CSR generated with requested SANs");
-
-            if (mainController != null) {
-                com.cryptocarver.model.OperationDetail.Classification cls = keyDesc.startsWith("Generated") ? com.cryptocarver.model.OperationDetail.Classification.SECRET : com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Generate CSR")
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Common Name", cn, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
-                        new com.cryptocarver.model.OperationDetail("Source", keyDesc.startsWith("Generated") ? "Generated new pair" : keyDesc, cls, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", outputText, cls, false, null)
-                    ))
-                    .build());
-            }
-        } catch (Exception e) {
-            showError("CSR Generation", "Cannot generate CSR: " + e.getMessage());
-        }
-    }
-
-    private void applySanConfiguration(CertificateGenerator.CertificateConfig config) {
-        config.sanDnsNames = commaSeparatedValues(certSanDnsField == null ? null : certSanDnsField.getText());
-        config.sanIpAddresses = commaSeparatedValues(certSanIpField == null ? null : certSanIpField.getText());
-        config.addSubjectAlternativeNames = !config.sanDnsNames.isEmpty() || !config.sanIpAddresses.isEmpty();
-    }
-
-    private List<String> commaSeparatedValues(String value) {
-        if (value == null || value.isBlank()) return new ArrayList<>();
-        return Arrays.stream(value.split(",")).map(String::trim).filter(part -> !part.isEmpty()).toList();
-    }
-
-    /**
-     * Parse and display certificate information
-     */
-    public void handleParseCertificate() {
-        try {
-            if (certInputArea == null || certParseResultArea == null) {
-                updateStatus("Certificate parsing not initialized");
-                return;
-            }
-
-            String pemCert = certInputArea.getText().trim();
-            if (pemCert.isEmpty()) {
-                showError(new UserFacingError("Missing Certificate Input", "Please paste a certificate in PEM format.", "Provide X.509 PEM certificate data in the input area.", "certInputArea"));
-                return;
-            }
-
-            updateStatus("Parsing certificate...");
-
-            // Parse certificate using CertificateGenerator
-            X509Certificate cert = CertificateGenerator.parseCertificate(pemCert);
-
-            // Get certificate info
-            String certInfo = CertificateGenerator.getCertificateInfo(cert);
-
-            StringBuilder output = new StringBuilder();
-            output.append("=== CERTIFICATE INFORMATION ===\n\n");
-            output.append(certInfo);
-
-            certParseResultArea.setText(output.toString());
-            certParseResultArea.setVisible(true);
-            certParseResultArea.setManaged(true);
-
-            updateStatus("Certificate parsed successfully");
-
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Parse Certificate")
-                    .enrichedOutput(output.toString(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Subject", cert.getSubjectX500Principal().getName(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
-                        new com.cryptocarver.model.OperationDetail("Result", "Parsed successfully", com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
-                    ))
-                    .status("Certificate parsed successfully")
-                    .build());
-            }
-
-        } catch (Exception e) {
-            certParseResultArea.setText("Error parsing certificate: " + e.getMessage());
-            certParseResultArea.setVisible(true);
-            certParseResultArea.setManaged(true);
-            updateStatus("Certificate parse failed");
-            showError(e, "Certificate Parse Error", "certInputArea");
-        }
-    }
-
-    /**
-     * Handle Validate Certificate button click
-     */
-    public void handleValidateCertificate() {
-        try {
-            if (valCertInput == null || valResultArea == null) {
-                // Not initialized
-                return;
-            }
-
-            String certPem = valCertInput.getText().trim();
-            if (certPem.isEmpty()) {
-                showError(new UserFacingError("Missing Validation Certificate", "Please paste a certificate to validate.", "Provide X.509 PEM certificate data in the validation input field.", "valCertInput"));
-                return;
-            }
-
-            String issuerPem = valIssuerInput.getText().trim();
-
-            updateStatus("Validating certificate...");
-
-            // Parse certificates
-            List<X509Certificate> chain = null;
-            try {
-                chain = CertificateGenerator.parseCertificateChain(certPem);
-            } catch (Exception e) {
-                valResultArea.setText("Error parsing certificate chain: " + e.getMessage());
-                updateStatus("Validation failed: Parse error");
-                showError(e, "Certificate Chain Parse Error", "valCertInput");
-                return;
-            }
-
-            if (chain == null || chain.isEmpty()) {
-                valResultArea.setText("No certificates found in input.");
-                return;
-            }
-
-            StringBuilder sb = new StringBuilder();
-            boolean isValid = false;
-            String statusReason = "";
-
-            if (issuerPem.isEmpty()) {
-                // Chain validation or single self-signed
-                CertificateGenerator.ChainValidationResult result = CertificateGenerator.validateCertificateChain(chain);
-                isValid = result.isValid;
-                statusReason = result.message;
-
-                sb.append("=== CHAIN VALIDATION RESULT ===\n");
-                sb.append("Status: ").append(result.isValid ? "VALID ✅" : "INVALID ❌").append("\n");
-                sb.append("Message: ").append(result.message).append("\n\n");
-                sb.append("=== DETAILS ===\n");
-                for (String detail : result.details) {
-                    sb.append("• ").append(detail).append("\n");
-                }
-            } else {
-                // Legacy validation against explicit issuer
-                X509Certificate issuer;
-                try {
-                    issuer = CertificateGenerator.parseCertificate(issuerPem);
-                } catch (Exception e) {
-                    valResultArea.setText("Error parsing issuer certificate: " + e.getMessage());
-                    updateStatus("Validation failed: Issuer parse error");
-                    return;
-                }
-
-                CertificateGenerator.CertificateValidationResult result = CertificateGenerator.validateCertificate(chain.get(0), issuer);
-                isValid = result.isValid;
-                statusReason = result.status;
-
-                sb.append("=== SINGLE CERTIFICATE VALIDATION RESULT ===\n");
-                sb.append("Status: ").append(result.isValid ? "VALID ✅" : "INVALID ❌").append("\n");
-                sb.append("Reason: ").append(result.status).append("\n");
-                sb.append("Message: ").append(result.message).append("\n\n");
-                sb.append("=== DETAILS ===\n");
-                for (String detail : result.details) {
-                    sb.append("• ").append(detail).append("\n");
-                }
-            }
-
-            String outputText = sb.toString();
-            valResultArea.setText(outputText);
-            updateStatus(isValid ? "Certificate is valid" : "Certificate is invalid");
-
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Validate Certificate")
-                    .enrichedOutput(outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Status: " + statusReason, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", outputText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC, false, null)
-                    ))
-                    .build());
-            }
-
-        } catch (Exception e) {
-            valResultArea.setText("Error during validation: " + e.getMessage());
-            updateStatus("Validation error");
-            LOG.warn("Certificate validation failed", e);
-        }
-    }
-
-    // ============================================================================
-    // TR-31 KEY BLOCK OPERATIONS
-    // ============================================================================
-
-    // TR-31 UI Components (to be added to FXML)
-    @FXML
-    private TextField tr31KbpkExportField;
-    @FXML
-    private TextField tr31KeyToWrapField;
-    @FXML
-    private ComboBox<String> tr31UsageCombo;
-    @FXML
-    private ComboBox<String> tr31AlgorithmCombo;
-    @FXML
-    private ComboBox<String> tr31ModeCombo;
-    @FXML
-    private ComboBox<String> tr31VersionCombo;
-    @FXML
-    private ComboBox<String> tr31ExportabilityCombo;
-    @FXML
-    private TextField tr31OptionalBlocksField;
+    @FXML private TextField tr31KbpkExportField;
+    @FXML private TextField tr31KeyToWrapField;
+    @FXML private ComboBox<String> tr31UsageCombo;
+    @FXML private ComboBox<String> tr31AlgorithmCombo;
+    @FXML private ComboBox<String> tr31ModeCombo;
+    @FXML private ComboBox<String> tr31VersionCombo;
+    @FXML private ComboBox<String> tr31ExportabilityCombo;
+    @FXML private TextField tr31OptionalBlocksField;
     @javafx.fxml.FXML private ComboBox<String> tr31OptionalBlockCombo;
-    @FXML
-    private TextArea tr31ExportResultArea;
+    @FXML private TextArea tr31ExportResultArea;
 
-    @FXML
-    private TextField tr31KbpkImportField;
-    @FXML
-    private TextArea tr31KeyBlockField;
-    @FXML
-    private TextField tr31KeyLengthField;
-    @FXML
-    private TextArea tr31ImportResultArea;
+    @FXML private TextField tr31KbpkImportField;
+    @FXML private TextArea tr31KeyBlockField;
+    @FXML private TextField tr31KeyLengthField;
+    @FXML private TextArea tr31ImportResultArea;
 
-    /**
-     * Initialize TR-31 UI components
-     */
     public void initializeTR31(TextField tr31KbpkExportField, TextField tr31KeyToWrapField,
             ComboBox<String> tr31VersionCombo, ComboBox<String> tr31UsageCombo,
             ComboBox<String> tr31AlgorithmCombo, ComboBox<String> tr31ModeCombo,
@@ -2008,30 +1111,14 @@ public class KeysController {
         tr31Coordinator().initialize();
     }
 
-    /**
-     * Handle TR-31 Export (Wrap Key)
-     */
     @FXML
     public void handleTR31Export() { tr31Coordinator().handleTR31Export(); }
 
-    /**
-     * Handle TR-31 Import (Unwrap Key)
-     */
     @FXML
     public void handleTR31Import() { tr31Coordinator().handleTR31Import(); }
 
-    /**
-     * Handle Parse TR-31 Header (without unwrapping)
-     */
     @FXML
     public void handleTR31ParseHeader() { tr31Coordinator().handleTR31ParseHeader(); }
-
-    // ============================================================================
-    // RSA KEY EXCHANGE — export/import of a symmetric key under RSA (Raw OAEP,
-    // JWE Compact or CMS EnvelopedData), the RSA sibling of TR-31 above. See
-    // RsaKeyWrapOperations for the underlying wrap/unwrap primitives and
-    // CryptoEnvelope/CryptoEnvelopeCodec for the optional crypto-agility header.
-    // ============================================================================
 
     @FXML private TextArea rsaKexRecipientPemArea;
     @FXML private TextField rsaKexKeyToWrapField;
@@ -2052,15 +1139,9 @@ public class KeysController {
     @FXML
     public void handleRsaKexEnvelopeToggle() { rsaKexCoordinator().handleRsaKexEnvelopeToggle(); }
 
-    /**
-     * Handle RSA Key Exchange Export (Wrap Key)
-     */
     @FXML
     public void handleRsaKexExport() { rsaKexCoordinator().handleRsaKexExport(); }
 
-    /**
-     * Handle RSA Key Exchange Import (Unwrap Key)
-     */
     @FXML
     public void handleRsaKexImport() { rsaKexCoordinator().handleRsaKexImport(); }
 
@@ -2069,17 +1150,6 @@ public class KeysController {
 
     @FXML
     public void handleRsaKexReset() { rsaKexCoordinator().handleRsaKexReset(); }
-
-    // ============================================================================
-    // TR-34 KEY DISTRIBUTION — laboratory RSA remote key distribution, inspired by
-    // ANSI X9 TR-34 (sign then envelope with CMS). Supports both the one-pass
-    // profile and an optional two-pass, binding-nonce profile for replay
-    // protection (fill the Binding Nonce / Challenge Nonce fields to engage it;
-    // leave them blank for plain one-pass, unchanged from before). See
-    // TR34Operations for the "this is not a byte-for-byte TR-34 implementation"
-    // disclosure; the same caveat is shown to the user directly in the pane
-    // (keys.fxml).
-    // ============================================================================
 
     @FXML private TextArea tr34SenderPrivateKeyArea;
     @FXML private TextArea tr34SenderCertArea;
@@ -2096,19 +1166,12 @@ public class KeysController {
     @FXML private TextField tr34ChallengeNonceField;
     @FXML private TextArea tr34ReceiveResultArea;
 
-    /**
-     * Handle TR-34 Distribute (sender side: sign then envelope the key)
-     */
     @FXML
     public void handleTr34Distribute() { tr34Coordinator().handleTr34Distribute(); }
 
-    /**
-     * Handle TR-34 Receive (receiver side: decrypt then verify)
-     */
     @FXML
     public void handleTr34Receive() { tr34Coordinator().handleTr34Receive(); }
 
-    /** Fills the Receive tab's challenge nonce field with a fresh random value (two-pass, step 1). */
     @FXML
     public void handleTr34GenerateChallenge() { tr34Coordinator().handleTr34GenerateChallenge(); }
 
@@ -2118,11 +1181,6 @@ public class KeysController {
     @FXML
     public void handleTr34Reset() { tr34Coordinator().handleTr34Reset(); }
 
-    /** KCV is only defined here for AES-length key material (16/24/32 bytes); anything else is best-effort skipped. */
-
-    /**
-     * Initialize Key Derivation Functions
-     */
     public void initializeKDF(ComboBox<String> algorithmCombo,
             ComboBox<String> inputFormatCombo,
             ComboBox<String> saltFormatCombo,
@@ -2149,11 +1207,6 @@ public class KeysController {
     @FXML
     public void handleGenerateKdfSalt() { kdfKeyWrapCoordinator().handleGenerateKdfSalt(); }
 
-    /**
-     * Update KDF parameters based on selected algorithm
-     */
-
-    /** Initializes the standalone AES Key Wrap laboratory panel. */
     public void initializeKeyWrap(ComboBox<String> modeCombo, CheckBox unwrapCheck, TextField kekField,
             TextField dataField, TextArea resultArea) {
         this.keyWrapModeCombo = modeCombo;
@@ -2164,25 +1217,10 @@ public class KeysController {
         kdfKeyWrapCoordinator().initializeKeyWrap();
     }
 
-    /** Executes wrapping or authenticated unwrapping of hexadecimal key material. */
     public void handleKeyWrap() { kdfKeyWrapCoordinator().handleKeyWrap(); }
 
-    /**
-     * Handle key derivation
-     */
     public void handleDeriveKey() { kdfKeyWrapCoordinator().handleDeriveKey(); }
 
-    /**
-     * Parse data according to format
-     */
-
-    // ============================================================================
-    // CMS / PKCS#7 OPERATIONS
-    // ============================================================================
-
-    /**
-     * Initialize CMS components
-     */
     public void initializeCMS(TextArea inputArea, TextArea outputArea, CheckBox detachedCheck, CheckBox cadesBesCheck,
             CheckBox cadesTCheck, TextField cadesTsaUrlField, javafx.scene.layout.HBox cadesTsaBox,
             TextArea signCertArea, TextArea signKeyArea,
@@ -2198,7 +1236,6 @@ public class KeysController {
             javafx.scene.control.ComboBox<String> encryptKeyAliasCombo, javafx.scene.control.Button signButton,
             CheckBox onlineRevocationCheck) { cmsCoordinator().initialize(new CmsCoordinator.View(inputArea, outputArea, detachedCheck, cadesBesCheck, cadesTCheck, cadesTsaUrlField, cadesTsaBox, signCertArea, signKeyArea, encryptCertArea, decryptKeyArea, signSourcePkcs11Radio, signLocalGrid, signPkcs11Box, signKeyAliasCombo, verifyDataArea, encryptSourcePkcs11Radio, encryptLocalGrid, encryptPkcs11Box, encryptKeyAliasCombo, signButton, onlineRevocationCheck)); }
 
-    /** Shows the timestamp inputs and keeps CAdES-T dependent on CAdES-BES. */
     public void handleCadesTimestampOptionChanged() { cmsCoordinator().handleCadesTimestampOptionChanged(); }
 
     public void handleCMSourceChanged() { cmsCoordinator().handleCMSourceChanged(); }
@@ -2209,81 +1246,28 @@ public class KeysController {
 
     public void handleLoadCMSEncryptKeys() { cmsCoordinator().handleLoadCMSEncryptKeys(); }
 
-    /**
-     * Handle CMS Sign
-     */
     public void handleCMSSign() { cmsCoordinator().handleCMSSign(); }
 
-    /**
-     * Handle CMS Verify
-     */
     public void handleCMSVerify() { cmsCoordinator().handleCMSVerify(); }
 
-    /**
-     * Upgrades the CAdES-T currently shown in the CMS output area by embedding
-     * user-selected CRL and optional certificate-chain evidence. It is
-     * deliberately offline: CryptoCarver never discovers or downloads
-     * revocation URLs on the user's behalf.
-     */
     public void handleUpgradeCadesLt() { cmsCoordinator().handleUpgradeCadesLt(); }
 
     public void handleCMSEncrypt() { cmsCoordinator().handleCMSEncrypt(); }
 
     public void handleCMSDecrypt() { cmsCoordinator().handleCMSDecrypt(); }
 
-    // Helper to parse Private Key from PEM (simplistic version for now)
-
-    // ============================================================================
-    // CERTIFICATE CHAIN VALIDATION
-    // ============================================================================
-
     public void initializeCertificateChain(TextArea inputArea, TextArea crlArea, TextArea resultArea) { certificateChainCoordinator().initialize(new CertificateChainCoordinator.View(inputArea, crlArea, resultArea)); }
 
     public void handleValidateCertificateChain() { certificateChainCoordinator().handleValidateCertificateChain(); }
-
-    // --- Global Helper Methods ---
 
     public void handleClear() { keySummaryCoordinator().handleClear(); }
 
     public void handleClearAsymmetric() { keySummaryCoordinator().handleClearAsymmetric(); }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /**
-     * Stores only canonical PEM material from the generated summary. The
-     * rendered diagnostic TextAreas are deliberately not consulted here.
-     */
-
-
-
-
-
-
-
-
-    /** Entry point used only by ModernMainController's global Add to Shelf. */
-    /** Adds the symmetric key shown in Key Generation to the Clipboard Shelf. */
     public void handleGlobalSymmetricShelfAction() { keySummaryCoordinator().handleGlobalSymmetricShelfAction(); }
 
     public void handleGlobalAsymmetricShelfAction(String operation) { keySummaryCoordinator().handleGlobalAsymmetricShelfAction(operation); }
 
-
-
-
-
-    // RSA Action Handlers
     @FXML public void handleCopyRsaPublicKey() { keySummaryCoordinator().handleCopyRsaPublicKey(); }
     @FXML public void handleCopyRsaPrivateKey() { keySummaryCoordinator().handleCopyRsaPrivateKey(); }
     @FXML public void handleCopyRsaSummary() { keySummaryCoordinator().handleCopyRsaSummary(); }
@@ -2296,7 +1280,6 @@ public class KeysController {
     @FXML public void handleUseRsaInCertificates() { keySummaryCoordinator().handleUseRsaInCertificates(); }
     @FXML public void handleClearRsa() { keySummaryCoordinator().handleClearRsa(); }
 
-    // ECDSA Action Handlers
     @FXML public void handleCopyEcdsaPublicKey() { keySummaryCoordinator().handleCopyEcdsaPublicKey(); }
     @FXML public void handleCopyEcdsaPrivateKey() { keySummaryCoordinator().handleCopyEcdsaPrivateKey(); }
     @FXML public void handleCopyEcdsaSummary() { keySummaryCoordinator().handleCopyEcdsaSummary(); }
@@ -2308,7 +1291,6 @@ public class KeysController {
     @FXML public void handleUseEcdsaInCertificates() { keySummaryCoordinator().handleUseEcdsaInCertificates(); }
     @FXML public void handleClearEcdsa() { keySummaryCoordinator().handleClearEcdsa(); }
 
-    // DSA Action Handlers
     @FXML public void handleCopyDsaPublicKey() { keySummaryCoordinator().handleCopyDsaPublicKey(); }
     @FXML public void handleCopyDsaPrivateKey() { keySummaryCoordinator().handleCopyDsaPrivateKey(); }
     @FXML public void handleCopyDsaSummary() { keySummaryCoordinator().handleCopyDsaSummary(); }
@@ -2320,7 +1302,6 @@ public class KeysController {
     @FXML public void handleUseDsaInCertificates() { keySummaryCoordinator().handleUseDsaInCertificates(); }
     @FXML public void handleClearDsa() { keySummaryCoordinator().handleClearDsa(); }
 
-    // Ed25519 Action Handlers
     @FXML public void handleCopyEddsaPublicKey() { keySummaryCoordinator().handleCopyEddsaPublicKey(); }
     @FXML public void handleCopyEddsaPrivateKey() { keySummaryCoordinator().handleCopyEddsaPrivateKey(); }
     @FXML public void handleCopyEddsaSummary() { keySummaryCoordinator().handleCopyEddsaSummary(); }
@@ -2340,21 +1321,7 @@ public class KeysController {
 
     public void updateVisibilityControls() { keyLabCoordinator().updateVisibilityControls(); }
 
-
-
     public void refreshKeyLabTable() { keyLabCoordinator().refreshKeyLabTable(); }
-
-
-
-
-
-
-
-
-
-
-
-
 
     @FXML
     public void handleUseKeyLabInCipher() { keyLabCoordinator().handleUseKeyLabInCipher(); }
@@ -2362,46 +1329,29 @@ public class KeysController {
     @FXML
     public void handleUseKeyLabInMac() { keyLabCoordinator().handleUseKeyLabInMac(); }
 
+    @FXML private void handleKeyLabGenerate() { keyLabCoordinator().handleKeyLabGenerate(); }
 
+    @FXML private void handleKeyLabImport() { keyLabCoordinator().handleKeyLabImport(); }
 
-    @FXML
-    private void handleKeyLabGenerate() { keyLabCoordinator().handleKeyLabGenerate(); }
+    @FXML private void handleKeyLabReveal() { keyLabCoordinator().handleKeyLabReveal(); }
 
-    @FXML
-    private void handleKeyLabImport() { keyLabCoordinator().handleKeyLabImport(); }
+    @FXML private void handleKeyLabCopyId() { keyLabCoordinator().handleKeyLabCopyId(); }
 
-    @FXML
-    private void handleKeyLabReveal() { keyLabCoordinator().handleKeyLabReveal(); }
+    @FXML private void handleKeyLabSaveMetadata() { keyLabCoordinator().handleKeyLabSaveMetadata(); }
 
-    @FXML
-    private void handleKeyLabCopyId() { keyLabCoordinator().handleKeyLabCopyId(); }
+    @FXML private void handleKeyLabArchive() { keyLabCoordinator().handleKeyLabArchive(); }
 
-    @FXML
-    private void handleKeyLabSaveMetadata() { keyLabCoordinator().handleKeyLabSaveMetadata(); }
+    @FXML private void handleKeyLabDelete() { keyLabCoordinator().handleKeyLabDelete(); }
 
-    @FXML
-    private void handleKeyLabArchive() { keyLabCoordinator().handleKeyLabArchive(); }
+    @FXML private void handleImportKeyLabMetadata() { keyLabCoordinator().handleImportKeyLabMetadata(); }
 
-    @FXML
-    private void handleKeyLabDelete() { keyLabCoordinator().handleKeyLabDelete(); }
-
-    @FXML
-    private void handleImportKeyLabMetadata() { keyLabCoordinator().handleImportKeyLabMetadata(); }
-
-    @FXML
-    private void handleExportKeyLabMetadata() { keyLabCoordinator().handleExportKeyLabMetadata(); }
+    @FXML private void handleExportKeyLabMetadata() { keyLabCoordinator().handleExportKeyLabMetadata(); }
 
     public void selectKeyInKeyLab(String keyId) { keyLabCoordinator().selectKeyInKeyLab(keyId); }
 
     private void setupHexValidation(TextField field) { symmetricKeyCoordinator().setupHexValidation(field); }
 
     private void setupHexValidation(TextArea field) { symmetricKeyCoordinator().setupHexValidation(field); }
-
-
-
-    // =====================================================================
-    // Thales Variant LMK — payShield 10K Host Programmer's Manual, chapter 7
-    // =====================================================================
 
     @FXML private TextField thalesLmkField;
     @FXML private TextField thalesKeyTypeField;
@@ -2411,12 +1361,6 @@ public class KeysController {
     @FXML private TextField thalesCheckValueField;
     @FXML private CheckBox thalesComponentCheck;
     @FXML private TextArea thalesResultArea;
-
-    /** Clause 7.2.3 — the worked example, every value taken from the manual. */
-
-
-
-
 
     @FXML
     public void handleThalesEncrypt() { paymentKeyBlockCoordinator().handleThalesEncrypt(); }
@@ -2430,67 +1374,23 @@ public class KeysController {
     @FXML
     public void handleThalesLookup() { paymentKeyBlockCoordinator().handleThalesLookup(); }
 
-    /**
-     * Fills the pane with the manual's worked example.
-     *
-     * <p>Useful on its own, and useful as a check: run the same FK console
-     * session on a real payShield and the printed cryptogram should be the one
-     * this pane produces. If they differ, this bench is wrong, not the HSM.</p>
-     */
     @FXML
     public void handleThalesLoadExample() { paymentKeyBlockCoordinator().handleThalesLoadExample(); }
 
-    /**
-     * The scheme list is the variant schemes only. X and Y are the ANSI X9.17
-     * schemes and S is a Key Block: different formats, so offering them here
-     * would be offering to produce something this code does not produce.
-     */
     private void initializeThalesControls() { paymentKeyBlockCoordinator().initializeThalesControls(); }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // =====================================================================
-    // Thales Key Block — payShield 10K Host Programmer's Manual, chapter 8
-    // =====================================================================
 
     @FXML private TextArea keyBlockInputArea;
     @FXML private TextArea keyBlockResultArea;
     @FXML private TextField keyBlockLmkField;
 
-    /** Clause 8.5.1.8, the header the manual works through, padded out to the
-     *  72 characters it declares. */
-    /** payShield manual clause 8.8.1: the published 3DES Key Block test LMK. */
-
-    /** A real block under that LMK, generated with an external tool and pinned in the tests. */
-
-
     @FXML
     public void handleKeyBlockInspect() { paymentKeyBlockCoordinator().handleKeyBlockInspect(); }
 
-    /**
-     * Unwraps with the Key Block LMK, which the manual never explains how to
-     * turn into the encryption and MAC keys. The derivation here was taken from
-     * the external tool and is pinned by a test; see ThalesKeyBlockOperations.
-     */
     @FXML
     public void handleKeyBlockUnwrap() { paymentKeyBlockCoordinator().handleKeyBlockUnwrap(); }
 
     @FXML
     public void handleKeyBlockExample() { paymentKeyBlockCoordinator().handleKeyBlockExample(); }
-
-    // =====================================================================
-    // Atalla Key Block — Utimaco AJ560-9004A
-    // =====================================================================
 
     @FXML private ComboBox<AtallaAkbHeader.Template> atallaTemplateCombo;
     @FXML private ComboBox<AtallaAkbHeader.Option> atalla0Combo;
@@ -2508,17 +1408,7 @@ public class KeysController {
     @FXML private TextArea atallaBlockArea;
     @FXML private TextArea atallaResultArea;
 
-
-
-
-
     private void initializeAtalla() { paymentKeyBlockCoordinator().initializeAtalla(); }
-
-
-
-
-
-
 
     @FXML
     public void handleAtallaGenerate() { paymentKeyBlockCoordinator().handleAtallaGenerate(); }
@@ -2526,9 +1416,7 @@ public class KeysController {
     @FXML
     public void handleAtallaUnwrap() { paymentKeyBlockCoordinator().handleAtallaUnwrap(); }
 
-    /** The external tool vector for a 24-byte key, pinned in AtallaAkbOperationsTest. */
     @FXML
     public void handleAtallaExample() { paymentKeyBlockCoordinator().handleAtallaExample(); }
-
 
 }

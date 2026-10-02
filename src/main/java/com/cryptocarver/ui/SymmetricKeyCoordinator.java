@@ -5,10 +5,9 @@ import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.GeneratedKeySummary;
 import com.cryptocarver.util.DataConverter;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
 import java.nio.charset.StandardCharsets;
 
-/** Owns the SymmetricKeyCoordinator workbench; views and shell are resolved on demand. */
+/** Symmetric generation, component sharing and KCV validation. */
 final class SymmetricKeyCoordinator extends KeysCoordinatorSupport {
     record View(
             ComboBox<String> keyTypeCombo,
@@ -44,7 +43,6 @@ final class SymmetricKeyCoordinator extends KeysCoordinatorSupport {
     }
 
     void initialize() {
-
 
         // Populate combo boxes
         view().keyTypeCombo().getItems().addAll("DES", "3DES-2KEY", "3DES-3KEY", "AES-128", "AES-192", "AES-256");
@@ -463,6 +461,5 @@ final class SymmetricKeyCoordinator extends KeysCoordinatorSupport {
             }
         });
     }
-
 
 }

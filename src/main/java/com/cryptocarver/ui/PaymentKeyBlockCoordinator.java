@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-/** Owns the PaymentKeyBlockCoordinator workbench; views and shell are resolved on demand. */
+/** Payment key block operations and synchronized header controls. */
 final class PaymentKeyBlockCoordinator extends KeysCoordinatorSupport {
     record View(
             TextField thalesLmkField,
@@ -38,12 +38,10 @@ final class PaymentKeyBlockCoordinator extends KeysCoordinatorSupport {
             TextArea atallaResultArea) { }
 
     private final java.util.function.Supplier<View> view;
-    private final KeysWorkspaceState workspace;
 
-    PaymentKeyBlockCoordinator(java.util.function.Supplier<View> view, java.util.function.Supplier<StatusReporter> reporter, KeysWorkspaceState workspace) {
+    PaymentKeyBlockCoordinator(java.util.function.Supplier<View> view, java.util.function.Supplier<StatusReporter> reporter) {
         super(reporter);
         this.view = view;
-        this.workspace = workspace;
     }
 
     private View view() {

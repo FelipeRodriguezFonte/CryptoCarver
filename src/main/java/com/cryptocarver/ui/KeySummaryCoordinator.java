@@ -1,6 +1,5 @@
 package com.cryptocarver.ui;
 
-import com.cryptocarver.crypto.*;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.GeneratedAsymmetricKeySummary;
 import com.cryptocarver.util.DataConverter;
@@ -10,7 +9,7 @@ import javafx.stage.FileChooser;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-/** Owns the KeySummaryCoordinator workbench; views and shell are resolved on demand. */
+/** Generation summaries, export and Shelf actions. */
 final class KeySummaryCoordinator extends KeysCoordinatorSupport {
     record View(
             ComboBox<String> keyTypeCombo,
@@ -223,10 +222,22 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
         workspace.currentDsaSummary = null;
         workspace.currentEddsaSummary = null;
 
-        if (view().rsaSummaryCard() != null) { view().rsaSummaryCard().setVisible(false); view().rsaSummaryCard().setManaged(false); }
-        if (view().ecdsaSummaryCard() != null) { view().ecdsaSummaryCard().setVisible(false); view().ecdsaSummaryCard().setManaged(false); }
-        if (view().dsaSummaryCard() != null) { view().dsaSummaryCard().setVisible(false); view().dsaSummaryCard().setManaged(false); }
-        if (view().eddsaSummaryCard() != null) { view().eddsaSummaryCard().setVisible(false); view().eddsaSummaryCard().setManaged(false); }
+        if (view().rsaSummaryCard() != null) {
+            view().rsaSummaryCard().setVisible(false);
+            view().rsaSummaryCard().setManaged(false);
+        }
+        if (view().ecdsaSummaryCard() != null) {
+            view().ecdsaSummaryCard().setVisible(false);
+            view().ecdsaSummaryCard().setManaged(false);
+        }
+        if (view().dsaSummaryCard() != null) {
+            view().dsaSummaryCard().setVisible(false);
+            view().dsaSummaryCard().setManaged(false);
+        }
+        if (view().eddsaSummaryCard() != null) {
+            view().eddsaSummaryCard().setVisible(false);
+            view().eddsaSummaryCard().setManaged(false);
+        }
 
         if (view().rsaPublicKeyArea() != null) view().rsaPublicKeyArea().clear();
         if (view().rsaPrivateKeyArea() != null) view().rsaPrivateKeyArea().clear();
@@ -524,7 +535,10 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
 
     void handleClearRsa() {
         workspace.currentRsaSummary = null;
-        if (view().rsaSummaryCard() != null) { view().rsaSummaryCard().setVisible(false); view().rsaSummaryCard().setManaged(false); }
+        if (view().rsaSummaryCard() != null) {
+            view().rsaSummaryCard().setVisible(false);
+            view().rsaSummaryCard().setManaged(false);
+        }
         if (view().rsaPublicKeyArea() != null) view().rsaPublicKeyArea().clear();
         if (view().rsaPrivateKeyArea() != null) view().rsaPrivateKeyArea().clear();
         updateStatus("Cleared RSA key pair");
@@ -550,7 +564,10 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
 
     void handleClearEcdsa() {
         workspace.currentEcdsaSummary = null;
-        if (view().ecdsaSummaryCard() != null) { view().ecdsaSummaryCard().setVisible(false); view().ecdsaSummaryCard().setManaged(false); }
+        if (view().ecdsaSummaryCard() != null) {
+            view().ecdsaSummaryCard().setVisible(false);
+            view().ecdsaSummaryCard().setManaged(false);
+        }
         if (view().ecdsaPublicKeyArea() != null) view().ecdsaPublicKeyArea().clear();
         if (view().ecdsaPrivateKeyArea() != null) view().ecdsaPrivateKeyArea().clear();
         if (view().ecdsaFpPublicKeyArea() != null) view().ecdsaFpPublicKeyArea().clear();
@@ -578,7 +595,10 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
 
     void handleClearDsa() {
         workspace.currentDsaSummary = null;
-        if (view().dsaSummaryCard() != null) { view().dsaSummaryCard().setVisible(false); view().dsaSummaryCard().setManaged(false); }
+        if (view().dsaSummaryCard() != null) {
+            view().dsaSummaryCard().setVisible(false);
+            view().dsaSummaryCard().setManaged(false);
+        }
         if (view().dsaPublicKeyArea() != null) view().dsaPublicKeyArea().clear();
         if (view().dsaPrivateKeyArea() != null) view().dsaPrivateKeyArea().clear();
         updateStatus("Cleared DSA key pair");
@@ -604,7 +624,10 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
 
     void handleClearEd25519() {
         workspace.currentEddsaSummary = null;
-        if (view().eddsaSummaryCard() != null) { view().eddsaSummaryCard().setVisible(false); view().eddsaSummaryCard().setManaged(false); }
+        if (view().eddsaSummaryCard() != null) {
+            view().eddsaSummaryCard().setVisible(false);
+            view().eddsaSummaryCard().setManaged(false);
+        }
         if (view().eddsaPublicKeyArea() != null) view().eddsaPublicKeyArea().clear();
         if (view().eddsaPrivateKeyArea() != null) view().eddsaPrivateKeyArea().clear();
         if (view().ed25519PublicKeyArea() != null) view().ed25519PublicKeyArea().clear();
@@ -660,19 +683,28 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
         if (view().rsaKeySizeCombo() != null) {
             view().rsaKeySizeCombo().valueProperty().addListener((obs, oldVal, newVal) -> {
                 workspace.currentRsaSummary = null;
-                if (view().rsaSummaryCard() != null) { view().rsaSummaryCard().setVisible(false); view().rsaSummaryCard().setManaged(false); }
+                if (view().rsaSummaryCard() != null) {
+                    view().rsaSummaryCard().setVisible(false);
+                    view().rsaSummaryCard().setManaged(false);
+                }
             });
         }
         if (view().ecdsaCurveCombo() != null) {
             view().ecdsaCurveCombo().valueProperty().addListener((obs, oldVal, newVal) -> {
                 workspace.currentEcdsaSummary = null;
-                if (view().ecdsaSummaryCard() != null) { view().ecdsaSummaryCard().setVisible(false); view().ecdsaSummaryCard().setManaged(false); }
+                if (view().ecdsaSummaryCard() != null) {
+                    view().ecdsaSummaryCard().setVisible(false);
+                    view().ecdsaSummaryCard().setManaged(false);
+                }
             });
         }
         if (view().dsaKeySizeCombo() != null) {
             view().dsaKeySizeCombo().valueProperty().addListener((obs, oldVal, newVal) -> {
                 workspace.currentDsaSummary = null;
-                if (view().dsaSummaryCard() != null) { view().dsaSummaryCard().setVisible(false); view().dsaSummaryCard().setManaged(false); }
+                if (view().dsaSummaryCard() != null) {
+                    view().dsaSummaryCard().setVisible(false);
+                    view().dsaSummaryCard().setManaged(false);
+                }
             });
         }
     }

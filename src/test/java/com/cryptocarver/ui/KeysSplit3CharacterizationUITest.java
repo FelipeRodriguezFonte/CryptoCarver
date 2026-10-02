@@ -14,7 +14,6 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
@@ -105,9 +104,14 @@ class KeysSplit3CharacterizationUITest {
         fx(() -> {
             navigate("Variant LMK");
             keys.handleKeyBlockExample();
+            String publishedBlock = text("keyBlockInputArea");
+            String wrapped = ThalesKeyBlockOperations.wrap(text("keyBlockLmkField"), "00072B0TN00E0002",
+                    "735B3125EFF2E04ABFBFA1670180A168", "E370F35CCB09");
+            assertEquals(publishedBlock.substring(1), wrapped);
+            text("keyBlockInputArea", "S" + wrapped);
             keys.handleKeyBlockUnwrap();
-            assertFalse(text("keyBlockResultArea").startsWith("Error"));
-            assertTrue(text("keyBlockResultArea").contains("Key"));
+            assertTrue(text("keyBlockResultArea").contains("735B3125EFF2E04ABFBFA1670180A168"));
+            assertTrue(text("keyBlockResultArea").contains("MATCHES"));
         });
     }
 

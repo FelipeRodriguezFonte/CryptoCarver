@@ -8,7 +8,7 @@ import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import java.util.UUID;
 
-/** Owns the KeyLabCoordinator workbench; views and shell are resolved on demand. */
+/** Key Lab inventory, metadata and visibility actions. */
 final class KeyLabCoordinator extends KeysCoordinatorSupport {
     record View(
             TitledPane keyLabPane,
@@ -141,10 +141,14 @@ final class KeyLabCoordinator extends KeysCoordinatorSupport {
 
         javafx.scene.control.Label usageLabel = new javafx.scene.control.Label("Key Usages:");
         javafx.scene.layout.VBox usageBox = new javafx.scene.layout.VBox(5);
-        javafx.scene.control.CheckBox chkEncrypt = new javafx.scene.control.CheckBox("ENCRYPT"); chkEncrypt.setSelected(true);
-        javafx.scene.control.CheckBox chkDecrypt = new CheckBox("DECRYPT"); chkDecrypt.setSelected(true);
-        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC"); chkMac.setSelected(true);
-        javafx.scene.control.CheckBox chkWrap = new javafx.scene.control.CheckBox("WRAP / UNWRAP (KEY_WRAP)"); chkWrap.setSelected(true);
+        javafx.scene.control.CheckBox chkEncrypt = new javafx.scene.control.CheckBox("ENCRYPT");
+        chkEncrypt.setSelected(true);
+        javafx.scene.control.CheckBox chkDecrypt = new CheckBox("DECRYPT");
+        chkDecrypt.setSelected(true);
+        javafx.scene.control.CheckBox chkMac = new javafx.scene.control.CheckBox("MAC");
+        chkMac.setSelected(true);
+        javafx.scene.control.CheckBox chkWrap = new javafx.scene.control.CheckBox("WRAP / UNWRAP (KEY_WRAP)");
+        chkWrap.setSelected(true);
         usageBox.getChildren().addAll(chkEncrypt, chkDecrypt, chkMac, chkWrap);
         grid.add(usageLabel, 0, 2);
         grid.add(usageBox, 1, 2);
