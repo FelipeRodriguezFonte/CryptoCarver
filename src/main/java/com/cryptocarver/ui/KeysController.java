@@ -169,6 +169,40 @@ public class KeysController {
         }
     }
 
+    private KdfKeyWrapCoordinator kdfKeyWrapCoordinator;
+
+    private KdfKeyWrapCoordinator kdfKeyWrapCoordinator() {
+        if (kdfKeyWrapCoordinator == null) {
+            kdfKeyWrapCoordinator = new KdfKeyWrapCoordinator(
+                    () -> new KdfKeyWrapCoordinator.View(
+                            kdfAlgorithmCombo,
+                            kdfInputFormatCombo,
+                            kdfSaltFormatCombo,
+                            kdfInfoFormatCombo,
+                            kdfInputField,
+                            kdfSaltField,
+                            kdfInfoField,
+                            kdfIterationsField,
+                            kdfOutputLengthField,
+                            kdfResultArea,
+                            kdfInputHelpLabel,
+                            kdfValidationLabel,
+                            kdfIterationsLabel,
+                            kdfSaltBox,
+                            kdfInfoBox,
+                            kdfInputBadgeLabel,
+                            kdfSaltBadgeLabel,
+                            kdfInfoBadgeLabel,
+                            keyWrapModeCombo,
+                            keyWrapUnwrapCheck,
+                            keyWrapKekField,
+                            keyWrapDataField,
+                            keyWrapResultArea),
+                    () -> mainController, this::showError, this::updateStatus, this::t);
+        }
+        return kdfKeyWrapCoordinator;
+    }
+
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
@@ -489,10 +523,6 @@ public class KeysController {
     private Label kdfSaltBadgeLabel;
     @FXML
     private Label kdfInfoBadgeLabel;
-
-    private com.cryptocarver.ui.component.MaterialFieldBadge kdfInputBadge;
-    private com.cryptocarver.ui.component.MaterialFieldBadge kdfSaltBadge;
-    private com.cryptocarver.ui.component.MaterialFieldBadge kdfInfoBadge;
 
     // AES Key Wrap components
     @FXML
@@ -3196,173 +3226,15 @@ public class KeysController {
         this.kdfIterationsField = iterationsField;
         this.kdfOutputLengthField = outputLengthField;
         this.kdfResultArea = resultArea;
-
-        // Populate algorithms (with SHA variants)
-        kdfAlgorithmCombo.getItems().addAll(
-                "HKDF-SHA1",
-                "HKDF-SHA256",
-                "HKDF-SHA512",
-                "NIST-800-108-SHA256",
-                "X9.63-SHA256",
-                "PBKDF2-SHA1",
-                "PBKDF2-SHA256",
-                "PBKDF2-SHA512",
-                "SCrypt",
-                "Argon2id");
-        kdfAlgorithmCombo.setValue("HKDF-SHA256");
-
-        // Populate format combos
-        String[] formats = { "UTF-8", "Hex", "Base64" };
-        kdfInputFormatCombo.getItems().addAll(formats);
-        kdfSaltFormatCombo.getItems().addAll(formats);
-        kdfInfoFormatCombo.getItems().addAll(formats);
-
-        kdfInputFormatCombo.setValue("UTF-8");
-        kdfSaltFormatCombo.setValue("Hex");
-        kdfInfoFormatCombo.setValue("UTF-8");
-
-        if (kdfInputBadgeLabel != null && kdfInputBadge == null) {
-            kdfInputBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Input Key Material");
-            kdfInputBadge.attach(kdfInputField, kdfInputFormatCombo);
-            kdfInputBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfInputBadgeLabel.setText(newVal));
-            kdfInputBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                kdfInputBadgeLabel.getStyleClass().setAll(kdfInputBadge.getStyleClass());
-            });
-        }
-        if (kdfSaltBadgeLabel != null && kdfSaltBadge == null) {
-            kdfSaltBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Salt");
-            kdfSaltBadge.attach(kdfSaltField, kdfSaltFormatCombo);
-            kdfSaltBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfSaltBadgeLabel.setText(newVal));
-            kdfSaltBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                kdfSaltBadgeLabel.getStyleClass().setAll(kdfSaltBadge.getStyleClass());
-            });
-        }
-        if (kdfInfoBadgeLabel != null && kdfInfoBadge == null) {
-            kdfInfoBadge = new com.cryptocarver.ui.component.MaterialFieldBadge("Info");
-            kdfInfoBadge.attach(kdfInfoField, kdfInfoFormatCombo);
-            kdfInfoBadge.textProperty().addListener((obs, oldVal, newVal) -> kdfInfoBadgeLabel.setText(newVal));
-            kdfInfoBadge.getStyleClass().addListener((javafx.collections.ListChangeListener<String>) c -> {
-                kdfInfoBadgeLabel.getStyleClass().setAll(kdfInfoBadge.getStyleClass());
-            });
-        }
-
-        // Add listener to update parameters based on algorithm
-        kdfAlgorithmCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-            updateKDFParameters(newVal);
-        });
-        kdfInputFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
-        kdfSaltFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
-        kdfInfoFormatCombo.valueProperty().addListener((obs, oldVal, newVal) -> updateKdfFormatHints());
-        kdfInputField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfInputField, kdfInputFormatCombo));
-        kdfSaltField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfSaltField, kdfSaltFormatCombo));
-        kdfInfoField.textProperty().addListener((obs, oldVal, newVal) -> validateKdfEncodedField(kdfInfoField, kdfInfoFormatCombo));
-
-        updateKDFParameters("HKDF-SHA256");
-        updateKdfFormatHints();
-    }
-
-    private void updateKdfFormatHints() {
-        updateKdfEncodedFieldHint(kdfInputField, kdfInputFormatCombo, "Input key material");
-        updateKdfEncodedFieldHint(kdfSaltField, kdfSaltFormatCombo, "Salt");
-        updateKdfEncodedFieldHint(kdfInfoField, kdfInfoFormatCombo, "Info / application context");
-        if (kdfInputHelpLabel != null) {
-            String format = kdfInputFormatCombo == null || kdfInputFormatCombo.getValue() == null
-                    ? "UTF-8" : kdfInputFormatCombo.getValue();
-            kdfInputHelpLabel.setText("Input key material — interpreted as " + format + " using Input key material format above.");
-        }
-    }
-
-    private void updateKdfEncodedFieldHint(TextField field, ComboBox<String> formatCombo, String label) {
-        if (field == null) return;
-        String format = formatCombo == null || formatCombo.getValue() == null ? "UTF-8" : formatCombo.getValue();
-        field.setPromptText(label + " (" + format + ")...");
-        field.setAccessibleText(label + "; encoding: " + format);
-        validateKdfEncodedField(field, formatCombo);
-    }
-
-    private void validateKdfEncodedField(TextField field, ComboBox<String> formatCombo) {
-        if (field == null) return;
-        String value = field.getText() == null ? "" : field.getText().trim();
-        String format = formatCombo == null ? null : formatCombo.getValue();
-        boolean invalid = !value.isEmpty() && (format == null || parseData(value, format) == null);
-        if (invalid) {
-            if (!field.getStyleClass().contains("field-error")) field.getStyleClass().add("field-error");
-        } else {
-            field.getStyleClass().remove("field-error");
-        }
-        if (kdfInputBadge != null) kdfInputBadge.updateState();
-        if (kdfSaltBadge != null) kdfSaltBadge.updateState();
-        if (kdfInfoBadge != null) kdfInfoBadge.updateState();
+        kdfKeyWrapCoordinator().initializeKDF();
     }
 
     @FXML
-    public void handleGenerateKdfSalt() {
-        if (kdfSaltField == null || kdfSaltFormatCombo == null) return;
-        byte[] salt = new byte[16];
-        new java.security.SecureRandom().nextBytes(salt);
-        kdfSaltFormatCombo.setValue("Hex");
-        kdfSaltField.setText(DataConverter.bytesToHex(salt));
-        clearKdfValidation();
-        if (kdfSaltBadge != null) kdfSaltBadge.updateState();
-        updateStatus("Generated a fresh 16-byte salt for key derivation");
-    }
+    public void handleGenerateKdfSalt() { kdfKeyWrapCoordinator().handleGenerateKdfSalt(); }
 
     /**
      * Update KDF parameters based on selected algorithm
      */
-    private void updateKDFParameters(String algorithm) {
-        if (algorithm == null) return;
-
-        boolean requiresSalt = algorithm.startsWith("PBKDF2") || algorithm.equals("SCrypt") || algorithm.equals("Argon2id");
-
-        if (algorithm.startsWith("HKDF")) {
-            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
-            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
-            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
-            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Optional salt (zeros if omitted)"); }
-            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
-            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Optional application context"); }
-        } else if (algorithm.startsWith("NIST-800-108")) {
-            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
-            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
-            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
-            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Label (optional)"); }
-            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
-            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Context (optional)"); }
-        } else if (algorithm.startsWith("X9.63")) {
-            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(false); kdfIterationsLabel.setManaged(false); }
-            if (kdfIterationsField != null) { kdfIterationsField.setText("1"); kdfIterationsField.setVisible(false); kdfIterationsField.setManaged(false); }
-            if (kdfSaltBox != null) { kdfSaltBox.setVisible(false); kdfSaltBox.setManaged(false); }
-            if (kdfInfoBox != null) { kdfInfoBox.setVisible(true); kdfInfoBox.setManaged(true); }
-            if (kdfInfoField != null) { kdfInfoField.setDisable(false); kdfInfoField.setPromptText("Shared info (optional)"); }
-        } else if (algorithm.startsWith("PBKDF2")) {
-            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
-            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("600000"); }
-            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
-            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
-            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
-        } else if (algorithm.equals("SCrypt")) {
-            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
-            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("32768"); }
-            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
-            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
-            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
-        } else if (algorithm.equals("Argon2id")) {
-            if (kdfIterationsLabel != null) { kdfIterationsLabel.setVisible(true); kdfIterationsLabel.setManaged(true); }
-            if (kdfIterationsField != null) { kdfIterationsField.setVisible(true); kdfIterationsField.setManaged(true); kdfIterationsField.setDisable(false); if (kdfIterationsField.getText().equals("1")) kdfIterationsField.setText("3"); }
-            if (kdfInfoBox != null) { kdfInfoBox.setVisible(false); kdfInfoBox.setManaged(false); }
-            if (kdfSaltBox != null) { kdfSaltBox.setVisible(true); kdfSaltBox.setManaged(true); }
-            if (kdfSaltField != null) { kdfSaltField.setDisable(false); kdfSaltField.setPromptText("Required salt"); }
-        }
-
-        if (kdfSaltBadge != null) {
-            if (requiresSalt && (kdfSaltField == null || kdfSaltField.getText().trim().isEmpty())) {
-                kdfSaltBadge.updateStateIncomplete("Salt required");
-            } else {
-                kdfSaltBadge.updateState();
-            }
-        }
-    }
 
     /** Initializes the standalone AES Key Wrap laboratory panel. */
     public void initializeKeyWrap(ComboBox<String> modeCombo, CheckBox unwrapCheck, TextField kekField,
@@ -3372,393 +3244,21 @@ public class KeysController {
         this.keyWrapKekField = kekField;
         this.keyWrapDataField = dataField;
         this.keyWrapResultArea = resultArea;
-        modeCombo.getItems().setAll("RFC 3394 - AES Key Wrap", "RFC 5649 - AES Key Wrap with Padding");
-        modeCombo.setValue("RFC 3394 - AES Key Wrap");
+        kdfKeyWrapCoordinator().initializeKeyWrap();
     }
 
     /** Executes wrapping or authenticated unwrapping of hexadecimal key material. */
-    public void handleKeyWrap() {
-        try {
-            byte[] kek = DataConverter.hexToBytes(keyWrapKekField.getText().replaceAll("\\s+", ""));
-            byte[] data = DataConverter.hexToBytes(keyWrapDataField.getText().replaceAll("\\s+", ""));
-            boolean unwrap = keyWrapUnwrapCheck.isSelected();
-            boolean padded = keyWrapModeCombo.getValue().startsWith("RFC 5649");
-            byte[] result;
-            if (unwrap) {
-                result = padded ? KeyWrapOperations.unwrapRfc5649(kek, data) : KeyWrapOperations.unwrapRfc3394(kek, data);
-            } else {
-                result = padded ? KeyWrapOperations.wrapRfc5649(kek, data) : KeyWrapOperations.wrapRfc3394(kek, data);
-            }
-            String operation = unwrap ? "UNWRAP" : "WRAP";
-            StringBuilder text = new StringBuilder("========================================\nAES KEY ")
-                    .append(operation).append("\n========================================\n\n")
-                    .append("Mode: ").append(keyWrapModeCombo.getValue()).append("\n")
-                    .append("KEK: ").append(kek.length * 8).append(" bits\n")
-                    .append("Input: ").append(data.length).append(" bytes\n")
-                    .append("Output: ").append(result.length).append(" bytes\n\n")
-                    .append(unwrap ? "UNWRAPPED:" : "WRAPPED:").append("\n")
-                    .append(DataConverter.bytesToHex(result)).append("\n\n")
-                    .append("✓ Integrity is verified during unwrapping.");
-            keyWrapResultArea.setText(text.toString());
-            keyWrapResultArea.setManaged(true);
-            keyWrapResultArea.setVisible(true);
-            updateStatus("AES Key Wrap " + operation.toLowerCase() + " completed");
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("AES Key " + operation)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Mode: " + (padded ? "RFC 5649" : "RFC 3394") + ", KEK: " + kek.length * 8 + " bits", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Input: " + data.length + " bytes, output: " + result.length + " bytes", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-        } catch (Exception e) {
-            showError("AES Key Wrap", "Cannot execute operation: " + e.getMessage());
-        }
-    }
+    public void handleKeyWrap() { kdfKeyWrapCoordinator().handleKeyWrap(); }
 
     /**
      * Handle key derivation
      */
-    public void handleDeriveKey() {
-        try {
-            clearKdfValidation();
-            String algorithm = kdfAlgorithmCombo.getValue();
-            String inputFormat = kdfInputFormatCombo.getValue();
-            String saltFormat = kdfSaltFormatCombo.getValue();
-            String infoFormat = kdfInfoFormatCombo.getValue();
-
-            String inputText = kdfInputField.getText().trim();
-            String saltText = kdfSaltField.getText().trim();
-            String infoText = kdfInfoField.getText().trim();
-            String iterationsText = kdfIterationsField.getText().trim();
-            String outputLengthText = kdfOutputLengthField.getText().trim();
-
-            if (inputText.isEmpty()) {
-                showKdfValidation("Enter input key material in the selected " + inputFormat + " format.", kdfInputField);
-                return;
-            }
-
-            // Parse input according to format
-            byte[] input = parseData(inputText, inputFormat);
-            if (input == null) {
-                showKdfValidation("Input key material is not valid " + inputFormat + ".", kdfInputField);
-                return;
-            }
-
-            // Parse salt according to format (NULL if empty - no forced generation!)
-            byte[] salt = null;
-            if (!saltText.isEmpty()) {
-                salt = parseData(saltText, saltFormat);
-                if (salt == null) {
-                    showKdfValidation("Salt is not valid " + saltFormat + ". For Hex, use pairs of digits 0-9 and A-F.", kdfSaltField);
-                    return;
-                }
-            }
-
-            // Parse info according to format
-            byte[] info = null;
-            if (!infoText.isEmpty()) {
-                info = parseData(infoText, infoFormat);
-                if (info == null) {
-                    showKdfValidation("Info / application context is not valid " + infoFormat + ".", kdfInfoField);
-                    return;
-                }
-            }
-
-            // Parse iterations
-            int iterations;
-            try {
-                iterations = Integer.parseInt(iterationsText);
-            } catch (Exception e) {
-                showKdfValidation("Iterations must be a positive whole number.", kdfIterationsField);
-                return;
-            }
-
-            // Parse output length
-            int outputLength;
-            try {
-                outputLength = Integer.parseInt(outputLengthText);
-                if (outputLength < 1 || outputLength > 256) {
-                    showKdfValidation("Output length must be between 1 and 256 bytes.", kdfOutputLengthField);
-                    return;
-                }
-            } catch (Exception e) {
-                showKdfValidation("Output length must be a whole number of bytes.", kdfOutputLengthField);
-                return;
-            }
-
-            // Extract hash algorithm from name (e.g., "HKDF-SHA256" -> "SHA256")
-            String hashAlgo = "SHA256"; // default
-            if (algorithm.contains("SHA1")) {
-                hashAlgo = "SHA1";
-            } else if (algorithm.contains("SHA256")) {
-                hashAlgo = "SHA256";
-            } else if (algorithm.contains("SHA512")) {
-                hashAlgo = "SHA512";
-            }
-
-            // Derive key based on algorithm
-            byte[] derivedKey;
-            String resultInfo;
-
-            if (algorithm.startsWith("HKDF")) {
-                // HKDF requires digest
-                org.bouncycastle.crypto.Digest digest = com.cryptocarver.crypto.KeyDerivation.getDigest(hashAlgo);
-                derivedKey = com.cryptocarver.crypto.KeyDerivation.hkdf(input, salt, info, outputLength, digest);
-                resultInfo = buildHKDFResult(input, salt, info, outputLength, derivedKey, hashAlgo);
-            } else if (algorithm.startsWith("NIST-800-108")) {
-                org.bouncycastle.crypto.Digest digest = com.cryptocarver.crypto.KeyDerivation.getDigest(hashAlgo);
-                derivedKey = com.cryptocarver.crypto.KeyDerivation.sp800108Counter(input, salt, info, outputLength, digest);
-                resultInfo = buildContextKdfResult("NIST SP 800-108 Counter KDF", "Key", input,
-                        "Label", salt, "Context", info, outputLength, derivedKey, hashAlgo);
-            } else if (algorithm.startsWith("X9.63")) {
-                org.bouncycastle.crypto.Digest digest = com.cryptocarver.crypto.KeyDerivation.getDigest(hashAlgo);
-                derivedKey = com.cryptocarver.crypto.KeyDerivation.x963(input, info, outputLength, digest);
-                resultInfo = buildContextKdfResult("ANSI X9.63 / Concatenation KDF", "Shared secret", input,
-                        null, null, "Shared info", info, outputLength, derivedKey, hashAlgo);
-            } else if (algorithm.startsWith("PBKDF2")) {
-                // PBKDF2 requires salt
-                if (salt == null || salt.length == 0) {
-                    showKdfValidation("PBKDF2 requires a non-empty salt. Use Generate for a fresh 16-byte salt.", kdfSaltField);
-                    return;
-                }
-                derivedKey = com.cryptocarver.crypto.KeyDerivation.pbkdf2(input, salt, iterations, outputLength,
-                        hashAlgo);
-                resultInfo = buildPBKDF2Result(input, salt, iterations, outputLength, derivedKey, hashAlgo);
-            } else if (algorithm.equals("SCrypt")) {
-                // SCrypt requires salt
-                if (salt == null || salt.length == 0) {
-                    showKdfValidation("SCrypt requires a non-empty salt. Use Generate for a fresh 16-byte salt.", kdfSaltField);
-                    return;
-                }
-                // N=iterations, r=8, p=1
-                derivedKey = com.cryptocarver.crypto.KeyDerivation.scrypt(input, salt, iterations, 8, 1, outputLength);
-                resultInfo = buildSCryptResult(input, salt, iterations, 8, 1, outputLength, derivedKey);
-            } else if (algorithm.equals("Argon2id")) {
-                // Argon2 requires salt
-                if (salt == null || salt.length < 8) {
-                    showKdfValidation("Argon2id requires a salt of at least 8 bytes. Use Generate for a fresh 16-byte salt.", kdfSaltField);
-                    return;
-                }
-                // iterations=time, memory=64MB, parallelism=4
-                derivedKey = com.cryptocarver.crypto.KeyDerivation.argon2(input, salt, iterations, 65536, 4,
-                        outputLength);
-                resultInfo = buildArgon2Result(input, salt, iterations, 65536, 4, outputLength, derivedKey);
-            } else {
-                showKdfValidation("Choose a supported KDF algorithm.", kdfAlgorithmCombo);
-                return;
-            }
-
-            // Display result
-            kdfResultArea.setText(resultInfo);
-            kdfResultArea.setVisible(true);
-            kdfResultArea.setManaged(true);
-            updateStatus("Key derived successfully using " + algorithm);
-
-            // Add to history
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Derive - " + algorithm)
-                    .input(input)
-                    .output(derivedKey, com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                    .enrichedOutput(resultInfo, com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Input: " + inputText.substring(0, Math.min(30, inputText.length())), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Derived: " + DataConverter.bytesToHex(derivedKey).substring(0,
-                            Math.min(50, DataConverter.bytesToHex(derivedKey).length())), com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .status("Key derived successfully using " + algorithm)
-                    .build());
-            }
-
-        } catch (Exception e) {
-            showKdfValidation("Cannot derive the key: " + e.getMessage(), null);
-        }
-    }
-
-    private void clearKdfValidation() {
-        if (kdfValidationLabel != null) {
-            kdfValidationLabel.setText("");
-            kdfValidationLabel.setVisible(false);
-            kdfValidationLabel.setManaged(false);
-        }
-    }
-
-    private void showKdfValidation(String message, javafx.scene.Node field) {
-        if (kdfValidationLabel != null) {
-            kdfValidationLabel.setText("⚠ " + message);
-            kdfValidationLabel.setVisible(true);
-            kdfValidationLabel.setManaged(true);
-        }
-        if (field != null) {
-            if (!field.getStyleClass().contains("field-error")) field.getStyleClass().add("field-error");
-            field.requestFocus();
-        }
-        updateStatus(message);
-    }
+    public void handleDeriveKey() { kdfKeyWrapCoordinator().handleDeriveKey(); }
 
     /**
      * Parse data according to format
      */
-    private byte[] parseData(String text, String format) {
-        try {
-            switch (format) {
-                case "UTF-8":
-                    return text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                case "Hex":
-                    return DataConverter.hexToBytes(text.replaceAll("\\s+", ""));
-                case "Base64":
-                    return java.util.Base64.getDecoder().decode(text.replaceAll("\\s+", ""));
-                default:
-                    return null;
-            }
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
-    private String buildHKDFResult(byte[] input, byte[] salt, byte[] info, int outputLength, byte[] derivedKey,
-            String hashAlgo) {
-        StringBuilder result = new StringBuilder();
-        result.append("========================================\n");
-        result.append("HKDF-").append(hashAlgo).append(" KEY DERIVATION\n");
-        result.append("========================================\n\n");
-        result.append("Algorithm: HKDF (RFC 5869) with ").append(hashAlgo).append("\n\n");
-        result.append("Input Key Material (").append(input.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(input)).append("\n\n");
-        if (salt != null && salt.length > 0) {
-            result.append("Salt (").append(salt.length).append(" bytes):\n");
-            result.append(DataConverter.bytesToHex(salt)).append("\n\n");
-        } else {
-            result.append("Salt: (none provided - HKDF will use zeros)\n\n");
-        }
-        if (info != null && info.length > 0) {
-            result.append("Info (").append(info.length).append(" bytes):\n");
-            result.append(new String(info, java.nio.charset.StandardCharsets.UTF_8)).append("\n");
-            result.append("(hex: ").append(DataConverter.bytesToHex(info)).append(")\n\n");
-        }
-        result.append("Output Length: ").append(outputLength).append(" bytes\n\n");
-        result.append("DERIVED KEY:\n");
-        result.append(DataConverter.bytesToHex(derivedKey)).append("\n\n");
-        result.append("✓ HKDF is deterministic: same inputs always produce same output\n");
-        result.append("✓ Used in: TLS 1.3, Signal Protocol, WireGuard\n");
-        return result.toString();
-    }
-
-    private String buildContextKdfResult(String name, String inputLabel, byte[] input, String firstLabel,
-            byte[] firstValue, String secondLabel, byte[] secondValue, int outputLength, byte[] derivedKey,
-            String hashAlgorithm) {
-        StringBuilder result = new StringBuilder();
-        result.append("========================================\n");
-        result.append(name.toUpperCase()).append("\n");
-        result.append("========================================\n\n");
-        result.append("Hash/PRF: HMAC-").append(hashAlgorithm).append("\n");
-        result.append(inputLabel).append(" (").append(input.length).append(" bytes):\n")
-                .append(DataConverter.bytesToHex(input)).append("\n\n");
-        appendKdfField(result, firstLabel, firstValue);
-        appendKdfField(result, secondLabel, secondValue);
-        result.append("Output Length: ").append(outputLength).append(" bytes\n\nDERIVED KEY:\n")
-                .append(DataConverter.bytesToHex(derivedKey)).append("\n\n")
-                .append("✓ Deterministic: preserve every input to reproduce this result\n");
-        return result.toString();
-    }
-
-    private void appendKdfField(StringBuilder result, String label, byte[] value) {
-        if (label == null) return;
-        result.append(label).append(": ");
-        if (value == null || value.length == 0) {
-            result.append("(empty)\n\n");
-        } else {
-            result.append(value.length).append(" bytes\n").append(DataConverter.bytesToHex(value)).append("\n\n");
-        }
-    }
-
-    private String buildPBKDF2Result(byte[] password, byte[] salt, int iterations, int outputLength, byte[] derivedKey,
-            String hashAlgo) {
-        StringBuilder result = new StringBuilder();
-        result.append("========================================\n");
-        result.append("PBKDF2-").append(hashAlgo).append(" KEY DERIVATION\n");
-        result.append("========================================\n\n");
-        result.append("Algorithm: PBKDF2 (PKCS #5) with HMAC-").append(hashAlgo).append("\n\n");
-        result.append("Password/Input (").append(password.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(password)).append("\n\n");
-        result.append("Salt (").append(salt.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(salt)).append("\n\n");
-        result.append("Iterations: ").append(String.format("%,d", iterations));
-        if (iterations < 100000) {
-            result.append(" ⚠️ LOW - Recommend 600,000+ (OWASP 2023)");
-        } else if (iterations < 600000) {
-            result.append(" ⚠️ MEDIUM - Recommend 600,000+ (OWASP 2023)");
-        } else {
-            result.append(" ✓ GOOD (OWASP 2023 compliant)");
-        }
-        result.append("\n");
-        result.append("Output Length: ").append(outputLength).append(" bytes\n\n");
-        result.append("DERIVED KEY:\n");
-        result.append(DataConverter.bytesToHex(derivedKey)).append("\n\n");
-        result.append("✓ Standard password-based key derivation\n");
-        result.append("✓ Widely supported and battle-tested\n");
-        return result.toString();
-    }
-
-    private String buildSCryptResult(byte[] password, byte[] salt, int N, int r, int p, int outputLength,
-            byte[] derivedKey) {
-        StringBuilder result = new StringBuilder();
-        result.append("========================================\n");
-        result.append("SCRYPT KEY DERIVATION\n");
-        result.append("========================================\n\n");
-        result.append("Algorithm: SCrypt (memory-hard KDF)\n\n");
-        result.append("Password/Input (").append(password.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(password)).append("\n\n");
-        result.append("Salt (").append(salt.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(salt)).append("\n\n");
-        result.append("Parameters:\n");
-        result.append("  N (CPU/Memory cost): ").append(String.format("%,d", N));
-        if (N < 16384) {
-            result.append(" ⚠️ LOW");
-        } else {
-            result.append(" ✓ GOOD");
-        }
-        result.append("\n");
-        result.append("  r (Block size): ").append(r).append("\n");
-        result.append("  p (Parallelism): ").append(p).append("\n");
-        result.append("  Memory required: ~").append((128 * N * r / 1024)).append(" KB\n\n");
-        result.append("Output Length: ").append(outputLength).append(" bytes\n\n");
-        result.append("DERIVED KEY:\n");
-        result.append(DataConverter.bytesToHex(derivedKey)).append("\n\n");
-        result.append("✓ Memory-hard: resistant to hardware attacks\n");
-        result.append("✓ Used in: Litecoin, many password managers\n");
-        return result.toString();
-    }
-
-    private String buildArgon2Result(byte[] password, byte[] salt, int iterations, int memory, int parallelism,
-            int outputLength, byte[] derivedKey) {
-        StringBuilder result = new StringBuilder();
-        result.append("========================================\n");
-        result.append("ARGON2ID KEY DERIVATION\n");
-        result.append("========================================\n\n");
-        result.append("Algorithm: Argon2id (Password Hashing Competition winner 2015)\n\n");
-        result.append("Password/Input (").append(password.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(password)).append("\n\n");
-        result.append("Salt (").append(salt.length).append(" bytes):\n");
-        result.append(DataConverter.bytesToHex(salt)).append("\n\n");
-        result.append("Parameters:\n");
-        result.append("  Time cost (iterations): ").append(iterations);
-        if (iterations < 3) {
-            result.append(" ⚠️ LOW");
-        } else {
-            result.append(" ✓ GOOD");
-        }
-        result.append("\n");
-        result.append("  Memory cost: ").append(memory).append(" KB (").append(memory / 1024).append(" MB)\n");
-        result.append("  Parallelism: ").append(parallelism).append(" threads\n\n");
-        result.append("Output Length: ").append(outputLength).append(" bytes\n\n");
-        result.append("DERIVED KEY:\n");
-        result.append(DataConverter.bytesToHex(derivedKey)).append("\n\n");
-        result.append("✓ Most modern and secure password hashing algorithm\n");
-        result.append("✓ Combines data-dependent (Argon2i) and data-independent (Argon2d) approaches\n");
-        result.append("✓ Recommended for new applications\n");
-        return result.toString();
-    }
     // ============================================================================
     // CMS / PKCS#7 OPERATIONS
     // ============================================================================
