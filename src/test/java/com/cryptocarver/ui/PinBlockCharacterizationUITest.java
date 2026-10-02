@@ -184,7 +184,21 @@ class PinBlockCharacterizationUITest {
             panel.controller().handleDecodeEncryptedPinBlock();
             transcript.add("iso4 wrong block " + panel.reporter().drain(false));
         });
-        assertEquals("16c564678409e7ff90d04beb96a03de1917a1d423b6afb452e46ec949c6a40a5", digest(transcript), String.join("\n", transcript));
+        assertEquals("9e1b555f8796dcd736edfca8d67057ad389534c151909eb0f57f29bdc2e191c8", digest(transcript), String.join("\n", transcript));
+    }
+
+    @Test
+    void anUnusableKeyDoesNotPublishTheClearBlockAsProtected() throws Exception {
+        withPanel(panel -> {
+            panel.combo("encPinBlockFormatCombo").setValue("Format 0 (ISO-0)");
+            panel.field("encPinField").setText(PIN);
+            panel.field("encPanFieldEncode").setText(PAN);
+            panel.field("encPinBlockKeyField").setText("0123456789ABCDEF0123");
+            panel.controller().handleEncodeEncryptedPinBlock();
+            String reported = panel.reporter().drain(false);
+            assertTrue(!reported.contains("publish"), reported);
+            assertTrue(reported.startsWith("error ") && reported.endsWith("@encPinBlockKeyField"), reported);
+        });
     }
 
     private static String decodedPinLine(String text) {

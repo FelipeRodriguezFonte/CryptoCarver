@@ -355,7 +355,10 @@ final class PinBlockCoordinator {
                     }
                     result += "\n\n" + t("module.payments.result.encryptedPinBlock") + "\n" + publishedBlock;
                 } catch (Exception e) {
-                    result += "\n\nEncryption Error: " + e.getMessage();
+                    // Never publish the clear block as if it had been protected.
+                    showError(t("module.payments.error.encodingTitle"), t("module.payments.error.operation",
+                            t("module.payments.operation.encryptedPinBlock"), e.getMessage()), "encPinBlockKeyField");
+                    return;
                 }
             }
 

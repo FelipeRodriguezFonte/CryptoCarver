@@ -34,3 +34,18 @@ Se elimina en un commit aparte. Queda para otra fase el MAC (`handleGenerateMac`
 vuelta de todos los formatos en claro, los errores de entrada, la ida y vuelta cifrada (TDES y
 AES para el formato 4) y los errores del panel cifrado. Los formatos con relleno aleatorio se
 fijan por longitud y PIN recuperado, no por bytes.
+
+## Resultado
+
+`PaymentsController` pasa de 2473 a 1733 líneas: 398 de código muerto y el resto a
+`PinBlockCoordinator` (y `PanMask`). `PaymentsValidationHeadlessTest`, que busca las claves de
+traducción en el código, ahora lee también el coordinador y ya no exige las claves que solo
+usaba el código muerto.
+
+## Fallos destapados
+
+- Con una clave de longitud no válida, el panel cifrado publicaba el bloque PIN en claro como
+  operación correcta marcada «TDES ECB», y lo añadía al histórico. Ahora muestra el error en el
+  campo de clave y no publica nada.
+- Pendiente, menor: un bloque en claro de 16 caracteres con letras no hexadecimales da el mensaje
+  de longitud incorrecta («Current length: 16»).
