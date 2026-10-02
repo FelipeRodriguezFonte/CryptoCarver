@@ -4,7 +4,7 @@ Base: `a548f8b`, 4727 líneas; referencias al controlador antes de la extracció
 
 ## Decisión de estado compartido
 
-`KeysWorkspaceState` contendrá `lastGeneratedKeyPair`, `lastKeyType`, los cinco `current*Summary` y el material simétrico generado. Generación escribe; resumen/Shelf, guardado en Key Lab y certificados leen. Mantendrá las mismas reglas de invalidación y borrado de bytes. No contendrá nodos ni proveedores HSM.
+`KeysWorkspaceState` contendrá `lastGeneratedKeyPair`, `lastKeyType`, los cinco `current*Summary` y el material simétrico generado. Generación escribe; resumen/Shelf y guardado en Key Lab leen el material y los resúmenes. El getter del último par y el proveedor conectado a CipherController leen el par. Generate Certificate y CSR generan sus propios pares y no sustituyen el último par de generación asimétrica. Mantendrá las mismas reglas de invalidación y borrado de bytes. No contendrá nodos ni proveedores HSM.
 
 Los controles siguen en la fachada y se ofrecen mediante records de vista obtenidos por proveedores; los cuatro controladores incluidos se resuelven al usar el proveedor. `AppSettings` y el proveedor HSM mantienen sus propietarios actuales.
 
@@ -478,99 +478,62 @@ Key Lab: los handlers de alta/importación/metadatos/archivo/borrado escriben Si
 
 ## Contratos públicos y consumidores
 
-- `getLastGeneratedKeyPair` (632): `src/main/java/com/cryptocarver/ui/ModernMainController.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `init` (723): `src/main/java/com/cryptocarver/ui/AuthenticationController.java`, `src/main/java/com/cryptocarver/ui/EMVController.java`, `src/main/java/com/cryptocarver/ui/ModernMainController.java`, `src/main/java/com/cryptocarver/ui/CmsInspectorController.java`, `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/ASN1Controller.java`, `src/main/java/com/cryptocarver/ui/PaymentsController.java`, `src/main/java/com/cryptocarver/crypto/FuturexMfkOperations.java`, `src/main/java/com/cryptocarver/crypto/MastercardIccDynamicNumber.java`, `src/main/java/com/cryptocarver/crypto/SymmetricCipher.java`, `src/main/java/com/cryptocarver/crypto/AtallaAkbOperations.java`, `src/main/java/com/cryptocarver/crypto/EmvSecureMessaging.java`, `src/main/java/com/cryptocarver/crypto/MACOperations.java`, `src/main/java/com/cryptocarver/crypto/VisaHceOperations.java`, `src/main/java/com/cryptocarver/crypto/OpenPgpOperations.java`, `src/main/java/com/cryptocarver/crypto/AsymmetricKeyOperations.java`, `src/main/java/com/cryptocarver/crypto/PaymentOperations.java`, `src/main/java/com/cryptocarver/crypto/WssEncryptionOperations.java`, `src/main/java/com/cryptocarver/crypto/TR31.java`, `src/main/java/com/cryptocarver/crypto/PostQuantumOperations.java`, `src/main/java/com/cryptocarver/crypto/MastercardDataStorage.java`, `src/main/java/com/cryptocarver/crypto/LineRecordCipher.java`, `src/main/java/com/cryptocarver/crypto/AesDukpt.java`, `src/main/java/com/cryptocarver/crypto/KeyOperations.java`, `src/main/java/com/cryptocarver/crypto/StreamingCipher.java`, `src/main/java/com/cryptocarver/crypto/ThalesLmkOperations.java`, `src/main/java/com/cryptocarver/crypto/DukptKsn.java`, `src/main/java/com/cryptocarver/crypto/KeyWrapOperations.java`, `src/main/java/com/cryptocarver/crypto/KeyDerivation.java`, `src/main/java/com/cryptocarver/crypto/JOSEService.java`, `src/main/java/com/cryptocarver/crypto/FormatPreservingEncryption.java`, `src/main/java/com/cryptocarver/crypto/ThalesKeyBlockOperations.java`, `src/main/java/com/cryptocarver/crypto/SafeNetKmOperations.java`, `src/main/java/com/cryptocarver/crypto/AsymmetricCipher.java`, `src/main/java/com/cryptocarver/crypto/EMVOperations.java`, `src/main/java/com/cryptocarver/pin/TDes.java`, `src/main/java/com/cryptocarver/pin/AesEcb.java`, `src/main/java/com/cryptocarver/model/SafeTransformations.java`, `src/main/java/com/cryptocarver/model/PasswordFieldCipher.java`, `src/main/java/com/cryptocarver/crypto/hsm/Pkcs11Session.java`, `src/main/java/com/cryptocarver/model/process/handlers/KeyMaterialNodeHandler.java`, `src/test/java/com/cryptocarver/ui/CmsInspectorControllerTest.java`, `src/test/java/com/cryptocarver/ui/Ux25CmsJoseValidationLiveUITest.java`, `src/test/java/com/cryptocarver/ui/EmvVisaHceControllerTest.java`, `src/test/java/com/cryptocarver/ui/EmvMastercardDataStorageControllerTest.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2Vectors.java`, `src/test/java/com/cryptocarver/ui/ASN1ControllerTest.java`, `src/test/java/com/cryptocarver/ui/Ux24LegacyValidationLiveUITest.java`, `src/test/java/com/cryptocarver/crypto/EmvOptAReverseManualSmoke.java`, `src/test/java/com/cryptocarver/crypto/KeyDerivationTest.java`, `src/test/java/com/cryptocarver/model/KeyLabSaveGeneratedTest.java`, `src/test/java/com/cryptocarver/crypto/hsm/Pkcs11WrapUnwrapIntegrationTest.java`, `src/test/java/com/cryptocarver/crypto/hsm/PayShieldSimulatorCaptureTest.java`, `src/test/java/com/cryptocarver/model/process/ProcessEngineTest.java`
-- `showSymmetricSection` (741): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `showAsymmetricSection` (746): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `isSymmetricSectionVisible` (751): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `expandSymmetricPane` (765): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `expandAsymmetricPane` (786): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `fillTR31KeyBlockInput` (822): `src/main/java/com/cryptocarver/ui/ClipboardTargetNavigator.java`, `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`, `src/test/java/com/cryptocarver/ui/Ux21LiveUITest.java`
-- `handleTR31Clear` (824): `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`, `src/test/java/com/cryptocarver/ui/Ux21LiveUITest.java`
-- `handleTR31Reset` (827): `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`
-- `handleGenerateECDSA` (868): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `initialize` (893): `src/main/java/com/cryptocarver/ui/JOSEController.java`, `src/main/java/com/cryptocarver/ui/CipherController.java`, `src/main/java/com/cryptocarver/ui/ProcessDesignerController.java`, `src/main/java/com/cryptocarver/ui/IcsfTokenController.java`, `src/main/java/com/cryptocarver/ui/AuthenticationController.java`, `src/main/java/com/cryptocarver/ui/PostQuantumController.java`, `src/main/java/com/cryptocarver/ui/CryptoEnvelopeInspectorController.java`, `src/main/java/com/cryptocarver/ui/WalletController.java`, `src/main/java/com/cryptocarver/ui/CertificateChainCoordinator.java`, `src/main/java/com/cryptocarver/ui/HistoryCoordinator.java`, `src/main/java/com/cryptocarver/ui/IcsfBatchController.java`, `src/main/java/com/cryptocarver/ui/AsicController.java`, `src/main/java/com/cryptocarver/ui/EMVController.java`, `src/main/java/com/cryptocarver/ui/IcsfKeyWrapController.java`, `src/main/java/com/cryptocarver/ui/ModernMainController.java`, `src/main/java/com/cryptocarver/ui/XMLSignatureController.java`, `src/main/java/com/cryptocarver/ui/GenericController.java`, `src/main/java/com/cryptocarver/ui/CmsInspectorController.java`, `src/main/java/com/cryptocarver/ui/PadesController.java`, `src/main/java/com/cryptocarver/ui/ASN1Controller.java`, `src/main/java/com/cryptocarver/ui/ClipboardShelfController.java`, `src/main/java/com/cryptocarver/ui/PaymentsController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`, `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`, `src/main/java/com/cryptocarver/ui/HistoryController.java`, `src/main/java/com/cryptocarver/ui/OpenPgpController.java`, `src/main/java/com/cryptocarver/ui/CompareResultsController.java`, `src/main/java/com/cryptocarver/ui/Pkcs11ProfilesController.java`, `src/main/java/com/cryptocarver/ui/KeyCertificateWorkbenchController.java`, `src/main/java/com/cryptocarver/ui/ModuleI18n.java`, `src/main/java/com/cryptocarver/ui/CommandPaletteCoordinator.java`, `src/main/java/com/cryptocarver/ui/WssSecurityController.java`, `src/main/java/com/cryptocarver/ui/COSEController.java`, `src/main/java/com/cryptocarver/crypto/OpenPgpOperations.java`, `src/main/java/com/cryptocarver/crypto/AsymmetricKeyOperations.java`, `src/main/java/com/cryptocarver/crypto/CertificateGenerator.java`, `src/main/java/com/cryptocarver/crypto/AsymmetricCipher.java`, `src/main/java/com/cryptocarver/crypto/hsm/JnaPkcs11NativeBridge.java`, `src/main/java/com/cryptocarver/crypto/hsm/Pkcs11LibraryInventoryService.java`, `src/main/java/com/cryptocarver/crypto/hsm/Pkcs11NativeBridge.java`, `src/main/java/com/cryptocarver/model/process/handlers/KeyMaterialNodeHandler.java`, `src/test/java/com/cryptocarver/ui/Pkcs11ProfilesPresenterTest.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`, `src/test/java/com/cryptocarver/ui/Tr34LogicTest.java`, `src/test/java/com/cryptocarver/ui/WalletControllerDefaultsTest.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/PostQuantumControllerTest.java`, `src/test/java/com/cryptocarver/ui/ResultViewerSecurityCharacterizationTest.java`, `src/test/java/com/cryptocarver/ui/Ux28AddToShelfUITest.java`, `src/test/java/com/cryptocarver/ui/CertificateChainLogicTest.java`, `src/test/java/com/cryptocarver/ui/CmsLogicTest.java`, `src/test/java/com/cryptocarver/ui/ExpandResultAuditTest.java`, `src/test/java/com/cryptocarver/ui/JOSEControllerJwkConversionTest.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`, `src/test/java/com/cryptocarver/ui/ModuleI18nSkinDeferredContainersUITest.java`, `src/test/java/com/cryptocarver/ui/RsaKeyExchangeLogicTest.java`, `src/test/java/com/cryptocarver/ui/KeyCertificateWorkbenchUIFlowTest.java`, `src/test/java/com/cryptocarver/crypto/CertificateChainValidationTest.java`, `src/test/java/com/cryptocarver/crypto/SdJwtOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/EdDsaJwsTest.java`, `src/test/java/com/cryptocarver/crypto/CertificateComparatorTest.java`, `src/test/java/com/cryptocarver/crypto/TsaValidationTest.java`, `src/test/java/com/cryptocarver/crypto/CertificateAuthorityOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/CertificateAuthorityTest.java`, `src/test/java/com/cryptocarver/crypto/TrustedListInspectorTest.java`, `src/test/java/com/cryptocarver/crypto/AdesValidationOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/LocalOcspDelegationTest.java`, `src/test/java/com/cryptocarver/crypto/JoseKeyMaterialTest.java`, `src/test/java/com/cryptocarver/crypto/TrustedEntityListJsonInspectorTest.java`, `src/test/java/com/cryptocarver/crypto/StatusListOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/EidasCertificateInspectorTest.java`, `src/test/java/com/cryptocarver/crypto/NestedJwtInteropTest.java`, `src/test/java/com/cryptocarver/crypto/CertificateLinterTest.java`, `src/test/java/com/cryptocarver/crypto/EmvOdaOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/COSEOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/TR34OperationsTest.java`, `src/test/java/com/cryptocarver/crypto/RsaKeyWrapOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/CertificateGeneratorCsrTest.java`, `src/test/java/com/cryptocarver/crypto/LocalTimestampAuthority.java`, `src/test/java/com/cryptocarver/crypto/WssSecurityOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/KeyMaterialInspectorTest.java`, `src/test/java/com/cryptocarver/crypto/MdocOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/Ts12ScaOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/PostQuantumOperationsTest.java`, `src/test/java/com/cryptocarver/crypto/JweComposerTest.java`, `src/test/java/com/cryptocarver/crypto/JoseEcInteroperabilityTest.java`, `src/test/java/com/cryptocarver/crypto/AsymmetricKeyOperationsAutoImportTest.java`, `src/test/java/com/cryptocarver/crypto/OpenId4VpInspectorTest.java`, `src/test/java/com/cryptocarver/crypto/LocalPkiFixture.java`, `src/test/java/com/cryptocarver/service/KeyCertificateFormatServiceTest.java`, `src/test/java/com/cryptocarver/service/KeystoreWorkbenchServiceTest.java`, `src/test/java/com/cryptocarver/ui/component/MaterialFieldBadgeTest.java`, `src/test/java/com/cryptocarver/crypto/hsm/Pkcs11LibraryInventoryServiceTest.java`, `src/test/java/com/cryptocarver/crypto/hsm/JnaPkcs11NativeBridgeTest.java`, `src/test/java/com/cryptocarver/model/process/WalletCredentialNodeHandlerTest.java`, `src/test/java/com/cryptocarver/model/process/HandlerFacadeParityTest.java`, `src/test/java/com/cryptocarver/model/process/EmvOdaNodeHandlerTest.java`, `src/test/java/com/cryptocarver/model/process/JoseCoseNodeHandlerTest.java`
-- `initializeRSA` (1696): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`
-- `initializeDSA` (1706): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`
-- `initializeECDSAFp` (1716): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`
-- `initializeEd25519` (1726): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`
-- `initializeCertificateGen` (1739): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `initializeCertificateGen` (1770): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `initializeCertificateParse` (1782): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `initializeCertificateComparator` (1787): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `initializeCertificateIssuer` (1793): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `initializeCrlManagement` (1812): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleIssueCertificateFromCsr` (1832): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleGenerateCrl` (1880): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleRevokeCrl` (1904): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleCompareCertificates` (1950): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `initializeValidateCertificate` (1974): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleGenerateKey` (1990): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/ShelfStaleSnapshotUITest.java`
-- `handleSaveGeneratedKeyToLab` (2059): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleCopyGeneratedKey` (2265): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleCopyGeneratedKcv` (2281): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleCopyGeneratedSummary` (2292): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleGenerateRSA` (2693): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleGenerateDSA` (2698): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleGenerateECDSAFp` (2703): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`
-- `handleGenerateEd25519` (2708): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`
-- `handleGenerateEdDSA` (2713): `src/main/java/com/cryptocarver/ui/AsymmetricKeyGenerationCoordinator.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleGenerateCertificate` (2722): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleGenerateCSR` (2816): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleParseCertificate` (2892): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/InlineErrorBannerTest.java`
-- `handleValidateCertificate` (2946): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleTR31Export` (3110): `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleTR31Import` (3116): `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleTR31ParseHeader` (3122): `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleRsaKexEnvelopeToggle` (3148): `src/main/java/com/cryptocarver/ui/RsaKeyExchangeCoordinator.java`
-- `handleRsaKexExport` (3154): `src/main/java/com/cryptocarver/ui/RsaKeyExchangeCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleRsaKexImport` (3160): `src/main/java/com/cryptocarver/ui/RsaKeyExchangeCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleRsaKexClear` (3163): `src/main/java/com/cryptocarver/ui/RsaKeyExchangeCoordinator.java`
-- `handleRsaKexReset` (3166): `src/main/java/com/cryptocarver/ui/RsaKeyExchangeCoordinator.java`
-- `handleTr34Distribute` (3198): `src/main/java/com/cryptocarver/ui/Tr34Coordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleTr34Receive` (3204): `src/main/java/com/cryptocarver/ui/Tr34Coordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleTr34GenerateChallenge` (3208): `src/main/java/com/cryptocarver/ui/Tr34Coordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplitCharacterizationUITest.java`
-- `handleTr34Clear` (3211): `src/main/java/com/cryptocarver/ui/Tr34Coordinator.java`
-- `handleTr34Reset` (3214): `src/main/java/com/cryptocarver/ui/Tr34Coordinator.java`
-- `initializeKDF` (3222): `src/main/java/com/cryptocarver/ui/KdfKeyWrapCoordinator.java`
-- `handleGenerateKdfSalt` (3245): `src/main/java/com/cryptocarver/ui/KdfKeyWrapCoordinator.java`
-- `initializeKeyWrap` (3253): `src/main/java/com/cryptocarver/ui/KdfKeyWrapCoordinator.java`
-- `handleKeyWrap` (3264): `src/main/java/com/cryptocarver/ui/KdfKeyWrapCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleDeriveKey` (3269): `src/main/java/com/cryptocarver/ui/KdfKeyWrapCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `initializeCMS` (3282): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleCadesTimestampOptionChanged` (3298): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`
-- `handleCMSourceChanged` (3300): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`
-- `handleLoadCMSKeys` (3302): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`
-- `handleCMSEncryptSourceChanged` (3304): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`
-- `handleLoadCMSEncryptKeys` (3306): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`
-- `handleCMSSign` (3311): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleCMSVerify` (3316): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleUpgradeCadesLt` (3324): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`
-- `handleCMSEncrypt` (3326): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleCMSDecrypt` (3328): `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/main/java/com/cryptocarver/ui/CmsCoordinator.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `initializeCertificateChain` (3336): `src/main/java/com/cryptocarver/ui/CertificatesController.java`
-- `handleValidateCertificateChain` (3338): `src/main/java/com/cryptocarver/ui/CertificateChainCoordinator.java`, `src/main/java/com/cryptocarver/ui/CertificatesController.java`, `src/test/java/com/cryptocarver/ui/KeysSplit2CharacterizationUITest.java`
-- `handleClear` (3342): `src/main/java/com/cryptocarver/ui/JOSEController.java`, `src/main/java/com/cryptocarver/ui/CipherController.java`, `src/main/java/com/cryptocarver/ui/IcsfTokenController.java`, `src/main/java/com/cryptocarver/ui/AuthenticationController.java`, `src/main/java/com/cryptocarver/ui/CryptoEnvelopeInspectorController.java`, `src/main/java/com/cryptocarver/ui/WalletController.java`, `src/main/java/com/cryptocarver/ui/IcsfBatchController.java`, `src/main/java/com/cryptocarver/ui/AsicController.java`, `src/main/java/com/cryptocarver/ui/EMVController.java`, `src/main/java/com/cryptocarver/ui/ModernMainController.java`, `src/main/java/com/cryptocarver/ui/XMLSignatureController.java`, `src/main/java/com/cryptocarver/ui/GenericController.java`, `src/main/java/com/cryptocarver/ui/CmsInspectorController.java`, `src/main/java/com/cryptocarver/ui/PadesController.java`, `src/main/java/com/cryptocarver/ui/PaymentsController.java`, `src/main/java/com/cryptocarver/ui/OpenPgpController.java`, `src/main/java/com/cryptocarver/ui/WssSecurityController.java`, `src/main/java/com/cryptocarver/ui/COSEController.java`, `src/test/java/com/cryptocarver/ui/Ux20RPaymentsLiveUITest.java`
-- `handleClearAsymmetric` (3360): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `handleGlobalSymmetricShelfAction` (3574): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `handleGlobalAsymmetricShelfAction` (3604): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `handleCopyRsaPrivateKey` (3650): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleCopyRsaSummary` (3651): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleUseRsaInCipher` (3656): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleUseRsaInSignatures` (3666): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleClearRsa` (3668): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `getOutputText` (3734): `src/main/java/com/cryptocarver/ui/CipherController.java`, `src/main/java/com/cryptocarver/ui/EMVController.java`, `src/main/java/com/cryptocarver/ui/GenericController.java`, `src/main/java/com/cryptocarver/ui/SessionTrailViewFormatter.java`, `src/main/java/com/cryptocarver/model/OperationSessionLog.java`, `src/main/java/com/cryptocarver/model/SessionOperationStep.java`, `src/test/java/com/cryptocarver/ui/SessionTrailUITest.java`, `src/test/java/com/cryptocarver/model/OperationSessionLogTest.java`, `src/test/java/com/cryptocarver/model/RedactedTrailTest.java`
-- `loadProfile` (3763): `src/main/java/com/cryptocarver/ui/LaboratoryMenuCoordinator.java`, `src/main/java/com/cryptocarver/ui/EMVController.java`, `src/main/java/com/cryptocarver/ui/PaymentsController.java`, `src/main/java/com/cryptocarver/ui/Tr31Coordinator.java`
-- `updateVisibilityControls` (3841): `src/main/java/com/cryptocarver/ui/ModernMainController.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`, `src/test/java/com/cryptocarver/ui/Ux28bAsymmetricShelfLiveUITest.java`
-- `refreshKeyLabTable` (3879): `src/main/java/com/cryptocarver/ui/ModernMainController.java`
-- `handleUseKeyLabInCipher` (4005): `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `selectKeyInKeyLab` (4329): `src/main/java/com/cryptocarver/ui/CipherController.java`, `src/main/java/com/cryptocarver/ui/AuthenticationController.java`, `src/test/java/com/cryptocarver/ui/ModernMainControllerUITest.java`
-- `handleThalesEncrypt` (4399): `src/test/java/com/cryptocarver/ui/ThalesLmkPaneTest.java`
-- `handleThalesDecrypt` (4411): `src/test/java/com/cryptocarver/ui/ThalesLmkPaneTest.java`
-- `handleThalesLookup` (4433): `src/test/java/com/cryptocarver/ui/ThalesLmkPaneTest.java`
-- `handleThalesLoadExample` (4447): `src/test/java/com/cryptocarver/ui/ThalesLmkPaneTest.java`
-- `handleKeyBlockInspect` (4530): `src/test/java/com/cryptocarver/ui/ThalesKeyBlockPaneTest.java`
-- `handleKeyBlockUnwrap` (4554): `src/test/java/com/cryptocarver/ui/ThalesKeyBlockPaneTest.java`
-- `handleKeyBlockExample` (4573): `src/test/java/com/cryptocarver/ui/ThalesKeyBlockPaneTest.java`
+Inventario de consumidores de producción por llamada al controlador compartido; las firmas y los fx:id permanecen en la fachada. Las líneas de métodos y campos anteriores se refieren a la declaración original, incluida su anotación cuando la hay.
 
-ModernMainController carga Keys de forma perezosa en loadSymmetricKeysContent y conecta servicios con connectShellServices/init; certificados aporta controles por initializeCertificate*. Configuración de pantalla, paleta, Process Designer y sesiones usan la navegación y fx:id existentes; inspector e histórico reciben OperationResult publicado por StatusReporter. Shelf conserva el resultado de generación en vez del snapshot de otra pantalla (29c699a). Estas rutas y contratos no cambian.
+- `getLastGeneratedKeyPair`: `ModernMainController.java`.
+- `init`: `ModernMainController.java`.
+- `showSymmetricSection`: `ModernMainController.java`.
+- `showAsymmetricSection`: `ModernMainController.java`.
+- `isSymmetricSectionVisible`: `ModernMainController.java`.
+- `expandSymmetricPane`: `ModernMainController.java`.
+- `expandAsymmetricPane`: `ModernMainController.java`.
+- `initializeCertificateGen`: `CertificatesController.java`.
+- `initializeCertificateGen`: `CertificatesController.java`.
+- `initializeCertificateParse`: `CertificatesController.java`.
+- `initializeCertificateComparator`: `CertificatesController.java`.
+- `initializeCertificateIssuer`: `CertificatesController.java`.
+- `initializeCrlManagement`: `CertificatesController.java`.
+- `handleIssueCertificateFromCsr`: `CertificatesController.java`.
+- `handleGenerateCrl`: `CertificatesController.java`.
+- `handleRevokeCrl`: `CertificatesController.java`.
+- `handleCompareCertificates`: `CertificatesController.java`.
+- `initializeValidateCertificate`: `CertificatesController.java`.
+- `handleGenerateCertificate`: `CertificatesController.java`.
+- `handleGenerateCSR`: `CertificatesController.java`.
+- `handleParseCertificate`: `CertificatesController.java`.
+- `handleValidateCertificate`: `CertificatesController.java`.
+- `initializeCMS`: `CertificatesController.java`.
+- `handleCadesTimestampOptionChanged`: `CertificatesController.java`.
+- `handleCMSourceChanged`: `CertificatesController.java`.
+- `handleLoadCMSKeys`: `CertificatesController.java`.
+- `handleCMSEncryptSourceChanged`: `CertificatesController.java`.
+- `handleLoadCMSEncryptKeys`: `CertificatesController.java`.
+- `handleCMSSign`: `CertificatesController.java`.
+- `handleCMSVerify`: `CertificatesController.java`.
+- `handleUpgradeCadesLt`: `CertificatesController.java`.
+- `handleCMSEncrypt`: `CertificatesController.java`.
+- `handleCMSDecrypt`: `CertificatesController.java`.
+- `initializeCertificateChain`: `CertificatesController.java`.
+- `handleValidateCertificateChain`: `CertificatesController.java`.
+- `handleClear`: `ModernMainController.java`.
+- `handleClearAsymmetric`: `ModernMainController.java`.
+- `handleGlobalSymmetricShelfAction`: `ModernMainController.java`.
+- `handleGlobalAsymmetricShelfAction`: `ModernMainController.java`.
+- `updateVisibilityControls`: `ModernMainController.java`.
+- `refreshKeyLabTable`: `ModernMainController.java`.
+
+Los restantes handlers públicos conservan sus entradas FXML; los métodos de inicialización de la interfaz clásica mantienen sus firmas aunque no tengan consumidor en el shell moderno. Los tests de fases 1/2/3, ShelfStaleSnapshotUITest, Ux28bAsymmetricShelfLiveUITest y los tests de integración de sesiones/configuración ejercitan los contratos y los fx:id.
+
+- `CertificatesController.init`: aporta las vistas externas por `initializeCertificate*`, `initializeCrlManagement`, `initializeValidateCertificate`, `initializeCMS` y las operaciones delegadas.
+- `ModernMainController.loadSymmetricKeysContent` / `connectShellServices`: carga del módulo, `init`, conexión de callbacks y navegación de secciones. `CipherController` recibe un proveedor de `getLastGeneratedKeyPair`.
+- `ClipboardTargetNavigator`: carga referencias y destinos, incluido `selectKeyInKeyLab` y `fillTR31KeyBlockInput`.
+- Shelf: `handleGlobalSymmetricShelfAction` y `handleGlobalAsymmetricShelfAction` conservan el resultado de generación, sin depender del snapshot de otra pantalla (`29c699a`).
+- Sesiones y configuración: `UiStateSnapshot` y `ScreenConfigurationCoordinator` inspeccionan los campos FXML. Key Lab excluye el campo de importación de bytes; los secretos de histórico se redactan según el perfil.
+- Process Designer y paleta: rutas de `UiNavigationRegistry` y navegación del shell; no acceden al nuevo estado compartido.
+- Histórico e inspector: el contrato `StatusReporter.publish(OperationResult)` permanece.
+
+## Auxiliares que se incorporan a las áreas
+
+- Área simétrica: `setupHexValidation(TextField)` (4349), `setupHexValidation(TextArea)` (4362), `isValidHex` (4375). El predicado sólo comprueba el alfabeto hexadecimal durante la escritura; las operaciones validan después longitud y formato completo.
+- Área almacenes: handlers de conexión, selección de fichero/perfil, firma, certificados, JWT, CMS, wrap y unwrap (854–866). La conexión/desconexión conserva la notificación de refresco HSM después de la operación.
+- Lectura PEM y verificación de emisor se comparten en `KeysMaterialSupport`, sin JavaFX; el predicado hexadecimal se comparte en `KeysHexValidation`, también sin JavaFX.
