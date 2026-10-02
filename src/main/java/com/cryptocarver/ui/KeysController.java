@@ -117,6 +117,59 @@ public class KeysController {
         return keyLabCoordinator;
     }
 
+    private KeySummaryCoordinator keySummaryCoordinator;
+
+    private KeySummaryCoordinator keySummaryCoordinator() {
+        if (keySummaryCoordinator == null) {
+            keySummaryCoordinator = new KeySummaryCoordinator(
+                    () -> new KeySummaryCoordinator.View(
+                            keyTypeCombo,
+                            saveGeneratedKeyButton,
+                            rsaKeySizeCombo,
+                            ecdsaCurveCombo,
+                            dsaKeySizeCombo,
+                            ecdsaPublicKeyArea,
+                            ecdsaPrivateKeyArea,
+                            eddsaPublicKeyArea,
+                            eddsaPrivateKeyArea,
+                            rsaKeyMaterialTabs,
+                            ecdsaKeyMaterialTabs,
+                            dsaKeyMaterialTabs,
+                            eddsaKeyMaterialTabs,
+                            generatedKeyField,
+                            generatedKeySummaryCard,
+                            summaryAlgoLabel,
+                            summaryLengthLabel,
+                            summaryKcvLabel,
+                            summaryFingerprintLabel,
+                            summaryParityLabel,
+                            summaryOriginLabel,
+                            summarySavedStatusLabel,
+                            validationPane,
+                            useFourByteKcvCheck,
+                            rsaSummaryCard,
+                            ecdsaSummaryCard,
+                            dsaSummaryCard,
+                            eddsaSummaryCard,
+                            keyInputField,
+                            validationResultArea,
+                            componentResultsArea,
+                            component1Field,
+                            component2Field,
+                            component3Field,
+                            rsaPublicKeyArea,
+                            rsaPrivateKeyArea,
+                            dsaPublicKeyArea,
+                            dsaPrivateKeyArea,
+                            ecdsaFpPublicKeyArea,
+                            ecdsaFpPrivateKeyArea,
+                            ed25519PublicKeyArea,
+                            ed25519PrivateKeyArea),
+                    () -> mainController, workspace, this::handleValidateKey);
+        }
+        return keySummaryCoordinator;
+    }
+
     private Tr31Coordinator tr31Coordinator;
 
     private Tr31Coordinator tr31Coordinator() {
@@ -241,17 +294,7 @@ public class KeysController {
         return asymmetricKeyGenerationCoordinator;
     }
 
-    private void acceptAsymmetricGeneration(AsymmetricKeyGenerationCoordinator.StateUpdate update) {
-        workspace.lastGeneratedKeyPair = update.keyPair();
-        workspace.lastKeyType = update.algorithm();
-        switch (update.algorithm()) {
-            case "RSA" -> workspace.currentRsaSummary = update.summary();
-            case "DSA" -> workspace.currentDsaSummary = update.summary();
-            case "ECDSA" -> workspace.currentEcdsaSummary = update.summary();
-            case "Ed25519" -> workspace.currentEddsaSummary = update.summary();
-            default -> throw new IllegalArgumentException("Unsupported generation algorithm");
-        }
-    }
+    private void acceptAsymmetricGeneration(AsymmetricKeyGenerationCoordinator.StateUpdate update) { keySummaryCoordinator().acceptAsymmetricGeneration(update); }
 
     private KdfKeyWrapCoordinator kdfKeyWrapCoordinator;
 
@@ -761,39 +804,7 @@ public class KeysController {
         setupHexValidation(component3Field);
         setupHexValidation(component4Field);
         setupHexValidation(component5Field);
-        if (keyTypeCombo != null) {
-            keyTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                if (workspace.currentGeneratedKeySummary != null && (newVal == null || !newVal.equalsIgnoreCase(workspace.currentGeneratedKeySummary.getAlgorithm()))) {
-                    hideGeneratedKeySummary();
-                    if (workspace.lastGeneratedSymmetricKeyBytes != null) {
-                        Arrays.fill(workspace.lastGeneratedSymmetricKeyBytes, (byte) 0);
-                    }
-                    workspace.lastGeneratedSymmetricKeyBytes = null;
-                    workspace.lastGeneratedSymmetricKeyType = null;
-                    if (generatedKeyField != null) generatedKeyField.clear();
-                    if (saveGeneratedKeyButton != null) saveGeneratedKeyButton.setDisable(true);
-                }
-            });
-        }
-
-        if (rsaKeySizeCombo != null) {
-            rsaKeySizeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                workspace.currentRsaSummary = null;
-                if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
-            });
-        }
-        if (ecdsaCurveCombo != null) {
-            ecdsaCurveCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                workspace.currentEcdsaSummary = null;
-                if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
-            });
-        }
-        if (dsaKeySizeCombo != null) {
-            dsaKeySizeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                workspace.currentDsaSummary = null;
-                if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
-            });
-        }
+        keySummaryCoordinator().initializeSummaryListeners();
         setupHexValidation(keyWrapKekField);
         setupHexValidation(keyWrapDataField);
         setupHexValidation(tr31KbpkExportField);
@@ -2143,120 +2154,28 @@ public class KeysController {
     @FXML
     public void handleSaveGeneratedKeyToLab() { keyLabCoordinator().handleSaveGeneratedKeyToLab(); }
 
-    private void hideGeneratedKeySummary() {
-        workspace.currentGeneratedKeySummary = null;
-        if (generatedKeySummaryCard != null) {
-            generatedKeySummaryCard.setVisible(false);
-            generatedKeySummaryCard.setManaged(false);
-        }
-    }
+    private void hideGeneratedKeySummary() { keySummaryCoordinator().hideGeneratedKeySummary(); }
 
-    private void updateGeneratedKeySummaryCard(com.cryptocarver.model.GeneratedKeySummary summary) {
-        if (generatedKeySummaryCard == null || summary == null) return;
-        if (summaryAlgoLabel != null) summaryAlgoLabel.setText(summary.getAlgorithm());
-        if (summaryLengthLabel != null) summaryLengthLabel.setText(summary.getFormattedLength());
-        if (summaryKcvLabel != null) summaryKcvLabel.setText(summary.getFormattedKcv(selectedKcvLength()));
-        if (summaryFingerprintLabel != null) summaryFingerprintLabel.setText(summary.getFingerprintTruncated());
-        if (summaryParityLabel != null) summaryParityLabel.setText(summary.getParityStatus());
-        if (summaryOriginLabel != null) summaryOriginLabel.setText(summary.getOrigin());
-        if (summarySavedStatusLabel != null) {
-            summarySavedStatusLabel.setText(summary.getSavedStatus() != null ? "✓ " + summary.getSavedStatus() : "");
-        }
-        generatedKeySummaryCard.setVisible(true);
-        generatedKeySummaryCard.setManaged(true);
-    }
+    private void updateGeneratedKeySummaryCard(com.cryptocarver.model.GeneratedKeySummary summary) { keySummaryCoordinator().updateGeneratedKeySummaryCard(summary); }
 
     @FXML
-    public void handleCopyGeneratedKey() {
-        if (workspace.currentGeneratedKeySummary == null || workspace.currentGeneratedKeySummary.getRawKeyBytes().length == 0) {
-            updateStatus("No generated key summary available to copy.");
-            return;
-        }
-        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (!AppSettings.isFullLab()) {
-            updateStatus("Action blocked: Secret key cannot be copied in current visibility mode.");
-            showInfo("Security Policy", "Copying key material is blocked under " + profile + " mode. Switch to FULL_LAB to copy secret keys.");
-            return;
-        }
-        copyToClipboard(workspace.currentGeneratedKeySummary.getRawKeyHex());
-        updateStatus("Copied generated key to clipboard");
-    }
+    public void handleCopyGeneratedKey() { keySummaryCoordinator().handleCopyGeneratedKey(); }
 
     @FXML
-    public void handleCopyGeneratedKcv() {
-        if (workspace.currentGeneratedKeySummary == null) {
-            updateStatus("No generated key summary available to copy.");
-            return;
-        }
-        String kcv = workspace.currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength());
-        copyToClipboard(kcv);
-        updateStatus("Copied KCV to clipboard: " + kcv);
-    }
+    public void handleCopyGeneratedKcv() { keySummaryCoordinator().handleCopyGeneratedKcv(); }
 
     @FXML
-    public void handleCopyGeneratedSummary() {
-        if (workspace.currentGeneratedKeySummary == null) {
-            updateStatus("No generated key summary available to copy.");
-            return;
-        }
-        String keyDisplay = (AppSettings.isFullLab())
-                ? workspace.currentGeneratedKeySummary.getRawKeyHex()
-                : "***MASKED***";
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("--- Generated Key Summary ---\n");
-        sb.append("Algorithm: ").append(workspace.currentGeneratedKeySummary.getAlgorithm()).append("\n");
-        sb.append("Length: ").append(workspace.currentGeneratedKeySummary.getFormattedLength()).append("\n");
-        sb.append("KCV: ").append(workspace.currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength())).append("\n");
-        sb.append("Fingerprint: ").append(workspace.currentGeneratedKeySummary.getFingerprintTruncated()).append("\n");
-        sb.append("Odd Parity: ").append(workspace.currentGeneratedKeySummary.getParityStatus()).append("\n");
-        sb.append("Origin: ").append(workspace.currentGeneratedKeySummary.getOrigin()).append("\n");
-        sb.append("Key: ").append(keyDisplay);
-        if (workspace.currentGeneratedKeySummary.getSavedStatus() != null) {
-            sb.append("\nStatus: ").append(workspace.currentGeneratedKeySummary.getSavedStatus());
-        }
-
-        copyToClipboard(sb.toString());
-        updateStatus("Copied Key Summary to clipboard");
-    }
+    public void handleCopyGeneratedSummary() { keySummaryCoordinator().handleCopyGeneratedSummary(); }
 
     @FXML
-    public void handleOpenValidationAndKcv() {
-        if (workspace.currentGeneratedKeySummary == null) {
-            updateStatus("No generated key available for validation.");
-            return;
-        }
-        if (AppSettings.isFullLab() && keyInputField != null) {
-            keyInputField.setText(workspace.currentGeneratedKeySummary.getRawKeyHex());
-        }
-        if (validationPane != null) {
-            validationPane.setExpanded(true);
-        }
-        handleValidateKey();
-    }
+    public void handleOpenValidationAndKcv() { keySummaryCoordinator().handleOpenValidationAndKcv(); }
 
     @FXML
-    public void handleKcvLengthToggle() {
-        if (workspace.currentGeneratedKeySummary != null) {
-            updateGeneratedKeySummaryCard(workspace.currentGeneratedKeySummary);
-        }
-        if (validationResultArea != null && validationResultArea.isVisible()
-                && keyInputField != null && !keyInputField.getText().isBlank()) {
-            handleValidateKey();
-        }
-    }
+    public void handleKcvLengthToggle() { keySummaryCoordinator().handleKcvLengthToggle(); }
 
-    private int selectedKcvLength() {
-        return useFourByteKcvCheck == null || useFourByteKcvCheck.isSelected() ? 4 : 3;
-    }
+    private int selectedKcvLength() { return keySummaryCoordinator().selectedKcvLength(); }
 
-    private void copyToClipboard(String text) {
-        if (text == null) return;
-        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
-        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-        content.putString(text);
-        clipboard.setContent(content);
-    }
+
 
     /**
      * Validate a key and calculate all KCVs
@@ -3243,426 +3162,96 @@ public class KeysController {
 
     // --- Global Helper Methods ---
 
-    public void handleClear() {
-        // Symmetric
-        if (generatedKeyField != null)
-            generatedKeyField.clear();
-        if (keyInputField != null)
-            keyInputField.clear();
-        if (validationResultArea != null)
-            validationResultArea.clear();
-        if (component1Field != null)
-            component1Field.clear();
-        if (component2Field != null)
-            component2Field.clear();
-        if (component3Field != null)
-            component3Field.clear();
-        if (componentResultsArea != null)
-            componentResultsArea.clear();
-    }
+    public void handleClear() { keySummaryCoordinator().handleClear(); }
 
-    public void handleClearAsymmetric() {
-        // Asymmetric
-        workspace.currentRsaSummary = null;
-        workspace.currentEcdsaSummary = null;
-        workspace.currentDsaSummary = null;
-        workspace.currentEddsaSummary = null;
+    public void handleClearAsymmetric() { keySummaryCoordinator().handleClearAsymmetric(); }
 
-        if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
-        if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
-        if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
-        if (eddsaSummaryCard != null) { eddsaSummaryCard.setVisible(false); eddsaSummaryCard.setManaged(false); }
 
-        if (rsaPublicKeyArea != null) rsaPublicKeyArea.clear();
-        if (rsaPrivateKeyArea != null) rsaPrivateKeyArea.clear();
-        if (dsaPublicKeyArea != null) dsaPublicKeyArea.clear();
-        if (dsaPrivateKeyArea != null) dsaPrivateKeyArea.clear();
-        if (ecdsaPublicKeyArea != null) ecdsaPublicKeyArea.clear();
-        if (ecdsaPrivateKeyArea != null) ecdsaPrivateKeyArea.clear();
-        if (ecdsaFpPublicKeyArea != null) ecdsaFpPublicKeyArea.clear();
-        if (ecdsaFpPrivateKeyArea != null) ecdsaFpPrivateKeyArea.clear();
-        if (eddsaPublicKeyArea != null) eddsaPublicKeyArea.clear();
-        if (eddsaPrivateKeyArea != null) eddsaPrivateKeyArea.clear();
-        if (ed25519PublicKeyArea != null) ed25519PublicKeyArea.clear();
-        if (ed25519PrivateKeyArea != null) ed25519PrivateKeyArea.clear();
-    }
 
-    private void copyPublicKey(GeneratedAsymmetricKeySummary summary) {
-        if (summary == null || summary.getPublicKeyPem() == null) {
-            updateStatus("No public key available to copy.");
-            return;
-        }
-        copyToClipboard(summary.getPublicKeyPem());
-        updateStatus("Copied " + summary.getAlgorithm() + " public key to clipboard");
-    }
 
-    private void copyPrivateKey(GeneratedAsymmetricKeySummary summary) {
-        if (summary == null || summary.getPrivateKeyPem() == null) {
-            updateStatus("No private key available to copy.");
-            return;
-        }
-        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (!AppSettings.isFullLab()) {
-            updateStatus("Action blocked: Private key cannot be copied under " + profile + " profile.");
-            showInfo("Security Policy", "Copying private key material is blocked under " + profile + " profile. Switch to FULL_LAB to copy private keys.");
-            return;
-        }
-        copyToClipboard(summary.getPrivateKeyPem());
-        updateStatus("Copied " + summary.getAlgorithm() + " private key to clipboard");
-    }
 
-    private void copyAsymmetricSummary(GeneratedAsymmetricKeySummary summary) {
-        if (summary == null) {
-            updateStatus("No asymmetric summary available to copy.");
-            return;
-        }
-        String privDisplay = (AppSettings.isFullLab())
-                ? summary.getPrivateKeyPem()
-                : "***MASKED***";
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("--- ").append(summary.getAlgorithm()).append(" Key Pair Summary ---\n");
-        sb.append("Algorithm/Size: ").append(summary.getAlgorithm()).append(" (").append(summary.getCurveOrKeySize()).append(")\n");
-        sb.append("Public Fingerprint (SHA-256): ").append(summary.getPublicFingerprintTruncated()).append("\n");
-        sb.append("Public Key Length: ").append(summary.getPublicKeyLength()).append("\n");
-        sb.append("Private Key Length: ").append(summary.getPrivateKeyLength()).append("\n");
-        sb.append("Creation Time: ").append(summary.getCreatedAt()).append("\n");
-        sb.append("Compatible Uses: ").append(summary.getCompatibleUses()).append("\n");
-        sb.append("Origin: ").append(summary.getOrigin()).append("\n\n");
-        sb.append("=== PUBLIC KEY (PEM) ===\n").append(summary.getPublicKeyPem()).append("\n\n");
-        sb.append("=== PRIVATE KEY (PEM) ===\n").append(privDisplay);
 
-        copyToClipboard(sb.toString());
-        updateStatus("Copied " + summary.getAlgorithm() + " PEM Pair Summary to clipboard");
-    }
 
-    private void exportPublicPem(GeneratedAsymmetricKeySummary summary, String defaultFilename) {
-        if (summary == null || summary.getPublicKeyPem() == null) {
-            updateStatus("No public key available to export.");
-            return;
-        }
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Export Public Key PEM");
-        fc.setInitialFileName(defaultFilename);
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM Files (*.pem, *.pub)", "*.pem", "*.pub"));
-        java.io.File file = fc.showSaveDialog(null);
-        if (file != null) {
-            try {
-                java.nio.file.Files.writeString(file.toPath(), summary.getPublicKeyPem(), StandardCharsets.UTF_8);
-                updateStatus("Exported public key to " + file.getName());
-                summary.setSavedStatus("Exported to " + file.getName());
-            } catch (Exception e) {
-                showError("Export Error", "Error exporting public key: " + e.getMessage());
-            }
-        }
-    }
 
-    private void exportPrivatePem(GeneratedAsymmetricKeySummary summary, String defaultFilename) {
-        if (summary == null || summary.getPrivateKeyPem() == null) {
-            updateStatus("No private key available to export.");
-            return;
-        }
-        com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (!AppSettings.isFullLab()) {
-            updateStatus("Action blocked: Exporting private key is blocked under " + profile + " profile.");
-            showInfo("Security Policy", "Exporting private key files is blocked under " + profile + " profile. Switch to FULL_LAB to export private keys.");
-            return;
-        }
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Export Private Key PEM");
-        fc.setInitialFileName(defaultFilename);
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM Files (*.pem, *.key)", "*.pem", "*.key"));
-        java.io.File file = fc.showSaveDialog(null);
-        if (file != null) {
-            try {
-                java.nio.file.Files.writeString(file.toPath(), summary.getPrivateKeyPem(), StandardCharsets.UTF_8);
-                updateStatus("Exported private key to " + file.getName());
-                summary.setSavedStatus("Exported to " + file.getName());
-            } catch (Exception e) {
-                showError("Export Error", "Error exporting private key: " + e.getMessage());
-            }
-        }
-    }
 
-    private void sendPublicKeyToShelf(GeneratedAsymmetricKeySummary summary) {
-        sendAsymmetricKeyToShelf(summary, AsymmetricShelfMaterial.PUBLIC);
-    }
 
-    private enum AsymmetricShelfMaterial {
-        PUBLIC,
-        PRIVATE
-    }
+
+
+
 
     /**
      * Stores only canonical PEM material from the generated summary. The
      * rendered diagnostic TextAreas are deliberately not consulted here.
      */
-    private void sendAsymmetricKeyToShelf(GeneratedAsymmetricKeySummary summary,
-                                          AsymmetricShelfMaterial material) {
-        if (summary == null) {
-            updateStatus("No generated " + (material == AsymmetricShelfMaterial.PRIVATE ? "private" : "public")
-                    + " key pair available for Clipboard Shelf.");
-            return;
-        }
 
-        if (material == AsymmetricShelfMaterial.PRIVATE) {
-            if (!AppSettings.isFullLab()) {
-                updateStatus("Action blocked: private key material requires FULL_LAB.");
-                return;
-            }
-            String privatePem = summary.getPrivateKeyPem();
-            if (privatePem == null || privatePem.isBlank()) {
-                updateStatus("No generated private key available for Clipboard Shelf.");
-                return;
-            }
-            com.cryptocarver.model.ClipboardEntry entry =
-                    com.cryptocarver.model.ClipboardShelfManager.getInstance()
-                            .addSessionOnlyPrivateKey(privatePem, "Key Generation", summary.getAlgorithm());
-            if (entry == null) {
-                updateStatus("Action blocked: private key material requires FULL_LAB.");
-                return;
-            }
-            revealShelfEntry(entry);
-            updateStatus("Added " + summary.getAlgorithm() + " private key to Clipboard Shelf (session only).");
-            return;
-        }
 
-        String publicPem = summary.getPublicKeyPem();
-        if (publicPem == null || publicPem.isBlank()) {
-            updateStatus("No generated public key available for Clipboard Shelf.");
-            return;
-        }
-        com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
-                summary.getAlgorithm() + " Public Key",
-                publicPem,
-                com.cryptocarver.model.ClipboardEntry.Format.PEM,
-                com.cryptocarver.model.OperationDetail.Classification.PUBLIC,
-                "Key Generation",
-                summary.getAlgorithm()
-        );
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().addEntry(entry);
-        revealShelfEntry(entry);
-        updateStatus("Added " + summary.getAlgorithm() + " public key to Clipboard Shelf.");
-    }
 
-    private void revealShelfEntry(com.cryptocarver.model.ClipboardEntry entry) {
-        if (entry != null && mainController instanceof ModernMainController modern) {
-            modern.revealShelfEntry(entry);
-        }
-    }
 
-    private GeneratedAsymmetricKeySummary summaryForGeneration(String operation) {
-        if (operation == null) return null;
-        return switch (operation) {
-            case "RSA Key Generation" -> workspace.currentRsaSummary;
-            case "ECDSA Key Generation" -> workspace.currentEcdsaSummary;
-            case "DSA Key Generation" -> workspace.currentDsaSummary;
-            case "EdDSA Key Generation" -> workspace.currentEddsaSummary;
-            default -> null;
-        };
-    }
 
-    private TabPane tabsForGeneration(String operation) {
-        if (operation == null) return null;
-        return switch (operation) {
-            case "RSA Key Generation" -> rsaKeyMaterialTabs;
-            case "ECDSA Key Generation" -> ecdsaKeyMaterialTabs;
-            case "DSA Key Generation" -> dsaKeyMaterialTabs;
-            case "EdDSA Key Generation" -> eddsaKeyMaterialTabs;
-            default -> null;
-        };
-    }
+
+
 
     /** Entry point used only by ModernMainController's global Add to Shelf. */
     /** Adds the symmetric key shown in Key Generation to the Clipboard Shelf. */
-    public void handleGlobalSymmetricShelfAction() {
-        byte[] key = workspace.lastGeneratedSymmetricKeyBytes;
-        if (key == null || key.length == 0) {
-            updateStatus("No generated symmetric key available for Clipboard Shelf.");
-            return;
-        }
-        if (com.cryptocarver.model.ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
-                com.cryptocarver.model.OperationDetail.Classification.SECRET,
-                AppSettings.getInstance().getSecretVisibilityProfile())) {
-            updateStatus("Action blocked: output hidden by visibility policy.");
-            return;
-        }
-        String keyHex = DataConverter.bytesToHex(key);
-        com.cryptocarver.model.ClipboardShelfManager shelf = com.cryptocarver.model.ClipboardShelfManager.getInstance();
-        java.util.Optional<com.cryptocarver.model.ClipboardEntry> duplicate =
-                shelf.findDuplicate(keyHex, "Generate Symmetric Key");
-        if (duplicate.isPresent()) {
-            updateStatus("Item already in Clipboard Shelf: " + duplicate.get().getLabel());
-            return;
-        }
-        com.cryptocarver.model.ClipboardEntry entry = new com.cryptocarver.model.ClipboardEntry(
-                "Copied from Generate Symmetric Key", keyHex,
-                com.cryptocarver.model.ClipboardEntry.Format.HEX,
-                com.cryptocarver.model.OperationDetail.Classification.SECRET,
-                "Generate Symmetric Key", workspace.lastGeneratedSymmetricKeyType);
-        shelf.addEntry(entry);
-        revealShelfEntry(entry);
-        updateStatus("Added " + workspace.lastGeneratedSymmetricKeyType + " key to Clipboard Shelf.");
-    }
+    public void handleGlobalSymmetricShelfAction() { keySummaryCoordinator().handleGlobalSymmetricShelfAction(); }
 
-    public void handleGlobalAsymmetricShelfAction(String operation) {
-        GeneratedAsymmetricKeySummary summary = summaryForGeneration(operation);
-        TabPane tabs = tabsForGeneration(operation);
-        if (summary == null || tabs == null) {
-            String algorithm = operation == null ? "asymmetric" : operation.replace(" Key Generation", "");
-            updateStatus("No generated " + algorithm + " key pair available for Clipboard Shelf.");
-            return;
-        }
-        Tab selectedTab = tabs.getSelectionModel().getSelectedItem();
-        Object selectedMaterial = selectedTab == null ? null : selectedTab.getUserData();
-        if ("PRIVATE".equals(selectedMaterial)) {
-            sendAsymmetricKeyToShelf(summary, AsymmetricShelfMaterial.PRIVATE);
-        } else if ("PUBLIC".equals(selectedMaterial)) {
-            sendAsymmetricKeyToShelf(summary, AsymmetricShelfMaterial.PUBLIC);
-        } else {
-            updateStatus("Action blocked: select Public Key (PEM) or Private Key (PEM) before adding to Shelf.");
-        }
-    }
+    public void handleGlobalAsymmetricShelfAction(String operation) { keySummaryCoordinator().handleGlobalAsymmetricShelfAction(operation); }
 
-    private void useInSignatures(GeneratedAsymmetricKeySummary summary) {
-        if (summary == null || summary.getKeyPair() == null) {
-            updateStatus("No key pair available for signatures.");
-            return;
-        }
-        updateStatus("Selected " + summary.getAlgorithm() + " key pair for Digital Signatures");
-        if (mainController instanceof ModernMainController modern) {
-            modern.useGeneratedKeyPairInSignatures(
-                    summary.getKeyPair(), summary.getPublicKeyPem(), summary.getPrivateKeyPem());
-        } else if (mainController != null) {
-            mainController.navigateTo("Digital Signatures");
-        }
-    }
 
-    private void useInCertificates(GeneratedAsymmetricKeySummary summary) {
-        if (summary == null) {
-            updateStatus("No key pair available for certificates.");
-            return;
-        }
-        updateStatus("Selected " + summary.getAlgorithm() + " key pair for Certificates");
-        if (mainController != null) {
-            mainController.navigateTo("Generate Certificate");
-        }
-    }
+
+
 
     // RSA Action Handlers
-    @FXML public void handleCopyRsaPublicKey() { copyPublicKey(workspace.currentRsaSummary); }
-    @FXML public void handleCopyRsaPrivateKey() { copyPrivateKey(workspace.currentRsaSummary); }
-    @FXML public void handleCopyRsaSummary() { copyAsymmetricSummary(workspace.currentRsaSummary); }
-    @FXML public void handleExportRsaPublicPem() { exportPublicPem(workspace.currentRsaSummary, "rsa_public.pem"); }
-    @FXML public void handleExportRsaPrivatePem() { exportPrivatePem(workspace.currentRsaSummary, "rsa_private.pem"); }
-    @FXML public void handleSendRsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentRsaSummary); }
-    @FXML public void handleSendRsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentRsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseRsaInCipher() {
-        if (workspace.currentRsaSummary == null) {
-            updateStatus("No RSA key pair available for encryption.");
-            return;
-        }
-        updateStatus("Selected RSA key pair for RSA Cipher");
-        if (mainController != null) {
-            mainController.navigateTo("Asymmetric Ciphers");
-        }
-    }
-    @FXML public void handleUseRsaInSignatures() { useInSignatures(workspace.currentRsaSummary); }
-    @FXML public void handleUseRsaInCertificates() { useInCertificates(workspace.currentRsaSummary); }
-    @FXML public void handleClearRsa() {
-        workspace.currentRsaSummary = null;
-        if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
-        if (rsaPublicKeyArea != null) rsaPublicKeyArea.clear();
-        if (rsaPrivateKeyArea != null) rsaPrivateKeyArea.clear();
-        updateStatus("Cleared RSA key pair");
-    }
+    @FXML public void handleCopyRsaPublicKey() { keySummaryCoordinator().handleCopyRsaPublicKey(); }
+    @FXML public void handleCopyRsaPrivateKey() { keySummaryCoordinator().handleCopyRsaPrivateKey(); }
+    @FXML public void handleCopyRsaSummary() { keySummaryCoordinator().handleCopyRsaSummary(); }
+    @FXML public void handleExportRsaPublicPem() { keySummaryCoordinator().handleExportRsaPublicPem(); }
+    @FXML public void handleExportRsaPrivatePem() { keySummaryCoordinator().handleExportRsaPrivatePem(); }
+    @FXML public void handleSendRsaPublicToShelf() { keySummaryCoordinator().handleSendRsaPublicToShelf(); }
+    @FXML public void handleSendRsaPrivateToShelf() { keySummaryCoordinator().handleSendRsaPrivateToShelf(); }
+    @FXML public void handleUseRsaInCipher() { keySummaryCoordinator().handleUseRsaInCipher(); }
+    @FXML public void handleUseRsaInSignatures() { keySummaryCoordinator().handleUseRsaInSignatures(); }
+    @FXML public void handleUseRsaInCertificates() { keySummaryCoordinator().handleUseRsaInCertificates(); }
+    @FXML public void handleClearRsa() { keySummaryCoordinator().handleClearRsa(); }
 
     // ECDSA Action Handlers
-    @FXML public void handleCopyEcdsaPublicKey() { copyPublicKey(workspace.currentEcdsaSummary); }
-    @FXML public void handleCopyEcdsaPrivateKey() { copyPrivateKey(workspace.currentEcdsaSummary); }
-    @FXML public void handleCopyEcdsaSummary() { copyAsymmetricSummary(workspace.currentEcdsaSummary); }
-    @FXML public void handleExportEcdsaPublicPem() { exportPublicPem(workspace.currentEcdsaSummary, "ecdsa_public.pem"); }
-    @FXML public void handleExportEcdsaPrivatePem() { exportPrivatePem(workspace.currentEcdsaSummary, "ecdsa_private.pem"); }
-    @FXML public void handleSendEcdsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentEcdsaSummary); }
-    @FXML public void handleSendEcdsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentEcdsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseEcdsaInSignatures() { useInSignatures(workspace.currentEcdsaSummary); }
-    @FXML public void handleUseEcdsaInCertificates() { useInCertificates(workspace.currentEcdsaSummary); }
-    @FXML public void handleClearEcdsa() {
-        workspace.currentEcdsaSummary = null;
-        if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
-        if (ecdsaPublicKeyArea != null) ecdsaPublicKeyArea.clear();
-        if (ecdsaPrivateKeyArea != null) ecdsaPrivateKeyArea.clear();
-        if (ecdsaFpPublicKeyArea != null) ecdsaFpPublicKeyArea.clear();
-        if (ecdsaFpPrivateKeyArea != null) ecdsaFpPrivateKeyArea.clear();
-        updateStatus("Cleared ECDSA key pair");
-    }
+    @FXML public void handleCopyEcdsaPublicKey() { keySummaryCoordinator().handleCopyEcdsaPublicKey(); }
+    @FXML public void handleCopyEcdsaPrivateKey() { keySummaryCoordinator().handleCopyEcdsaPrivateKey(); }
+    @FXML public void handleCopyEcdsaSummary() { keySummaryCoordinator().handleCopyEcdsaSummary(); }
+    @FXML public void handleExportEcdsaPublicPem() { keySummaryCoordinator().handleExportEcdsaPublicPem(); }
+    @FXML public void handleExportEcdsaPrivatePem() { keySummaryCoordinator().handleExportEcdsaPrivatePem(); }
+    @FXML public void handleSendEcdsaPublicToShelf() { keySummaryCoordinator().handleSendEcdsaPublicToShelf(); }
+    @FXML public void handleSendEcdsaPrivateToShelf() { keySummaryCoordinator().handleSendEcdsaPrivateToShelf(); }
+    @FXML public void handleUseEcdsaInSignatures() { keySummaryCoordinator().handleUseEcdsaInSignatures(); }
+    @FXML public void handleUseEcdsaInCertificates() { keySummaryCoordinator().handleUseEcdsaInCertificates(); }
+    @FXML public void handleClearEcdsa() { keySummaryCoordinator().handleClearEcdsa(); }
 
     // DSA Action Handlers
-    @FXML public void handleCopyDsaPublicKey() { copyPublicKey(workspace.currentDsaSummary); }
-    @FXML public void handleCopyDsaPrivateKey() { copyPrivateKey(workspace.currentDsaSummary); }
-    @FXML public void handleCopyDsaSummary() { copyAsymmetricSummary(workspace.currentDsaSummary); }
-    @FXML public void handleExportDsaPublicPem() { exportPublicPem(workspace.currentDsaSummary, "dsa_public.pem"); }
-    @FXML public void handleExportDsaPrivatePem() { exportPrivatePem(workspace.currentDsaSummary, "dsa_private.pem"); }
-    @FXML public void handleSendDsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentDsaSummary); }
-    @FXML public void handleSendDsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentDsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseDsaInSignatures() { useInSignatures(workspace.currentDsaSummary); }
-    @FXML public void handleUseDsaInCertificates() { useInCertificates(workspace.currentDsaSummary); }
-    @FXML public void handleClearDsa() {
-        workspace.currentDsaSummary = null;
-        if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
-        if (dsaPublicKeyArea != null) dsaPublicKeyArea.clear();
-        if (dsaPrivateKeyArea != null) dsaPrivateKeyArea.clear();
-        updateStatus("Cleared DSA key pair");
-    }
+    @FXML public void handleCopyDsaPublicKey() { keySummaryCoordinator().handleCopyDsaPublicKey(); }
+    @FXML public void handleCopyDsaPrivateKey() { keySummaryCoordinator().handleCopyDsaPrivateKey(); }
+    @FXML public void handleCopyDsaSummary() { keySummaryCoordinator().handleCopyDsaSummary(); }
+    @FXML public void handleExportDsaPublicPem() { keySummaryCoordinator().handleExportDsaPublicPem(); }
+    @FXML public void handleExportDsaPrivatePem() { keySummaryCoordinator().handleExportDsaPrivatePem(); }
+    @FXML public void handleSendDsaPublicToShelf() { keySummaryCoordinator().handleSendDsaPublicToShelf(); }
+    @FXML public void handleSendDsaPrivateToShelf() { keySummaryCoordinator().handleSendDsaPrivateToShelf(); }
+    @FXML public void handleUseDsaInSignatures() { keySummaryCoordinator().handleUseDsaInSignatures(); }
+    @FXML public void handleUseDsaInCertificates() { keySummaryCoordinator().handleUseDsaInCertificates(); }
+    @FXML public void handleClearDsa() { keySummaryCoordinator().handleClearDsa(); }
 
     // Ed25519 Action Handlers
-    @FXML public void handleCopyEddsaPublicKey() { copyPublicKey(workspace.currentEddsaSummary); }
-    @FXML public void handleCopyEddsaPrivateKey() { copyPrivateKey(workspace.currentEddsaSummary); }
-    @FXML public void handleCopyEddsaSummary() { copyAsymmetricSummary(workspace.currentEddsaSummary); }
-    @FXML public void handleExportEddsaPublicPem() { exportPublicPem(workspace.currentEddsaSummary, "ed25519_public.pem"); }
-    @FXML public void handleExportEddsaPrivatePem() { exportPrivatePem(workspace.currentEddsaSummary, "ed25519_private.pem"); }
-    @FXML public void handleSendEddsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentEddsaSummary); }
-    @FXML public void handleSendEddsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentEddsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseEddsaInSignatures() { useInSignatures(workspace.currentEddsaSummary); }
-    @FXML public void handleUseEddsaInCertificates() { useInCertificates(workspace.currentEddsaSummary); }
-    @FXML public void handleClearEd25519() {
-        workspace.currentEddsaSummary = null;
-        if (eddsaSummaryCard != null) { eddsaSummaryCard.setVisible(false); eddsaSummaryCard.setManaged(false); }
-        if (eddsaPublicKeyArea != null) eddsaPublicKeyArea.clear();
-        if (eddsaPrivateKeyArea != null) eddsaPrivateKeyArea.clear();
-        if (ed25519PublicKeyArea != null) ed25519PublicKeyArea.clear();
-        if (ed25519PrivateKeyArea != null) ed25519PrivateKeyArea.clear();
-        updateStatus("Cleared Ed25519 key pair");
-    }
+    @FXML public void handleCopyEddsaPublicKey() { keySummaryCoordinator().handleCopyEddsaPublicKey(); }
+    @FXML public void handleCopyEddsaPrivateKey() { keySummaryCoordinator().handleCopyEddsaPrivateKey(); }
+    @FXML public void handleCopyEddsaSummary() { keySummaryCoordinator().handleCopyEddsaSummary(); }
+    @FXML public void handleExportEddsaPublicPem() { keySummaryCoordinator().handleExportEddsaPublicPem(); }
+    @FXML public void handleExportEddsaPrivatePem() { keySummaryCoordinator().handleExportEddsaPrivatePem(); }
+    @FXML public void handleSendEddsaPublicToShelf() { keySummaryCoordinator().handleSendEddsaPublicToShelf(); }
+    @FXML public void handleSendEddsaPrivateToShelf() { keySummaryCoordinator().handleSendEddsaPrivateToShelf(); }
+    @FXML public void handleUseEddsaInSignatures() { keySummaryCoordinator().handleUseEddsaInSignatures(); }
+    @FXML public void handleUseEddsaInCertificates() { keySummaryCoordinator().handleUseEddsaInCertificates(); }
+    @FXML public void handleClearEd25519() { keySummaryCoordinator().handleClearEd25519(); }
 
-    public String getOutputText() {
-        // Check Symmetric Results
-        if (componentResultsArea != null && !componentResultsArea.getText().isEmpty()) {
-            return componentResultsArea.getText();
-        }
-        if (validationResultArea != null && !validationResultArea.getText().isEmpty()) {
-            return validationResultArea.getText();
-        }
-        if (generatedKeyField != null && !generatedKeyField.getText().isEmpty()) {
-            return generatedKeyField.getText();
-        }
-
-        // Check Asymmetric (Public/Private)
-        StringBuilder sb = new StringBuilder();
-        // RSA
-        if (rsaPublicKeyArea != null && !rsaPublicKeyArea.getText().isEmpty()) {
-            sb.append("RSA Public Key:\n").append(rsaPublicKeyArea.getText()).append("\n\n");
-        }
-        if (rsaPrivateKeyArea != null && !rsaPrivateKeyArea.getText().isEmpty()) {
-            sb.append("RSA Private Key:\n").append(rsaPrivateKeyArea.getText()).append("\n\n");
-        }
-        // DSA
-        if (dsaPublicKeyArea != null && !dsaPublicKeyArea.getText().isEmpty()) {
-            sb.append("DSA Public Key:\n").append(dsaPublicKeyArea.getText()).append("\n\n");
-        }
-
-        return sb.toString();
-    }
+    public String getOutputText() { return keySummaryCoordinator().getOutputText(); }
 
     public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) { tr31Coordinator().loadProfile(p); }
 
