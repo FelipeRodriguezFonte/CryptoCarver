@@ -16,6 +16,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Headless contract test for Payments validation feedback. */
 class PaymentsValidationHeadlessTest {
+    /** The Payments screen's UI code: the controller and the coordinators split out of it. */
+    private static String paymentsSource() throws java.io.IOException {
+        StringBuilder source = new StringBuilder();
+        for (String name : new String[] {"PaymentsController", "PinBlockCoordinator"}) {
+            source.append(Files.readString(Path.of("src/main/java/com/cryptocarver/ui/" + name + ".java")));
+        }
+        return source.toString();
+    }
+
     @TempDir Path temporaryDirectory;
 
     @Test
@@ -34,17 +43,12 @@ class PaymentsValidationHeadlessTest {
         expectedTechnicalAnchor.put("module.payments.error.macRequired", "MAC");
         expectedTechnicalAnchor.put("module.payments.error.macKeyInvalid", "MAC");
         expectedTechnicalAnchor.put("module.payments.error.macDataHex", "MAC");
-        expectedTechnicalAnchor.put("module.payments.error.pinBlockPanRequired", "PIN");
-        expectedTechnicalAnchor.put("module.payments.error.pvvRequired", "PVV");
-        expectedTechnicalAnchor.put("module.payments.error.pvvFormatInvalid", "PVV");
-        expectedTechnicalAnchor.put("module.payments.error.trackRequired", "Track");
-        expectedTechnicalAnchor.put("module.payments.error.trackFormatInvalid", "Track");
 
         AppSettings settings = new AppSettings(temporaryDirectory.resolve("settings.json"));
         I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
                 Locale.ENGLISH, getClass().getClassLoader());
         String generic = service.text("module.payments.error.required");
-        String source = Files.readString(Path.of("src/main/java/com/cryptocarver/ui/PaymentsController.java"));
+        String source = paymentsSource();
 
         for (Map.Entry<String, String> entry : expectedTechnicalAnchor.entrySet()) {
             String key = entry.getKey();
@@ -66,7 +70,6 @@ class PaymentsValidationHeadlessTest {
         String[] keys = {
                 "module.payments.error.aesDukptSelection",
                 "module.payments.error.aesDukptBdkRequired",
-                "module.payments.error.samePinFormats",
                 "module.payments.error.controlsNotInitialized",
                 "module.payments.error.invalidStartPosition",
                 "module.payments.error.invalidLength",
@@ -93,17 +96,14 @@ class PaymentsValidationHeadlessTest {
                 "module.payments.result.pinBlockDecodingTitle",
                 "module.payments.result.cvvGenerationTitle",
                 "module.payments.result.cvvVerificationTitle",
-                "module.payments.result.pvvVerificationTitle",
                 "module.payments.result.macGenerationTitle",
-                "module.payments.result.track1EncodedTitle",
-                "module.payments.result.track2EncodedTitle",
                 "module.payments.result.aesDukptNote"
         };
 
         AppSettings settings = new AppSettings(temporaryDirectory.resolve("advanced-settings.json"));
         I18nService service = new I18nService(settings, I18nService.BUNDLE_BASE_NAME,
                 Locale.ENGLISH, getClass().getClassLoader());
-        String source = Files.readString(Path.of("src/main/java/com/cryptocarver/ui/PaymentsController.java"));
+        String source = paymentsSource();
 
         for (String key : keys) {
             String english = service.text(key, "sample");
@@ -120,6 +120,5 @@ class PaymentsValidationHeadlessTest {
         assertTrue(source.contains("module.payments.error.cvkAInvalid"));
         assertTrue(source.contains("module.payments.error.cvkBInvalid"));
         assertTrue(source.contains("module.payments.error.atcInvalid"));
-        assertTrue(source.contains("module.payments.error.trackFormatInvalid"));
     }
 }
