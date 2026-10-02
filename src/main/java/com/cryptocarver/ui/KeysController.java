@@ -15,14 +15,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.Key;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,6 +103,70 @@ public class KeysController {
                     () -> mainController, this::updateStatus, this::t);
         }
         return tr34Coordinator;
+    }
+
+    private AsymmetricKeyGenerationCoordinator asymmetricKeyGenerationCoordinator;
+
+    private AsymmetricKeyGenerationCoordinator asymmetricKeyGenerationCoordinator() {
+        if (asymmetricKeyGenerationCoordinator == null) {
+            asymmetricKeyGenerationCoordinator = new AsymmetricKeyGenerationCoordinator(
+                    () -> new AsymmetricKeyGenerationCoordinator.View(
+                            rsaSummaryCard,
+                            rsaSummaryAlgoLabel,
+                            rsaSummaryFingerprintLabel,
+                            rsaSummaryPubLenLabel,
+                            rsaSummaryPrivLenLabel,
+                            rsaSummaryCreatedLabel,
+                            rsaSummarySavedStatusLabel,
+                            ecdsaSummaryCard,
+                            ecdsaSummaryAlgoLabel,
+                            ecdsaSummaryFingerprintLabel,
+                            ecdsaSummaryPubLenLabel,
+                            ecdsaSummaryPrivLenLabel,
+                            ecdsaSummaryCreatedLabel,
+                            ecdsaSummarySavedStatusLabel,
+                            dsaSummaryCard,
+                            dsaSummaryAlgoLabel,
+                            dsaSummaryFingerprintLabel,
+                            dsaSummaryPubLenLabel,
+                            dsaSummaryPrivLenLabel,
+                            dsaSummaryCreatedLabel,
+                            dsaSummarySavedStatusLabel,
+                            eddsaSummaryCard,
+                            eddsaSummaryAlgoLabel,
+                            eddsaSummaryFingerprintLabel,
+                            eddsaSummaryPubLenLabel,
+                            eddsaSummaryPrivLenLabel,
+                            eddsaSummaryCreatedLabel,
+                            eddsaSummarySavedStatusLabel,
+                            rsaKeySizeCombo,
+                            rsaPublicKeyArea,
+                            rsaPrivateKeyArea,
+                            dsaKeySizeCombo,
+                            dsaPublicKeyArea,
+                            dsaPrivateKeyArea,
+                            ecdsaFpCurveCombo,
+                            ecdsaFpPublicKeyArea,
+                            ecdsaFpPrivateKeyArea,
+                            ed25519PublicKeyArea,
+                            ed25519PrivateKeyArea,
+                            rsaGenerateBtn,
+                            dsaGenerateBtn),
+                    () -> mainController, this::showError, this::updateStatus, this::t, this::acceptAsymmetricGeneration);
+        }
+        return asymmetricKeyGenerationCoordinator;
+    }
+
+    private void acceptAsymmetricGeneration(AsymmetricKeyGenerationCoordinator.StateUpdate update) {
+        lastGeneratedKeyPair = update.keyPair();
+        lastKeyType = update.algorithm();
+        switch (update.algorithm()) {
+            case "RSA" -> currentRsaSummary = update.summary();
+            case "DSA" -> currentDsaSummary = update.summary();
+            case "ECDSA" -> currentEcdsaSummary = update.summary();
+            case "Ed25519" -> currentEddsaSummary = update.summary();
+            default -> throw new IllegalArgumentException("Unsupported generation algorithm");
+        }
     }
 
     private String t(String key, Object... args) {
@@ -1589,9 +1650,7 @@ public class KeysController {
         this.rsaKeySizeCombo = keySizeCombo;
         this.rsaPublicKeyArea = publicArea;
         this.rsaPrivateKeyArea = privateArea;
-
-        rsaKeySizeCombo.getItems().addAll(AsymmetricKeyOperations.RSA_KEY_SIZES);
-        rsaKeySizeCombo.setValue(2048);
+        asymmetricKeyGenerationCoordinator().initializeRSA();
     }
 
     /**
@@ -1601,9 +1660,7 @@ public class KeysController {
         this.dsaKeySizeCombo = keySizeCombo;
         this.dsaPublicKeyArea = publicArea;
         this.dsaPrivateKeyArea = privateArea;
-
-        dsaKeySizeCombo.getItems().addAll(AsymmetricKeyOperations.DSA_KEY_SIZES);
-        dsaKeySizeCombo.setValue("2048/256");
+        asymmetricKeyGenerationCoordinator().initializeDSA();
     }
 
     /**
@@ -1613,9 +1670,7 @@ public class KeysController {
         this.ecdsaFpCurveCombo = curveCombo;
         this.ecdsaFpPublicKeyArea = publicArea;
         this.ecdsaFpPrivateKeyArea = privateArea;
-
-        ecdsaFpCurveCombo.getItems().addAll(AsymmetricKeyOperations.ECDSA_FP_NAMED_CURVES);
-        ecdsaFpCurveCombo.setValue("secp256r1");
+        asymmetricKeyGenerationCoordinator().initializeECDSAFp();
     }
 
     /**
@@ -1624,6 +1679,7 @@ public class KeysController {
     public void initializeEd25519(TextArea publicArea, TextArea privateArea) {
         this.ed25519PublicKeyArea = publicArea;
         this.ed25519PrivateKeyArea = privateArea;
+        asymmetricKeyGenerationCoordinator().initializeEd25519();
     }
 
     /**
@@ -2591,308 +2647,27 @@ public class KeysController {
      * Cancellation here is UI/Interface Best-Effort cancellation: the UI thread detaches instantly, hides progress,
      * re-enables controls, and discards all output/history, while the JCA background task completes off the UI thread.
      */
-    public void handleGenerateRSA() {
-        try {
-            Integer keySize = rsaKeySizeCombo.getValue();
-            if (keySize == null) {
-                showError("Input Error", "Please select RSA key size");
-                return;
-            }
-
-            updateStatus("Generating RSA-" + keySize + " key pair... This may take a moment.");
-
-            Callable<KeyPair> task = () -> AsymmetricKeyOperations.generateRSAKeyPair(keySize);
-
-            Consumer<KeyPair> onSuccess = keyPair -> {
-                try {
-                    lastGeneratedKeyPair = keyPair;
-                    lastKeyType = "RSA";
-
-                    GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "RSA", keySize + " bits");
-                    this.currentRsaSummary = summary;
-                    updateAsymmetricSummaryCard(rsaSummaryCard, rsaSummaryAlgoLabel, rsaSummaryFingerprintLabel, rsaSummaryPubLenLabel, rsaSummaryPrivLenLabel, rsaSummaryCreatedLabel, rsaSummarySavedStatusLabel, summary);
-
-                    String publicKeyInfo = AsymmetricKeyOperations.getRSAPublicKeyInfo(keyPair.getPublic());
-                    String privateKeyInfo = AsymmetricKeyOperations.getRSAPrivateKeyInfo(keyPair.getPrivate());
-
-                    rsaPublicKeyArea.setText("=== RSA PUBLIC KEY ===\n\n" + publicKeyInfo +
-                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-                    rsaPrivateKeyArea.setText("=== RSA PRIVATE KEY ===\n\n" + privateKeyInfo +
-                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-                    updateStatus("RSA-" + keySize + " key pair generated successfully");
-
-                    if (mainController != null) {
-                        try {
-                            java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Size", keySize + " bits"));
-                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
-                            details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
-
-                            mainController.publish(OperationResult.forOperation("Generate RSA Key")
-                                    .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
-                                            .getBytes(StandardCharsets.UTF_8))
-                                    .enrichedOutput(renderGeneratedKeyPair(
-                                            AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
-                                            AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
-                                            com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                                    .details(details)
-                                    .status("RSA-" + keySize + " key pair generated successfully")
-                                    .build());
-                        } catch (Exception e) {
-                            System.err.println("Failed to add to history: " + e.getMessage());
-                        }
-                    }
-                } catch (Exception e) {
-                    showError("RSA Generation Error", e.getMessage());
-                }
-            };
-
-            Consumer<Throwable> onFailure = err -> {
-                showError("RSA Generation Error", err != null ? err.getMessage() : "Unknown error during key generation");
-            };
-
-            Runnable onCancelled = () -> {
-                updateStatus("RSA key generation cancelled.");
-            };
-
-            if (mainController != null && mainController.getOperationExecutor() != null) {
-                mainController.getOperationExecutor().execute("RSA-" + keySize + " Key Generation", rsaGenerateBtn, task, onSuccess, onFailure, onCancelled);
-            } else {
-                KeyPair kp = task.call();
-                onSuccess.accept(kp);
-            }
-        } catch (Exception e) {
-            showError("RSA Generation Error", e.getMessage());
-        }
-    }
+    public void handleGenerateRSA() { asymmetricKeyGenerationCoordinator().handleGenerateRSA(); }
 
     /**
      * Generate DSA key pair
      */
-    public void handleGenerateDSA() {
-        try {
-            String keySize = dsaKeySizeCombo.getValue();
-            if (keySize == null) {
-                showError("Input Error", "Please select DSA key size");
-                return;
-            }
-
-            updateStatus("Generating DSA-" + keySize + " key pair...");
-
-            Callable<KeyPair> task = () -> AsymmetricKeyOperations.generateDSAKeyPair(keySize);
-
-            Consumer<KeyPair> onSuccess = keyPair -> {
-                try {
-                    lastGeneratedKeyPair = keyPair;
-                    lastKeyType = "DSA";
-
-                    GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "DSA", keySize + " bits");
-                    this.currentDsaSummary = summary;
-                    updateAsymmetricSummaryCard(dsaSummaryCard, dsaSummaryAlgoLabel, dsaSummaryFingerprintLabel, dsaSummaryPubLenLabel, dsaSummaryPrivLenLabel, dsaSummaryCreatedLabel, dsaSummarySavedStatusLabel, summary);
-
-                    String publicKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPublic());
-                    String privateKeyInfo = AsymmetricKeyOperations.getDSAKeyInfo(keyPair.getPrivate());
-
-                    dsaPublicKeyArea.setText("=== DSA PUBLIC KEY ===\n\n" + publicKeyInfo +
-                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-                    dsaPrivateKeyArea.setText("=== DSA PRIVATE KEY ===\n\n" + privateKeyInfo +
-                            "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-                    updateStatus("DSA-" + keySize + " key pair generated successfully");
-
-                    if (mainController != null) {
-                        try {
-                            java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Size", keySize));
-                            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
-                            details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
-
-                            mainController.publish(OperationResult.forOperation("Generate DSA Key")
-                                    .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
-                                            .getBytes(StandardCharsets.UTF_8))
-                                    .enrichedOutput(renderGeneratedKeyPair(
-                                            AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
-                                            AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
-                                            com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                                    .details(details)
-                                    .status("DSA-" + keySize + " key pair generated successfully")
-                                    .build());
-                        } catch (Exception e) {
-                            System.err.println("Failed to add to history: " + e.getMessage());
-                        }
-                    }
-                } catch (Exception e) {
-                    showError("DSA Generation Error", e.getMessage());
-                }
-            };
-
-            Consumer<Throwable> onFailure = err -> {
-                showError("DSA Generation Error", err != null ? err.getMessage() : "Unknown error during key generation");
-            };
-
-            Runnable onCancelled = () -> {
-                updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.keys.generationCancelled"));
-            };
-
-            if (mainController != null && mainController.getOperationExecutor() != null) {
-                mainController.getOperationExecutor().execute("DSA-" + keySize + " Key Generation", dsaGenerateBtn, task, onSuccess, onFailure, onCancelled);
-            } else {
-                KeyPair kp = task.call();
-                onSuccess.accept(kp);
-            }
-        } catch (Exception e) {
-            showError("DSA Generation Error", e.getMessage());
-        }
-    }
+    public void handleGenerateDSA() { asymmetricKeyGenerationCoordinator().handleGenerateDSA(); }
 
     /**
      * Generate ECDSA F(p) key pair
      */
-    public void handleGenerateECDSAFp() {
-        try {
-            String curve = ecdsaFpCurveCombo.getValue();
-            if (curve == null) {
-                showError("Input Error", "Please select a curve");
-                return;
-            }
-
-            updateStatus("Generating ECDSA F(p) key pair on curve " + curve + "...");
-
-            KeyPair keyPair = AsymmetricKeyOperations.generateECDSAFpKeyPair(curve);
-
-            lastGeneratedKeyPair = keyPair;
-            lastKeyType = "ECDSA";
-
-            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "ECDSA", curve);
-            this.currentEcdsaSummary = summary;
-            updateAsymmetricSummaryCard(ecdsaSummaryCard, ecdsaSummaryAlgoLabel, ecdsaSummaryFingerprintLabel, ecdsaSummaryPubLenLabel, ecdsaSummaryPrivLenLabel, ecdsaSummaryCreatedLabel, ecdsaSummarySavedStatusLabel, summary);
-
-            String publicKeyInfo = AsymmetricKeyOperations.getECKeyInfo(keyPair.getPublic());
-            String privateKeyInfo = AsymmetricKeyOperations.getECKeyInfo(keyPair.getPrivate());
-
-            ecdsaFpPublicKeyArea.setText("=== ECDSA F(p) PUBLIC KEY ===\n" +
-                    "Curve: " + curve + "\n\n" + publicKeyInfo +
-                    "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-            ecdsaFpPrivateKeyArea.setText("=== ECDSA F(p) PRIVATE KEY ===\n" +
-                    "Curve: " + curve + "\n\n" + privateKeyInfo +
-                    "\n\n=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-            updateStatus("ECDSA F(p) key pair generated on curve " + curve);
-
-            if (mainController != null) {
-                try {
-                    java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Curve", curve));
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())));
-                    details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key", AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
-
-                    mainController.publish(OperationResult.forOperation("Generate ECDSA Key")
-                            .output(AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic())
-                                    .getBytes(StandardCharsets.UTF_8))
-                            .enrichedOutput(renderGeneratedKeyPair(
-                                    AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()),
-                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
-                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                            .details(details)
-                            .status("ECDSA F(p) key pair generated on curve " + curve)
-                            .build());
-                } catch (Exception e) {
-                    System.err.println("Failed to add to history: " + e.getMessage());
-                }
-            } else {
-                if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Generate ECDSA F(p) - " + curve)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "N/A", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Curve: " + curve, com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-            }
-
-        } catch (Exception e) {
-            showError("Generation Error", "Error generating ECDSA F(p) key: " + e.getMessage());
-        }
-    }
+    public void handleGenerateECDSAFp() { asymmetricKeyGenerationCoordinator().handleGenerateECDSAFp(); }
 
     /**
      * Generate Ed25519 key pair
      */
-    public void handleGenerateEd25519() {
-        try {
-            updateStatus("Generating Ed25519 key pair...");
-
-            KeyPair keyPair = AsymmetricKeyOperations.generateEd25519KeyPair();
-
-            lastGeneratedKeyPair = keyPair;
-            lastKeyType = "Ed25519";
-
-            GeneratedAsymmetricKeySummary summary = new GeneratedAsymmetricKeySummary(keyPair, "Ed25519", "Ed25519 (255-bit curve)");
-            this.currentEddsaSummary = summary;
-            updateAsymmetricSummaryCard(eddsaSummaryCard, eddsaSummaryAlgoLabel, eddsaSummaryFingerprintLabel, eddsaSummaryPubLenLabel, eddsaSummaryPrivLenLabel, eddsaSummaryCreatedLabel, eddsaSummarySavedStatusLabel, summary);
-
-            ed25519PublicKeyArea.setText("=== Ed25519 PUBLIC KEY ===\n" +
-                    "Algorithm: Ed25519 (255-bit curve)\n" +
-                    "Use: Digital signatures (fast, secure)\n\n" +
-                    "=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic()));
-
-            ed25519PrivateKeyArea.setText("=== Ed25519 PRIVATE KEY ===\n" +
-                    "Algorithm: Ed25519 (255-bit curve)\n" +
-                    "Use: Digital signatures (fast, secure)\n\n" +
-                    "=== PEM FORMAT ===\n" + AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate()));
-
-            updateStatus("Ed25519 key pair generated successfully");
-
-            if (mainController != null) {
-                try {
-                    String publicPem = AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic());
-                    java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", "Ed25519"));
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", publicPem));
-                    details.add(com.cryptocarver.model.OperationDetail.secretDetail("Private Key",
-                            AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())));
-                    mainController.publish(OperationResult.forOperation("Generate EdDSA Key")
-                            .output(publicPem.getBytes(StandardCharsets.UTF_8))
-                            .enrichedOutput(renderGeneratedKeyPair(publicPem,
-                                    AsymmetricKeyOperations.exportPrivateKeyPEM(keyPair.getPrivate())),
-                                    com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                            .details(details)
-                            .status("Ed25519 key pair generated successfully")
-                            .build());
-                } catch (Exception e) {
-                    System.err.println("Failed to add to history: " + e.getMessage());
-                }
-            } else {
-                if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Generate Ed25519")
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "N/A", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Algorithm: Ed25519", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-            }
-
-        } catch (Exception e) {
-            showError("Generation Error", "Error generating Ed25519 key: " + e.getMessage());
-        }
-    }
-
-    private String renderGeneratedKeyPair(String publicKeyPem, String privateKeyPem) {
-        return "=== PUBLIC KEY ===\n\n" + publicKeyPem
-                + "\n\n=== PRIVATE KEY ===\n\n" + privateKeyPem;
-    }
+    public void handleGenerateEd25519() { asymmetricKeyGenerationCoordinator().handleGenerateEd25519(); }
 
     /**
      * Alias for handleGenerateEd25519 for Modern UI
      */
-    public void handleGenerateEdDSA() {
-        handleGenerateEd25519();
-    }
+    public void handleGenerateEdDSA() { asymmetricKeyGenerationCoordinator().handleGenerateEdDSA(); }
 
     /**
      * Generate ECDSA F(2^m) key pair
@@ -4703,18 +4478,6 @@ public class KeysController {
         if (eddsaPrivateKeyArea != null) eddsaPrivateKeyArea.clear();
         if (ed25519PublicKeyArea != null) ed25519PublicKeyArea.clear();
         if (ed25519PrivateKeyArea != null) ed25519PrivateKeyArea.clear();
-    }
-
-    private void updateAsymmetricSummaryCard(VBox card, Label algoLbl, Label fpLbl, Label pubLenLbl, Label privLenLbl, Label createdLbl, Label savedLbl, GeneratedAsymmetricKeySummary summary) {
-        if (card == null || summary == null) return;
-        if (algoLbl != null) algoLbl.setText(summary.getAlgorithm() + " (" + summary.getCurveOrKeySize() + ")");
-        if (fpLbl != null) fpLbl.setText(summary.getPublicFingerprintTruncated());
-        if (pubLenLbl != null) pubLenLbl.setText(summary.getPublicKeyLength());
-        if (privLenLbl != null) privLenLbl.setText(summary.getPrivateKeyLength());
-        if (createdLbl != null) createdLbl.setText(summary.getCreatedAt());
-        if (savedLbl != null) savedLbl.setText(summary.getSavedStatus() != null ? "✓ " + summary.getSavedStatus() : "");
-        card.setVisible(true);
-        card.setManaged(true);
     }
 
     private void copyPublicKey(GeneratedAsymmetricKeySummary summary) {
