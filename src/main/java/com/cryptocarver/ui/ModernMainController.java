@@ -1602,7 +1602,13 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
         if (accordion != null) {
             String targetPane = "";
-            if (itemName.contains("DUKPT")) {
+            // ISO 8583 and the host commands first: their names would otherwise match "ISO"
+            // (Encrypted PIN Blocks) or nothing at all.
+            if (itemName.contains("ISO 8583") || itemName.contains("ISO8583")) {
+                targetPane = "ISO 8583 Message Inspector";
+            } else if (itemName.contains("Host Command")) {
+                targetPane = "Host Command Bank";
+            } else if (itemName.contains("DUKPT")) {
                 targetPane = "DUKPT KSN";
             } else if (itemName.contains("CVV")) {
                 targetPane = "CVV";

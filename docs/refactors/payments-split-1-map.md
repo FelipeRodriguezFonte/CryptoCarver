@@ -100,3 +100,9 @@ usaba el código muerto.
 
 - El informe de ISO 8583 lista los campos en orden aleatorio: `Iso8583Operations.Message`
   copia los campos con `Map.copyOf`, que no conserva el orden. El test los ordena.
+- Navegación: «ISO 8583 Message Inspector» abría «Encrypted PIN Blocks (ISO)» porque la ruta
+  contiene «ISO», y el banco de comandos de host no abría ningún panel. Lo cubre
+  `PaymentsNavigationUITest` en inglés y español. La ruta del banco admite también el alias
+  neutro «Host Command Bank».
+- Traducción: «Clear PIN Blocks» aparecía como «Limpiar bloques PIN»; ahora «Bloques PIN en
+  claro».
