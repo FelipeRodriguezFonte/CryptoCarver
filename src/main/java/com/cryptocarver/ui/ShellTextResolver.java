@@ -5,6 +5,9 @@ import java.util.function.Function;
 
 /** Resolves translated shell text without depending on JavaFX. */
 public final class ShellTextResolver {
+  /** Remedy UserFacingErrorMapper attaches when it has nothing more specific to suggest. */
+  private static final String FALLBACK_REMEDY = "Review the parameters and technical details to correct the error.";
+
   private final Function<String, String> translate;
 
   public ShellTextResolver(Function<String, String> translate) {
@@ -58,7 +61,7 @@ public final class ShellTextResolver {
     String title = error.title() == null ? "" : error.title().toLowerCase(Locale.ROOT);
     String keyPrefix = errorKeyPrefix(title);
     if (keyPrefix == null) {
-      return error;
+      return withCommonTextLocalized(error);
     }
     return new UserFacingError(
         translate.apply(keyPrefix + ".title"),
@@ -66,6 +69,39 @@ public final class ShellTextResolver {
         translate.apply(keyPrefix + ".remedy"),
         error.fieldKey(),
         error.cause());
+  }
+
+  /** Errors without a dedicated translation keep their detail but get a translated title and fallback remedy. */
+  private UserFacingError withCommonTextLocalized(UserFacingError error) {
+    String titleKey = commonTitleKey(error.title());
+    boolean fallbackRemedy = FALLBACK_REMEDY.equals(error.remedy());
+    if (titleKey == null && !fallbackRemedy) {
+      return error;
+    }
+    return new UserFacingError(
+        titleKey == null ? error.title() : translate.apply(titleKey),
+        error.detail(),
+        fallbackRemedy ? translate.apply("error.wrap.fallback.remedy") : error.remedy(),
+        error.fieldKey(),
+        error.cause());
+  }
+
+  private static String commonTitleKey(String title) {
+    if (title == null) {
+      return null;
+    }
+    return switch (title) {
+      case "Operation Failed" -> "error.wrap.fallback.title";
+      case "Validation Error" -> "error.title.validation";
+      case "Input Error" -> "error.title.input";
+      case "Encryption Error" -> "error.title.encryption";
+      case "Decryption Error" -> "error.title.decryption";
+      case "IV Error" -> "error.title.iv";
+      case "Tag Error" -> "error.title.tag";
+      case "Save Error" -> "error.title.save";
+      case "Analysis Error" -> "error.title.analysis";
+      default -> null;
+    };
   }
 
   private String errorKeyPrefix(String title) {

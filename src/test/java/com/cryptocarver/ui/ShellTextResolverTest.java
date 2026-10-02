@@ -15,7 +15,9 @@ class ShellTextResolverTest {
                       "bread.symmetric", "Simétrico",
                       "error.wrap.tag.title", "Error traducido",
                       "error.wrap.tag.detail", "Detalle traducido",
-                      "error.wrap.tag.remedy", "Solución traducida")
+                      "error.wrap.tag.remedy", "Solución traducida",
+                      "error.title.validation", "Error de validación",
+                      "error.wrap.fallback.remedy", "Revisa los parámetros")
                   .getOrDefault(key, key));
 
   @Test
@@ -53,5 +55,16 @@ class ShellTextResolverTest {
   void preservesUnmappedError() {
     UserFacingError error = new UserFacingError("Custom failure", "detail", "remedy", "field");
     assertSame(error, resolver.localizedError(error));
+  }
+
+  @Test
+  void translatesCommonTitleAndFallbackRemedyButKeepsTheDetail() {
+    UserFacingError error = new UserFacingError("Validation Error", "Enter the symmetric key",
+        "Review the parameters and technical details to correct the error.", "key");
+    UserFacingError localized = resolver.localizedError(error);
+    assertEquals("Error de validación", localized.title());
+    assertEquals("Enter the symmetric key", localized.detail());
+    assertEquals("Revisa los parámetros", localized.remedy());
+    assertEquals("key", localized.fieldKey());
   }
 }
