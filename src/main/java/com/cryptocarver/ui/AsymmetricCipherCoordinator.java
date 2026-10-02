@@ -21,7 +21,9 @@ import java.util.function.Supplier;
 /**
  * The RSA panel of the cipher screen: loading public and private keys (PEM, hex or Base64 DER),
  * the padding choice with its warning, and encryption/decryption of the shared input area.
- * Keys loaded here take precedence; otherwise the key pair generated in the Keys module is used.
+ * Each operation first takes the key pair generated in the Keys module, when there is one, and
+ * only falls back to the keys loaded here otherwise. Typing a key in the text area does not load
+ * it: the paste, Shelf and file buttons do.
  */
 final class AsymmetricCipherCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(AsymmetricCipherCoordinator.class);
