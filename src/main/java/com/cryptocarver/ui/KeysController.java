@@ -203,6 +203,16 @@ public class KeysController {
         return kdfKeyWrapCoordinator;
     }
 
+    private CmsCoordinator cmsCoordinator;
+
+    private CmsCoordinator cmsCoordinator() {
+        if (cmsCoordinator == null) {
+            cmsCoordinator = new CmsCoordinator(
+                    () -> mainController, this::showError, this::updateStatus, this::t);
+        }
+        return cmsCoordinator;
+    }
+
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
@@ -3263,32 +3273,6 @@ public class KeysController {
     // CMS / PKCS#7 OPERATIONS
     // ============================================================================
 
-    // CMS UI // CMS
-    private TextArea cmsInputArea;
-    private TextArea cmsOutputArea;
-    private CheckBox cmsDetachedCheck;
-    private CheckBox cmsCadesBesCheck;
-    private CheckBox cmsCadesTCheck;
-    private TextField cmsCadesTsaUrlField;
-    private javafx.scene.layout.HBox cmsCadesTsaBox;
-    // Split fields
-    private TextArea cmsSignCertArea;
-    private TextArea cmsSignKeyArea;
-    private TextArea cmsEncryptCertArea;
-    private TextArea cmsDecryptKeyArea;
-    private javafx.scene.control.RadioButton cmsSignSourcePkcs11Radio;
-    private javafx.scene.layout.GridPane cmsSignLocalGrid;
-    private javafx.scene.layout.HBox cmsSignPkcs11Box;
-    private javafx.scene.control.ComboBox<String> cmsSignKeyAliasCombo;
-    private javafx.scene.control.TextArea cmsVerifyDataArea;
-
-    private javafx.scene.control.RadioButton cmsEncryptSourcePkcs11Radio;
-    private javafx.scene.layout.GridPane cmsEncryptLocalGrid;
-    private javafx.scene.layout.HBox cmsEncryptPkcs11Box;
-    private javafx.scene.control.ComboBox<String> cmsEncryptKeyAliasCombo;
-    private javafx.scene.control.Button cmsSignButton;
-    private CheckBox cmsOnlineRevocationCheck;
-
     /**
      * Initialize CMS components
      */
@@ -3305,326 +3289,28 @@ public class KeysController {
             javafx.scene.layout.GridPane encryptLocalGrid,
             javafx.scene.layout.HBox encryptPkcs11Box,
             javafx.scene.control.ComboBox<String> encryptKeyAliasCombo, javafx.scene.control.Button signButton,
-            CheckBox onlineRevocationCheck) {
-        this.cmsInputArea = inputArea;
-        this.cmsOutputArea = outputArea;
-        this.cmsDetachedCheck = detachedCheck;
-        this.cmsCadesBesCheck = cadesBesCheck;
-        this.cmsCadesTCheck = cadesTCheck;
-        this.cmsCadesTsaUrlField = cadesTsaUrlField;
-        this.cmsCadesTsaBox = cadesTsaBox;
-        this.cmsSignCertArea = signCertArea;
-        this.cmsSignKeyArea = signKeyArea;
-        this.cmsEncryptCertArea = encryptCertArea;
-        this.cmsDecryptKeyArea = decryptKeyArea;
-        this.cmsSignSourcePkcs11Radio = signSourcePkcs11Radio;
-        this.cmsSignLocalGrid = signLocalGrid;
-        this.cmsSignPkcs11Box = signPkcs11Box;
-        this.cmsSignKeyAliasCombo = signKeyAliasCombo;
-        this.cmsVerifyDataArea = verifyDataArea;
-
-        this.cmsEncryptSourcePkcs11Radio = encryptSourcePkcs11Radio;
-        this.cmsEncryptLocalGrid = encryptLocalGrid;
-        this.cmsEncryptPkcs11Box = encryptPkcs11Box;
-        this.cmsEncryptKeyAliasCombo = encryptKeyAliasCombo;
-        this.cmsSignButton = signButton;
-        this.cmsOnlineRevocationCheck = onlineRevocationCheck;
-        handleCadesTimestampOptionChanged();
-    }
+            CheckBox onlineRevocationCheck) { cmsCoordinator().initialize(new CmsCoordinator.View(inputArea, outputArea, detachedCheck, cadesBesCheck, cadesTCheck, cadesTsaUrlField, cadesTsaBox, signCertArea, signKeyArea, encryptCertArea, decryptKeyArea, signSourcePkcs11Radio, signLocalGrid, signPkcs11Box, signKeyAliasCombo, verifyDataArea, encryptSourcePkcs11Radio, encryptLocalGrid, encryptPkcs11Box, encryptKeyAliasCombo, signButton, onlineRevocationCheck)); }
 
     /** Shows the timestamp inputs and keeps CAdES-T dependent on CAdES-BES. */
-    public void handleCadesTimestampOptionChanged() {
-        boolean cadesT = cmsCadesTCheck != null && cmsCadesTCheck.isSelected();
-        if (cadesT && cmsCadesBesCheck != null) {
-            cmsCadesBesCheck.setSelected(true);
-        }
-        if (cmsCadesTsaBox != null) {
-            cmsCadesTsaBox.setVisible(cadesT);
-            cmsCadesTsaBox.setManaged(cadesT);
-        }
-        if (cadesT && cmsCadesTsaUrlField != null && cmsCadesTsaUrlField.getText().isBlank()) {
-            cmsCadesTsaUrlField.setText(AppSettings.getInstance().getCustomTsaUrl());
-        }
-    }
+    public void handleCadesTimestampOptionChanged() { cmsCoordinator().handleCadesTimestampOptionChanged(); }
 
-    public void handleCMSourceChanged() {
-        boolean usePkcs11 = cmsSignSourcePkcs11Radio != null && cmsSignSourcePkcs11Radio.isSelected();
-        if (cmsSignLocalGrid != null) cmsSignLocalGrid.setVisible(!usePkcs11);
-        if (cmsSignLocalGrid != null) cmsSignLocalGrid.setManaged(!usePkcs11);
-        if (cmsSignPkcs11Box != null) cmsSignPkcs11Box.setVisible(usePkcs11);
-        if (cmsSignPkcs11Box != null) cmsSignPkcs11Box.setManaged(usePkcs11);
-    }
+    public void handleCMSourceChanged() { cmsCoordinator().handleCMSourceChanged(); }
 
-    public void handleLoadCMSKeys() {
-        if (!com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
-            showError("PKCS#11 Error", "No token is connected. Please connect from the left panel first.");
-            return;
-        }
-        try {
-            java.util.List<String> aliases = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().listPrivateKeysWithCertificate();
-            cmsSignKeyAliasCombo.getItems().setAll(aliases);
-            if (!aliases.isEmpty()) {
-                cmsSignKeyAliasCombo.getSelectionModel().selectFirst();
-            }
-        } catch (Exception error) {
-            showError("PKCS#11 Error", "Unable to list valid signing aliases: " + error.getMessage());
-        }
-    }
+    public void handleLoadCMSKeys() { cmsCoordinator().handleLoadCMSKeys(); }
 
-    public void handleCMSEncryptSourceChanged() {
-        boolean usePkcs11 = cmsEncryptSourcePkcs11Radio != null && cmsEncryptSourcePkcs11Radio.isSelected();
-        if (cmsEncryptLocalGrid != null) cmsEncryptLocalGrid.setVisible(!usePkcs11);
-        if (cmsEncryptLocalGrid != null) cmsEncryptLocalGrid.setManaged(!usePkcs11);
-        if (cmsEncryptPkcs11Box != null) cmsEncryptPkcs11Box.setVisible(usePkcs11);
-        if (cmsEncryptPkcs11Box != null) cmsEncryptPkcs11Box.setManaged(usePkcs11);
-    }
+    public void handleCMSEncryptSourceChanged() { cmsCoordinator().handleCMSEncryptSourceChanged(); }
 
-    public void handleLoadCMSEncryptKeys() {
-        if (!com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
-            showError("PKCS#11 Error", "No token is connected. Please connect from the left panel first.");
-            return;
-        }
-        try {
-            java.util.List<String> aliases = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().listPrivateKeysWithCertificate();
-            cmsEncryptKeyAliasCombo.getItems().setAll(aliases);
-            if (!aliases.isEmpty()) {
-                cmsEncryptKeyAliasCombo.getSelectionModel().selectFirst();
-            }
-        } catch (Exception error) {
-            showError("PKCS#11 Error", "Unable to list valid encrypt/decrypt aliases: " + error.getMessage());
-        }
-    }
+    public void handleLoadCMSEncryptKeys() { cmsCoordinator().handleLoadCMSEncryptKeys(); }
 
     /**
      * Handle CMS Sign
      */
-    public void handleCMSSign() {
-        try {
-            String dataStr = cmsInputArea.getText();
-            boolean detached = cmsDetachedCheck.isSelected();
-            boolean cadesBes = cmsCadesBesCheck != null && cmsCadesBesCheck.isSelected();
-            boolean cadesT = cmsCadesTCheck != null && cmsCadesTCheck.isSelected();
-            if (cadesT) cadesBes = true;
-            boolean usePkcs11 = cmsSignSourcePkcs11Radio != null && cmsSignSourcePkcs11Radio.isSelected();
-
-            if (dataStr.isEmpty()) {
-                showError("Input Error", "Data to sign is required");
-                return;
-            }
-
-            byte[] data = dataStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            String alias = usePkcs11 ? cmsSignKeyAliasCombo.getSelectionModel().getSelectedItem() : null;
-            String certStr = usePkcs11 ? null : cmsSignCertArea.getText().trim();
-            String keyStr = usePkcs11 ? null : cmsSignKeyArea.getText().trim();
-            String tsaUrl = cadesT ? cmsCadesTsaUrlField == null ? "" : cmsCadesTsaUrlField.getText().trim() : null;
-            if (usePkcs11 && (alias == null || alias.isEmpty())) {
-                showError("Input Error", "Please select a token alias with a valid certificate.");
-                return;
-            }
-            if (!usePkcs11 && (certStr.isEmpty() || keyStr.isEmpty())) {
-                showError("Input Error", "Signer Certificate and Private Key are required for local signing");
-                return;
-            }
-            if (cadesT && !tsaUrl.startsWith("http://") && !tsaUrl.startsWith("https://")) {
-                showError("CAdES-T TSA", "Enter a valid http:// or https:// TSA URL for CAdES-T.");
-                return;
-            }
-            final boolean cadesBesOption = cadesBes;
-            final boolean cadesTOption = cadesT;
-            OperationExecutor executor = mainController == null ? null : mainController.getOperationExecutor();
-            if (executor == null) {
-                showError("Signing Error", "CMS operation executor is not available");
-                return;
-            }
-            updateStatus("Signing data...");
-            executor.execute("CMS/CAdES signing", cmsSignButton, () -> {
-                byte[] signature;
-                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-                if (usePkcs11) {
-                    signature = cadesBesOption
-                            ? com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                                    .signCadesBes(alias, data, detached)
-                            : com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                                    .signCms(alias, data, detached);
-                    details.put("Source", "PKCS#11 Token");
-                    details.put("Alias", alias);
-                } else {
-                    X509Certificate cert = CertificateGenerator.parseCertificate(certStr);
-                    PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
-                    signature = cadesBesOption
-                            ? CMSOperations.generateCadesBes(data, cert, privateKey, null, detached)
-                            : CMSOperations.generateSignedData(data, cert, privateKey, null, detached);
-                    details.put("Source", "Local PEM");
-                    details.put("Certificate", "Present");
-                    details.put("Private Key", "[not persisted]");
-                }
-                if (cadesTOption) {
-                    AppSettings.getInstance().setCustomTsaUrl(tsaUrl);
-                    byte[] signatureValue = CMSOperations.cadesSignatureValue(signature);
-                    TsaDiagnostics.TokenResult timestamp = TsaDiagnostics.timestamp(tsaUrl, signatureValue, "SHA-256");
-                    signature = CMSOperations.addCadesTSignatureTimestamp(signature, timestamp.token());
-                    details.put("TSA", tsaUrl);
-                    details.put("Timestamp", timestamp.report().generationTime());
-                }
-                return new CadesSignResult(signature, details);
-            }, result -> {
-                String output = "-----BEGIN PKCS7-----\n" + java.util.Base64.getEncoder().encodeToString(result.signature())
-                        + "\n-----END PKCS7-----";
-                cmsOutputArea.setText(output);
-                result.details().put("Type", detached ? "Detached SignedData" : "Encapsulated SignedData");
-                result.details().put("Profile", cadesTOption ? "CAdES-T" : (cadesBesOption ? "CAdES-BES" : "CMS / PKCS#7"));
-                mainController.publish(OperationResult.forOperation(cadesTOption ? "CAdES-T Sign" : (cadesBesOption ? "CAdES-BES Sign" : "CMS Sign"))
-                        .input(data).output(result.signature()).details(result.details())
-                        .status((cadesTOption ? "CAdES-T" : (cadesBesOption ? "CAdES-BES" : "CMS")) + " signature generated successfully").build());
-            }, error -> {
-                showError("Signing Error", "Error signing data: " + error.getMessage());
-                LOG.warn("Key operation failed", error);
-            }, () -> updateStatus("Signing cancelled"));
-        } catch (Exception e) {
-            showError("Signing Error", "Error signing data: " + e.getMessage());
-            LOG.warn("Key operation failed", e);
-        }
-    }
-
-    private record CadesSignResult(byte[] signature, java.util.Map<String, String> details) { }
+    public void handleCMSSign() { cmsCoordinator().handleCMSSign(); }
 
     /**
      * Handle CMS Verify
      */
-    public void handleCMSVerify() {
-        try {
-            if (cmsOnlineRevocationCheck != null && cmsOnlineRevocationCheck.isSelected()) {
-                handleCMSVerifyOnline();
-                return;
-            }
-            String pkcs7Str = cmsInputArea.getText().trim();
-
-            if (pkcs7Str.isEmpty()) {
-                showError("Input Error", "PKCS#7 Signature is required in Input");
-                return;
-            }
-
-            updateStatus("Verifying signature...");
-
-            // Clean PEM
-            String base64 = pkcs7Str.replace("-----BEGIN PKCS7-----", "")
-                    .replace("-----END PKCS7-----", "")
-                    .replaceAll("\\s+", "");
-            byte[] pkcs7Bytes = java.util.Base64.getDecoder().decode(base64);
-
-            byte[] detachedData = null;
-            if (cmsVerifyDataArea != null && !cmsVerifyDataArea.getText().trim().isEmpty()) {
-                detachedData = cmsVerifyDataArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            }
-
-            // Verify
-            CMSOperations.VerificationResult result = CMSOperations.verifySignedData(pkcs7Bytes, null, detachedData);
-            CMSOperations.CadesProfile cadesProfile = CMSOperations.inspectCadesProfile(pkcs7Bytes);
-            CMSOperations.CadesTimestampStatus timestampStatus = CMSOperations.inspectCadesTimestamp(pkcs7Bytes);
-            CMSOperations.CadesLongTermStatus longTerm = CMSOperations.inspectCadesLongTermEvidence(pkcs7Bytes);
-            CMSOperations.CadesLongTermValidation longTermValidation =
-                    CMSOperations.validateCadesLongTermEvidence(pkcs7Bytes, new java.util.Date());
-
-            StringBuilder output = new StringBuilder();
-            output.append("VERIFICATION RESULT: ").append(result.verified ? "✅ VALID" : "❌ INVALID").append("\n\n");
-            output.append("SIGNATURE PROFILE: ").append(cadesProfile.profile()).append("\n");
-            if (cadesProfile.certificateBindingPresent()) {
-                output.append("CAdES certificate binding: ")
-                        .append(cadesProfile.certificateBindingValid() ? "✅ VALID" : "❌ INVALID")
-                        .append("\n");
-            }
-            output.append(cadesProfile.message()).append("\n\n");
-            if (timestampStatus.present()) {
-                output.append("CAdES signature timestamp: ")
-                        .append(timestampStatus.imprintValid() ? "✅ VALID" : "❌ INVALID").append("\n")
-                        .append(timestampStatus.message()).append("\n\n");
-            }
-            if (cadesProfile.profile().startsWith("CAdES")) {
-                output.append("LONG-TERM EVIDENCE: ").append(longTerm.level()).append("\n")
-                        .append("CRL evidence: ").append(longTermValidation.crlCount())
-                        .append("; signature-valid: ").append(longTermValidation.signatureValidCrlCount())
-                        .append("; within declared validity: ").append(longTermValidation.currentCrlCount()).append("\n")
-                        .append(longTermValidation.message()).append("\n\n");
-            }
-
-            if (result.content != null) {
-                output.append("SIGNED CONTENT:\n");
-                output.append(new String(result.content, java.nio.charset.StandardCharsets.UTF_8)).append("\n\n");
-            } else {
-                output.append("Content is detached (not present in signature).\n\n");
-            }
-
-            if (!result.associatedData.isEmpty()) {
-                output.append("SIGNED ATTRIBUTES:\n");
-                for (java.util.Map.Entry<String, String> entry : result.associatedData.entrySet()) {
-                    output.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
-                }
-            }
-
-            cmsOutputArea.setText(output.toString());
-            mainController.publish(OperationResult.forOperation(
-                            cadesProfile.profile().startsWith("CAdES") ? cadesProfile.profile() + " Verify" : "CMS Verify")
-                    .input(pkcs7Bytes).output(result.content)
-                    .detail("Result", result.verified ? "VALID" : "INVALID")
-                    .detail("Profile", cadesProfile.profile())
-                    .detail("Certificate binding", cadesProfile.certificateBindingPresent()
-                            ? (cadesProfile.certificateBindingValid() ? "VALID" : "INVALID") : "NOT PRESENT")
-                    .detail("Signature timestamp", timestampStatus.present()
-                            ? (timestampStatus.imprintValid() ? "VALID" : "INVALID") : "NOT PRESENT")
-                    .detail("Long-term evidence", longTerm.level())
-                    .detail("CRLs embedded", String.valueOf(longTermValidation.crlCount()))
-                    .detail("CRLs signature-valid", String.valueOf(longTermValidation.signatureValidCrlCount()))
-                    .detail("CRLs currently valid", String.valueOf(longTermValidation.currentCrlCount()))
-                    .status("CMS verification: " + (result.verified ? "valid" : "invalid")).build());
-
-        } catch (Exception e) {
-            cmsOutputArea.setText("Verification Failed: " + e.getMessage());
-            updateStatus("Verification failed");
-            LOG.warn("Key operation failed", e);
-        }
-    }
-
-    private void handleCMSVerifyOnline() {
-        String input = cmsInputArea == null ? "" : cmsInputArea.getText().trim();
-        if (input.isEmpty()) {
-            showError("Input Error", "PKCS#7 Signature is required in Input");
-            return;
-        }
-        final byte[] cmsBytes;
-        try {
-            cmsBytes = decodeCmsArmored(input);
-        } catch (Exception error) {
-            showError("Verification Error", "Invalid CMS encoding");
-            return;
-        }
-        final byte[] detached = cmsVerifyDataArea != null && !cmsVerifyDataArea.getText().trim().isEmpty()
-                ? cmsVerifyDataArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8) : null;
-        OperationExecutor executor = mainController == null ? null : mainController.getOperationExecutor();
-        if (executor == null) {
-            showError("Verification Error", "CMS operation executor is not available");
-            return;
-        }
-        executor.execute("CMS/CAdES online revocation validation", null,
-                () -> new com.cryptocarver.crypto.CmsInspector().inspect(cmsBytes, detached, null, true, java.util.List.of()),
-                report -> {
-                    String integrity = report.getValidationSteps().stream()
-                            .filter(step -> "Signature/Integrity".equals(step.getStepName()))
-                            .map(step -> step.getState().name()).findFirst().orElse("NOT_EVALUATED");
-                    String text = "CMS/CAdES verification report\n"
-                            + "Integrity/signature: " + integrity + "\n"
-                            + "Trust chain: not evaluated (no truststore provided)\n"
-                            + "Revocation: " + report.getRevocation().status() + "\n"
-                            + "Evidence: " + report.getRevocation().evidence() + "\n"
-                            + (report.getRevocation().errors().isEmpty() ? "" : "Reason: " + String.join("; ", report.getRevocation().errors()) + "\n");
-                    cmsOutputArea.setText(text);
-                    updateStatus("CMS revocation validation completed: " + report.getRevocation().status());
-                },
-                error -> {
-                    cmsOutputArea.setText("Verification Failed: " + (error.getMessage() == null ? "CMS validation failed" : error.getMessage()));
-                    updateStatus("Verification failed");
-                },
-                () -> updateStatus("CMS validation cancelled"));
-    }
+    public void handleCMSVerify() { cmsCoordinator().handleCMSVerify(); }
 
     /**
      * Upgrades the CAdES-T currently shown in the CMS output area by embedding
@@ -3632,207 +3318,13 @@ public class KeysController {
      * deliberately offline: CryptoCarver never discovers or downloads
      * revocation URLs on the user's behalf.
      */
-    public void handleUpgradeCadesLt() {
-        try {
-            String current = cmsOutputArea == null ? "" : cmsOutputArea.getText().trim();
-            if (current.isEmpty()) {
-                showError("CAdES-LT", "Generate or paste a CAdES-T signature into the Output area first.");
-                return;
-            }
-            byte[] cadesT = decodeCmsArmored(current);
-            CMSOperations.CadesLongTermStatus status = CMSOperations.inspectCadesLongTermEvidence(cadesT);
-            if (!"CAdES-T".equals(status.level())) {
-                showError("CAdES-LT", "The selected CMS must be a valid CAdES-T signature without LT evidence.");
-                return;
-            }
+    public void handleUpgradeCadesLt() { cmsCoordinator().handleUpgradeCadesLt(); }
 
-            FileChooser chooser = new FileChooser();
-            chooser.setTitle("Select CAdES-LT Evidence (CRL required; certificates optional)");
-            chooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("CRL or certificate evidence", "*.crl", "*.cer", "*.crt", "*.der", "*.pem"),
-                    new FileChooser.ExtensionFilter("All files", "*.*"));
-            java.util.List<java.io.File> files = chooser.showOpenMultipleDialog(cmsOutputArea.getScene().getWindow());
-            if (files == null || files.isEmpty()) return;
+    public void handleCMSEncrypt() { cmsCoordinator().handleCMSEncrypt(); }
 
-            java.util.List<java.security.cert.X509CRL> crls = new java.util.ArrayList<>();
-            java.util.List<java.security.cert.X509Certificate> certificates = new java.util.ArrayList<>();
-            for (java.io.File file : files) {
-                byte[] evidence = java.nio.file.Files.readAllBytes(file.toPath());
-                try {
-                    crls.add(CMSOperations.parseX509Crl(evidence));
-                } catch (Exception notACrl) {
-                    try {
-                        certificates.addAll(CMSOperations.parseX509Certificates(evidence));
-                    } catch (Exception notACertificate) {
-                        throw new IllegalArgumentException(file.getName()
-                                + " is neither a valid X.509 CRL nor X.509 certificate evidence", notACertificate);
-                    }
-                }
-            }
-            if (crls.isEmpty()) {
-                showError("CAdES-LT", "Select at least one CRL. Certificate files alone are not revocation evidence.");
-                return;
-            }
-            byte[] upgraded = CMSOperations.addCadesLtEvidence(cadesT, certificates, crls);
-            String armored = "-----BEGIN PKCS7-----\n" + java.util.Base64.getEncoder().encodeToString(upgraded)
-                    + "\n-----END PKCS7-----";
-            cmsOutputArea.setText(armored);
-            mainController.publish(OperationResult.forOperation("CAdES-LT Evidence")
-                    .input(cadesT).output(upgraded)
-                    .detail("CRL evidence", String.valueOf(crls.size()))
-                    .detail("Certificate evidence", String.valueOf(certificates.size()))
-                    .detail("Network", "Not used; evidence selected locally")
-                    .status("CAdES-LT evidence embedded; validate freshness and trust separately").build());
-            updateStatus("CAdES-LT evidence embedded from " + crls.size() + " CRL(s) and "
-                    + certificates.size() + " certificate(s).");
-        } catch (Exception error) {
-            showError("CAdES-LT", "Unable to embed LT evidence: " + error.getMessage());
-        }
-    }
-
-    private static byte[] decodeCmsArmored(String input) {
-        String base64 = input.replace("-----BEGIN PKCS7-----", "")
-                .replace("-----END PKCS7-----", "")
-                .replaceAll("\\s+", "");
-        return java.util.Base64.getDecoder().decode(base64);
-    }
-
-    public void handleCMSEncrypt() {
-        try {
-            String dataStr = cmsInputArea.getText();
-            boolean usePkcs11 = cmsEncryptSourcePkcs11Radio != null && cmsEncryptSourcePkcs11Radio.isSelected();
-
-            if (dataStr.isEmpty()) {
-                showError("Input Error", "Data to encrypt is required");
-                return;
-            }
-
-            updateStatus("Encrypting data...");
-            byte[] data = dataStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            X509Certificate cert;
-            String alias = null;
-
-            if (usePkcs11) {
-                if (!com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
-                    showError("PKCS#11 Error", "No token connected.");
-                    return;
-                }
-                alias = cmsEncryptKeyAliasCombo.getValue();
-                if (alias == null || alias.isEmpty()) {
-                    showError("PKCS#11 Error", "Select an alias from the token.");
-                    return;
-                }
-                cert = (X509Certificate) com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().getCertificateChain(alias)[0];
-                if (cert == null) {
-                    showError("PKCS#11 Error", "No certificate found for the selected alias.");
-                    return;
-                }
-            } else {
-                String certStr = cmsEncryptCertArea.getText().trim();
-                if (certStr.isEmpty()) {
-                    showError("Input Error", "Recipient Certificate is required in Local mode");
-                    return;
-                }
-                cert = CertificateGenerator.parseCertificate(certStr);
-            }
-
-            byte[] encrypted = CMSOperations.generateEnvelopedData(data, cert);
-
-            String output = "-----BEGIN PKCS7-----\n" +
-                    java.util.Base64.getEncoder().encodeToString(encrypted) +
-                    "\n-----END PKCS7-----";
-
-            cmsOutputArea.setText(output);
-            updateStatus("CMS Encrypted (EnvelopedData) successfully");
-            String sourceStr = usePkcs11 ? ("PKCS#11 Token (alias: " + alias + ")") : "Local PEM";
-            mainController.publish(com.cryptocarver.model.OperationResult.forOperation("CMS Encrypt (EnvelopedData)")
-                    .input(data).output(encrypted)
-                    .detail("Source", sourceStr)
-                    .status("CMS data encrypted successfully").build());
-        } catch (Exception e) {
-            showError("Encryption Error", "Error encrypting data: " + e.getMessage());
-            LOG.warn("Key operation failed", e);
-        }
-    }
-
-    public void handleCMSDecrypt() {
-        try {
-            String pkcs7Str = cmsInputArea.getText().trim();
-            boolean usePkcs11 = cmsEncryptSourcePkcs11Radio != null && cmsEncryptSourcePkcs11Radio.isSelected();
-
-            if (pkcs7Str.isEmpty()) {
-                showError("Input Error", "PKCS#7 Enveloped Data is required");
-                return;
-            }
-
-            updateStatus("Decrypting data...");
-
-            // Clean PEM
-            String base64 = pkcs7Str.replace("-----BEGIN PKCS7-----", "")
-                    .replace("-----END PKCS7-----", "")
-                    .replaceAll("\\s+", "");
-            byte[] pkcs7Bytes = java.util.Base64.getDecoder().decode(base64);
-
-            byte[] decrypted;
-            String alias = null;
-
-            if (usePkcs11) {
-                if (!com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected()) {
-                    showError("PKCS#11 Error", "No token connected.");
-                    return;
-                }
-                alias = cmsEncryptKeyAliasCombo.getValue();
-                if (alias == null || alias.isEmpty()) {
-                    showError("PKCS#11 Error", "Select an alias from the token.");
-                    return;
-                }
-                decrypted = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession().decryptCms(alias, pkcs7Bytes);
-            } else {
-                String keyStr = cmsDecryptKeyArea.getText().trim();
-                if (keyStr.isEmpty()) {
-                    showError("Input Error", "Private Key is required in Local mode");
-                    return;
-                }
-                PrivateKey privateKey = parsePrivateKeyFromPEM(keyStr);
-                decrypted = CMSOperations.decryptEnvelopedData(pkcs7Bytes, privateKey);
-            }
-
-            cmsOutputArea.setText(new String(decrypted, java.nio.charset.StandardCharsets.UTF_8));
-            updateStatus("CMS Decrypted successfully");
-            String sourceStr = usePkcs11 ? ("PKCS#11 Token (alias: " + alias + ")") : "Local PEM";
-            mainController.publish(com.cryptocarver.model.OperationResult.forOperation("CMS Decrypt (EnvelopedData)")
-                    .input(pkcs7Bytes).output(decrypted)
-                    .detail("Source", sourceStr)
-                    .detail("Private Key", "[not persisted]")
-                    .status("CMS data decrypted successfully").build());
-        } catch (Exception e) {
-            cmsOutputArea.setText("Decryption Failed: " + e.getMessage());
-            updateStatus("Decryption failed");
-            LOG.warn("Key operation failed", e);
-        }
-    }
+    public void handleCMSDecrypt() { cmsCoordinator().handleCMSDecrypt(); }
 
     // Helper to parse Private Key from PEM (simplistic version for now)
-    private PrivateKey parsePrivateKeyFromPEM(String pemKey) throws Exception {
-        String base64 = pemKey.replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                .replace("-----END RSA PRIVATE KEY-----", "")
-                .replaceAll("\\s+", "");
-
-        byte[] encoded = java.util.Base64.getDecoder().decode(base64);
-        java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("RSA"); // Defaulting to RSA for now
-
-        try {
-            return keyFactory.generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(encoded));
-        } catch (Exception e) {
-            // Try as standard RSA private key (PKCS#1) if needed, but Java mostly supports
-            // PKCS#8
-            // If BouncyCastle is registered, we can try to use it more robustly
-            throw new Exception("Could not parse Private Key. Ensure it is PKCS#8 format (or standard PEM). sent: "
-                    + e.getMessage());
-        }
-    }
 
     // ============================================================================
     // CERTIFICATE CHAIN VALIDATION
