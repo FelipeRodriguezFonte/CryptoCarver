@@ -63,6 +63,29 @@ public class KeysController {
         return tr31Coordinator;
     }
 
+    private RsaKeyExchangeCoordinator rsaKexCoordinator;
+
+    private RsaKeyExchangeCoordinator rsaKexCoordinator() {
+        if (rsaKexCoordinator == null) {
+            rsaKexCoordinator = new RsaKeyExchangeCoordinator(
+                    () -> new RsaKeyExchangeCoordinator.View(
+                            rsaKexRecipientPemArea,
+                            rsaKexKeyToWrapField,
+                            rsaKexExportProfileCombo,
+                            rsaKexIncludeEnvelopeCheck,
+                            rsaKexEnvelopeFieldsBox,
+                            rsaKexKidField,
+                            rsaKexKeyVersionField,
+                            rsaKexExportResultArea,
+                            rsaKexPrivateKeyArea,
+                            rsaKexWrappedDataArea,
+                            rsaKexImportProfileCombo,
+                            rsaKexImportResultArea),
+                    () -> mainController, this::updateStatus, this::t);
+        }
+        return rsaKexCoordinator;
+    }
+
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
@@ -3280,271 +3303,28 @@ public class KeysController {
     @FXML private ComboBox<String> rsaKexImportProfileCombo;
     @FXML private TextArea rsaKexImportResultArea;
 
-    private void initializeRsaKexControls() {
-        if (rsaKexExportProfileCombo != null) {
-            rsaKexExportProfileCombo.getItems().setAll("Raw OAEP", "JWE Compact", "CMS EnvelopedData");
-            rsaKexExportProfileCombo.setValue("Raw OAEP");
-        }
-        if (rsaKexImportProfileCombo != null) {
-            rsaKexImportProfileCombo.getItems().setAll("Raw OAEP", "JWE Compact", "CMS EnvelopedData");
-            rsaKexImportProfileCombo.setValue("Raw OAEP");
-        }
-    }
+    private void initializeRsaKexControls() { rsaKexCoordinator().initializeRsaKexControls(); }
 
     @FXML
-    public void handleRsaKexEnvelopeToggle() {
-        boolean selected = rsaKexIncludeEnvelopeCheck != null && rsaKexIncludeEnvelopeCheck.isSelected();
-        if (rsaKexEnvelopeFieldsBox != null) {
-            rsaKexEnvelopeFieldsBox.setVisible(selected);
-            rsaKexEnvelopeFieldsBox.setManaged(selected);
-        }
-    }
-
-    private static RsaKeyWrapOperations.WrapProfile rsaKexProfileFromCombo(String value) {
-        if (value == null) return RsaKeyWrapOperations.WrapProfile.RAW_OAEP;
-        return switch (value) {
-            case "JWE Compact" -> RsaKeyWrapOperations.WrapProfile.JWE_COMPACT;
-            case "CMS EnvelopedData" -> RsaKeyWrapOperations.WrapProfile.CMS_ENVELOPED;
-            default -> RsaKeyWrapOperations.WrapProfile.RAW_OAEP;
-        };
-    }
+    public void handleRsaKexEnvelopeToggle() { rsaKexCoordinator().handleRsaKexEnvelopeToggle(); }
 
     /**
      * Handle RSA Key Exchange Export (Wrap Key)
      */
     @FXML
-    public void handleRsaKexExport() {
-        try {
-            String pem = rsaKexRecipientPemArea.getText().trim();
-            String keyHex = rsaKexKeyToWrapField.getText().trim().replaceAll("\\s+", "");
-
-            if (pem.isEmpty() || keyHex.isEmpty()) {
-                showRsaKexValidation(t("module.keys.rsaKex.required"),
-                        pem.isEmpty() ? "rsaKexRecipientPemArea" : "rsaKexKeyToWrapField", rsaKexExportResultArea::setText);
-                return;
-            }
-            if (!keyHex.matches("[0-9A-Fa-f]+")) {
-                showRsaKexValidation(t("module.keys.rsaKex.keyInvalid"), "rsaKexKeyToWrapField", rsaKexExportResultArea::setText);
-                return;
-            }
-
-            byte[] keyToWrap = DataConverter.hexToBytes(keyHex);
-
-            PublicKey publicKey;
-            X509Certificate certificate = null;
-            if (pem.contains("BEGIN CERTIFICATE")) {
-                java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
-                certificate = (X509Certificate) factory.generateCertificate(
-                        new java.io.ByteArrayInputStream(pem.getBytes(StandardCharsets.US_ASCII)));
-                publicKey = certificate.getPublicKey();
-            } else if (pem.contains("BEGIN PUBLIC KEY")) {
-                publicKey = AsymmetricKeyOperations.importPublicKeyPEMAuto(pem);
-            } else {
-                showRsaKexValidation(t("module.keys.rsaKex.pemUnrecognized"), "rsaKexRecipientPemArea", rsaKexExportResultArea::setText);
-                return;
-            }
-
-            RsaKeyWrapOperations.WrapProfile profile = rsaKexProfileFromCombo(rsaKexExportProfileCombo.getValue());
-            RsaKeyWrapOperations.WrapResult wrapResult = RsaKeyWrapOperations.wrap(keyToWrap, publicKey, certificate, profile);
-
-            boolean asEnvelope = rsaKexIncludeEnvelopeCheck != null && rsaKexIncludeEnvelopeCheck.isSelected();
-            String outputText;
-            if (asEnvelope) {
-                CryptoEnvelope.Builder builder = CryptoEnvelope.forAlgorithm(wrapResult.getAlgorithm())
-                        .ciphertext(wrapResult.getWrapped())
-                        .kcv(wrapResult.getKcvHex())
-                        .extension("profile", profile.name());
-                String kid = rsaKexKidField == null ? "" : rsaKexKidField.getText().trim();
-                if (!kid.isEmpty()) builder.kid(kid);
-                String keyVersionText = rsaKexKeyVersionField == null ? "" : rsaKexKeyVersionField.getText().trim();
-                if (!keyVersionText.isEmpty()) {
-                    try {
-                        builder.keyVersion(Integer.parseInt(keyVersionText));
-                    } catch (NumberFormatException e) {
-                        showRsaKexValidation(t("module.keys.rsaKex.keyVersionInvalid"), "rsaKexKeyVersionField", rsaKexExportResultArea::setText);
-                        return;
-                    }
-                }
-                outputText = CryptoEnvelopeCodec.serializeCompact(builder.build());
-            } else if (profile == RsaKeyWrapOperations.WrapProfile.JWE_COMPACT) {
-                outputText = new String(wrapResult.getWrapped(), StandardCharsets.US_ASCII);
-            } else {
-                outputText = java.util.Base64.getEncoder().encodeToString(wrapResult.getWrapped());
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("RSA KEY EXCHANGE — EXPORT\n");
-            result.append("========================================\n\n");
-            result.append("Profile:        ").append(profile).append("\n");
-            result.append("Algorithm:      ").append(wrapResult.getAlgorithm()).append("\n");
-            if (wrapResult.getKcvHex() != null) {
-                result.append("Key KCV:        ").append(wrapResult.getKcvHex()).append("\n");
-            }
-            result.append("Envelope:       ").append(asEnvelope ? "yes (compact)" : "no").append("\n\n");
-            result.append("OUTPUT:\n");
-            result.append("------------------\n");
-            result.append(outputText).append("\n");
-            result.append("\n========================================\n");
-
-            rsaKexExportResultArea.setText(result.toString());
-            updateStatus(t("module.keys.rsaKex.status.wrapped"));
-
-            if (mainController != null) {
-                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Profile", profile.name()));
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", wrapResult.getAlgorithm()));
-                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Key to Wrap", keyHex));
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Output", outputText));
-                mainController.publish(OperationResult.forOperation("RSA Key Exchange Export")
-                        .input(keyToWrap)
-                        .output(outputText.getBytes(StandardCharsets.UTF_8))
-                        .details(details)
-                        .status("RSA key wrapped successfully (" + profile + ")")
-                        .build());
-            }
-        } catch (Exception e) {
-            showRsaKexValidation(t("module.keys.rsaKex.operation", e.getMessage()), "rsaKexKeyToWrapField", rsaKexExportResultArea::setText);
-            updateStatus(t("module.keys.rsaKex.status.wrapFailed"));
-            logRsaKexFailure("wrap", e);
-        }
-    }
+    public void handleRsaKexExport() { rsaKexCoordinator().handleRsaKexExport(); }
 
     /**
      * Handle RSA Key Exchange Import (Unwrap Key)
      */
     @FXML
-    public void handleRsaKexImport() {
-        try {
-            String privatePem = rsaKexPrivateKeyArea.getText().trim();
-            String wrappedText = rsaKexWrappedDataArea.getText().trim();
-
-            if (privatePem.isEmpty() || wrappedText.isEmpty()) {
-                showRsaKexValidation(t("module.keys.rsaKex.importRequired"),
-                        privatePem.isEmpty() ? "rsaKexPrivateKeyArea" : "rsaKexWrappedDataArea", rsaKexImportResultArea::setText);
-                return;
-            }
-
-            PrivateKey privateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
-
-            byte[] wrapped;
-            RsaKeyWrapOperations.WrapProfile profile;
-            CryptoEnvelope envelope = null;
-            if (CryptoEnvelopeCodec.looksLikeEnvelope(wrappedText)) {
-                envelope = CryptoEnvelopeCodec.deserializeAuto(wrappedText);
-                wrapped = java.util.Base64.getDecoder().decode(envelope.getCiphertextB64());
-                String profileExt = envelope.getExtensions().get("profile");
-                profile = profileExt != null
-                        ? RsaKeyWrapOperations.WrapProfile.valueOf(profileExt)
-                        : rsaKexProfileFromCombo(rsaKexImportProfileCombo.getValue());
-            } else {
-                profile = rsaKexProfileFromCombo(rsaKexImportProfileCombo.getValue());
-                wrapped = profile == RsaKeyWrapOperations.WrapProfile.JWE_COMPACT
-                        ? wrappedText.getBytes(StandardCharsets.US_ASCII)
-                        : java.util.Base64.getDecoder().decode(wrappedText);
-            }
-
-            byte[] recovered = RsaKeyWrapOperations.unwrap(wrapped, privateKey, profile);
-            String recoveredHex = DataConverter.bytesToHex(recovered);
-            String recoveredKcv = null;
-            if (recovered.length == 16 || recovered.length == 24 || recovered.length == 32) {
-                try {
-                    recoveredKcv = DataConverter.bytesToHex(KeyOperations.calculateKCV_AES(recovered));
-                } catch (Exception ignored) {
-                    // Best-effort only — KCV is a convenience cross-check, not required.
-                }
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("RSA KEY EXCHANGE — IMPORT\n");
-            result.append("========================================\n\n");
-            result.append("Profile:        ").append(profile).append("\n");
-            if (envelope != null) {
-                result.append("Envelope:       yes\n");
-                result.append("Algorithm:      ").append(envelope.getAlg()).append("\n");
-                if (envelope.getKid() != null) result.append("Key ID:         ").append(envelope.getKid()).append("\n");
-                if (envelope.getKeyVersion() != null) result.append("Key Version:    ").append(envelope.getKeyVersion()).append("\n");
-                if (envelope.getKcv() != null) {
-                    boolean matches = recoveredKcv != null && recoveredKcv.equalsIgnoreCase(envelope.getKcv());
-                    result.append("Envelope KCV:   ").append(envelope.getKcv())
-                            .append(matches ? "  (matches recovered key)" : "  (!) does not match the recovered key's KCV")
-                            .append("\n");
-                }
-            } else {
-                result.append("Envelope:       no\n");
-            }
-            result.append("\nUNWRAPPED KEY:\n");
-            result.append("------------------\n");
-            result.append(recoveredHex.toUpperCase()).append("\n");
-            if (recoveredKcv != null) result.append("Recovered KCV:  ").append(recoveredKcv).append("\n");
-            result.append("Key Length:     ").append(recovered.length).append(" bytes\n");
-            result.append("\n========================================\n");
-
-            rsaKexImportResultArea.setText(result.toString());
-            updateStatus(t("module.keys.rsaKex.status.unwrapped"));
-
-            if (mainController != null) {
-                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Profile", profile.name()));
-                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Recovered Key (hex)", recoveredHex));
-                mainController.publish(OperationResult.forOperation("RSA Key Exchange Import")
-                        .input(wrapped)
-                        .output(recovered, com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                        .details(details)
-                        .status("RSA key unwrapped successfully (" + profile + ")")
-                        .build());
-            }
-        } catch (Exception e) {
-            showRsaKexValidation(t("module.keys.rsaKex.operation", e.getMessage()), "rsaKexWrappedDataArea", rsaKexImportResultArea::setText);
-            updateStatus(t("module.keys.rsaKex.status.unwrapFailed"));
-            logRsaKexFailure("unwrap", e);
-        }
-    }
+    public void handleRsaKexImport() { rsaKexCoordinator().handleRsaKexImport(); }
 
     @FXML
-    public void handleRsaKexClear() {
-        clearRsaKexFields();
-        if (mainController != null) mainController.updateStatus(t("module.keys.rsaKex.clearStatus"));
-    }
+    public void handleRsaKexClear() { rsaKexCoordinator().handleRsaKexClear(); }
 
     @FXML
-    public void handleRsaKexReset() {
-        clearRsaKexFields();
-        if (rsaKexExportProfileCombo != null) rsaKexExportProfileCombo.setValue("Raw OAEP");
-        if (rsaKexImportProfileCombo != null) rsaKexImportProfileCombo.setValue("Raw OAEP");
-        if (rsaKexIncludeEnvelopeCheck != null) rsaKexIncludeEnvelopeCheck.setSelected(false);
-        if (rsaKexEnvelopeFieldsBox != null) {
-            rsaKexEnvelopeFieldsBox.setVisible(false);
-            rsaKexEnvelopeFieldsBox.setManaged(false);
-        }
-        if (mainController != null) mainController.updateStatus(t("module.keys.rsaKex.resetStatus"));
-    }
-
-    private void clearRsaKexFields() {
-        if (rsaKexRecipientPemArea != null) rsaKexRecipientPemArea.clear();
-        if (rsaKexKeyToWrapField != null) rsaKexKeyToWrapField.clear();
-        if (rsaKexKidField != null) rsaKexKidField.clear();
-        if (rsaKexKeyVersionField != null) rsaKexKeyVersionField.clear();
-        if (rsaKexExportResultArea != null) rsaKexExportResultArea.clear();
-        if (rsaKexPrivateKeyArea != null) rsaKexPrivateKeyArea.clear();
-        if (rsaKexWrappedDataArea != null) rsaKexWrappedDataArea.clear();
-        if (rsaKexImportResultArea != null) rsaKexImportResultArea.clear();
-    }
-
-    private void showRsaKexValidation(String message, String fieldKey, Consumer<String> feedbackTarget) {
-        String safeMessage = InlineErrorPresenter.redactSecrets(message);
-        UserFacingError error = new UserFacingError(t("module.keys.rsaKex.errorTitle"), safeMessage, safeMessage, fieldKey);
-        if (mainController != null) {
-            mainController.showError(error);
-        } else if (feedbackTarget != null) {
-            feedbackTarget.accept(safeMessage);
-        }
-    }
-
-    private void logRsaKexFailure(String operation, Exception error) {
-        LOG.error("RSA Key Exchange {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
-    }
+    public void handleRsaKexReset() { rsaKexCoordinator().handleRsaKexReset(); }
 
     // ============================================================================
     // TR-34 KEY DISTRIBUTION — laboratory RSA remote key distribution, inspired by
