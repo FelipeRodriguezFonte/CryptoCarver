@@ -94,12 +94,12 @@ final class FileConversionCoordinator {
 
     void handleConvertFile() {
         if (fileInputPathField != null && fileOutputPathField != null && fileInputFormatCombo != null && fileOutputFormatCombo != null) {
-            String inputPath = fileInputPathField.getText().trim();
             String outputPath = fileOutputPathField.getText().trim();
-            if (inputPath.isEmpty() || outputPath.isEmpty()) return;
 
+            // Without an output path the conversion previews on screen; handleFileConvert reports
+            // a missing input or a failure, and publishes once when it succeeds.
             boolean isTestMode = "true".equals(System.getProperty("test.mode"));
-            if (!isTestMode && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
+            if (!isTestMode && !outputPath.isEmpty() && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
                 javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
                 confirm.setTitle("Overwrite existing file?");
                 confirm.setHeaderText("The selected output file already exists.");
@@ -111,15 +111,6 @@ final class FileConversionCoordinator {
             }
 
             handleFileConvert();
-
-            if (reporter() != null) {
-                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-                details.put("Input File", inputPath);
-                details.put("Output File", outputPath);
-                details.put("Input Format", fileInputFormatCombo.getValue());
-                details.put("Output Format", fileOutputFormatCombo.getValue());
-                reporter().publish(OperationResult.forOperation("File Conversion").details(details).build());
-            }
         }
     }
 
@@ -177,6 +168,8 @@ final class FileConversionCoordinator {
      * Handle file conversion operation
      */
     void handleFileConvert() {
+        // A failed conversion must not leave the previous one on screen.
+        fileResultArea.clear();
         try {
             String inputPath = fileInputPathField.getText().trim();
             String outputPath = fileOutputPathField.getText().trim();
@@ -327,7 +320,7 @@ final class FileConversionCoordinator {
                     .build());
             }
 
-        } catch (java.io.FileNotFoundException e) {
+        } catch (java.io.FileNotFoundException | java.nio.file.NoSuchFileException e) {
             reporter().showError("File Error", "File not found: " + e.getMessage());
         } catch (java.io.IOException e) {
             reporter().showError("File Error", "I/O error: " + e.getMessage());
@@ -339,15 +332,9 @@ final class FileConversionCoordinator {
         }
     }
 
-    /** Hex text to bytes, as the conversion has always read it. */
+    /** Strict hex: rejects odd lengths and non-hex characters instead of producing garbage bytes. */
     private static byte[] hexToBytes(String hex) {
-        int len = hex.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-                    + Character.digit(hex.charAt(i + 1), 16));
-        }
-        return data;
+        return java.util.HexFormat.of().parseHex(hex);
     }
 
     private static String bytesToHex(byte[] bytes) {

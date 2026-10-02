@@ -112,7 +112,27 @@ class BatchAndFileCharacterizationUITest {
             panel.controller().handlePreviewFileStreaming();
             transcript.add(panel.step("hash and preview without file", null));
         });
-        assertEquals("21ac189b90a3ce4cdb110f0b432b4fe7174b3ec601681876b73fef7ad9508035", digest(transcript), String.join("\n", transcript));
+        assertEquals("ff370697db063e5eaa4bde2e552ff50c637ceffa50235c3dbddc29e4a99fd0a1", digest(transcript), String.join("\n", transcript));
+    }
+
+    @Test
+    void conversionWithoutOutputPathPreviewsAndFailuresClearTheResult() throws Exception {
+        Path binary = dir.resolve("small.bin");
+        Files.write(binary, new byte[] {1, 2, 3});
+        withPanel(panel -> {
+            panel.set("fileInputPathField", binary.toString());
+            panel.set("fileOutputPathField", "");
+            panel.combo("fileInputFormatCombo").setValue("Binary");
+            panel.combo("fileOutputFormatCombo").setValue("Hex");
+            panel.controller().handleConvertFile();
+            assertTrue(panel.text("fileResultArea").contains("010203"), panel.text("fileResultArea"));
+            assertEquals(1, panel.reporter().drain().lines().filter(line -> line.startsWith("publish")).count());
+
+            panel.set("fileInputPathField", dir.resolve("absent.bin").toString());
+            panel.controller().handleConvertFile();
+            assertEquals("", panel.text("fileResultArea"));
+            assertTrue(panel.reporter().drain().contains("File not found"));
+        });
     }
 
     @Test
