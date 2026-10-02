@@ -8,19 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class KeyWrapOperationsTest {
-    private static final byte[] KEK = DataConverter.hexToBytes("000102030405060708090A0B0C0D0E0F");
+    private static final byte[] KEK = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_7);
 
     @Test
     void rfc3394MatchesPublishedVectorAndRoundTrips() throws Exception {
-        byte[] keyData = DataConverter.hexToBytes("00112233445566778899AABBCCDDEEFF");
+        byte[] keyData = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_6);
         byte[] wrapped = KeyWrapOperations.wrapRfc3394(KEK, keyData);
-        assertArrayEquals(DataConverter.hexToBytes("1FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE5"), wrapped);
+        assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.HEX_8), wrapped);
         assertArrayEquals(keyData, KeyWrapOperations.unwrapRfc3394(KEK, wrapped));
     }
 
     @Test
     void rfc5649RoundTripsShortUnalignedKeyDataAndDetectsTampering() throws Exception {
-        byte[] keyData = DataConverter.hexToBytes("466F7250617369");
+        byte[] keyData = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_9);
         byte[] wrapped = KeyWrapOperations.wrapRfc5649(KEK, keyData);
         assertArrayEquals(keyData, KeyWrapOperations.unwrapRfc5649(KEK, wrapped));
         wrapped[0] ^= 0x01;
