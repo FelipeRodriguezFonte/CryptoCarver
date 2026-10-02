@@ -256,11 +256,18 @@ final class SymmetricFieldsPresenter {
                 boolean available = km != null && km.hasKeyMaterial();
                 String keyAlgo = km != null && km.getAlgorithm() != null ? km.getAlgorithm() : algo;
                 String kcv = km != null ? km.getKcv() : null;
-                if (symKeyBadge != null) symKeyBadge.updateStateKeyReference(selectedKey, keyAlgo, kcv, available);
+                // Name the Key Lab entry as the user knows it, not by its internal id.
+                String keyName = km != null && km.getName() != null && !km.getName().isBlank() ? km.getName() : selectedKey;
+                if (symKeyBadge != null) {
+                    symKeyBadge.setPurpose("Key Lab Key");
+                    symKeyBadge.updateStateKeyReference(keyName, keyAlgo, kcv, available);
+                }
             } else if (symKeyBadge != null) {
+                symKeyBadge.setPurpose("Key Lab Key");
                 symKeyBadge.updateStateIncomplete("Select HSM Key from Lab");
             }
         } else if (symKeyBadge != null) {
+            symKeyBadge.setPurpose("Manual Key");
             if (algoUpper.contains("3DES") || algoUpper.contains("TRIPLEDES")) {
                 symKeyBadge.setAcceptedByteLengths(16, 24);
             } else {

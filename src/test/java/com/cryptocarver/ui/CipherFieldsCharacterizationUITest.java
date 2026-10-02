@@ -213,7 +213,7 @@ class CipherFieldsCharacterizationUITest {
             panel.controller().saveCurrentKeyToHsm();
             transcript.add(panel.reporter().drain());
         });
-        assertEquals("e06a39351c65a92a8a5ea6c13d2dc5300dbed5ba2d7a450f22e5f94e34049a08", digest(transcript), String.join("\n", transcript));
+        assertEquals("d23f76b8c5be5698f361c041249a51e95dee31532cff4fecfe1a04907ccbe888", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
