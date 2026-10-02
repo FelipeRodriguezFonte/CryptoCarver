@@ -83,17 +83,18 @@ class Ux22HeadlessTest {
 
     @Test
     void isolatedTR31FallbackKeepsExportImportAndParseFeedbackSeparated() throws Exception {
-        KeysController controller = new KeysController();
-        setField(controller, "mainController", null);
+        // Feedback now belongs to the extracted coordinator; assertions are unchanged.
+        Tr31Coordinator controller = new Tr31Coordinator(() -> null, () -> null,
+                message -> { }, (key, args) -> com.cryptocarver.service.I18nService.getInstance().text(key, args));
 
         FeedbackAreaProbe exportArea = new FeedbackAreaProbe();
         FeedbackAreaProbe importArea = new FeedbackAreaProbe();
-        Method validation = KeysController.class.getDeclaredMethod("showTR31Validation",
-                String.class, String.class, KeysController.TR31FeedbackTarget.class);
+        Method validation = Tr31Coordinator.class.getDeclaredMethod("showTR31Validation",
+                String.class, String.class, Tr31Coordinator.TR31FeedbackTarget.class);
         validation.setAccessible(true);
 
         validation.invoke(controller, "export secret=00112233445566778899AABBCCDDEEFF",
-                "tr31KeyToWrapField", (KeysController.TR31FeedbackTarget) exportArea::present);
+                "tr31KeyToWrapField", (Tr31Coordinator.TR31FeedbackTarget) exportArea::present);
         assertEquals("export secret=[REDACTED]", exportArea.text);
         assertTrue(exportArea.visible);
         assertTrue(exportArea.managed);
@@ -102,9 +103,9 @@ class Ux22HeadlessTest {
         assertFalse(importArea.managed);
 
         validation.invoke(controller, "import secret=00112233445566778899AABBCCDDEEFF",
-                "tr31KeyBlockField", (KeysController.TR31FeedbackTarget) importArea::present);
+                "tr31KeyBlockField", (Tr31Coordinator.TR31FeedbackTarget) importArea::present);
         validation.invoke(controller, "parse secret=00112233445566778899AABBCCDDEEFF",
-                "tr31KeyBlockField", (KeysController.TR31FeedbackTarget) importArea::present);
+                "tr31KeyBlockField", (Tr31Coordinator.TR31FeedbackTarget) importArea::present);
         assertEquals("parse secret=[REDACTED]", importArea.text);
         assertTrue(importArea.visible);
         assertTrue(importArea.managed);

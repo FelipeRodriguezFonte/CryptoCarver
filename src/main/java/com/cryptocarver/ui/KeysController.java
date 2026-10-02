@@ -9,13 +9,10 @@ import com.cryptocarver.model.GeneratedAsymmetricKeySummary;
 import com.cryptocarver.model.CryptoEnvelope;
 import com.cryptocarver.model.CryptoEnvelopeCodec;
 import com.cryptocarver.util.DataConverter;
-import com.cryptocarver.utils.OperationHistory;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -40,6 +37,31 @@ public class KeysController {
 
     private static final Logger LOG = LoggerFactory.getLogger(KeysController.class);
     private final DialogService dialogService = new DialogService();
+
+    private Tr31Coordinator tr31Coordinator;
+
+    private Tr31Coordinator tr31Coordinator() {
+        if (tr31Coordinator == null) {
+            tr31Coordinator = new Tr31Coordinator(
+                    () -> new Tr31Coordinator.View(
+                            tr31KbpkExportField,
+                            tr31KeyToWrapField,
+                            tr31UsageCombo,
+                            tr31AlgorithmCombo,
+                            tr31ModeCombo,
+                            tr31VersionCombo,
+                            tr31ExportabilityCombo,
+                            tr31OptionalBlocksField,
+                            tr31OptionalBlockCombo,
+                            tr31ExportResultArea,
+                            tr31KbpkImportField,
+                            tr31KeyBlockField,
+                            tr31KeyLengthField,
+                            tr31ImportResultArea),
+                    () -> mainController, this::updateStatus, this::t);
+        }
+        return tr31Coordinator;
+    }
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
@@ -644,68 +666,13 @@ public class KeysController {
         return null;
     }
 
-    public void fillTR31KeyBlockInput(String value) {
-        if (tr31KeyBlockField != null) tr31KeyBlockField.setText(value);
-    }
+    public void fillTR31KeyBlockInput(String value) { tr31Coordinator().fillTR31KeyBlockInput(value); }
 
     @FXML
-    public void handleTR31Clear() {
-        clearTR31Fields();
-        if (mainController != null) mainController.updateStatus(t("module.keys.tr31ClearStatus"));
-    }
+    public void handleTR31Clear() { tr31Coordinator().handleTR31Clear(); }
 
     @FXML
-    public void handleTR31Reset() {
-        clearTR31Fields();
-        if (tr31VersionCombo != null) tr31VersionCombo.setValue("B - TDES Key Derivation Binding");
-        if (tr31UsageCombo != null) tr31UsageCombo.getSelectionModel().selectFirst();
-        if (tr31AlgorithmCombo != null) tr31AlgorithmCombo.getSelectionModel().selectFirst();
-        if (tr31ModeCombo != null) tr31ModeCombo.getSelectionModel().selectFirst();
-        if (tr31ExportabilityCombo != null) tr31ExportabilityCombo.getSelectionModel().selectFirst();
-        if (mainController != null) mainController.updateStatus(t("module.keys.tr31ResetStatus"));
-    }
-
-    private void clearTR31Fields() {
-        if (tr31KbpkExportField != null) tr31KbpkExportField.clear();
-        if (tr31KeyToWrapField != null) tr31KeyToWrapField.clear();
-        if (tr31OptionalBlocksField != null) tr31OptionalBlocksField.clear();
-        if (tr31KbpkImportField != null) tr31KbpkImportField.clear();
-        if (tr31KeyBlockField != null) tr31KeyBlockField.clear();
-        if (tr31KeyLengthField != null) tr31KeyLengthField.clear();
-        if (tr31ExportResultArea != null) tr31ExportResultArea.clear();
-        if (tr31ImportResultArea != null) {
-            tr31ImportResultArea.clear();
-            tr31ImportResultArea.setManaged(false);
-            tr31ImportResultArea.setVisible(false);
-        }
-    }
-
-    private void showTR31Validation(String message, String fieldKey, TextArea feedbackArea) {
-        showTR31Validation(message, fieldKey, feedbackArea == null ? null : safeMessage -> {
-            feedbackArea.setText(safeMessage);
-            feedbackArea.setVisible(true);
-            feedbackArea.setManaged(true);
-        });
-    }
-
-    private void showTR31Validation(String message, String fieldKey, TR31FeedbackTarget feedbackTarget) {
-        String safeMessage = InlineErrorPresenter.redactSecrets(message);
-        UserFacingError error = new UserFacingError(t("module.keys.tr31.errorTitle"), safeMessage, safeMessage, fieldKey);
-        if (mainController != null) {
-            mainController.showError(error);
-        } else if (feedbackTarget != null) {
-            feedbackTarget.present(safeMessage);
-        }
-    }
-
-    @FunctionalInterface
-    interface TR31FeedbackTarget {
-        void present(String safeMessage);
-    }
-
-    private void logTR31Failure(String operation, Exception error) {
-        LOG.error("TR-31 {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
-    }
+    public void handleTR31Reset() { tr31Coordinator().handleTR31Reset(); }
 
     private void setSectionVisible(VBox section, boolean visible) {
         if (section != null) {
@@ -3271,373 +3238,26 @@ public class KeysController {
         this.tr31KeyLengthField = tr31KeyLengthField;
         this.tr31ImportResultArea = tr31ImportResultArea;
 
-        setupTR31Combos();
-    }
-
-    /**
-     * Setup TR-31 ComboBoxes
-     */
-    private void setupTR31Combos() {
-        if (tr31OptionalBlockCombo != null) {
-            tr31OptionalBlockCombo.setPromptText(t("module.keys.tr31.optionalBlockPrompt"));
-            TR31Operations.OPTIONAL_BLOCKS.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
-                    .forEach(entry -> tr31OptionalBlockCombo.getItems().add(entry.getKey() + " - " + entry.getValue()));
-        }
-        if (tr31OptionalBlocksField != null) {
-            tr31OptionalBlocksField.setPromptText(t("module.keys.tr31.optionalBlockFormat"));
-        }
-        if (tr31VersionCombo != null) {
-            tr31VersionCombo.getItems().addAll(
-                    "A - DES Key Variant Binding (deprecated)",
-                    "B - TDES Key Derivation Binding",
-                    "C - TDES Key Variant Binding (deprecated)",
-                    "D - AES Key Derivation Binding");
-            tr31VersionCombo.getSelectionModel().select(1); // Default to B
-        }
-
-        if (tr31UsageCombo != null) {
-            TR31Operations.KEY_USAGES.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
-                    .forEach(entry -> tr31UsageCombo.getItems().add(entry.getKey() + " - " + entry.getValue()));
-            tr31UsageCombo.getSelectionModel().selectFirst();
-        }
-
-        if (tr31AlgorithmCombo != null) {
-            tr31AlgorithmCombo.getItems().addAll(
-                    "T - Triple DES",
-                    "A - AES",
-                    "D - DES (single)",
-                    "H - HMAC",
-                    "R - RSA",
-                    "S - DSA",
-                    "E - Elliptic Curve");
-            tr31AlgorithmCombo.getSelectionModel().selectFirst();
-        }
-
-        if (tr31ModeCombo != null) {
-            TR31Operations.MODES.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
-                    .forEach(entry -> tr31ModeCombo.getItems().add(entry.getKey() + " - " + entry.getValue()));
-            tr31ModeCombo.getItems().add("T - Both sign & key transport (legacy compatibility)");
-            tr31ModeCombo.getSelectionModel().selectFirst(); // "B - Both"
-        }
-
-        if (tr31ExportabilityCombo != null) {
-            tr31ExportabilityCombo.getItems().addAll(
-                    "E - Exportable",
-                    "N - Non-exportable",
-                    "S - Sensitive");
-            tr31ExportabilityCombo.getSelectionModel().selectFirst(); // "E - Exportable"
-        }
+        tr31Coordinator().initialize();
     }
 
     /**
      * Handle TR-31 Export (Wrap Key)
      */
-    public void handleTR31Export() {
-        try {
-            updateStatus(t("module.keys.tr31.status.starting"));
-            String kbpk = tr31KbpkExportField.getText().trim().replaceAll("\\s+", "");
-            String key = tr31KeyToWrapField.getText().trim().replaceAll("\\s+", "");
-
-            // Validate inputs
-            if (kbpk.isEmpty() || key.isEmpty()) {
-                showTR31Validation(t("module.keys.tr31.required"), kbpk.isEmpty() ? "tr31KbpkExportField" : "tr31KeyToWrapField", tr31ExportResultArea);
-                return;
-            }
-
-            if (!kbpk.matches("[0-9A-Fa-f]+")) {
-                showTR31Validation(t("module.keys.tr31.kbpkInvalid"), "tr31KbpkExportField", tr31ExportResultArea);
-                return;
-            }
-
-            if (!key.matches("[0-9A-Fa-f]+")) {
-                showTR31Validation(t("module.keys.tr31.keyInvalid"), "tr31KeyToWrapField", tr31ExportResultArea);
-                return;
-            }
-
-            // Extract parameters
-            String versionStr = tr31VersionCombo.getValue();
-            char version = versionStr.charAt(0); // 'B' or 'D'
-
-            String usageStr = tr31UsageCombo.getValue();
-            String usage = usageStr.substring(0, 2); // Extract "P0", "D0", etc.
-
-            String algoStr = tr31AlgorithmCombo.getValue();
-            char algorithm = algoStr.charAt(0); // 'T' or 'A'
-
-            String modeStr = tr31ModeCombo.getValue();
-            char mode = modeStr.charAt(0); // 'E', 'D', 'B', etc.
-
-            String exportStr = tr31ExportabilityCombo.getValue();
-            char exportability = exportStr.charAt(0); // 'E', 'N', or 'S'
-
-            // Wrap key
-            String optionalBlocks = tr31OptionalBlocksField == null ? "" : tr31OptionalBlocksField.getText();
-            String keyBlock = TR31Operations.wrapKey(kbpk, key, usage, version, algorithm, mode, exportability, optionalBlocks);
-
-            // Parse header for display
-            TR31Operations.TR31Header header = TR31Operations.TR31Header.parse(keyBlock);
-
-            // Build result
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("TR-31 KEY BLOCK EXPORT\n");
-            result.append("========================================\n\n");
-
-            result.append("HEADER INFORMATION:\n");
-            result.append("------------------\n");
-            result.append("Version ID:        ").append(header.versionId).append("\n");
-            result.append("Key Block Length:  ").append(header.keyBlockLength).append(" characters\n");
-            result.append("Key Usage:         ").append(header.keyUsage);
-            result.append(" (").append(TR31Operations.getKeyUsageDescription(header.keyUsage)).append(")\n");
-            result.append("Algorithm:         ").append(header.algorithm);
-            result.append(" (").append(TR31Operations.getAlgorithmDescription(header.algorithm.charAt(0)))
-                    .append(")\n");
-            result.append("Mode of Use:       ").append(header.modeOfUse);
-            result.append(" (").append(TR31Operations.getModeOfUseDescription(header.modeOfUse.charAt(0)))
-                    .append(")\n");
-            result.append("Key Version:       ").append(header.keyVersionNumber).append("\n");
-            result.append("Exportability:     ").append(header.exportability);
-            result.append(" (").append(TR31Operations.getExportabilityDescription(header.exportability.charAt(0)))
-                    .append(")\n");
-            result.append("Optional Blocks:   ").append(header.numOptionalBlocks).append("\n\n");
-            if (!header.optionalBlockDetails.isEmpty()) {
-                result.append(t("module.keys.tr31.optionalBlock").toUpperCase(java.util.Locale.ROOT)).append(":\n");
-                for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
-                    result.append("  ").append(block.id()).append(" (" ).append(block.dataCharacters()).append(" characters): ").append(block.data()).append("\n");
-                }
-                result.append("\n");
-            }
-
-            result.append("KEY BLOCK:\n");
-            result.append("------------------\n");
-            result.append(keyBlock).append("\n\n");
-
-            result.append("KEY BLOCK (Formatted):\n");
-            result.append("------------------\n");
-            result.append("Header:       ")
-                    .append(keyBlock.substring(0, Math.min(header.build().length(), keyBlock.length()))).append("\n");
-            int headerLen = header.build().length();
-            int macLen = (header.versionId.equals("A") || header.versionId.equals("C")) ? 8 : 16;
-            if (keyBlock.length() > headerLen + macLen) {
-                result.append("Encrypted Key: ").append(keyBlock.substring(headerLen, keyBlock.length() - macLen))
-                        .append("\n");
-                result.append("MAC:          ").append(keyBlock.substring(keyBlock.length() - macLen)).append("\n");
-            }
-
-            result.append("\n========================================\n");
-
-            javafx.application.Platform.runLater(() -> {
-                tr31ExportResultArea.setVisible(true);
-                tr31ExportResultArea.setManaged(true);
-                tr31ExportResultArea.setText(result.toString());
-
-                // Force layout update specifically for VBox parent
-                if (tr31ExportResultArea.getParent() != null) {
-                    tr31ExportResultArea.getParent().requestLayout();
-                    // If parent is VBox/HBox/Grid, this helps trigger resize
-                    tr31ExportResultArea.getParent().layout();
-                }
-            });
-
-            updateStatus(t("module.keys.tr31.status.wrapped"));
-
-            // Delegate to ModernMainController history if available
-            if (mainController != null) {
-                try {
-                    java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Version", header.versionId));
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Usage", usage));
-                    details.add(com.cryptocarver.model.OperationDetail.secretDetail("KBPK", kbpk));
-                    details.add(com.cryptocarver.model.OperationDetail.secretDetail("Key to Wrap", key));
-                    details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key Block", keyBlock));
-
-                    mainController.publish(OperationResult.forOperation("TR-31 Export")
-                            .input(DataConverter.hexToBytes(key))
-                            .output(keyBlock.getBytes(StandardCharsets.UTF_8))
-                            .details(details)
-                            .status("TR-31 key wrapped successfully")
-                            .build());
-                } catch (Exception e) {
-                    System.err.println("Failed to add to history: " + e.getMessage());
-                }
-            } else {
-                // Fallback to old system
-                if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Wrap Key - " + TR31Operations.getKeyUsageDescription(usage))
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Version: " + header.versionId + " | Usage: " + usage, com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "KBPK: " + kbpk + "\nKey to Wrap: " + key + "\nKey Block: " + keyBlock, com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-            }
-
-        } catch (Exception e) {
-            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyToWrapField", tr31ExportResultArea);
-            updateStatus(t("module.keys.tr31.status.wrapFailed"));
-            logTR31Failure("wrap", e);
-        }
-    }
+    @FXML
+    public void handleTR31Export() { tr31Coordinator().handleTR31Export(); }
 
     /**
      * Handle TR-31 Import (Unwrap Key)
      */
-    public void handleTR31Import() {
-        try {
-            String kbpk = tr31KbpkImportField.getText().trim().replaceAll("\\s+", "");
-            String keyBlock = tr31KeyBlockField.getText().trim().replaceAll("\\s+", "");
-
-            // Validate inputs
-            if (kbpk.isEmpty() || keyBlock.isEmpty()) {
-                showTR31Validation(t("module.keys.tr31.keyBlockRequired"), kbpk.isEmpty() ? "tr31KbpkImportField" : "tr31KeyBlockField", tr31ImportResultArea);
-                return;
-            }
-
-            // Parse header
-            TR31Operations.TR31Header header = TR31Operations.TR31Header.parse(keyBlock);
-
-            // Unwrap key
-            String unwrappedKey = TR31Operations.unwrapKey(kbpk, keyBlock);
-
-            // Build result
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("TR-31 KEY BLOCK IMPORT\n");
-            result.append("========================================\n\n");
-
-            result.append("HEADER INFORMATION:\n");
-            result.append("------------------\n");
-            result.append("Version ID:        ").append(header.versionId).append("\n");
-            result.append("Key Block Length:  ").append(header.keyBlockLength).append(" characters\n");
-            result.append("Key Usage:         ").append(header.keyUsage);
-            result.append(" (").append(TR31Operations.getKeyUsageDescription(header.keyUsage)).append(")\n");
-            result.append("Algorithm:         ").append(header.algorithm);
-            result.append(" (").append(TR31Operations.getAlgorithmDescription(header.algorithm.charAt(0)))
-                    .append(")\n");
-            result.append("Mode of Use:       ").append(header.modeOfUse);
-            result.append(" (").append(TR31Operations.getModeOfUseDescription(header.modeOfUse.charAt(0)))
-                    .append(")\n");
-            result.append("Key Version:       ").append(header.keyVersionNumber).append("\n");
-            result.append("Exportability:     ").append(header.exportability).append("\n");
-            result.append("Optional Blocks:   ").append(header.numOptionalBlocks).append("\n");
-            result.append("\n");
-
-            result.append("UNWRAPPED KEY:\n");
-            result.append("------------------\n");
-            result.append(unwrappedKey.toUpperCase()).append("\n");
-            result.append("\nKey Length: ").append(unwrappedKey.length() / 2).append(" bytes (");
-            result.append(unwrappedKey.length()).append(" hex characters)\n");
-
-            result.append("\n========================================\n");
-
-            tr31ImportResultArea.setText(result.toString());
-            tr31ImportResultArea.setVisible(true);
-            tr31ImportResultArea.setManaged(true);
-            updateStatus(t("module.keys.tr31.status.unwrapped"));
-
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Unwrap Key - " + TR31Operations.getKeyUsageDescription(header.keyUsage))
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", "Version " + header.versionId, com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Key Length: " + (unwrappedKey.length() / 2) + " bytes", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-
-        } catch (Exception e) {
-            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyBlockField", tr31ImportResultArea);
-            updateStatus(t("module.keys.tr31.status.unwrapFailed"));
-            logTR31Failure("unwrap", e);
-        }
-    }
+    @FXML
+    public void handleTR31Import() { tr31Coordinator().handleTR31Import(); }
 
     /**
      * Handle Parse TR-31 Header (without unwrapping)
      */
-    public void handleTR31ParseHeader() {
-        try {
-            String keyBlock = tr31KeyBlockField.getText().trim().replaceAll("\\s+", "");
-
-            if (keyBlock.isEmpty()) {
-                showTR31Validation(t("module.keys.tr31.keyBlockRequired"), "tr31KeyBlockField", tr31ImportResultArea);
-                return;
-            }
-
-            // Parse header
-            TR31Operations.TR31Header header = TR31Operations.TR31Header.parse(keyBlock);
-
-            // Build result
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("TR-31 HEADER PARSE\n");
-            result.append("========================================\n\n");
-
-            result.append("HEADER FIELDS:\n");
-            result.append("------------------\n");
-            result.append("Version ID:        ").append(header.versionId).append("\n");
-            result.append("Key Block Length:  ").append(header.keyBlockLength).append(" characters\n");
-            result.append("Key Usage:         ").append(header.keyUsage);
-            result.append(" (").append(TR31Operations.getKeyUsageDescription(header.keyUsage)).append(")\n");
-            result.append("Algorithm:         ").append(header.algorithm);
-            result.append(" (").append(TR31Operations.getAlgorithmDescription(header.algorithm.charAt(0)))
-                    .append(")\n");
-            result.append("Mode of Use:       ").append(header.modeOfUse);
-            result.append(" (").append(TR31Operations.getModeOfUseDescription(header.modeOfUse.charAt(0)))
-                    .append(")\n");
-            result.append("Key Version:       ").append(header.keyVersionNumber).append("\n");
-            result.append("Exportability:     ").append(header.exportability).append(" (")
-                    .append(TR31Operations.getExportabilityDescription(header.exportability.charAt(0))).append(")\n");
-            result.append("Optional Blocks:   ").append(header.numOptionalBlocks).append("\n");
-            result.append("Reserved:          ").append(header.reserved).append("\n\n");
-
-            result.append("INPUT LENGTH:       ").append(keyBlock.length()).append(" characters\n");
-
-            if (!header.optionalBlockDetails.isEmpty()) {
-                result.append("OPTIONAL BLOCKS:\n");
-                result.append("------------------\n");
-                for (TR31Operations.OptionalBlock block : header.optionalBlockDetails) {
-                    result.append(block.id()).append(" (")
-                            .append(TR31Operations.OPTIONAL_BLOCKS.getOrDefault(block.id(), "Unknown optional block"))
-                            .append("): ").append(block.dataCharacters()).append(" characters\n");
-                    result.append("  Data: ").append(block.data()).append("\n");
-                    result.append("  ").append(t("module.keys.tr31.decoded")).append(": ")
-                            .append(TR31Operations.describeOptionalBlockData(block.id(), block.data())).append("\n");
-                }
-                result.append("\n");
-            }
-
-            result.append(t("module.keys.tr31.headerWarnings").toUpperCase(java.util.Locale.ROOT)).append(":\n");
-            result.append("------------------\n");
-            if (header.getDiagnostics().isEmpty()) result.append("No structural warnings detected.\n\n");
-            else {
-                for (String diagnostic : header.getDiagnostics()) result.append(diagnostic).append("\n");
-                result.append("\n");
-            }
-
-            result.append("RAW HEADER:\n");
-            result.append("------------------\n");
-            result.append(header.build()).append("\n");
-
-            result.append("\n========================================\n");
-
-            tr31ImportResultArea.setText(result.toString());
-            tr31ImportResultArea.setVisible(true);
-            tr31ImportResultArea.setManaged(true);
-            updateStatus(t("module.keys.tr31.status.headerParsed"));
-
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("TR-31 Header Parse")
-                        .enrichedOutput(result.toString(), com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .status("TR-31 header parsed successfully")
-                        .build());
-            }
-
-        } catch (Exception e) {
-            showTR31Validation(t("module.keys.tr31.operation", e.getMessage()), "tr31KeyBlockField", tr31ImportResultArea);
-            updateStatus(t("module.keys.tr31.status.parseFailed"));
-            logTR31Failure("header parse", e);
-        }
-    }
+    @FXML
+    public void handleTR31ParseHeader() { tr31Coordinator().handleTR31ParseHeader(); }
 
     // ============================================================================
     // RSA KEY EXCHANGE — export/import of a symmetric key under RSA (Raw OAEP,
@@ -5901,46 +5521,7 @@ public class KeysController {
         return sb.toString();
     }
 
-    public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) {
-        if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.TR31) {
-            java.util.Map<String, String> params = p.getParameters();
-            if (tr31VersionCombo != null && params.containsKey("version")) {
-                for (String item : tr31VersionCombo.getItems()) {
-                    if (item.startsWith(params.get("version").substring(0, 1))) { tr31VersionCombo.setValue(item); break; }
-                }
-            }
-            if (tr31AlgorithmCombo != null && params.containsKey("algorithm")) {
-                for (String item : tr31AlgorithmCombo.getItems()) {
-                    if (item.startsWith(params.get("algorithm").substring(0, 1))) { tr31AlgorithmCombo.setValue(item); break; }
-                }
-            }
-            if (tr31UsageCombo != null && params.containsKey("usage")) {
-                for (String item : tr31UsageCombo.getItems()) {
-                    if (item.startsWith(params.get("usage").substring(0, 2))) { tr31UsageCombo.setValue(item); break; }
-                }
-            }
-            if (tr31ModeCombo != null && params.containsKey("mode")) {
-                for (String item : tr31ModeCombo.getItems()) {
-                    if (item.startsWith(params.get("mode").substring(0, 1))) { tr31ModeCombo.setValue(item); break; }
-                }
-            }
-            if (tr31ExportabilityCombo != null && params.containsKey("exportability")) {
-                for (String item : tr31ExportabilityCombo.getItems()) {
-                    if (item.startsWith(params.get("exportability").substring(0, 1))) { tr31ExportabilityCombo.setValue(item); break; }
-                }
-            }
-            if (tr31KbpkExportField != null && p.getInputs().containsKey("kbpk")) {
-                tr31KbpkExportField.setText(p.getInputs().get("kbpk"));
-            }
-            if (tr31KeyToWrapField != null && p.getInputs().containsKey("keyToWrap")) {
-                tr31KeyToWrapField.setText(p.getInputs().get("keyToWrap"));
-            }
-            if (tr31OptionalBlocksField != null && p.getInputs().containsKey("optionalBlocks")) {
-                tr31OptionalBlocksField.setText(p.getInputs().get("optionalBlocks"));
-            }
-            updateStatus("Loaded TR-31 profile: " + p.getName());
-        }
-    }
+    public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) { tr31Coordinator().loadProfile(p); }
 
     private void initializeKeyLab() {
         if (keyLabStatusFilterCombo != null) {
