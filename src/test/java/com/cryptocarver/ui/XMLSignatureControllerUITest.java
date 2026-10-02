@@ -7,6 +7,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -48,6 +49,23 @@ public class XMLSignatureControllerUITest {
         latch.await();
         assertNotNull(root, "FXML must be loaded");
         assertNotNull(controller, "Controller must be loaded");
+    }
+
+    @AfterAll
+    static void releaseFixture() throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                if (root != null && root.getScene() != null) {
+                    root.getScene().setRoot(new javafx.scene.Group());
+                }
+                root = null;
+                controller = null;
+            } finally {
+                done.countDown();
+            }
+        });
+        assertTrue(done.await(15, java.util.concurrent.TimeUnit.SECONDS), "FXML teardown timed out");
     }
 
     @Test

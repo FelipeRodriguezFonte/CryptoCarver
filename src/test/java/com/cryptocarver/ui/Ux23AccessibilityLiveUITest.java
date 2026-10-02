@@ -48,7 +48,11 @@ class Ux23AccessibilityLiveUITest {
     @AfterAll
     static void stopStage() throws Exception {
         fx(() -> {
-            if (stage != null) stage.hide();
+            if (stage != null) {
+                stage.close();
+                stage.setScene(null);
+                stage = null;
+            }
             I18nService.getInstance().setPreference(LanguagePreference.EN);
         });
     }

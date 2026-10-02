@@ -37,7 +37,11 @@ class Ux22ValidationLiveUITest {
 
     @AfterAll
     static void stopStage() throws Exception {
-        fx(() -> { if (stage != null) stage.hide(); });
+        fx(() -> { if (stage != null) {
+                stage.close();
+                stage.setScene(null);
+                stage = null;
+            } });
     }
 
     private static void fx(Runnable action) throws Exception {
