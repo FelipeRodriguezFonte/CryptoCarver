@@ -195,6 +195,62 @@ public class KeysController {
         return symmetricKeyCoordinator;
     }
 
+    private KeyStoreCoordinator keyStoreCoordinator;
+
+    private KeyStoreCoordinator keyStoreCoordinator() {
+        if (keyStoreCoordinator == null) {
+            keyStoreCoordinator = new KeyStoreCoordinator(
+                    () -> new KeyStoreCoordinator.View(
+                            keysRoot,
+                            pkcs11ProfilesController,
+                            icsfTokenPaneController,
+                            icsfBatchPaneController,
+                            icsfKeyWrapPaneController,
+                            keyMaterialInputArea,
+                            keyMaterialReportArea,
+                            keyComparePublicArea,
+                            keyComparePrivateArea,
+                            keyCompareResultArea,
+                            keyStoreTypeCombo,
+                            keyStorePasswordField,
+                            keyStoreUnsafeExtractCheck,
+                            keyStorePathField,
+                            keyStoreReportArea,
+                            keyStoreProfileCombo,
+                            keyStoreProfileNameField,
+                            pkcs11NameField,
+                            pkcs11LibraryField,
+                            pkcs11SlotField,
+                            pkcs11PinField,
+                            pkcs11ProfileCombo,
+                            pkcs11ReportArea,
+                            pkcs11SigningKeyCombo,
+                            pkcs11SignatureAlgorithmCombo,
+                            pkcs11DataArea,
+                            pkcs11SignatureArea,
+                            pkcs11CertificateAliasCombo,
+                            pkcs11CertificateArea,
+                            pkcs11JwtAlgorithmCombo,
+                            pkcs11JwtPayloadArea,
+                            pkcs11JwtOutputArea,
+                            pkcs11CmsDataArea,
+                            pkcs11CmsDetachedCheck,
+                            pkcs11CmsOutputArea,
+                            pkcs11WrappingKeyCombo,
+                            pkcs11WrapKeyCombo,
+                            pkcs11WrapTransformationCombo,
+                            pkcs11WrapResultArea,
+                            pkcs11UnwrappingKeyCombo,
+                            pkcs11UnwrapDataArea,
+                            pkcs11UnwrapTransformationCombo,
+                            pkcs11UnwrapAlgorithmField,
+                            pkcs11UnwrapTypeCombo,
+                            pkcs11UnwrapResultArea),
+                    () -> mainController, workspace, () -> hsmRefreshCallback.run());
+        }
+        return keyStoreCoordinator;
+    }
+
     private Tr31Coordinator tr31Coordinator;
 
     private Tr31Coordinator tr31Coordinator() {
@@ -843,19 +899,7 @@ public class KeysController {
     public void init(StatusReporter reporter, Runnable hsmRefreshCallback) {
         this.mainController = reporter;
         this.hsmRefreshCallback = hsmRefreshCallback == null ? () -> { } : hsmRefreshCallback;
-        if (pkcs11ProfilesController != null && reporter != null) {
-            pkcs11ProfilesController.setStatusReporter(reporter);
-            pkcs11ProfilesController.setOperationExecutor(reporter.getOperationExecutor());
-        }
-        if (icsfTokenPaneController != null && reporter != null) {
-            icsfTokenPaneController.setStatusReporter(reporter);
-        }
-        if (icsfKeyWrapPaneController != null && reporter != null) {
-            icsfKeyWrapPaneController.setStatusReporter(reporter);
-        }
-        if (icsfBatchPaneController != null && reporter != null) {
-            icsfBatchPaneController.setStatusReporter(reporter);
-        }
+        keyStoreCoordinator().init();
     }
 
     public void showSymmetricSection() {
@@ -971,19 +1015,19 @@ public class KeysController {
         return null;
     }
 
-    @FXML private void handleChooseKeyStore() { chooseKeyStore(); }
-    @FXML private void handleSaveKeyStoreProfile() { saveKeyStoreProfile(); }
-    @FXML private void handleChoosePkcs11Library() { choosePkcs11Library(); }
-    @FXML private void handleConnectPkcs11() { connectPkcs11(); hsmRefreshCallback.run(); }
-    @FXML private void handleDisconnectPkcs11() { disconnectPkcs11(); hsmRefreshCallback.run(); }
-    @FXML private void handlePkcs11Sign() { signWithPkcs11(); }
-    @FXML private void handlePkcs11Verify() { verifyWithPkcs11(); }
-    @FXML private void handleShowPkcs11Certificate() { showPkcs11CertificateChain(); }
-    @FXML private void handleGeneratePkcs11Jwt() { generatePkcs11Jwt(); }
-    @FXML private void handleGeneratePkcs11Cms() { generatePkcs11Cms(); }
-    @FXML private void handlePkcs11Wrap() { wrapWithPkcs11(); }
-    @FXML private void handlePkcs11Unwrap() { unwrapWithPkcs11(); }
-    @FXML private void handleLoadKeyStoreProfile() { loadKeyStoreProfile(); }
+    @FXML private void handleChooseKeyStore() { keyStoreCoordinator().handleChooseKeyStore(); }
+    @FXML private void handleSaveKeyStoreProfile() { keyStoreCoordinator().handleSaveKeyStoreProfile(); }
+    @FXML private void handleChoosePkcs11Library() { keyStoreCoordinator().handleChoosePkcs11Library(); }
+    @FXML private void handleConnectPkcs11() { keyStoreCoordinator().handleConnectPkcs11(); }
+    @FXML private void handleDisconnectPkcs11() { keyStoreCoordinator().handleDisconnectPkcs11(); }
+    @FXML private void handlePkcs11Sign() { keyStoreCoordinator().handlePkcs11Sign(); }
+    @FXML private void handlePkcs11Verify() { keyStoreCoordinator().handlePkcs11Verify(); }
+    @FXML private void handleShowPkcs11Certificate() { keyStoreCoordinator().handleShowPkcs11Certificate(); }
+    @FXML private void handleGeneratePkcs11Jwt() { keyStoreCoordinator().handleGeneratePkcs11Jwt(); }
+    @FXML private void handleGeneratePkcs11Cms() { keyStoreCoordinator().handleGeneratePkcs11Cms(); }
+    @FXML private void handlePkcs11Wrap() { keyStoreCoordinator().handlePkcs11Wrap(); }
+    @FXML private void handlePkcs11Unwrap() { keyStoreCoordinator().handlePkcs11Unwrap(); }
+    @FXML private void handleLoadKeyStoreProfile() { keyStoreCoordinator().handleLoadKeyStoreProfile(); }
     @FXML private void handleAesKeyWrap() { handleKeyWrap(); }
     @FXML public void handleGenerateECDSA() { handleGenerateECDSAFp(); }
 
@@ -1044,12 +1088,14 @@ public class KeysController {
     public void initializeKeyMaterialInspector(TextArea inputArea, TextArea reportArea) {
         this.keyMaterialInputArea = inputArea;
         this.keyMaterialReportArea = reportArea;
+        keyStoreCoordinator().initializeKeyMaterialInspector();
     }
 
     public void initializeKeyPairComparator(TextArea publicArea, TextArea privateArea, TextArea resultArea) {
         this.keyComparePublicArea = publicArea;
         this.keyComparePrivateArea = privateArea;
         this.keyCompareResultArea = resultArea;
+        keyStoreCoordinator().initializeKeyPairComparator();
     }
 
     public void initializeKeyStoreInspector(ComboBox<String> typeCombo, PasswordField passwordField, CheckBox unsafeExtractCheck,
@@ -1061,9 +1107,7 @@ public class KeysController {
         this.keyStoreReportArea = reportArea;
         this.keyStoreProfileCombo = profileCombo;
         this.keyStoreProfileNameField = profileNameField;
-        typeCombo.getItems().setAll("Auto", "PKCS12", "JKS", "JCEKS");
-        typeCombo.setValue("Auto");
-        refreshKeyStoreProfiles();
+        keyStoreCoordinator().initializeKeyStoreInspector();
     }
 
     public void initializePkcs11Inspector(TextField nameField, TextField libraryField, TextField slotField,
@@ -1074,12 +1118,7 @@ public class KeysController {
         this.pkcs11PinField = pinField;
         this.pkcs11ProfileCombo = profileCombo;
         this.pkcs11ReportArea = reportArea;
-        if (pkcs11NameField != null && pkcs11NameField.getText().isBlank()) pkcs11NameField.setText("CryptoCarverToken");
-        if (pkcs11SlotField != null && pkcs11SlotField.getText().isBlank()) pkcs11SlotField.setText("0");
-        refreshPkcs11Profiles();
-        if (pkcs11ProfileCombo != null) {
-            pkcs11ProfileCombo.setOnAction(e -> handlePkcs11ProfileSelection());
-        }
+        keyStoreCoordinator().initializePkcs11Inspector();
     }
 
     /** Initializes direct token signing controls. Data and signatures are hexadecimal. */
@@ -1089,35 +1128,27 @@ public class KeysController {
         this.pkcs11SignatureAlgorithmCombo = algorithmCombo;
         this.pkcs11DataArea = dataArea;
         this.pkcs11SignatureArea = signatureArea;
-        if (pkcs11SignatureAlgorithmCombo != null) {
-            pkcs11SignatureAlgorithmCombo.getItems().setAll(
-                    "SHA256withRSA", "SHA384withRSA", "SHA512withRSA",
-                    "SHA256withECDSA", "SHA384withECDSA", "Ed25519");
-            pkcs11SignatureAlgorithmCombo.setValue("SHA256withRSA");
-        }
-        refreshPkcs11SigningKeys();
+        keyStoreCoordinator().initializePkcs11Signing();
     }
 
     public void initializePkcs11Certificates(ComboBox<String> certificateAliasCombo, TextArea certificateArea) {
         this.pkcs11CertificateAliasCombo = certificateAliasCombo;
         this.pkcs11CertificateArea = certificateArea;
-        refreshPkcs11CertificateAliases();
+        keyStoreCoordinator().initializePkcs11Certificates();
     }
 
     public void initializePkcs11Jwt(ComboBox<String> algorithmCombo, TextArea payloadArea, TextArea outputArea) {
         this.pkcs11JwtAlgorithmCombo = algorithmCombo;
         this.pkcs11JwtPayloadArea = payloadArea;
         this.pkcs11JwtOutputArea = outputArea;
-        if (pkcs11JwtAlgorithmCombo != null) {
-            pkcs11JwtAlgorithmCombo.getItems().setAll("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA");
-            pkcs11JwtAlgorithmCombo.setValue("RS256");
-        }
+        keyStoreCoordinator().initializePkcs11Jwt();
     }
 
     public void initializePkcs11Cms(TextArea dataArea, CheckBox detachedCheck, TextArea outputArea) {
         this.pkcs11CmsDataArea = dataArea;
         this.pkcs11CmsDetachedCheck = detachedCheck;
         this.pkcs11CmsOutputArea = outputArea;
+        keyStoreCoordinator().initializePkcs11Cms();
     }
 
     public void initializePkcs11Wrap(ComboBox<String> wrappingKeyCombo, ComboBox<String> keyToWrapCombo,
@@ -1134,674 +1165,82 @@ public class KeysController {
         this.pkcs11UnwrapAlgorithmField = unwrapAlgorithmField;
         this.pkcs11UnwrapTypeCombo = unwrapTypeCombo;
         this.pkcs11UnwrapResultArea = unwrapResultArea;
-        // RSA/ECB/PKCS1Padding is what real tokens actually advertise in practice (confirmed
-        // empirically against SoftHSM — see Pkcs11Session#wrapKey); OAEP is offered too in case a
-        // specific token/HSM does expose it, but is not the safe default here.
-        java.util.List<String> transformations = java.util.List.of("RSA/ECB/PKCS1Padding", "RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-        if (pkcs11WrapTransformationCombo != null) {
-            pkcs11WrapTransformationCombo.getItems().setAll(transformations);
-            pkcs11WrapTransformationCombo.setValue(transformations.get(0));
-        }
-        if (pkcs11UnwrapTransformationCombo != null) {
-            pkcs11UnwrapTransformationCombo.getItems().setAll(transformations);
-            pkcs11UnwrapTransformationCombo.setValue(transformations.get(0));
-        }
-        if (pkcs11UnwrapTypeCombo != null) {
-            pkcs11UnwrapTypeCombo.getItems().setAll("Secret Key", "Private Key", "Public Key");
-            pkcs11UnwrapTypeCombo.setValue("Secret Key");
-        }
-        if (pkcs11UnwrapAlgorithmField != null && pkcs11UnwrapAlgorithmField.getText().isBlank()) {
-            pkcs11UnwrapAlgorithmField.setText("AES");
-        }
-        refreshPkcs11WrapKeyAliases();
+        keyStoreCoordinator().initializePkcs11Wrap();
     }
 
     /** Opens a real JDK SunPKCS11 session. The PIN is used once and never persisted. */
-    public void connectPkcs11() {
-        char[] pin = pkcs11PinField == null ? new char[0] : pkcs11PinField.getText().toCharArray();
-        try {
-            int slot = Integer.parseInt(pkcs11SlotField.getText().trim());
-            var configuration = new com.cryptocarver.crypto.hsm.Pkcs11Configuration(
-                    pkcs11NameField.getText(), java.nio.file.Path.of(pkcs11LibraryField.getText().trim()), slot);
-            disconnectPkcs11Internal();
-            com.cryptocarver.crypto.hsm.Pkcs11Session pkcs11Session =
-                    com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().connect(configuration, pin);
-            var objects = pkcs11Session.listObjects();
-            StringBuilder report = new StringBuilder("========================================\nPKCS#11 TOKEN SESSION\n========================================\n\n")
-                    .append("Provider: ").append(pkcs11Session.providerName()).append("\n")
-                    .append("Library: ").append(configuration.library()).append("\n")
-                    .append("Slot list index: ").append(configuration.slotListIndex()).append("\n")
-                    .append("Objects: ").append(objects.size()).append("\n\n");
-            for (var object : objects) {
-                report.append("Alias: ").append(object.alias())
-                        .append("\nType: ").append(object.objectType())
-                        .append("\nAlgorithm: ").append(object.algorithm())
-                        .append("\nFormat: ").append(object.format())
-                        .append("\nFingerprint: ").append(object.fingerprint())
-                        .append("\n----------------------------------------\n");
-            }
+    public void connectPkcs11() { keyStoreCoordinator().connectPkcs11(); }
 
-            report.append("\n========================================\nJCA PROVIDER SERVICES (COMPATIBILITY)\n========================================\n")
-                    .append("Advertised services are not a direct PKCS#11 mechanism list; a selected key may still reject an operation.\n\n");
-            var sigs = pkcs11Session.getSupportedMechanisms("Signature");
-            report.append("Signatures (").append(sigs.size()).append("): ").append(String.join(", ", sigs)).append("\n\n");
-            var ciphers = pkcs11Session.getSupportedMechanisms("Cipher");
-            report.append("Ciphers (").append(ciphers.size()).append("): ").append(String.join(", ", ciphers)).append("\n\n");
-            var macs = pkcs11Session.getSupportedMechanisms("Mac");
-            report.append("MACs (").append(macs.size()).append("): ").append(String.join(", ", macs)).append("\n\n");
+    public void disconnectPkcs11() { keyStoreCoordinator().disconnectPkcs11(); }
 
-            report.append("UI Compatible Signatures:\n");
-            if (pkcs11SignatureAlgorithmCombo != null) {
-                for (String algo : pkcs11SignatureAlgorithmCombo.getItems()) {
-                    if (sigs.contains(algo)) {
-                        report.append(" [YES] ").append(algo).append("\n");
-                    } else {
-                        report.append(" [NO]  ").append(algo).append("\n");
-                    }
-                }
-            }
+    public void choosePkcs11Library() { keyStoreCoordinator().choosePkcs11Library(); }
 
-            pkcs11ReportArea.setText(report.toString());
-            refreshPkcs11SigningKeys();
-            refreshPkcs11CertificateAliases();
-            refreshPkcs11WrapKeyAliases();
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("PKCS#11 Token Connect")
-                        .output(report.toString().getBytes(StandardCharsets.UTF_8))
-                        .detail("Provider", pkcs11Session.providerName())
-                        .detail("Slot list index", String.valueOf(slot))
-                        .detail("Objects", String.valueOf(objects.size()))
-                        .status("PKCS#11 token connected; " + objects.size() + " object(s) discovered")
-                        .build());
-            }
-        } catch (Exception error) {
-            showError("PKCS#11 connection", "Unable to open token: " + safePkcs11Message(error));
-        } finally {
-            java.util.Arrays.fill(pin, '\0');
-            if (pkcs11PinField != null) pkcs11PinField.clear();
-        }
-    }
+    public void handleSavePkcs11Profile() { keyStoreCoordinator().handleSavePkcs11Profile(); }
 
-    public void disconnectPkcs11() {
-        boolean wasConnected = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().isConnected();
-        disconnectPkcs11Internal();
-        if (pkcs11ReportArea != null) {
-            pkcs11ReportArea.setText(wasConnected ? "PKCS#11 session closed. Token keys remain on the token." : "No PKCS#11 session is open.");
-        }
-        updateStatus(com.cryptocarver.service.I18nService.getInstance().text(
-                wasConnected ? "module.keys.pkcs11Closed" : "module.keys.pkcs11NotOpen"));
-        refreshPkcs11SigningKeys();
-        refreshPkcs11CertificateAliases();
-        refreshPkcs11WrapKeyAliases();
-    }
+    public void handleDeletePkcs11Profile() { keyStoreCoordinator().handleDeletePkcs11Profile(); }
 
-    public void choosePkcs11Library() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select PKCS#11 native library");
-        chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("PKCS#11 libraries", "*.dylib", "*.so", "*.dll"),
-                new FileChooser.ExtensionFilter("All files", "*"));
-        java.io.File selected = chooser.showOpenDialog(null);
-        if (selected != null && pkcs11LibraryField != null) pkcs11LibraryField.setText(selected.getAbsolutePath());
-    }
 
-    public void handleSavePkcs11Profile() {
-        if (pkcs11NameField == null || pkcs11LibraryField == null || pkcs11SlotField == null) return;
-        String name = pkcs11NameField.getText().trim();
-        String library = pkcs11LibraryField.getText().trim();
-        String slotStr = pkcs11SlotField.getText().trim();
-        if (name.isEmpty() || library.isEmpty()) {
-            showError("Save Profile", "Profile name and library path are required.");
-            return;
-        }
-        int slot = 0;
-        try {
-            slot = Integer.parseInt(slotStr);
-        } catch (NumberFormatException e) {
-            showError("Save Profile", "Slot must be a valid integer.");
-            return;
-        }
-        if (slot < 0) {
-            showError("Save Profile", "Slot must be zero or greater.");
-            return;
-        }
-        com.cryptocarver.model.AppSettings.getInstance().savePkcs11Profile(name, library, slot);
-        refreshPkcs11Profiles();
-        if (pkcs11ProfileCombo != null) pkcs11ProfileCombo.setValue(name);
-        updateStatus("PKCS#11 profile '" + name + "' saved");
-    }
 
-    public void handleDeletePkcs11Profile() {
-        if (pkcs11ProfileCombo == null || pkcs11ProfileCombo.getValue() == null) return;
-        String name = pkcs11ProfileCombo.getValue();
-        com.cryptocarver.model.AppSettings.getInstance().removePkcs11Profile(name);
-        refreshPkcs11Profiles();
-        updateStatus("PKCS#11 profile '" + name + "' deleted");
-    }
 
-    private void handlePkcs11ProfileSelection() {
-        if (pkcs11ProfileCombo == null || pkcs11ProfileCombo.getValue() == null) return;
-        String name = pkcs11ProfileCombo.getValue();
-        for (var profile : com.cryptocarver.model.AppSettings.getInstance().getPkcs11Profiles()) {
-            if (profile.name().equalsIgnoreCase(name)) {
-                pkcs11NameField.setText(profile.name());
-                pkcs11LibraryField.setText(profile.library());
-                pkcs11SlotField.setText(String.valueOf(profile.slot()));
-                if (pkcs11PinField != null) pkcs11PinField.clear(); // Ensure PIN is blank
-                break;
-            }
-        }
-    }
 
-    private void refreshPkcs11Profiles() {
-        if (pkcs11ProfileCombo == null) return;
-        String current = pkcs11ProfileCombo.getValue();
-        pkcs11ProfileCombo.getItems().clear();
-        for (var profile : com.cryptocarver.model.AppSettings.getInstance().getPkcs11Profiles()) {
-            pkcs11ProfileCombo.getItems().add(profile.name());
-        }
-        if (current != null && pkcs11ProfileCombo.getItems().contains(current)) {
-            pkcs11ProfileCombo.setValue(current);
-        }
-    }
 
-    private void disconnectPkcs11Internal() {
-        com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().disconnect();
-    }
 
-    private String safePkcs11Message(Exception error) {
-        String message = error.getMessage();
-        return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
-    }
 
-    public void refreshPkcs11SigningKeys() {
-        if (pkcs11SigningKeyCombo == null) return;
-        String selected = pkcs11SigningKeyCombo.getValue();
-        pkcs11SigningKeyCombo.getItems().clear();
-        try {
-            pkcs11SigningKeyCombo.getItems().addAll(
-                    com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().listPrivateKeyAliases());
-            if (selected != null && pkcs11SigningKeyCombo.getItems().contains(selected)) {
-                pkcs11SigningKeyCombo.setValue(selected);
-            } else if (!pkcs11SigningKeyCombo.getItems().isEmpty()) {
-                pkcs11SigningKeyCombo.setValue(pkcs11SigningKeyCombo.getItems().get(0));
-            }
-        } catch (Exception ignored) {
-            // No token session is expected before the user connects one.
-        }
-    }
 
-    public void refreshPkcs11CertificateAliases() {
-        if (pkcs11CertificateAliasCombo == null) return;
-        String selected = pkcs11CertificateAliasCombo.getValue();
-        pkcs11CertificateAliasCombo.getItems().clear();
-        try {
-            pkcs11CertificateAliasCombo.getItems().addAll(
-                    com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().listCertificateAliases());
-            if (selected != null && pkcs11CertificateAliasCombo.getItems().contains(selected)) {
-                pkcs11CertificateAliasCombo.setValue(selected);
-            } else if (!pkcs11CertificateAliasCombo.getItems().isEmpty()) {
-                pkcs11CertificateAliasCombo.setValue(pkcs11CertificateAliasCombo.getItems().get(0));
-            }
-        } catch (Exception ignored) {
-            // No token session is expected before the user connects one.
-        }
-    }
+    public void refreshPkcs11SigningKeys() { keyStoreCoordinator().refreshPkcs11SigningKeys(); }
+
+    public void refreshPkcs11CertificateAliases() { keyStoreCoordinator().refreshPkcs11CertificateAliases(); }
 
     /** Wrapping/unwrapping key aliases can be any object on the token (private, public or
      *  secret), unlike the signing combo which only lists private keys with a certificate. */
-    public void refreshPkcs11WrapKeyAliases() {
-        if (pkcs11WrappingKeyCombo == null && pkcs11WrapKeyCombo == null && pkcs11UnwrappingKeyCombo == null) return;
-        String selectedWrapping = pkcs11WrappingKeyCombo == null ? null : pkcs11WrappingKeyCombo.getValue();
-        String selectedTarget = pkcs11WrapKeyCombo == null ? null : pkcs11WrapKeyCombo.getValue();
-        String selectedUnwrapping = pkcs11UnwrappingKeyCombo == null ? null : pkcs11UnwrappingKeyCombo.getValue();
-        if (pkcs11WrappingKeyCombo != null) pkcs11WrappingKeyCombo.getItems().clear();
-        if (pkcs11WrapKeyCombo != null) pkcs11WrapKeyCombo.getItems().clear();
-        if (pkcs11UnwrappingKeyCombo != null) pkcs11UnwrappingKeyCombo.getItems().clear();
-        try {
-            var session = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession();
-            java.util.List<String> allAliases = session.listObjects().stream()
-                    .map(com.cryptocarver.crypto.hsm.Pkcs11ObjectInfo::alias)
-                    .distinct().toList();
-            java.util.List<String> privateAliases = session.listPrivateKeysWithCertificate();
-            if (pkcs11WrappingKeyCombo != null) {
-                pkcs11WrappingKeyCombo.getItems().addAll(privateAliases);
-                selectComboValue(pkcs11WrappingKeyCombo, selectedWrapping);
-            }
-            if (pkcs11UnwrappingKeyCombo != null) {
-                pkcs11UnwrappingKeyCombo.getItems().addAll(privateAliases);
-                selectComboValue(pkcs11UnwrappingKeyCombo, selectedUnwrapping);
-            }
-            if (pkcs11WrapKeyCombo != null) {
-                pkcs11WrapKeyCombo.getItems().addAll(allAliases);
-                selectComboValue(pkcs11WrapKeyCombo, selectedTarget);
-            }
-        } catch (Exception ignored) {
-            // No token session is expected before the user connects one.
-        }
-    }
+    public void refreshPkcs11WrapKeyAliases() { keyStoreCoordinator().refreshPkcs11WrapKeyAliases(); }
 
-    private static void selectComboValue(ComboBox<String> combo, String previous) {
-        if (previous != null && combo.getItems().contains(previous)) {
-            combo.setValue(previous);
-        } else if (!combo.getItems().isEmpty()) {
-            combo.setValue(combo.getItems().get(0));
-        }
-    }
 
-    public void wrapWithPkcs11() {
-        try {
-            String wrappingAlias = requireComboValue(pkcs11WrappingKeyCombo,
-                    "Connect a token, then select a wrapping key alias");
-            String targetAlias = requireComboValue(pkcs11WrapKeyCombo,
-                    "Select the alias of the key to wrap");
-            String transformation = pkcs11WrapTransformationCombo == null || pkcs11WrapTransformationCombo.getValue() == null
-                    ? "RSA/ECB/PKCS1Padding" : pkcs11WrapTransformationCombo.getValue();
-            byte[] wrapped = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .wrapKey(wrappingAlias, targetAlias, transformation);
-            String hex = DataConverter.bytesToHex(wrapped);
-            pkcs11WrapResultArea.setText(hex);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("PKCS#11 Wrap Key")
-                        .output(wrapped)
-                        .detail("Wrapping key alias", wrappingAlias)
-                        .detail("Wrapped key alias", targetAlias)
-                        .detail("Transformation", transformation)
-                        .status("Wrapped '" + targetAlias + "' under '" + wrappingAlias + "'").build());
-            }
-        } catch (Exception error) {
-            showError("PKCS#11 Wrap", "Unable to wrap key: " + safePkcs11Message(error));
-        }
-    }
 
-    public void unwrapWithPkcs11() {
-        try {
-            String unwrappingAlias = requireComboValue(pkcs11UnwrappingKeyCombo,
-                    "Connect a token, then select an unwrapping key alias");
-            byte[] wrapped = DataConverter.hexToBytes(requirePkcs11Text(pkcs11UnwrapDataArea, "Wrapped key"));
-            String transformation = pkcs11UnwrapTransformationCombo == null || pkcs11UnwrapTransformationCombo.getValue() == null
-                    ? "RSA/ECB/PKCS1Padding" : pkcs11UnwrapTransformationCombo.getValue();
-            String algorithm = pkcs11UnwrapAlgorithmField == null || pkcs11UnwrapAlgorithmField.getText().isBlank()
-                    ? "AES" : pkcs11UnwrapAlgorithmField.getText().trim();
-            int keyType = switch (pkcs11UnwrapTypeCombo == null || pkcs11UnwrapTypeCombo.getValue() == null
-                    ? "Secret Key" : pkcs11UnwrapTypeCombo.getValue()) {
-                case "Private Key" -> javax.crypto.Cipher.PRIVATE_KEY;
-                case "Public Key" -> javax.crypto.Cipher.PUBLIC_KEY;
-                default -> javax.crypto.Cipher.SECRET_KEY;
-            };
-            java.security.Key unwrapped = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .unwrapKey(unwrappingAlias, wrapped, transformation, algorithm, keyType);
-            // The recovered key material is never displayed or logged — only a description of the
-            // handle, matching how every other PKCS#11 operation in this class treats key material.
-            String summary = "Unwrapped " + unwrapped.getClass().getSimpleName()
-                    + " (algorithm=" + unwrapped.getAlgorithm() + ", format=" + unwrapped.getFormat() + ")";
-            pkcs11UnwrapResultArea.setText(summary);
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("PKCS#11 Unwrap Key")
-                        .input(wrapped)
-                        .detail("Unwrapping key alias", unwrappingAlias)
-                        .detail("Transformation", transformation)
-                        .detail("Recovered algorithm", unwrapped.getAlgorithm())
-                        .status(summary).build());
-            }
-        } catch (Exception error) {
-            showError("PKCS#11 Unwrap", "Unable to unwrap key: " + safePkcs11Message(error));
-        }
-    }
+    public void wrapWithPkcs11() { keyStoreCoordinator().wrapWithPkcs11(); }
 
-    private static String requireComboValue(ComboBox<String> combo, String message) {
-        String value = combo == null ? null : combo.getValue();
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
-        }
-        return value;
-    }
+    public void unwrapWithPkcs11() { keyStoreCoordinator().unwrapWithPkcs11(); }
 
-    public void showPkcs11CertificateChain() {
-        try {
-            String alias = pkcs11CertificateAliasCombo == null ? null : pkcs11CertificateAliasCombo.getValue();
-            if (alias == null || alias.isBlank()) {
-                throw new IllegalArgumentException("Connect a token and select an alias with a certificate");
-            }
-            String pem = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .certificateChainPem(alias);
-            pkcs11CertificateArea.setText(pem);
-            mainController.publish(OperationResult.forOperation("PKCS#11 Certificate Export")
-                    .output(pem.getBytes(StandardCharsets.US_ASCII))
-                    .detail("Key alias", alias).detail("Content", "Public X.509 certificate chain")
-                    .status("Exported public certificate chain from PKCS#11 token").build());
-        } catch (Exception error) {
-            showError("PKCS#11 certificate", "Unable to load certificate chain: " + safePkcs11Message(error));
-        }
-    }
 
-    public void handleUpdatePkcs11CertificateChain() {
-        try {
-            String alias = pkcs11CertificateAliasCombo == null ? null : pkcs11CertificateAliasCombo.getValue();
-            if (alias == null || alias.isBlank()) {
-                throw new IllegalArgumentException("Connect a token and select an alias to update");
-            }
 
-            String pem = pkcs11CertificateArea.getText().trim();
-            if (pem.isEmpty()) {
-                throw new IllegalArgumentException("Paste the PEM certificate chain in the text area");
-            }
+    public void showPkcs11CertificateChain() { keyStoreCoordinator().showPkcs11CertificateChain(); }
 
-            List<X509Certificate> chain = new ArrayList<>();
-            String[] parts = pem.split("-----BEGIN CERTIFICATE-----");
-            for (String part : parts) {
-                if (part.trim().isEmpty()) continue;
-                String certPem = "-----BEGIN CERTIFICATE-----" + part;
-                int endIndex = certPem.indexOf("-----END CERTIFICATE-----");
-                if (endIndex != -1) {
-                    certPem = certPem.substring(0, endIndex + 25);
-                    chain.add(CertificateGenerator.parseCertificate(certPem));
-                }
-            }
+    public void handleUpdatePkcs11CertificateChain() { keyStoreCoordinator().handleUpdatePkcs11CertificateChain(); }
 
-            if (chain.isEmpty()) {
-                throw new IllegalArgumentException("No valid PEM certificates found");
-            }
 
-            // Determine the leaf from verified issuer relationships so the
-            // confirmation describes the certificate that will be installed.
-            java.security.cert.X509Certificate leaf = null;
-            for (java.security.cert.X509Certificate cert : chain) {
-                boolean isIssuer = false;
-                for (java.security.cert.X509Certificate other : chain) {
-                    if (cert != other && isVerifiedIssuer(cert, other)) {
-                        isIssuer = true;
-                        break;
-                    }
-                }
-                if (!isIssuer) {
-                    if (leaf != null) throw new IllegalArgumentException("Chain contains multiple leaves");
-                    leaf = cert;
-                }
-            }
-            if (leaf == null) {
-                throw new IllegalArgumentException("Could not determine a unique leaf in the chain");
-            }
 
-            String subject = leaf.getSubjectX500Principal().getName();
-            String issuer = leaf.getIssuerX500Principal().getName();
+    public void generatePkcs11Jwt() { keyStoreCoordinator().generatePkcs11Jwt(); }
 
-            javafx.stage.Window owner = keysRoot == null || keysRoot.getScene() == null
-                    ? null : keysRoot.getScene().getWindow();
-            boolean confirmed = dialogService.confirmDestructive(owner, "Confirm Token Update",
-                    "Updating certificate chain for alias: " + alias + "\n\nLeaf Subject: " + subject
-                            + "\nLeaf Issuer: " + issuer + "\nChain length: " + chain.size()
-                            + "\n\nProceed with token modification?", "Update");
-            if (!confirmed) {
-                updateStatus("Update cancelled by user");
-                return;
-            }
+    public void generatePkcs11Cms() { keyStoreCoordinator().generatePkcs11Cms(); }
 
-            com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .updateCertificateChain(alias, chain.toArray(new java.security.cert.Certificate[0]));
+    public void signWithPkcs11() { keyStoreCoordinator().signWithPkcs11(); }
 
-            updateStatus("Successfully updated certificate chain for token alias: " + alias);
+    public void verifyWithPkcs11() { keyStoreCoordinator().verifyWithPkcs11(); }
 
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("Update PKCS#11 Certificate Chain")
-                        .detail("Alias", alias)
-                        .detail("Subject", subject)
-                        .detail("Issuer", issuer)
-                        .detail("Chain Length", String.valueOf(chain.size()))
-                        .status("Success").build());
-            }
-        } catch (Exception error) {
-            showError("Update PKCS#11 certificate chain", "Failed to update chain: " + safePkcs11Message(error));
-        }
-    }
+    private String requirePkcs11SigningAlias() { return keyStoreCoordinator().requirePkcs11SigningAlias(); }
 
-    private static boolean isVerifiedIssuer(X509Certificate issuer, X509Certificate certificate) {
-        if (!issuer.getSubjectX500Principal().equals(certificate.getIssuerX500Principal())) {
-            return false;
-        }
-        try {
-            certificate.verify(issuer.getPublicKey());
-            return true;
-        } catch (java.security.GeneralSecurityException e) {
-            return false;
-        }
-    }
 
-    public void generatePkcs11Jwt() {
-        try {
-            String alias = requirePkcs11SigningAlias();
-            String payload = requirePkcs11TextPayload(pkcs11JwtPayloadArea, "JWT claims JSON");
-            String algorithm = pkcs11JwtAlgorithmCombo == null ? null : pkcs11JwtAlgorithmCombo.getValue();
-            String compactJws = com.cryptocarver.crypto.JOSEService.generateSignedJwtWithPkcs11(payload, algorithm,
-                    com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession(), alias);
-            pkcs11JwtOutputArea.setText(compactJws);
-            mainController.publish(OperationResult.forOperation("PKCS#11 Signed JWT")
-                    .input(payload.getBytes(StandardCharsets.UTF_8)).output(compactJws.getBytes(StandardCharsets.US_ASCII))
-                    .detail("Key alias", alias).detail("Algorithm", algorithm).detail("Serialization", "Compact JWS")
-                    .status("JWT signed by PKCS#11 token object " + alias).build());
-        } catch (Exception error) {
-            showError("PKCS#11 JWT", "Unable to create signed JWT: " + safePkcs11Message(error));
-        }
-    }
 
-    public void generatePkcs11Cms() {
-        try {
-            String alias = requirePkcs11SigningAlias();
-            byte[] data = DataConverter.hexToBytes(requirePkcs11Text(pkcs11CmsDataArea, "CMS data"));
-            boolean detached = pkcs11CmsDetachedCheck != null && pkcs11CmsDetachedCheck.isSelected();
-            byte[] cms = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .signCms(alias, data, detached);
-            String base64 = java.util.Base64.getEncoder().encodeToString(cms);
-            pkcs11CmsOutputArea.setText(base64);
-            mainController.publish(OperationResult.forOperation("PKCS#11 CMS SignedData")
-                    .input(data).output(cms)
-                    .detail("Key alias", alias).detail("Detached", String.valueOf(detached))
-                    .detail("Encoding", "Base64 CMS/PKCS#7")
-                    .status("CMS SignedData created by PKCS#11 token object " + alias).build());
-        } catch (Exception error) {
-            showError("PKCS#11 CMS", "Unable to create CMS SignedData: " + safePkcs11Message(error));
-        }
-    }
 
-    public void signWithPkcs11() {
-        try {
-            String alias = requirePkcs11SigningAlias();
-            byte[] data = DataConverter.hexToBytes(requirePkcs11Text(pkcs11DataArea, "Data"));
-            String algorithm = pkcs11SignatureAlgorithmCombo.getValue();
-            byte[] signature = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .sign(alias, data, algorithm);
-            pkcs11SignatureArea.setText(DataConverter.bytesToHex(signature));
-            mainController.publish(OperationResult.forOperation("PKCS#11 Sign")
-                    .input(data).output(signature)
-                    .detail("Key alias", alias).detail("Algorithm", algorithm)
-                    .status("Signature created by PKCS#11 token object " + alias).build());
-        } catch (Exception error) {
-            showError("PKCS#11 signing", "Unable to sign: " + safePkcs11Message(error));
-        }
-    }
-
-    public void verifyWithPkcs11() {
-        try {
-            String alias = requirePkcs11SigningAlias();
-            byte[] data = DataConverter.hexToBytes(requirePkcs11Text(pkcs11DataArea, "Data"));
-            byte[] signature = DataConverter.hexToBytes(requirePkcs11Text(pkcs11SignatureArea, "Signature"));
-            String algorithm = pkcs11SignatureAlgorithmCombo.getValue();
-            boolean valid = com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .verify(alias, data, signature, algorithm);
-            mainController.publish(OperationResult.forOperation("PKCS#11 Signature Verify")
-                    .input(data).output(signature)
-                    .detail("Key alias", alias).detail("Algorithm", algorithm).detail("Valid", String.valueOf(valid))
-                    .status("PKCS#11 signature verification: " + (valid ? "VALID" : "INVALID")).build());
-            if (valid) updateStatus("PKCS#11 signature is valid");
-            else showError("PKCS#11 verification", "Signature is not valid for the selected token key");
-        } catch (Exception error) {
-            showError("PKCS#11 verification", "Unable to verify: " + safePkcs11Message(error));
-        }
-    }
-
-    private String requirePkcs11SigningAlias() {
-        String alias = pkcs11SigningKeyCombo == null ? null : pkcs11SigningKeyCombo.getValue();
-        if (alias == null || alias.isBlank()) {
-            throw new IllegalArgumentException("Connect a token that exposes a private-key object and select its alias");
-        }
-        return alias;
-    }
-
-    private static String requirePkcs11Text(TextArea area, String name) {
-        String value = area == null ? null : area.getText().replaceAll("\\s+", "");
-        if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " hex is required");
-        return value;
-    }
-
-    private static String requirePkcs11TextPayload(TextArea area, String name) {
-        String value = area == null ? null : area.getText().trim();
-        if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " is required");
-        return value;
-    }
 
     /** Inspects PEM keys and certificates without modifying them. */
-    public void handleInspectKeyMaterial() {
-        try {
-            String pem = keyMaterialInputArea.getText().trim();
-            if (pem.isEmpty()) throw new IllegalArgumentException("Paste PEM key or certificate material first");
-            String report;
-            if (pem.contains("BEGIN CERTIFICATE")) {
-                var factory = java.security.cert.CertificateFactory.getInstance("X.509");
-                var certificate = (java.security.cert.X509Certificate) factory.generateCertificate(
-                        new java.io.ByteArrayInputStream(pem.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
-                report = KeyMaterialInspector.describeCertificate(certificate);
-            } else if (pem.contains("PRIVATE KEY")) {
-                java.security.PrivateKey key = AsymmetricKeyOperations.importPrivateKeyPEMAuto(pem);
-                report = KeyMaterialInspector.describeKey(key);
-            } else if (pem.contains("BEGIN PUBLIC KEY")) {
-                java.security.PublicKey key = AsymmetricKeyOperations.importPublicKeyPEMAuto(pem);
-                report = KeyMaterialInspector.describeKey(key);
-            } else {
-                throw new IllegalArgumentException("Recognized PEM headers are PUBLIC KEY, EC/PRIVATE KEY and CERTIFICATE");
-            }
-            keyMaterialReportArea.setText(report);
-            updateStatus("Key material inspected successfully");
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Key Material Inspection")
-                        .enrichedOutput(report, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .status("Key material inspected successfully")
-                        .build());
-            }
-        } catch (Exception e) {
-            showError("Key Material Inspector", "Cannot inspect material: " + e.getMessage());
-        }
-    }
+    public void handleInspectKeyMaterial() { keyStoreCoordinator().handleInspectKeyMaterial(); }
 
-    public void handleCompareKeyPair() {
-        try {
-            java.security.PublicKey publicKey = parsePublicMaterial(keyComparePublicArea.getText().trim());
-            java.security.PrivateKey privateKey = parsePrivateMaterial(keyComparePrivateArea.getText().trim());
-            boolean matches = KeyMaterialInspector.matches(publicKey, privateKey);
-            String reportText = "========================================\nKEY PAIR COMPARISON\n========================================\n\n"
-                    + "Public algorithm: " + publicKey.getAlgorithm() + "\nPrivate algorithm: " + privateKey.getAlgorithm() + "\n"
-                    + "Public SHA-256: " + KeyMaterialInspector.fingerprint(publicKey.getEncoded()) + "\n\n"
-                    + (matches ? "✓ MATCH: the private key successfully signed a challenge verified by the public key."
-                            : "✗ NO MATCH: signature verification failed or the algorithms are incompatible.");
-            keyCompareResultArea.setText(reportText);
-            updateStatus(matches ? "Key pair comparison: match" : "Key pair comparison: no match");
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("Key Pair Comparison")
-                        .enrichedOutput(reportText, com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .status(matches ? "Key pair comparison: match" : "Key pair comparison: no match")
-                        .build());
-            }
-        } catch (Exception e) {
-            showError("Compare Key Pair", "Cannot compare material: " + e.getMessage());
-        }
-    }
+    public void handleCompareKeyPair() { keyStoreCoordinator().handleCompareKeyPair(); }
 
-    public void handleInspectKeyStore() {
-        char[] password = keyStorePasswordField.getText().toCharArray();
-        try {
-            boolean unsafe = keyStoreUnsafeExtractCheck.isSelected();
-            var report = KeyStoreInspector.inspect(java.nio.file.Path.of(keyStorePathField.getText().trim()), password,
-                    keyStoreTypeCombo.getValue(), unsafe);
-            StringBuilder text = new StringBuilder("========================================\nKEYSTORE REPORT\n========================================\n\n")
-                    .append("Type: ").append(report.type()).append("\nEntries: ").append(report.entries().size()).append("\n")
-                    .append(unsafe ? "⚠️ UNSAFE EXTRACTION ENABLED — do not use this mode in production.\n\n" : "\n");
-            for (var entry : report.entries()) {
-                text.append("Alias: ").append(entry.alias()).append("\nType: ").append(entry.kind())
-                        .append("\nAlgorithm: ").append(entry.algorithm());
-                if (!entry.subject().isEmpty()) text.append("\nSubject: ").append(entry.subject());
-                if (!entry.fingerprint().equals("Not exposed")) text.append("\nSHA-256: ").append(entry.fingerprint());
-                if (unsafe && !entry.keyMaterial().equals("Not requested")) text.append("\nEXPORTED KEY (HEX): ").append(entry.keyMaterial());
-                text.append("\n----------------------------------------\n");
-            }
-            keyStoreReportArea.setText(text.toString());
-            updateStatus("KeyStore inspected: " + report.entries().size() + " entries");
-            if (mainController != null) {
-                mainController.publish(com.cryptocarver.model.OperationResult.forOperation("KeyStore Inspection")
-                        .enrichedOutput(text.toString(), unsafe ? com.cryptocarver.model.OperationDetail.Classification.SECRET : com.cryptocarver.model.OperationDetail.Classification.PUBLIC)
-                        .status("KeyStore inspected: " + report.entries().size() + " entries")
-                        .build());
-            }
-        } catch (Exception e) {
-            showError("KeyStore Inspector", "Cannot inspect keystore: " + e.getMessage());
-        } finally {
-            java.util.Arrays.fill(password, '\0');
-            keyStorePasswordField.clear();
-        }
-    }
+    public void handleInspectKeyStore() { keyStoreCoordinator().handleInspectKeyStore(); }
 
-    public void chooseKeyStore() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select PKCS#12, JKS or JCEKS KeyStore");
-        chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("KeyStores", "*.p12", "*.pfx", "*.jks", "*.jceks"),
-                new FileChooser.ExtensionFilter("All files", "*"));
-        java.io.File selected = chooser.showOpenDialog(null);
-        if (selected != null) keyStorePathField.setText(selected.getAbsolutePath());
-    }
+    public void chooseKeyStore() { keyStoreCoordinator().chooseKeyStore(); }
 
-    public void saveKeyStoreProfile() {
-        try {
-            AppSettings.getInstance().saveTrustStoreProfile(keyStoreProfileNameField.getText(), keyStorePathField.getText(), keyStoreTypeCombo.getValue());
-            refreshKeyStoreProfiles();
-            keyStoreProfileCombo.setValue(keyStoreProfileNameField.getText().trim());
-            updateStatus("KeyStore profile saved (password not stored)");
-        } catch (Exception e) {
-            showError("KeyStore Profile", e.getMessage());
-        }
-    }
+    public void saveKeyStoreProfile() { keyStoreCoordinator().saveKeyStoreProfile(); }
 
-    public void loadKeyStoreProfile() {
-        String name = keyStoreProfileCombo.getValue();
-        if (name == null || name.isBlank()) return;
-        AppSettings.getInstance().getTrustStoreProfiles().stream().filter(profile -> name.equals(profile.name())).findFirst().ifPresent(profile -> {
-            keyStorePathField.setText(profile.path());
-            keyStoreTypeCombo.setValue(profile.type());
-            keyStorePasswordField.clear();
-            updateStatus("KeyStore profile loaded; enter password to inspect");
-        });
-    }
+    public void loadKeyStoreProfile() { keyStoreCoordinator().loadKeyStoreProfile(); }
 
-    private void refreshKeyStoreProfiles() {
-        if (keyStoreProfileCombo == null) return;
-        keyStoreProfileCombo.getItems().setAll(AppSettings.getInstance().getTrustStoreProfiles().stream()
-                .map(AppSettings.TrustStoreProfile::name).sorted(String.CASE_INSENSITIVE_ORDER).toList());
-    }
 
-    private java.security.PublicKey parsePublicMaterial(String pem) throws Exception {
-        if (pem.isBlank()) throw new IllegalArgumentException("Public key or certificate is required");
-        if (pem.contains("BEGIN CERTIFICATE")) {
-            var factory = java.security.cert.CertificateFactory.getInstance("X.509");
-            return ((java.security.cert.X509Certificate) factory.generateCertificate(
-                    new java.io.ByteArrayInputStream(pem.getBytes(java.nio.charset.StandardCharsets.US_ASCII)))).getPublicKey();
-        }
-        return AsymmetricKeyOperations.importPublicKeyPEMAuto(pem);
-    }
 
-    private java.security.PrivateKey parsePrivateMaterial(String pem) throws Exception {
-        if (pem.isBlank()) throw new IllegalArgumentException("Private key is required");
-        if (pem.contains("ED25519")) return AsymmetricKeyOperations.importEd25519PrivateKeyPEM(pem);
-        if (pem.contains("EC PRIVATE")) return AsymmetricKeyOperations.importECPrivateKeyPEM(pem);
-        return AsymmetricKeyOperations.importPrivateKeyPEMAuto(pem);
-    }
+
+
+    private java.security.PrivateKey parsePrivateMaterial(String pem) throws Exception { return KeysMaterialSupport.parsePrivateMaterial(pem); }
 
     /**
      * Initialize RSA components
