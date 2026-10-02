@@ -53,5 +53,6 @@ destapó tres fallos, corregidos después:
   porque el laboratorio no ofrece Salsa20.
 - El texto de ayuda del nonce decía 8 bytes para ChaCha20; ahora muestra la longitud
   recomendada de cada algoritmo (12 para ChaCha20).
-- Descifrar sin clave mostraba «Invalid Hexadecimal Format»; ahora dice que falta la clave,
-  igual que al cifrar.
+- Cifrar o descifrar sin clave mostraba «Formato hexadecimal no válido»: el aviso de la
+  ventana principal clasifica por palabras y el mensaje decía «hexadecimal». Ahora pide la
+  clave o una entrada de Key Lab.

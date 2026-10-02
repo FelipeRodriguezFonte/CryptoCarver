@@ -187,7 +187,12 @@ class SymmetricCipherCharacterizationUITest {
             panel.material("", IV_16, "", "");
             panel.inputs("Hexadecimal", "00".repeat(16), "Hexadecimal");
             panel.decrypt();
-            assertEquals("error Validation Error: Please enter symmetric key in hexadecimal", panel.reporter().drain());
+            assertEquals("error Validation Error: Enter the symmetric key or select a Key Lab entry",
+                    panel.reporter().drain());
+            // The main window maps messages by their wording; this one must not read as bad hex.
+            UserFacingError shown = UserFacingErrorMapper.map("Validation Error",
+                    "Enter the symmetric key or select a Key Lab entry", null);
+            assertEquals("Validation Error", shown.title());
         });
     }
 
@@ -218,7 +223,7 @@ class SymmetricCipherCharacterizationUITest {
             panel.encrypt();
             transcript.add(panel.snapshot("bad hex input"));
         });
-        assertEquals("c2a46e1a96bfa9b997d2bd1201e7a5aae119a16207bbf19b5ee9b1ef71fdd836", digest(transcript), String.join("\n", transcript));
+        assertEquals("60320302bb8af5de8921bca94fb9cbb3bba5f3ba2b9811807baa32a1e687226c", digest(transcript), String.join("\n", transcript));
     }
 
     @Test

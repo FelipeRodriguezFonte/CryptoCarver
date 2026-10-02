@@ -101,7 +101,7 @@ final class SymmetricCipherCoordinator {
     private byte[] getManualSymmetricKey() {
         String keyHex = symmetricKeyField.getText().trim();
         if (keyHex.isEmpty()) {
-            throw new IllegalArgumentException("Please enter symmetric key in hexadecimal");
+            throw new IllegalArgumentException("Enter the symmetric key or select a Key Lab entry");
         }
         return DataConverter.hexToBytes(keyHex);
     }
@@ -247,7 +247,8 @@ final class SymmetricCipherCoordinator {
             String padding = paddingCombo.getValue();
 
             // Get key
-            // Checked apart so a missing key reads as such, not as malformed input.
+            // Checked apart, and worded without "hex", so the error mappers report a missing key
+            // instead of malformed input.
             String hsmKeyId;
             byte[] manualKey;
             try {
