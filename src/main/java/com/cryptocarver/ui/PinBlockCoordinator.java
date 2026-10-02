@@ -265,6 +265,13 @@ final class PinBlockCoordinator {
             boolean isISO4 = selectedFormat == com.cryptocarver.crypto.PinBlockFormat.ISO4;
             int expectedLength = isISO4 ? 32 : 16;
 
+            if (!pinBlock.matches("[0-9A-Fa-f]*")) {
+                pinBlockResultArea.setText(t("module.payments.error.pinBlockNotHex"));
+                pinBlockResultArea.setManaged(true);
+                pinBlockResultArea.setVisible(true);
+                return;
+            }
+
             if (!pinBlock.matches("[0-9A-Fa-f]{" + expectedLength + "}")) {
                 pinBlockResultArea.setText(t("module.payments.error.pinBlockInvalid",
                         expectedLength, format, pinBlock.length()));

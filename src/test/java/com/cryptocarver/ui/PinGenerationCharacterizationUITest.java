@@ -96,7 +96,7 @@ class PinGenerationCharacterizationUITest {
             panel.controller().handleVerifyIbm3624Pin();
             transcript.add(panel.step("missing pvk", null));
         });
-        assertEquals("137ab806277c3952e949ea7fb446c7a81b1490c7be7b176cf408e95c0cc9415a", digest(transcript), String.join("\n", transcript));
+        assertEquals("e59f30b2dbc36c23b0e67dd9fff72e2ca3506dee800ef67446d5bb98902b6827", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -138,7 +138,7 @@ class PinGenerationCharacterizationUITest {
             panel.controller().handleGenerateOffsetUtility();
             transcript.add(panel.step("missing pin", null));
         });
-        assertEquals("4f56af6c253c4146fad586527a0056ef2175b9d18679a0116087fb9cd8875e3e", digest(transcript), String.join("\n", transcript));
+        assertEquals("ae79220c8611e4fc419f93948431c6cad65e4435c76991e0477c427f6d420862", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -172,7 +172,18 @@ class PinGenerationCharacterizationUITest {
             panel.controller().handleDerivePinFromPvvUtility();
             transcript.add(panel.step("derive missing pvv", null));
         });
-        assertEquals("e18bb92fc36f7d537542fb2cd9ab4b6b40257b308bcd2971328efecfbb72d3a8", digest(transcript), String.join("\n", transcript));
+        assertEquals("49cbb5da8b56f495b0aaf3b8bcd3e08bbd97cdf9fb098b4cb1dd516d58622ecb", digest(transcript), String.join("\n", transcript));
+    }
+
+    @Test
+    void secureMessagingProfilesSayTheyCannotBeLoadedHere() throws Exception {
+        withPanel(panel -> {
+            var profile = com.cryptocarver.model.payments.PaymentProfileManager.getProfilesByType(
+                    com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING).get(0);
+            panel.controller().loadProfile(profile);
+            String reported = panel.reporter().drain();
+            assertTrue(reported.contains("was not loaded"), reported);
+        });
     }
 
     private static String digest(List<String> transcript) throws Exception {

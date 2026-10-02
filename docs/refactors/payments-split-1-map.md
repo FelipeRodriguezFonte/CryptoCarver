@@ -51,3 +51,27 @@ usaba el código muerto.
   decodificar. Ahora pasa solo el bloque que produjo la última codificación (en claro o cifrada).
 - Pendiente, menor: un bloque en claro de 16 caracteres con letras no hexadecimales da el mensaje
   de longitud incorrecta («Current length: 16»).
+
+# Fase 2: generación y verificación de PIN
+
+- `PinGenerationCoordinator`: IBM 3624 (generar y verificar, con ventana de datos de
+  validación configurable), generador de offset, generador de PVV y búsqueda de PINs que dan
+  un PVV. Caracterizado antes con `PinGenerationCharacterizationUITest`.
+- Código muerto eliminado: el panel MAC (`handleGenerateMac`, `handleVerifyMac`,
+  `setupMacAlgorithms` y sus campos). `payments.fxml` no tiene esos controles. Los algoritmos
+  ISO 9797-1 siguen en el panel MAC de Autenticación; `Iso8583PaymentsPaneTest` lo comprueba ahí.
+- `PaymentsController` queda en 1189 líneas.
+
+## Fallos destapados y corregidos
+
+- «Derive PIN from PVV» publicaba en el histórico el informe completo, con la PVK en claro.
+  Ahora publica solo los PINs candidatos.
+- El generador de offset calculaba primero con la configuración por defecto y fallaba con PANs
+  cortos aunque la configuración elegida fuera válida.
+- Con una PVK no hexadecimal, el redactor de secretos convertía el error en
+  «Error in PIN=[REDACTED] hexadecimal string»; ahora dice qué falló.
+- Los errores de posición inicial, longitud y tabla de decimalización señalan su campo.
+- Cargar un perfil Secure Messaging desde el menú Laboratorio decía «cargado» sin cargar
+  nada (Pagos no tiene ese formulario); ahora lo dice y remite a «Ejecutar y verificar».
+- Un bloque PIN en claro con caracteres no hexadecimales da su propio mensaje, no el de
+  longitud.

@@ -109,7 +109,7 @@ class PinBlockCharacterizationUITest {
                         + " " + panel.reporter().drain(false));
             }
         });
-        assertEquals("98da76e4da0299c3d09a24d04631011d64ee9dd3a48f8b2408ef0a0792b5ee83", digest(transcript), String.join("\n", transcript));
+        assertEquals("2f50d86f4228ed681a26ead359d2df94a0e3a4e7f5462d51bf3ea4e32633fdbe", digest(transcript), String.join("\n", transcript));
     }
 
     @Test

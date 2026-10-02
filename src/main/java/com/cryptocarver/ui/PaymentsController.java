@@ -1171,7 +1171,8 @@ public class PaymentsController {
             }
             updateStatus(t("module.payments.status.profileLoaded", "PIN - " + p.getName()));
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
-            updateStatus(t("module.payments.status.profileLoaded", "Secure Messaging - " + p.getName()));
+            // The Payments screen has no secure-messaging form to fill; say so instead of "loaded".
+            updateStatus(t("module.payments.status.profileNoForm", p.getName()));
         }
     }
 

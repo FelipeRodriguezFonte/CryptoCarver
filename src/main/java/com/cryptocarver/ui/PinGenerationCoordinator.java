@@ -174,7 +174,7 @@ final class PinGenerationCoordinator {
                     if (startPos > 0)
                         startPos--;
                 } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"), "ibm3624StartField");
                     return;
                 }
             }
@@ -183,7 +183,7 @@ final class PinGenerationCoordinator {
                 try {
                     length = Integer.parseInt(ibm3624LengthField.getText().trim());
                 } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"), "ibm3624LengthField");
                     return;
                 }
             }
@@ -248,7 +248,7 @@ final class PinGenerationCoordinator {
                     .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
+            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "IBM 3624", e.getMessage()));
             LOG.error("IBM 3624 PIN generation failed", e);
         }
     }
@@ -287,7 +287,7 @@ final class PinGenerationCoordinator {
                     if (startPos > 0)
                         startPos--; // 1-based to 0-based
                 } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"), "ibm3624StartField");
                     return;
                 }
             }
@@ -296,7 +296,7 @@ final class PinGenerationCoordinator {
                 try {
                     length = Integer.parseInt(ibm3624LengthField.getText().trim());
                 } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"), "ibm3624LengthField");
                     return;
                 }
             }
@@ -361,7 +361,7 @@ final class PinGenerationCoordinator {
                     .status(t(isValid ? "module.payments.status.valid" : "module.payments.status.invalid")).build());
 
         } catch (Exception e) {
-            showError(t("module.payments.error.verificationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
+            showError(t("module.payments.error.verificationTitle"), t("module.payments.error.operation", "IBM 3624", e.getMessage()));
             LOG.error("IBM 3624 PIN verification failed", e);
         }
     }
@@ -387,15 +387,9 @@ final class PinGenerationCoordinator {
             }
 
             if (decTable.length() != 16) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.decimalizationTable"));
+                showError(t("module.payments.error.inputTitle"), t("module.payments.error.decimalizationTable"), "genOffsetDecTableField");
                 return;
             }
-
-            String offset = PaymentOperations.generateIBM3624Offset(pin, pan, pvk, decTable);
-
-            // Reconstruct Validation Data Block for display (This helper uses defaults, so
-            // "offset" might be wrong if defaults mismatch)
-            // WE MUST RE-CALCULATE using Pin.java directly to support custom config
 
             // Convert PVK to bytes
             byte[] pvkBytes = DataConverter.hexToBytes(pvk);
@@ -411,7 +405,7 @@ final class PinGenerationCoordinator {
                     if (startPos > 0)
                         startPos--; // 1-based to 0-based
                 } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"), "genOffsetStartField");
                     return;
                 }
             }
@@ -420,7 +414,7 @@ final class PinGenerationCoordinator {
                 try {
                     length = Integer.parseInt(genOffsetLengthField.getText().trim());
                 } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
+                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"), "genOffsetLengthField");
                     return;
                 }
             }
@@ -430,7 +424,7 @@ final class PinGenerationCoordinator {
             }
 
             // Generate Offset directly
-            offset = com.cryptocarver.pin.Pin.generateIbm3624Offset(
+            String offset = com.cryptocarver.pin.Pin.generateIbm3624Offset(
                     pvkBytes,
                     decTable,
                     pin,
@@ -575,11 +569,12 @@ final class PinGenerationCoordinator {
             details.put("Matches", String.valueOf(matches.size()));
             details.put("PINs", "[not persisted]");
             reporter().publish(OperationResult.forOperation("Derive PIN from PVV")
-                    .output(res.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    // Only the candidate PINs: the on-screen report also echoes the PVK.
+                    .output(String.join(", ", matches).getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
                     .status(t("module.payments.status.success")).build());
 
         } catch (Exception e) {
-            showError(t("module.payments.error.derivationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
+            showError(t("module.payments.error.derivationTitle"), t("module.payments.error.operation", "PVV", e.getMessage()));
         }
     }
 }
