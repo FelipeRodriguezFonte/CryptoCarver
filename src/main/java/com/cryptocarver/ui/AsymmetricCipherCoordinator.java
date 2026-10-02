@@ -21,9 +21,9 @@ import java.util.function.Supplier;
 /**
  * The RSA panel of the cipher screen: loading public and private keys (PEM, hex or Base64 DER),
  * the padding choice with its warning, and encryption/decryption of the shared input area.
- * Each operation first takes the key pair generated in the Keys module, when there is one, and
- * only falls back to the keys loaded here otherwise. Typing a key in the text area does not load
- * it: the paste, Shelf and file buttons do.
+ * The key in the panel's text area wins: it is parsed when the operation runs (or by the paste,
+ * Shelf and file buttons) and reused while its text is unchanged. With the area empty, the
+ * operation uses the key pair generated in the Keys module.
  */
 final class AsymmetricCipherCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(AsymmetricCipherCoordinator.class);
@@ -51,8 +51,14 @@ final class AsymmetricCipherCoordinator {
     private final TextArea cipherOutputArea;
     private final Supplier<StatusReporter> reporter;
     private final Supplier<Supplier<KeyPair>> sharedKeyPairs;
+    /** Keys the current operation uses: the panel's own key, or else the pair generated in Keys. */
     private PublicKey currentPublicKey;
     private PrivateKey currentPrivateKey;
+    /** Keys parsed from the text areas, with the exact text they came from. */
+    private PublicKey panelPublicKey;
+    private PrivateKey panelPrivateKey;
+    private String loadedPublicText;
+    private String loadedPrivateText;
 
     AsymmetricCipherCoordinator(View view, Supplier<StatusReporter> reporter, Supplier<Supplier<KeyPair>> sharedKeyPairs) {
         this.rsaPaddingCombo = view.padding();
@@ -77,21 +83,49 @@ final class AsymmetricCipherCoordinator {
     }
 
 
-    private void syncSharedKeyPair() {
-        if (sharedKeyPairSupplier() == null) return;
-        java.security.KeyPair pair = sharedKeyPairSupplier().get();
-        if (pair != null) {
-            currentPublicKey = pair.getPublic();
-            currentPrivateKey = pair.getPrivate();
+    /**
+     * Picks the public key for this operation. A key in the text area wins and is parsed again
+     * only when its text changed; an empty area falls back to the pair generated in Keys.
+     * Returns false when the typed key cannot be parsed (the load error is already shown).
+     */
+    private boolean resolvePublicKey() {
+        String text = publicKeyArea == null ? "" : publicKeyArea.getText().trim();
+        if (text.isEmpty()) {
+            KeyPair pair = sharedPair();
+            currentPublicKey = pair == null ? null : pair.getPublic();
+            return true;
         }
+        if (!text.equals(loadedPublicText)) {
+            handleLoadPublicKey();
+        }
+        currentPublicKey = panelPublicKey;
+        return text.equals(loadedPublicText);
     }
 
-    /** Returns whether the selected asymmetric operation has key material available without mutating state. */
+    private boolean resolvePrivateKey() {
+        String text = privateKeyArea == null ? "" : privateKeyArea.getText().trim();
+        if (text.isEmpty()) {
+            KeyPair pair = sharedPair();
+            currentPrivateKey = pair == null ? null : pair.getPrivate();
+            return true;
+        }
+        if (!text.equals(loadedPrivateText)) {
+            handleLoadPrivateKey();
+        }
+        currentPrivateKey = panelPrivateKey;
+        return text.equals(loadedPrivateText);
+    }
+
+    private KeyPair sharedPair() {
+        Supplier<KeyPair> supplier = sharedKeyPairSupplier();
+        return supplier == null ? null : supplier.get();
+    }
+
+    /** Whether the operation has key material: text in the panel's area, or the pair generated in Keys. */
     boolean hasAsymmetricKeyAvailable(boolean forEncryption) {
-        if (forEncryption && currentPublicKey != null) return true;
-        if (!forEncryption && currentPrivateKey != null) return true;
-        if (sharedKeyPairSupplier() == null) return false;
-        java.security.KeyPair pair = sharedKeyPairSupplier().get();
+        TextArea area = forEncryption ? publicKeyArea : privateKeyArea;
+        if (area != null && !area.getText().isBlank()) return true;
+        KeyPair pair = sharedPair();
         return pair != null && (forEncryption ? pair.getPublic() != null : pair.getPrivate() != null);
     }
 
@@ -111,7 +145,7 @@ final class AsymmetricCipherCoordinator {
         try {
             // Try PEM format firs
             if (keyText.contains("-----BEGIN PUBLIC KEY-----")) {
-                currentPublicKey = AsymmetricKeyOperations.importPublicKeyPEM(keyText);
+                panelPublicKey = AsymmetricKeyOperations.importPublicKeyPEM(keyText);
                 reporter().updateStatus("Public Key loaded from PEM");
             } else {
                 // Try Hex format (requires reconstructing key spec, which is complex for
@@ -122,7 +156,7 @@ final class AsymmetricCipherCoordinator {
                     byte[] keyBytes = DataConverter.hexToBytes(keyText);
                     java.security.spec.X509EncodedKeySpec spec = new java.security.spec.X509EncodedKeySpec(keyBytes);
                     java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA", "BC");
-                    currentPublicKey = kf.generatePublic(spec);
+                    panelPublicKey = kf.generatePublic(spec);
                     reporter().updateStatus("Public Key loaded from Hex (DER)");
                 } catch (Exception e) {
                     // Try converting from Base64 if Hex fails, just in case
@@ -131,14 +165,17 @@ final class AsymmetricCipherCoordinator {
                         java.security.spec.X509EncodedKeySpec spec = new java.security.spec.X509EncodedKeySpec(
                                 keyBytes);
                         java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA", "BC");
-                        currentPublicKey = kf.generatePublic(spec);
+                        panelPublicKey = kf.generatePublic(spec);
                         reporter().updateStatus("Public Key loaded from Base64 (DER)");
                     } catch (Exception ex) {
                         throw new IllegalArgumentException("Unknown key format. Please use PEM or Hex/Base64 DER.");
                     }
                 }
             }
+            loadedPublicText = keyText;
         } catch (Exception e) {
+            panelPublicKey = null;
+            loadedPublicText = null;
             reporter().showError("Load Error", "Failed to load Public Key: " + e.getMessage());
             LOG.warn("Unable to load public key", e);
         }
@@ -160,7 +197,7 @@ final class AsymmetricCipherCoordinator {
         try {
             // Try PEM format firs
             if (keyText.contains("-----BEGIN PRIVATE KEY-----")) {
-                currentPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEM(keyText);
+                panelPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEM(keyText);
                 reporter().updateStatus("Private Key loaded from PEM");
             } else {
                 // Try Hex/Base64 DER
@@ -168,7 +205,7 @@ final class AsymmetricCipherCoordinator {
                     byte[] keyBytes = DataConverter.hexToBytes(keyText);
                     java.security.spec.PKCS8EncodedKeySpec spec = new java.security.spec.PKCS8EncodedKeySpec(keyBytes);
                     java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA", "BC");
-                    currentPrivateKey = kf.generatePrivate(spec);
+                    panelPrivateKey = kf.generatePrivate(spec);
                     reporter().updateStatus("Private Key loaded from Hex (DER)");
                 } catch (Exception e) {
                     try {
@@ -176,14 +213,17 @@ final class AsymmetricCipherCoordinator {
                         java.security.spec.PKCS8EncodedKeySpec spec = new java.security.spec.PKCS8EncodedKeySpec(
                                 keyBytes);
                         java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA", "BC");
-                        currentPrivateKey = kf.generatePrivate(spec);
+                        panelPrivateKey = kf.generatePrivate(spec);
                         reporter().updateStatus("Private Key loaded from Base64 (DER)");
                     } catch (Exception ex) {
                         throw new IllegalArgumentException("Unknown key format. Please use PEM or Hex/Base64 DER.");
                     }
                 }
             }
+            loadedPrivateText = keyText;
         } catch (Exception e) {
+            panelPrivateKey = null;
+            loadedPrivateText = null;
             reporter().showError("Load Error", "Failed to load Private Key: " + e.getMessage());
             LOG.warn("Unable to load private key", e);
         }
@@ -246,7 +286,9 @@ final class AsymmetricCipherCoordinator {
             return;
         }
         try {
-            syncSharedKeyPair();
+            if (!resolvePublicKey()) {
+                return;
+            }
             if (currentPublicKey == null) {
                 reporter().showError("Key Error",
                         "Please load a public key first");
@@ -367,7 +409,9 @@ final class AsymmetricCipherCoordinator {
             return;
         }
         try {
-            syncSharedKeyPair();
+            if (!resolvePrivateKey()) {
+                return;
+            }
             if (currentPrivateKey == null) {
                 reporter().showError("Key Error",
                         "Please load a private key first");

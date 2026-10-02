@@ -158,6 +158,116 @@ class AsymmetricCipherCharacterizationUITest {
         });
     }
 
+    @Test
+    void aKeyTypedInTheAreaIsLoadedWhenEncrypting() throws Exception {
+        withPanel(null, panel -> {
+            panel.publicKey().setText(pem("PUBLIC KEY", pair.getPublic().getEncoded()));
+            panel.input().setText("typed key");
+            panel.controller().handleAsymmetricEncrypt();
+
+            assertEquals(List.of(), panel.reporter().errors);
+            assertEquals(List.of("Public Key loaded from PEM"), panel.reporter().statuses);
+            assertEquals(1, panel.reporter().published.size());
+        });
+    }
+
+    @Test
+    void anUnchangedTypedKeyIsNotReloaded() throws Exception {
+        withPanel(null, panel -> {
+            panel.publicKey().setText(pem("PUBLIC KEY", pair.getPublic().getEncoded()));
+            panel.input().setText("twice");
+            panel.controller().handleAsymmetricEncrypt();
+            panel.controller().handleAsymmetricEncrypt();
+
+            assertEquals(List.of("Public Key loaded from PEM"), panel.reporter().statuses);
+            assertEquals(2, panel.reporter().published.size());
+        });
+    }
+
+    @Test
+    void anInvalidTypedKeyStopsTheOperationWithOneError() throws Exception {
+        withPanel(() -> pair, panel -> {
+            panel.publicKey().setText("not a key");
+            panel.input().setText("data");
+            panel.controller().handleAsymmetricEncrypt();
+
+            assertEquals(List.of("Load Error: Failed to load Public Key: Unknown key format. Please use PEM or Hex/Base64 DER."),
+                    panel.reporter().errors);
+            assertEquals(List.of(), panel.reporter().published);
+        });
+    }
+
+    @Test
+    void thePanelKeyWinsOverTheKeyPairGeneratedInKeys() throws Exception {
+        withPanel(() -> pair, panel -> {
+            try {
+                panel.publicKey().setText(pem("PUBLIC KEY", otherPair.getPublic().getEncoded()));
+                panel.input().setText("panel public key");
+                panel.controller().handleAsymmetricEncrypt();
+                byte[] encrypted = DataConverter.hexToBytes(panel.output().getText());
+                assertEquals("panel public key", new String(pkcs1(javax.crypto.Cipher.DECRYPT_MODE,
+                        otherPair.getPrivate(), encrypted), StandardCharsets.UTF_8));
+
+                byte[] external = pkcs1(javax.crypto.Cipher.ENCRYPT_MODE, otherPair.getPublic(),
+                        "panel private key".getBytes(StandardCharsets.UTF_8));
+                panel.privateKey().setText(pem("PRIVATE KEY", otherPair.getPrivate().getEncoded()));
+                panel.inputFormat().setValue("Hexadecimal");
+                panel.outputFormat().setValue("Text (UTF-8)");
+                panel.input().setText(DataConverter.bytesToHex(external));
+                panel.controller().handleAsymmetricDecrypt();
+
+                assertEquals("panel private key", panel.output().getText());
+                assertEquals(List.of(), panel.reporter().errors);
+            } catch (Exception error) {
+                throw new AssertionError(error);
+            }
+        });
+    }
+
+    private static byte[] pkcs1(int mode, java.security.Key key, byte[] data) throws Exception {
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(mode, key);
+        return cipher.doFinal(data);
+    }
+
+    @Test
+    void clearingTheAreaFallsBackToTheKeyPairGeneratedInKeys() throws Exception {
+        withPanel(() -> pair, panel -> {
+            panel.publicKey().setText(pem("PUBLIC KEY", otherPair.getPublic().getEncoded()));
+            panel.controller().handleLoadPublicKey();
+            panel.publicKey().setText("");
+            panel.padding().setValue("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+            panel.input().setText("shared again");
+            panel.controller().handleAsymmetricEncrypt();
+            String ciphertext = panel.output().getText();
+            panel.inputFormat().setValue("Hexadecimal");
+            panel.outputFormat().setValue("Text (UTF-8)");
+            panel.input().setText(ciphertext);
+            panel.controller().handleAsymmetricDecrypt();
+
+            assertEquals("shared again", panel.output().getText());
+            assertEquals(List.of(), panel.reporter().errors);
+        });
+    }
+
+    @Test
+    void typedKeysCountAsAvailableForTheReadinessPanel() throws Exception {
+        withPanel(null, panel -> {
+            assertFalse(panel.controller().hasAsymmetricKeyAvailable(true));
+            panel.publicKey().setText("anything typed");
+            assertTrue(panel.controller().hasAsymmetricKeyAvailable(true));
+            assertFalse(panel.controller().hasAsymmetricKeyAvailable(false));
+        });
+    }
+
+    @Test
+    void theFormatListsOfferTheToolbarFormats() throws Exception {
+        withPanel(null, panel -> {
+            assertEquals(List.of("Text (UTF-8)", "Hexadecimal", "Base64", "Binary"), panel.inputFormat().getItems());
+            assertEquals(List.of("Text (UTF-8)", "Hexadecimal", "Base64", "Binary"), panel.outputFormat().getItems());
+        });
+    }
+
     private static String formatError(Panel panel) {
         try {
             com.cryptocarver.util.InputValidator.validateInput("ZZ", "Hexadecimal");
@@ -182,8 +292,10 @@ class AsymmetricCipherCharacterizationUITest {
                 CipherController controller = loader.getController();
                 Recorder reporter = new Recorder();
                 ComboBox<String> inputFormat = new ComboBox<>();
+                inputFormat.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Binary");
                 inputFormat.setValue("Text (UTF-8)");
                 ComboBox<String> outputFormat = new ComboBox<>();
+                outputFormat.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Binary");
                 outputFormat.setValue("Hexadecimal");
                 controller.initModern(reporter, inputFormat, outputFormat, shared);
                 body.accept(new Panel(loader, controller, reporter));

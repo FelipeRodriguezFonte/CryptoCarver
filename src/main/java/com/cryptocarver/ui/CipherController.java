@@ -491,6 +491,9 @@ public class CipherController {
         this.sharedKeyPairSupplier = keyPairSupplier;
         asymmetricInputFormatCombo.valueProperty().bindBidirectional(globalInputFormatCombo.valueProperty());
         asymmetricOutputFormatCombo.valueProperty().bindBidirectional(globalOutputFormatCombo.valueProperty());
+        // Same choices as the toolbar the panel's format selectors are bound to.
+        asymmetricInputFormatCombo.setItems(globalInputFormatCombo.getItems());
+        asymmetricOutputFormatCombo.setItems(globalOutputFormatCombo.getItems());
         if (openPgpContainerController != null) {
             openPgpContainerController.setStatusReporter(reporter);
         }
