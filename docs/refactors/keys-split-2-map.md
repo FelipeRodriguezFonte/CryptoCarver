@@ -139,7 +139,7 @@ Handlers en certificates.fxml: .
 | `handleCMSEncryptSourceChanged` | 4099 | 4105 |
 | `handleLoadCMSEncryptKeys` | 4107 | 4121 |
 | `handleCMSSign` | 4126 | 4212 |
-| `CadesSignResult` | 4214 | 4310 |
+| `CadesSignResult` (record, no método) | 4214 | 4214 |
 | `handleCMSVerify` | 4219 | 4310 |
 | `handleCMSVerifyOnline` | 4312 | 4352 |
 | `handleUpgradeCadesLt` | 4360 | 4416 |
