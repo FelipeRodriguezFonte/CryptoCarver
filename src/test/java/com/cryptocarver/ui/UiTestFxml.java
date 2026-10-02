@@ -38,7 +38,13 @@ final class UiTestFxml {
             if (controller instanceof ClipboardShelfController shelf) shelf.dispose();
             Parent root = fixture.root().get();
             if (root != null && root.getScene() != null && root.getScene().getRoot() == root) {
-                root.getScene().setRoot(new Group());
+                javafx.scene.Scene scene = root.getScene();
+                // Already-hidden stages are absent from Window.getWindows().
+                if (scene.getWindow() instanceof javafx.stage.Stage stage) {
+                    stage.close();
+                    stage.setScene(null);
+                }
+                scene.setRoot(new Group());
             }
         }
     }
