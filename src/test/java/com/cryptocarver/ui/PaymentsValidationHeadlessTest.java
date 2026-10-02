@@ -19,7 +19,7 @@ class PaymentsValidationHeadlessTest {
     /** The Payments screen's UI code: the controller and the coordinators split out of it. */
     private static String paymentsSource() throws java.io.IOException {
         StringBuilder source = new StringBuilder();
-        for (String name : new String[] {"PaymentsController", "PinBlockCoordinator"}) {
+        for (String name : new String[] {"PaymentsController", "PinBlockCoordinator", "PinGenerationCoordinator"}) {
             source.append(Files.readString(Path.of("src/main/java/com/cryptocarver/ui/" + name + ".java")));
         }
         return source.toString();

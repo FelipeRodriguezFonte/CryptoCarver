@@ -12,7 +12,6 @@ import com.cryptocarver.crypto.hsm.PayShieldMessageCodec;
 import com.cryptocarver.crypto.hsm.PayShieldResponse;
 import com.cryptocarver.crypto.iso8583.Iso8583Operations;
 import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -514,9 +513,7 @@ public class PaymentsController {
                 genPvvPvkField, genPvvPanField, genPvvPinField, genPvvKeyIndexField, genPvvResultArea,
                 derivePvvPvkField, derivePvvPanField, derivePvvTargetPvvField,
                 derivePvvKeyIndexField, derivePvvResultArea);
-        initializeIbm3624Controls(ibm3624PvkField, ibm3624ConvTableField, ibm3624OffsetField,
-                ibm3624PanField, ibm3624PinVerifyField, ibm3624ResultArea,
-                ibm3624StartField, ibm3624LengthField, ibm3624PadField);
+        pinGeneration().configure();
         initializeDukptControls(dukptBdkField, dukptKsnField, dukptResultArea,
                 dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo,
                 dukptAesPinBlockField, dukptAesPinOperationCombo,
@@ -679,6 +676,21 @@ public class PaymentsController {
                     encResultArea), () -> mainController);
         }
         return pinBlocks;
+    }
+
+    private PinGenerationCoordinator pinGeneration;
+
+    private PinGenerationCoordinator pinGeneration() {
+        if (pinGeneration == null) {
+            pinGeneration = new PinGenerationCoordinator(new PinGenerationCoordinator.View(ibm3624PvkField,
+                    ibm3624ConvTableField, ibm3624OffsetField, ibm3624PanField, ibm3624PinVerifyField,
+                    ibm3624ResultArea, ibm3624StartField, ibm3624LengthField, ibm3624PadField, genOffsetPvkField,
+                    genOffsetDecTableField, genOffsetPanField, genOffsetPinField, genOffsetResultArea,
+                    genOffsetStartField, genOffsetLengthField, genOffsetPadField, genPvvPvkField, genPvvPanField,
+                    genPvvPinField, genPvvKeyIndexField, genPvvResultArea, derivePvvPvkField, derivePvvPanField,
+                    derivePvvTargetPvvField, derivePvvKeyIndexField, derivePvvResultArea), () -> mainController);
+        }
+        return pinGeneration;
     }
 
     public void init(StatusReporter reporter) {
@@ -1083,488 +1095,26 @@ public class PaymentsController {
         }
     }
 
-    /**
-     * Initialize IBM 3624 PIN Generation controls
-     */
-    public void initializeIbm3624Controls(
-            TextField ibm3624PvkField,
-            TextField ibm3624ConvTableField,
-            TextField ibm3624OffsetField,
-            TextField ibm3624PanField,
-            TextField ibm3624PinVerifyField,
-            TextArea ibm3624ResultArea,
-            TextField ibm3624StartField,
-            TextField ibm3624LengthField,
-            TextField ibm3624PadField) {
-
-        this.ibm3624PvkField = ibm3624PvkField;
-        this.ibm3624ConvTableField = ibm3624ConvTableField;
-        this.ibm3624OffsetField = ibm3624OffsetField;
-        this.ibm3624PanField = ibm3624PanField;
-        this.ibm3624PinVerifyField = ibm3624PinVerifyField;
-        this.ibm3624ResultArea = ibm3624ResultArea;
-        this.ibm3624StartField = ibm3624StartField;
-        this.ibm3624LengthField = ibm3624LengthField;
-        this.ibm3624PadField = ibm3624PadField;
-
-        // Set default values if fields are loaded
-        if (ibm3624ConvTableField != null) {
-            ibm3624ConvTableField.setText("0123456789012345");
-        }
-    }
-
     @FXML
     public void handleEncodeEncryptedPinBlock() { pinBlocks().handleEncodeEncryptedPinBlock(); }
 
     @FXML
     public void handleDecodeEncryptedPinBlock() { pinBlocks().handleDecodeEncryptedPinBlock(); }
 
-    // ============================================================
-    // IBM 3624 PIN OPERATIONS
-    // ============================================================
+    @FXML
+    public void handleGenerateIbm3624Pin() { pinGeneration().handleGenerateIbm3624Pin(); }
 
-    public void handleGenerateIbm3624Pin() {
-        try {
-            if (ibm3624PvkField == null || ibm3624OffsetField == null || ibm3624PanField == null
-                    || ibm3624ResultArea == null) {
-                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "IBM 3624"));
-                return;
-            }
+    @FXML
+    public void handleVerifyIbm3624Pin() { pinGeneration().handleVerifyIbm3624Pin(); }
 
-            String pvkHex = ibm3624PvkField.getText().trim();
-            String convTable = ibm3624ConvTableField != null ? ibm3624ConvTableField.getText().trim()
-                    : "0123456789012345";
-            String offset = ibm3624OffsetField.getText().trim();
-            String pan = ibm3624PanField.getText().trim();
+    @FXML
+    public void handleGenerateOffsetUtility() { pinGeneration().handleGenerateOffsetUtility(); }
 
-            if (pvkHex.isEmpty() || offset.isEmpty() || pan.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkOffsetPanRequired"), "ibm3624PvkField");
-                return;
-            }
+    @FXML
+    public void handleGeneratePVVUtility() { pinGeneration().handleGeneratePVVUtility(); }
 
-            // Convert PVK to bytes
-            byte[] pvk = DataConverter.hexToBytes(pvkHex);
-
-            // Parse configuration
-            int startPos = 0;
-            int length = 12; // Default for simpler IBM 3624
-            String padChar = "0";
-
-            if (ibm3624StartField != null && !ibm3624StartField.getText().trim().isEmpty()) {
-                try {
-                    startPos = Integer.parseInt(ibm3624StartField.getText().trim());
-                    // Convert 1-based start position to 0-based index
-                    if (startPos > 0)
-                        startPos--;
-                } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
-                    return;
-                }
-            }
-
-            if (ibm3624LengthField != null && !ibm3624LengthField.getText().trim().isEmpty()) {
-                try {
-                    length = Integer.parseInt(ibm3624LengthField.getText().trim());
-                } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
-                    return;
-                }
-            }
-
-            if (ibm3624PadField != null && !ibm3624PadField.getText().trim().isEmpty()) {
-                padChar = ibm3624PadField.getText().trim().substring(0, 1);
-            }
-
-            // Generate PIN using IBM 3624 method
-            String pin = com.cryptocarver.pin.Pin.generateIbm3624Pin(
-                    pvk,
-                    convTable,
-                    offset,
-                    pan,
-                    startPos,
-                    length,
-                    padChar);
-
-            // Reconstruct Validation Data Block for display (Debugging feedback)
-            String rawVd = "";
-            try {
-                if (pan.length() >= startPos + length) {
-                    rawVd = pan.substring(startPos, startPos + length);
-                } else {
-                    rawVd = "Error: bounds";
-                }
-            } catch (Exception e) {
-                rawVd = "Error";
-            }
-
-            // Pad if necessary (Display logic only, Pin.java handles actual logic)
-            String displayVd = rawVd;
-            if (!rawVd.startsWith("Error")) {
-                if (displayVd.length() > 16)
-                    displayVd = displayVd.substring(0, 16);
-                while (displayVd.length() < 16)
-                    displayVd += padChar;
-            }
-
-            // Show User's Start Input (startPos + 1) for clarity
-            int displayStart = startPos + 1;
-
-            String result = t("module.payments.result.pin") + " " + pin + "\n\n" +
-                    t("module.payments.result.method") + " IBM 3624\n" +
-                    t("module.payments.result.pan") + " " + pan + "\n" +
-                    "Offset: " + offset + "\n" +
-                    "Conversion Table: " + convTable + "\n" +
-                    t("module.payments.result.validationConfig", displayStart, length, padChar) + "\n" +
-                    t("module.payments.result.validationDataBlock", " (Computed)") + " " + displayVd.toUpperCase();
-
-            ibm3624ResultArea.setText(result);
-            ibm3624ResultArea.setManaged(true);
-            ibm3624ResultArea.setVisible(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Method", "IBM 3624");
-            details.put("PAN", PanMask.mask(pan));
-            details.put("Offset", offset);
-            details.put("PIN", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("Generate PIN (IBM 3624)")
-                    .output(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status(t("module.payments.status.success")).build());
-
-        } catch (Exception e) {
-            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
-            LOG.error("IBM 3624 PIN generation failed", e);
-        }
-    }
-
-    public void handleVerifyIbm3624Pin() {
-        try {
-            if (ibm3624PvkField == null || ibm3624PinVerifyField == null || ibm3624PanField == null
-                    || ibm3624ResultArea == null) {
-                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "IBM 3624 verify"));
-                return;
-            }
-
-            String pvkHex = ibm3624PvkField.getText().trim();
-            String convTable = ibm3624ConvTableField != null ? ibm3624ConvTableField.getText().trim()
-                    : "0123456789012345";
-            String offset = ibm3624OffsetField != null ? ibm3624OffsetField.getText().trim() : "";
-            String pan = ibm3624PanField.getText().trim();
-            String pinToVerify = ibm3624PinVerifyField.getText().trim();
-
-            if (pvkHex.isEmpty() || pan.isEmpty() || pinToVerify.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPinRequired"), "ibm3624PvkField");
-                return;
-            }
-
-            // Convert PVK to bytes
-            byte[] pvk = DataConverter.hexToBytes(pvkHex);
-
-            // Parse configuration (Same as Generation)
-            int startPos = 0;
-            int length = 12; // Default
-            String padChar = "0";
-
-            if (ibm3624StartField != null && !ibm3624StartField.getText().trim().isEmpty()) {
-                try {
-                    startPos = Integer.parseInt(ibm3624StartField.getText().trim());
-                    if (startPos > 0)
-                        startPos--; // 1-based to 0-based
-                } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
-                    return;
-                }
-            }
-
-            if (ibm3624LengthField != null && !ibm3624LengthField.getText().trim().isEmpty()) {
-                try {
-                    length = Integer.parseInt(ibm3624LengthField.getText().trim());
-                } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
-                    return;
-                }
-            }
-
-            if (ibm3624PadField != null && !ibm3624PadField.getText().trim().isEmpty()) {
-                padChar = ibm3624PadField.getText().trim().substring(0, 1);
-            }
-
-            // Generate expected PIN - use static method with all parameters
-            String expectedPin = com.cryptocarver.pin.Pin.generateIbm3624Pin(
-                    pvk,
-                    convTable,
-                    offset,
-                    pan,
-                    startPos,
-                    length,
-                    padChar);
-
-            // Reconstruct Validation Data Block for display (Debugging feedback)
-            String rawVd = "";
-            try {
-                if (pan.length() >= startPos + length) {
-                    rawVd = pan.substring(startPos, startPos + length);
-                } else {
-                    rawVd = "Error: bounds";
-                }
-            } catch (Exception e) {
-                rawVd = "Error";
-            }
-
-            String displayVd = rawVd;
-            if (!rawVd.startsWith("Error")) {
-                if (displayVd.length() > 16)
-                    displayVd = displayVd.substring(0, 16);
-                while (displayVd.length() < 16)
-                    displayVd += padChar;
-            }
-            int displayStart = startPos + 1;
-
-            boolean isValid = expectedPin.equals(pinToVerify);
-
-            String result = t("module.payments.result.pinVerification") + " " + t(isValid ? "module.payments.result.validSymbol" : "module.payments.result.invalidSymbol") + "\n\n" +
-                    t("module.payments.result.enteredPin") + " " + pinToVerify + "\n" +
-                    t("module.payments.result.expectedPin") + " " + expectedPin + "\n" +
-                    t("module.payments.result.method") + " IBM 3624\n" +
-                    t("module.payments.result.pan") + " " + pan + "\n" +
-                    "Offset: " + offset + "\n" +
-                    t("module.payments.result.validationConfig", displayStart, length, padChar) + "\n" +
-                    t("module.payments.result.validationDataBlock", "") + " " + displayVd.toUpperCase();
-
-            ibm3624ResultArea.setText(result);
-            ibm3624ResultArea.setManaged(true);
-            ibm3624ResultArea.setVisible(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Method", "IBM 3624");
-            details.put("PAN", PanMask.mask(pan));
-            details.put("Result", isValid ? "VALID" : "INVALID");
-            details.put("PIN", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("Verify PIN (IBM 3624)")
-                    .output(expectedPin.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status(t(isValid ? "module.payments.status.valid" : "module.payments.status.invalid")).build());
-
-        } catch (Exception e) {
-            showError(t("module.payments.error.verificationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
-            LOG.error("IBM 3624 PIN verification failed", e);
-        }
-    }
-
-    // PIN GENERATORS (OFFSET & PVV)
-    // ============================================================
-
-    public void handleGenerateOffsetUtility() {
-        try {
-            if (genOffsetPvkField == null || genOffsetResultArea == null) {
-                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "PIN generator"));
-                return;
-            }
-
-            String pvk = genOffsetPvkField.getText().trim();
-            String decTable = genOffsetDecTableField.getText().trim();
-            String pan = genOffsetPanField.getText().trim();
-            String pin = genOffsetPinField.getText().trim();
-
-            if (pvk.isEmpty() || decTable.isEmpty() || pan.isEmpty() || pin.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"), "genOffsetPvkField");
-                return;
-            }
-
-            if (decTable.length() != 16) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.decimalizationTable"));
-                return;
-            }
-
-            String offset = PaymentOperations.generateIBM3624Offset(pin, pan, pvk, decTable);
-
-            // Reconstruct Validation Data Block for display (This helper uses defaults, so
-            // "offset" might be wrong if defaults mismatch)
-            // WE MUST RE-CALCULATE using Pin.java directly to support custom config
-
-            // Convert PVK to bytes
-            byte[] pvkBytes = DataConverter.hexToBytes(pvk);
-
-            // Parse configuration
-            int startPos = 0;
-            int length = 12; // Default
-            String padChar = "0";
-
-            if (genOffsetStartField != null && !genOffsetStartField.getText().trim().isEmpty()) {
-                try {
-                    startPos = Integer.parseInt(genOffsetStartField.getText().trim());
-                    if (startPos > 0)
-                        startPos--; // 1-based to 0-based
-                } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidStartPosition"));
-                    return;
-                }
-            }
-
-            if (genOffsetLengthField != null && !genOffsetLengthField.getText().trim().isEmpty()) {
-                try {
-                    length = Integer.parseInt(genOffsetLengthField.getText().trim());
-                } catch (NumberFormatException e) {
-                    showError(t("module.payments.error.inputTitle"), t("module.payments.error.invalidLength"));
-                    return;
-                }
-            }
-
-            if (genOffsetPadField != null && !genOffsetPadField.getText().trim().isEmpty()) {
-                padChar = genOffsetPadField.getText().trim().substring(0, 1);
-            }
-
-            // Generate Offset directly
-            offset = com.cryptocarver.pin.Pin.generateIbm3624Offset(
-                    pvkBytes,
-                    decTable,
-                    pin,
-                    pan,
-                    startPos,
-                    length,
-                    padChar);
-
-            // Reconstruct Validation Data Block for display
-            String rawVd = "";
-            try {
-                if (pan.length() >= startPos + length) {
-                    rawVd = pan.substring(startPos, startPos + length);
-                } else {
-                    rawVd = "Error: bounds";
-                }
-            } catch (Exception e) {
-                rawVd = "Error";
-            }
-
-            String displayVd = rawVd;
-            if (!rawVd.startsWith("Error")) {
-                if (displayVd.length() > 16)
-                    displayVd = displayVd.substring(0, 16);
-                while (displayVd.length() < 16)
-                    displayVd += padChar;
-            }
-            int displayStart = startPos + 1;
-
-            StringBuilder res = new StringBuilder();
-            res.append(t("module.payments.result.generatedOffset")).append("\n").append(offset).append("\n\n");
-            res.append(t("module.payments.result.forPin")).append(" ").append(pin).append("\n");
-            res.append(t("module.payments.result.validationConfig", displayStart, length, padChar)).append("\n");
-            res.append(t("module.payments.result.validationDataBlock", "")).append(" ").append(displayVd.toUpperCase());
-
-            genOffsetResultArea.setText(res.toString());
-            genOffsetResultArea.setManaged(true);
-            genOffsetResultArea.setVisible(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Method", "IBM 3624 offset");
-            details.put("PAN", PanMask.mask(pan));
-            details.put("PIN", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("Generate Offset")
-                    .output(offset.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status(t("module.payments.status.success")).build());
-
-        } catch (Exception e) {
-            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "Offset", e.getMessage()));
-        }
-    }
-
-    public void handleGeneratePVVUtility() {
-        try {
-            if (genPvvPvkField == null || genPvvResultArea == null) {
-                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "PVV generator"));
-                return;
-            }
-
-            String pvk = genPvvPvkField.getText().trim();
-            String pan = genPvvPanField.getText().trim();
-            String pin = genPvvPinField.getText().trim();
-            String keyIndex = genPvvKeyIndexField != null ? genPvvKeyIndexField.getText().trim() : "0";
-            if (keyIndex.isEmpty())
-                keyIndex = "0";
-
-            if (pvk.isEmpty() || pan.isEmpty() || pin.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvkPanPin"), "genPvvPvkField");
-                return;
-            }
-
-            String pvv = PaymentOperations.generatePVV(pin, pan, pvk, keyIndex, 4);
-
-            StringBuilder res = new StringBuilder();
-            res.append(t("module.payments.result.generatedPvv")).append(" ").append(pvv).append("\n\n");
-            res.append(t("module.payments.result.keyIndex")).append(" ").append(keyIndex).append("\n");
-
-            genPvvResultArea.setText(res.toString());
-            genPvvResultArea.setManaged(true);
-            genPvvResultArea.setVisible(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Method", "VISA PVV");
-            details.put("PAN", PanMask.mask(pan));
-            details.put("Key Index", keyIndex);
-            details.put("PIN", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("Generate PVV")
-                    .output(pvv.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status(t("module.payments.status.success")).build());
-
-        } catch (Exception e) {
-            showError(t("module.payments.error.generationTitle"), t("module.payments.error.operation", "PVV", e.getMessage()));
-        }
-    }
-
-    public void handleDerivePinFromPvvUtility() {
-        try {
-            if (derivePvvPvkField == null || derivePvvResultArea == null) {
-                showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "PVV derivation"));
-                return;
-            }
-
-            String pvk = derivePvvPvkField.getText().trim();
-            String pan = derivePvvPanField.getText().trim();
-            String targetPvv = derivePvvTargetPvvField.getText().trim();
-            String keyIndex = derivePvvKeyIndexField != null ? derivePvvKeyIndexField.getText().trim() : "0";
-            if (keyIndex.isEmpty())
-                keyIndex = "0";
-
-            if (pvk.isEmpty() || pan.isEmpty() || targetPvv.isEmpty()) {
-                showError(t("module.payments.error.inputTitle"), t("module.payments.error.pvvTargetRequired"), "derivePvvTargetPvvField");
-                return;
-            }
-
-            java.util.List<String> matches = PaymentOperations.derivePinFromPvv(pan, pvk, keyIndex, targetPvv, 4);
-
-            StringBuilder res = new StringBuilder();
-            res.append("Derive PIN Results:\n");
-            res.append("-------------------\n");
-            res.append("PVK: ").append(pvk).append("\n");
-            res.append(t("module.payments.result.pan")).append(" ").append(pan).append("\n");
-            res.append(t("module.payments.result.targetPvv")).append(" ").append(targetPvv).append("\n");
-            res.append(t("module.payments.result.pvki")).append(" ").append(keyIndex).append("\n\n");
-
-            if (matches.isEmpty()) {
-                res.append(t("module.payments.result.noPinsFound"));
-            } else {
-                res.append(t("module.payments.result.foundMatches", matches.size())).append("\n\n");
-                for (String pin : matches) {
-                    res.append("  • ").append(t("module.payments.result.pin")).append(" ").append(pin).append("\n");
-                }
-            }
-
-            derivePvvResultArea.setText(res.toString());
-            derivePvvResultArea.setManaged(true);
-            derivePvvResultArea.setVisible(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Method", "Derive PIN from PVV");
-            details.put("PAN", PanMask.mask(pan));
-            details.put("PVV", targetPvv);
-            details.put("Matches", String.valueOf(matches.size()));
-            details.put("PINs", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("Derive PIN from PVV")
-                    .output(res.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status(t("module.payments.status.success")).build());
-
-        } catch (Exception e) {
-            showError(t("module.payments.error.derivationTitle"), t("module.payments.error.operation", "PIN", e.getMessage()));
-        }
-    }
+    @FXML
+    public void handleDerivePinFromPvvUtility() { pinGeneration().handleDerivePinFromPvvUtility(); }
     public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) {
         if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.DUKPT_TDES) {
             if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("TDES (legacy, 10-byte KSN)");
