@@ -210,7 +210,7 @@ class ScreenConfigurationCharacterizationTest {
 
     private ModernMainController loadController() throws Exception {
         return onFx(() -> {
-            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
             loader.load();
             return loader.getController();
         });

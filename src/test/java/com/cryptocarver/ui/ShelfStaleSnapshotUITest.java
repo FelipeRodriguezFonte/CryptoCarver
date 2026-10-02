@@ -62,7 +62,7 @@ class ShelfStaleSnapshotUITest {
         AtomicReference<String> generatedKey = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 loader.load();
                 ModernMainController controller = loader.getController();
                 controller.navigateToModule("Key Generation");
@@ -95,7 +95,7 @@ class ShelfStaleSnapshotUITest {
         AtomicReference<String> generatedKey = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 loader.load();
                 ModernMainController controller = loader.getController();
                 controller.navigateToModule("Key Generation");
@@ -118,7 +118,7 @@ class ShelfStaleSnapshotUITest {
     void anotherScreensResultIsNotAddedUnderTheActiveScreen() throws Exception {
         runAndWait(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 loader.load();
                 ModernMainController controller = loader.getController();
                 controller.navigateToModule("Symmetric Ciphers");

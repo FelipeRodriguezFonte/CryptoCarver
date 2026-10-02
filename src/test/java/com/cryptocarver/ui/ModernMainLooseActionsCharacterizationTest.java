@@ -87,7 +87,7 @@ class ModernMainLooseActionsCharacterizationTest {
                     .map(SavedSession::getId).toList());
             I18nService.getInstance().setPreference(com.cryptocarver.model.LanguagePreference.EN);
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 Parent root = loader.load();
                 controller = loader.getController();
                 mainStage = new Stage();

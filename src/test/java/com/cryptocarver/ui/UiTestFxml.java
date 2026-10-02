@@ -3,6 +3,11 @@ package com.cryptocarver.ui;
 import javafx.fxml.FXMLLoader;
 import java.io.IOException;
 import java.net.URL;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.scene.Parent;
+import javafx.scene.Group;
 
 /**
  * Test-side FXML loading.
@@ -18,6 +23,35 @@ import java.net.URL;
  */
 final class UiTestFxml {
 
+    // Accessed only on the FX thread. Weak tracking must not become a new GC root.
+    private static final List<Fixture> fixtures = new ArrayList<>();
+    private record Fixture(WeakReference<Parent> root, WeakReference<Object> controller) { }
+
+    static int mark() { return fixtures.size(); }
+
+    static void releaseFrom(int mark) {
+        List<Fixture> owned = new ArrayList<>(fixtures.subList(mark, fixtures.size()));
+        fixtures.subList(mark, fixtures.size()).clear();
+        for (Fixture fixture : owned) {
+            Object controller = fixture.controller().get();
+            if (controller instanceof ModernMainController shell) shell.shutdown();
+            if (controller instanceof ClipboardShelfController shelf) shelf.dispose();
+            Parent root = fixture.root().get();
+            if (root != null && root.getScene() != null && root.getScene().getRoot() == root) {
+                root.getScene().setRoot(new Group());
+            }
+        }
+    }
+
+    /** Production loading without eager materialization, with the same fixture teardown. */
+    static FXMLLoader productionLoader(String location) {
+        return new MaterializingLoader(UiTestFxml.class.getResource(location), false);
+    }
+
+    static FXMLLoader productionLoader(URL location) {
+        return new MaterializingLoader(location, false);
+    }
+
     private UiTestFxml() {
     }
 
@@ -31,15 +65,23 @@ final class UiTestFxml {
 
     private static final class MaterializingLoader extends FXMLLoader {
 
-        private MaterializingLoader(URL location) {
+        private final boolean materialize;
+
+        private MaterializingLoader(URL location) { this(location, true); }
+
+        private MaterializingLoader(URL location, boolean materialize) {
             super(location);
+            this.materialize = materialize;
             setResources(Fxml.bundle());
         }
 
         @Override
         public <T> T load() throws IOException {
             T loaded = super.load();
-            if (getController() instanceof ModernMainController shell) {
+            if (loaded instanceof Parent root) {
+                fixtures.add(new Fixture(new WeakReference<>(root), new WeakReference<>(getController())));
+            }
+            if (materialize && getController() instanceof ModernMainController shell) {
                 shell.materializeModulesForTesting();
                 // Match CryptoCalculatorModern's bootstrap when a test attaches the
                 // shell to a Scene. Unstyled scenes otherwise reuse cached component

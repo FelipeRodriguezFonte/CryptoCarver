@@ -1,2 +1,3 @@
 com.cryptocarver.testing.DeterministicLanguageExtension
 com.cryptocarver.testing.JavaFxImplicitExitExtension
+com.cryptocarver.ui.UiTestLifecycleExtension

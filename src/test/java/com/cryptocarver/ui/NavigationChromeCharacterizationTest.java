@@ -58,7 +58,7 @@ class NavigationChromeCharacterizationTest {
         AtomicReference<GenericController> generic=new AtomicReference<>();
         runFx(() -> {
             try {
-                FXMLLoader loader=Fxml.loader("/fxml/main-view-modern.fxml"); loader.load(); c.set(loader.getController());
+                FXMLLoader loader=UiTestFxml.productionLoader("/fxml/main-view-modern.fxml"); loader.load(); c.set(loader.getController());
                 section.set(field(c.get(),"breadcrumbSectionBtn")); module.set(field(c.get(),"breadcrumbModuleBtn"));
                 favorite.set(field(c.get(),"favoriteToggleBtn")); op.set(field(c.get(),"breadcrumbOperationLabel"));
                 title.set(field(c.get(),"contentTitleLabel")); subtitle.set(field(c.get(),"contentSubtitleLabel"));

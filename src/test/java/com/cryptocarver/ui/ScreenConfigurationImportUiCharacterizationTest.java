@@ -223,7 +223,7 @@ class ScreenConfigurationImportUiCharacterizationTest {
     @Test
     void invalidFieldsFromAnotherRouteDoNotNavigateOrRestoreAnything() throws Exception {
         onFx(() -> {
-            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
             loader.load();
             ModernMainController main = loader.getController();
             String before = (String) readField(main, "currentActiveOperation");
@@ -283,7 +283,7 @@ class ScreenConfigurationImportUiCharacterizationTest {
         AtomicReference<String> cipherInput = new AtomicReference<>();
         AtomicInteger fileSelections = new AtomicInteger();
         onFx(() -> {
-            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
             loader.load();
             ModernMainController main = loader.getController();
             before.set((String) readField(main, "currentActiveOperation"));

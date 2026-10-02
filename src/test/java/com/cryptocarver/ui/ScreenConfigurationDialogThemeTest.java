@@ -57,7 +57,7 @@ class ScreenConfigurationDialogThemeTest {
         AtomicReference<List<String>> findings = new AtomicReference<>(new ArrayList<>());
         fx(() -> {
             try {
-                var loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                var loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 loader.load();
                 ModernMainController controller = loader.getController();
                 ScreenConfigurationCoordinator coordinator = controller.screenConfigurationCoordinator();

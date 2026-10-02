@@ -34,7 +34,7 @@ class ModernMainReadinessCharacterizationTest {
     runFx(
         () -> {
           try {
-            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
             loader.load();
             controller = loader.getController();
           } catch (Exception exception) {

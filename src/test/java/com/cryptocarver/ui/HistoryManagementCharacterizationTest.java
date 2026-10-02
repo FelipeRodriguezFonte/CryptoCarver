@@ -140,7 +140,7 @@ class HistoryManagementCharacterizationTest {
         AtomicReference<Stage> stageRef = new AtomicReference<>();
         onFx(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 assertNull(field(controller, "historyViewController"), "history view should still be lazy after main FXML load");
@@ -178,7 +178,7 @@ class HistoryManagementCharacterizationTest {
         AtomicReference<HistoryCommand> itemRef = new AtomicReference<>();
         onFx(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 useIsolatedHistory(controller, "reopen");
@@ -220,7 +220,7 @@ class HistoryManagementCharacterizationTest {
     }
 
     private ModernMainController loadProductionController() throws Exception {
-        FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+        FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
         loader.load();
         return loader.getController();
     }

@@ -84,7 +84,7 @@ class ComputedStyleSnapshotTool {
     }
 
     private void snapshot(String theme, String route, List<String> lines) throws Exception {
-        FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+        FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
         Parent root = loader.load();
         ModernMainController controller = loader.getController();
         Scene scene = new Scene(root, 1400, 900);

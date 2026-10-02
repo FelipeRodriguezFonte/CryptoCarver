@@ -33,7 +33,7 @@ class ClipboardTargetLazyModuleTest {
     void joseTargetWorksWhenJoseLoadsAfterAnEarlierFill() throws Exception {
         runFx(() -> {
             try {
-                FXMLLoader loader = Fxml.loader(getClass().getResource("/fxml/main-view-modern.fxml"));
+                FXMLLoader loader = UiTestFxml.productionLoader(getClass().getResource("/fxml/main-view-modern.fxml"));
                 loader.load();
                 ModernMainController controller = loader.getController();
                 assertNull(field(controller, "joseController"), "JOSE starts unloaded");

@@ -225,7 +225,7 @@ class ModernShellCharacterizationUITest {
     }
 
     private static ModernMainController loadProductionController() {
-        FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+        FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
         try {
             loader.load();
             return loader.getController();

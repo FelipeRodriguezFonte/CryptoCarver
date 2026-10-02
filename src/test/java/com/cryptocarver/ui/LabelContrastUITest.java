@@ -38,7 +38,7 @@ class LabelContrastUITest {
         List<Finding> findings = new ArrayList<>();
         fx(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 Stage stage = new Stage();

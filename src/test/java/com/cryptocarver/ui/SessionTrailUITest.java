@@ -61,7 +61,7 @@ class SessionTrailUITest {
                 javafx.stage.Stage stage = new javafx.stage.Stage();
                 try {
                     AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
-                    FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                    FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                     javafx.scene.Parent root = loader.load();
                     ModernMainController controller = loader.getController();
                     stage.setScene(new javafx.scene.Scene(root, 1100, 800));
@@ -211,7 +211,7 @@ class SessionTrailUITest {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 javafx.scene.Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 controllerRef.set(controller);
@@ -250,7 +250,7 @@ class SessionTrailUITest {
         AtomicReference<javafx.stage.Stage> stageRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 javafx.scene.Parent root = loader.load();
                 ModernMainController controller = loader.getController();
                 javafx.stage.Stage stage = new javafx.stage.Stage();
@@ -459,7 +459,7 @@ class SessionTrailUITest {
         AtomicReference<ModernMainController> controllerRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 loader.load();
                 ModernMainController controller = loader.getController();
                 controllerRef.set(controller);

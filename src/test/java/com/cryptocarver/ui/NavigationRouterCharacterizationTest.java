@@ -27,7 +27,7 @@ class NavigationRouterCharacterizationTest {
 
     @Test void registeredModulesVariantsDynamicUnknownAndStartupRoutes() throws Exception {
         AtomicReference<ModernMainController> ref=new AtomicReference<>();
-        fxRun(()->{try {var l=Fxml.loader("/fxml/main-view-modern.fxml");l.load();ref.set(l.getController());}catch(Exception e){throw new RuntimeException(e);}});
+        fxRun(()->{try {var l=UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");l.load();ref.set(l.getController());}catch(Exception e){throw new RuntimeException(e);}});
         fxRun(()->{ setField(ref.get(),"lastPublishedResultSnapshot",com.cryptocarver.model.OperationResult.forOperation("Hashing").output(new byte[]{1}).build()); setField(ref.get(),"lastPublishedScreen","Hashing"); ref.get().navigateToModule("Symmetric Ciphers"); });
         assertNull(field(ref.get(),"lastPublishedResultSnapshot"),"navigation clears the published result snapshot");
         String[][] routes={{"JOSE","JWT (Signed)"},{"COSE","COSE Sign1"},{"WALLET","SD-JWT VC"},{"EPOCH_CONVERTER","Epoch Converter"},{"JSON_FORMATTER","JSON Formatter"},{"KEYS_SYMMETRIC","Key Generation"},{"KEYS_ASYMMETRIC","RSA Key Generation"},{"CERTIFICATES","Parse Certificate"},{"GENERIC","Hashing"},{"POST_QUANTUM","PQC Key Generation"},{"XML_SECURITY","XML Security"},{"WSS_SECURITY","WSS Security"},{"EMV","EMV Tool"},{"HISTORY","Recent Operations"},{"CLIPBOARD_SHELF","Clipboard Shelf"},{"SAVED_SESSIONS","Saved Sessions"},{"CIPHER","Symmetric Ciphers"},{"AUTHENTICATION","Digital Signatures"},{"PAYMENTS","Payments"},{"PROCESS_DESIGNER","Process Designer"}};

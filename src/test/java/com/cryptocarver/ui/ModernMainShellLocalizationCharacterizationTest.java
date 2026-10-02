@@ -44,7 +44,7 @@ class ModernMainShellLocalizationCharacterizationTest {
           I18nService.getInstance().setPreference(LanguagePreference.EN);
           AppSettings.getInstance().setLastRoute("Hashing");
           try {
-            FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
             Parent root = loader.load();
             controller = loader.getController();
             stage = new Stage();

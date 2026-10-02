@@ -135,7 +135,7 @@ class ClippedTextAuditTool {
             settings.setLastRoute(""); settings.setStartupRoute("");
             settings.setTextScale(1.0); settings.setCompactDensity(false);
             settings.setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB);
-            var loader = Fxml.loader("/fxml/main-view-modern.fxml");
+            var loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
             Parent root = loader.load();
             controller = loader.getController();
             Scene scene = new Scene(root, 1400, 900);

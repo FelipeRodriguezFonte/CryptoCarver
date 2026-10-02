@@ -69,7 +69,7 @@ class ModuleHostVisibilityUITest {
         final Parent[] root = new Parent[1];
         fx(() -> {
             try {
-                FXMLLoader loader = Fxml.loader("/fxml/main-view-modern.fxml");
+                FXMLLoader loader = UiTestFxml.productionLoader("/fxml/main-view-modern.fxml");
                 root[0] = loader.load();
                 shell[0] = loader.getController();
                 Stage stage = new Stage();
