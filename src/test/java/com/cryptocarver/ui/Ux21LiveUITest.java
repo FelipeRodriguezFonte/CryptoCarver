@@ -53,20 +53,30 @@ class Ux21LiveUITest {
 
     @Test
     void historyReopenClearsResultsSecretsAndInputMaterial() throws Exception {
-        ModernMainController controller = loadMain();
-        GenericController generic = field(controller, "genericContainerController");
-        TextArea input = field(generic, "hashInputArea");
-        TextArea result = field(generic, "hashOutputArea");
-        fx(() -> {
-            result.setText("SENSITIVE RESULT MUST NOT REOPEN");
-            controller.restoreOperationState(Map.of(
-                    "GenericController.hashInputArea", "safe input",
-                    "GenericController.hashOutputArea", "old result",
-                    "CipherController.symmetricKeyField", "[REDACTED_SECRET]"), "Hashing: SHA-256");
-        });
-        assertEquals("", input.getText());
-        assertEquals("", result.getText());
-        assertTrue(((javafx.scene.Node) field(controller, "genericContainer")).isVisible());
+        var settings = com.cryptocarver.model.AppSettings.getInstance();
+        var previousVisibility = settings.getSecretVisibilityProfile();
+        // This test exercises restricted History restoration. FULL_LAB legitimately
+        // restores editable inputs; relying on another class to select REDACTED
+        // made this assertion dependent on the suite's previous settings.
+        settings.setSecretVisibilityProfile(com.cryptocarver.model.SecretVisibilityProfile.REDACTED);
+        try {
+            ModernMainController controller = loadMain();
+            GenericController generic = field(controller, "genericContainerController");
+            TextArea input = field(generic, "hashInputArea");
+            TextArea result = field(generic, "hashOutputArea");
+            fx(() -> {
+                result.setText("SENSITIVE RESULT MUST NOT REOPEN");
+                controller.restoreOperationState(Map.of(
+                        "GenericController.hashInputArea", "safe input",
+                        "GenericController.hashOutputArea", "old result",
+                        "CipherController.symmetricKeyField", "[REDACTED_SECRET]"), "Hashing: SHA-256");
+            });
+            assertEquals("", input.getText());
+            assertEquals("", result.getText());
+            assertTrue(((javafx.scene.Node) field(controller, "genericContainer")).isVisible());
+        } finally {
+            settings.setSecretVisibilityProfile(previousVisibility);
+        }
     }
 
     @Test
