@@ -650,6 +650,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
+            detachWindowLifecycleListeners();
             if (clipboardShelfController != null) {
                 clipboardShelfController.dispose();
             }
@@ -659,29 +660,49 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
+    private javafx.scene.Node lifecycleNode;
+    private javafx.scene.Scene lifecycleScene;
+    private javafx.stage.Window lifecycleWindow;
+    private final javafx.event.EventHandler<javafx.stage.WindowEvent> lifecycleHiddenHandler = event -> shutdown();
+    private final javafx.beans.value.ChangeListener<javafx.stage.Window> lifecycleWindowListener = (obs, oldWindow, newWindow) -> {
+        observeLifecycleWindow(newWindow);
+        if (oldWindow != null && newWindow == null) shutdown();
+    };
+    private final javafx.beans.value.ChangeListener<javafx.scene.Scene> lifecycleSceneListener = (obs, oldScene, newScene) -> {
+        if (oldScene != null && newScene == null) shutdown();
+        else observeLifecycleScene(newScene);
+    };
+
     private void setupWindowLifecycleListeners() {
-        javafx.scene.Node node = rootStackPane != null ? rootStackPane : asyncProgressBox;
-        if (node == null) return;
+        lifecycleNode = rootStackPane != null ? rootStackPane : asyncProgressBox;
+        if (lifecycleNode == null) return;
+        lifecycleNode.sceneProperty().addListener(lifecycleSceneListener);
+        observeLifecycleScene(lifecycleNode.getScene());
+    }
 
-        javafx.beans.value.ChangeListener<javafx.stage.Window> windowListener = (obsWindow, oldWindow, newWindow) -> {
-            if (newWindow != null) {
-                newWindow.addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, e -> shutdown());
-            }
-        };
-
-        javafx.beans.value.ChangeListener<javafx.scene.Scene> sceneListener = (obsScene, oldScene, newScene) -> {
-            if (newScene != null) {
-                if (newScene.getWindow() != null) {
-                    newScene.getWindow().addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, e -> shutdown());
-                }
-                newScene.windowProperty().addListener(windowListener);
-            }
-        };
-
-        if (node.getScene() != null) {
-            sceneListener.changed(null, null, node.getScene());
+    private void observeLifecycleScene(javafx.scene.Scene scene) {
+        if (lifecycleScene == scene) return;
+        if (lifecycleScene != null) lifecycleScene.windowProperty().removeListener(lifecycleWindowListener);
+        observeLifecycleWindow(null);
+        lifecycleScene = scene;
+        if (scene != null) {
+            scene.windowProperty().addListener(lifecycleWindowListener);
+            observeLifecycleWindow(scene.getWindow());
         }
-        node.sceneProperty().addListener(sceneListener);
+    }
+
+    private void observeLifecycleWindow(javafx.stage.Window window) {
+        if (lifecycleWindow == window) return;
+        if (lifecycleWindow != null) lifecycleWindow.removeEventHandler(
+                javafx.stage.WindowEvent.WINDOW_HIDING, lifecycleHiddenHandler);
+        lifecycleWindow = window;
+        if (window != null) window.addEventHandler(javafx.stage.WindowEvent.WINDOW_HIDING, lifecycleHiddenHandler);
+    }
+
+    private void detachWindowLifecycleListeners() {
+        if (lifecycleNode != null) lifecycleNode.sceneProperty().removeListener(lifecycleSceneListener);
+        observeLifecycleScene(null);
+        lifecycleNode = null;
     }
 
     @FXML
