@@ -113,9 +113,9 @@ class Ux28bAsymmetricShelfLiveUITest {
         runAndWait(() -> mainController.navigateToModule("RSA Key Generation"));
         Button rsaGenerate = readField(keysController, "rsaGenerateBtn");
         runAndWait(rsaGenerate::fire);
-        awaitFx(() -> readFieldUnchecked(keysController, "currentRsaSummary") != null, 30_000);
+        awaitFx(() -> readFieldUnchecked(readFieldUnchecked(keysController, "workspace"), "currentRsaSummary") != null, 30_000);
 
-        GeneratedAsymmetricKeySummary rsa = readField(keysController, "currentRsaSummary");
+        GeneratedAsymmetricKeySummary rsa = readField(readField(keysController, "workspace"), "currentRsaSummary");
         TabPane rsaTabs = readField(keysController, "rsaKeyMaterialTabs");
         Button rsaPublicSend = readField(keysController, "rsaSendShelfBtn");
         Button rsaPrivateSend = readField(keysController, "rsaSendPrivateShelfBtn");
@@ -195,7 +195,7 @@ class Ux28bAsymmetricShelfLiveUITest {
         Button ecdsaGenerate = findButton(readField(mainController, "keysContainer"), "Generate ECDSA Key Pair");
         assertNotNull(ecdsaGenerate);
         runAndWait(ecdsaGenerate::fire);
-        GeneratedAsymmetricKeySummary ecdsa = readField(keysController, "currentEcdsaSummary");
+        GeneratedAsymmetricKeySummary ecdsa = readField(readField(keysController, "workspace"), "currentEcdsaSummary");
         assertNotNull(ecdsa, "ECDSA regression must generate a summary");
         TabPane ecdsaTabs = readField(keysController, "ecdsaKeyMaterialTabs");
         runAndWait(() -> {

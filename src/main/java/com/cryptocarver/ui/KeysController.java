@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 public class KeysController {
 
     private static final Logger LOG = LoggerFactory.getLogger(KeysController.class);
+    private final KeysWorkspaceState workspace = new KeysWorkspaceState();
     private final DialogService dialogService = new DialogService();
 
     private Tr31Coordinator tr31Coordinator;
@@ -158,13 +159,13 @@ public class KeysController {
     }
 
     private void acceptAsymmetricGeneration(AsymmetricKeyGenerationCoordinator.StateUpdate update) {
-        lastGeneratedKeyPair = update.keyPair();
-        lastKeyType = update.algorithm();
+        workspace.lastGeneratedKeyPair = update.keyPair();
+        workspace.lastKeyType = update.algorithm();
         switch (update.algorithm()) {
-            case "RSA" -> currentRsaSummary = update.summary();
-            case "DSA" -> currentDsaSummary = update.summary();
-            case "ECDSA" -> currentEcdsaSummary = update.summary();
-            case "Ed25519" -> currentEddsaSummary = update.summary();
+            case "RSA" -> workspace.currentRsaSummary = update.summary();
+            case "DSA" -> workspace.currentDsaSummary = update.summary();
+            case "ECDSA" -> workspace.currentEcdsaSummary = update.summary();
+            case "Ed25519" -> workspace.currentEddsaSummary = update.summary();
             default -> throw new IllegalArgumentException("Unsupported generation algorithm");
         }
     }
@@ -296,8 +297,8 @@ public class KeysController {
     private TextArea generatedKeyField;
     @FXML
     private Button saveGeneratedKeyButton;
-    private byte[] lastGeneratedSymmetricKeyBytes;
-    private String lastGeneratedSymmetricKeyType;
+
+
 
     // Generated Key Summary components
     @FXML private VBox generatedKeySummaryCard;
@@ -316,7 +317,7 @@ public class KeysController {
     @FXML private Button saveGeneratedSummaryButton;
     @FXML private Button openValidationButton;
 
-    private GeneratedKeySummary currentGeneratedKeySummary;
+
 
     // Asymmetric Key Generation summary components
     @FXML private VBox rsaSummaryCard;
@@ -395,10 +396,10 @@ public class KeysController {
     @FXML private Button eddsaUseCertificatesBtn;
     @FXML private Button eddsaClearBtn;
 
-    private GeneratedAsymmetricKeySummary currentRsaSummary;
-    private GeneratedAsymmetricKeySummary currentEcdsaSummary;
-    private GeneratedAsymmetricKeySummary currentDsaSummary;
-    private GeneratedAsymmetricKeySummary currentEddsaSummary;
+
+
+
+
 
     // Key Validation components
     @FXML
@@ -626,11 +627,11 @@ public class KeysController {
     private TextArea valResultArea;
 
     // Store last generated key pair for certificate generation
-    private KeyPair lastGeneratedKeyPair;
-    private String lastKeyType;
+
+
 
     public KeyPair getLastGeneratedKeyPair() {
-        return lastGeneratedKeyPair;
+        return workspace.lastGeneratedKeyPair;
     }
 
     @FXML
@@ -679,13 +680,13 @@ public class KeysController {
         setupHexValidation(component5Field);
         if (keyTypeCombo != null) {
             keyTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                if (currentGeneratedKeySummary != null && (newVal == null || !newVal.equalsIgnoreCase(currentGeneratedKeySummary.getAlgorithm()))) {
+                if (workspace.currentGeneratedKeySummary != null && (newVal == null || !newVal.equalsIgnoreCase(workspace.currentGeneratedKeySummary.getAlgorithm()))) {
                     hideGeneratedKeySummary();
-                    if (lastGeneratedSymmetricKeyBytes != null) {
-                        Arrays.fill(lastGeneratedSymmetricKeyBytes, (byte) 0);
+                    if (workspace.lastGeneratedSymmetricKeyBytes != null) {
+                        Arrays.fill(workspace.lastGeneratedSymmetricKeyBytes, (byte) 0);
                     }
-                    lastGeneratedSymmetricKeyBytes = null;
-                    lastGeneratedSymmetricKeyType = null;
+                    workspace.lastGeneratedSymmetricKeyBytes = null;
+                    workspace.lastGeneratedSymmetricKeyType = null;
                     if (generatedKeyField != null) generatedKeyField.clear();
                     if (saveGeneratedKeyButton != null) saveGeneratedKeyButton.setDisable(true);
                 }
@@ -694,19 +695,19 @@ public class KeysController {
 
         if (rsaKeySizeCombo != null) {
             rsaKeySizeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                currentRsaSummary = null;
+                workspace.currentRsaSummary = null;
                 if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
             });
         }
         if (ecdsaCurveCombo != null) {
             ecdsaCurveCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                currentEcdsaSummary = null;
+                workspace.currentEcdsaSummary = null;
                 if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
             });
         }
         if (dsaKeySizeCombo != null) {
             dsaKeySizeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                currentDsaSummary = null;
+                workspace.currentDsaSummary = null;
                 if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
             });
         }
@@ -2000,15 +2001,15 @@ public class KeysController {
             String keyHex = DataConverter.bytesToHex(key);
             generatedKeyField.setText(keyHex);
 
-            this.lastGeneratedSymmetricKeyBytes = key;
-            this.lastGeneratedSymmetricKeyType = keyType;
+            workspace.lastGeneratedSymmetricKeyBytes = key;
+            workspace.lastGeneratedSymmetricKeyType = keyType;
             if (saveGeneratedKeyButton != null) {
                 saveGeneratedKeyButton.setDisable(false);
             }
 
             // Create and update GeneratedKeySummary card
             GeneratedKeySummary summary = new GeneratedKeySummary(key, keyType, forceParity);
-            this.currentGeneratedKeySummary = summary;
+            workspace.currentGeneratedKeySummary = summary;
             updateGeneratedKeySummaryCard(summary);
 
             String parityStatus = forceParity ? " with odd parity" : " without parity adjustment";
@@ -2058,8 +2059,8 @@ public class KeysController {
 
     @FXML
     public void handleSaveGeneratedKeyToLab() {
-        byte[] keyBytes = this.lastGeneratedSymmetricKeyBytes;
-        String algoName = this.lastGeneratedSymmetricKeyType;
+        byte[] keyBytes = workspace.lastGeneratedSymmetricKeyBytes;
+        String algoName = workspace.lastGeneratedSymmetricKeyType;
 
         if (keyBytes == null || keyBytes.length == 0) {
             showError("No Key Available", "Generate a key first before saving to Key Lab.");
@@ -2228,9 +2229,9 @@ public class KeysController {
             mainController.refreshHsmKeyCombos();
         }
 
-        if (currentGeneratedKeySummary != null) {
+        if (workspace.currentGeneratedKeySummary != null) {
             String status = "Saved to Key Lab (" + keyName + ")";
-            currentGeneratedKeySummary.setSavedStatus(status);
+            workspace.currentGeneratedKeySummary.setSavedStatus(status);
             if (summarySavedStatusLabel != null) {
                 summarySavedStatusLabel.setText("✓ " + status);
             }
@@ -2240,7 +2241,7 @@ public class KeysController {
     }
 
     private void hideGeneratedKeySummary() {
-        this.currentGeneratedKeySummary = null;
+        workspace.currentGeneratedKeySummary = null;
         if (generatedKeySummaryCard != null) {
             generatedKeySummaryCard.setVisible(false);
             generatedKeySummaryCard.setManaged(false);
@@ -2264,7 +2265,7 @@ public class KeysController {
 
     @FXML
     public void handleCopyGeneratedKey() {
-        if (currentGeneratedKeySummary == null || currentGeneratedKeySummary.getRawKeyBytes().length == 0) {
+        if (workspace.currentGeneratedKeySummary == null || workspace.currentGeneratedKeySummary.getRawKeyBytes().length == 0) {
             updateStatus("No generated key summary available to copy.");
             return;
         }
@@ -2274,42 +2275,42 @@ public class KeysController {
             showInfo("Security Policy", "Copying key material is blocked under " + profile + " mode. Switch to FULL_LAB to copy secret keys.");
             return;
         }
-        copyToClipboard(currentGeneratedKeySummary.getRawKeyHex());
+        copyToClipboard(workspace.currentGeneratedKeySummary.getRawKeyHex());
         updateStatus("Copied generated key to clipboard");
     }
 
     @FXML
     public void handleCopyGeneratedKcv() {
-        if (currentGeneratedKeySummary == null) {
+        if (workspace.currentGeneratedKeySummary == null) {
             updateStatus("No generated key summary available to copy.");
             return;
         }
-        String kcv = currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength());
+        String kcv = workspace.currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength());
         copyToClipboard(kcv);
         updateStatus("Copied KCV to clipboard: " + kcv);
     }
 
     @FXML
     public void handleCopyGeneratedSummary() {
-        if (currentGeneratedKeySummary == null) {
+        if (workspace.currentGeneratedKeySummary == null) {
             updateStatus("No generated key summary available to copy.");
             return;
         }
         String keyDisplay = (AppSettings.isFullLab())
-                ? currentGeneratedKeySummary.getRawKeyHex()
+                ? workspace.currentGeneratedKeySummary.getRawKeyHex()
                 : "***MASKED***";
 
         StringBuilder sb = new StringBuilder();
         sb.append("--- Generated Key Summary ---\n");
-        sb.append("Algorithm: ").append(currentGeneratedKeySummary.getAlgorithm()).append("\n");
-        sb.append("Length: ").append(currentGeneratedKeySummary.getFormattedLength()).append("\n");
-        sb.append("KCV: ").append(currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength())).append("\n");
-        sb.append("Fingerprint: ").append(currentGeneratedKeySummary.getFingerprintTruncated()).append("\n");
-        sb.append("Odd Parity: ").append(currentGeneratedKeySummary.getParityStatus()).append("\n");
-        sb.append("Origin: ").append(currentGeneratedKeySummary.getOrigin()).append("\n");
+        sb.append("Algorithm: ").append(workspace.currentGeneratedKeySummary.getAlgorithm()).append("\n");
+        sb.append("Length: ").append(workspace.currentGeneratedKeySummary.getFormattedLength()).append("\n");
+        sb.append("KCV: ").append(workspace.currentGeneratedKeySummary.getFormattedKcv(selectedKcvLength())).append("\n");
+        sb.append("Fingerprint: ").append(workspace.currentGeneratedKeySummary.getFingerprintTruncated()).append("\n");
+        sb.append("Odd Parity: ").append(workspace.currentGeneratedKeySummary.getParityStatus()).append("\n");
+        sb.append("Origin: ").append(workspace.currentGeneratedKeySummary.getOrigin()).append("\n");
         sb.append("Key: ").append(keyDisplay);
-        if (currentGeneratedKeySummary.getSavedStatus() != null) {
-            sb.append("\nStatus: ").append(currentGeneratedKeySummary.getSavedStatus());
+        if (workspace.currentGeneratedKeySummary.getSavedStatus() != null) {
+            sb.append("\nStatus: ").append(workspace.currentGeneratedKeySummary.getSavedStatus());
         }
 
         copyToClipboard(sb.toString());
@@ -2318,12 +2319,12 @@ public class KeysController {
 
     @FXML
     public void handleOpenValidationAndKcv() {
-        if (currentGeneratedKeySummary == null) {
+        if (workspace.currentGeneratedKeySummary == null) {
             updateStatus("No generated key available for validation.");
             return;
         }
         if (AppSettings.isFullLab() && keyInputField != null) {
-            keyInputField.setText(currentGeneratedKeySummary.getRawKeyHex());
+            keyInputField.setText(workspace.currentGeneratedKeySummary.getRawKeyHex());
         }
         if (validationPane != null) {
             validationPane.setExpanded(true);
@@ -2333,8 +2334,8 @@ public class KeysController {
 
     @FXML
     public void handleKcvLengthToggle() {
-        if (currentGeneratedKeySummary != null) {
-            updateGeneratedKeySummaryCard(currentGeneratedKeySummary);
+        if (workspace.currentGeneratedKeySummary != null) {
+            updateGeneratedKeySummaryCard(workspace.currentGeneratedKeySummary);
         }
         if (validationResultArea != null && validationResultArea.isVisible()
                 && keyInputField != null && !keyInputField.getText().isBlank()) {
@@ -3359,10 +3360,10 @@ public class KeysController {
 
     public void handleClearAsymmetric() {
         // Asymmetric
-        currentRsaSummary = null;
-        currentEcdsaSummary = null;
-        currentDsaSummary = null;
-        currentEddsaSummary = null;
+        workspace.currentRsaSummary = null;
+        workspace.currentEcdsaSummary = null;
+        workspace.currentDsaSummary = null;
+        workspace.currentEddsaSummary = null;
 
         if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
         if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
@@ -3550,10 +3551,10 @@ public class KeysController {
     private GeneratedAsymmetricKeySummary summaryForGeneration(String operation) {
         if (operation == null) return null;
         return switch (operation) {
-            case "RSA Key Generation" -> currentRsaSummary;
-            case "ECDSA Key Generation" -> currentEcdsaSummary;
-            case "DSA Key Generation" -> currentDsaSummary;
-            case "EdDSA Key Generation" -> currentEddsaSummary;
+            case "RSA Key Generation" -> workspace.currentRsaSummary;
+            case "ECDSA Key Generation" -> workspace.currentEcdsaSummary;
+            case "DSA Key Generation" -> workspace.currentDsaSummary;
+            case "EdDSA Key Generation" -> workspace.currentEddsaSummary;
             default -> null;
         };
     }
@@ -3572,7 +3573,7 @@ public class KeysController {
     /** Entry point used only by ModernMainController's global Add to Shelf. */
     /** Adds the symmetric key shown in Key Generation to the Clipboard Shelf. */
     public void handleGlobalSymmetricShelfAction() {
-        byte[] key = lastGeneratedSymmetricKeyBytes;
+        byte[] key = workspace.lastGeneratedSymmetricKeyBytes;
         if (key == null || key.length == 0) {
             updateStatus("No generated symmetric key available for Clipboard Shelf.");
             return;
@@ -3595,10 +3596,10 @@ public class KeysController {
                 "Copied from Generate Symmetric Key", keyHex,
                 com.cryptocarver.model.ClipboardEntry.Format.HEX,
                 com.cryptocarver.model.OperationDetail.Classification.SECRET,
-                "Generate Symmetric Key", lastGeneratedSymmetricKeyType);
+                "Generate Symmetric Key", workspace.lastGeneratedSymmetricKeyType);
         shelf.addEntry(entry);
         revealShelfEntry(entry);
-        updateStatus("Added " + lastGeneratedSymmetricKeyType + " key to Clipboard Shelf.");
+        updateStatus("Added " + workspace.lastGeneratedSymmetricKeyType + " key to Clipboard Shelf.");
     }
 
     public void handleGlobalAsymmetricShelfAction(String operation) {
@@ -3646,15 +3647,15 @@ public class KeysController {
     }
 
     // RSA Action Handlers
-    @FXML public void handleCopyRsaPublicKey() { copyPublicKey(currentRsaSummary); }
-    @FXML public void handleCopyRsaPrivateKey() { copyPrivateKey(currentRsaSummary); }
-    @FXML public void handleCopyRsaSummary() { copyAsymmetricSummary(currentRsaSummary); }
-    @FXML public void handleExportRsaPublicPem() { exportPublicPem(currentRsaSummary, "rsa_public.pem"); }
-    @FXML public void handleExportRsaPrivatePem() { exportPrivatePem(currentRsaSummary, "rsa_private.pem"); }
-    @FXML public void handleSendRsaPublicToShelf() { sendPublicKeyToShelf(currentRsaSummary); }
-    @FXML public void handleSendRsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentRsaSummary, AsymmetricShelfMaterial.PRIVATE); }
+    @FXML public void handleCopyRsaPublicKey() { copyPublicKey(workspace.currentRsaSummary); }
+    @FXML public void handleCopyRsaPrivateKey() { copyPrivateKey(workspace.currentRsaSummary); }
+    @FXML public void handleCopyRsaSummary() { copyAsymmetricSummary(workspace.currentRsaSummary); }
+    @FXML public void handleExportRsaPublicPem() { exportPublicPem(workspace.currentRsaSummary, "rsa_public.pem"); }
+    @FXML public void handleExportRsaPrivatePem() { exportPrivatePem(workspace.currentRsaSummary, "rsa_private.pem"); }
+    @FXML public void handleSendRsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentRsaSummary); }
+    @FXML public void handleSendRsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentRsaSummary, AsymmetricShelfMaterial.PRIVATE); }
     @FXML public void handleUseRsaInCipher() {
-        if (currentRsaSummary == null) {
+        if (workspace.currentRsaSummary == null) {
             updateStatus("No RSA key pair available for encryption.");
             return;
         }
@@ -3663,10 +3664,10 @@ public class KeysController {
             mainController.navigateTo("Asymmetric Ciphers");
         }
     }
-    @FXML public void handleUseRsaInSignatures() { useInSignatures(currentRsaSummary); }
-    @FXML public void handleUseRsaInCertificates() { useInCertificates(currentRsaSummary); }
+    @FXML public void handleUseRsaInSignatures() { useInSignatures(workspace.currentRsaSummary); }
+    @FXML public void handleUseRsaInCertificates() { useInCertificates(workspace.currentRsaSummary); }
     @FXML public void handleClearRsa() {
-        currentRsaSummary = null;
+        workspace.currentRsaSummary = null;
         if (rsaSummaryCard != null) { rsaSummaryCard.setVisible(false); rsaSummaryCard.setManaged(false); }
         if (rsaPublicKeyArea != null) rsaPublicKeyArea.clear();
         if (rsaPrivateKeyArea != null) rsaPrivateKeyArea.clear();
@@ -3674,17 +3675,17 @@ public class KeysController {
     }
 
     // ECDSA Action Handlers
-    @FXML public void handleCopyEcdsaPublicKey() { copyPublicKey(currentEcdsaSummary); }
-    @FXML public void handleCopyEcdsaPrivateKey() { copyPrivateKey(currentEcdsaSummary); }
-    @FXML public void handleCopyEcdsaSummary() { copyAsymmetricSummary(currentEcdsaSummary); }
-    @FXML public void handleExportEcdsaPublicPem() { exportPublicPem(currentEcdsaSummary, "ecdsa_public.pem"); }
-    @FXML public void handleExportEcdsaPrivatePem() { exportPrivatePem(currentEcdsaSummary, "ecdsa_private.pem"); }
-    @FXML public void handleSendEcdsaPublicToShelf() { sendPublicKeyToShelf(currentEcdsaSummary); }
-    @FXML public void handleSendEcdsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentEcdsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseEcdsaInSignatures() { useInSignatures(currentEcdsaSummary); }
-    @FXML public void handleUseEcdsaInCertificates() { useInCertificates(currentEcdsaSummary); }
+    @FXML public void handleCopyEcdsaPublicKey() { copyPublicKey(workspace.currentEcdsaSummary); }
+    @FXML public void handleCopyEcdsaPrivateKey() { copyPrivateKey(workspace.currentEcdsaSummary); }
+    @FXML public void handleCopyEcdsaSummary() { copyAsymmetricSummary(workspace.currentEcdsaSummary); }
+    @FXML public void handleExportEcdsaPublicPem() { exportPublicPem(workspace.currentEcdsaSummary, "ecdsa_public.pem"); }
+    @FXML public void handleExportEcdsaPrivatePem() { exportPrivatePem(workspace.currentEcdsaSummary, "ecdsa_private.pem"); }
+    @FXML public void handleSendEcdsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentEcdsaSummary); }
+    @FXML public void handleSendEcdsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentEcdsaSummary, AsymmetricShelfMaterial.PRIVATE); }
+    @FXML public void handleUseEcdsaInSignatures() { useInSignatures(workspace.currentEcdsaSummary); }
+    @FXML public void handleUseEcdsaInCertificates() { useInCertificates(workspace.currentEcdsaSummary); }
     @FXML public void handleClearEcdsa() {
-        currentEcdsaSummary = null;
+        workspace.currentEcdsaSummary = null;
         if (ecdsaSummaryCard != null) { ecdsaSummaryCard.setVisible(false); ecdsaSummaryCard.setManaged(false); }
         if (ecdsaPublicKeyArea != null) ecdsaPublicKeyArea.clear();
         if (ecdsaPrivateKeyArea != null) ecdsaPrivateKeyArea.clear();
@@ -3694,17 +3695,17 @@ public class KeysController {
     }
 
     // DSA Action Handlers
-    @FXML public void handleCopyDsaPublicKey() { copyPublicKey(currentDsaSummary); }
-    @FXML public void handleCopyDsaPrivateKey() { copyPrivateKey(currentDsaSummary); }
-    @FXML public void handleCopyDsaSummary() { copyAsymmetricSummary(currentDsaSummary); }
-    @FXML public void handleExportDsaPublicPem() { exportPublicPem(currentDsaSummary, "dsa_public.pem"); }
-    @FXML public void handleExportDsaPrivatePem() { exportPrivatePem(currentDsaSummary, "dsa_private.pem"); }
-    @FXML public void handleSendDsaPublicToShelf() { sendPublicKeyToShelf(currentDsaSummary); }
-    @FXML public void handleSendDsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentDsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseDsaInSignatures() { useInSignatures(currentDsaSummary); }
-    @FXML public void handleUseDsaInCertificates() { useInCertificates(currentDsaSummary); }
+    @FXML public void handleCopyDsaPublicKey() { copyPublicKey(workspace.currentDsaSummary); }
+    @FXML public void handleCopyDsaPrivateKey() { copyPrivateKey(workspace.currentDsaSummary); }
+    @FXML public void handleCopyDsaSummary() { copyAsymmetricSummary(workspace.currentDsaSummary); }
+    @FXML public void handleExportDsaPublicPem() { exportPublicPem(workspace.currentDsaSummary, "dsa_public.pem"); }
+    @FXML public void handleExportDsaPrivatePem() { exportPrivatePem(workspace.currentDsaSummary, "dsa_private.pem"); }
+    @FXML public void handleSendDsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentDsaSummary); }
+    @FXML public void handleSendDsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentDsaSummary, AsymmetricShelfMaterial.PRIVATE); }
+    @FXML public void handleUseDsaInSignatures() { useInSignatures(workspace.currentDsaSummary); }
+    @FXML public void handleUseDsaInCertificates() { useInCertificates(workspace.currentDsaSummary); }
     @FXML public void handleClearDsa() {
-        currentDsaSummary = null;
+        workspace.currentDsaSummary = null;
         if (dsaSummaryCard != null) { dsaSummaryCard.setVisible(false); dsaSummaryCard.setManaged(false); }
         if (dsaPublicKeyArea != null) dsaPublicKeyArea.clear();
         if (dsaPrivateKeyArea != null) dsaPrivateKeyArea.clear();
@@ -3712,17 +3713,17 @@ public class KeysController {
     }
 
     // Ed25519 Action Handlers
-    @FXML public void handleCopyEddsaPublicKey() { copyPublicKey(currentEddsaSummary); }
-    @FXML public void handleCopyEddsaPrivateKey() { copyPrivateKey(currentEddsaSummary); }
-    @FXML public void handleCopyEddsaSummary() { copyAsymmetricSummary(currentEddsaSummary); }
-    @FXML public void handleExportEddsaPublicPem() { exportPublicPem(currentEddsaSummary, "ed25519_public.pem"); }
-    @FXML public void handleExportEddsaPrivatePem() { exportPrivatePem(currentEddsaSummary, "ed25519_private.pem"); }
-    @FXML public void handleSendEddsaPublicToShelf() { sendPublicKeyToShelf(currentEddsaSummary); }
-    @FXML public void handleSendEddsaPrivateToShelf() { sendAsymmetricKeyToShelf(currentEddsaSummary, AsymmetricShelfMaterial.PRIVATE); }
-    @FXML public void handleUseEddsaInSignatures() { useInSignatures(currentEddsaSummary); }
-    @FXML public void handleUseEddsaInCertificates() { useInCertificates(currentEddsaSummary); }
+    @FXML public void handleCopyEddsaPublicKey() { copyPublicKey(workspace.currentEddsaSummary); }
+    @FXML public void handleCopyEddsaPrivateKey() { copyPrivateKey(workspace.currentEddsaSummary); }
+    @FXML public void handleCopyEddsaSummary() { copyAsymmetricSummary(workspace.currentEddsaSummary); }
+    @FXML public void handleExportEddsaPublicPem() { exportPublicPem(workspace.currentEddsaSummary, "ed25519_public.pem"); }
+    @FXML public void handleExportEddsaPrivatePem() { exportPrivatePem(workspace.currentEddsaSummary, "ed25519_private.pem"); }
+    @FXML public void handleSendEddsaPublicToShelf() { sendPublicKeyToShelf(workspace.currentEddsaSummary); }
+    @FXML public void handleSendEddsaPrivateToShelf() { sendAsymmetricKeyToShelf(workspace.currentEddsaSummary, AsymmetricShelfMaterial.PRIVATE); }
+    @FXML public void handleUseEddsaInSignatures() { useInSignatures(workspace.currentEddsaSummary); }
+    @FXML public void handleUseEddsaInCertificates() { useInCertificates(workspace.currentEddsaSummary); }
     @FXML public void handleClearEd25519() {
-        currentEddsaSummary = null;
+        workspace.currentEddsaSummary = null;
         if (eddsaSummaryCard != null) { eddsaSummaryCard.setVisible(false); eddsaSummaryCard.setManaged(false); }
         if (eddsaPublicKeyArea != null) eddsaPublicKeyArea.clear();
         if (eddsaPrivateKeyArea != null) eddsaPrivateKeyArea.clear();
