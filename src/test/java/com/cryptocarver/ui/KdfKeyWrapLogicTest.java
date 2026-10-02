@@ -23,12 +23,12 @@ class KdfKeyWrapLogicTest {
     @ValueSource(booleans = {false, true})
     void wrapsAndUnwrapsTheSharedVector(boolean padded) throws Exception {
         String mode = padded ? "RFC 5649 - AES Key Wrap with Padding" : "RFC 3394 - AES Key Wrap";
-        String input = padded ? KdfWrapTestVectors.HEX_9 : KdfWrapTestVectors.HEX_6;
-        var wrapped = KdfKeyWrapLogic.wrap(KdfWrapTestVectors.HEX_7, input, false, mode);
-        var unwrapped = KdfKeyWrapLogic.wrap(KdfWrapTestVectors.HEX_7, DataConverter.bytesToHex(wrapped.result()), true, mode);
+        String input = padded ? KdfWrapTestVectors.KWP_SHORT_PLAINTEXT : KdfWrapTestVectors.KEY_DATA_128;
+        var wrapped = KdfKeyWrapLogic.wrap(KdfWrapTestVectors.KEK_128, input, false, mode);
+        var unwrapped = KdfKeyWrapLogic.wrap(KdfWrapTestVectors.KEK_128, DataConverter.bytesToHex(wrapped.result()), true, mode);
         assertArrayEquals(DataConverter.hexToBytes(input), unwrapped.result());
         if (!padded) {
-            assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.HEX_8), wrapped.result());
+            assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.RFC3394_WRAPPED_KEY_DATA_128), wrapped.result());
         }
     }
 
@@ -50,6 +50,6 @@ class KdfKeyWrapLogicTest {
     @Test
     void rejectsUnwrappingWithTheWrongKek() {
         assertThrows(Exception.class, () -> KdfKeyWrapLogic.wrap("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-                KdfWrapTestVectors.HEX_8, true, "RFC 3394 - AES Key Wrap"));
+                KdfWrapTestVectors.RFC3394_WRAPPED_KEY_DATA_128, true, "RFC 3394 - AES Key Wrap"));
     }
 }

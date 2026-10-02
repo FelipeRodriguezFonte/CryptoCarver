@@ -19,8 +19,8 @@ final class KeysSplit2Vectors {
         if (name.startsWith("HKDF")) {
             byte[] input = new byte[22];
             Arrays.fill(input, (byte) 0x0b);
-            byte[] salt = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_0);
-            byte[] info = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_1);
+            byte[] salt = DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_SALT);
+            byte[] info = DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_INFO);
             String hash = "Hmac" + name.substring(5);
             byte[] prk = mac(hash, salt, input);
             byte[] expanded = new byte[0];
@@ -29,17 +29,17 @@ final class KeysSplit2Vectors {
                 previous = mac(hash, prk, concat(previous, info, new byte[] {(byte) counter}));
                 expanded = concat(expanded, previous);
             }
-            byte[] expected = name.equals("HKDF-SHA256") ? DataConverter.hexToBytes(KdfWrapTestVectors.HEX_3) : Arrays.copyOf(expanded, 42);
+            byte[] expected = name.equals("HKDF-SHA256") ? DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_OKM) : Arrays.copyOf(expanded, 42);
             return vector(input, salt, info, 1, expected);
         }
         if (name.startsWith("NIST")) {
-            byte[] key = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_4);
+            byte[] key = DataConverter.hexToBytes(KdfWrapTestVectors.KDF_AES128_KEY);
             byte[] label = "CryptoCarver".getBytes(StandardCharsets.US_ASCII);
-            byte[] context = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_5);
+            byte[] context = DataConverter.hexToBytes(KdfWrapTestVectors.KDF_CONTEXT);
             return vector(key, label, context, 1, mac("HmacSHA256", key, concat(new byte[] {0, 0, 0, 1}, label, new byte[] {0}, context, new byte[] {0, 0, 1, 0})));
         }
         if (name.startsWith("X9.63")) {
-            byte[] input = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_6);
+            byte[] input = DataConverter.hexToBytes(KdfWrapTestVectors.KEY_DATA_128);
             byte[] info = "ECIES".getBytes(StandardCharsets.US_ASCII);
             var digest = MessageDigest.getInstance("SHA-256");
             byte[] expected = concat(digest.digest(concat(input, new byte[] {0, 0, 0, 1}, info)),

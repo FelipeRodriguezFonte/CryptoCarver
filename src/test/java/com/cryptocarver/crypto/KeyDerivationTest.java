@@ -13,19 +13,19 @@ class KeyDerivationTest {
     @Test
     void hkdfExtractAndExpandMatchRfc5869Sha256CaseOne() {
         byte[] ikm = new byte[22]; java.util.Arrays.fill(ikm, (byte) 0x0b);
-        byte[] salt = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_0);
-        byte[] info = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_1);
+        byte[] salt = DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_SALT);
+        byte[] info = DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_INFO);
         byte[] prk = KeyDerivation.hkdfExtract(ikm, salt, KeyDerivation.getDigest("SHA-256"));
-        assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.HEX_2), prk);
-        assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.HEX_3),
+        assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_PRK), prk);
+        assertArrayEquals(DataConverter.hexToBytes(KdfWrapTestVectors.HKDF_RFC5869_OKM),
                 KeyDerivation.hkdfExpand(prk, info, 42, KeyDerivation.getDigest("SHA-256")));
     }
 
     @Test
     void counterKdfFollowsSp800108FixedInputLayout() throws Exception {
-        byte[] key = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_4);
+        byte[] key = DataConverter.hexToBytes(KdfWrapTestVectors.KDF_AES128_KEY);
         byte[] label = "CryptoCarver".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-        byte[] context = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_5);
+        byte[] context = DataConverter.hexToBytes(KdfWrapTestVectors.KDF_CONTEXT);
         byte[] actual = KeyDerivation.sp800108Counter(key, label, context, 32, KeyDerivation.getDigest("SHA-256"));
 
         Mac mac = Mac.getInstance("HmacSHA256");
@@ -37,7 +37,7 @@ class KeyDerivationTest {
 
     @Test
     void x963FollowsSharedSecretCounterInfoLayout() throws Exception {
-        byte[] secret = DataConverter.hexToBytes(KdfWrapTestVectors.HEX_6);
+        byte[] secret = DataConverter.hexToBytes(KdfWrapTestVectors.KEY_DATA_128);
         byte[] info = "ECIES".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
         byte[] actual = KeyDerivation.x963(secret, info, 40, KeyDerivation.getDigest("SHA-256"));
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");

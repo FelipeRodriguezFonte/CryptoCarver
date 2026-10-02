@@ -186,13 +186,13 @@ class KeysSplit2CharacterizationUITest {
             keys.handleKeyWrap();
         });
         String wrapped = text("keyWrapResultArea").split("WRAPPED:\\n", 2)[1].split("\\n", 2)[0];
-        if (!padded) assertEquals(KdfWrapTestVectors.HEX_8, wrapped);
+        if (!padded) assertEquals(KdfWrapTestVectors.RFC3394_WRAPPED_KEY_DATA_128, wrapped);
         fx(() -> {
             ((CheckBox) root.lookup("#keyWrapUnwrapCheck")).setSelected(true);
             text("keyWrapDataField", wrapped);
             keys.handleKeyWrap();
         });
-        assertTrue(text("keyWrapResultArea").contains(padded ? KdfWrapTestVectors.HEX_9 : KdfWrapTestVectors.HEX_6));
+        assertTrue(text("keyWrapResultArea").contains(padded ? KdfWrapTestVectors.KWP_SHORT_PLAINTEXT : KdfWrapTestVectors.KEY_DATA_128));
     }
 
     @Test
@@ -337,8 +337,8 @@ class KeysSplit2CharacterizationUITest {
     private void configureWrap(boolean padded) {
         navigate("AES Key Wrap");
         combo("keyWrapModeCombo").setValue(padded ? "RFC 5649 - AES Key Wrap with Padding" : "RFC 3394 - AES Key Wrap");
-        text("keyWrapKekField", KdfWrapTestVectors.HEX_7);
-        text("keyWrapDataField", padded ? KdfWrapTestVectors.HEX_9 : KdfWrapTestVectors.HEX_6);
+        text("keyWrapKekField", KdfWrapTestVectors.KEK_128);
+        text("keyWrapDataField", padded ? KdfWrapTestVectors.KWP_SHORT_PLAINTEXT : KdfWrapTestVectors.KEY_DATA_128);
     }
 
     private void configureCms() throws Exception {
