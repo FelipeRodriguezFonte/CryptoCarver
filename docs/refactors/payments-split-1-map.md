@@ -47,5 +47,7 @@ usaba el código muerto.
 - Con una clave de longitud no válida, el panel cifrado publicaba el bloque PIN en claro como
   operación correcta marcada «TDES ECB», y lo añadía al histórico. Ahora muestra el error en el
   campo de clave y no publica nada.
+- «Usar como entrada» copiaba el informe completo del resultado en el campo de bloque PIN a
+  decodificar. Ahora pasa solo el bloque que produjo la última codificación (en claro o cifrada).
 - Pendiente, menor: un bloque en claro de 16 caracteres con letras no hexadecimales da el mensaje
   de longitud incorrecta («Current length: 16»).

@@ -536,11 +536,13 @@ public class PaymentsController {
             // An encoded PIN block is the input to decoding it, so those two chain. A CVV and a
             // generated IBM 3624 PIN are not the input to anything here, so they pass no target
             // and the action is hidden while their result is on screen.
+            // The result areas hold a whole report; chaining passes on just the block it produced.
             bindResult(paymentsResultPanel, pinBlockResultArea, "PIN block",
-                    pinBlockField == null ? null : pinBlockField::setText);
+                    pinBlockField == null ? null : report -> chain(pinBlocks().encodedBlock(), pinBlockField));
             bindResult(paymentsResultPanel, cvvResultArea, "CVV", null);
             bindResult(paymentsResultPanel, encResultArea, "Encrypted PIN block",
-                    encPinBlockFieldDecode == null ? null : encPinBlockFieldDecode::setText);
+                    encPinBlockFieldDecode == null ? null
+                            : report -> chain(pinBlocks().encryptedBlock(), encPinBlockFieldDecode));
             bindResult(paymentsResultPanel, ibm3624ResultArea, "IBM 3624 PIN", null);
         }
     }
@@ -660,6 +662,10 @@ public class PaymentsController {
      * <p>{@code chainTarget} is where "use as input" should put the value while this operation's
      * result is the one shown; a null one hides the action rather than leaving it inert.
      */
+    private static void chain(String block, TextField target) {
+        if (block != null) target.setText(block);
+    }
+
     private static void bindResult(ResultPanel panel, TextArea area, String operation,
                                    java.util.function.Consumer<String> chainTarget) {
         if (panel == null || area == null) return;

@@ -58,6 +58,9 @@ final class PinBlockCoordinator {
     private final TextField encPinBlockKeyFieldDecode;
     private final TextArea encResultArea;
     private final Supplier<StatusReporter> reporter;
+    /** Blocks the last encoding produced, for "use as input"; cleared when another operation runs. */
+    private String encodedBlock;
+    private String encryptedBlock;
 
     PinBlockCoordinator(View view, Supplier<StatusReporter> reporter) {
         this.pinField = view.pin();
@@ -78,6 +81,16 @@ final class PinBlockCoordinator {
         this.encPinBlockKeyFieldDecode = view.encKeyDecode();
         this.encResultArea = view.encResult();
         this.reporter = reporter;
+    }
+
+    /** The clear PIN block the last encoding produced, or null after a decode or a failure. */
+    String encodedBlock() {
+        return encodedBlock;
+    }
+
+    /** The PIN block the last encrypted encoding produced, or null after a decode or a failure. */
+    String encryptedBlock() {
+        return encryptedBlock;
     }
 
     private StatusReporter reporter() {
@@ -145,6 +158,7 @@ final class PinBlockCoordinator {
     // ==================== PIN BLOCK HANDLERS ====================
 
     void handleEncodePinBlock() {
+        encodedBlock = null;
         try {
             String pin = pinField.getText().trim();
             String pan = panFieldEncode.getText().trim().replaceAll("\\s+", "");
@@ -218,6 +232,7 @@ final class PinBlockCoordinator {
             details.put("Format", format);
             details.put("PAN", PanMask.mask(pan));
             details.put("PIN Length", pin.length() + " digits");
+            encodedBlock = pinBlock;
             reporter().publish(OperationResult.forOperation("Encode PIN Block")
                     .output(DataConverter.hexToBytes(pinBlock)).details(details)
                     .status(t("module.payments.status.success")).build());
@@ -231,6 +246,7 @@ final class PinBlockCoordinator {
     }
 
     void handleDecodePinBlock() {
+        encodedBlock = null;
         try {
             String pinBlock = pinBlockField.getText().trim().replaceAll("\\s+", "");
             String pan = panFieldDecode.getText().trim().replaceAll("\\s+", "");
@@ -311,6 +327,7 @@ final class PinBlockCoordinator {
     }
 
     void handleEncodeEncryptedPinBlock() {
+        encryptedBlock = null;
         try {
             if (encPinField == null || encPanFieldEncode == null || encResultArea == null) {
                 showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "Encrypted PIN"));
@@ -371,6 +388,7 @@ final class PinBlockCoordinator {
             details.put("PAN", PanMask.mask(pan));
             details.put("PIN", "[not persisted]");
             details.put("Protected", keyHex.isEmpty() ? "No key supplied" : isIso4(format) ? "AES (ISO 9564-1 format 4)" : "TDES ECB");
+            encryptedBlock = publishedBlock;
             reporter().publish(OperationResult.forOperation("Encode Encrypted PIN Block")
                     .output(DataConverter.hexToBytes(publishedBlock)).details(details)
                     .status(t("module.payments.status.success")).build());
@@ -382,6 +400,7 @@ final class PinBlockCoordinator {
     }
 
     void handleDecodeEncryptedPinBlock() {
+        encryptedBlock = null;
         try {
             if (encPinBlockFieldDecode == null || encPanFieldDecode == null || encResultArea == null) {
                 showError(t("module.payments.error.configurationTitle"), t("module.payments.error.controlsNotInitialized", "Encrypted PIN decode"));

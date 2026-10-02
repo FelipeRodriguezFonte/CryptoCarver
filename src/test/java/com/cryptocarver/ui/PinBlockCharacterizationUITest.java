@@ -201,6 +201,28 @@ class PinBlockCharacterizationUITest {
         });
     }
 
+    @Test
+    void useAsInputPassesOnlyTheEncodedBlock() throws Exception {
+        withPanel(panel -> {
+            panel.combo("pinBlockFormatCombo").setValue("Format 0 (ISO-0)");
+            panel.field("pinField").setText(PIN);
+            panel.field("panFieldEncode").setText(PAN);
+            panel.controller().handleEncodePinBlock();
+            String block = panel.reporter().lastOutput();
+            panel.chainResult();
+            assertEquals(block, panel.field("pinBlockField").getText());
+
+            panel.combo("encPinBlockFormatCombo").setValue("Format 0 (ISO-0)");
+            panel.field("encPinField").setText(PIN);
+            panel.field("encPanFieldEncode").setText(PAN);
+            panel.field("encPinBlockKeyField").setText(TDES_KEY);
+            panel.controller().handleEncodeEncryptedPinBlock();
+            String encrypted = panel.reporter().lastOutput();
+            panel.chainResult();
+            assertEquals(encrypted, panel.field("encPinBlockFieldDecode").getText());
+        });
+    }
+
     private static String decodedPinLine(String text) {
         return text.lines().filter(line -> line.contains("Decoded PIN")).map(String::strip).findFirst().orElse("<no pin>");
     }
@@ -237,6 +259,17 @@ class PinBlockCharacterizationUITest {
         ComboBox<String> combo(String id) { return (ComboBox<String>) loader.getNamespace().get(id); }
         TextField field(String id) { return (TextField) loader.getNamespace().get(id); }
         TextArea area(String id) { return (TextArea) loader.getNamespace().get(id); }
+
+        /** Presses the result panel's "use as input" action. */
+        void chainResult() {
+            try {
+                java.lang.reflect.Method chain = ResultPanel.class.getDeclaredMethod("chainCurrent");
+                chain.setAccessible(true);
+                chain.invoke(loader.getNamespace().get("paymentsResultPanel"));
+            } catch (ReflectiveOperationException error) {
+                throw new IllegalStateException(error);
+            }
+        }
     }
 
     private static final class Recorder implements StatusReporter {
