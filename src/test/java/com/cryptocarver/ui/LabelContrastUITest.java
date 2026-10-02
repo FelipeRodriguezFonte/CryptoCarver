@@ -62,10 +62,53 @@ class LabelContrastUITest {
         assertTrue(findings.isEmpty(), "Visible labels below 3:1: " + findings.stream().distinct().toList());
     }
 
+    @Test void navigationTreeCaptionsAndDisclosureArrowsHaveContrastInBothThemes() throws Exception {
+        List<Finding> findings = new ArrayList<>();
+        fx(() -> {
+            SidePanel panel = new SidePanel();
+            panel.updateContent(NavigationRail.Section.KEYS);
+            Parent root = new javafx.scene.layout.VBox(panel);
+            Scene scene = new Scene(root, 400, 700);
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            try {
+                stage.show();
+                for (String theme : List.of("theme-light.css", "theme-dark.css")) {
+                    scene.getStylesheets().setAll(getClass().getResource("/css/styles.css").toExternalForm(),
+                            getClass().getResource("/css/" + theme).toExternalForm());
+                    root.applyCss(); root.layout();
+                    var trees = panel.lookupAll(".navigation-tree");
+                    assertTrue(!trees.isEmpty(), "Navigation tree must be measured");
+                    javafx.scene.control.TreeView<?> tree = (javafx.scene.control.TreeView<?>) trees.iterator().next();
+                    tree.getRoot().getChildren().forEach(item -> item.setExpanded(true));
+                    root.applyCss(); root.layout();
+                    for (boolean selected : List.of(false, true)) {
+                        if (selected) tree.getSelectionModel().select(0);
+                        else tree.getSelectionModel().clearSelection();
+                        root.applyCss(); root.layout();
+                        assertTrue(tree.lookupAll(".tree-cell").stream().anyMatch(node ->
+                                node instanceof javafx.scene.control.TreeCell<?> cell && !cell.isEmpty()),
+                                "Real navigation cells must be visible");
+                        measure(root, theme, "Navigation tree selected=" + selected, findings);
+                        for (Node arrow : tree.lookupAll(".tree-disclosure-node > .arrow")) {
+                            if (!visible(arrow) || !(arrow instanceof javafx.scene.layout.Region region)) continue;
+                            Color foreground = paintColor(region.getBackground().getFills().get(region.getBackground().getFills().size() - 1).getFill());
+                            assertTrue(contrast(foreground, effectiveBackground(arrow.getParent())) >= 3.0,
+                                    "Navigation disclosure arrow contrast: " + theme);
+                        }
+                    }
+                }
+            } finally { stage.close(); stage.setScene(null); }
+        });
+        assertTrue(findings.isEmpty(), "Navigation captions below 3:1: " + findings);
+    }
+
     private static void measure(Parent root, String theme, String module, List<Finding> findings) {
         root.applyCss(); root.layout();
         for (Node node : descendants(root)) {
-            if (!(node instanceof Label label) || label.getText() == null || label.getText().isBlank() || !visible(label)) continue;
+            if (!(node instanceof Label || node instanceof javafx.scene.control.TreeCell<?>)) continue;
+            javafx.scene.control.Labeled label = (javafx.scene.control.Labeled) node;
+            if (label.getText() == null || label.getText().isBlank() || !visible(label)) continue;
             Color foreground = label.getTextFill() instanceof Color c ? c : null;
             Color background = effectiveBackground(label);
             if (foreground == null || background == null) continue;

@@ -102,9 +102,6 @@ public class SidePanel extends VBox {
 
         // Navigation TreeView
         navigationTree = new TreeView<>();
-        // Cells can resolve Modena's arrow paint before this tree has a Scene/root.
-        // Author CSS preserves the measured normal/selected-focus paints afterwards.
-        navigationTree.setStyle("-fx-text-background-color: #333333;");
         navigationTree.setShowRoot(false);
         navigationTree.setAccessibleText(I18nService.getInstance().text("side.navigation"));
         navigationTree.getStyleClass().add("navigation-tree");

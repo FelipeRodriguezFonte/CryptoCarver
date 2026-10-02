@@ -3214,3 +3214,11 @@
 .tree-view:focused .tree-cell:filled:selected > .tree-disclosure-node > .arrow {
     -fx-background-color: #ffffff;
 }
+
+/* Navigation lookup and disclosure paint follow the theme; light keeps its measured #333333. */
+.navigation-tree {
+    -fx-text-background-color: -cc-navigation-text-background;
+}
+.navigation-tree .tree-cell > .tree-disclosure-node > .arrow {
+    -fx-background-color: -cc-navigation-text-background;
+}
