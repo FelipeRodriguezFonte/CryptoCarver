@@ -15,9 +15,9 @@
 
     <properties>
         <surefire.cpuArgs></surefire.cpuArgs>
-        <!-- JavaFX caches native skins and CSS across classes. Match the Xvfb suite's
-             per-class toolkit lifetime in the default suite as well. -->
-        <surefire.reuseForks>false</surefire.reuseForks>
+        <!-- One JVM for the whole suite: a JVM per class doubles the run time on macOS.
+             scripts/run-ui-tests.sh (CI under Xvfb) passes -Dsurefire.reuseForks=false. -->
+        <surefire.reuseForks>true</surefire.reuseForks>
         <!-- The JavaFX suite runs in the default build. Pass -DrunUiTests=false to skip it
              on a machine with no display. -->
         <runUiTests>true</runUiTests>
@@ -337,7 +337,7 @@
                          the JVM resolves Locale.getDefault() during startup, before Surefire gets
                          the chance to set properties, so a late user.language is simply ignored.
                          Tests that care about translation select their locale explicitly. -->
-                    <argLine>-Duser.language=en -Duser.country=US -Xmx3g ${surefire.cpuArgs}</argLine>
+                    <argLine>-Duser.language=en -Duser.country=US -Xmx5g ${surefire.cpuArgs}</argLine>
                 </configuration>
             </plugin>
 
