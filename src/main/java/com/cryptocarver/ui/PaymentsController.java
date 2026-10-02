@@ -1,17 +1,5 @@
 package com.cryptocarver.ui;
 
-import com.cryptocarver.crypto.PaymentOperations;
-import com.cryptocarver.crypto.DukptKsn;
-import com.cryptocarver.crypto.AesDukpt;
-import com.cryptocarver.crypto.hsm.PayShieldBodyDecomposer;
-import com.cryptocarver.crypto.hsm.PayShieldBodySchema;
-import com.cryptocarver.crypto.hsm.PayShieldCommand;
-import com.cryptocarver.crypto.hsm.PayShieldErrorCatalog;
-import com.cryptocarver.crypto.hsm.PayShieldMessage;
-import com.cryptocarver.crypto.hsm.PayShieldMessageCodec;
-import com.cryptocarver.crypto.hsm.PayShieldResponse;
-import com.cryptocarver.crypto.iso8583.Iso8583Operations;
-import com.cryptocarver.model.OperationResult;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -19,12 +7,8 @@ import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
-import java.util.HexFormat;
 import java.util.Optional;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Controller for Payments tab
@@ -78,8 +62,6 @@ public class PaymentsController {
     @FXML private CheckBox hsmHostTcpPrefixCheck;
     @FXML private TextArea hsmHostCapturedFrameArea;
     @FXML private TextArea hsmHostResultArea;
-
-    private static final String SUPPLIED_NC_RESPONSE = "0000ND007B44AC1DDEE2A94B0007-E000";
 
     // ISO 8583 message workbench. The UI delegates parsing, field definitions,
     // bitmap handling and enrichment to the typed core codec.
@@ -146,381 +128,41 @@ public class PaymentsController {
     @FXML private ComboBox<String> dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinOperationCombo;
     @FXML private HBox dukptTdesOptionsBox, dukptAesOptionsBox;
     @FXML private VBox dukptAesPinBox;
-    private DukptKsn.TdesKeyUsage selectedTdesUsage = DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
-    private String loadedDukptProfileName;
-    private String loadedDukptExpectedWorkingKey;
-
-    public void initializeDukptControls(TextField bdkField, TextField ksnField, TextArea resultArea,
-            ComboBox<String> schemeCombo, ComboBox<String> tdesUsageCombo, ComboBox<String> aesUsageCombo,
-            ComboBox<String> aesKeyTypeCombo, TextField aesPinBlockField, ComboBox<String> aesPinOperationCombo,
-            HBox tdesOptionsBox, HBox aesOptionsBox, VBox aesPinBox) {
-        this.dukptBdkField = bdkField; this.dukptKsnField = ksnField; this.dukptResultArea = resultArea;
-        this.dukptSchemeCombo = schemeCombo; this.dukptTdesUsageCombo = tdesUsageCombo;
-        this.dukptAesUsageCombo = aesUsageCombo; this.dukptAesKeyTypeCombo = aesKeyTypeCombo;
-        this.dukptAesPinBlockField = aesPinBlockField; this.dukptAesPinOperationCombo = aesPinOperationCombo;
-        this.dukptTdesOptionsBox = tdesOptionsBox; this.dukptAesOptionsBox = aesOptionsBox; this.dukptAesPinBox = aesPinBox;
-        if (schemeCombo != null) {
-            schemeCombo.getItems().setAll("TDES (legacy, 10-byte KSN)", "AES (X9.24-3, 12-byte KSN)");
-            schemeCombo.setValue("TDES (legacy, 10-byte KSN)");
-            schemeCombo.valueProperty().addListener((ignored, oldValue, newValue) -> updateDukptOptionsVisibility());
-        }
-        if (tdesUsageCombo != null) {
-            tdesUsageCombo.getItems().setAll("PIN Encryption", "MAC Request", "MAC Response", "Data Encryption");
-            tdesUsageCombo.setValue(selectedTdesUsage.label());
-            tdesUsageCombo.valueProperty().addListener((ignored, oldValue, newValue) -> selectedTdesUsage = selectedTdesUsage());
-        }
-        if (aesUsageCombo != null) { aesUsageCombo.getItems().setAll("Data encryption (encrypt)", "Data encryption (decrypt)", "PIN encryption", "MAC generation", "MAC verification", "MAC both ways", "Key encryption", "Key derivation"); aesUsageCombo.setValue("Data encryption (encrypt)"); }
-        if (aesKeyTypeCombo != null) { aesKeyTypeCombo.getItems().setAll("AES-128", "AES-192", "AES-256"); aesKeyTypeCombo.setValue("AES-128"); }
-        if (aesPinOperationCombo != null) { aesPinOperationCombo.getItems().setAll("Encrypt formatted PIN block", "Decrypt encrypted PIN block"); aesPinOperationCombo.setValue("Encrypt formatted PIN block"); }
-        updateDukptOptionsVisibility();
-    }
-
-    private void updateDukptOptionsVisibility() {
-        boolean aes = dukptSchemeCombo != null && dukptSchemeCombo.getValue() != null && dukptSchemeCombo.getValue().startsWith("AES");
-        setDukptSectionVisible(dukptTdesOptionsBox, !aes);
-        setDukptSectionVisible(dukptAesOptionsBox, aes);
-        setDukptSectionVisible(dukptAesPinBox, aes);
-    }
-
-    private static void setDukptSectionVisible(javafx.scene.Node node, boolean visible) {
-        if (node != null) {
-            node.setVisible(visible);
-            node.setManaged(visible);
-        }
-    }
-
-    private DukptKsn.TdesKeyUsage selectedTdesUsage() {
-        String selection = dukptTdesUsageCombo == null ? null : dukptTdesUsageCombo.getValue();
-        return switch (selection == null ? "" : selection) {
-            case "MAC Request" -> DukptKsn.TdesKeyUsage.MAC_REQUEST;
-            case "MAC Response" -> DukptKsn.TdesKeyUsage.MAC_RESPONSE;
-            case "Data Encryption" -> DukptKsn.TdesKeyUsage.DATA_ENCRYPTION;
-            default -> DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
-        };
-    }
-
-    public void handleInspectDukpt() {
-        try {
-            if (dukptSchemeCombo != null && dukptSchemeCombo.getValue().startsWith("AES")) { inspectAesDukpt(); return; }
-            DukptKsn.Parsed ksn = DukptKsn.parseTdes(dukptKsnField.getText());
-            String result = "--- DUKPT TDES KSN ---\nKSN: " + ksn.ksnHex() + "\nBase KSN: " + ksn.baseKsnHex()
-                    + "\nDevice ID: " + ksn.deviceIdentifierHex() + "\nTransaction counter: " + ksn.transactionCounter()
-                    + "\nCounter exhausted: " + DukptKsn.isTdesCounterExhausted(ksn.ksnHex())
-                    + "\nNext KSN: " + (DukptKsn.isTdesCounterExhausted(ksn.ksnHex()) ? t("module.payments.status.notAvailable") : DukptKsn.nextTdesKsn(ksn.ksnHex()));
-            if (!dukptBdkField.getText().isBlank()) {
-                String ipek = DukptKsn.deriveIpek(dukptBdkField.getText(), ksn.ksnHex());
-                DukptKsn.TdesDerivedKey derived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), selectedTdesUsage);
-
-                result += "\n\n=== Derivation Tree ===";
-                result += "\n[BDK]\n  └─ " + dukptBdkField.getText().replaceAll("\\s+", "").toUpperCase();
-                result += "\n\n[IPEK (Initial PIN Encryption Key)]\n  └─ " + ipek.toUpperCase();
-
-                result += "\n\n[Counter Steps (Intermediate)]";
-                if (derived.derivationSteps().isEmpty()) {
-                    result += "\n  └─ (None)";
-                } else {
-                    for (String step : derived.derivationSteps()) {
-                        result += "\n  └─ " + step.toUpperCase();
-                    }
-                }
-
-                if (loadedDukptProfileName != null) {
-                    result += "\n\n[Laboratory Profile]\n  └─ " + loadedDukptProfileName;
-                }
-                result += "\n\n[Selected Working Key (" + selectedTdesUsage.label() + ")]\n  └─ "
-                        + derived.workingKeyHex().toUpperCase();
-                if (loadedDukptExpectedWorkingKey != null) {
-                    boolean matches = loadedDukptExpectedWorkingKey.equalsIgnoreCase(derived.workingKeyHex());
-                    result += "\n\n[Laboratory Expected Key]\n  └─ " + loadedDukptExpectedWorkingKey.toUpperCase();
-                    result += "\n[" + t("module.payments.result.vectorCheck") + "]\n  └─ " + t(matches ? "module.payments.status.match" : "module.payments.status.mismatch");
-                }
-
-                DukptKsn.TdesDerivedKey macDerived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.MAC_REQUEST);
-                result += "\n\n[Working Key (MAC Variant)]\n  └─ " + macDerived.workingKeyHex().toUpperCase();
-
-                DukptKsn.TdesDerivedKey dataDerived = DukptKsn.deriveWorkingKey(ipek, ksn.ksnHex(), DukptKsn.TdesKeyUsage.DATA_ENCRYPTION);
-                result += "\n\n[Working Key (Data Variant)]\n  └─ " + dataDerived.workingKeyHex().toUpperCase();
-            }
-            dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true);
-            updateStatus(t("module.payments.status.dukptInspected"));
-        } catch (Exception e) { showError(t("module.payments.error.dukptTitle"), t("module.payments.error.operation", t("module.payments.error.dukptTitle"), e.getMessage())); }
-    }
-
-    private void inspectAesDukpt() throws Exception {
-        AesDukpt.ParsedKsn ksn = AesDukpt.parseKsn(dukptKsnField.getText());
-        String result = "--- AES DUKPT (ANSI X9.24-3) ---\nKSN: " + ksn.ksnHex() + "\nInitial Key ID: " + ksn.initialKeyIdHex()
-                + "\nBase KSN: " + ksn.baseKsnHex() + "\nTransaction counter: " + String.format("%08X", ksn.transactionCounter())
-                + "\nCounter exhausted: " + AesDukpt.isCounterExhausted(ksn.ksnHex())
-                + "\nNext KSN: " + (AesDukpt.isCounterExhausted(ksn.ksnHex()) ? t("module.payments.status.notAvailable") : AesDukpt.nextKsn(ksn.ksnHex()));
-        if (!dukptBdkField.getText().isBlank()) {
-            AesDukpt.KeyUsage usage = selectedAesUsage();
-            AesDukpt.KeyType type = selectedAesKeyType();
-            AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), ksn.ksnHex(), usage, type);
-
-            result += "\n\n=== Derivation Tree ===";
-            result += "\n[BDK]\n  └─ " + dukptBdkField.getText().replaceAll("\\s+", "").toUpperCase() + " (" + AesDukpt.KeyType.fromBytes(dukptBdkField.getText().replaceAll("\\s+", "").length() / 2) + ")";
-            result += "\n\n[Initial Key / IPEK]\n  └─ " + derived.initialKeyHex().toUpperCase();
-
-            if (!derived.initialKeyHex().equalsIgnoreCase(derived.intermediateKeyHex())) {
-                result += "\n\n[Counter Steps (Intermediate)]\n  └─ " + derived.intermediateKeyHex().toUpperCase();
-            }
-
-            result += "\n\n[Final Derivation Data]\n  └─ " + derived.derivationDataHex().toUpperCase();
-            result += "\n\n[Working Key]\n  └─ " + derived.workingKeyHex().toUpperCase();
-        }
-
-        dukptResultArea.setText(result); dukptResultArea.setManaged(true); dukptResultArea.setVisible(true); updateStatus(t("module.payments.status.aesDukptDerived"));
-    }
-    private AesDukpt.KeyUsage selectedAesUsage() {
-        String selection = dukptAesUsageCombo == null ? "Data encryption (encrypt)" : dukptAesUsageCombo.getValue();
-        return switch (selection) {
-            case "Data encryption (decrypt)" -> AesDukpt.KeyUsage.DATA_ENCRYPTION_DECRYPT;
-            case "PIN encryption" -> AesDukpt.KeyUsage.PIN_ENCRYPTION;
-            case "MAC generation" -> AesDukpt.KeyUsage.MAC_GENERATION;
-            case "MAC verification" -> AesDukpt.KeyUsage.MAC_VERIFICATION;
-            case "MAC both ways" -> AesDukpt.KeyUsage.MAC_BOTH_WAYS;
-            case "Key encryption" -> AesDukpt.KeyUsage.KEY_ENCRYPTION;
-            case "Key derivation" -> AesDukpt.KeyUsage.KEY_DERIVATION;
-            default -> AesDukpt.KeyUsage.DATA_ENCRYPTION_ENCRYPT;
-        };
-    }
-    private AesDukpt.KeyType selectedAesKeyType() {
-        String selection = dukptAesKeyTypeCombo == null ? "AES-128" : dukptAesKeyTypeCombo.getValue();
-        return "AES-192".equals(selection) ? AesDukpt.KeyType.AES192 : "AES-256".equals(selection) ? AesDukpt.KeyType.AES256 : AesDukpt.KeyType.AES128;
-    }
-
-    public void handleAesDukptPinBlock() {
-        try {
-            if (dukptSchemeCombo == null || !dukptSchemeCombo.getValue().startsWith("AES")) {
-                throw new IllegalArgumentException(t("module.payments.error.aesDukptSelection"));
-            }
-            if (dukptBdkField == null || dukptBdkField.getText().isBlank()) throw new IllegalArgumentException(t("module.payments.error.aesDukptBdkRequired"));
-            boolean decrypt = dukptAesPinOperationCombo != null && dukptAesPinOperationCombo.getValue().startsWith("Decrypt");
-            AesDukpt.KeyType type = selectedAesKeyType();
-            AesDukpt.DerivedKey derived = AesDukpt.deriveWorkingKey(dukptBdkField.getText(), dukptKsnField.getText(), AesDukpt.KeyUsage.PIN_ENCRYPTION, type);
-            String output = AesDukpt.cryptPinBlock(dukptBdkField.getText(), dukptKsnField.getText(), type, dukptAesPinBlockField.getText(), decrypt);
-            dukptResultArea.setText("--- AES DUKPT PIN block (lab operation) ---\nKSN: " + AesDukpt.parseKsn(dukptKsnField.getText()).ksnHex()
-                    + "\nPIN key type: " + type + "\nDerived PIN key: " + derived.workingKeyHex()
-                    + "\n" + t("module.payments.result.inputBlock", decrypt ? "encrypted" : "formatted") + " " + dukptAesPinBlockField.getText().replaceAll("\\s+", "").toUpperCase()
-                    + "\n" + t("module.payments.result.outputBlock", decrypt ? "formatted" : "encrypted") + " " + output
-                    + "\n\n" + t("module.payments.result.aesDukptNote"));
-            updateStatus(t("module.payments.status.aesPinBlockProcessed"));
-        } catch (Exception e) { showError(t("module.payments.operation.aesPinBlock"), t("module.payments.error.operation", t("module.payments.operation.aesPinBlock"), e.getMessage())); }
-    }
 
     @FXML
-    public void handleHsmHostCompose() {
-        runHsmHost(() -> {
-            PayShieldMessageCodec codec = hsmHostCodec();
-            byte[] frame = codec.composeCommand(
-                    controlText(hsmHostHeaderField),
-                    controlText(hsmHostCommandCodeField).toUpperCase(java.util.Locale.ROOT),
-                    controlText(hsmHostBodyField).getBytes(StandardCharsets.US_ASCII),
-                    controlText(hsmHostTrailerField).getBytes(StandardCharsets.US_ASCII));
-            String rendered = renderHsmFrame(frame, codec.tcpLengthPrefix());
-            if (hsmHostCapturedFrameArea != null) {
-                hsmHostCapturedFrameArea.setText(rendered);
-            }
-            return describeHsmCommand(codec.parseCommand(frame));
-        });
-    }
+    public void handleInspectDukpt() { dukpt().handleInspectDukpt(); }
 
     @FXML
-    public void handleHsmHostAnalyzeCommand() {
-        runHsmHost(() -> {
-            PayShieldMessageCodec codec = hsmHostCodec();
-            return describeHsmCommand(codec.parseCommand(readHsmFrame(codec.tcpLengthPrefix())));
-        });
-    }
+    public void handleAesDukptPinBlock() { dukpt().handleAesDukptPinBlock(); }
 
     @FXML
-    public void handleHsmHostAnalyzeResponse() {
-        runHsmHost(() -> {
-            PayShieldMessageCodec codec = hsmHostCodec();
-            return describeHsmResponse(codec.parseResponse(readHsmFrame(codec.tcpLengthPrefix())));
-        });
-    }
+    public void handleHsmHostCompose() { hsmHost().handleHsmHostCompose(); }
 
-    /**
-     * Origin not recorded: this value was already in the tree when its
-     * provenance was questioned, and no independent capture supports it.
-     * Kept as an unsourced legacy example, separate from the simulator capture.
-     */
     @FXML
-    public void handleHsmHostLoadExample() {
-        if (hsmHostHeaderLengthField != null) {
-            hsmHostHeaderLengthField.setText("4");
-        }
-        if (hsmHostTcpPrefixCheck != null) {
-            hsmHostTcpPrefixCheck.setSelected(false);
-        }
-        if (hsmHostCapturedFrameArea != null) {
-            hsmHostCapturedFrameArea.setText(SUPPLIED_NC_RESPONSE);
-        }
-        if (hsmHostResultArea != null) {
-            hsmHostResultArea.setText(t("module.payments.hsmHost.exampleLoaded"));
-        }
-    }
+    public void handleHsmHostAnalyzeCommand() { hsmHost().handleHsmHostAnalyzeCommand(); }
 
-    private PayShieldMessageCodec hsmHostCodec() {
-        String length = controlText(hsmHostHeaderLengthField);
-        int headerLength;
-        try {
-            headerLength = Integer.parseInt(length);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("header length must be a decimal integer");
-        }
-        return new PayShieldMessageCodec(headerLength,
-                hsmHostTcpPrefixCheck != null && hsmHostTcpPrefixCheck.isSelected());
-    }
+    @FXML
+    public void handleHsmHostAnalyzeResponse() { hsmHost().handleHsmHostAnalyzeResponse(); }
 
-    private byte[] readHsmFrame(boolean tcpPrefix) {
-        String value = controlText(hsmHostCapturedFrameArea);
-        if (!tcpPrefix) {
-            return value.getBytes(StandardCharsets.US_ASCII);
-        }
-        try {
-            return HexFormat.of().parseHex(value.replaceAll("\\s+", ""));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("a TCP-prefixed frame must be entered as hexadecimal");
-        }
-    }
-
-    private static String renderHsmFrame(byte[] frame, boolean tcpPrefix) {
-        return tcpPrefix
-                ? HexFormat.of().withUpperCase().formatHex(frame)
-                : new String(frame, StandardCharsets.US_ASCII);
-    }
-
-    private String describeHsmCommand(PayShieldMessage message) {
-        PayShieldCommand command = findHsmCommand(message.code());
-        String body = new String(message.body(), StandardCharsets.US_ASCII);
-        String trailer = new String(message.trailer(), StandardCharsets.US_ASCII);
-        StringBuilder report = new StringBuilder()
-                .append("Type: command\n")
-                .append("Header: ").append(message.header()).append('\n')
-                .append("Command code: ").append(message.code()).append('\n')
-                .append("Command: ")
-                .append(command == null ? "Unknown; body left opaque" : command.displayName())
-                .append('\n')
-                .append("Expected response: ")
-                .append(command == null ? "Unknown" : command.expectedResponseCode()).append('\n')
-                .append("Body length: ").append(message.body().length).append('\n')
-                .append("Body (opaque): ").append(body.isEmpty() ? "(empty)" : body).append('\n')
-                .append("Trailer: ").append(trailer.isEmpty() ? "(none)" : trailer);
-        appendHsmDecomposition(report, PayShieldBodyDecomposer.decompose(message));
-        return report.toString();
-    }
-
-    private String describeHsmResponse(PayShieldResponse response) {
-        PayShieldCommand command = findHsmCommandByResponse(response.responseCode());
-        String data = new String(response.data(), StandardCharsets.US_ASCII);
-        String trailer = new String(response.trailer(), StandardCharsets.US_ASCII);
-        StringBuilder report = new StringBuilder()
-                .append("Type: response\n")
-                .append("Header: ").append(response.header()).append('\n')
-                .append("Response code: ").append(response.responseCode()).append('\n')
-                .append("Command: ")
-                .append(command == null ? "Unknown" : command.name() + " — " + command.displayName())
-                .append('\n')
-                .append("Error code: ").append(response.errorCode()).append(" — ")
-                .append(PayShieldErrorCatalog.translate(response.errorCode())).append('\n')
-                .append("Data length: ").append(response.data().length).append('\n')
-                .append("Data (opaque): ").append(data.isEmpty() ? "(empty)" : data).append('\n')
-                .append("Trailer: ").append(trailer.isEmpty() ? "(none)" : trailer);
-        appendHsmDecomposition(report, PayShieldBodyDecomposer.decompose(response));
-        return report.toString();
-    }
-
-    private void appendHsmDecomposition(
-            StringBuilder report,
-            Optional<PayShieldBodyDecomposer.Decomposition> optionalDecomposition) {
-        optionalDecomposition.ifPresent(decomposition -> {
-            report.append("\nBody schema: ")
-                    .append(evidenceLabel(decomposition.schema().evidenceStatus()))
-                    .append(" (").append(decomposition.schema().evidenceId()).append(')');
-            for (PayShieldBodyDecomposer.DecodedField field : decomposition.fields()) {
-                report.append('\n')
-                        .append(field.definition().displayName())
-                        .append(": ")
-                        .append(field.value());
-            }
-        });
-    }
-
-    private String evidenceLabel(PayShieldBodySchema.EvidenceStatus status) {
-        return t(switch (status) {
-            case EXTERNAL_REQUEST -> "module.payments.hsmHost.evidence.externalRequest";
-            case THIRD_PARTY_SIMULATOR -> "module.payments.hsmHost.evidence.simulator";
-            case PENDING_CAPTURE -> "module.payments.hsmHost.evidence.pending";
-            case VERIFIED -> "module.payments.hsmHost.evidence.verified";
-        });
-    }
-
-    private static PayShieldCommand findHsmCommand(String code) {
-        try {
-            return PayShieldCommand.valueOf(code);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    private static PayShieldCommand findHsmCommandByResponse(String responseCode) {
-        for (PayShieldCommand command : PayShieldCommand.values()) {
-            if (command.expectedResponseCode().equals(responseCode)) {
-                return command;
-            }
-        }
-        return null;
-    }
-
-    private interface HsmHostStep {
-        String run();
-    }
-
-    private void runHsmHost(HsmHostStep step) {
-        try {
-            String report = step.run();
-            if (hsmHostResultArea != null) {
-                hsmHostResultArea.setText(report);
-            }
-            updateStatus(t("module.payments.hsmHost.status"));
-        } catch (Exception e) {
-            if (hsmHostResultArea != null) {
-                hsmHostResultArea.setText(
-                        t("module.payments.hsmHost.error", String.valueOf(e.getMessage())));
-            }
-        }
-    }
-
-    private static String controlText(TextInputControl control) {
-        return control == null || control.getText() == null ? "" : control.getText().trim();
-    }
+    @FXML
+    public void handleHsmHostLoadExample() { hsmHost().handleHsmHostLoadExample(); }
 
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(paymentsContainer, ModuleTextCatalog.payments());
-        initializeIso8583Controls();
-        initialize(null,
-                pinField, panFieldEncode, pinBlockField, panFieldDecode,
-                pinBlockFormatCombo, pinBlockFormatDecodeCombo, pinBlockResultArea,
-                cvkAField, cvkBField, panFieldCvv, expiryDateField, serviceCodeField,
-                atcField, cvvTypeCombo, cvvResultArea,
-                encPinBlockFormatCombo, encPinField, encPanFieldEncode, encPinBlockKeyField,
-                encPinBlockFieldDecode, encPanFieldDecode, encPinBlockKeyFieldDecode, encResultArea,
-                genOffsetPvkField, genOffsetDecTableField, genOffsetPanField, genOffsetPinField,
-                genOffsetResultArea, genOffsetStartField, genOffsetLengthField, genOffsetPadField,
-                genPvvPvkField, genPvvPanField, genPvvPinField, genPvvKeyIndexField, genPvvResultArea,
-                derivePvvPvkField, derivePvvPanField, derivePvvTargetPvvField,
-                derivePvvKeyIndexField, derivePvvResultArea);
-        pinGeneration().configure();
-        initializeDukptControls(dukptBdkField, dukptKsnField, dukptResultArea,
-                dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo,
-                dukptAesPinBlockField, dukptAesPinOperationCombo,
-                dukptTdesOptionsBox, dukptAesOptionsBox, dukptAesPinBox);
-        if (ibm3624ConvTableField != null && ibm3624ConvTableField.getText().isBlank()) {
-            ibm3624ConvTableField.setText("0123456789012345");
+        iso8583().configure();
+        if (pinBlockFormatCombo != null && pinBlockFormatDecodeCombo != null) {
+            pinBlocks().setupPinBlockFormats();
         }
+        if (encPinBlockFormatCombo != null) {
+            encPinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames());
+            encPinBlockFormatCombo.getSelectionModel().selectFirst();
+        }
+        if (cvvTypeCombo != null) {
+            cvv().configure();
+        }
+        pinGeneration().configure();
+        dukpt().configure();
         if (paymentsResultPanel != null) {
             paymentsResultPanel.connectTo(() -> mainController);
             // An encoded PIN block is the input to decoding it, so those two chain. A CVV and a
@@ -537,113 +179,15 @@ public class PaymentsController {
         }
     }
 
-    private void initializeIso8583Controls() {
-        if (iso8583ProfileCombo != null) {
-            iso8583ProfileCombo.getItems().setAll("ISO 8583:1987", "ISO 8583:1993");
-            iso8583ProfileCombo.getSelectionModel().selectFirst();
-        }
-        if (iso8583BitmapEncodingCombo != null) {
-            iso8583BitmapEncodingCombo.getItems().setAll("Binary", "Hexadecimal ASCII");
-            iso8583BitmapEncodingCombo.getSelectionModel().selectFirst();
-        }
-        if (iso8583LengthEncodingCombo != null) {
-            iso8583LengthEncodingCombo.getItems().setAll("ASCII", "BCD");
-            iso8583LengthEncodingCombo.getSelectionModel().selectFirst();
-        }
-    }
+    @FXML
+    public void handleParseIso8583() { iso8583().handleParseIso8583(); }
 
     @FXML
-    public void handleParseIso8583() {
-        runIso8583Operation("parse");
-    }
+    public void handleBuildIso8583() { iso8583().handleBuildIso8583(); }
 
-    @FXML
-    public void handleBuildIso8583() {
-        runIso8583Operation("build");
-    }
-
-    private void runIso8583Operation(String operation) {
-        if (iso8583MessageArea == null || iso8583ReportArea == null) return;
-        String input = iso8583MessageArea.getText() == null ? "" : iso8583MessageArea.getText().trim();
-        if (input.isEmpty()) {
-            iso8583ReportArea.setText(t("module.payments.iso8583.emptyMessage"));
-            return;
-        }
-        try {
-            Iso8583Operations.Profile profile = iso8583Profile();
-            String report;
-            if ("parse".equals(operation)) {
-                Iso8583Operations.Message parsed = parseIso8583(input, profile);
-                report = parsed.report();
-            } else {
-                BuiltIso8583 built = buildIso8583(input, profile);
-                byte[] rebuilt = Iso8583Operations.build(built.mti(), built.values(), profile);
-                report = "Built message (" + profile.bitmapEncoding() + ", " + profile.lengthEncoding() + "):\n"
-                        + formatIsoOutput(rebuilt, profile);
-            }
-            iso8583ReportArea.setText(report);
-            updateStatus(t("module.payments.iso8583.completed", operation));
-        } catch (Exception e) {
-            LOG.debug("ISO 8583 {} failed", operation, e);
-            iso8583ReportArea.setText(t("module.payments.iso8583.error", e.getMessage()));
-        }
-    }
-
-    private Iso8583Operations.Profile iso8583Profile() {
-        Iso8583Operations.Version version = "ISO 8583:1993".equals(iso8583ProfileCombo.getValue())
-                ? Iso8583Operations.Version.ISO_1993 : Iso8583Operations.Version.ISO_1987;
-        Iso8583Operations.BitmapEncoding bitmap = "Hexadecimal ASCII".equals(iso8583BitmapEncodingCombo.getValue())
-                ? Iso8583Operations.BitmapEncoding.ASCII_HEX : Iso8583Operations.BitmapEncoding.BINARY;
-        Iso8583Operations.LengthEncoding length = "BCD".equals(iso8583LengthEncodingCombo.getValue())
-                ? Iso8583Operations.LengthEncoding.BCD : Iso8583Operations.LengthEncoding.ASCII;
-        return new Iso8583Operations.Profile(version, bitmap, length, false);
-    }
-
-    private static Iso8583Operations.Message parseIso8583(String input, Iso8583Operations.Profile profile) {
-        if (profile.bitmapEncoding() == Iso8583Operations.BitmapEncoding.BINARY) {
-            return Iso8583Operations.parseBinary(hexToBytes(input), profile);
-        }
-        return Iso8583Operations.parseAsciiHex(input.replaceAll("\\s+", ""), profile);
-    }
-
-    private record BuiltIso8583(String mti, Map<Integer, String> values) { }
-
-    /** Build input is MTI on the first line followed by one decimal field per line, e.g. 3=000000. */
-    private static BuiltIso8583 buildIso8583(String input, Iso8583Operations.Profile profile) {
-        String[] lines = input.lines().map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
-        if (lines.length > 1 && lines[0].matches("\\d{4}")) {
-            Map<Integer, String> fields = new LinkedHashMap<>();
-            for (int i = 1; i < lines.length; i++) {
-                int equals = lines[i].indexOf('=');
-                if (equals < 1) throw new IllegalArgumentException("build lines must use field=value");
-                int number = Integer.parseInt(lines[i].substring(0, equals).trim());
-                fields.put(number, lines[i].substring(equals + 1).trim());
-            }
-            return new BuiltIso8583(lines[0], fields);
-        }
-        Iso8583Operations.Message parsed = parseIso8583(input, profile);
-        Map<Integer, String> values = new LinkedHashMap<>();
-        parsed.fields().forEach((n, field) -> values.put(n, field.value()));
-        return new BuiltIso8583(parsed.mti().value(), values);
-    }
-
-    private static String formatIsoOutput(byte[] bytes, Iso8583Operations.Profile profile) {
-        if (profile.bitmapEncoding() == Iso8583Operations.BitmapEncoding.ASCII_HEX) {
-            return new String(bytes, java.nio.charset.StandardCharsets.US_ASCII);
-        }
-        StringBuilder out = new StringBuilder();
-        for (byte b : bytes) out.append(String.format(java.util.Locale.ROOT, "%02X", b & 0xff));
-        return out.toString();
-    }
-
-    private static byte[] hexToBytes(String value) {
-        String hex = value.replaceAll("\\s+", "");
-        if (!hex.matches("(?i)[0-9a-f]+") || (hex.length() & 1) != 0) {
-            throw new IllegalArgumentException("binary input must be an even-length hexadecimal message");
-        }
-        byte[] result = new byte[hex.length() / 2];
-        for (int i = 0; i < result.length; i++) result[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
-        return result;
+    /** Puts the block an encoding produced into the field that decodes it, when there is one. */
+    private static void chain(String block, TextField target) {
+        if (block != null) target.setText(block);
     }
 
     /**
@@ -652,10 +196,6 @@ public class PaymentsController {
      * <p>{@code chainTarget} is where "use as input" should put the value while this operation's
      * result is the one shown; a null one hides the action rather than leaving it inert.
      */
-    private static void chain(String block, TextField target) {
-        if (block != null) target.setText(block);
-    }
-
     private static void bindResult(ResultPanel panel, TextArea area, String operation,
                                    java.util.function.Consumer<String> chainTarget) {
         if (panel == null || area == null) return;
@@ -691,6 +231,55 @@ public class PaymentsController {
                     derivePvvTargetPvvField, derivePvvKeyIndexField, derivePvvResultArea), () -> mainController);
         }
         return pinGeneration;
+    }
+
+    private CvvCoordinator cvv;
+
+    private CvvCoordinator cvv() {
+        if (cvv == null) {
+            cvv = new CvvCoordinator(new CvvCoordinator.View(cvkAField, cvkBField, panFieldCvv, expiryDateField, serviceCodeField, atcField, cvvTypeCombo, cvvResultArea), () -> mainController, this::askCvvToVerify);
+        }
+        return cvv;
+    }
+
+    private DukptCoordinator dukpt;
+
+    private DukptCoordinator dukpt() {
+        if (dukpt == null) {
+            dukpt = new DukptCoordinator(new DukptCoordinator.View(dukptBdkField, dukptKsnField, dukptResultArea, dukptSchemeCombo, dukptTdesUsageCombo, dukptAesUsageCombo, dukptAesKeyTypeCombo, dukptAesPinBlockField, dukptAesPinOperationCombo, dukptTdesOptionsBox, dukptAesOptionsBox, dukptAesPinBox), () -> mainController);
+        }
+        return dukpt;
+    }
+
+    private HsmHostCommandCoordinator hsmHost;
+
+    private HsmHostCommandCoordinator hsmHost() {
+        if (hsmHost == null) {
+            hsmHost = new HsmHostCommandCoordinator(new HsmHostCommandCoordinator.View(hsmHostHeaderField, hsmHostCommandCodeField, hsmHostBodyField, hsmHostTrailerField, hsmHostHeaderLengthField, hsmHostTcpPrefixCheck, hsmHostCapturedFrameArea, hsmHostResultArea), () -> mainController);
+        }
+        return hsmHost;
+    }
+
+    private Iso8583Coordinator iso8583;
+
+    private Iso8583Coordinator iso8583() {
+        if (iso8583 == null) {
+            iso8583 = new Iso8583Coordinator(new Iso8583Coordinator.View(iso8583ProfileCombo, iso8583BitmapEncodingCombo, iso8583LengthEncodingCombo, iso8583MessageArea, iso8583ReportArea), () -> mainController);
+        }
+        return iso8583;
+    }
+
+    /** Package-private so tests can answer the CVV question without a modal dialog. */
+    java.util.function.Supplier<java.util.Optional<String>> cvvPrompt = () -> {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle(t("module.payments.dialog.verifyCvvTitle"));
+        dialog.setHeaderText(t("module.payments.dialog.verifyCvvHeader"));
+        dialog.setContentText(t("module.payments.dialog.cvv"));
+        return dialog.showAndWait();
+    };
+
+    private java.util.Optional<String> askCvvToVerify() {
+        return cvvPrompt.get();
     }
 
     public void init(StatusReporter reporter) {
@@ -732,368 +321,17 @@ public class PaymentsController {
         resetModule();
     }
 
-    public void initialize(StatusReporter mainController,
-            TextField pinField,
-            TextField panFieldEncode,
-            TextField pinBlockField,
-            TextField panFieldDecode,
-            ComboBox<String> pinBlockFormatCombo,
-            ComboBox<String> pinBlockFormatDecodeCombo,
-            TextArea pinBlockResultArea,
-            TextField cvkAField,
-            TextField cvkBField,
-            TextField panFieldCvv,
-            TextField expiryDateField,
-            TextField serviceCodeField,
-            TextField atcField,
-            ComboBox<String> cvvTypeCombo,
-            TextArea cvvResultArea,
-            // New Encrypted PIN Fields (Generic)
-            ComboBox<String> encPinBlockFormatCombo,
-            TextField encPinField,
-            TextField encPanFieldEncode,
-            TextField encPinBlockKeyField,
-            TextField encPinBlockFieldDecode,
-            TextField encPanFieldDecode,
-            TextField encPinBlockKeyFieldDecode,
-            TextArea encResultArea,
-            // New PIN Generator Fields
-            TextField genOffsetPvkField,
-            TextField genOffsetDecTableField,
-            TextField genOffsetPanField,
-            TextField genOffsetPinField,
-            TextArea genOffsetResultArea,
-            // Offset Config
-            TextField genOffsetStartField,
-            TextField genOffsetLengthField,
-            TextField genOffsetPadField,
-            TextField genPvvPvkField,
-            TextField genPvvPanField,
-            TextField genPvvPinField,
-            TextField genPvvKeyIndexField,
-            TextArea genPvvResultArea,
-            // Derive PIN from PVV Fields
-            TextField derivePvvPvkField,
-            TextField derivePvvPanField,
-            TextField derivePvvTargetPvvField,
-            TextField derivePvvKeyIndexField,
-            TextArea derivePvvResultArea) {
-
-        this.mainController = mainController;
-        this.pinField = pinField;
-        this.panFieldEncode = panFieldEncode;
-        this.pinBlockField = pinBlockField;
-        this.panFieldDecode = panFieldDecode;
-        this.pinBlockFormatCombo = pinBlockFormatCombo;
-        this.pinBlockFormatDecodeCombo = pinBlockFormatDecodeCombo;
-        this.pinBlockResultArea = pinBlockResultArea;
-        this.cvkAField = cvkAField;
-        this.cvkBField = cvkBField;
-        this.panFieldCvv = panFieldCvv;
-        this.expiryDateField = expiryDateField;
-        this.serviceCodeField = serviceCodeField;
-        this.atcField = atcField;
-        this.cvvTypeCombo = cvvTypeCombo;
-        this.cvvResultArea = cvvResultArea;
-
-        // Assign generic Encrypted PIN fields
-        this.encPinBlockFormatCombo = encPinBlockFormatCombo;
-        this.encPinField = encPinField;
-        this.encPanFieldEncode = encPanFieldEncode;
-        this.encPinBlockKeyField = encPinBlockKeyField;
-        this.encPinBlockFieldDecode = encPinBlockFieldDecode;
-        this.encPanFieldDecode = encPanFieldDecode;
-        this.encPinBlockKeyFieldDecode = encPinBlockKeyFieldDecode;
-        this.encResultArea = encResultArea;
-
-        // Assign PIN Generator fields
-        this.genOffsetPvkField = genOffsetPvkField;
-        this.genOffsetDecTableField = genOffsetDecTableField;
-        this.genOffsetPanField = genOffsetPanField;
-        this.genOffsetPinField = genOffsetPinField;
-        this.genOffsetResultArea = genOffsetResultArea;
-        this.genOffsetStartField = genOffsetStartField;
-        this.genOffsetLengthField = genOffsetLengthField;
-        this.genOffsetPadField = genOffsetPadField;
-        this.genPvvPvkField = genPvvPvkField;
-        this.genPvvPanField = genPvvPanField;
-        this.genPvvPinField = genPvvPinField;
-        this.genPvvKeyIndexField = genPvvKeyIndexField;
-        this.genPvvResultArea = genPvvResultArea;
-
-        // Derive PIN Fields
-        this.derivePvvPvkField = derivePvvPvkField;
-        this.derivePvvPanField = derivePvvPanField;
-        this.derivePvvTargetPvvField = derivePvvTargetPvvField;
-        this.derivePvvKeyIndexField = derivePvvKeyIndexField;
-        this.derivePvvResultArea = derivePvvResultArea;
-
-        // Only setup controls that are available (not null)
-        if (pinBlockFormatCombo != null && pinBlockFormatDecodeCombo != null) {
-            pinBlocks().setupPinBlockFormats();
-        }
-        if (cvvTypeCombo != null) {
-            setupCvvTypes();
-        }
-
-        // Initialize Encrypted PIN Block Format Combo if available
-        if (encPinBlockFormatCombo != null) {
-            encPinBlockFormatCombo.getItems().addAll(com.cryptocarver.crypto.PinBlockFormat.displayNames());
-            encPinBlockFormatCombo.getSelectionModel().selectFirst();
-        }
-    }
-
-    private void setupCvvTypes() {
-        if (cvvTypeCombo == null) {
-            return; // Safety check
-        }
-        cvvTypeCombo.getItems().addAll(
-                "CVV (Magnetic Stripe)",
-                "CVV2 (Card Printed)",
-                "iCVV (Chip)",
-                "dCVV (Dynamic)");
-        cvvTypeCombo.getSelectionModel().selectFirst();
-    }
-
     @FXML
     public void handleEncodePinBlock() { pinBlocks().handleEncodePinBlock(); }
 
     @FXML
     public void handleDecodePinBlock() { pinBlocks().handleDecodePinBlock(); }
 
-    // ==================== CVV HANDLERS ====================
+    @FXML
+    public void handleGenerateCvv() { cvv().handleGenerateCvv(); }
 
-    public void handleGenerateCvv() {
-        try {
-            String cvkA = cvkAField.getText().trim().replaceAll("\\s+", "");
-            String cvkB = cvkBField.getText().trim().replaceAll("\\s+", "");
-            String pan = panFieldCvv.getText().trim().replaceAll("\\s+", "");
-            String expiry = expiryDateField.getText().trim();
-            String serviceCode = serviceCodeField.getText().trim();
-            String atc = atcField.getText().trim();
-            String cvvType = cvvTypeCombo.getSelectionModel().getSelectedItem();
-
-            // Auto-populate Service Code if empty based on type
-            if (serviceCode.isEmpty()) {
-                if (cvvType != null) {
-                    if (cvvType.contains("CVV2")) {
-                        serviceCode = "000";
-                        serviceCodeField.setText("000");
-                    } else if (cvvType.contains("iCVV")) {
-                        serviceCode = "000"; // Display 000 as per user preference/expert tool
-                        serviceCodeField.setText("000");
-                    }
-                }
-            }
-
-            // Validate inputs
-            if (cvkA.isEmpty() || cvkB.isEmpty() || pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                cvvResultArea.setText(t("module.payments.error.cvvRequired"));
-                return;
-            }
-
-            if (!cvkA.matches("[0-9A-Fa-f]{16}")) {
-                cvvResultArea.setText(t("module.payments.error.cvkAInvalid"));
-                return;
-            }
-
-            if (!cvkB.matches("[0-9A-Fa-f]{16}")) {
-                cvvResultArea.setText(t("module.payments.error.cvkBInvalid"));
-                return;
-            }
-
-            if (!pan.matches("\\d{13,19}")) {
-                cvvResultArea.setText(t("module.payments.error.panInvalid"));
-                return;
-            }
-
-            if (!expiry.matches("\\d{4}")) {
-                cvvResultArea.setText(t("module.payments.error.expiryInvalid"));
-                return;
-            }
-
-            if (!serviceCode.matches("\\d{3}")) {
-                cvvResultArea.setText(t("module.payments.error.serviceCodeInvalid"));
-                return;
-            }
-
-            // Generate CVV
-            String cvv;
-            String serviceCodeForCalc = serviceCode;
-            if (cvvType != null && cvvType.contains("dCVV")) {
-                if (atc.isEmpty()) {
-                    cvvResultArea.setText(t("module.payments.error.atcRequired"));
-                    return;
-                }
-                if (!atc.matches("[0-9A-Fa-f]{1,4}")) {
-                    cvvResultArea.setText(t("module.payments.error.atcInvalid"));
-                    return;
-                }
-                // CVK A || CVK B is the issuer MDK; the card key is derived with PSN 00.
-                cvv = PaymentOperations.generateDCVV(cvkA, cvkB, pan, "00", expiry, serviceCode, atc);
-            } else { // Standard CVV, CVV2, iCVV
-                if (cvvType != null && cvvType.contains("iCVV")) {
-                    // iCVV always uses 999 for calculation, regardless of magnetic stripe service
-                    // code
-                    serviceCodeForCalc = "999";
-                } else if (cvvType != null && cvvType.contains("CVV2")) {
-                    // CVV2 always uses 000 for calculation
-                    serviceCodeForCalc = "000";
-                }
-                cvv = PaymentOperations.generateCVV(cvkA, cvkB, pan, expiry, serviceCodeForCalc);
-            }
-
-            // Display result
-            StringBuilder result = new StringBuilder();
-            result.append("═══ ").append(t("module.payments.result.cvvGenerationTitle")).append(" ═══\n\n");
-            result.append(t("module.payments.result.type")).append("         ").append(cvvType);
-            if (cvvType != null && cvvType.contains("dCVV")) {
-                result.append(" (Visa CVN 10)");
-            }
-            result.append("\n");
-
-            result.append(t("module.payments.result.cvkA")).append("        ").append(cvkA.toUpperCase()).append("\n");
-            result.append(t("module.payments.result.cvkB")).append("        ").append(cvkB.toUpperCase()).append("\n");
-            result.append(t("module.payments.result.pan")).append("          ").append(pan).append("\n");
-            result.append(t("module.payments.result.expiry")).append("       ").append(expiry).append("\n");
-
-            // Always show Service Code, but note usage
-            result.append(t("module.payments.result.serviceCode")).append(" ").append(serviceCode);
-            if (cvvType != null) {
-                if (cvvType.contains("CVV2") || cvvType.contains("iCVV")) {
-                    result.append(" ").append(t("module.payments.result.forcedCalculation", serviceCodeForCalc));
-                } else if (cvvType.contains("dCVV")) {
-                    result.append(" ").append(t("module.payments.result.notUsedDcvv"));
-                }
-            }
-            result.append("\n");
-
-            if (!atc.isEmpty() || (cvvType != null && cvvType.contains("dCVV"))) {
-                result.append(t("module.payments.result.atc")).append("          ").append(atc)
-                        .append(cvvType.contains("dCVV") ? " " + t("module.payments.result.usedDcvv") : " " + t("module.payments.result.notUsedStatic") + "\n");
-            }
-            result.append("\n");
-            result.append(t("module.payments.result.cvv")).append("          ").append(cvv).append("\n");
-
-            cvvResultArea.setText(result.toString());
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Type", cvvType);
-            details.put("PAN", PanMask.mask(pan));
-            details.put("Expiry", expiry);
-            details.put("Service Code", serviceCode);
-            mainController.publish(OperationResult.forOperation("Generate CVV")
-                    .output(cvv.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                    .status(t("module.payments.status.success")).build());
-
-        } catch (Exception e) {
-            cvvResultArea.setText(t("module.payments.error.operation", t("module.payments.result.cvvGenerationTitle"), e.getMessage()));
-            updateStatus(t("module.payments.error.operation", t("module.payments.result.cvvGenerationTitle"), e.getMessage()));
-        }
-    }
-
-    public void handleVerifyCvv() {
-        try {
-            String cvkA = cvkAField.getText().trim().replaceAll("\\s+", "");
-            String cvkB = cvkBField.getText().trim().replaceAll("\\s+", "");
-            String pan = panFieldCvv.getText().trim().replaceAll("\\s+", "");
-            String expiry = expiryDateField.getText().trim();
-            String serviceCode = serviceCodeField.getText().trim();
-
-            // Use the result area text as "input" CVV if it looks like a CVV,
-            // otherwise prompt or expect user to put it somewhere?
-            // For now, let's assume verification matches the Generated one re-calculated.
-            // Better: Add a dialog or assume the user compares it visually?
-            // "Verify" usually implies taking an input CVV and checking it.
-            // But we don't have a specific "Input CVV to Verify" field.
-            // We can add a TextInputDialog.
-
-            if (cvkA.isEmpty() || cvkB.isEmpty() || pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                cvvResultArea.setText(t("module.payments.error.cvvRequired"));
-                return;
-            }
-            if (!cvkA.matches("[0-9A-Fa-f]{16}")) {
-                cvvResultArea.setText(t("module.payments.error.cvkAInvalid"));
-                return;
-            }
-            if (!cvkB.matches("[0-9A-Fa-f]{16}")) {
-                cvvResultArea.setText(t("module.payments.error.cvkBInvalid"));
-                return;
-            }
-            if (!pan.matches("\\d{13,19}")) {
-                cvvResultArea.setText(t("module.payments.error.panInvalid"));
-                return;
-            }
-            if (!expiry.matches("\\d{4}")) {
-                cvvResultArea.setText(t("module.payments.error.expiryInvalid"));
-                return;
-            }
-            if (!serviceCode.matches("\\d{3}")) {
-                cvvResultArea.setText(t("module.payments.error.serviceCodeInvalid"));
-                return;
-            }
-
-            TextInputDialog dialog = new TextInputDialog();
-            dialog.setTitle(t("module.payments.dialog.verifyCvvTitle"));
-            dialog.setHeaderText(t("module.payments.dialog.verifyCvvHeader"));
-            dialog.setContentText(t("module.payments.dialog.cvv"));
-
-            java.util.Optional<String> outcome = dialog.showAndWait();
-            if (outcome.isPresent()) {
-                String inputCvv = outcome.get().trim();
-                String atc = atcField.getText().trim();
-
-                boolean isValid;
-                String calculated;
-
-                if (cvvTypeCombo.getSelectionModel().getSelectedItem() != null &&
-                        cvvTypeCombo.getSelectionModel().getSelectedItem().contains("dCVV")) {
-
-                    if (atc.isEmpty()) {
-                        cvvResultArea.setText(t("module.payments.error.atcRequired"));
-                        return;
-                    }
-                    if (!atc.matches("[0-9A-Fa-f]{1,4}")) {
-                        cvvResultArea.setText(t("module.payments.error.atcInvalid"));
-                        return;
-                    }
-                    isValid = PaymentOperations.verifyDCVV(cvkA, cvkB, pan, "00", expiry, serviceCode, atc, inputCvv);
-                    calculated = PaymentOperations.generateDCVV(cvkA, cvkB, pan, "00", expiry, serviceCode, atc);
-
-                } else {
-                    String serviceCodeForCalc = serviceCode;
-                    if (cvvTypeCombo.getSelectionModel().getSelectedItem() != null &&
-                            cvvTypeCombo.getSelectionModel().getSelectedItem().contains("iCVV")) {
-                        serviceCodeForCalc = "999";
-                    } else if (cvvTypeCombo.getSelectionModel().getSelectedItem() != null &&
-                            cvvTypeCombo.getSelectionModel().getSelectedItem().contains("CVV2")) {
-                        serviceCodeForCalc = "000";
-                    }
-
-                    isValid = PaymentOperations.verifyCVV(cvkA, cvkB, pan, expiry, serviceCodeForCalc, inputCvv);
-                    calculated = PaymentOperations.generateCVV(cvkA, cvkB, pan, expiry, serviceCodeForCalc);
-                }
-
-                StringBuilder result = new StringBuilder();
-                result.append("═══ ").append(t("module.payments.result.cvvVerificationTitle")).append(" ═══\n\n");
-                result.append(t("module.payments.result.inputCvv")).append("    ").append(inputCvv).append("\n");
-                result.append(t("module.payments.result.calculated")).append("   ").append(calculated).append("\n\n");
-                result.append(t("module.payments.result.result")).append("       ").append(t(isValid ? "module.payments.result.matchSymbol" : "module.payments.result.mismatchSymbol")).append("\n");
-
-                cvvResultArea.setText(result.toString());
-                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-                details.put("Type", cvvTypeCombo.getSelectionModel().getSelectedItem());
-                details.put("PAN", PanMask.mask(pan));
-                details.put("Result", isValid ? "VALID" : "INVALID");
-                mainController.publish(OperationResult.forOperation("Verify CVV")
-                        .output(calculated.getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
-                        .status(t(isValid ? "module.payments.status.cvvValid" : "module.payments.status.cvvInvalid")).build());
-            }
-
-        } catch (Exception e) {
-            cvvResultArea.setText(t("module.payments.error.operation", t("module.payments.result.cvvVerificationTitle"), e.getMessage()));
-            updateStatus(t("module.payments.error.operation", t("module.payments.result.cvvVerificationTitle"), e.getMessage()));
-        }
-    }
+    @FXML
+    public void handleVerifyCvv() { cvv().handleVerifyCvv(); }
 
     @FXML
     public void handleEncodeEncryptedPinBlock() { pinBlocks().handleEncodeEncryptedPinBlock(); }
@@ -1117,28 +355,9 @@ public class PaymentsController {
     public void handleDerivePinFromPvvUtility() { pinGeneration().handleDerivePinFromPvvUtility(); }
     public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) {
         if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.DUKPT_TDES) {
-            if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("TDES (legacy, 10-byte KSN)");
-            selectedTdesUsage = p.getParameters().getOrDefault("usage", "").toLowerCase().contains("mac")
-                    ? DukptKsn.TdesKeyUsage.MAC_REQUEST : DukptKsn.TdesKeyUsage.PIN_ENCRYPTION;
-            if (dukptTdesUsageCombo != null) dukptTdesUsageCombo.setValue(selectedTdesUsage.label());
-            loadedDukptProfileName = p.getName();
-            loadedDukptExpectedWorkingKey = p.getOutputs().get("workingKey");
-            if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
-            if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
-            updateStatus(t("module.payments.status.profileLoaded", "DUKPT TDES - " + p.getName()));
+            dukpt().loadTdesProfile(p);
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.DUKPT_AES) {
-            if (dukptSchemeCombo != null) dukptSchemeCombo.setValue("AES (X9.24-3, 12-byte KSN)");
-            loadedDukptProfileName = p.getName();
-            loadedDukptExpectedWorkingKey = p.getOutputs().get("workingKey");
-            if (dukptAesUsageCombo != null && p.getParameters().containsKey("usage")) {
-                String usageStr = p.getParameters().get("usage");
-                for (String item : dukptAesUsageCombo.getItems()) {
-                    if (item.toLowerCase().contains(usageStr.toLowerCase())) { dukptAesUsageCombo.setValue(item); break; }
-                }
-            }
-            if (dukptBdkField != null && p.getInputs().containsKey("bdk")) dukptBdkField.setText(p.getInputs().get("bdk"));
-            if (dukptKsnField != null && p.getInputs().containsKey("ksn")) dukptKsnField.setText(p.getInputs().get("ksn"));
-            updateStatus(t("module.payments.status.profileLoaded", "DUKPT AES - " + p.getName()));
+            dukpt().loadAesProfile(p);
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.PIN) {
             if (p.getParameters().containsKey("format")) {
                 String formatStr = p.getParameters().get("format");
