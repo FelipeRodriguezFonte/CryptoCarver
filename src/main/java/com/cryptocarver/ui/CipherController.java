@@ -1043,7 +1043,8 @@ public class CipherController {
                 ivField.setManaged(true);
                 ivField.setDisable(false);
                 if (isStreamCipher) {
-                    ivField.setPromptText("Hex Nonce (8 bytes recommended for " + algo + ")");
+                    ivField.setPromptText("Hex Nonce (" + SymmetricCipher.getRecommendedIvLength(algo, mode)
+                            + " bytes recommended for " + algo + ")");
                 } else {
                     ivField.setPromptText("Hex IV (required for " + mode + " mode)...");
                 }

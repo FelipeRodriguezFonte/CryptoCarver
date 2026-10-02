@@ -155,7 +155,40 @@ class SymmetricCipherCharacterizationUITest {
                 transcript.add(panel.snapshot(algorithm + " decrypt"));
             }
         });
-        assertEquals("dd221183be27bfda2aa4c6d78d5de8e08f1a43562e196c156d5c7124dda41085", digest(transcript), String.join("\n", transcript));
+        assertEquals("7435b2bdf9c90a437e25b7159a0cab70646230620e0a0969af1213ee730c7e63", digest(transcript), String.join("\n", transcript));
+    }
+
+    @Test
+    void salsa20UsesItsOwnEightByteNonceAndTheNoncePromptMatchesEachCipher() throws Exception {
+        withPanel(panel -> {
+            panel.select("Salsa20", null, null);
+            assertEquals("Hex Nonce (8 bytes recommended for Salsa20)", panel.field("ivField").getPromptText());
+            panel.material(KEY_256, NONCE_8, "", "");
+            panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
+            panel.encrypt();
+            try {
+                byte[] expected = com.cryptocarver.crypto.SymmetricCipher.encryptSalsa20(
+                        MESSAGE.getBytes(StandardCharsets.UTF_8), DataConverter.hexToBytes(KEY_256),
+                        DataConverter.hexToBytes(NONCE_8));
+                assertEquals(DataConverter.bytesToHex(expected), panel.output().getText());
+            } catch (Exception error) {
+                throw new AssertionError(error);
+            }
+
+            panel.select("ChaCha20", null, null);
+            assertEquals("Hex Nonce (12 bytes recommended for ChaCha20)", panel.field("ivField").getPromptText());
+        });
+    }
+
+    @Test
+    void decryptingWithoutAKeySaysTheKeyIsMissing() throws Exception {
+        withPanel(panel -> {
+            panel.select("AES-128", "CBC", "PKCS5Padding");
+            panel.material("", IV_16, "", "");
+            panel.inputs("Hexadecimal", "00".repeat(16), "Hexadecimal");
+            panel.decrypt();
+            assertEquals("error Validation Error: Please enter symmetric key in hexadecimal", panel.reporter().drain());
+        });
     }
 
     @Test
@@ -185,7 +218,7 @@ class SymmetricCipherCharacterizationUITest {
             panel.encrypt();
             transcript.add(panel.snapshot("bad hex input"));
         });
-        assertEquals("d9272450a4b1730f48633061541236a69f7a5d0697df8b5be59cac9f1a2a4991", digest(transcript), String.join("\n", transcript));
+        assertEquals("c2a46e1a96bfa9b997d2bd1201e7a5aae119a16207bbf19b5ee9b1ef71fdd836", digest(transcript), String.join("\n", transcript));
     }
 
     @Test

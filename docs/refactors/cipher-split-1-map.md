@@ -34,3 +34,24 @@ real con ficheros de prueba (CBC en bruto, CBC en Base64, contenedor `CFXBI1` y 
 tag separado) y fija con SHA-256 el texto del resultado, los tres ficheros generados,
 el inspector, los mensajes de estado y los errores, tras normalizar rutas y la marca
 de tiempo de la carpeta. También cubre la falta de clave y de fichero de tag.
+
+## Fase 3: cifrado simétrico y plantillas
+
+- `SymmetricCipherCoordinator`: cifrar/descifrar del área compartida (bloque con modo y
+  relleno, ChaCha20, Salsa20, GCM, ChaCha20-Poly1305 y XChaCha20-Poly1305), resultado AEAD
+  con texto cifrado y tag por separado, paquete de Shelf del último resultado AEAD y aviso
+  de nonce repetido.
+- `CipherTemplateCoordinator`: plantillas integradas, personales y «Reset Defaults».
+- Siguen en el controlador la visibilidad de campos por modo, las insignias, la selección de
+  claves de Key Lab y FPE.
+
+`SymmetricCipherCharacterizationUITest` fijó el comportamiento antes de mover código y
+destapó tres fallos, corregidos después:
+
+- Salsa20 no funcionaba: pasaba por el cifrado genérico con modo «None» y exigía un IV de
+  16 bytes. Ahora usa su motor con nonce de 8 bytes. Con claves de Key Lab da un error claro,
+  porque el laboratorio no ofrece Salsa20.
+- El texto de ayuda del nonce decía 8 bytes para ChaCha20; ahora muestra la longitud
+  recomendada de cada algoritmo (12 para ChaCha20).
+- Descifrar sin clave mostraba «Invalid Hexadecimal Format»; ahora dice que falta la clave,
+  igual que al cifrar.

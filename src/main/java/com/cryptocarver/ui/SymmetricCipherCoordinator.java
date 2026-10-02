@@ -247,8 +247,16 @@ final class SymmetricCipherCoordinator {
             String padding = paddingCombo.getValue();
 
             // Get key
-            String hsmKeyId = getHsmKeyId();
-            byte[] manualKey = hsmKeyId == null ? getManualSymmetricKey() : null;
+            // Checked apart so a missing key reads as such, not as malformed input.
+            String hsmKeyId;
+            byte[] manualKey;
+            try {
+                hsmKeyId = getHsmKeyId();
+                manualKey = hsmKeyId == null ? getManualSymmetricKey() : null;
+            } catch (IllegalArgumentException e) {
+                reporter().showError("Validation Error", e.getMessage());
+                return;
+            }
 
             // Handle stream ciphers separately
             if (algorithm.equals("Salsa20")) {
@@ -573,16 +581,18 @@ final class SymmetricCipherCoordinator {
         }
     }
 
+    /** Key Lab keys cannot run Salsa20: the lab only offers the generic and ChaCha20 operations. */
+    private static byte[] salsa20Key(String hsmKeyId, byte[] manualKey) {
+        if (hsmKeyId != null) {
+            throw new IllegalArgumentException("Salsa20 is not available for Key Lab keys; use a manual key");
+        }
+        return manualKey;
+    }
+
     private void handleSalsa20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
-            String algorithm = "Salsa20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] ciphertext;
-            if (hsmKeyId != null) {
-                ciphertext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptSymmetric(hsmKeyId, plaintext, algorithm, "None", "NoPadding", iv);
-            } else {
-                ciphertext = SymmetricCipher.encrypt(plaintext, manualKey, algorithm, "None", "NoPadding", iv);
-            }
+            byte[] ciphertext = SymmetricCipher.encryptSalsa20(plaintext, salsa20Key(hsmKeyId, manualKey), iv);
             setOutputData(ciphertext);
             reporter().updateStatus("Encrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
@@ -625,14 +635,8 @@ final class SymmetricCipherCoordinator {
 
     private void handleSalsa20Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
         try {
-            String algorithm = "Salsa20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] plaintext;
-            if (hsmKeyId != null) {
-                plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, ciphertext, algorithm, "None", "NoPadding", iv);
-            } else {
-                plaintext = SymmetricCipher.decrypt(ciphertext, manualKey, algorithm, "None", "NoPadding", iv);
-            }
+            byte[] plaintext = SymmetricCipher.decryptSalsa20(ciphertext, salsa20Key(hsmKeyId, manualKey), iv);
             setOutputData(plaintext);
             reporter().updateStatus("Decrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
