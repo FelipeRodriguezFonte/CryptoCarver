@@ -118,7 +118,7 @@ No comparte controles con los otros dos bloques. Los campos permanecen en la fac
 
 ## Dependencias y contratos
 
-- Reportero mutable `mainController: StatusReporter`: estado, `showError(UserFacingError)` y `publish(OperationResult)`. Se resolverá mediante proveedor, incluso después de `init`. `connectShellServices` en ModernMainController es el cableado real; no hay clase ShellServices independiente.
+- Reportero mutable `mainController: StatusReporter`: estado, `showError(UserFacingError)` y `publish(OperationResult)`. Se resolverá mediante proveedor, incluso después de `init`. `loadSymmetricKeysContent` en ModernMainController llama a `keysController.init(this, callback)` tras materializar el módulo; `connectShellServices` conecta otros módulos. No hay clase ShellServices independiente.
 - `updateStatus` y `t` son auxiliares globales compartidos: el primero respeta el fallback de consola y el segundo consulta I18nService al ejecutar. Validación propia de cada bloque redacciona con InlineErrorPresenter; no abre diálogos modales. TR-31 usa fallback TextArea visible/managed; RSA/TR-34 Consumer de texto.
 - No usa HsmProvider, Key Lab ni OperationExecutor: estas tres operaciones son síncronas. Las llamadas a crypto se preservan. No hay claves/resultados persistidos en campos no FXML de estos bloques.
 - Inspector e histórico se alimentan a través de publish. Shelf y sesiones guardadas consumen el snapshot de la shell; no necesitan referencias de módulo. Los resultados importados RSA/TR-34 se clasifican SECRET; TR-31 import publica sólo longitud y parámetros, no bytes recuperados. Se caracteriza esa asimetría sin corregirla en una extracción.
@@ -126,7 +126,7 @@ No comparte controles con los otros dos bloques. Los campos permanecen en la fac
 - ModuleI18n se mantiene en la fachada; etiquetas de FXML y texto de errores se actualizan por I18nService. setupHexValidation compartido permanece en KeysController.
 - TR-31 tiene initializeTR31 público (también reconfigura controles externos), fillTR31KeyBlockInput usado desde fillClipboardTarget y loadProfile para perfiles. Mantener delegación y permitir reinicializar la vista.
 - parseCertificatePem sólo se usa en TR-34; tr34KcvIfEligible también. rsaKexProfileFromCombo sólo se usa en RSA. Estos auxiliares y formatos/envelopes pasan a lógica sin JavaFX.
-- ModernMainController accede mediante getKeysController, rutas UiNavigationRegistry y fachada. Process Designer usa ejecutores de operaciones/crypto; no llama estos handlers. La paleta consume rutas, no campos ni coordinadores. Tests actuales Ux21LiveUITest, Ux22HeadlessTest, UiStateSnapshotTest y auditorías dependen de contratos/campos. El test headless de feedback deberá apuntar al propietario extraído, manteniendo sus aserciones.
+- ModernMainController accede mediante getKeysController, rutas UiNavigationRegistry y fachada. Process Designer usa `model/process/handlers/KeyOperationsNodeHandler` y llama directamente a TR31Operations; no llama estos handlers. `LaboratoryMenuCoordinator` carga perfiles por `getKeysController().loadProfile`. La paleta consume rutas, no campos ni coordinadores. Tests actuales Ux21LiveUITest, Ux22HeadlessTest, UiStateSnapshotTest y auditorías dependen de contratos/campos. El test headless de feedback deberá apuntar al propietario extraído, manteniendo sus aserciones.
 
 ## Separación prevista
 
@@ -147,3 +147,7 @@ Coordinadores: vista record de controles, proveedor de StatusReporter, pintado, 
 | Atalla | 6760–6907 | 15 |
 
 Los campos asimétricos, CMS, certificados y Key Lab se declaran mayoritariamente antes de initialize (48–454), incluso cuando su lógica está al final. Hay campos no @FXML recibidos por initializeCMS/initializeCertificateChain y controles de módulos incluidos: requieren inventario propio antes de fase 2. No extraer por rango sin atender sus contratos públicos.
+
+## Comprobación del inventario tras la extracción
+
+Se conservan los **287 campos privados @FXML**, con los mismos nombres, tipos y orden. El número 384 del contexto no es el recuento de campos: el original contiene 385 anotaciones @FXML contando handlers y la anotación cualificada. Los tres bloques usan 39 campos (14 TR-31, 12 RSA, 13 TR-34), todos conservados en la fachada. El inventario de declaraciones de la tabla suma 248 campos para las áreas restantes.
