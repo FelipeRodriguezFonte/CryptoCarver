@@ -8,15 +8,12 @@ import com.cryptocarver.crypto.UUIDGenerator;
 import com.cryptocarver.crypto.ByteStatistics;
 import com.cryptocarver.crypto.BitShifter;
 import com.cryptocarver.crypto.HexInspector;
-import com.cryptocarver.crypto.StreamingFileTools;
 import com.cryptocarver.crypto.CompressionCodec;
 import com.cryptocarver.crypto.CharsetInspector;
 import com.cryptocarver.crypto.TraceHexExtractor;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.util.DataConverter;
-import com.cryptocarver.utils.FileConverter;
-import com.cryptocarver.utils.OperationHistory;
 import com.cryptocarver.codec.ByteFormat;
 import com.cryptocarver.codec.CodecRegistry;
 import com.cryptocarver.codec.CodecException;
@@ -44,8 +41,6 @@ import java.util.Map;
  * @author Felipe
  */
 public class GenericController {
-    /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
-    private java.util.function.Consumer<java.util.Locale> localeChangeListener;
 
     private static final Logger LOG = LoggerFactory.getLogger(GenericController.class);
 
@@ -179,12 +174,6 @@ public class GenericController {
     @FXML private ComboBox<String> manualInputFormatCombo;
     @FXML private ComboBox<String> manualOutputFormatCombo;
 
-    // Batch State
-    private javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> activeBatchTask;
-    private com.cryptocarver.model.batch.BatchRunner.Report lastBatchReport;
-    private BatchRunnerExecutor batchRunnerExecutor = (rows, operation, cancellationRequested, progressListener) ->
-            com.cryptocarver.model.batch.BatchRunner.run(rows, operation, cancellationRequested, progressListener);
-
 
     /**
      * Convert hex string to byte array (replacement for
@@ -236,348 +225,70 @@ public class GenericController {
 
     /** Test seam for controlling batch execution without changing production timing. */
     void setBatchRunnerExecutorForTesting(BatchRunnerExecutor executor) {
-        this.batchRunnerExecutor = java.util.Objects.requireNonNull(executor, "Batch runner executor is required");
+        batchRunner().setExecutor(executor);
     }
 
-        @FXML public void handleBrowseInputFile() {
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Select Input File");
-        java.io.File file = fileChooser.showOpenDialog(null);
-        if (file != null && fileInputPathField != null) fileInputPathField.setText(file.getAbsolutePath());
+    /** The running batch task, or null; read by tests. */
+    javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> activeBatchTask() {
+        return batchRunner().activeTask();
     }
 
-        @FXML public void handleBrowseOutputFile() {
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Select Output File");
-        java.io.File file = fileChooser.showSaveDialog(null);
-        if (file != null && fileOutputPathField != null) fileOutputPathField.setText(file.getAbsolutePath());
+    /** The last completed batch report, or null; read by tests. */
+    com.cryptocarver.model.batch.BatchRunner.Report lastBatchReport() {
+        return batchRunner().lastReport();
     }
 
-        @FXML public void handleBrowseCompareFile() {
-        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-        fileChooser.setTitle("Select File to Compare");
-        java.io.File file = fileChooser.showOpenDialog(null);
-        if (file != null && fileComparePathField != null) fileComparePathField.setText(file.getAbsolutePath());
+    private BatchRunnerCoordinator batchRunner;
+    private FileConversionCoordinator fileConversion;
+
+    private BatchRunnerCoordinator batchRunner() {
+        if (batchRunner == null) {
+            batchRunner = new BatchRunnerCoordinator(new BatchRunnerCoordinator.View(batchInputFormatCombo,
+                    batchOperationCombo, batchColumnField, batchAlgorithmCombo, batchRecordEncodingCombo, batchKeyField,
+                    batchIvNonceField, batchAadField, batchCharsetCombo, batchStopOnErrorCheck, batchCompactModeCheck,
+                    batchOutputColumnField, batchCryptoConfigBox, batchInputArea, batchExportFormatCombo,
+                    batchProgressBar, batchStatusLabel, batchResultArea),
+                    () -> statusReporter, this::ownerWindow);
+        }
+        return batchRunner;
     }
 
-    @FXML public void handleConvertFile() {
-        if (fileInputPathField != null && fileOutputPathField != null && fileInputFormatCombo != null && fileOutputFormatCombo != null) {
-            String inputPath = fileInputPathField.getText().trim();
-            String outputPath = fileOutputPathField.getText().trim();
-            if (inputPath.isEmpty() || outputPath.isEmpty()) return;
-
-            boolean isTestMode = "true".equals(System.getProperty("test.mode"));
-            if (!isTestMode && java.nio.file.Files.exists(java.nio.file.Paths.get(outputPath))) {
-                javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
-                confirm.setTitle("Overwrite existing file?");
-                confirm.setHeaderText("The selected output file already exists.");
-                confirm.setContentText(outputPath);
-                if (confirm.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL) != javafx.scene.control.ButtonType.OK) {
-                    if (statusReporter != null) statusReporter.updateStatus("File conversion cancelled");
-                    return;
-                }
-            }
-
-            handleFileConvert();
-
-            if (statusReporter != null) {
-                java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-                details.put("Input File", inputPath);
-                details.put("Output File", outputPath);
-                details.put("Input Format", fileInputFormatCombo.getValue());
-                details.put("Output Format", fileOutputFormatCombo.getValue());
-                statusReporter.publish(OperationResult.forOperation("File Conversion").details(details).build());
-            }
+    private FileConversionCoordinator fileConversion() {
+        if (fileConversion == null) {
+            fileConversion = new FileConversionCoordinator(new FileConversionCoordinator.View(fileInputPathField,
+                    fileOutputPathField, fileComparePathField, fileInputFormatCombo, fileOutputFormatCombo,
+                    fileEncodingCombo, fileResultArea), () -> statusReporter);
         }
+        return fileConversion;
     }
 
-    @FXML public void handleCompareFiles() { compareFiles(); }
-    @FXML public void handleHashFileStreaming() { hashFileStreaming(); }
-    @FXML public void handlePreviewFileStreaming() { previewFileStreaming(); }
-
-    private boolean isCsvBatchFormat(String format) { return "CSV".equals(format); }
-
-    @FXML public void handleResetBatch() {
-        if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            activeBatchTask.cancel();
-        }
-        if (batchInputArea != null) batchInputArea.clear();
-        if (batchResultArea != null) batchResultArea.clear();
-        if (batchKeyField != null) batchKeyField.clear();
-        if (batchIvNonceField != null) batchIvNonceField.clear();
-        if (batchAadField != null) batchAadField.clear();
-        if (batchProgressBar != null) {
-            batchProgressBar.progressProperty().unbind();
-            batchProgressBar.setProgress(0);
-        }
-        lastBatchReport = null;
-        activeBatchTask = null;
-        if (batchStatusLabel != null) batchStatusLabel.setText(t("module.batch.reset"));
+    private javafx.stage.Window ownerWindow() {
+        return genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow();
     }
 
-    @FXML public void handleBrowseBatchInput() {
-        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
-        chooser.setTitle("Load Batch Input");
-        chooser.getExtensionFilters().addAll(
-                new javafx.stage.FileChooser.ExtensionFilter("Batch data", "*.csv", "*.jsonl", "*.ndjson", "*.txt"),
-                new javafx.stage.FileChooser.ExtensionFilter("All files", "*.*"));
-        java.io.File file = chooser.showOpenDialog(genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow());
-        if (file == null) return;
-        try {
-            batchInputArea.setText(java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8));
-            String lower = file.getName().toLowerCase(java.util.Locale.ROOT);
-            batchInputFormatCombo.setValue(lower.endsWith(".csv") ? "CSV" : "JSON Lines (.jsonl)");
-            batchStatusLabel.setText(t("module.batch.loaded", file.getName()));
-        } catch (java.io.IOException e) {
-            if (statusReporter != null) statusReporter.showError(t("module.batch.inputErrorTitle"), "Unable to read file: " + e.getMessage());
-        }
-    }
+    @FXML public void handleBrowseInputFile() { fileConversion().handleBrowseInputFile(); }
 
+    @FXML public void handleBrowseOutputFile() { fileConversion().handleBrowseOutputFile(); }
 
+    @FXML public void handleBrowseCompareFile() { fileConversion().handleBrowseCompareFile(); }
 
-    private String renderBatchReport(com.cryptocarver.model.batch.BatchRunner.Report report) {
-        StringBuilder text = new StringBuilder("Rows processed: ").append(report.results().size()).append("\nSucceeded: ")
-                .append(report.succeeded()).append("\nFailed: ").append(report.failed()).append("\n\n");
-        int displayed = Math.min(50, report.results().size());
-        for (int i = 0; i < displayed; i++) {
-            com.cryptocarver.model.batch.BatchRunner.RowResult row = report.results().get(i);
-            String outputStr = "";
-            if (row.succeeded() && row.output() != null && !row.output().isEmpty()) {
-                outputStr = row.output().values().iterator().next(); // First mapped value
-            }
-            text.append("#").append(row.rowNumber()).append(" ").append(row.succeeded() ? "OK  " : "ERR ")
-                    .append(row.succeeded() ? outputStr : row.error()).append('\n');
-        }
-        if (report.results().size() > displayed) text.append("… ").append(report.results().size() - displayed).append(" additional rows; export the report for all results.\n");
-        return text.toString();
-    }
+    @FXML public void handleConvertFile() { fileConversion().handleConvertFile(); }
 
-    @FXML public void handleRunBatch() {
-        if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            if (statusReporter != null) statusReporter.showError(t("module.batch.errorTitle"), t("module.batch.alreadyRunning"));
-            return;
-        }
-        final java.util.List<java.util.Map<String, String>> rows;
-        final String srcCol = batchColumnField.getText().trim();
-        final String outCol = batchOutputColumnField.getText().trim();
-        if (srcCol.isEmpty() || outCol.isEmpty()) {
-            if (statusReporter != null) statusReporter.showError(t("module.batch.errorTitle"), t("module.batch.columnsRequired"));
-            return;
-        }
-        try {
-            rows = isCsvBatchFormat(batchInputFormatCombo.getValue())
-                    ? com.cryptocarver.model.batch.BatchInputCodec.parseCsv(batchInputArea.getText())
-                    : com.cryptocarver.model.batch.BatchInputCodec.parseJsonLines(batchInputArea.getText());
-            if (rows.isEmpty()) throw new IllegalArgumentException("No batch rows found");
-            if (rows.stream().anyMatch(row -> !row.containsKey(srcCol))) throw new IllegalArgumentException("Every row must contain the field: " + srcCol);
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError(t("module.batch.inputErrorTitle"), e.getMessage());
-            return;
-        }
-        final String operation = batchOperationCombo.getValue();
-        final boolean isCrypto = "Encrypt Record".equals(operation) || "Decrypt Record".equals(operation);
-        final boolean isEncrypt = "Encrypt Record".equals(operation);
-        final boolean stopOnError = batchStopOnErrorCheck != null && batchStopOnErrorCheck.isSelected();
-        final byte[] key;
-        final String alg;
-        final byte[] iv;
-        final byte[] aad;
-        final com.cryptocarver.crypto.LineFileCipher.Encoding enc;
-        final java.nio.charset.Charset cs;
-        final boolean compact;
+    @FXML public void handleCompareFiles() { fileConversion().compareFiles(); }
+    @FXML public void handleHashFileStreaming() { fileConversion().hashFileStreaming(); }
+    @FXML public void handlePreviewFileStreaming() { fileConversion().previewFileStreaming(); }
 
-        if (isCrypto) {
-            try {
-                alg = batchAlgorithmCombo.getValue();
-                key = java.util.HexFormat.of().parseHex(batchKeyField.getText().trim());
-                String ivStr = batchIvNonceField.getText().trim();
-                iv = ivStr.isEmpty() ? null : java.util.HexFormat.of().parseHex(ivStr);
-                String aadStr = batchAadField.getText().trim();
-                aad = aadStr.isEmpty() ? null : java.util.HexFormat.of().parseHex(aadStr);
-                enc = "Hexadecimal".equals(batchRecordEncodingCombo.getValue())
-                        ? com.cryptocarver.crypto.LineFileCipher.Encoding.HEXADECIMAL
-                        : com.cryptocarver.crypto.LineFileCipher.Encoding.BASE64URL;
+    @FXML public void handleResetBatch() { batchRunner().handleResetBatch(); }
 
-                String csName = batchCharsetCombo.getValue();
-                String mapped = com.cryptocarver.crypto.EBCDICConverter.supportedCodePages().get(csName);
-                cs = java.nio.charset.Charset.forName(mapped != null ? mapped : csName);
+    @FXML public void handleBrowseBatchInput() { batchRunner().handleBrowseBatchInput(); }
 
-                compact = batchCompactModeCheck.isSelected();
-                com.cryptocarver.crypto.LineRecordCipher.validateAlgorithmAndKey(alg, key);
-                com.cryptocarver.crypto.LineRecordCipher.validateIvAndAad(alg, iv, aad);
+    @FXML public void handleRunBatch() { batchRunner().handleRunBatch(); }
 
-                if (isEncrypt && "AES-256-CBC".equals(alg) && iv != null
-                        && LabPrompt.CBC_IV_REUSE.shouldShow()) {
-                    javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
-                    confirm.setTitle("CBC IV Reuse");
-                    confirm.setHeaderText("Security Warning: Static IV in CBC mode");
-                    confirm.setContentText("Reusing the same IV across multiple encryption records leaks structural information if identical plaintexts share the same IV.\n\nDo you want to proceed?");
-                    java.util.Optional<javafx.scene.control.ButtonType> result = confirm.showAndWait();
-                    if (result.isEmpty() || result.get() != javafx.scene.control.ButtonType.OK) {
-                        return;
-                    }
-                }
-            } catch (Exception e) {
-                if (statusReporter != null) statusReporter.showError(t("module.batch.errorTitle"), "Invalid crypto parameters: " + e.getMessage());
-                return;
-            }
-        } else {
-            alg = null; key = null; iv = null; aad = null; enc = null; cs = null; compact = false;
-        }
+    @FXML public void handleDryRunBatch() { batchRunner().handleDryRunBatch(); }
 
-        final java.util.concurrent.atomic.AtomicBoolean errorOccurred = new java.util.concurrent.atomic.AtomicBoolean(false);
-        final com.cryptocarver.model.batch.BatchRunner.RowOperation rowOperation;
-        if (isCrypto) {
-            rowOperation = (rowNum, row) -> {
-                String val = row.get(srcCol);
-                if (val == null) throw new IllegalArgumentException("Missing column: " + srcCol);
-                try {
-                    String res = isEncrypt ? com.cryptocarver.crypto.LineRecordCipher.encryptRecord(val, key, alg, aad, enc, iv, cs, compact)
-                                           : com.cryptocarver.crypto.LineRecordCipher.decryptRecord(val, key, alg, aad, iv, enc, cs, rowNum);
-                    return java.util.Map.of(outCol, res);
-                } catch (Exception e) {
-                    if (stopOnError) errorOccurred.set(true);
-                    throw e;
-                }
-            };
-        } else {
-            rowOperation = (rowNum, row) -> {
-                try {
-                    return com.cryptocarver.model.batch.BatchOperationCatalog.execute(operation, row, srcCol, outCol);
-                } catch (Exception e) {
-                    if (stopOnError) errorOccurred.set(true);
-                    throw e;
-                }
-            };
-        }
+    @FXML public void handleCancelBatch() { batchRunner().handleCancelBatch(); }
 
-        lastBatchReport = null;
-        javafx.concurrent.Task<com.cryptocarver.model.batch.BatchRunner.Report> task = new javafx.concurrent.Task<>() {
-            @Override protected com.cryptocarver.model.batch.BatchRunner.Report call() {
-                try {
-                    return batchRunnerExecutor.run(rows, rowOperation, () -> isCancelled() || errorOccurred.get(),
-                            (completed, total) -> updateProgress(completed, total));
-                } finally {
-                    if (key != null) java.util.Arrays.fill(key, (byte) 0);
-                    javafx.application.Platform.runLater(() -> batchKeyField.clear());
-                }
-            }
-        };
-        activeBatchTask = task;
-        batchProgressBar.progressProperty().unbind(); batchProgressBar.progressProperty().bind(task.progressProperty());
-        batchStatusLabel.setText(t("module.batch.processing", rows.size())); batchResultArea.clear();
-        task.setOnSucceeded(event -> {
-            batchProgressBar.progressProperty().unbind(); batchProgressBar.setProgress(1);
-            if (task.getValue() != null && task.getValue().cancelled()) {
-                lastBatchReport = null;
-                batchStatusLabel.setText(t("module.batch.cancelled"));
-                activeBatchTask = null;
-                return;
-            }
-            lastBatchReport = task.getValue();
-            batchResultArea.setText(renderBatchReport(lastBatchReport));
-            batchStatusLabel.setText(t("module.batch.completed", lastBatchReport.succeeded(), lastBatchReport.failed()));
-            if (statusReporter != null) {
-                java.util.Map<String, String> batchDetails = new java.util.LinkedHashMap<>();
-                batchDetails.put("Operation", operation);
-                batchDetails.put("Rows", String.valueOf(lastBatchReport.results().size()));
-                batchDetails.put("Succeeded", String.valueOf(lastBatchReport.succeeded()));
-                batchDetails.put("Failed", String.valueOf(lastBatchReport.failed()));
-                statusReporter.publish(OperationResult.forOperation("Batch Runner").details(batchDetails).build());
-            }
-            activeBatchTask = null;
-        });
-        task.setOnCancelled(event -> {
-            batchProgressBar.progressProperty().unbind();
-            lastBatchReport = null;
-            batchResultArea.clear();
-            batchStatusLabel.setText(t("module.batch.cancelled"));
-            activeBatchTask = null;
-        });
-        task.setOnFailed(event -> {
-            batchProgressBar.progressProperty().unbind(); Throwable error = task.getException();
-            batchStatusLabel.setText(t("module.batch.failed", error == null ? "unknown error" : error.getMessage())); activeBatchTask = null;
-        });
-        Thread worker = new Thread(task, "cryptocarver-batch-runner"); worker.setDaemon(true); worker.start();
-    }
-
-    @FXML public void handleDryRunBatch() {
-        final java.util.List<java.util.Map<String, String>> rows;
-        final String srcCol = batchColumnField != null ? batchColumnField.getText().trim() : "input";
-        final String outCol = batchOutputColumnField != null ? batchOutputColumnField.getText().trim() : "result";
-        String rawText = batchInputArea != null ? batchInputArea.getText() : "";
-        try {
-            rows = isCsvBatchFormat(batchInputFormatCombo != null ? batchInputFormatCombo.getValue() : "CSV")
-                    ? com.cryptocarver.model.batch.BatchInputCodec.parseCsv(rawText)
-                    : com.cryptocarver.model.batch.BatchInputCodec.parseJsonLines(rawText);
-        } catch (Exception e) {
-            batchResultArea.setText(t("module.batch.dryRunInvalid", e.getMessage()));
-            if (batchStatusLabel != null) batchStatusLabel.setText(t("module.batch.dryRunBlocked"));
-            return;
-        }
-
-        String op = batchOperationCombo != null ? batchOperationCombo.getValue() : "None";
-        String alg = batchAlgorithmCombo != null ? batchAlgorithmCombo.getValue() : null;
-        String keyHex = batchKeyField != null ? batchKeyField.getText() : null;
-        String ivHex = batchIvNonceField != null ? batchIvNonceField.getText() : null;
-
-        com.cryptocarver.model.process.DryRunSummary summary =
-                com.cryptocarver.model.batch.BatchValidator.dryRun(rows, op, srcCol, outCol, alg, keyHex, ivHex);
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== BATCH RUNNER DRY RUN ===\n");
-        sb.append("Total Rows: ").append(summary.totalSteps()).append('\n');
-        sb.append("Status Breakdown: Ready=").append(summary.readyCount())
-          .append(", Warning=").append(summary.warningCount())
-          .append(", Blocked=").append(summary.blockedCount()).append('\n');
-        if (summary.firstBlockedReason() != null) {
-            sb.append("First Blocked Reason: ").append(summary.firstBlockedReason()).append('\n');
-        }
-        sb.append("Resolved Dependencies:\n");
-        for (String dep : summary.resolvedDependencies()) {
-            sb.append("  - ").append(dep).append('\n');
-        }
-        sb.append("Execution Plan:\n");
-        for (String step : summary.executionOrder()) {
-            sb.append("  - ").append(step).append('\n');
-        }
-        sb.append("\n(Dry Run completed: 0 cryptographic operations called, 0 files written, 0 history entries created)");
-
-        batchResultArea.setText(sb.toString());
-        if (batchStatusLabel != null) {
-            batchStatusLabel.setText(t("module.batch.dryRunSummary", summary.readyCount(), summary.blockedCount()));
-        }
-    }
-
-    @FXML public void handleCancelBatch() {
-        if (activeBatchTask != null && activeBatchTask.isRunning()) {
-            batchStatusLabel.setText(t("module.batch.cancelling"));
-            activeBatchTask.cancel();
-        } else {
-            batchStatusLabel.setText(t("module.batch.notRunning"));
-        }
-    }
-
-    @FXML public void handleExportBatchResults() {
-        if (lastBatchReport == null) {
-            if (statusReporter != null) statusReporter.showError(t("module.batch.exportErrorTitle"), t("module.batch.noResults"));
-            return;
-        }
-        boolean csv = isCsvBatchFormat(batchExportFormatCombo.getValue());
-        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser(); chooser.setTitle(t("module.batch.exportTitle"));
-        chooser.setInitialFileName(csv ? "cryptocarver-batch-results.csv" : "cryptocarver-batch-results.jsonl");
-        chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter(csv ? "CSV" : "JSON Lines", csv ? "*.csv" : "*.jsonl"));
-        java.io.File file = chooser.showSaveDialog(genericContainer == null || genericContainer.getScene() == null ? null : genericContainer.getScene().getWindow());
-        if (file == null) return;
-        try {
-            String output = csv ? com.cryptocarver.model.batch.BatchOutputCodec.toCsv(lastBatchReport)
-                    : com.cryptocarver.model.batch.BatchOutputCodec.toJsonLines(lastBatchReport);
-            java.nio.file.Files.writeString(file.toPath(), output, java.nio.charset.StandardCharsets.UTF_8);
-            batchStatusLabel.setText(t("module.batch.exported", file.getName()));
-        } catch (java.io.IOException e) {
-            if (statusReporter != null) statusReporter.showError(t("module.batch.exportErrorTitle"), "Unable to save results: " + e.getMessage());
-        }
-    }
+    @FXML public void handleExportBatchResults() { batchRunner().handleExportBatchResults(); }
 
     private String getManualInputFormat() {
         return manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null ? manualInputFormatCombo.getValue() : "Text";
@@ -664,47 +375,7 @@ public class GenericController {
             bindResult(genericResultPanel, modResultArea, "Modular arithmetic", null);
             bindResult(genericResultPanel, fileResultArea, "File operation", null);
         }
-        localeChangeListener = locale -> {
-            if (batchStatusLabel == null) return;
-            if (activeBatchTask != null && activeBatchTask.isRunning()) {
-                batchStatusLabel.setText(t("module.batch.processing", batchInputArea == null ? 0 : batchInputArea.getParagraphs().size()));
-            }
-        };
-        com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
-        if (batchInputFormatCombo != null) {
-            batchInputFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
-            batchInputFormatCombo.setValue("CSV");
-        }
-
-        if (batchOperationCombo != null) {
-            // Batch files are deliberately data-only. Secret/key-bearing
-            // crypto operations remain available in their dedicated modules.
-            batchOperationCombo.getItems().setAll(com.cryptocarver.model.batch.BatchOperationCatalog.getAvailableOperations());
-            if (!batchOperationCombo.getItems().isEmpty()) {
-                batchOperationCombo.setValue(batchOperationCombo.getItems().get(0));
-            }
-            batchOperationCombo.valueProperty().addListener((obs, oldV, newV) -> {
-                boolean isCrypto = "Encrypt Record".equals(newV) || "Decrypt Record".equals(newV);
-                if (batchCryptoConfigBox != null) {
-                    batchCryptoConfigBox.setVisible(isCrypto);
-                    batchCryptoConfigBox.setManaged(isCrypto);
-                }
-            });
-        }
-        if (batchAlgorithmCombo != null) {
-            batchAlgorithmCombo.getItems().setAll("AES-256-GCM", "ChaCha20-Poly1305", "AES-256-CBC");
-            batchAlgorithmCombo.setValue("AES-256-GCM");
-            batchRecordEncodingCombo.getItems().setAll("Base64URL", "Hexadecimal");
-            batchRecordEncodingCombo.setValue("Base64URL");
-            batchCharsetCombo.getItems().setAll("UTF-8");
-            batchCharsetCombo.getItems().addAll(com.cryptocarver.crypto.EBCDICConverter.supportedCodePages().keySet());
-            batchCharsetCombo.setValue("UTF-8");
-        }
-
-        if (batchExportFormatCombo != null) {
-            batchExportFormatCombo.getItems().setAll("CSV", "JSON Lines (.jsonl)");
-            batchExportFormatCombo.setValue("CSV");
-        }
+        batchRunner().configure();
         if (manualInputFormatCombo != null) {
             manualInputFormatCombo.getItems().setAll("Text (UTF-8)", "Hexadecimal", "Base64", "Base64URL", "Base94", "Binary", "Decimal");
             manualInputFormatCombo.setValue("Text (UTF-8)");
@@ -770,18 +441,7 @@ public class GenericController {
                     "XOR (Decimal Input)");
             modOperationCombo.getSelectionModel().select(0);
         }
-        if (fileInputFormatCombo != null) {
-            fileInputFormatCombo.getItems().setAll("Binary", "Text", "Hex", "Base64");
-            fileInputFormatCombo.getSelectionModel().select("Binary");
-        }
-        if (fileOutputFormatCombo != null) {
-            fileOutputFormatCombo.getItems().setAll("Binary", "Text", "Hex", "Base64");
-            fileOutputFormatCombo.getSelectionModel().select("Binary");
-        }
-        if (fileEncodingCombo != null) {
-            fileEncodingCombo.getItems().setAll("UTF-8", "ASCII", "ISO-8859-1");
-            fileEncodingCombo.getSelectionModel().select("UTF-8");
-        }
+        fileConversion().configure();
 
         refreshHashTemplateCombo();
         refreshManualTemplateCombo();
@@ -2040,287 +1700,6 @@ public class GenericController {
 
         } catch (Exception e) {
             statusReporter.showError("Calculation Error", "Error in modular arithmetic: " + e.getMessage());
-        }
-    }
-
-    // ============================================================================
-    // FILE CONVERTER
-    // ============================================================================
-
-    /**
-     * Initialize file converter components
-     */
-    public void initializeFileConverter(
-            TextField inputPathField,
-            TextField outputPathField,
-            ComboBox<String> inputFormatCombo,
-            ComboBox<String> outputFormatCombo,
-            ComboBox<String> encodingCombo,
-            TextArea resultArea) {
-
-        this.fileInputPathField = inputPathField;
-        this.fileOutputPathField = outputPathField;
-        this.fileInputFormatCombo = inputFormatCombo;
-        this.fileOutputFormatCombo = outputFormatCombo;
-        this.fileEncodingCombo = encodingCombo;
-        this.fileResultArea = resultArea;
-
-        // Format options
-        String[] formats = { "Binary", "Hex", "Base64", "Text", "Analyze", "Hex Dump" };
-        fileInputFormatCombo.getItems().addAll(formats);
-        fileOutputFormatCombo.getItems().addAll("Binary", "Hex", "Base64", "Text");
-        fileInputFormatCombo.setValue("Binary");
-        fileOutputFormatCombo.setValue("Hex");
-
-        // Encoding options
-        fileEncodingCombo.getItems().addAll(
-                "UTF-8",
-                "ASCII",
-                "ISO-8859-1 (Latin-1)",
-                "ISO-8859-15 (Latin-9)",
-                "Windows-1252",
-                "UTF-16",
-                "UTF-16BE",
-                "UTF-16LE",
-                "UTF-32",
-                "Cp037 (EBCDIC US/Canada)",
-                "Cp273 (EBCDIC Germany)",
-                "Cp284 (EBCDIC Spain)",
-                "Cp285 (EBCDIC UK)",
-                "Cp297 (EBCDIC France)",
-                "Cp500 (EBCDIC International)",
-                "Cp850 (DOS Latin-1)",
-                "Cp437 (DOS US)");
-        fileEncodingCombo.setValue("UTF-8");
-
-        // Disable encoding when not needed
-        javafx.beans.value.ChangeListener<String> encodingListener = (obs, oldVal, newVal) -> {
-            boolean needsEncoding = "Text".equals(fileInputFormatCombo.getValue()) ||
-                    "Text".equals(fileOutputFormatCombo.getValue());
-            fileEncodingCombo.setDisable(!needsEncoding);
-        };
-        fileInputFormatCombo.valueProperty().addListener(encodingListener);
-        fileOutputFormatCombo.valueProperty().addListener(encodingListener);
-        fileEncodingCombo.setDisable(true); // Initially disabled
-    }
-
-    public void setFileComparePathField(TextField field) { this.fileComparePathField = field; }
-
-    public void compareFiles() {
-        try {
-            String left = fileInputPathField.getText().trim();
-            String right = fileComparePathField.getText().trim();
-            if (left.isEmpty() || right.isEmpty()) throw new IllegalArgumentException("Select both files to compare");
-            long difference = StreamingFileTools.firstDifference(java.nio.file.Paths.get(left), java.nio.file.Paths.get(right), com.cryptocarver.util.ProgressMonitor.NO_OP);
-            String result = difference < 0 ? "Files are identical."
-                    : "Files differ at byte offset " + difference + " (0x" + Long.toHexString(difference).toUpperCase() + ").";
-            fileResultArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Compare Files")
-                    .detail("Left File", java.nio.file.Paths.get(left).getFileName().toString())
-                    .detail("Right File", java.nio.file.Paths.get(right).getFileName().toString())
-                    .detail("Result", difference < 0 ? "IDENTICAL" : "DIFFERENT")
-                    .status(result).build());
-        } catch (Exception e) {
-            statusReporter.showError("File Comparison Error", e.getMessage());
-        }
-    }
-
-    public void hashFileStreaming() {
-        try {
-            String source = fileInputPathField.getText().trim();
-            if (source.isEmpty()) throw new IllegalArgumentException("Select a source file first");
-            java.nio.file.Path path = java.nio.file.Paths.get(source);
-            String hash = StreamingFileTools.hash(path, "SHA-256", com.cryptocarver.util.ProgressMonitor.NO_OP);
-            String result = "SHA-256\n" + hash + "\n\nBytes: " + java.nio.file.Files.size(path);
-            fileResultArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Hash File (streaming)")
-                    .output(DataConverter.hexToBytes(hash)).detail("Algorithm", "SHA-256")
-                    .detail("File", path.getFileName().toString()).detail("Bytes", String.valueOf(java.nio.file.Files.size(path)))
-                    .status("File hash calculated").build());
-        } catch (Exception e) {
-            statusReporter.showError("File Hash Error", e.getMessage());
-        }
-    }
-
-    public void previewFileStreaming() {
-        try {
-            String source = fileInputPathField.getText().trim();
-            if (source.isEmpty()) throw new IllegalArgumentException("Select a source file first");
-            java.nio.file.Path path = java.nio.file.Paths.get(source);
-            byte[] preview = StreamingFileTools.preview(path, 4096, com.cryptocarver.util.ProgressMonitor.NO_OP);
-            String result = com.cryptocarver.crypto.HexInspector.render(preview, 0, preview.length);
-            fileResultArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Preview File (streaming)")
-                    .output(preview).detail("File", path.getFileName().toString()).detail("Preview", preview.length + " bytes")
-                    .status("File preview loaded").build());
-        } catch (Exception e) { statusReporter.showError("File Preview Error", e.getMessage()); }
-    }
-
-    /**
-     * Handle file conversion operation
-     */
-    @FXML
-
-    public void handleFileConvert() {
-        try {
-            String inputPath = fileInputPathField.getText().trim();
-            String outputPath = fileOutputPathField.getText().trim();
-            String inputFormat = fileInputFormatCombo.getValue();
-            String outputFormat = fileOutputFormatCombo.getValue();
-            String encodingFull = fileEncodingCombo.getValue();
-
-            // Extract charset name (e.g., "UTF-8" or "Cp037" from "Cp037 (EBCDIC
-            // US/Canada)")
-            String encoding = encodingFull != null ? encodingFull.split(" ")[0] : "UTF-8";
-
-            if (inputPath.isEmpty()) {
-                statusReporter.showError("Input Error", "Input file path is required");
-                return;
-            }
-
-            if (inputFormat == null || outputFormat == null) {
-                statusReporter.showError("Input Error", "Please select input and output formats");
-                return;
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("File Conversion\n");
-            result.append("===============\n\n");
-            result.append("Input File: ").append(inputPath).append("\n");
-            result.append("From: ").append(inputFormat).append("\n");
-            result.append("To: ").append(outputFormat).append("\n");
-
-            // Special operations (no output format)
-            if ("Analyze".equals(inputFormat)) {
-                result.append("\n").append(FileConverter.analyzeFile(inputPath));
-                result.append("\n\n").append(FileConverter.getFileSizeInfo(inputPath));
-                fileResultArea.setText(result.toString());
-                return;
-            }
-
-            if ("Hex Dump".equals(inputFormat)) {
-                result.append("\n\n").append(FileConverter.hexDump(inputPath, 512));
-                fileResultArea.setText(result.toString());
-                return;
-            }
-
-            // Step 1: Read input file as bytes based on input format
-            byte[] data;
-            switch (inputFormat) {
-                case "Binary":
-                    data = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(inputPath));
-                    break;
-
-                case "Hex":
-                    String hexContent = java.nio.file.Files.readString(java.nio.file.Paths.get(inputPath)).trim();
-                    hexContent = hexContent.replaceAll("\\s+", ""); // Remove whitespace
-                    data = hexToBytes(hexContent);
-                    break;
-
-                case "Base64":
-                    String base64Content = java.nio.file.Files.readString(java.nio.file.Paths.get(inputPath)).trim();
-                    data = java.util.Base64.getDecoder().decode(base64Content);
-                    break;
-
-                case "Text":
-                    String textContent = java.nio.file.Files.readString(java.nio.file.Paths.get(inputPath),
-                            java.nio.charset.Charset.forName(encoding));
-                    data = textContent.getBytes(encoding);
-                    result.append("Input Encoding: ").append(encodingFull).append("\n");
-                    break;
-
-                default:
-                    statusReporter.showError("Error", "Unknown input format: " + inputFormat);
-                    return;
-            }
-
-            result.append("Data Size: ").append(data.length).append(" bytes\n");
-
-            // Step 2: Convert to output format
-            switch (outputFormat) {
-                case "Binary":
-                    if (outputPath.isEmpty()) {
-                        statusReporter.showError("Input Error", "Output path required for binary files");
-                        return;
-                    }
-                    java.nio.file.Files.write(java.nio.file.Paths.get(outputPath), data);
-                    result.append("Output: ").append(outputPath).append("\n");
-                    result.append("Status: Binary file written successfully");
-                    break;
-
-                case "Hex":
-                    String hexOutput = bytesToHex(data);
-                    if (outputPath.isEmpty()) {
-                        result.append("\nHex Output (first 1000 chars):\n");
-                        result.append(hexOutput.substring(0, Math.min(1000, hexOutput.length())));
-                        if (hexOutput.length() > 1000) {
-                            result.append("\n\n... ").append(hexOutput.length() - 1000).append(" more chars");
-                        }
-                    } else {
-                        java.nio.file.Files.writeString(java.nio.file.Paths.get(outputPath), hexOutput);
-                        result.append("Output: ").append(outputPath).append("\n");
-                        result.append("Status: Hex file written (").append(hexOutput.length()).append(" chars)");
-                    }
-                    break;
-
-                case "Base64":
-                    String base64Output = java.util.Base64.getEncoder().encodeToString(data);
-                    if (outputPath.isEmpty()) {
-                        result.append("\nBase64 Output (first 1000 chars):\n");
-                        result.append(base64Output.substring(0, Math.min(1000, base64Output.length())));
-                        if (base64Output.length() > 1000) {
-                            result.append("\n\n... ").append(base64Output.length() - 1000).append(" more chars");
-                        }
-                    } else {
-                        java.nio.file.Files.writeString(java.nio.file.Paths.get(outputPath), base64Output);
-                        result.append("Output: ").append(outputPath).append("\n");
-                        result.append("Status: Base64 file written (").append(base64Output.length()).append(" chars)");
-                    }
-                    break;
-
-                case "Text":
-                    String textOutput = new String(data, encoding);
-                    result.append("Output Encoding: ").append(encodingFull).append("\n");
-                    if (outputPath.isEmpty()) {
-                        result.append("\nText Output (first 1000 chars):\n");
-                        result.append(textOutput.substring(0, Math.min(1000, textOutput.length())));
-                        if (textOutput.length() > 1000) {
-                            result.append("\n\n... ").append(textOutput.length() - 1000).append(" more chars");
-                        }
-                    } else {
-                        java.nio.file.Files.writeString(java.nio.file.Paths.get(outputPath), textOutput,
-                                java.nio.charset.Charset.forName(encoding));
-                        result.append("Output: ").append(outputPath).append("\n");
-                        result.append("Status: Text file written (").append(textOutput.length()).append(" chars)");
-                    }
-                    break;
-
-                default:
-                    statusReporter.showError("Error", "Unknown output format: " + outputFormat);
-                    return;
-            }
-
-            fileResultArea.setText(result.toString());
-            statusReporter.updateStatus("Conversion completed: " + inputFormat + " → " + outputFormat);
-
-            if (statusReporter != null) {
-                statusReporter.publish(com.cryptocarver.model.OperationResult.forOperation("File Convert: " + inputFormat + " → " + outputFormat)
-                    .details(java.util.List.of(
-                        new com.cryptocarver.model.OperationDetail("Input Parameters", inputPath, com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null),
-                        new com.cryptocarver.model.OperationDetail("Output", "Success", com.cryptocarver.model.OperationDetail.Classification.SECRET, false, null)
-                    ))
-                    .build());
-            }
-
-        } catch (java.io.FileNotFoundException e) {
-            statusReporter.showError("File Error", "File not found: " + e.getMessage());
-        } catch (java.io.IOException e) {
-            statusReporter.showError("File Error", "I/O error: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            statusReporter.showError("Format Error", "Invalid input format: " + e.getMessage());
-        } catch (Exception e) {
-            statusReporter.showError("Conversion Error", "Error: " + e.getMessage());
-            LOG.error("Conversion failed", e);
         }
     }
 

@@ -1867,7 +1867,7 @@ class ModernMainControllerUITest {
         });
 
         GenericController generic = controllerRef.get();
-        javafx.concurrent.Task<?> task = getField(generic, "activeBatchTask");
+        javafx.concurrent.Task<?> task = generic.activeBatchTask();
         javafx.scene.control.Label batchStatusLabel = getField(generic, "batchStatusLabel");
         assertNotNull(task);
         assertTrue(blockingBatch.operationStarted.await(5, TimeUnit.SECONDS),
@@ -1890,13 +1890,13 @@ class ModernMainControllerUITest {
 
         runAndWait(() -> {
             try {
-                Object lastReport = getField(generic, "lastBatchReport");
+                Object lastReport = generic.lastBatchReport();
                 assertNull(lastReport, "Cancelled batch must not expose a partial exportable report");
                 javafx.scene.control.TextArea batchResultArea = getField(generic, "batchResultArea");
                 assertTrue(batchResultArea.getText().isEmpty(), "Cancelled batch output must be cleared");
                 javafx.scene.control.ProgressBar progressBar = getField(generic, "batchProgressBar");
                 assertFalse(progressBar.progressProperty().isBound(), "Progress control must be restored after cancellation");
-                assertNull(getField(generic, "activeBatchTask"), "Batch controls must be restored after cancellation");
+                assertNull(generic.activeBatchTask(), "Batch controls must be restored after cancellation");
                 assertFalse(task.isRunning(), "Cancelled task must no longer be running");
                 assertEquals(com.cryptocarver.service.I18nService.getInstance().text("module.batch.cancelled"),
                         ((javafx.scene.control.Label) getField(generic, "batchStatusLabel")).getText(),
@@ -1940,14 +1940,14 @@ class ModernMainControllerUITest {
         });
 
         GenericController generic = controllerRef.get();
-        javafx.concurrent.Task<?> task = getField(generic, "activeBatchTask");
+        javafx.concurrent.Task<?> task = generic.activeBatchTask();
         assertNotNull(task);
         awaitTask(task, 5, "Completed batch task");
 
         AtomicReference<Object> completedReportRef = new AtomicReference<>();
         runAndWait(() -> {
             try {
-                Object report = getField(generic, "lastBatchReport");
+                Object report = generic.lastBatchReport();
                 completedReportRef.set(report);
                 assertNotNull(report, "Completed batch should expose its report");
                 java.lang.reflect.Method succeededMethod = report.getClass().getDeclaredMethod("succeeded");
@@ -1963,7 +1963,7 @@ class ModernMainControllerUITest {
 
         runAndWait(() -> {
             try {
-                assertSame(completedReportRef.get(), getField(generic, "lastBatchReport"),
+                assertSame(completedReportRef.get(), generic.lastBatchReport(),
                         "Cancelling after completion must preserve the normal report");
                 com.cryptocarver.model.HistoryManager hm = getField(mainControllerRef.get(), "historyManager");
                 assertEquals(1, hm.getHistoryItems().size(), "Completed batch should remain the only history entry");
