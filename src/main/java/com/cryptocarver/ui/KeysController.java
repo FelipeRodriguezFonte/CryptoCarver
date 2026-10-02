@@ -6,8 +6,6 @@ import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.model.GeneratedKeySummary;
 import com.cryptocarver.model.GeneratedAsymmetricKeySummary;
-import com.cryptocarver.model.CryptoEnvelope;
-import com.cryptocarver.model.CryptoEnvelopeCodec;
 import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -84,6 +82,30 @@ public class KeysController {
                     () -> mainController, this::updateStatus, this::t);
         }
         return rsaKexCoordinator;
+    }
+
+    private Tr34Coordinator tr34Coordinator;
+
+    private Tr34Coordinator tr34Coordinator() {
+        if (tr34Coordinator == null) {
+            tr34Coordinator = new Tr34Coordinator(
+                    () -> new Tr34Coordinator.View(
+                            tr34SenderPrivateKeyArea,
+                            tr34SenderCertArea,
+                            tr34ReceiverCertArea,
+                            tr34KeyToDistributeField,
+                            tr34KeyIdField,
+                            tr34BindingNonceField,
+                            tr34IncludeEnvelopeCheck,
+                            tr34DistributeResultArea,
+                            tr34ReceiverPrivateKeyArea,
+                            tr34ExpectedSenderCertArea,
+                            tr34DistributedDataArea,
+                            tr34ChallengeNonceField,
+                            tr34ReceiveResultArea),
+                    () -> mainController, this::updateStatus, this::t);
+        }
+        return tr34Coordinator;
     }
 
     private String t(String key, Object... args) {
@@ -3352,258 +3374,29 @@ public class KeysController {
     @FXML private TextField tr34ChallengeNonceField;
     @FXML private TextArea tr34ReceiveResultArea;
 
-    private static X509Certificate parseCertificatePem(String pem) throws Exception {
-        java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
-        return (X509Certificate) factory.generateCertificate(
-                new java.io.ByteArrayInputStream(pem.getBytes(StandardCharsets.US_ASCII)));
-    }
-
     /**
      * Handle TR-34 Distribute (sender side: sign then envelope the key)
      */
     @FXML
-    public void handleTr34Distribute() {
-        try {
-            String privatePem = tr34SenderPrivateKeyArea.getText().trim();
-            String senderCertPem = tr34SenderCertArea.getText().trim();
-            String receiverCertPem = tr34ReceiverCertArea.getText().trim();
-            String keyHex = tr34KeyToDistributeField.getText().trim().replaceAll("\\s+", "");
-
-            if (privatePem.isEmpty() || senderCertPem.isEmpty() || receiverCertPem.isEmpty() || keyHex.isEmpty()) {
-                showTr34Validation(t("module.keys.tr34.required"),
-                        privatePem.isEmpty() ? "tr34SenderPrivateKeyArea"
-                                : senderCertPem.isEmpty() ? "tr34SenderCertArea"
-                                : receiverCertPem.isEmpty() ? "tr34ReceiverCertArea" : "tr34KeyToDistributeField",
-                        tr34DistributeResultArea::setText);
-                return;
-            }
-            if (!keyHex.matches("[0-9A-Fa-f]+")) {
-                showTr34Validation(t("module.keys.tr34.keyInvalid"), "tr34KeyToDistributeField", tr34DistributeResultArea::setText);
-                return;
-            }
-
-            byte[] keyToDistribute = DataConverter.hexToBytes(keyHex);
-            PrivateKey senderPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
-            X509Certificate senderCert = parseCertificatePem(senderCertPem);
-            X509Certificate receiverCert = parseCertificatePem(receiverCertPem);
-            String keyId = tr34KeyIdField == null ? "" : tr34KeyIdField.getText().trim();
-            String bindingNonceHex = tr34BindingNonceField == null ? ""
-                    : tr34BindingNonceField.getText().trim().replaceAll("\\s+", "");
-            if (!bindingNonceHex.isEmpty() && !bindingNonceHex.matches("[0-9A-Fa-f]+")) {
-                showTr34Validation(t("module.keys.tr34.keyInvalid"), "tr34BindingNonceField", tr34DistributeResultArea::setText);
-                return;
-            }
-            boolean twoPass = !bindingNonceHex.isEmpty();
-
-            byte[] distributed = twoPass
-                    ? TR34Operations.distributeKeyTwoPass(keyToDistribute, senderCert, senderPrivateKey,
-                            receiverCert, DataConverter.hexToBytes(bindingNonceHex), keyId.isEmpty() ? null : keyId)
-                    : TR34Operations.distributeKey(keyToDistribute, senderCert, senderPrivateKey,
-                            receiverCert, keyId.isEmpty() ? null : keyId);
-
-            boolean asEnvelope = tr34IncludeEnvelopeCheck != null && tr34IncludeEnvelopeCheck.isSelected();
-            String outputText;
-            if (asEnvelope) {
-                CryptoEnvelope.Builder builder = CryptoEnvelope.forAlgorithm("TR34-CMS")
-                        .ciphertext(distributed)
-                        .kcv(tr34KcvIfEligible(keyToDistribute));
-                if (!keyId.isEmpty()) builder.kid(keyId);
-                outputText = CryptoEnvelopeCodec.serializeCompact(builder.build());
-            } else {
-                outputText = java.util.Base64.getEncoder().encodeToString(distributed);
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("TR-34 KEY DISTRIBUTION — DISTRIBUTE\n");
-            result.append("========================================\n\n");
-            if (!keyId.isEmpty()) result.append("Key ID:         ").append(keyId).append("\n");
-            result.append("Profile:        ").append(twoPass ? "two-pass (bound to nonce " + bindingNonceHex.toUpperCase() + ")" : "one-pass").append("\n");
-            result.append("Envelope:       ").append(asEnvelope ? "yes (compact)" : "no").append("\n\n");
-            result.append("OUTPUT:\n");
-            result.append("------------------\n");
-            result.append(outputText).append("\n");
-            result.append("\n========================================\n");
-
-            tr34DistributeResultArea.setText(result.toString());
-            updateStatus(t("module.keys.tr34.status.distributed"));
-
-            if (mainController != null) {
-                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
-                if (!keyId.isEmpty()) details.add(com.cryptocarver.model.OperationDetail.publicDetail("Key ID", keyId));
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Profile", twoPass ? "Two-pass" : "One-pass"));
-                if (twoPass) details.add(com.cryptocarver.model.OperationDetail.publicDetail("Binding Nonce", bindingNonceHex.toUpperCase()));
-                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Key to Distribute", keyHex));
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Output", outputText));
-                mainController.publish(OperationResult.forOperation("TR-34 Key Distribution")
-                        .input(keyToDistribute)
-                        .output(outputText.getBytes(StandardCharsets.UTF_8))
-                        .details(details)
-                        .status("TR-34 key distributed successfully")
-                        .build());
-            }
-        } catch (Exception e) {
-            showTr34Validation(t("module.keys.tr34.operation", e.getMessage()), "tr34KeyToDistributeField", tr34DistributeResultArea::setText);
-            updateStatus(t("module.keys.tr34.status.distributeFailed"));
-            logTr34Failure("distribute", e);
-        }
-    }
+    public void handleTr34Distribute() { tr34Coordinator().handleTr34Distribute(); }
 
     /**
      * Handle TR-34 Receive (receiver side: decrypt then verify)
      */
     @FXML
-    public void handleTr34Receive() {
-        try {
-            String privatePem = tr34ReceiverPrivateKeyArea.getText().trim();
-            String expectedSenderCertPem = tr34ExpectedSenderCertArea.getText().trim();
-            String distributedText = tr34DistributedDataArea.getText().trim();
-
-            if (privatePem.isEmpty() || expectedSenderCertPem.isEmpty() || distributedText.isEmpty()) {
-                showTr34Validation(t("module.keys.tr34.receiveRequired"),
-                        privatePem.isEmpty() ? "tr34ReceiverPrivateKeyArea"
-                                : expectedSenderCertPem.isEmpty() ? "tr34ExpectedSenderCertArea" : "tr34DistributedDataArea",
-                        tr34ReceiveResultArea::setText);
-                return;
-            }
-
-            PrivateKey receiverPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEMAuto(privatePem);
-            X509Certificate expectedSenderCert = parseCertificatePem(expectedSenderCertPem);
-
-            byte[] distributed;
-            CryptoEnvelope envelope = null;
-            if (CryptoEnvelopeCodec.looksLikeEnvelope(distributedText)) {
-                envelope = CryptoEnvelopeCodec.deserializeAuto(distributedText);
-                distributed = java.util.Base64.getDecoder().decode(envelope.getCiphertextB64());
-            } else {
-                distributed = java.util.Base64.getDecoder().decode(distributedText);
-            }
-
-            String challengeNonceHex = tr34ChallengeNonceField == null ? ""
-                    : tr34ChallengeNonceField.getText().trim().replaceAll("\\s+", "");
-            if (!challengeNonceHex.isEmpty() && !challengeNonceHex.matches("[0-9A-Fa-f]+")) {
-                showTr34Validation(t("module.keys.tr34.keyInvalid"), "tr34ChallengeNonceField", tr34ReceiveResultArea::setText);
-                return;
-            }
-            boolean twoPass = !challengeNonceHex.isEmpty();
-
-            TR34Operations.ReceivedKey received = twoPass
-                    ? TR34Operations.receiveKeyTwoPass(distributed, receiverPrivateKey, expectedSenderCert,
-                            DataConverter.hexToBytes(challengeNonceHex))
-                    : TR34Operations.receiveKey(distributed, receiverPrivateKey, expectedSenderCert);
-            String recoveredHex = DataConverter.bytesToHex(received.getKey());
-
-            StringBuilder result = new StringBuilder();
-            result.append("========================================\n");
-            result.append("TR-34 KEY DISTRIBUTION — RECEIVE\n");
-            result.append("========================================\n\n");
-            result.append("Signature Verified: ").append(received.isSignatureVerified() ? "YES" : "NO — do not trust this key").append("\n");
-            if (twoPass) {
-                result.append("Nonce Verified:      ").append(received.isNonceVerified()
-                        ? "YES" : "NO — possible replay of an old distribution, or wrong challenge").append("\n");
-            }
-            String keyId = received.getKeyId();
-            if (keyId != null) result.append("Key ID (authenticated): ").append(keyId).append("\n");
-            if (envelope != null) {
-                result.append("Envelope KCV:        ").append(envelope.getKcv() == null ? "-" : envelope.getKcv()).append("\n");
-            }
-            result.append("\nRECOVERED KEY:\n");
-            result.append("------------------\n");
-            result.append(recoveredHex.toUpperCase()).append("\n");
-            result.append("Key Length:     ").append(received.getKey().length).append(" bytes\n");
-            result.append("\n========================================\n");
-
-            tr34ReceiveResultArea.setText(result.toString());
-            boolean trustworthy = received.isSignatureVerified() && (!twoPass || received.isNonceVerified());
-            if (!received.isSignatureVerified()) {
-                updateStatus(t("module.keys.tr34.status.receivedUnverified"));
-            } else if (twoPass && !received.isNonceVerified()) {
-                updateStatus(t("module.keys.tr34.status.receivedNonceMismatch"));
-            } else {
-                updateStatus(t("module.keys.tr34.status.received"));
-            }
-
-            if (mainController != null) {
-                List<com.cryptocarver.model.OperationDetail> details = new ArrayList<>();
-                details.add(com.cryptocarver.model.OperationDetail.publicDetail("Signature Verified", String.valueOf(received.isSignatureVerified())));
-                if (twoPass) details.add(com.cryptocarver.model.OperationDetail.publicDetail("Nonce Verified", String.valueOf(received.isNonceVerified())));
-                details.add(com.cryptocarver.model.OperationDetail.secretDetail("Recovered Key (hex)", recoveredHex));
-                mainController.publish(OperationResult.forOperation("TR-34 Key Reception")
-                        .input(distributed)
-                        .output(received.getKey(), com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                        .details(details)
-                        .status(trustworthy ? "TR-34 key received and verified" : "TR-34 key received but NOT verified")
-                        .build());
-            }
-        } catch (Exception e) {
-            showTr34Validation(t("module.keys.tr34.operation", e.getMessage()), "tr34DistributedDataArea", tr34ReceiveResultArea::setText);
-            updateStatus(t("module.keys.tr34.status.receiveFailed"));
-            logTr34Failure("receive", e);
-        }
-    }
+    public void handleTr34Receive() { tr34Coordinator().handleTr34Receive(); }
 
     /** Fills the Receive tab's challenge nonce field with a fresh random value (two-pass, step 1). */
     @FXML
-    public void handleTr34GenerateChallenge() {
-        if (tr34ChallengeNonceField == null) return;
-        byte[] nonce = TR34Operations.generateChallengeNonce();
-        tr34ChallengeNonceField.setText(DataConverter.bytesToHex(nonce).toUpperCase());
-        updateStatus(t("module.keys.tr34.status.challengeGenerated"));
-    }
+    public void handleTr34GenerateChallenge() { tr34Coordinator().handleTr34GenerateChallenge(); }
 
     @FXML
-    public void handleTr34Clear() {
-        clearTr34Fields();
-        if (mainController != null) mainController.updateStatus(t("module.keys.tr34.clearStatus"));
-    }
+    public void handleTr34Clear() { tr34Coordinator().handleTr34Clear(); }
 
     @FXML
-    public void handleTr34Reset() {
-        clearTr34Fields();
-        if (tr34IncludeEnvelopeCheck != null) tr34IncludeEnvelopeCheck.setSelected(false);
-        if (mainController != null) mainController.updateStatus(t("module.keys.tr34.resetStatus"));
-    }
-
-    private void clearTr34Fields() {
-        if (tr34SenderPrivateKeyArea != null) tr34SenderPrivateKeyArea.clear();
-        if (tr34SenderCertArea != null) tr34SenderCertArea.clear();
-        if (tr34ReceiverCertArea != null) tr34ReceiverCertArea.clear();
-        if (tr34KeyToDistributeField != null) tr34KeyToDistributeField.clear();
-        if (tr34KeyIdField != null) tr34KeyIdField.clear();
-        if (tr34BindingNonceField != null) tr34BindingNonceField.clear();
-        if (tr34DistributeResultArea != null) tr34DistributeResultArea.clear();
-        if (tr34ReceiverPrivateKeyArea != null) tr34ReceiverPrivateKeyArea.clear();
-        if (tr34ExpectedSenderCertArea != null) tr34ExpectedSenderCertArea.clear();
-        if (tr34DistributedDataArea != null) tr34DistributedDataArea.clear();
-        if (tr34ChallengeNonceField != null) tr34ChallengeNonceField.clear();
-        if (tr34ReceiveResultArea != null) tr34ReceiveResultArea.clear();
-    }
+    public void handleTr34Reset() { tr34Coordinator().handleTr34Reset(); }
 
     /** KCV is only defined here for AES-length key material (16/24/32 bytes); anything else is best-effort skipped. */
-    private static String tr34KcvIfEligible(byte[] keyMaterial) {
-        if (keyMaterial.length != 16 && keyMaterial.length != 24 && keyMaterial.length != 32) {
-            return null;
-        }
-        try {
-            return DataConverter.bytesToHex(KeyOperations.calculateKCV_AES(keyMaterial));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private void showTr34Validation(String message, String fieldKey, Consumer<String> feedbackTarget) {
-        String safeMessage = InlineErrorPresenter.redactSecrets(message);
-        UserFacingError error = new UserFacingError(t("module.keys.tr34.errorTitle"), safeMessage, safeMessage, fieldKey);
-        if (mainController != null) {
-            mainController.showError(error);
-        } else if (feedbackTarget != null) {
-            feedbackTarget.accept(safeMessage);
-        }
-    }
-
-    private void logTr34Failure(String operation, Exception error) {
-        LOG.error("TR-34 {} failed: {}", operation, InlineErrorPresenter.redactSecrets(error.toString()), error);
-    }
 
     /**
      * Initialize Key Derivation Functions
