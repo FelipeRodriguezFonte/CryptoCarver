@@ -2,7 +2,6 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.SymmetricCipher;
 import com.cryptocarver.crypto.FormatPreservingEncryption;
-import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.utils.OperationHistory;
 import javafx.fxml.FXML;
@@ -18,17 +17,12 @@ import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.function.Consumer;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Controller for Cipher operations
@@ -147,10 +141,6 @@ public class CipherController {
     @FXML private TextArea fpeInputArea;
     @FXML private TextArea fpeOutputArea;
 
-    // Last AEAD encryption components, kept separately from the rendered result.
-    private String lastAeadCiphertext;
-    private String lastAeadTag;
-
     private com.cryptocarver.ui.component.MaterialFieldBadge symKeyBadge;
     private com.cryptocarver.ui.component.MaterialFieldBadge ivBadge;
     private com.cryptocarver.ui.component.MaterialFieldBadge tagBadge;
@@ -174,6 +164,8 @@ public class CipherController {
     @FXML private Button fileCipherAnalyzeBtn;
     private FileCipherCoordinator fileCipher;
     private AsymmetricCipherCoordinator rsa;
+    private SymmetricCipherCoordinator symmetric;
+    private CipherTemplateCoordinator templates;
 
     // Asymmetric cipher UI components
     @FXML private ComboBox<String> rsaPaddingCombo;
@@ -185,7 +177,6 @@ public class CipherController {
     @FXML private TextArea privateKeyArea;
     @FXML private javafx.scene.layout.VBox openPgpContainer;
     @FXML private OpenPgpController openPgpContainerController;
-    private final java.util.Set<String> usedAeadNonces = new java.util.HashSet<>();
 
     public CipherController() {
     }
@@ -246,7 +237,7 @@ public class CipherController {
             field.getParent().managedProperty().bind(field.visibleProperty());
         }
         showSymmetricWorkspace(true);
-        refreshCipherTemplateCombo();
+        templates().refreshCipherTemplateCombo();
         updateModeAndAlgorithmVisibility();
     }
 
@@ -359,126 +350,34 @@ public class CipherController {
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX);
     }
 
-    private void refreshCipherTemplateCombo() {
-        SafeTemplateUIHelper.populateTemplateCombo(
-                cipherTemplateCombo,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER,
-                List.of("AES-256-GCM — Text UTF-8 → Base64", "AES-256-CBC — Hex → Hex")
-        );
-    }
-
     @FXML
     private void handleApplyCipherTemplate() {
-        String template = cipherTemplateCombo != null ? cipherTemplateCombo.getValue() : null;
-        if (template == null) return;
-
-        Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "symmetricAlgorithmCombo", v -> { if (symmetricAlgorithmCombo != null) symmetricAlgorithmCombo.setValue(v); },
-                "cipherModeCombo", v -> { if (cipherModeCombo != null) cipherModeCombo.setValue(v); },
-                "paddingCombo", v -> { if (paddingCombo != null) paddingCombo.setValue(v); },
-                "asymmetricInputFormatCombo", v -> { if (asymmetricInputFormatCombo != null) asymmetricInputFormatCombo.setValue(v); },
-                "asymmetricOutputFormatCombo", v -> { if (asymmetricOutputFormatCombo != null) asymmetricOutputFormatCombo.setValue(v); },
-                "rsaPaddingCombo", v -> { if (rsaPaddingCombo != null) rsaPaddingCombo.setValue(v); },
-                "inputFormatCombo", v -> { if (statusReporter != null) statusReporter.setInputFormat(v); },
-                "outputFormatCombo", v -> { if (statusReporter != null) statusReporter.setOutputFormat(v); }
-        );
-
-        SafeTemplateUIHelper.applySelectedTemplate(
-                template,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER,
-                () -> {
-                    if (template.contains("AES-256-GCM")) {
-                        symmetricAlgorithmCombo.setValue("AES-256");
-                        cipherModeCombo.setValue("GCM");
-                        paddingCombo.setValue("NoPadding");
-                        symKeySourceCombo.setValue("Manual Input");
-                        symmetricKeyField.setText("");
-                        symmetricKeyField.setPromptText("Enter key in hex (Select a Key)");
-                        ivField.setText("");
-                        ivField.setPromptText("Click Generate for fresh GCM nonce...");
-                        gcmTagField.setText("");
-                        aadField.setText("");
-                        if (statusReporter != null) {
-                            statusReporter.setInputFormat("Text (UTF-8)");
-                            statusReporter.setOutputFormat("Base64");
-                            statusReporter.updateStatus("Template Applied: AES-256-GCM — Text UTF-8 → Base64. GCM authenticates ciphertext; use a fresh nonce for every encryption.");
-                        }
-                    } else if (template.contains("AES-256-CBC")) {
-                        symmetricAlgorithmCombo.setValue("AES-256");
-                        cipherModeCombo.setValue("CBC");
-                        paddingCombo.setValue("PKCS5Padding");
-                        symKeySourceCombo.setValue("Manual Input");
-                        symmetricKeyField.setText("");
-                        ivField.setText("");
-                        gcmTagField.setText("");
-                        aadField.setText("");
-                        if (statusReporter != null) {
-                            statusReporter.setInputFormat("Hexadecimal");
-                            statusReporter.setOutputFormat("Hexadecimal");
-                            statusReporter.updateStatus("Template Applied: AES-256-CBC — Hex → Hex");
-                        }
-                    }
-                },
-                setters,
-                statusReporter
-        );
+        templates().handleApplyCipherTemplate();
     }
 
     @FXML
     private void handleSaveCipherTemplate() {
-        Map<String, String> params = new java.util.LinkedHashMap<>();
-        if (symmetricAlgorithmCombo != null && symmetricAlgorithmCombo.getValue() != null) params.put("symmetricAlgorithmCombo", symmetricAlgorithmCombo.getValue());
-        if (cipherModeCombo != null && cipherModeCombo.getValue() != null) params.put("cipherModeCombo", cipherModeCombo.getValue());
-        if (paddingCombo != null && paddingCombo.getValue() != null) params.put("paddingCombo", paddingCombo.getValue());
-        if (rsaPaddingCombo != null && rsaPaddingCombo.getValue() != null) params.put("rsaPaddingCombo", rsaPaddingCombo.getValue());
-        if (asymmetricInputFormatCombo != null && asymmetricInputFormatCombo.getValue() != null) params.put("asymmetricInputFormatCombo", asymmetricInputFormatCombo.getValue());
-        if (asymmetricOutputFormatCombo != null && asymmetricOutputFormatCombo.getValue() != null) params.put("asymmetricOutputFormatCombo", asymmetricOutputFormatCombo.getValue());
-        if (cipherInputFormatCombo != null && cipherInputFormatCombo.getValue() != null) params.put("inputFormatCombo", cipherInputFormatCombo.getValue());
-        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
-
-        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.saveCurrentAsTemplate(
-                owner,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER,
-                params,
-                this::refreshCipherTemplateCombo,
-                statusReporter
-        );
+        templates().handleSaveCipherTemplate();
     }
 
     @FXML
     private void handleExportCipherTemplate() {
-        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER, cipherTemplateCombo, statusReporter);
+        templates().handleExportCipherTemplate();
     }
 
     @FXML
     private void handleImportCipherTemplate() {
-        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER, this::refreshCipherTemplateCombo, statusReporter);
+        templates().handleImportCipherTemplate();
     }
 
     @FXML
     private void handleDeleteCipherTemplate() {
-        javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_CIPHER, cipherTemplateCombo, this::refreshCipherTemplateCombo, statusReporter);
+        templates().handleDeleteCipherTemplate();
     }
 
     @FXML
     private void handleResetCipherDefaults() {
-        symmetricAlgorithmCombo.setValue("AES-256");
-        cipherModeCombo.setValue("CBC");
-        paddingCombo.setValue("PKCS5Padding");
-        symKeySourceCombo.setValue("Manual Input");
-        symmetricKeyField.setText("");
-        ivField.setText("");
-        gcmTagField.setText("");
-        aadField.setText("");
-        if (statusReporter != null) {
-            statusReporter.setInputFormat("Text (UTF-8)");
-            statusReporter.setOutputFormat("Hexadecimal");
-            statusReporter.updateStatus(com.cryptocarver.service.I18nService.getInstance().text("module.cipher.reset"));
-        }
+        templates().handleResetCipherDefaults();
     }
 
     public void initModern(StatusReporter reporter,
@@ -603,6 +502,35 @@ public class CipherController {
     public void chooseFileCipherTag() { fileCipher().chooseFileCipherTag(); }
 
     public void generateFileCipherNonce() { fileCipher().generateFileCipherNonce(); }
+
+    private CipherTemplateCoordinator templates() {
+        if (templates == null) {
+            templates = new CipherTemplateCoordinator(new CipherTemplateCoordinator.View(cipherTemplateCombo,
+                    symmetricAlgorithmCombo, cipherModeCombo, paddingCombo, symKeySourceCombo, symmetricKeyField,
+                    ivField, gcmTagField, aadField, rsaPaddingCombo, asymmetricInputFormatCombo,
+                    asymmetricOutputFormatCombo),
+                    () -> statusReporter, () -> cipherInputFormatCombo, () -> outputFormatCombo);
+        }
+        return templates;
+    }
+
+    private SymmetricCipherCoordinator symmetric() {
+        if (symmetric == null) {
+            symmetric = new SymmetricCipherCoordinator(new SymmetricCipherCoordinator.View(
+                    symmetricAlgorithmCombo, cipherModeCombo, paddingCombo, symKeySourceCombo, symHsmKeyCombo,
+                    symmetricKeyField, ivField, gcmTagField, aadField, cipherInputArea, cipherOutputArea),
+                    () -> statusReporter, () -> cipherInputFormatCombo, () -> outputFormatCombo);
+        }
+        return symmetric;
+    }
+
+    public void handleSymmetricEncrypt() { symmetric().handleSymmetricEncrypt(); }
+
+    public void handleSymmetricDecrypt() { symmetric().handleSymmetricDecrypt(); }
+
+    public com.cryptocarver.model.ShelfPackage createAuthenticatedCipherShelfPackage() {
+        return symmetric().createAuthenticatedCipherShelfPackage();
+    }
 
     private AsymmetricCipherCoordinator rsa() {
         if (rsa == null) {
@@ -980,271 +908,6 @@ public class CipherController {
         updateGcmTagFieldState();
     }
 
-    private String getHsmKeyId() {
-        if (symKeySourceCombo != null && "Simulated HSM".equals(symKeySourceCombo.getValue())) {
-            String keyId = symHsmKeyCombo.getValue();
-            if (keyId == null || keyId.isEmpty()) {
-                throw new IllegalArgumentException("Please select a key from the Lab Cache");
-            }
-            var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
-            if (km != null && !km.hasKeyMaterial()) {
-                throw new IllegalStateException("Selected key material is not available (metadata-only reference). Please re-import or regenerate the key bytes.");
-            }
-            return keyId;
-        }
-        return null;
-    }
-
-    private byte[] getManualSymmetricKey() {
-        String keyHex = symmetricKeyField.getText().trim();
-        if (keyHex.isEmpty()) {
-            throw new IllegalArgumentException("Please enter symmetric key in hexadecimal");
-        }
-        return DataConverter.hexToBytes(keyHex);
-    }
-
-    /**
-     * Handle symmetric encryption
-     */
-    public void handleSymmetricEncrypt() {
-        lastAeadCiphertext = null;
-        lastAeadTag = null;
-        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Symmetric Cipher", true)) {
-            return;
-        }
-        try {
-            // Get inputs
-            byte[] plaintext = getInputDataAsBytes();
-            if (plaintext == null || plaintext.length == 0) {
-                statusReporter.showError("Input Error", "Please enter data to encrypt");
-                return;
-            }
-
-            String algorithm = symmetricAlgorithmCombo.getValue();
-            String mode = cipherModeCombo.getValue();
-            String padding = paddingCombo.getValue();
-
-            // Get key
-            String hsmKeyId = getHsmKeyId();
-            byte[] manualKey = hsmKeyId == null ? getManualSymmetricKey() : null;
-
-            // Handle stream ciphers separately
-            if (algorithm.equals("Salsa20")) {
-                handleSalsa20Encrypt(plaintext, hsmKeyId, manualKey);
-                return;
-            } else if (algorithm.equals("ChaCha20")) {
-                handleChaCha20Encrypt(plaintext, hsmKeyId, manualKey);
-                return;
-            } else if (algorithm.equals("ChaCha20-Poly1305")) {
-                handleChaCha20Poly1305Encrypt(plaintext, hsmKeyId, manualKey);
-                return;
-            } else if (algorithm.equals("XChaCha20-Poly1305")) {
-                handleXChaCha20Poly1305Encrypt(plaintext, hsmKeyId, manualKey);
-                return;
-            }
-
-            // Get IV if required for block ciphers
-            byte[] iv = null;
-            if (SymmetricCipher.requiresIV(mode)) {
-                String ivHex = ivField.getText().trim();
-                if (ivHex.isEmpty()) {
-                    statusReporter.showError("IV Error",
-                            mode + " mode requires an Initialization Vector (IV)");
-                    return;
-                }
-                iv = DataConverter.hexToBytes(ivHex);
-            }
-
-            // Get AAD if required for AEAD modes
-            byte[] aadBytes = null;
-            if (aadField != null && !aadField.getText().isEmpty() && !aadField.isDisabled()) {
-                String aadText = aadField.getText().trim();
-                try {
-                    // Try Hex firs
-                    aadBytes = DataConverter.hexToBytes(aadText);
-                } catch (Exception e) {
-                    // Fallback to ASCII bytes (useful for pasting JWE Header string directly)
-                    aadBytes = aadText.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-                }
-            }
-
-            warnIfNonceReused(algorithm, mode, hsmKeyId, manualKey, iv);
-
-            // Encrypt with block cipher
-            byte[] ciphertext;
-            if (hsmKeyId != null) {
-                ciphertext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptSymmetric(hsmKeyId, plaintext, algorithm, mode, padding, iv, aadBytes);
-            } else {
-                ciphertext = SymmetricCipher.encrypt(plaintext, manualKey, algorithm, mode, padding, iv, aadBytes);
-            }
-
-            // Special handling for GCM - extract and show TAG separately
-            if (mode.equalsIgnoreCase("GCM")) {
-                displayGCMResult(ciphertext, true);
-            } else {
-                // Display normal resul
-                setOutputData(ciphertext);
-            }
-
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", algorithm);
-            details.put("Mode", mode);
-            details.put("Padding", padding);
-            if (symmetricKeyField != null) {
-                details.put("Key Size", (symmetricKeyField.getText().trim().length() * 4) + " bits");
-            }
-            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext).output(ciphertext).details(details)
-                    .status(String.format("Encrypted using %s/%s/%s", algorithm, mode, padding)).build());
-
-        } catch (IllegalArgumentException e) {
-            statusReporter.showError("Validation Error", e.getMessage());
-        } catch (Exception e) {
-            statusReporter.showError("Encryption Error",
-                    "Error encrypting data: " + e.getMessage());
-        }
-    }
-
-    private void warnIfNonceReused(String algorithm, String mode, String hsmKeyId, byte[] manualKey, byte[] iv) {
-        boolean aead = "GCM".equalsIgnoreCase(mode)
-                || "ChaCha20-Poly1305".equals(algorithm)
-                || "XChaCha20-Poly1305".equals(algorithm);
-        if (!aead || iv == null) return;
-        try {
-            byte[] keyToHash = hsmKeyId != null ? hsmKeyId.getBytes(java.nio.charset.StandardCharsets.UTF_8) : manualKey;
-            byte[] fingerprint = java.security.MessageDigest.getInstance("SHA-256").digest(
-                    java.nio.ByteBuffer.allocate(keyToHash.length + iv.length).put(keyToHash).put(iv).array());
-            String id = DataConverter.bytesToHex(fingerprint);
-            if (!usedAeadNonces.add(id)) {
-                statusReporter.showInfo("Nonce reuse warning",
-                        "This IV/nonce has already been used with the same key in this session. Generate a fresh value before encrypting.");
-            }
-        } catch (java.security.NoSuchAlgorithmException ignored) {
-            // SHA-256 is mandatory in the Java runtime; no warning is preferable to blocking encryption.
-        }
-    }
-
-    /**
-     * Handle symmetric decryption
-     */
-    public void handleSymmetricDecrypt() {
-        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Symmetric Cipher", false)) {
-            return;
-        }
-        try {
-            // Get inputs
-            byte[] ciphertext = getInputDataAsBytes();
-            if (ciphertext == null || ciphertext.length == 0) {
-                statusReporter.showError("Input Error", "Please enter data to decrypt");
-                return;
-            }
-
-            String algorithm = symmetricAlgorithmCombo.getValue();
-            String mode = cipherModeCombo.getValue();
-            String padding = paddingCombo.getValue();
-
-            // Get key
-            String hsmKeyId = getHsmKeyId();
-            byte[] manualKey = hsmKeyId == null ? getManualSymmetricKey() : null;
-
-            // Handle stream ciphers separately
-            if (algorithm.equals("Salsa20")) {
-                handleSalsa20Decrypt(ciphertext, hsmKeyId, manualKey);
-                return;
-            } else if (algorithm.equals("ChaCha20")) {
-                handleChaCha20Decrypt(ciphertext, hsmKeyId, manualKey);
-                return;
-            } else if (algorithm.equals("ChaCha20-Poly1305")) {
-                handleChaCha20Poly1305Decrypt(ciphertext, hsmKeyId, manualKey);
-                return;
-            } else if (algorithm.equals("XChaCha20-Poly1305")) {
-                handleXChaCha20Poly1305Decrypt(ciphertext, hsmKeyId, manualKey);
-                return;
-            }
-
-            // Get IV if required for block ciphers
-            byte[] iv = null;
-            if (SymmetricCipher.requiresIV(mode)) {
-                String ivHex = ivField.getText().trim();
-                if (ivHex.isEmpty()) {
-                    statusReporter.showError("IV Error",
-                            mode + " mode requires an Initialization Vector (IV)");
-                    return;
-                }
-                iv = DataConverter.hexToBytes(ivHex);
-            }
-
-            // Get AAD if required for AEAD modes
-            byte[] aadBytes = null;
-            if (aadField != null && !aadField.getText().isEmpty() && !aadField.isDisabled()) {
-                String aadText = aadField.getText().trim();
-                try {
-                    // Try Hex firs
-                    aadBytes = DataConverter.hexToBytes(aadText);
-                } catch (Exception e) {
-                    // Fallback to ASCII bytes (useful for pasting JWE Header string directly)
-                    aadBytes = aadText.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-                }
-            }
-
-            // Decrypt with block cipher
-            byte[] plaintext;
-
-            // Handle GCM Tag for decryption
-            if (mode.equalsIgnoreCase("GCM") && gcmTagField != null && !gcmTagField.getText().trim().isEmpty()) {
-                String tagHex = gcmTagField.getText().trim();
-                byte[] tag = DataConverter.hexToBytes(tagHex);
-                if (tag.length != 16) {
-                    statusReporter.showError("Tag Error", "GCM Tag must be 16 bytes (32 hex chars)");
-                    return;
-                }
-
-                // Append tag to ciphertext if provided separately
-                byte[] combined = new byte[ciphertext.length + tag.length];
-                System.arraycopy(ciphertext, 0, combined, 0, ciphertext.length);
-                System.arraycopy(tag, 0, combined, ciphertext.length, tag.length);
-
-                if (hsmKeyId != null) {
-                    plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, combined, algorithm, mode, padding, iv, aadBytes);
-                } else {
-                    plaintext = SymmetricCipher.decrypt(combined, manualKey, algorithm, mode, padding, iv, aadBytes);
-                }
-            } else {
-                if (hsmKeyId != null) {
-                    plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, ciphertext, algorithm, mode, padding, iv, aadBytes);
-                } else {
-                    plaintext = SymmetricCipher.decrypt(ciphertext, manualKey, algorithm, mode, padding, iv, aadBytes);
-                }
-            }
-
-            // Special handling for GCM - show TAG verification message
-            String enriched = null;
-            if (mode.equalsIgnoreCase("GCM")) {
-                enriched = displayGCMResult(plaintext, false);
-            } else {
-                // Display normal resul
-                setOutputData(plaintext);
-            }
-
-            java.util.Map<String, String> details = new java.util.HashMap<>();
-            details.put("Algorithm", algorithm);
-            details.put("Mode", mode);
-            details.put("Padding", padding);
-            OperationResult.Builder b = OperationResult.forOperation("Symmetric Decrypt")
-                    .input(ciphertext).output(plaintext).details(details)
-                    .status(String.format("Decrypted using %s/%s/%s", algorithm, mode, padding));
-            if (enriched != null) b.enrichedOutput(enriched);
-            statusReporter.publish(b.build());
-
-        } catch (IllegalArgumentException e) {
-            statusReporter.showError(e, "Validation Error", "cipherInputArea");
-        } catch (javax.crypto.AEADBadTagException e) {
-            statusReporter.showError(e, "Authentication Error", "gcmTagField");
-        } catch (Exception e) {
-            statusReporter.showError(e, "Decryption Error", "cipherInputArea");
-        }
-    }
-
     /**
      * Analyze encrypted file with default options
      */
@@ -1527,401 +1190,6 @@ public class CipherController {
         updateModeAndAlgorithmVisibility();
     }
 
-    /**
-     * Get input data as bytes
-     */
-    private byte[] getInputDataAsBytes() {
-        String input = cipherInputArea.getText().trim();
-        if (input.isEmpty()) {
-            return null;
-        }
-
-        String format = cipherInputFormatCombo.getValue();
-        if (format == null)
-            format = "Hexadecimal";
-
-        com.cryptocarver.util.InputValidator.validateInput(input, format);
-
-        try {
-            switch (format) {
-                case "Hexadecimal":
-                    return DataConverter.hexToBytes(input);
-                case "Base64":
-                    return org.apache.commons.codec.binary.Base64.decodeBase64(input);
-                case "Text (UTF-8)":
-                    return input.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                case "Binary":
-                    return DataConverter.binaryToBytes(input);
-                default:
-                    return DataConverter.hexToBytes(input);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Error parsing input: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Set output data
-     */
-    private void setOutputData(byte[] data) {
-        String format = outputFormatCombo.getValue();
-        if (format == null)
-            format = "Hexadecimal";
-
-        String output;
-        switch (format) {
-            case "Hexadecimal":
-                output = DataConverter.bytesToHex(data);
-                break;
-            case "Base64":
-                output = org.apache.commons.codec.binary.Base64.encodeBase64String(data);
-                break;
-            case "Text (UTF-8)":
-                output = new String(data, java.nio.charset.StandardCharsets.UTF_8);
-                break;
-            case "Binary":
-                output = DataConverter.bytesToBinary(data);
-                break;
-            case "C Array":
-                output = DataConverter.bytesToCArray(data, 12);
-                break;
-            default:
-                output = DataConverter.bytesToHex(data);
-        }
-
-        cipherOutputArea.setText(output);
-    }
-
-    /**
-     * Display GCM encryption/decryption result with TAG shown separately
-     * In GCM, the last 16 bytes are the authentication TAG (only for encryption)
-     */
-    private String displayGCMResult(byte[] data, boolean isEncryption) {
-        String algorithm = symmetricAlgorithmCombo.getValue();
-        String mode = cipherModeCombo.getValue();
-        String label = algorithm;
-
-        // Adjust label for AES-GCM vs Poly1305 variants
-        if (mode != null && mode.equalsIgnoreCase("GCM") && !algorithm.contains("Poly1305")) {
-            label = algorithm + "-GCM";
-        }
-
-        if (isEncryption) {
-            // For encryption: separate ciphertext and TAG
-            if (data.length < 16) {
-                setOutputData(data);
-                return "";
-            }
-
-            // GCM TAG is 16 bytes (128 bits) at the end
-            int tagLength = 16;
-            byte[] ciphertext = new byte[data.length - tagLength];
-            byte[] tag = new byte[tagLength];
-
-            System.arraycopy(data, 0, ciphertext, 0, ciphertext.length);
-            System.arraycopy(data, ciphertext.length, tag, 0, tagLength);
-
-            // Format output based on selected forma
-            String format = outputFormatCombo.getValue();
-            if (format == null)
-                format = "Hexadecimal";
-
-            String ciphertextStr;
-            String tagStr;
-            String fullDataStr;
-
-            switch (format) {
-                case "Hexadecimal":
-                    ciphertextStr = DataConverter.bytesToHex(ciphertext);
-                    tagStr = DataConverter.bytesToHex(tag);
-                    fullDataStr = DataConverter.bytesToHex(data);
-                    break;
-                case "Base64":
-                    ciphertextStr = org.apache.commons.codec.binary.Base64.encodeBase64String(ciphertext);
-                    tagStr = org.apache.commons.codec.binary.Base64.encodeBase64String(tag);
-                    fullDataStr = org.apache.commons.codec.binary.Base64.encodeBase64String(data);
-                    break;
-                default:
-                    ciphertextStr = DataConverter.bytesToHex(ciphertext);
-                    tagStr = DataConverter.bytesToHex(tag);
-                    fullDataStr = DataConverter.bytesToHex(data);
-            }
-
-            lastAeadCiphertext = ciphertextStr;
-            lastAeadTag = tagStr;
-
-            // Build formatted output for ENCRYPTION
-            StringBuilder output = new StringBuilder();
-            output.append("=== ").append(label).append(" ENCRYPTION RESULT ===\n\n");
-            output.append("CIPHERTEXT (").append(ciphertext.length).append(" bytes):\n");
-            output.append(ciphertextStr).append("\n\n");
-            output.append("AUTHENTICATION TAG (").append(tagLength).append(" bytes):\n");
-            output.append(tagStr).append("\n\n");
-            output.append("FULL OUTPUT (Ciphertext + TAG, ").append(data.length).append(" bytes):\n");
-            output.append(fullDataStr).append("\n\n");
-            output.append("ℹ️  Note: For decryption, enter the Ciphertext and TAG separately.\n");
-            output.append("ℹ️  The TAG provides authentication - it must match exactly.");
-
-            cipherOutputArea.setText(output.toString());
-            return output.toString();
-
-        } else {
-            // For decryption: just show the plaintext with verification message
-            String format = outputFormatCombo.getValue();
-            if (format == null)
-                format = "Hexadecimal";
-
-            String plaintextStr;
-            switch (format) {
-                case "Hexadecimal":
-                    plaintextStr = DataConverter.bytesToHex(data);
-                    break;
-                case "Base64":
-                    plaintextStr = org.apache.commons.codec.binary.Base64.encodeBase64String(data);
-                    break;
-                case "Text (UTF-8)":
-                    plaintextStr = new String(data, java.nio.charset.StandardCharsets.UTF_8);
-                    break;
-                case "Binary":
-                    plaintextStr = DataConverter.bytesToBinary(data);
-                    break;
-                case "C Array":
-                    plaintextStr = DataConverter.bytesToCArray(data, 12);
-                    break;
-                default:
-                    plaintextStr = DataConverter.bytesToHex(data);
-            }
-
-            // Build formatted output for DECRYPTION
-            StringBuilder output = new StringBuilder();
-            output.append("=== ").append(label).append(" DECRYPTION RESULT ===\n\n");
-            output.append("PLAINTEXT (").append(data.length).append(" bytes):\n");
-            output.append(plaintextStr).append("\n\n");
-            output.append("✅ TAG VERIFIED - Integrity Confirmed\n");
-
-            cipherOutputArea.setText(output.toString());
-            return output.toString();
-        }
-    }
-
-    // Helpers to support Salsa20 and ChaCha20
-    private void handleChaCha20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
-        try {
-            String algorithm = "ChaCha20";
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] ciphertext;
-            if (hsmKeyId != null) {
-                ciphertext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptChaCha20(hsmKeyId, plaintext, iv);
-            } else {
-                ciphertext = SymmetricCipher.encryptChaCha20(plaintext, manualKey, iv);
-            }
-            setOutputData(ciphertext);
-            statusReporter.updateStatus("Encrypted using ChaCha20");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext)
-                    .output(ciphertext)
-                    .detail("Algorithm", "ChaCha20")
-                    .status("Encrypted using ChaCha20")
-                    .build());
-
-        } catch (Exception e) {
-            statusReporter.showError("Encryption Error", e.getMessage());
-        }
-    }
-
-    private void handleChaCha20Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
-        try {
-            String algorithm = "ChaCha20";
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] plaintext;
-            if (hsmKeyId != null) {
-                plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptChaCha20(hsmKeyId, ciphertext, iv);
-            } else {
-                plaintext = SymmetricCipher.decryptChaCha20(ciphertext, manualKey, iv);
-            }
-            setOutputData(plaintext);
-            statusReporter.updateStatus("Decrypted using ChaCha20");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
-                    .input(ciphertext)
-                    .output(plaintext)
-                    .detail("Algorithm", "ChaCha20")
-                    .status("Decrypted using ChaCha20")
-                    .build());
-        } catch (Exception e) {
-            statusReporter.showError("Decryption Error", e.getMessage());
-        }
-    }
-
-    private void handleSalsa20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
-        try {
-            String algorithm = "Salsa20";
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] ciphertext;
-            if (hsmKeyId != null) {
-                ciphertext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptSymmetric(hsmKeyId, plaintext, algorithm, "None", "NoPadding", iv);
-            } else {
-                ciphertext = SymmetricCipher.encrypt(plaintext, manualKey, algorithm, "None", "NoPadding", iv);
-            }
-            setOutputData(ciphertext);
-            statusReporter.updateStatus("Encrypted using Salsa20");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext)
-                    .output(ciphertext)
-                    .detail("Algorithm", "Salsa20")
-                    .status("Encrypted using Salsa20")
-                    .build());
-
-        } catch (Exception e) {
-            statusReporter.showError("Encryption Error", e.getMessage());
-        }
-    }
-
-    private void handleChaCha20Poly1305Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
-        try {
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-
-            byte[] combined;
-            if (hsmKeyId != null) {
-                combined = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptChaCha20Poly1305(hsmKeyId, plaintext, iv);
-            } else {
-                combined = SymmetricCipher.encryptChaCha20Poly1305(plaintext, manualKey, iv);
-            }
-
-            // Split for display (last 16 bytes are tag)
-            String enriched = displayGCMResult(combined, true);
-            statusReporter.updateStatus("Encrypted using ChaCha20-Poly1305");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext)
-                    .output(combined)
-                    .enrichedOutput(enriched)
-                    .detail("Algorithm", "ChaCha20-Poly1305")
-                    .status("Encrypted using ChaCha20-Poly1305")
-                    .build());
-        } catch (Exception e) {
-            statusReporter.showError("Encryption Error", e.getMessage());
-        }
-    }
-
-    private void handleSalsa20Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
-        try {
-            String algorithm = "Salsa20";
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] plaintext;
-            if (hsmKeyId != null) {
-                plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSymmetric(hsmKeyId, ciphertext, algorithm, "None", "NoPadding", iv);
-            } else {
-                plaintext = SymmetricCipher.decrypt(ciphertext, manualKey, algorithm, "None", "NoPadding", iv);
-            }
-            setOutputData(plaintext);
-            statusReporter.updateStatus("Decrypted using Salsa20");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
-                    .input(ciphertext)
-                    .output(plaintext)
-                    .detail("Algorithm", "Salsa20")
-                    .status("Decrypted using Salsa20")
-                    .build());
-        } catch (Exception e) {
-            statusReporter.showError("Decryption Error", e.getMessage());
-        }
-    }
-
-    private void handleChaCha20Poly1305Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
-        try {
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-
-            // Get Auth Tag - REQUIRED for Poly1305 decryption
-            String tagHex = gcmTagField.getText().trim();
-            if (tagHex.isEmpty()) {
-                throw new IllegalArgumentException("ChaCha20-Poly1305 requires an Auth Tag for decryption");
-            }
-            byte[] tag = DataConverter.hexToBytes(tagHex);
-
-            // Combine ciphertext + tag (SymmetricCipher expects combined)
-            byte[] combined = SymmetricCipher.combineChaCha20CiphertextAndTag(ciphertext, tag);
-
-            byte[] plaintext;
-            if (hsmKeyId != null) {
-                plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptChaCha20Poly1305(hsmKeyId, combined, iv);
-            } else {
-                plaintext = SymmetricCipher.decryptChaCha20Poly1305(combined, manualKey, iv);
-            }
-
-            displayGCMResult(plaintext, false);
-            statusReporter.updateStatus("Decrypted using ChaCha20-Poly1305");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
-                    .input(combined)
-                    .output(plaintext)
-                    .detail("Algorithm", "ChaCha20-Poly1305")
-                    .status("Decrypted using ChaCha20-Poly1305")
-                    .build());
-        } catch (Exception e) {
-            statusReporter.showError("Decryption Error", e.getMessage());
-        }
-    }
-
-    // --- XChaCha20-Poly1305 Handlers ---
-
-    private void handleXChaCha20Poly1305Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
-        try {
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-
-            // XChaCha20-Poly1305 Encryption
-            byte[] combined;
-            if (hsmKeyId != null) {
-                combined = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptXChaCha20Poly1305(hsmKeyId, plaintext, iv);
-            } else {
-                combined = SymmetricCipher.encryptXChaCha20Poly1305(plaintext, manualKey, iv);
-            }
-
-            // Split for display (last 16 bytes are tag)
-            String enriched = displayGCMResult(combined, true);
-            statusReporter.updateStatus("Encrypted using XChaCha20-Poly1305");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext)
-                    .output(combined)
-                    .enrichedOutput(enriched)
-                    .detail("Algorithm", "XChaCha20-Poly1305")
-                    .status("Encrypted using XChaCha20-Poly1305")
-                    .build());
-        } catch (Exception e) {
-            statusReporter.showError("Encryption Error", e.getMessage());
-        }
-    }
-
-    private void handleXChaCha20Poly1305Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
-        try {
-            byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-
-            // Get Auth Tag
-            String tagHex = gcmTagField.getText().trim();
-            if (tagHex.isEmpty()) {
-                throw new IllegalArgumentException("XChaCha20-Poly1305 requires an Auth Tag for decryption");
-            }
-            byte[] tag = DataConverter.hexToBytes(tagHex);
-
-            // Combine ciphertext + tag
-            byte[] combined = SymmetricCipher.combineChaCha20CiphertextAndTag(ciphertext, tag);
-
-            byte[] plaintext;
-            if (hsmKeyId != null) {
-                plaintext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptXChaCha20Poly1305(hsmKeyId, combined, iv);
-            } else {
-                plaintext = SymmetricCipher.decryptXChaCha20Poly1305(combined, manualKey, iv);
-            }
-
-            displayGCMResult(plaintext, false);
-            statusReporter.updateStatus("Decrypted using XChaCha20-Poly1305");
-            statusReporter.publish(OperationResult.forOperation("Symmetric Decrypt")
-                    .input(combined)
-                    .output(plaintext)
-                    .detail("Algorithm", "XChaCha20-Poly1305")
-                    .status("Decrypted using XChaCha20-Poly1305")
-                    .build());
-        } catch (Exception e) {
-            statusReporter.showError("Decryption Error", e.getMessage());
-        }
-    }
-
     // --- Helper Methods for Global Toolbar ---
 
     public void handleClear() {
@@ -2021,33 +1289,6 @@ public class CipherController {
         if (ivField != null) ivField.setText(packageData.artifact("nonce"));
         if (gcmTagField != null) gcmTagField.setText(packageData.artifact("authTag"));
         if (aadField != null) aadField.setText(packageData.artifact("aad") == null ? "" : packageData.artifact("aad"));
-    }
-
-    public com.cryptocarver.model.ShelfPackage createAuthenticatedCipherShelfPackage() {
-        if (lastAeadCiphertext == null || lastAeadTag == null || symmetricAlgorithmCombo == null) return null;
-        String algorithm = symmetricAlgorithmCombo.getValue();
-        String mode = cipherModeCombo == null ? "" : cipherModeCombo.getValue();
-        boolean supported = "GCM".equalsIgnoreCase(mode)
-                || "ChaCha20-Poly1305".equalsIgnoreCase(algorithm)
-                || "XChaCha20-Poly1305".equalsIgnoreCase(algorithm);
-        if (!supported || ivField == null || ivField.getText().isBlank()) return null;
-        java.util.Map<String, String> artifacts = new java.util.LinkedHashMap<>();
-        artifacts.put("ciphertext", lastAeadCiphertext);
-        artifacts.put("algorithm", algorithm);
-        artifacts.put("mode", mode);
-        artifacts.put("padding", paddingCombo == null || paddingCombo.getValue() == null ? "NoPadding" : paddingCombo.getValue());
-        String selectedFormat = outputFormatCombo == null || outputFormatCombo.getValue() == null
-                ? "Hexadecimal" : outputFormatCombo.getValue();
-        // The rendered AEAD splitter emits hexadecimal for unsupported display
-        // formats (Text/Binary/C Array), so persist the actual representation.
-        artifacts.put("format", "Base64".equals(selectedFormat) || "Hexadecimal".equals(selectedFormat)
-                ? selectedFormat : "Hexadecimal");
-        artifacts.put("authTag", "Base64".equals(artifacts.get("format"))
-                ? DataConverter.bytesToHex(org.apache.commons.codec.binary.Base64.decodeBase64(lastAeadTag))
-                : lastAeadTag);
-        artifacts.put("nonce", ivField.getText().trim());
-        if (aadField != null && !aadField.getText().isBlank()) artifacts.put("aad", aadField.getText().trim());
-        return com.cryptocarver.model.ShelfPackage.authenticatedCipher(artifacts);
     }
 
     private void setupHexValidation(TextField field) {
