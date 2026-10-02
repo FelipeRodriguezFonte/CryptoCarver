@@ -155,7 +155,7 @@ class SymmetricCipherCharacterizationUITest {
                 transcript.add(panel.snapshot(algorithm + " decrypt"));
             }
         });
-        assertEquals("7435b2bdf9c90a437e25b7159a0cab70646230620e0a0969af1213ee730c7e63", digest(transcript), String.join("\n", transcript));
+        assertEquals("ae6001a3026f74d66c2eef189b932c0ea0514d27f622f71b91f94c7224770380", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -178,6 +178,28 @@ class SymmetricCipherCharacterizationUITest {
             panel.select("ChaCha20", null, null);
             assertEquals("Hex Nonce (12 bytes recommended for ChaCha20)", panel.field("ivField").getPromptText());
         });
+    }
+
+    @Test
+    void reusingANonceWarnsForEveryKeystreamCipherButNotForCbc() throws Exception {
+        String warning = "info Nonce reuse warning: This IV/nonce has already been used with the same key "
+                + "in this session. Generate a fresh value before encrypting.";
+        String[][] cases = {{"ChaCha20", null, NONCE_12}, {"Salsa20", null, NONCE_8},
+                {"ChaCha20-Poly1305", null, NONCE_12}, {"XChaCha20-Poly1305", null, NONCE_24},
+                {"AES-256", "CTR", IV_16}, {"AES-256", "CBC", IV_16}};
+        for (String[] each : cases) {
+            // A fresh panel per cipher: the same key and nonce across ciphers would warn too.
+            withPanel(panel -> {
+                panel.select(each[0], each[1], each[1] == null ? null : "PKCS5Padding");
+                panel.material(KEY_256, each[2], "", "");
+                panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
+                panel.encrypt();
+                assertTrue(!panel.reporter().drain().contains("Nonce reuse"), each[0] + " first use");
+                panel.encrypt();
+                String second = panel.reporter().drain();
+                assertEquals(!"CBC".equals(each[1]), second.contains(warning), each[0] + "/" + each[1] + ": " + second);
+            });
+        }
     }
 
     @Test

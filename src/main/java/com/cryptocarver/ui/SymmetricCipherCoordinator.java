@@ -209,10 +209,12 @@ final class SymmetricCipherCoordinator {
     }
 
     private void warnIfNonceReused(String algorithm, String mode, String hsmKeyId, byte[] manualKey, byte[] iv) {
-        boolean aead = "GCM".equalsIgnoreCase(mode)
-                || "ChaCha20-Poly1305".equals(algorithm)
-                || "XChaCha20-Poly1305".equals(algorithm);
-        if (!aead || iv == null) return;
+        // Modes that turn the IV/nonce into a keystream: reusing it with the same key exposes the
+        // XOR of the plaintexts (and, for GCM/Poly1305, allows forging the tag).
+        boolean keystream = "GCM".equalsIgnoreCase(mode)
+                || "CTR".equalsIgnoreCase(mode)
+                || SymmetricCipher.isStreamCipher(algorithm);
+        if (!keystream || iv == null) return;
         try {
             byte[] keyToHash = hsmKeyId != null ? hsmKeyId.getBytes(java.nio.charset.StandardCharsets.UTF_8) : manualKey;
             byte[] fingerprint = java.security.MessageDigest.getInstance("SHA-256").digest(
@@ -539,6 +541,7 @@ final class SymmetricCipherCoordinator {
         try {
             String algorithm = "ChaCha20";
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
+            warnIfNonceReused("ChaCha20", null, hsmKeyId, manualKey, iv);
             byte[] ciphertext;
             if (hsmKeyId != null) {
                 ciphertext = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptChaCha20(hsmKeyId, plaintext, iv);
@@ -593,6 +596,7 @@ final class SymmetricCipherCoordinator {
     private void handleSalsa20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
+            warnIfNonceReused("Salsa20", null, hsmKeyId, manualKey, iv);
             byte[] ciphertext = SymmetricCipher.encryptSalsa20(plaintext, salsa20Key(hsmKeyId, manualKey), iv);
             setOutputData(ciphertext);
             reporter().updateStatus("Encrypted using Salsa20");
@@ -611,6 +615,7 @@ final class SymmetricCipherCoordinator {
     private void handleChaCha20Poly1305Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
+            warnIfNonceReused("ChaCha20-Poly1305", null, hsmKeyId, manualKey, iv);
 
             byte[] combined;
             if (hsmKeyId != null) {
@@ -690,6 +695,7 @@ final class SymmetricCipherCoordinator {
     private void handleXChaCha20Poly1305Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
+            warnIfNonceReused("XChaCha20-Poly1305", null, hsmKeyId, manualKey, iv);
 
             // XChaCha20-Poly1305 Encryption
             byte[] combined;
