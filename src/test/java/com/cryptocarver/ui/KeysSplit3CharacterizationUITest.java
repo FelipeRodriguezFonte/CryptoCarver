@@ -179,6 +179,20 @@ class KeysSplit3CharacterizationUITest {
     }
 
     @Test
+    void openingValidationFromTheSummaryMovesTheBreadcrumbThere() throws Exception {
+        fx(() -> {
+            navigate("Key Generation");
+            keys.handleGenerateKey();
+            keys.handleOpenValidationAndKcv();
+            root.applyCss();
+            root.layout();
+            assertEquals("Validation & KCV", ((Label) root.lookup("#breadcrumbOperationLabel")).getText());
+            assertTrue(((TitledPane) root.lookup("#validationPane")).isExpanded());
+            assertFalse(text("validationResultArea").isBlank());
+        });
+    }
+
+    @Test
     void changingAlgorithmInvalidatesGeneratedSummary() throws Exception {
         fx(() -> {
             navigate("Key Generation");

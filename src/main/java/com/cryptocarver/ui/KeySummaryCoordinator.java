@@ -169,7 +169,10 @@ final class KeySummaryCoordinator extends KeysCoordinatorSupport {
         if (AppSettings.isFullLab() && view().keyInputField() != null) {
             view().keyInputField().setText(workspace.currentGeneratedKeySummary.getRawKeyHex());
         }
-        if (view().validationPane() != null) {
+        // Navigate rather than only expand the pane, so the header and breadcrumb follow.
+        if (reporter() instanceof ModernMainController modern) {
+            modern.navigateTo("Validation & KCV");
+        } else if (view().validationPane() != null) {
             view().validationPane().setExpanded(true);
         }
         validateKey.run();
