@@ -64,7 +64,7 @@ class ComputedStyleSnapshotTool {
                 String selectedTheme = System.getProperty("styleSnapshotTheme");
                 String selectedRoute = System.getProperty("styleSnapshotRoute");
                 String[] themes = selectedTheme == null ? THEMES : new String[] {selectedTheme};
-                String[] routes = selectedRoute == null ? ROUTES : new String[] {selectedRoute};
+                String[] routes = selectedRoute == null ? ROUTES : selectedRoute.split(",");
                 for (String theme : themes) {
                     for (String route : routes) {
                         snapshot(theme, route, lines);
@@ -105,6 +105,27 @@ class ComputedStyleSnapshotTool {
         neutralizePointerAndFocus(root);
         root.applyCss(); root.layout();
         walk(root, theme + " " + route + " ", lines);
+        if (Boolean.getBoolean("styleSnapshotTabs")) {
+            for (Node node : root.lookupAll(".tab-pane")) {
+                if (!(node instanceof javafx.scene.control.TabPane tabs)) continue;
+                boolean visible = true;
+                for (Node parent = tabs; parent != null; parent = parent.getParent()) {
+                    visible &= parent.isVisible();
+                }
+                if (!visible) continue;
+                int original = tabs.getSelectionModel().getSelectedIndex();
+                for (int index = 0; index < tabs.getTabs().size(); index++) {
+                    if (index == original) continue;
+                    tabs.getSelectionModel().select(index);
+                    ClippedTextAuditTool.settle();
+                    neutralizePointerAndFocus(root);
+                    root.applyCss();
+                    root.layout();
+                    walk(root, theme + " " + route + " tab=" + index + " ", lines);
+                }
+                tabs.getSelectionModel().select(original);
+            }
+        }
         } finally {
             stage.close(); controller.shutdown(); stage.setScene(null);
             com.cryptocarver.model.AppSettings.getInstance().setLastRoute(previousRoute);
