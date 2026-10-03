@@ -55,3 +55,11 @@ Ejecución previa de regresiones: 2 tests, 2 fallos, 0 errores. Fixtures inventa
 El comentario heredado del handler habla de TextField; el FXML actual declara generatedKeyField como TextArea. La razón de la ruta especial sigue vigente: el id no satisface isLikelyResultArea. Se conserva el comentario durante la extracción literal y se documenta aquí la discrepancia.
 
 La revisión de los manejadores reales añade un tercer fallo de severidad alta: Encode PIN Block y Decode PIN Block publican material en claro como PUBLIC. El bloque ISO-0 con su PAN permite recuperar el PIN. La captura publicada y la clasificación del área actualizada deben tratar esos dos resultados como SECRET, sin cambiar los controladores de publicación ni crypto/. Hash y ciphertext AES PUBLIC son válidos; RSA público en Shelf bajo perfiles restringidos también es válido. La ausencia de entrada en Shelf para una clave simétrica restringida es un bloqueo correcto, no una entrada de longitud seis.
+
+## Extracción
+
+ResultCaptureCoordinator recibe proveedores vivos de Keys, Generic, host Generic, mainPane, tracker, snapshot, pantalla publicada, operación activa y perfil. El constructor no evalúa ninguno; los efectos se suministran como callbacks de estado, información y Shelf segura. ResultCaptureCoordinatorTest cambia snapshot/perfil después de construir el coordinador y comprueba las capturas, además de rechazar evaluación temprana del proveedor.
+
+ModernMainController conserva los trece métodos del alcance como delegados de una línea. No se movieron campos consultados por reflexión: no hizo falta adaptar tests existentes ni FXML. Se renombró la variable local del perfil a `profile` para evitar que ocultase el Supplier `visibility`; no se sustituyeron identificadores dentro de cadenas literales. isContainerVisible conserva su equivalente local y el auxiliar compartido del shell permanece para Clear Input.
+
+Extracción: 2751 → 2623 líneas en ModernMainController; coordinador inicial 218 líneas. Verificación: ResultCaptureCharacterizationUITest y ResultCaptureCoordinatorTest, 2 tests, 0 fallos, 0 errores. SHA de caracterización intacto: `f9e29640f71909496daf18fd67a1098cf7653940603114e722a102522c84fc18`.
