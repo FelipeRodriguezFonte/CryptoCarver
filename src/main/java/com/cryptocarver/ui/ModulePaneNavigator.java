@@ -169,14 +169,14 @@ final class ModulePaneNavigator {
 
     void expandAsymmetricAccordionPane(String paneName) {
         if (keysController.get() == null) return;
-        if ("DSA Key Generation".equals(paneName)) {
+        if ("DSA Key Generation".equals(paneName) || "EdDSA Key Generation".equals(paneName)) {
             expandCanonicalAsymmetricPane(paneName);
             return;
         }
         revealExpandedPane(keysController.get().expandAsymmetricPane(paneName));
     }
 
-    /** Canonical equality prevents DSA from selecting ECDSA through substring matching. */
+    /** Canonical equality distinguishes DSA, ECDSA and EdDSA without substring collisions. */
     private void expandCanonicalAsymmetricPane(String canonical) {
         ModuleHost keysHost = host(UiNavigationRegistry.Module.KEYS_ASYMMETRIC);
         Node section = keysHost == null ? null : keysHost.lookup("#asymmetricKeysContainer");

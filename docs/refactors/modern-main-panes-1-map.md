@@ -49,6 +49,22 @@ Observación fuera de la selección de panel: el callback EMV llama updateConten
 
 Los nombres heredados del banco host y su fabricante se normalizan dinámicamente en las transcripciones nuevas. Se recorren las entradas originales del registro, incluidos los alias; la normalización solo afecta el texto guardado. Recurso revisado: `src/test/resources/com/cryptocarver/ui/module-pane-navigation-baseline.tsv`, filas tabuladas idioma/ruta/módulo/sección/panel/breadcrumb, orden estable por nombre original de ruta.
 
+Cobertura por módulo, contando cada alias registrado (el detalle completo está en la transcripción):
+
+| Módulo | Rutas / idioma | Secciones canónicas |
+| --- | ---: | ---: |
+| AUTHENTICATION | 9 | 2 |
+| CERTIFICATES | 28 | 11 |
+| CIPHER | 17 | 5 |
+| EMV | 11 | 6 |
+| GENERIC | 16 | 11 |
+| KEYS_ASYMMETRIC | 8 | 4 |
+| KEYS_SYMMETRIC | 41 | 20 |
+| PAYMENTS | 33 | 7 |
+| POST_QUANTUM | 11 | 3 |
+| WSS_SECURITY | 7 | 6 |
+| XML_SECURITY | 8 | 4 |
+
 Digests iniciales SHA-256 por idioma (UTF-8, LF final):
 
 - EN: `a8845d4bd744d7ee6e2f6da2ba19692fcfc7836cc70fa479956c7ba8a32a35eb`
@@ -77,7 +93,7 @@ La cobertura combinada es **221 rutas × 2 idiomas = 442 filas**. Se añade un c
 
 ## Extracción y verificación
 
-`ModulePaneNavigator` recibe un mapa de Supplier<ModuleHost> para todos los módulos con acordeón, además de proveedores de Keys, Cipher y los controladores a los que ya delegaba el shell, scroll y contentContainer. El constructor solo guarda proveedores; no los evalúa ni captura controladores. Los campos se resuelven en cada navegación y dentro del callback diferido de revelado. El shell conserva todos los métodos expand* como delegados de una línea y sus callbacks de carga/restauración.
+`ModulePaneNavigator` recibe un mapa de Supplier<ModuleHost> para todos los módulos con destino de panel del alcance, además de proveedores de Keys, Cipher y los controladores a los que ya delegaba el shell, scroll y contentContainer. El constructor solo guarda proveedores; no los evalúa ni captura controladores. Los campos se resuelven en cada navegación y dentro del callback diferido de revelado. El shell conserva todos los métodos expand* como delegados de una línea y sus callbacks de carga/restauración.
 
 Se movieron la clasificación, la búsqueda recursiva y revealExpandedPane. El delegado de reveal del shell se eliminó al quedarse sin llamadas; la búsqueda previa descarta FXML, otras clases y tests. Generic usa su delegado también desde el callback del router. No se modifican NavigationRouter, UiNavigationRegistry, KeysController ni load*Content.
 
@@ -96,4 +112,24 @@ Solo cambian cuatro filas: el título expandido de DSA Key Generation y Generate
 | EN | `a8845d4bd744d7ee6e2f6da2ba19692fcfc7836cc70fa479956c7ba8a32a35eb` | `4cd76346b8916a3acd35bdc222301d26d25cc27b53cdf5c270898fd814d4a4ee` |
 | ES | `42cbb38964e7d098b50ab0f1c06fca1b26fb9c35add4e31b9c324c977a8f54ce` | `e58cb04e849926b3173a9d3bba09f352f20fc0ec13d9c4a34432f7e59638a995` |
 
-Pendiente: fix EdDSA y resultados separados UI/completos.
+## Corrección EdDSA
+
+La prueba `edDsaRoutesSelectTheirOwnPane` identifica el panel por eddsaCopyPublicBtn; antes del arreglo falla con EdDSA → DSA (1 fallo, 0 errores). Se añade la sección canónica EdDSA Key Generation al mismo camino de igualdad exacta. Ambas pruebas recorren todos los alias de su sección y los dos idiomas.
+
+Solo cambian cuatro filas adicionales: el título expandido de EdDSA Key Generation y Generate EdDSA Key en EN/ES; no cambia ningún breadcrumb ni otro panel.
+
+| SHA-256 | Después de DSA | Final tras EdDSA |
+| --- | --- | --- |
+| EN | `4cd76346b8916a3acd35bdc222301d26d25cc27b53cdf5c270898fd814d4a4ee` | `b1e18cd32fb9d439c8c4a0e42e780f46050a03e54c4cf751f3833d1f93eebf76` |
+| ES | `e58cb04e849926b3173a9d3bba09f352f20fc0ec13d9c4a34432f7e59638a995` | `661e33e2ba5b8a22f40fe4bb731907cd3111c1983ebe2445e38529911060a600` |
+
+Estado final: 221 rutas en cada idioma (189 destinos del alcance más 32 rutas de sección documentadas); todos los destinos de panel del alcance lo abren correctamente. Las siete rutas del workspace Cipher sin acordeón y la limitación del breadcrumb EMV quedan explicadas arriba. ModernMainController: 2905 → 2751 líneas; ModulePaneNavigator final: 270 líneas. Los auxiliares de conversión muertos ajenos al alcance y la rama inalcanzable de Cipher se conservan. No se toca crypto/, no se añaden imágenes ni archivos .local.md.
+
+## Suites finales
+
+Se ejecutan por separado con `-Plow-cpu`, manteniendo la limitación de CPU solicitada:
+
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true` (perfil que selecciona solo UI): **452 tests, 0 fallos, 0 errores, 0 omitidos; 87 clases; exit 0**. Incluye los 4 tests de ModulePaneNavigationUITest.
+- `mvn -o -q test -Plow-cpu` (suite completa): **2794 tests, 0 fallos, 0 errores, 1 omitido; 400 clases; exit 0**. Incluye también la suite UI.
+
+Los números se obtienen de los informes XML de Surefire escritos por cada ejecución, excluyendo informes anteriores; las dos ejecuciones son independientes. El test omitido en la suite completa pertenece a una condición previa del repositorio, no a los nuevos tests de navegación.

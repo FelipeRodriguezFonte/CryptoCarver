@@ -53,7 +53,7 @@ EN	EMV Offline Data Authentication	EMV	Offline Data Authentication	🧾 Offline 
 EN	EMV Operations	EMV	Session Key	🔑 Session Key Derivation	EMV & Smartcards > Session Key > EMV Operations
 EN	EMV TLV Inspector	EMV	EMV TLV Inspector	🔬 EMV TLV Inspector	EMV & Smartcards > Session Key > EMV Operations
 EN	EMV Tool	EMV	Session Key	🔑 Session Key Derivation	EMV & Smartcards > Session Key > EMV Operations
-EN	EdDSA Key Generation	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > EdDSA Key Generation
+EN	EdDSA Key Generation	KEYS_ASYMMETRIC	EdDSA Key Generation	⚡ EdDSA Key Generation	Asymmetric Keys > EdDSA Key Generation
 EN	Encode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > Encode ASN.1
 EN	Encode EBCDIC	GENERIC	Manual Conversion	🔤 Manual Conversion	Utilities > Manual Conversion > Encode EBCDIC
 EN	Encode PIN Block	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > Encode PIN Block
@@ -72,7 +72,7 @@ EN	GPG	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Ciphers > OpenPGP > OpenPGP 
 EN	Generate Certificate	CERTIFICATES	Generate Certificate	📜 Generate Certificate	Certificates & CMS > Generate Certificate
 EN	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > DSA Key Generation > Generate DSA Key
 EN	Generate ECDSA Key	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > ECDSA Key Generation > Generate ECDSA Key
-EN	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > EdDSA Key Generation > Generate EdDSA Key
+EN	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	⚡ EdDSA Key Generation	Asymmetric Keys > EdDSA Key Generation > Generate EdDSA Key
 EN	Generate MAC	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > Generate MAC
 EN	Generate PIN	PAYMENTS	PIN Generation	🔑 PIN Generation (IBM 3624)	Payment Cryptography > PIN Generation > Generate PIN
 EN	Generate RSA Key	KEYS_ASYMMETRIC	RSA Key Generation	🔐 RSA Key Generation	Asymmetric Keys > RSA Key Generation > Generate RSA Key
@@ -242,7 +242,7 @@ ES	EMV Offline Data Authentication	EMV	Offline Data Authentication	🧾 Autentic
 ES	EMV Operations	EMV	Session Key	🔑 Derivación de clave de sesión	EMV y smartcards > Session Key > EMV Operations
 ES	EMV TLV Inspector	EMV	EMV TLV Inspector	🔬 Inspector EMV TLV	EMV y smartcards > Session Key > EMV Operations
 ES	EMV Tool	EMV	Session Key	🔑 Derivación de clave de sesión	EMV y smartcards > Session Key > EMV Operations
-ES	EdDSA Key Generation	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > EdDSA Key Generation
+ES	EdDSA Key Generation	KEYS_ASYMMETRIC	EdDSA Key Generation	⚡ EdDSA Key Generation	Claves asimétricas > EdDSA Key Generation
 ES	Encode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > Encode ASN.1
 ES	Encode EBCDIC	GENERIC	Manual Conversion	🔤 Conversión manual	Utilidades > Manual Conversion > Encode EBCDIC
 ES	Encode PIN Block	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > Encode PIN Block
@@ -261,7 +261,7 @@ ES	GPG	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Cifrados > OpenPGP > OpenPGP
 ES	Generate Certificate	CERTIFICATES	Generate Certificate	📜 Generar certificado	Certificados y CMS > Generate Certificate
 ES	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > DSA Key Generation > Generate DSA Key
 ES	Generate ECDSA Key	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > ECDSA Key Generation > Generate ECDSA Key
-ES	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > EdDSA Key Generation > Generate EdDSA Key
+ES	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	⚡ EdDSA Key Generation	Claves asimétricas > EdDSA Key Generation > Generate EdDSA Key
 ES	Generate MAC	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > Generate MAC
 ES	Generate PIN	PAYMENTS	PIN Generation	🔑 Generación de PIN (IBM 3624)	Criptografía de pagos > PIN Generation > Generate PIN
 ES	Generate RSA Key	KEYS_ASYMMETRIC	RSA Key Generation	🔐 RSA Key Generation	Claves asimétricas > RSA Key Generation > Generate RSA Key

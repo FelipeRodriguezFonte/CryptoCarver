@@ -37,8 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("ui")
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class ModulePaneNavigationUITest {
-    private static final String EXPECTED_EN_SHA256 = "4cd76346b8916a3acd35bdc222301d26d25cc27b53cdf5c270898fd814d4a4ee";
-    private static final String EXPECTED_ES_SHA256 = "e58cb04e849926b3173a9d3bba09f352f20fc0ec13d9c4a34432f7e59638a995";
+    private static final String EXPECTED_EN_SHA256 = "b1e18cd32fb9d439c8c4a0e42e780f46050a03e54c4cf751f3833d1f93eebf76";
+    private static final String EXPECTED_ES_SHA256 = "661e33e2ba5b8a22f40fe4bb731907cd3111c1983ebe2445e38529911060a600";
     private static final List<UiNavigationRegistry.Module> MODULES = List.of(
             UiNavigationRegistry.Module.KEYS_SYMMETRIC,
             UiNavigationRegistry.Module.KEYS_ASYMMETRIC,
@@ -189,6 +189,11 @@ class ModulePaneNavigationUITest {
             }
         }
         return null;
+    }
+
+    @Test
+    void edDsaRoutesSelectTheirOwnPane() throws Exception {
+        assertAsymmetricRoutes("EdDSA Key Generation", "eddsaCopyPublicBtn");
     }
 
     /** These modules route to sections, with no canonical accordion pane in Route.section(). */
