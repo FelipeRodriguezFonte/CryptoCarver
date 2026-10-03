@@ -97,7 +97,8 @@ public final class HistoryCoordinator {
     }
 
     public void addToHistory(String operation, List<OperationDetail> details, String navigationCandidate) {
-        HistoryCommand item = HistoryCommandPolicy.create(operation, details, recipe.get(),
+        List<OperationDetail> safeDetails = details == null ? List.of() : visibleDetails.apply(details);
+        HistoryCommand item = HistoryCommandPolicy.create(operation, safeDetails, recipe.get(),
                 inputFormat.get(), outputFormat.get(), navigationCandidate,
                 candidate -> OperationRegistry.getInstance().resolveNavigation(candidate).isPresent());
         historyManager().addHistoryItem(item);

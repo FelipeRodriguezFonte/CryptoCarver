@@ -681,6 +681,8 @@ public class GenericController {
 
 
     public void handleClear() {
+        if (hashInputArea != null) hashInputArea.clear();
+        if (hashOutputArea != null) hashOutputArea.clear();
         // Clear Manual Conversion
         if (manualInputArea != null)
             manualInputArea.clear();
