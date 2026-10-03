@@ -225,7 +225,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
-    private HistoryCoordinator historyCoordinator;
+    private ShellHistoryCoordinator shellHistoryCoordinator;
     private SavedSessionsCoordinator savedSessionsCoordinator;
     private SaveSessionCoordinator saveSessionCoordinator;
     private UtilityToolsCoordinator utilityToolsCoordinator;
@@ -1034,7 +1034,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         else if (breadcrumbModuleBtn != null) navigateToModule(breadcrumbModuleBtn.getText());
     }
 
-    public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) { historyCoordinator().reopenHistoryOperation(item); }
+    public void reopenRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) { shellHistoryCoordinator().reopenHistoryOperation(item); }
 
     /**
      * Opens a recorded execution for inspection. Selecting an entry under
@@ -1042,17 +1042,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * explicit job of the Reopen button in the History view.
      */
     public void showRecentHistoryCommand(com.cryptocarver.model.HistoryCommand item) {
-        historyCoordinator().showRecentHistoryCommand(item);
+        shellHistoryCoordinator().showRecentHistoryCommand(item);
     }
 
     @Override
     public void reopenHistoryOperation(com.cryptocarver.model.HistoryCommand item) {
-        historyCoordinator().reopenHistoryOperation(item);
+        shellHistoryCoordinator().reopenHistoryOperation(item);
     }
 
     private java.util.List<com.cryptocarver.model.OperationDetail> visibleHistoryDetails(
             com.cryptocarver.model.HistoryCommand item) {
-        return historyCoordinator().visibleHistoryDetails(item);
+        return shellHistoryCoordinator().visibleHistoryDetails(item);
     }
 
     private java.util.List<com.cryptocarver.model.OperationDetail> visibleOperationDetails(
@@ -1132,10 +1132,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return UiStateSnapshot.capture(this);
     }
 
-    private java.util.Map<String, Object> captureHistoryState() {
-        return UiStateSnapshot.captureHistoryRecipe(this);
-    }
-
     com.cryptocarver.model.ScreenConfiguration captureActiveScreenConfiguration() {
         return screenConfigurationCoordinator().captureActiveScreenConfiguration();
     }
@@ -1171,23 +1167,38 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return historyManager;
     }
 
-    private HistoryCoordinator historyCoordinator() {
-        if (historyCoordinator == null) {
-            historyCoordinator = new HistoryCoordinator(
+    private ShellHistoryCoordinator shellHistoryCoordinator() {
+        if (shellHistoryCoordinator == null) {
+            shellHistoryCoordinator = new ShellHistoryCoordinator(new ShellHistoryCoordinator.View(
                     this::historyManager, () -> sidePanel, () -> historyViewController,
-                    this::captureHistoryState, () -> currentActiveOperation,
+                    () -> UiStateSnapshot.captureHistoryRecipe(this), () -> currentActiveOperation,
                     () -> inputFormatCombo == null ? null : inputFormatCombo.getValue(),
                     () -> outputFormatCombo == null ? null : outputFormatCombo.getValue(),
-                    this::navigateToModule, this::restoreHistoryRecipe,
+                    this::navigateToModule, this::handleItemSelected, () -> this,
                     (operation, details) -> updateInspector(operation, null, null, details),
-                    this::visibleOperationDetails, this::updateStatus, () -> windowOf(mainPane),
-                    dialogService, i18n);
+                    this::visibleOperationDetails, () -> this, () -> windowOf(mainPane),
+                    dialogService, i18n, () -> i18n.text("status.noActiveOperation"),
+                    () -> i18n.text("status.inputCleared"),
+                    () -> isContainerVisible(emvContainer) && emvController != null,
+                    () -> () -> emvController.handleClear(),
+                    () -> isContainerVisible(cipherContainer) && cipherController != null,
+                    () -> () -> cipherController.handleClear(),
+                    () -> isContainerVisible(authenticationContainer) && authenticationContainerController != null,
+                    () -> () -> authenticationContainerController.handleClear(),
+                    () -> isContainerVisible(keysContainer) && keysController != null,
+                    () -> () -> { if (keysController.isSymmetricSectionVisible()) keysController.handleClear();
+                        else keysController.handleClearAsymmetric(); },
+                    () -> isContainerVisible(genericContainer) && genericContainerController != null,
+                    () -> () -> genericContainerController.handleClear(),
+                    () -> isContainerVisible(processDesignerContainer) && processDesignerContainerController != null,
+                    () -> () -> processDesignerContainerController.handleClearCanvas(),
+                    () -> isContainerVisible(certificatesContainer), this::clearPublishedResultSnapshot));
         }
-        return historyCoordinator;
+        return shellHistoryCoordinator;
     }
 
     private void initializeHistory() {
-        historyCoordinator().initialize();
+        shellHistoryCoordinator().initialize();
     }
 
     /**
@@ -1198,12 +1209,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * it, the History module's table.
      */
     private void refreshHistoryUI() {
-        historyCoordinator().refresh();
+        shellHistoryCoordinator().refresh();
     }
 
     @Override
     public void refreshHistoryNavigation() {
-        historyCoordinator().refreshNavigation();
+        shellHistoryCoordinator().refreshNavigation();
     }
 
     public void addToHistory(String operation, java.util.Map<String, String> details) {
@@ -1216,51 +1227,30 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @Override
     public void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        historyCoordinator().addToHistory(operation, details, currentActiveOperation);
+        shellHistoryCoordinator().addToHistory(operation, details, currentActiveOperation);
     }
 
     private void addToHistory(String operation, java.util.List<com.cryptocarver.model.OperationDetail> details,
                               String navigationOperation) {
-        historyCoordinator().addToHistory(operation, details, navigationOperation);
+        shellHistoryCoordinator().addToHistory(operation, details, navigationOperation);
     }
 
     /** Exposes the shared history store to the FXML history module. */
-    public com.cryptocarver.model.HistoryManager getHistoryManager() { return historyCoordinator().historyManager(); }
+    public com.cryptocarver.model.HistoryManager getHistoryManager() { return shellHistoryCoordinator().historyManager(); }
 
     /** Restores an operation selected from the modular history view. */
     public void restoreOperationState(java.util.Map<String, Object> state, String operation) {
-        historyCoordinator().restoreOperationState(state, operation);
-    }
-
-    private void restoreHistoryRecipe(java.util.Map<String, Object> state, String operation) {
-        handleItemSelected(operation);
-        java.util.List<javafx.scene.Node> redacted = UiStateSnapshot.restoreHistoryRecipe(this, state);
-        if (redacted != null && !redacted.isEmpty()) {
-            updateStatus("Restored configuration for: " + operation + ". Re-enter redacted sensitive values.");
-            // Recipes span every module; focus the first redacted field on the reopened screen.
-            javafx.application.Platform.runLater(() -> redacted.stream().filter(ModernMainController::isShowing)
-                    .findFirst().ifPresent(javafx.scene.Node::requestFocus));
-        } else {
-            updateStatus("Restored state for: " + operation);
-        }
-    }
-
-    private static boolean isShowing(javafx.scene.Node node) {
-        if (node.getScene() == null) return false;
-        for (javafx.scene.Node current = node; current != null; current = current.getParent()) {
-            if (!current.isVisible()) return false;
-        }
-        return true;
+        shellHistoryCoordinator().restoreOperationState(state, operation);
     }
 
     @FXML
     private void handleExportHistory() {
-        historyCoordinator().chooseAndExport();
+        shellHistoryCoordinator().chooseAndExport();
     }
 
     void exportHistoryTo(java.nio.file.Path target,
                          com.cryptocarver.model.SecretVisibilityProfile visibility) throws IOException {
-        historyCoordinator().exportTo(target, visibility);
+        shellHistoryCoordinator().exportTo(target, visibility);
     }
 
     /** Materializes and presents the modular Recent Operations view. */
@@ -1351,30 +1341,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @FXML
     private void handleClearInput() {
-        if (currentActiveOperation == null) {
-            updateStatus(i18n.text("status.noActiveOperation"));
-            return;
-        }
-
-        if (isContainerVisible(emvContainer) && emvController != null) {
-            emvController.handleClear();
-        } else if (isContainerVisible(cipherContainer) && cipherController != null) {
-            cipherController.handleClear();
-        } else if (isContainerVisible(authenticationContainer) && authenticationContainerController != null) {
-            authenticationContainerController.handleClear();
-        } else if (isContainerVisible(keysContainer) && keysController != null) {
-            if (keysController.isSymmetricSectionVisible()) keysController.handleClear();
-            else keysController.handleClearAsymmetric();
-        } else if (isContainerVisible(genericContainer) && genericContainerController != null) {
-            genericContainerController.handleClear();
-        } else if (isContainerVisible(processDesignerContainer) && processDesignerContainerController != null) {
-            processDesignerContainerController.handleClearCanvas();
-        } else if (isContainerVisible(certificatesContainer)) {
-            // Certificate clearing not fully implemented via global toolbar ye
-        }
-
-        clearPublishedResultSnapshot();
-        updateStatus(i18n.text("status.inputCleared"));
+        shellHistoryCoordinator().clearInput();
     }
 
     @FXML
