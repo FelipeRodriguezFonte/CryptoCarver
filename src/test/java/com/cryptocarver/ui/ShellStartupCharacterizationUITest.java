@@ -79,6 +79,10 @@ class ShellStartupCharacterizationUITest {
             JOSEController jose = field(shell, "joseController");
             assertNotNull(jose); assertSame(shell, field(jose, "statusReporter"));
             shell.rows.add("navigate=" + field(shell, "currentActiveOperation") + ";jose.reporter=shell");
+            OperationExecutor activeExecutor = field(shell, "operationExecutor");
+            assertNotNull(field(activeExecutor, "showProgressHandler"));
+            assertNotNull(field(activeExecutor, "updateProgressHandler"));
+            assertNotNull(field(activeExecutor, "hideProgressHandler"));
             shell.shutdown();
             shell.rows.add("shutdown.locale.registered=" + localeRegistered());
             shell.rows.add("shutdown.lifecycle.detached=" + (field(shell, "lifecycleNode") == null && field(shell, "lifecycleScene") == null && field(shell, "lifecycleWindow") == null));
@@ -96,6 +100,23 @@ class ShellStartupCharacterizationUITest {
     void shutdownUnregistersShellListenersAndPreventsClosedShellRepainting(String kind) throws Exception {
         fx(() -> {
             assertTrue(localeRegistered());
+            switch (kind) {
+                case "navigation" -> {
+                    assertNotNull(field((NavigationRail) field(shell, "navigationRail"), "onSectionSelected"));
+                    assertNotNull(field((SidePanel) field(shell, "sidePanel"), "onItemSelected"));
+                }
+                case "security-tip" -> {
+                    Label tip = field(shell, "securityTipLabel"); javafx.scene.layout.VBox box = field(shell, "securityTipBox");
+                    box.setVisible(false); tip.setText("active tip"); assertTrue(box.isVisible());
+                }
+                case "responsive" -> {
+                    javafx.scene.layout.BorderPane pane = field(shell, "mainPane");
+                    javafx.scene.layout.VBox inspector = field(shell, "inspectorPanel");
+                    inspector.setVisible(true); pane.resize(800, 900); assertFalse(inspector.isVisible());
+                    pane.resize(1400, 900); assertTrue(inspector.isVisible());
+                }
+                default -> { }
+            }
             shell.shutdown();
             switch (kind) {
                 case "locale" -> {

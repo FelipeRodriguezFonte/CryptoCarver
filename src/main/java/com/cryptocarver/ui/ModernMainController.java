@@ -351,6 +351,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ShellTextResolver shellTextResolver = new ShellTextResolver(i18n::text);
     private final ShellLocalizationCoordinator shellLocalizationCoordinator =
             new ShellLocalizationCoordinator(i18n);
+    private final ShellStartupCoordinator startupCoordinator = new ShellStartupCoordinator(i18n);
     private java.util.function.Consumer<java.util.Locale> i18nListener;
 
     // Async Progress UI
@@ -384,52 +385,20 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 xmlSecurityContainer, wssSecurityContainer, processDesignerContainer};
     }
 
-    private NavigationRouter createNavigationRouter() {
-        java.util.EnumMap<UiNavigationRegistry.Module, java.util.function.BiConsumer<UiNavigationRegistry.Route,Object>> callbacks = new java.util.EnumMap<>(UiNavigationRegistry.Module.class);
-        callbacks.put(UiNavigationRegistry.Module.JOSE, (r,c) -> { if(c instanceof JOSEController x) x.showSection(currentActiveOperation); });
-        callbacks.put(UiNavigationRegistry.Module.COSE, (r,c) -> { if(c instanceof COSEController x) x.showSection(currentActiveOperation); });
-        callbacks.put(UiNavigationRegistry.Module.WALLET, (r,c) -> { if(c instanceof WalletController x) x.showSection(currentActiveOperation); });
-        callbacks.put(UiNavigationRegistry.Module.EPOCH_CONVERTER, (r,c) -> handleEpochConverter());
-        callbacks.put(UiNavigationRegistry.Module.JSON_FORMATTER, (r,c) -> handleJsonFormatter());
-        callbacks.put(UiNavigationRegistry.Module.KEYS_SYMMETRIC, (r,c) -> { loadSymmetricKeysContent(); if(keysController!=null) keysController.showSymmetricSection(); expandAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.KEYS_ASYMMETRIC, (r,c) -> { loadSymmetricKeysContent(); if(keysController!=null) keysController.showAsymmetricSection(); expandAsymmetricAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.CERTIFICATES, (r,c) -> {
-            expandCertificatesAccordionPane(r.section());
-            if(c instanceof CertificatesController x) {
-                if(r.variant()==UiNavigationRegistry.Variant.ASN1_DECODE) x.selectAsn1DecodeTab();
-                else if(r.variant()==UiNavigationRegistry.Variant.ASN1_ENCODE) x.selectAsn1EncodeTab();
-            }
-        });
-        callbacks.put(UiNavigationRegistry.Module.GENERIC, (r,c) -> expandGenericAccordionPane(r.section()));
-        callbacks.put(UiNavigationRegistry.Module.POST_QUANTUM, (r,c) -> { loadPostQuantumContent(); expandPQCAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.XML_SECURITY, (r,c) -> { loadXMLSecurityContent(); expandXMLAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.WSS_SECURITY, (r,c) -> { loadWssSecurityContent(); expandWssAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.EMV, (r,c) -> { loadEMVContent(); expandEMVAccordionPane(r.section()); updateContentHeader("EMV Operations"); updateContentSubtitle("Session keys, ARQC/ARPC, and Track 2 data"); });
-        callbacks.put(UiNavigationRegistry.Module.CLIPBOARD_SHELF, (r,c) -> { if(c instanceof ClipboardShelfController x) x.refresh(); });
-        callbacks.put(UiNavigationRegistry.Module.HISTORY, (r,c) -> {
-            if(r.variant()==UiNavigationRegistry.Variant.HISTORY_EXPORT) {
-                if(c instanceof HistoryController x) x.focusExportActions();
-                updateStatus("Choose Export Visible JSON or Export JSON Record in Recent Operations.");
-            }
-        });
-        callbacks.put(UiNavigationRegistry.Module.CIPHER, (r,c) -> { loadCipherContent(); expandCipherAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.AUTHENTICATION, (r,c) -> { loadAuthenticationContent(); expandAuthenticationAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.PAYMENTS, (r,c) -> { loadPaymentsContent(); expandPaymentsAccordionPane(r.section()); });
-        callbacks.put(UiNavigationRegistry.Module.SAVED_SESSIONS, (r,c) -> { savedSessionsCoordinator().show(); updateContentHeader("Saved Sessions"); updateContentSubtitle("Load or manage your saved workspaces"); });
-        callbacks.put(UiNavigationRegistry.Module.PROCESS_DESIGNER, (r,c) -> {
-            enterProcessDesignerWorkspace();
-            if(processDesignerContainer != null && processDesignerContainer.root() instanceof TitledPane pane) pane.setExpanded(true);
-            updateContentHeader("Process Designer");
-            updateContentSubtitle("Visual workflow builder and execution engine");
-        });
-        return new NavigationRouter(
-                () -> java.util.Arrays.stream(moduleHosts()).filter(java.util.Objects::nonNull).map(n -> (javafx.scene.Node)n).toList(),
-                () -> java.util.stream.Stream.concat(contentContainer.getChildren().stream().filter(n -> n instanceof Label), java.util.stream.Stream.of(quickStartContainer, savedSessionsContainer)).filter(java.util.Objects::nonNull).toList(),
-                this::navigationHost,
-                this::resolveNavigationController,
-                callbacks,
-                this::exitProcessDesignerWorkspace,
-                this::handleItemSelectedImpl);
+    private NavigationRouter createNavigationRouter() { return ShellStartupCoordinator.createNavigationRouter(routerView()); }
+
+    private ShellStartupCoordinator.RouterView routerView() {
+        return new ShellStartupCoordinator.RouterView(this::moduleHosts, () -> contentContainer,
+                () -> quickStartContainer, () -> savedSessionsContainer, this::navigationHost, this::resolveNavigationController,
+                () -> currentActiveOperation, () -> keysController, () -> processDesignerContainer,
+                this::loadSymmetricKeysContent, this::expandAccordionPane, this::expandAsymmetricAccordionPane,
+                this::expandCertificatesAccordionPane, this::expandGenericAccordionPane,
+                this::loadPostQuantumContent, this::expandPQCAccordionPane, this::loadXMLSecurityContent, this::expandXMLAccordionPane,
+                this::loadWssSecurityContent, this::expandWssAccordionPane, this::loadEMVContent, this::expandEMVAccordionPane,
+                this::loadCipherContent, this::expandCipherAccordionPane, this::loadAuthenticationContent, this::expandAuthenticationAccordionPane,
+                this::loadPaymentsContent, this::expandPaymentsAccordionPane, this::handleEpochConverter, this::handleJsonFormatter,
+                () -> savedSessionsCoordinator().show(), this::enterProcessDesignerWorkspace, this::exitProcessDesignerWorkspace,
+                this::updateContentHeader, this::updateContentSubtitle, this::updateStatus, this::handleItemSelectedImpl);
     }
 
     private javafx.scene.Node navigationHost(UiNavigationRegistry.Module module) {
@@ -469,13 +438,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         };
     }
 
-    private void configureDeferredModules() {
-        java.util.concurrent.Executor direct = Runnable::run;
-        for (ModuleHost host : moduleHosts()) {
-            if (host != null) host.configure(moduleLoader, direct);
-        }
-    }
-
     @SuppressWarnings("unchecked")
     private <T> T ensureModule(ModuleHost host, Class<T> controllerType) {
         if (host == null) return null;
@@ -494,29 +456,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
      * its reporter null, and since each module guards on that, its results and errors are
      * dropped instead of reaching the status bar.
      */
-    private void connectShellServices(Object controller) {
-        if (controller instanceof JOSEController jose) {
-            jose.setReporter(this);
-        } else if (controller instanceof COSEController cose) {
-            cose.setReporter(this);
-        } else if (controller instanceof WalletController wallet) {
-            wallet.setReporter(this);
-        } else if (controller instanceof HistoryController history) {
-            history.setHistoryManager(historyManager());
-            history.setOperationNavigator(this);
-        } else if (controller instanceof ClipboardShelfController shelf) {
-            shelf.setNavigator(this, this);
-        } else if (controller instanceof GenericController generic) {
-            generic.setStatusReporter(this);
-            generic.setFormatControls(inputFormatCombo, outputFormatCombo);
-            if (generic.getKeyCertificateWorkbenchController() != null) {
-                generic.getKeyCertificateWorkbenchController().setStatusReporter(this);
-            }
-            if (generic.getCryptoEnvelopeInspectorController() != null) {
-                generic.getCryptoEnvelopeInspectorController().setStatusReporter(this);
-            }
-        }
-    }
+    private void connectShellServices(Object controller) { startupCoordinator.connectShellServices(controller, shellServices); }
+
+    private final ShellStartupCoordinator.ShellServices shellServices = new ShellStartupCoordinator.ShellServices(
+            () -> this, () -> this, this::historyManager, () -> this.inputFormatCombo, () -> this.outputFormatCombo,
+            shelf -> shelf.setNavigator(this, this));
 
     /**
      * Materializes every deferred module and runs the same initialization the shell performs
@@ -665,15 +609,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private javafx.beans.value.ChangeListener<String> securityTipListener;
     private javafx.beans.value.ChangeListener<Number> responsiveWidthListener;
 
     private void detachStartupListeners() {
-        i18n.removeLocaleChangeListener(i18nListener);
-        if (securityTipLabel != null && securityTipListener != null) securityTipLabel.textProperty().removeListener(securityTipListener);
+        startupCoordinator.shutdown();
         if (mainPane != null && responsiveWidthListener != null) mainPane.widthProperty().removeListener(responsiveWidthListener);
-        if (navigationRail != null) navigationRail.setOnSectionSelected(null);
-        if (sidePanel != null) sidePanel.setOnItemSelected(null);
     }
 
     private javafx.scene.Node lifecycleNode;
@@ -725,122 +665,29 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     void startupPhaseCompleted(String phase) {}
 
     @FXML
-    public void initialize() {
-        shellDialogCoordinator = new ShellDialogCoordinator(dialogService, () -> windowOf(mainPane));
-        startupPhaseCompleted("dialogs");
-        configureDeferredModules();
-        startupPhaseCompleted("deferred");
-        navigationRouter = createNavigationRouter();
-        startupPhaseCompleted("router");
-        navigationChrome = new NavigationChromeCoordinator(inputFormatCombo, outputFormatCombo, inputFormatLabel,
+    public void initialize() { startupCoordinator.initialize(startupView()); }
+
+    private ShellStartupCoordinator.View startupView() {
+        var chrome = new ShellStartupCoordinator.ChromeView(inputFormatCombo, outputFormatCombo, inputFormatLabel,
                 contractOperationLabel, contentTitleLabel, contentSubtitleLabel, breadcrumbContainer,
-                breadcrumbSectionBtn, breadcrumbSep1, breadcrumbModuleBtn, breadcrumbSep2,
-                breadcrumbOperationLabel, favoriteToggleBtn, FAVORITE_SHORTCUT, key -> {
+                breadcrumbSectionBtn, breadcrumbSep1, breadcrumbModuleBtn, breadcrumbSep2, breadcrumbOperationLabel,
+                favoriteToggleBtn, FAVORITE_SHORTCUT, key -> {
                     if (genericContainerController != null) genericContainerController.setActiveFormatContractOperation(key);
                 }, this::selectBreadcrumbSection, this::navigateToModule);
-        startupPhaseCompleted("chrome");
-        // Module reporters are wired in connectShellServices as each module materializes.
-        System.out.println("ModernMainController initializing...");
-        com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
-        startupPhaseCompleted("shelf");
-
-        operationExecutor.setProgressHandlers(
-                this::showAsyncProgress,
-                this::updateAsyncProgressDetails,
-                this::hideAsyncProgress
-        );
-        startupPhaseCompleted("progress");
-
-        setupWindowLifecycleListeners();
-        startupPhaseCompleted("lifecycle");
-
-        setupLaboratoryMenu();
-        startupPhaseCompleted("laboratory");
-        initializeCommandPalette();
-        startupPhaseCompleted("palette");
-        syncMenuBarAccelerators();
-        startupPhaseCompleted("accelerators");
-
-        inlineErrorPresenter = new InlineErrorPresenter(
-                errorBanner, errorBannerTitle, errorBannerRemedy,
-                errorBannerGoToFieldBtn, errorBannerCopyDetailsBtn, errorBannerCloseBtn
-        );
-        startupPhaseCompleted("errors");
-
-        if (securityTipLabel != null && securityTipBox != null) {
-            securityTipListener = (obs, oldVal, newVal) -> {
-                boolean hasTip = newVal != null && !newVal.trim().isEmpty();
-                securityTipBox.setVisible(hasTip);
-                securityTipBox.setManaged(hasTip);
-            };
-            securityTipLabel.textProperty().addListener(securityTipListener);
-        }
-
-        startupPhaseCompleted("security-tip");
-        statusBarPresenter = new StatusBarPresenter(statusLabel, statusVisibilityButton, statusLanguageLabel, i18n);
-        startupPhaseCompleted("status");
-
-        if (visibilityProfileGroup != null) {
-            com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-            for (javafx.scene.control.Toggle toggle : visibilityProfileGroup.getToggles()) {
-                if (toggle instanceof javafx.scene.control.RadioMenuItem item && item.getText().contains(profile.name())) {
-                    item.setSelected(true);
-                    break;
-                }
-            }
-        }
-
-        startupPhaseCompleted("visibility");
-        installResponsiveLayoutSupport();
-        startupPhaseCompleted("responsive");
-
-        // Connect Rail to SidePanel
-        navigationRail.setSidePanel(sidePanel);
-
-        // Handle item selection from SidePanel
-        sidePanel.setOnItemSelected(this::handleItemSelected);
-        navigationController = new NavigationController(navigationRail, sidePanel, this::handleItemSelected);
-        navigationController.install();
-        startupPhaseCompleted("navigation");
-
-        i18n.refreshFromSettings();
-        i18nListener = locale -> {
-            Runnable refresh = this::applyLocalization;
-            if (Platform.isFxApplicationThread()) refresh.run();
-            else Platform.runLater(refresh);
-        };
-        i18n.addLocaleChangeListener(i18nListener);
-        applyLocalization();
-        startupPhaseCompleted("localization");
-
-        // Initialize History
-        initializeHistory();
-        startupPhaseCompleted("history");
-        refreshSessionTrailUI();
-        startupPhaseCompleted("trail");
-
-        // Load symmetric keys content (default)
-        loadSymmetricKeysContent();
-        startupPhaseCompleted("keys-load");
-
-        // Show the symmetric keys by default
-        showSymmetricKeys();
-        startupPhaseCompleted("keys-show");
-        restoreStartupLastRoute();
-        startupPhaseCompleted("route");
-
-        // Apply default font size
-        applyFontSize();
-        startupPhaseCompleted("fonts");
-        // All static FXML content is available at this point. Install now so a
-        // result written immediately after loading cannot miss the listener.
-        // The method is idempotent for any later/dynamic invocation.
-        installResultViewerSupport();
-        startupPhaseCompleted("results");
-        Platform.runLater(() -> { if (!isShutdown.get()) installTableViewerSupport(); });
-        startupPhaseCompleted("tables-scheduled");
-
-        System.out.println("ModernMainController initialized successfully!");
+        var presenters = new ShellStartupCoordinator.PresenterView(errorBanner, errorBannerTitle, errorBannerRemedy,
+                errorBannerGoToFieldBtn, errorBannerCopyDetailsBtn, errorBannerCloseBtn, securityTipLabel, securityTipBox,
+                statusLabel, statusVisibilityButton, statusLanguageLabel, visibilityProfileGroup);
+        var services = new ShellStartupCoordinator.Services(value -> shellDialogCoordinator = value,
+                value -> navigationRouter = value, value -> navigationChrome = value, value -> inlineErrorPresenter = value,
+                value -> statusBarPresenter = value, value -> navigationController = value, value -> i18nListener = value);
+        var actions = new ShellStartupCoordinator.Actions(this::setupWindowLifecycleListeners, this::setupLaboratoryMenu,
+                this::initializeCommandPalette, this::syncMenuBarAccelerators, this::installResponsiveLayoutSupport,
+                this::applyLocalization, this::initializeHistory, this::refreshSessionTrailUI, this::loadSymmetricKeysContent,
+                this::showSymmetricKeys, this::restoreStartupLastRoute, this::applyFontSize, this::installResultViewerSupport,
+                this::installTableViewerSupport, this::handleItemSelected, this::startupPhaseCompleted, isShutdown::get);
+        return new ShellStartupCoordinator.View(dialogService, () -> windowOf(mainPane), this::moduleHosts, moduleLoader,
+                this::createNavigationRouter, chrome, presenters, () -> navigationRail, () -> sidePanel, () -> this,
+                operationExecutor, this::showAsyncProgress, this::updateAsyncProgressDetails, this::hideAsyncProgress, services, actions);
     }
 
     /** Applies shell strings without changing operation names, routes or technical values. */
