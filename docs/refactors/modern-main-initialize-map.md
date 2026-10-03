@@ -41,3 +41,25 @@ ShellStartupCoordinator contiene record View y vistas de chrome/presentadores, a
 initialize, createNavigationRouter y connectShellServices son delegados de una línea. Se conservan en ModernMainController el lifecycle de Scene/Window, responsive width/guard, loaders/materialización y resolución/asignación de controllers; el coordinador los invoca en su posición original. El puente shelf.setNavigator permanece como callback estrecho del shell porque esa API exige ModernMainController para inyección de datos. No se amplía su API ni se captura una instancia de módulo en el coordinador: el callback recibe el Shelf actual como argumento. Los getters de controller del router son perezosos, nunca una instancia guardada al arrancar.
 
 El coordinador registra y retira locale, security tip y callbacks de navegación; responsive width se retira en el shell y lifecycle/executor conservan sus cierres originales. Los trabajos encolados de responsive/tablas siguen diferidos y se ignoran tras shutdown. No se reordenó ninguna fase ni se adelantó un módulo. El observador de fases es un método sin efecto por defecto; la fixture lo sobrescribe para observar estado real sin logs de producto ni reflexión en producción.
+
+## Informe final
+
+JDK Temurin 21.0.8. Ejecuciones independientes con informes limpios entre pases:
+
+| Suite | Comando | Tests | Clases | Fallos | Errores | Omitidos | Exit |
+|---|---|---:|---:|---:|---:|---:|---:|
+| UI | `mvn -o -q test -Plow-cpu -DrunUiTests=true` | 467 | 92 | 0 | 0 | 0 | 0 |
+| Completa | `mvn -o -q test -Plow-cpu` | 2810 | 406 | 0 | 0 | 1 | 0 |
+
+Única omisión preexistente: `Pkcs11SessionEncapsulationTest.testSoftHsmUpdateCertificateChain`. Las cinco pruebas de arranque pasan en ambas suites. Informes locales independientes: target/startup-ui-reports y target/surefire-reports.
+
+ModernMainController: **2474 → 2362 líneas (−112)** respecto de main. Tras añadir el observador y el arreglo de cierre, la base previa a extracción era 2515 líneas: la extracción reduce 153. ShellStartupCoordinator nuevo: **221 líneas**. initialize() original (93 líneas), createNavigationRouter() (48) y connectShellServices() quedan como delegados de una línea.
+
+Digests SHA-256 comprobados después de cada suite:
+
+- Transcripción de arranque, 35 filas UTF-8 con salto final: `116b7045624997160c793f67818c6c4f42dd912650bd30b225a4633e1d58f4ba`. Idéntico al fijado después del arreglo y antes de extraer. Archivo generado target/shell-startup-transcript.txt.
+- Transcripción del 53: `a57ad3eaf8e958a7768a7ecee4bbd22f16b43fee7d4e0985a1b5895df82fdbfb`, sin cambio.
+- ModernMainController.java: `51a04842ada0443258dd04f924e7a138fb8f2f7ce08e02406f91f266f14736fe`.
+- ShellStartupCoordinator.java: `574ada6b2f930630aa2989575fa25f91396f7b1b5a73f4be649d9d38f92d9777`.
+
+No cambió el código después de los gates. Diff completo contra 4e9f496 sin errores de whitespace. Solo se modificaron ModernMainController, el nuevo coordinador, la nueva fixture y este mapa. No se tocó crypto, no se añadieron imágenes, .local.md ni secretos reales. Cinco commits separados: mapa, caracterización de fallos, arreglo de cierre, extracción e informe. Rama `codex/modern-main-initialize` sin cambios pendientes.
