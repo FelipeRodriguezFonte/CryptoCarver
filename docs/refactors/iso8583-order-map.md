@@ -18,4 +18,4 @@ The only `Map.copyOf`/`Map.of` occurrences in `com.cryptocarver.crypto.iso8583` 
 
 ## Characterization
 
-The regression fixture uses invented field values and constructs a `Message` from a deliberately non-ascending `LinkedHashMap`. Before the fix, its test is expected to fail because the report's field lines do not follow numeric order. After the fix, the complete report is pinned by SHA-256 and the digest is checked across separate JVM executions.
+The regression fixture uses invented field values and constructs a `Message` from a deliberately non-ascending `LinkedHashMap`. Before the fix, `Iso8583ReportOrderingCharacterizationTest` failed against base `d838fa3` (`mvn -Plow-cpu -Dtest=Iso8583ReportOrderingCharacterizationTest test`): expected `[3, 4, 7, 11, 41, 49]`, observed `[49, 11, 7, 41, 4, 3]`. Two further independent Maven/JVM invocations failed too; one observed `[49, 3, 4, 41, 7, 11]`, and the other observed `[49, 11, 7, 41, 4, 3]`. The distinct sequences reproduce the unstable iteration order. After the fix, the complete report is pinned by SHA-256 and the digest is checked across separate JVM executions.
