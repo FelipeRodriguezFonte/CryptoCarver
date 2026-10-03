@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class HistoryReopenCharacterizationUITest {
     private static final String PRIVATE_FIXTURE = "SYNTHETIC_HISTORY_PRIVATE_FIXTURE_55";
     private static final Path TRANSCRIPT = Path.of("src/test/resources/com/cryptocarver/ui/history-reopen-transcript.txt");
-    private static final String EXPECTED_SHA256 = "TO_BE_FIXED";
+    private static final String EXPECTED_SHA256 = "ec1d322ebeea489e3d32e8a64c3f17e8849af910958ad5675cb956a51dd0a5a0";
     @TempDir Path tempDir;
 
     @BeforeAll static void startJavaFx() throws Exception {
@@ -70,7 +70,7 @@ class HistoryReopenCharacterizationUITest {
                     new Route("Symmetric Ciphers", "cipherContainerController", "symmetricKeyField", "SYNTHETIC-CIPHER-KEY"),
                     new Route("Hashing", "genericContainerController", "hashInputArea", "SYNTHETIC-HASH-INPUT"),
                     new Route("Clear PIN Blocks", "paymentsContainerController", "pinField", "SYNTHETIC-PAYMENT-PIN"),
-                    new Route("JWT (Signed)", "joseContainerController", "jwtKeyArea", "SYNTHETIC-JOSE-KEY"));
+                    new Route("JWT (Signed)", "joseController", "jwtKeyArea", "SYNTHETIC-JOSE-KEY"));
             for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED,
                     SecretVisibilityProfile.REDACTED, SecretVisibilityProfile.FULL_LAB)) {
                 onFx(() -> AppSettings.getInstance().setSecretVisibilityProfile(profile));
@@ -78,13 +78,13 @@ class HistoryReopenCharacterizationUITest {
                     onFx(() -> {
                         try {
                             controller.navigateToModule(route.navigation());
+                            setField(controller, "currentActiveOperation", route.navigation());
                             Object module = field(controller, route.moduleField());
                             TextInputControl input = field(module, route.inputField());
                             input.setText(route.value());
                             controller.addToHistory("Synthetic history " + route.navigation(), List.of(
                                     OperationDetail.secretDetail("Synthetic private detail", PRIVATE_FIXTURE)));
-                            HistoryCommand item = controller.getHistoryManager().getHistoryItems().get(
-                                    controller.getHistoryManager().getHistoryItems().size() - 1);
+                            HistoryCommand item = controller.getHistoryManager().getHistoryItems().get(0);
                             controller.reopenHistoryOperation(item);
                             String active = (String) field(controller, "currentActiveOperation");
                             String expected = profile == SecretVisibilityProfile.FULL_LAB ? route.value() : "";
