@@ -70,7 +70,10 @@ public final class LaboratoryMenuCoordinator {
     }
 
     private Menu createProfileMenu(PaymentProfile profile) {
-        Menu profileMenu = new Menu(profile.getType().name() + " - " + profile.getName());
+        // The profile name already says its kind; the enum name lost its underscore in the
+        // native menu bar, which reads "_" as a mnemonic marker.
+        Menu profileMenu = new Menu(profile.getName());
+        profileMenu.setMnemonicParsing(false);
         MenuItem loadItem = new MenuItem(I18nService.getInstance().text("menu.loadData"));
         loadItem.setOnAction(event -> loadProfile(profile));
         MenuItem verifyItem = new MenuItem(I18nService.getInstance().text("menu.runVerify"));
@@ -93,13 +96,22 @@ public final class LaboratoryMenuCoordinator {
                 controller.loadProfile(profile);
             }
         } else {
-            navigate.accept("Payments");
+            navigate.accept(paymentsRoute(profile));
             PaymentsController controller = paymentsController.get();
             if (controller != null) {
                 controller.loadProfile(profile);
             }
         }
         System.out.println("Loaded profile: " + profile.getName());
+    }
+
+    /** Opens the Payments pane the profile fills, not just the module's first pane. */
+    static String paymentsRoute(PaymentProfile profile) {
+        return switch (profile.getType()) {
+            case DUKPT_TDES, DUKPT_AES -> "DUKPT TDES / AES";
+            case PIN -> profile.getInputs().containsKey("key") ? "Encrypted PIN Blocks" : "Clear PIN Blocks";
+            default -> "Payments";
+        };
     }
 
     private void verifyProfile(PaymentProfile profile) {

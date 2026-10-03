@@ -139,6 +139,9 @@ class ModernMainShellLocalizationCharacterizationTest {
             .toList();
     assertEquals(
         com.cryptocarver.model.payments.PaymentProfileManager.getAllProfiles().size(), profiles.size());
+    assertEquals(
+        com.cryptocarver.model.payments.PaymentProfileManager.getAllProfiles().get(0).getName(),
+        profiles.get(0).getText());
     assertEquals("Cargar datos", profiles.get(0).getItems().get(0).getText());
     assertEquals("Ejecutar y verificar", profiles.get(0).getItems().get(1).getText());
   }
@@ -166,6 +169,34 @@ class ModernMainShellLocalizationCharacterizationTest {
           }
         });
     assertTrue(outcomes.stream().noneMatch(line -> line.contains(" FAILED ")), String.join("\n", outcomes));
+  }
+
+  @Test
+  void laboratoryProfilesOpenThePaneTheyFill() throws Exception {
+    AtomicReference<String> expanded = new AtomicReference<>();
+    runFx(
+        () -> {
+          MenuBar menuBar = field(controller, "mainMenuBar");
+          Menu laboratory =
+              menuBar.getMenus().stream()
+                  .filter(menu -> "laboratory".equals(menu.getUserData()))
+                  .findFirst()
+                  .orElseThrow();
+          Menu aes =
+              laboratory.getItems().stream()
+                  .filter(item -> item instanceof Menu && item.getText().startsWith("DUKPT AES-128"))
+                  .map(item -> (Menu) item)
+                  .findFirst()
+                  .orElseThrow();
+          aes.getItems().get(0).fire();
+          javafx.scene.control.TitledPane pane =
+              ((javafx.scene.control.Accordion)
+                      ((javafx.scene.Parent) field(controller, "paymentsContainer"))
+                          .lookup(".accordion"))
+                  .getExpandedPane();
+          expanded.set(pane == null ? "<none>" : pane.getText());
+        });
+    assertTrue(expanded.get().contains("DUKPT"), expanded.get());
   }
 
   @Test
