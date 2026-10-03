@@ -526,7 +526,18 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 asyncProgressLabel.setText(title + "…");
                 asyncProgressLabel.setAccessibleText(title);
             }
-            if (asyncProgressIndicator != null) asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(operationName));
+            if (asyncProgressIndicator != null) {
+                asyncProgressIndicator.setProgress(-1);
+                asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(operationName));
+                asyncProgressIndicator.setVisible(true);
+                asyncProgressIndicator.setManaged(true);
+            }
+            if (asyncProgressBar != null) {
+                asyncProgressBar.setProgress(-1);
+                asyncProgressBar.setAccessibleText(null);
+                asyncProgressBar.setVisible(false);
+                asyncProgressBar.setManaged(false);
+            }
             if (asyncCancelBtn != null) {
                 asyncCancelBtn.setDisable(false);
             }

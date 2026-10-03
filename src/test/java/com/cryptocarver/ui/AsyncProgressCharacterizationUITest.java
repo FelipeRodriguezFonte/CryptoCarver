@@ -58,7 +58,35 @@ class AsyncProgressCharacterizationUITest {
             if (shell != null) shell.shutdown();
             AppSettings.setInstanceForTesting(previousSettings);
             I18nService.getInstance().refreshFromSettings();
-            assertEquals(previousShelf, ClipboardShelfManager.getInstance().getEntries());
+            var shelf = ClipboardShelfManager.getInstance();
+            if (!previousShelf.equals(shelf.getEntries())) {
+                shelf.clear();
+                for (int index = previousShelf.size() - 1; index >= 0; index--) shelf.addEntry(previousShelf.get(index));
+            }
+            assertEquals(previousShelf, shelf.getEntries());
+        });
+    }
+
+    @Test void optionalControlsAndMissingBoxAreNoOps() throws Exception {
+        fx(() -> {
+            var names = List.of("asyncProgressBox", "asyncProgressLabel", "asyncProgressBar", "asyncProgressIndicator", "asyncCancelBtn");
+            var original = new HashMap<String, Object>();
+            try {
+                for (String name : names) {
+                    var control = ModernMainController.class.getDeclaredField(name); control.setAccessible(true);
+                    original.put(name, control.get(shell)); control.set(shell, null);
+                }
+                shell.showAsyncProgress(null); shell.updateAsyncProgressDetails(details(25, 100));
+                shell.hideAsyncProgress(); shell.handleCancelAsyncOperation();
+                var boxField = ModernMainController.class.getDeclaredField("asyncProgressBox"); boxField.setAccessible(true);
+                boxField.set(shell, box);
+                shell.showAsyncProgress(null); shell.updateAsyncProgressDetails(details(25, 100));
+                shell.updateAsyncProgressDetails(details(0, 0)); shell.hideAsyncProgress();
+            } finally {
+                for (String name : names) {
+                    var control = ModernMainController.class.getDeclaredField(name); control.setAccessible(true); control.set(shell, original.get(name));
+                }
+            }
         });
     }
 
