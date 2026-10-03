@@ -66,7 +66,7 @@ class ResultCapturePinSecurityUITest {
         assertTrue(done.await(45, TimeUnit.SECONDS)); if (error.get() != null) throw new AssertionError(error.get());
     }
 
-    private enum PinSurface { DECODED, UNPROTECTED }
+    private enum PinSurface { DECODED, UNPROTECTED, MIXED_REPORT }
 
     @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
     @org.junit.jupiter.params.provider.EnumSource(PinSurface.class)
@@ -116,6 +116,25 @@ class ResultCapturePinSecurityUITest {
                             payments.handleEncodeEncryptedPinBlock();
                             assertEquals("Encode Encrypted PIN Block", ((OperationResult) publishedField.get(shell)).getOperation());
                             assertProtected(shell, shelf);
+                        }
+                        case MIXED_REPORT -> {
+                            Field trackerField = ModernMainController.class.getDeclaredField("resultAreaTracker"); trackerField.setAccessible(true);
+                            ResultAreaTracker tracker = (ResultAreaTracker) trackerField.get(shell);
+                            javafx.scene.control.TextArea report = (javafx.scene.control.TextArea) root.lookup("#encResultArea");
+                            tracker.register(report); tracker.focus(report); tracker.markUpdated(report);
+                            assertTrue(tracker.isValidShelfCaptureArea(report), "Fixture must exercise a visible registered mixed report");
+                            int pinOffset = report.getText().indexOf("1234");
+                            assertTrue(pinOffset >= 0); report.selectRange(pinOffset, pinOffset + 4);
+                            putClipboard("PIN_REPORT_SENTINEL");
+                            var copySelection = ModernMainController.class.getDeclaredMethod("handleCopySecure", javafx.scene.control.TextArea.class, String.class, boolean.class);
+                            copySelection.setAccessible(true); copySelection.invoke(shell, report, report.getSelectedText(), true);
+                            assertTrue("PIN_REPORT_SENTINEL".equals(Clipboard.getSystemClipboard().getString()), "Restricted selection must not copy plain PIN material");
+                            String ciphertext = shell.resolveCurrentOutputText();
+                            assertFalse(ciphertext.isBlank() || ciphertext.equals("***MASKED***"), "The encrypted artifact remains available");
+                            assertEquals(shell.renderPublishedResult(encrypted, profile), ciphertext);
+                            shelf.clear(); shell.handleAddCurrentOutputToShelf();
+                            assertTrue(shelf.getEntries().isEmpty(), "Restricted Shelf must not capture a report containing the clear block");
+                            tracker.clearSelection();
                         }
                     }
                 }

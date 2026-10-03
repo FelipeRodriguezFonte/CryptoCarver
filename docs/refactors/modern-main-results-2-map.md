@@ -110,3 +110,19 @@ Este commit corrige solo DECODED: Decode Encrypted PIN Block publica el PIN recu
 ## Corrección 5: encoder PIN sin clave suministrada
 
 El caso UNPROTECTED, que falló antes del arreglo, ejecuta Encode Encrypted PIN Block con el campo de clave vacío. Su output es un bloque en claro aunque el nombre de la operación contenga Encrypted. La captura reconoce el detalle canónico Protected = No key supplied y clasifica ese payload como SECRET. Los resultados con clave suministrada conservan su ciphertext público. La regresión prueba ambos perfiles restringidos, visor, portapapeles real, Shelf y logs; se añade como caso independiente al mismo test parametrizado. Siete pruebas de captura/proveedores/seguridad: 0 fallos, 0 errores. SHA anterior intacto: `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`.
+
+## Corrección 6: informe mixto del panel PIN cifrado
+
+El caso MIXED_REPORT, que fallaba antes del arreglo al capturar el informe en Shelf, registra y enfoca el control real encResultArea. Ese informe siempre contiene material en claro además del ciphertext opcional; por ello su clasificación de área es SECRET antes de heredar metadatos PUBLIC del artefacto publicado. La clasificación del ciphertext publicado sigue siendo PUBLIC con clave suministrada. Se preserva el literal FXML encResultArea.
+
+La prueba exige un informe visible y registrado, bloquea la selección real de sus dígitos privados en el portapapeles, comprueba Shelf vacío, ausencia de secretos en logs y que Copy/Expand sigan capturando el ciphertext público. Todo se verifica con MASKED y REDACTED y con cifrado real TDES. Ocho pruebas de captura/proveedores/seguridad: 0 fallos, 0 errores. Digest de caracterización intacto `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`; las tres rutas adicionales se fijan mediante regresiones explícitas y no se cambian filas anteriores.
+
+Estado tras la revisión adicional: seis fallos de severidad alta corregidos en seis commits independientes. Permanece únicamente el aviso genérico de severidad baja del coordinador excluido. ModernMainController: 2751 → 2623 líneas; ResultCaptureCoordinator final: 256 líneas. Las dos suites siguientes sustituyen los números del primer pase completo como gates finales de esta revisión.
+
+## Gates finales tras las seis correcciones
+
+`mvn -o -q test -Plow-cpu -DrunUiTests=true`: **459 tests, 0 fallos, 0 errores, 0 omitidos, 90 clases, exit 0**. Se retiraron los informes anteriores antes de ejecutar este pase. Incluye los tres casos nuevos DECODED/UNPROTECTED/MIXED_REPORT. La transcripción inicial permanece con SHA `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`.
+
+`mvn -o -q test -Plow-cpu`: **2802 tests, 0 fallos, 0 errores, 1 omitido, 404 clases, exit 0**. Ejecución independiente posterior al pase UI, con informes anteriores retirados. El único omitido sigue siendo Pkcs11SessionEncapsulationTest.testSoftHsmUpdateCertificateChain. Los ocho tests de captura/proveedores/seguridad pasan sin omisiones, incluidos los tres casos parametrizados de la pantalla PIN cifrada. No se modificó código después de estos gates.
+
+Informe definitivo: seis fugas de severidad alta corregidas, un aviso cosmético de baja severidad documentado fuera de alcance, nueve commits (mapa, caracterización, extracción y seis correcciones). La ampliación de tres regresiones PIN surgió de la revisión final y queda explicada en las correcciones 4–6. No hay dudas pendientes. Main 2751 → 2623 líneas; coordinador 256 líneas; SHA final `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`.

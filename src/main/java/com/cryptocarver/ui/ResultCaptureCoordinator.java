@@ -183,7 +183,9 @@ final class ResultCaptureCoordinator {
 
     com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
         // Private material stays protected even in a generic or mislabeled result control.
-        if (area != null && containsPrivateMaterial(area.getText())) {
+        // This PIN report contains the clear block even when the published artifact is ciphertext.
+        if (area != null && (containsPrivateMaterial(area.getText())
+                || "encResultArea".equals(area.getId()))) {
             return com.cryptocarver.model.OperationDetail.Classification.SECRET;
         }
         if (ResultAreaTracker.isPrivateKeyResultArea(area)) {
