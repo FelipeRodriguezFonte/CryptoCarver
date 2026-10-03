@@ -216,7 +216,7 @@ final class ResultCaptureCoordinator {
 
     private String renderCapturePublishedResult(com.cryptocarver.model.OperationResult result) {
         String rendered = OperationResultRenderer.render(result, visibility.get());
-        if ((containsPrivateMaterial(rendered) || isClearPinResult(result))
+        if ((containsPrivateMaterial(rendered) || isPlainPinResult(result))
                 && visibility.get() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
             return visibility.get() == com.cryptocarver.model.SecretVisibilityProfile.REDACTED
                     ? "" : "***MASKED***";
@@ -226,16 +226,17 @@ final class ResultCaptureCoordinator {
 
     private com.cryptocarver.model.OperationDetail.Classification classifyCapturePublishedResult(
             com.cryptocarver.model.OperationResult result) {
-        if (isClearPinResult(result) || containsPrivateMaterial(OperationResultRenderer.render(result,
+        if (isPlainPinResult(result) || containsPrivateMaterial(OperationResultRenderer.render(result,
                 com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB))) {
             return com.cryptocarver.model.OperationDetail.Classification.SECRET;
         }
         return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(result);
     }
 
-    private boolean isClearPinResult(com.cryptocarver.model.OperationResult result) {
+    private boolean isPlainPinResult(com.cryptocarver.model.OperationResult result) {
         return result != null && ("Encode PIN Block".equals(result.getOperation())
-                || "Decode PIN Block".equals(result.getOperation()));
+                || "Decode PIN Block".equals(result.getOperation())
+                || "Decode Encrypted PIN Block".equals(result.getOperation()));
     }
 
     private boolean containsPrivateMaterial(String text) {

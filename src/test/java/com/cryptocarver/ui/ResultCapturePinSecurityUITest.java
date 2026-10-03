@@ -66,6 +66,70 @@ class ResultCapturePinSecurityUITest {
         assertTrue(done.await(45, TimeUnit.SECONDS)); if (error.get() != null) throw new AssertionError(error.get());
     }
 
+    private enum PinSurface { DECODED }
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.EnumSource(PinSurface.class)
+    void encryptedPinSurfacesCannotEscapeRestrictedProfiles(PinSurface surface) throws Exception {
+        CountDownLatch done = new CountDownLatch(1); AtomicReference<Throwable> error = new AtomicReference<>();
+        Platform.runLater(() -> {
+            AppSettings settings = AppSettings.getInstance();
+            SecretVisibilityProfile previous = settings.getSecretVisibilityProfile(); String route = settings.getLastRoute();
+            ClipboardShelfManager shelf = ClipboardShelfManager.getInstance(); ModernMainController shell = null;
+            String clipboard = Clipboard.getSystemClipboard().getString();
+            java.io.ByteArrayOutputStream capturedLogs = new java.io.ByteArrayOutputStream();
+            java.io.PrintStream previousOut = System.out, previousErr = System.err;
+            java.io.PrintStream logStream = new java.io.PrintStream(capturedLogs, true, java.nio.charset.StandardCharsets.UTF_8);
+            System.setOut(logStream); System.setErr(logStream);
+            try {
+                settings.setLastRoute(""); shelf.clear();
+                var loader = Fxml.loader("/fxml/main-view-modern.fxml"); Parent root = loader.load(); shell = loader.getController();
+                new javafx.scene.Scene(root, 1400, 900);
+                shell.navigateToModule("Encrypted PIN Blocks"); root.applyCss(); root.layout();
+                Field controllerField = ModernMainController.class.getDeclaredField("paymentsController"); controllerField.setAccessible(true);
+                PaymentsController payments = (PaymentsController) controllerField.get(shell);
+                Field publishedField = ModernMainController.class.getDeclaredField("lastPublishedResultSnapshot"); publishedField.setAccessible(true);
+                String fixtureKey = "0123456789ABCDEFFEDCBA9876543210";
+                ((TextField) root.lookup("#encPinField")).setText("1234");
+                ((TextField) root.lookup("#encPanFieldEncode")).setText("4000001234567899");
+                ((TextField) root.lookup("#encPinBlockKeyField")).setText(fixtureKey);
+                ((TextField) root.lookup("#encPinBlockKeyFieldDecode")).setText(fixtureKey);
+                ((TextField) root.lookup("#encPanFieldDecode")).setText("4000001234567899");
+                for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
+                    settings.setSecretVisibilityProfile(profile);
+                    ((TextField) root.lookup("#encPinBlockKeyField")).setText(fixtureKey);
+                    payments.handleEncodeEncryptedPinBlock();
+                    OperationResult encrypted = (OperationResult) publishedField.get(shell);
+                    assertNotNull(encrypted); assertEquals("Encode Encrypted PIN Block", encrypted.getOperation());
+                    assertNotNull(encrypted.getOutput());
+                    switch (surface) {
+                        case DECODED -> {
+                            ((TextField) root.lookup("#encPinBlockFieldDecode")).setText(java.util.HexFormat.of().withUpperCase().formatHex(encrypted.getOutput()));
+                            payments.handleDecodeEncryptedPinBlock();
+                            OperationResult decoded = (OperationResult) publishedField.get(shell);
+                            assertEquals("Decode Encrypted PIN Block", decoded.getOperation());
+                            assertTrue(java.util.Arrays.equals("1234".getBytes(java.nio.charset.StandardCharsets.UTF_8), decoded.getOutput()), "The real handler must recover the invented PIN");
+                            assertProtected(shell, shelf);
+                        }
+                    }
+                }
+                String logs = capturedLogs.toString(java.nio.charset.StandardCharsets.UTF_8);
+                assertFalse(logs.contains(fixtureKey));
+                assertFalse(logs.contains("4000001234567899"));
+                assertFalse(logs.contains("041234FEDCBA9876"));
+                assertFalse(java.util.regex.Pattern.compile("\\b1234\\b").matcher(logs).find(), "Invented PIN must not reach application logs");
+            } catch (Throwable failure) { error.set(failure); }
+            finally {
+                shelf.clear(); if (shell != null) shell.shutdown();
+                settings.setSecretVisibilityProfile(previous); settings.setLastRoute(route);
+                if (clipboard == null) Clipboard.getSystemClipboard().clear(); else putClipboard(clipboard);
+                System.setOut(previousOut); System.setErr(previousErr); logStream.close();
+                done.countDown();
+            }
+        });
+        assertTrue(done.await(45, TimeUnit.SECONDS)); if (error.get() != null) throw new AssertionError(error.get());
+    }
+
     private static void assertProtected(ModernMainController shell, ClipboardShelfManager shelf) {
         String expanded = shell.resolveCurrentOutputText();
         assertTrue(expanded.isBlank() || expanded.equals("***MASKED***"), "Clear PIN capture must be protected for expanded viewer");

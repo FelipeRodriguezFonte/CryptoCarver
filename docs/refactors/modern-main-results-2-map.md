@@ -88,9 +88,9 @@ SHA `15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b` → `bfc9
 
 Aviso residual de severidad baja: el mensaje genérico heredado de ResultViewerCoordinator dice “Added public output to Clipboard Shelf.” incluso cuando la entrada PIN en FULL_LAB ahora es SECRET. La clasificación de la entrada y las barreras son correctas; no se cambia ese coordinador por la exclusión explícita del encargo. Esta diferencia está fijada y visible en la transcripción, no se oculta.
 
-Estado de fallos: las tres fugas de severidad alta están corregidas. El aviso genérico de severidad baja queda documentado fuera del alcance. ModernMainController final: 2623 líneas (128 menos); ResultCaptureCoordinator: 250 líneas. Ningún archivo de crypto/, navegación ni los tres coordinadores excluidos se modifica. No se agregan imágenes ni .local.md.
+Estado tras la tercera corrección: las tres fugas de severidad alta están corregidas. El aviso genérico de severidad baja queda documentado fuera del alcance. ModernMainController final: 2623 líneas (128 menos); ResultCaptureCoordinator: 250 líneas. Ningún archivo de crypto/, navegación ni los tres coordinadores excluidos se modifica. No se agregan imágenes ni .local.md.
 
-## Verificación final
+## Primer pase completo y revisión final
 
 La revisión final refuerza las aserciones de las claves generadas: Shelf debe estar vacío con perfiles restringidos y el PEM privado completo debe coincidir con la entrada de sesión en FULL_LAB. Se comprueba también el PEM puro de los detalles publicados contra los logs, además del informe privado de pantalla. Las lecturas de controles se realizan en FX. No cambia el digest ni ninguna fila de la transcripción.
 
@@ -99,3 +99,10 @@ Suite UI ejecutada por separado: `mvn -o -q test -Plow-cpu -DrunUiTests=true`, *
 Suite completa ejecutada después y con informes limpios: `mvn -o -q test -Plow-cpu`, **2799 tests, 0 fallos, 0 errores, 1 omitido, 404 clases, exit 0**. El omitido es el test existente `Pkcs11SessionEncapsulationTest.testSoftHsmUpdateCertificateChain`; no corresponde a esta fase. Los cinco tests nuevos de captura/proveedores/seguridad están incluidos y pasan sin omisiones. Digest final comprobado en ambos pases finales: `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`.
 
 Los resultados finales y el refuerzo de las aserciones sin cambio de digest se incorporan al último commit de corrección para conservar un commit de mapa, uno de caracterización, uno de extracción y un commit independiente por cada fuga. No hay adaptaciones de tests anteriores ni otros desvíos de alcance; el aviso residual de baja severidad se explica arriba.
+
+
+## Corrección 4: PIN recuperado de un bloque cifrado
+
+La revisión final del mismo coordinador PIN detectó tres rutas adicionales de material en claro publicado/renderizado como PUBLIC. Se escribieron tres casos independientes con cifrado/descifrado TDES real y fixtures inventadas: DECODED, UNPROTECTED y MIXED_REPORT. Antes de sus arreglos, ResultCapturePinSecurityUITest da 4 tests, 3 fallos, 0 errores: el caso previo Clear PIN pasa y los tres nuevos fallan. Estos fallos se descubrieron después de la caracterización inicial y del primer pase completo; se amplían las regresiones y se repetirán ambos gates después de corregirlos, sin ampliar archivos de producción fuera del alcance.
+
+Este commit corrige solo DECODED: Decode Encrypted PIN Block publica el PIN recuperado como PUBLIC, pero la captura lo clasifica SECRET y lo enmascara/redacta. El helper pasa a llamarse isPlainPinResult para reflejar que el dato capturado ya está en claro. El caso DECODED comprueba recuperación del PIN inventado, visor, portapapeles real, Shelf vacío y ausencia de secretos en stdout/stderr en ambos perfiles restringidos. En este commit solo se incorpora este caso nuevo; los otros dos van en sus commits propios. Verificación con las restantes pruebas de captura: 6 tests, 0 fallos, 0 errores. Digest intacto `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`; ninguna fila previa cambia.
