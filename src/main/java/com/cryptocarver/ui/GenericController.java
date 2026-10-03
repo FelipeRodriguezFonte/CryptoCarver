@@ -1,16 +1,7 @@
 package com.cryptocarver.ui;
 
-import com.cryptocarver.crypto.EBCDICConverter;
-import com.cryptocarver.crypto.HashOperations;
 import com.cryptocarver.crypto.UUIDGenerator;
-import com.cryptocarver.crypto.ByteStatistics;
-import com.cryptocarver.crypto.BitShifter;
-import com.cryptocarver.crypto.HexInspector;
-import com.cryptocarver.crypto.CompressionCodec;
-import com.cryptocarver.crypto.CharsetInspector;
-import com.cryptocarver.crypto.TraceHexExtractor;
 import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.model.AppSettings;
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.codec.ByteFormat;
 import com.cryptocarver.codec.CodecRegistry;
@@ -21,7 +12,6 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Accordion;
 import javafx.fxml.FXML;
@@ -29,7 +19,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.CheckBox;
 
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 
@@ -144,24 +133,10 @@ public class GenericController {
     @FXML private TextArea fileResultArea;
     @FXML private TextField fileComparePathField;
 
-    public void fillHashInput(String text) {
-        if (hashInputArea != null) {
-            hashInputArea.setText(text);
-        }
-    }
+    public void fillHashInput(String text) { hashing().fillHashInput(text); }
 
     public void fillHashInput(String text, com.cryptocarver.model.ClipboardEntry.Format format) {
-        fillHashInput(text);
-        if (statusReporter != null) statusReporter.setInputFormat(clipboardFormatName(format));
-    }
-
-    private String clipboardFormatName(com.cryptocarver.model.ClipboardEntry.Format format) {
-        return switch (format == null ? com.cryptocarver.model.ClipboardEntry.Format.UNKNOWN : format) {
-            case HEX -> "Hexadecimal";
-            case BASE64 -> "Base64";
-            case BASE64URL -> "Base64URL";
-            default -> "Text (UTF-8)";
-        };
+        hashing().fillHashInput(text, format);
     }
 
     // Manual Conversion Components
@@ -170,21 +145,6 @@ public class GenericController {
     @FXML private TextArea manualOutputArea;
     @FXML private ComboBox<String> manualInputFormatCombo;
     @FXML private ComboBox<String> manualOutputFormatCombo;
-
-
-    /**
-     * Convert hex string to byte array (replacement for
-     * DatatypeConverter.parseHexBinary)
-     */
-    private static byte[] hexToBytes(String hex) {
-        int len = hex.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-                    + Character.digit(hex.charAt(i + 1), 16));
-        }
-        return data;
-    }
 
     /**
      * Convert byte array to hex string (replacement for
@@ -233,6 +193,29 @@ public class GenericController {
     /** The last completed batch report, or null; read by tests. */
     com.cryptocarver.model.batch.BatchRunner.Report lastBatchReport() {
         return batchRunner().lastReport();
+    }
+
+    private HashingCoordinator hashing;
+    private ManualConversionCoordinator manualConversion;
+
+    private HashingCoordinator hashing() {
+        if (hashing == null) {
+            hashing = new HashingCoordinator(new HashingCoordinator.View(hashTemplateCombo, hashAlgorithmCombo,
+                    hashInputArea, hashOutputArea), () -> statusReporter, () -> inputFormatCombo,
+                    () -> outputFormatCombo, this::setSharedInputFormat, this::setSharedOutputFormat);
+        }
+        return hashing;
+    }
+
+    private ManualConversionCoordinator manualConversion() {
+        if (manualConversion == null) {
+            manualConversion = new ManualConversionCoordinator(new ManualConversionCoordinator.View(manualTemplateCombo,
+                    manualInputArea, manualOutputArea, manualInputFormatCombo, manualOutputFormatCombo,
+                    ebcdicConversionCheck, ebcdicDirectionCombo, ebcdicCodePageCombo, endianWordSizeCombo,
+                    compressionFormatCombo, bitShiftBitsField), () -> statusReporter, () -> inputFormatCombo,
+                    () -> outputFormatCombo, this::setSharedInputFormat, this::setSharedOutputFormat);
+        }
+        return manualConversion;
     }
 
     private CheckDigitCoordinator checkDigits;
@@ -306,66 +289,39 @@ public class GenericController {
 
     @FXML public void handleExportBatchResults() { batchRunner().handleExportBatchResults(); }
 
-    private String getManualInputFormat() {
-        return manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null ? manualInputFormatCombo.getValue() : "Text";
-    }
+    @FXML public void handleManualConvert() { manualConversion().handleManualConvert(); }
 
-    private String getManualOutputFormat() {
-        return manualOutputFormatCombo != null && manualOutputFormatCombo.getValue() != null ? manualOutputFormatCombo.getValue() : "Text";
-    }
+    @FXML public void handleEncodeBase64Url() { manualConversion().handleEncodeBase64Url(); }
 
-    @FXML public void handleManualConvert() {
-        if (ebcdicConversionCheck != null && ebcdicConversionCheck.isSelected()) {
-            convertEBCDIC(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(),
-                    ebcdicDirectionCombo.getValue(), ebcdicCodePageCombo.getValue(), manualOutputArea);
-        } else {
-            convert(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), manualOutputArea);
-        }
-    }
+    @FXML public void handleDecodeBase64Url() { manualConversion().handleDecodeBase64Url(); }
 
-    @FXML public void handleEncodeBase64Url() { convertBase64Url(manualInputArea.getText(), true, manualOutputArea); }
-    @FXML public void handleDecodeBase64Url() { convertBase64Url(manualInputArea.getText(), false, manualOutputArea); }
-    @FXML public void handleEncodeBase32() { convertBase32(manualInputArea.getText(), true, manualOutputArea); }
-    @FXML public void handleDecodeBase32() { convertBase32(manualInputArea.getText(), false, manualOutputArea); }
-    @FXML public void handleConvertEndian() {
-        int wordSize = 4;
-        if (endianWordSizeCombo != null && endianWordSizeCombo.getValue() != null) {
-            try {
-                wordSize = Integer.parseInt(endianWordSizeCombo.getValue().split(" ")[0]) / 8;
-            } catch (Exception e) {
-                wordSize = 4;
-            }
-        }
-        convertEndian(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), wordSize, manualOutputArea);
-    }
-    @FXML public void handleEncodeUrl() { convertUrlEncoding(manualInputArea.getText(), true, manualOutputArea); }
-    @FXML public void handleDecodeUrl() { convertUrlEncoding(manualInputArea.getText(), false, manualOutputArea); }
-    @FXML public void handleCompressData() { convertCompression(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), compressionFormatCombo.getValue(), true, manualOutputArea); }
-    @FXML public void handleDecompressData() { convertCompression(manualInputArea.getText(), getManualInputFormat(), getManualOutputFormat(), compressionFormatCombo.getValue(), false, manualOutputArea); }
-    @FXML public void handleEncodeBcd() { convertPackedDecimal(manualInputArea.getText(), false, true, manualOutputArea); }
-    @FXML public void handleDecodeBcd() { convertPackedDecimal(manualInputArea.getText(), false, false, manualOutputArea); }
-    @FXML public void handleEncodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, true, manualOutputArea); }
-    @FXML public void handleDecodeComp3() { convertPackedDecimal(manualInputArea.getText(), true, false, manualOutputArea); }
-    @FXML public void handleShiftLeft() { shiftManualBits(true); }
-    @FXML public void handleShiftRight() { shiftManualBits(false); }
-    @FXML public void handleExtractTraceHex() {
-        try {
-            TraceHexExtractor.Extraction result = TraceHexExtractor.extract(manualInputArea.getText());
-            manualOutputArea.setText(result.hex());
-            if (statusReporter != null) statusReporter.updateStatus("Extracted " + result.byteCount() + " trace bytes");
-        } catch (IllegalArgumentException e) {
-            manualOutputArea.setText("Error: " + e.getMessage());
-        }
-    }
-    private void shiftManualBits(boolean left) {
-        try {
-            int bits = Integer.parseInt(bitShiftBitsField == null ? "1" : bitShiftBitsField.getText().trim());
-            byte[] input = DataConverter.hexToBytes(manualInputArea.getText().replaceAll("\\s+", ""));
-            manualOutputArea.setText(DataConverter.bytesToHex(left ? BitShifter.left(input, bits) : BitShifter.right(input, bits)));
-        } catch (IllegalArgumentException e) {
-            manualOutputArea.setText("Error: " + e.getMessage());
-        }
-    }
+    @FXML public void handleEncodeBase32() { manualConversion().handleEncodeBase32(); }
+
+    @FXML public void handleDecodeBase32() { manualConversion().handleDecodeBase32(); }
+
+    @FXML public void handleConvertEndian() { manualConversion().handleConvertEndian(); }
+
+    @FXML public void handleEncodeUrl() { manualConversion().handleEncodeUrl(); }
+
+    @FXML public void handleDecodeUrl() { manualConversion().handleDecodeUrl(); }
+
+    @FXML public void handleCompressData() { manualConversion().handleCompressData(); }
+
+    @FXML public void handleDecompressData() { manualConversion().handleDecompressData(); }
+
+    @FXML public void handleEncodeBcd() { manualConversion().handleEncodeBcd(); }
+
+    @FXML public void handleDecodeBcd() { manualConversion().handleDecodeBcd(); }
+
+    @FXML public void handleEncodeComp3() { manualConversion().handleEncodeComp3(); }
+
+    @FXML public void handleDecodeComp3() { manualConversion().handleDecodeComp3(); }
+
+    @FXML public void handleShiftLeft() { manualConversion().handleShiftLeft(); }
+
+    @FXML public void handleShiftRight() { manualConversion().handleShiftRight(); }
+
+    @FXML public void handleExtractTraceHex() { manualConversion().handleExtractTraceHex(); }
     @FXML public void handleLaunchProcessDesigner() {
         if (statusReporter instanceof ModernMainController modern) {
             modern.navigateTo("Process Designer");
@@ -404,47 +360,17 @@ public class GenericController {
             manualOutputFormatCombo.valueProperty().addListener((observable, oldValue, newValue) ->
                     synchronizeToolbarFromManualFormats());
         }
-        if (hashAlgorithmCombo != null) {
-            hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
-            hashAlgorithmCombo.getItems().add("CRC32");
-            for (HashOperations.Crc32Variant variant : HashOperations.Crc32Variant.values()) hashAlgorithmCombo.getItems().add(variant.displayName());
-            hashAlgorithmCombo.setValue("SHA-256");
-        }
+        hashing().configure();
         checkDigits().configure();
         if (randomFormatCombo != null) {
             randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
             randomFormatCombo.setValue("Hexadecimal");
             setupRandomFormatComboListener();
         }
-        if (ebcdicCodePageCombo != null) {
-            ebcdicCodePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
-            AppSettings settings = AppSettings.getInstance();
-            String savedCodePage = settings.getEBCDICCodePage();
-            ebcdicCodePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
-                    ? savedCodePage : "IBM037 — US/Canada");
-        }
-        if (ebcdicDirectionCombo != null) {
-            ebcdicDirectionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
-            AppSettings settings = AppSettings.getInstance();
-            String savedDirection = settings.getEBCDICDirection();
-            ebcdicDirectionCombo.setValue(ebcdicDirectionCombo.getItems().contains(savedDirection)
-                    ? savedDirection : "Decode EBCDIC → UTF-8");
-        }
-        if (endianWordSizeCombo != null) {
-            endianWordSizeCombo.getItems().setAll("16 bits (2 bytes)", "32 bits (4 bytes)", "64 bits (8 bytes)", "128 bits (16 bytes)");
-            endianWordSizeCombo.setValue("32 bits (4 bytes)");
-        }
-        if (compressionFormatCombo != null) {
-            compressionFormatCombo.getItems().setAll("gzip", "zlib", "deflate");
-            compressionFormatCombo.setValue("gzip");
-        }
+        manualConversion().configure();
         modularArithmetic().configure();
         fileConversion().configure();
 
-        refreshHashTemplateCombo();
-        refreshManualTemplateCombo();
-
-        initializeEBCDICConverter();
     }
 
     /**
@@ -462,178 +388,41 @@ public class GenericController {
         });
     }
 
-    private void refreshHashTemplateCombo() {
-        SafeTemplateUIHelper.populateTemplateCombo(
-                hashTemplateCombo,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING,
-                List.of("SHA-256 — Text UTF-8 → Hex", "SHA-512 — Text UTF-8 → Base64")
-        );
-    }
-
-    private void refreshManualTemplateCombo() {
-        SafeTemplateUIHelper.populateTemplateCombo(
-                manualTemplateCombo,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION,
-                List.of("Convert Text UTF-8 → Base64", "Convert Hex → Text UTF-8")
-        );
-    }
+    @FXML
+    private void handleApplyHashTemplate() { hashing().handleApplyHashTemplate(); }
 
     @FXML
-    private void handleApplyHashTemplate() {
-        String template = hashTemplateCombo != null ? hashTemplateCombo.getValue() : null;
-        if (template == null) return;
-
-        Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "hashAlgorithmCombo", v -> { if (hashAlgorithmCombo != null) hashAlgorithmCombo.setValue(v); },
-                "inputFormatCombo", this::setSharedInputFormat,
-                "outputFormatCombo", this::setSharedOutputFormat
-        );
-
-        SafeTemplateUIHelper.applySelectedTemplate(
-                template,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING,
-                () -> {
-                    if (template.contains("SHA-256")) {
-                        hashAlgorithmCombo.setValue("SHA-256");
-                        if (statusReporter != null) {
-                            statusReporter.setInputFormat("Text (UTF-8)");
-                            statusReporter.setOutputFormat("Hexadecimal");
-                            statusReporter.updateStatus("Template Applied: SHA-256 — Text UTF-8 → Hex. A hash is one-way; it cannot be decrypted.");
-                        }
-                    } else if (template.contains("SHA-512")) {
-                        hashAlgorithmCombo.setValue("SHA-512");
-                        if (statusReporter != null) {
-                            statusReporter.setInputFormat("Text (UTF-8)");
-                            statusReporter.setOutputFormat("Base64");
-                            statusReporter.updateStatus("Template Applied: SHA-512 — Text UTF-8 → Base64. A hash is one-way; it cannot be decrypted.");
-                        }
-                    }
-                },
-                setters,
-                statusReporter
-        );
-    }
+    private void handleSaveHashTemplate() { hashing().handleSaveHashTemplate(); }
 
     @FXML
-    private void handleSaveHashTemplate() {
-        Map<String, String> params = new java.util.LinkedHashMap<>();
-        if (hashAlgorithmCombo != null && hashAlgorithmCombo.getValue() != null) params.put("hashAlgorithmCombo", hashAlgorithmCombo.getValue());
-        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
-        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
-        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, params, this::refreshHashTemplateCombo, statusReporter);
-    }
+    private void handleExportHashTemplate() { hashing().handleExportHashTemplate(); }
 
     @FXML
-    private void handleExportHashTemplate() {
-        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, hashTemplateCombo, statusReporter);
-    }
+    private void handleImportHashTemplate() { hashing().handleImportHashTemplate(); }
 
     @FXML
-    private void handleImportHashTemplate() {
-        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, this::refreshHashTemplateCombo, statusReporter);
-    }
+    private void handleDeleteHashTemplate() { hashing().handleDeleteHashTemplate(); }
 
     @FXML
-    private void handleDeleteHashTemplate() {
-        javafx.stage.Window owner = hashTemplateCombo != null && hashTemplateCombo.getScene() != null ? hashTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_HASHING, hashTemplateCombo, this::refreshHashTemplateCombo, statusReporter);
-    }
+    private void handleResetHashDefaults() { hashing().handleResetHashDefaults(); }
 
     @FXML
-    private void handleResetHashDefaults() {
-        hashAlgorithmCombo.setValue("SHA-256");
-        if (statusReporter != null) {
-            statusReporter.setInputFormat("Text (UTF-8)");
-            statusReporter.setOutputFormat("Hexadecimal");
-            statusReporter.updateStatus("Hash form reset to default");
-        }
-    }
+    private void handleApplyManualTemplate() { manualConversion().handleApplyManualTemplate(); }
 
     @FXML
-    private void handleApplyManualTemplate() {
-        String template = manualTemplateCombo != null ? manualTemplateCombo.getValue() : null;
-        if (template == null) return;
-
-        Map<String, java.util.function.Consumer<String>> setters = Map.of(
-                "manualInputFormatCombo", v -> selectIfSupported(manualInputFormatCombo, normalizeFormatName(v)),
-                "manualOutputFormatCombo", v -> selectIfSupported(manualOutputFormatCombo, normalizeFormatName(v)),
-                "inputFormatCombo", this::setSharedInputFormat,
-                "outputFormatCombo", this::setSharedOutputFormat,
-                "ebcdicDirectionCombo", v -> { if (ebcdicDirectionCombo != null) ebcdicDirectionCombo.setValue(v); }
-        );
-
-        SafeTemplateUIHelper.applySelectedTemplate(
-                template,
-                com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION,
-                () -> {
-                    if (template.contains("Base64")) {
-                        manualInputFormatCombo.setValue("Text (UTF-8)");
-                        manualOutputFormatCombo.setValue("Base64");
-                        if (statusReporter != null) {
-                            statusReporter.setInputFormat("Text (UTF-8)");
-                            statusReporter.setOutputFormat("Base64");
-                            statusReporter.updateStatus("Template Applied: Convert Text UTF-8 → Base64");
-                        }
-                    } else if (template.contains("Hex")) {
-                        manualInputFormatCombo.setValue("Hexadecimal");
-                        manualOutputFormatCombo.setValue("Text (UTF-8)");
-                        if (statusReporter != null) {
-                            statusReporter.setInputFormat("Hexadecimal");
-                            statusReporter.setOutputFormat("Text (UTF-8)");
-                            statusReporter.updateStatus("Template Applied: Convert Hex → Text UTF-8");
-                        }
-                    }
-                },
-                setters,
-                statusReporter
-        );
-    }
+    private void handleSaveManualTemplate() { manualConversion().handleSaveManualTemplate(); }
 
     @FXML
-    private void handleSaveManualTemplate() {
-        Map<String, String> params = new java.util.LinkedHashMap<>();
-        if (manualInputFormatCombo != null && manualInputFormatCombo.getValue() != null) params.put("manualInputFormatCombo", manualInputFormatCombo.getValue());
-        if (manualOutputFormatCombo != null && manualOutputFormatCombo.getValue() != null) params.put("manualOutputFormatCombo", manualOutputFormatCombo.getValue());
-        if (inputFormatCombo != null && inputFormatCombo.getValue() != null) params.put("inputFormatCombo", inputFormatCombo.getValue());
-        if (outputFormatCombo != null && outputFormatCombo.getValue() != null) params.put("outputFormatCombo", outputFormatCombo.getValue());
-        if (ebcdicDirectionCombo != null && ebcdicDirectionCombo.getValue() != null) params.put("ebcdicDirectionCombo", ebcdicDirectionCombo.getValue());
-        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.saveCurrentAsTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, params, this::refreshManualTemplateCombo, statusReporter);
-    }
+    private void handleExportManualTemplate() { manualConversion().handleExportManualTemplate(); }
 
     @FXML
-    private void handleExportManualTemplate() {
-        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.exportSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, manualTemplateCombo, statusReporter);
-    }
+    private void handleImportManualTemplate() { manualConversion().handleImportManualTemplate(); }
 
     @FXML
-    private void handleImportManualTemplate() {
-        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.importTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, this::refreshManualTemplateCombo, statusReporter);
-    }
+    private void handleDeleteManualTemplate() { manualConversion().handleDeleteManualTemplate(); }
 
     @FXML
-    private void handleDeleteManualTemplate() {
-        javafx.stage.Window owner = manualTemplateCombo != null && manualTemplateCombo.getScene() != null ? manualTemplateCombo.getScene().getWindow() : null;
-        SafeTemplateUIHelper.deleteSelectedTemplate(owner, com.cryptocarver.model.SafeTemplateAllowlist.MODULE_MANUAL_CONVERSION, manualTemplateCombo, this::refreshManualTemplateCombo, statusReporter);
-    }
-
-    @FXML
-    private void handleResetManualDefaults() {
-        manualInputFormatCombo.setValue("Text (UTF-8)");
-        manualOutputFormatCombo.setValue("Text (UTF-8)");
-        manualInputArea.setText("");
-        manualOutputArea.setText("");
-        if (statusReporter != null) {
-            statusReporter.setInputFormat("Text (UTF-8)");
-            statusReporter.setOutputFormat("Text (UTF-8)");
-            statusReporter.updateStatus("Manual conversion form reset to default");
-        }
-    }
+    private void handleResetManualDefaults() { manualConversion().handleResetManualDefaults(); }
 
     /**
      * Connects the shared format toolbar to Generic's operation-specific controls.
@@ -719,7 +508,7 @@ public class GenericController {
         }
     }
 
-    private static String normalizeFormatName(String format) {
+    static String normalizeFormatName(String format) {
         return "Text".equalsIgnoreCase(format) || "Plain Text".equalsIgnoreCase(format) ? "Text (UTF-8)" : format;
     }
 
@@ -739,7 +528,7 @@ public class GenericController {
         }
     }
 
-    private static void selectIfSupported(ComboBox<String> combo, String value) {
+    static void selectIfSupported(ComboBox<String> combo, String value) {
         if (combo == null) return;
         if (value == null) {
             combo.setValue(null);
@@ -753,72 +542,7 @@ public class GenericController {
         }
     }
 
-    public void setHashAlgorithmCombo(ComboBox<String> combo) {
-        this.hashAlgorithmCombo = combo;
-        hashAlgorithmCombo.getItems().addAll(HashOperations.SUPPORTED_ALGORITHMS);
-        hashAlgorithmCombo.getItems().add("CRC32");
-        for (HashOperations.Crc32Variant variant : HashOperations.Crc32Variant.values()) hashAlgorithmCombo.getItems().add(variant.displayName());
-        hashAlgorithmCombo.setValue("SHA-256");
-    }
-
-
-
-    public void initializeEBCDICConverter() {
-        if (ebcdicCodePageCombo != null && ebcdicDirectionCombo != null && ebcdicConversionCheck != null) {
-            ebcdicCodePageCombo.getItems().setAll(EBCDICConverter.supportedCodePages().keySet());
-            AppSettings settings = AppSettings.getInstance();
-            String savedCodePage = settings.getEBCDICCodePage();
-            ebcdicCodePageCombo.setValue(EBCDICConverter.supportedCodePages().containsKey(savedCodePage)
-                    ? savedCodePage : "IBM037 — US/Canada");
-            ebcdicDirectionCombo.getItems().setAll("Decode EBCDIC → UTF-8", "Encode UTF-8 → EBCDIC");
-            String savedDirection = settings.getEBCDICDirection();
-            ebcdicDirectionCombo.setValue(ebcdicDirectionCombo.getItems().contains(savedDirection)
-                    ? savedDirection : "Decode EBCDIC → UTF-8");
-
-            ebcdicCodePageCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICCodePage(selected));
-            ebcdicDirectionCombo.valueProperty().addListener((observable, previous, selected) -> settings.setEBCDICDirection(selected));
-            ebcdicDirectionCombo.disableProperty().bind(ebcdicConversionCheck.selectedProperty().not());
-            ebcdicCodePageCombo.disableProperty().bind(ebcdicConversionCheck.selectedProperty().not());
-        }
-    }
-
-    public void convertEBCDIC(String input, String inputFormat, String outputFormat, String direction, String codePage,
-                              TextInputControl targetOutputArea) {
-        try {
-            byte[] sourceBytes = parseInput(input, inputFormat);
-            if (sourceBytes == null) throw new IllegalArgumentException("Input cannot be empty");
-            boolean encoding = "Encode UTF-8 → EBCDIC".equals(direction);
-            String operation = encoding ? "UTF-8 → EBCDIC Conversion" : "EBCDIC → UTF-8 Conversion";
-            byte[] resultBytes;
-            String result;
-
-            if (encoding) {
-                if ("Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)) {
-                    throw new IllegalArgumentException("Choose Hexadecimal, Base64, Binary or Decimal to represent EBCDIC bytes");
-                }
-                resultBytes = EBCDICConverter.encode(DataConverter.utf8BytesToString(sourceBytes), codePage);
-                result = formatBytes(resultBytes, outputFormat);
-            } else {
-                String decodedText = EBCDICConverter.decode(sourceBytes, codePage);
-                resultBytes = decodedText.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                result = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
-                        ? decodedText : formatBytes(resultBytes, outputFormat);
-            }
-            targetOutputArea.setText(result);
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Input Format", inputFormat);
-            details.put("Output Format", outputFormat);
-            details.put("EBCDIC Code Page", codePage);
-            details.put("Direction", direction);
-            statusReporter.publish(OperationResult.forOperation(operation)
-                    .input(sourceBytes).output(resultBytes).details(details)
-                    .status(operation + " using " + codePage).build());
-        } catch (Exception e) {
-            statusReporter.showError("EBCDIC Conversion Error", e.getMessage());
-        }
-    }
-
-    private String formatBytes(byte[] bytes, String outputFormat) {
+    static String formatBytes(byte[] bytes, String outputFormat) {
         try {
             return CodecRegistry.getInstance().encode(bytes, ByteFormat.fromDisplayName(outputFormat));
         } catch (IllegalArgumentException | CodecException e) {
@@ -826,456 +550,10 @@ public class GenericController {
         }
     }
 
-    /** Explicit Base64URL text conversion for JOSE-style payloads. */
-    public void convertBase64Url(String input, boolean encode, TextInputControl targetOutputArea) {
-        try {
-            byte[] inputBytes;
-            byte[] outputBytes;
-            String output;
-            if (encode) {
-                inputBytes = CodecRegistry.getInstance().decode(input, ByteFormat.TEXT_UTF8);
-                output = CodecRegistry.getInstance().encode(inputBytes, ByteFormat.BASE64_URL);
-                outputBytes = CodecRegistry.getInstance().decode(output, ByteFormat.TEXT_ASCII);
-            } else {
-                inputBytes = CodecRegistry.getInstance().decode(input, ByteFormat.BASE64_URL);
-                output = CodecRegistry.getInstance().encode(inputBytes, ByteFormat.TEXT_UTF8);
-                outputBytes = inputBytes;
-            }
-            targetOutputArea.setText(output);
-            String operation = encode ? "UTF-8 → Base64URL" : "Base64URL → UTF-8";
-            statusReporter.publish(OperationResult.forOperation(operation)
-                    .input(encode ? inputBytes : input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
-                    .output(outputBytes).detail("Padding", "None (RFC 4648 / JOSE)")
-                    .status(operation + " conversion completed").build());
-        } catch (Exception e) {
-            statusReporter.showError("Base64URL Conversion Error", e.getMessage());
-        }
-    }
+    @FXML public void handleCalculateHash() { hashing().handleCalculateHash(); }
 
-    /** Explicit Base32 conversion for RFC 4648 interoperability. */
-    public void convertBase32(String input, boolean encode, TextInputControl targetOutputArea) {
-        try {
-            byte[] decoded;
-            String output;
-            if (encode) {
-                decoded = CodecRegistry.getInstance().decode(input, ByteFormat.TEXT_UTF8);
-                output = CodecRegistry.getInstance().encode(decoded, ByteFormat.BASE32);
-            } else {
-                decoded = CodecRegistry.getInstance().decode(input, ByteFormat.BASE32);
-                output = CodecRegistry.getInstance().encode(decoded, ByteFormat.TEXT_UTF8);
-            }
-            targetOutputArea.setText(output);
-            String operation = encode ? "UTF-8 → Base32" : "Base32 → UTF-8";
-            statusReporter.publish(OperationResult.forOperation(operation)
-                    .input(encode ? input.getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                            : input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
-                    .output(encode ? output.getBytes(java.nio.charset.StandardCharsets.US_ASCII) : decoded)
-                    .detail("Standard", "RFC 4648 Base32")
-                    .status(operation + " conversion completed").build());
-        } catch (Exception e) {
-            statusReporter.showError("Base32 Conversion Error", e.getMessage());
-        }
-    }
-
-    /** Reverses byte order inside each fixed-width integer (16/32/64/128 bits). */
-    public void convertEndian(String input, String inputFormat, String outputFormat, int wordBytes,
-                              TextInputControl targetOutputArea) {
-        try {
-            byte[] source = parseInput(input, inputFormat);
-            if (source == null || source.length == 0) throw new IllegalArgumentException("Input cannot be empty");
-            if (wordBytes != 2 && wordBytes != 4 && wordBytes != 8 && wordBytes != 16) {
-                throw new IllegalArgumentException("Word size must be 2, 4, 8 or 16 bytes");
-            }
-            if (source.length % wordBytes != 0) {
-                throw new IllegalArgumentException("Input length must be a multiple of " + wordBytes + " bytes");
-            }
-            byte[] converted = source.clone();
-            for (int offset = 0; offset < converted.length; offset += wordBytes) {
-                for (int left = offset, right = offset + wordBytes - 1; left < right; left++, right--) {
-                    byte temporary = converted[left];
-                    converted[left] = converted[right];
-                    converted[right] = temporary;
-                }
-            }
-            String output = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
-                    ? DataConverter.utf8BytesToString(converted) : formatBytes(converted, outputFormat);
-            targetOutputArea.setText(output);
-            statusReporter.publish(OperationResult.forOperation("Endian Conversion")
-                    .input(source).output(converted)
-                    .detail("Word Size", (wordBytes * 8) + " bits")
-                    .detail("Input Format", inputFormat).detail("Output Format", outputFormat)
-                    .status("Byte order converted for " + (wordBytes * 8) + "-bit words").build());
-        } catch (Exception e) {
-            statusReporter.showError("Endian Conversion Error", e.getMessage());
-        }
-    }
-
-    public void analyzeBytes(String input, String inputFormat, TextInputControl targetOutputArea) {
-        try {
-            byte[] bytes = parseInput(input, inputFormat);
-            String result = ByteStatistics.analyze(bytes);
-            targetOutputArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Byte Statistics")
-                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .detail("Input Format", inputFormat).status("Byte statistics calculated").build());
-        } catch (Exception e) {
-            statusReporter.showError("Byte Analysis Error", e.getMessage());
-        }
-    }
-
-    public void convertUrlEncoding(String input, boolean encode, TextInputControl targetOutputArea) {
-        try {
-            String result = encode
-                    ? java.net.URLEncoder.encode(input, java.nio.charset.StandardCharsets.UTF_8)
-                    : java.net.URLDecoder.decode(input, java.nio.charset.StandardCharsets.UTF_8);
-            targetOutputArea.setText(result);
-            String operation = encode ? "UTF-8 → URL Encoding" : "URL Encoding → UTF-8";
-            statusReporter.publish(OperationResult.forOperation(operation)
-                    .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .status(operation + " completed").build());
-        } catch (Exception e) {
-            statusReporter.showError("URL Encoding Error", e.getMessage());
-        }
-    }
-
-    public void xorBuffers(String left, String right, String inputFormat, String outputFormat,
-                           TextInputControl targetOutputArea) {
-        try {
-            byte[] leftBytes = parseInput(left, inputFormat);
-            byte[] rightBytes = parseInput(right, inputFormat);
-            byte[] result = DataConverter.xor(leftBytes, rightBytes);
-            String rendered = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
-                    ? DataConverter.utf8BytesToString(result) : formatBytes(result, outputFormat);
-            targetOutputArea.setText(rendered);
-            statusReporter.publish(OperationResult.forOperation("XOR Buffers")
-                    .input(leftBytes).output(result)
-                    .detail("Input Format", inputFormat).detail("Output Format", outputFormat)
-                    .detail("Second Buffer Bytes", String.valueOf(rightBytes.length))
-                    .status("XOR completed for " + result.length + " bytes").build());
-        } catch (Exception e) {
-            statusReporter.showError("XOR Error", e.getMessage());
-        }
-    }
-
-    public void compareBuffers(String left, String right, String inputFormat, TextInputControl targetOutputArea) {
-        try {
-            byte[] leftBytes = parseInput(left, inputFormat);
-            byte[] rightBytes = parseInput(right, inputFormat);
-            int limit = Math.min(leftBytes.length, rightBytes.length);
-            int firstDifference = -1;
-            for (int i = 0; i < limit; i++) {
-                if (leftBytes[i] != rightBytes[i]) { firstDifference = i; break; }
-            }
-            boolean equal = firstDifference < 0 && leftBytes.length == rightBytes.length;
-            String result;
-            if (equal) {
-                result = "Buffers are identical (" + leftBytes.length + " bytes).";
-            } else if (firstDifference >= 0) {
-                result = String.format("Buffers differ at offset %d (0x%X): left=%02X, right=%02X", firstDifference,
-                        firstDifference, leftBytes[firstDifference] & 0xFF, rightBytes[firstDifference] & 0xFF);
-            } else {
-                result = "Buffers match for " + limit + " bytes but lengths differ: left=" + leftBytes.length
-                        + ", right=" + rightBytes.length;
-            }
-            targetOutputArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Compare Buffers")
-                    .input(leftBytes).output(rightBytes)
-                    .detail("Input Format", inputFormat).detail("Left Length", String.valueOf(leftBytes.length))
-                    .detail("Right Length", String.valueOf(rightBytes.length))
-                    .detail("Result", equal ? "IDENTICAL" : "DIFFERENT")
-                    .status(equal ? "Buffers are identical" : "Buffers differ").build());
-        } catch (Exception e) {
-            statusReporter.showError("Buffer Comparison Error", e.getMessage());
-        }
-    }
-
-    public void visualizeControlCharacters(String input, String inputFormat, TextInputControl targetOutputArea) {
-        try {
-            byte[] bytes = parseInput(input, inputFormat);
-            String result = DataConverter.visualizeBytes(bytes);
-            targetOutputArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Visualize Control Characters")
-                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .detail("Input Format", inputFormat).status("Control characters visualized").build());
-        } catch (Exception e) {
-            statusReporter.showError("Byte Visualization Error", e.getMessage());
-        }
-    }
-
-    public void inspectHex(String input, String inputFormat, int offset, int length, TextInputControl targetOutputArea) {
-        inspectHex(input, inputFormat, offset, length, -1, 0, targetOutputArea);
-    }
-
-    public void inspectHex(String input, String inputFormat, int offset, int length, int selectionOffset, int selectionLength, TextInputControl targetOutputArea) {
-        try {
-            byte[] bytes = parseInput(input, inputFormat);
-            String result = HexInspector.render(bytes, offset, length, selectionOffset, selectionLength);
-            targetOutputArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Hexadecimal Inspector")
-                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .detail("Offset", String.valueOf(offset)).detail("Length", String.valueOf(length))
-                    .detail("Selection", selectionOffset < 0 ? "None" : selectionOffset + "+" + selectionLength)
-                    .status("Hexadecimal view rendered").build());
-        } catch (Exception e) {
-            statusReporter.showError("Hex Inspector Error", e.getMessage());
-        }
-    }
-
-    public void convertCompression(String input, String inputFormat, String outputFormat, String format, boolean compress,
-                                  TextInputControl targetOutputArea) {
-        try {
-            byte[] source = parseInput(input, inputFormat);
-            byte[] converted = compress ? CompressionCodec.compress(source, format) : CompressionCodec.decompress(source, format);
-            String output = "Text".equals(outputFormat) || "Text (UTF-8)".equals(outputFormat)
-                    ? DataConverter.utf8BytesToString(converted) : formatBytes(converted, outputFormat);
-            targetOutputArea.setText(output);
-            String operation = (compress ? "Compress " : "Decompress ") + format;
-            statusReporter.publish(OperationResult.forOperation(operation)
-                    .input(source).output(converted).detail("Format", format)
-                    .detail("Input Bytes", String.valueOf(source.length)).detail("Output Bytes", String.valueOf(converted.length))
-                    .status(operation + " completed").build());
-        } catch (Exception e) {
-            statusReporter.showError("Compression Error", e.getMessage());
-        }
-    }
-
-    public void compareCharsets(String input, String inputFormat, String ebcdicCodePage, TextInputControl targetOutputArea) {
-        try {
-            byte[] bytes = parseInput(input, inputFormat);
-            String result = CharsetInspector.compare(bytes, ebcdicCodePage);
-            targetOutputArea.setText(result);
-            statusReporter.publish(OperationResult.forOperation("Charset Comparison")
-                    .input(bytes).output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .detail("EBCDIC Code Page", ebcdicCodePage).status("Charset interpretations generated").build());
-        } catch (Exception e) { statusReporter.showError("Charset Comparison Error", e.getMessage()); }
-    }
-
-    public void convertPackedDecimal(String input, boolean comp3, boolean encode, TextInputControl targetOutputArea) {
-        try {
-            byte[] bytes;
-            String output;
-            if (encode) {
-                bytes = comp3 ? DataConverter.decimalToComp3(input) : DataConverter.decimalToPackedBcd(input);
-                output = DataConverter.bytesToHex(bytes);
-            } else {
-                bytes = DataConverter.hexToBytes(input);
-                output = comp3 ? DataConverter.comp3ToDecimal(bytes) : DataConverter.packedBcdToDecimal(bytes);
-            }
-            targetOutputArea.setText(output);
-            String name = comp3 ? "COMP-3" : "Packed BCD";
-            String operation = encode ? "Decimal → " + name : name + " → Decimal";
-            statusReporter.publish(OperationResult.forOperation(operation)
-                    .input(encode ? input.getBytes(java.nio.charset.StandardCharsets.US_ASCII) : bytes)
-                    .output(encode ? bytes : output.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
-                    .status(operation + " conversion completed").build());
-        } catch (Exception e) { statusReporter.showError("Packed Decimal Error", e.getMessage()); }
-    }
-
-    /**
-     * Calculate hash of input data
-     *
-     * @param input            The input string
-     * @param algorithm        The hash algorithm
-     * @param targetOutputArea The TextArea to display the result
-     */
-    /**
-     * Calculate hash of input data with specified format
-     *
-     * @param input            The input string
-     * @param inputFormat      The format of the input string
-     * @param algorithm        The hash algorithm
-     * @param targetOutputArea The TextArea to display the result
-     */
-    public void calculateHash(String input, String inputFormat, String algorithm, TextInputControl targetOutputArea) {
-        calculateHash(input, inputFormat, "Hexadecimal", algorithm, targetOutputArea);
-    }
-
-    /** Calculates a hash and serializes its bytes using the selected output format. */
-    public void calculateHash(String input, String inputFormat, String outputFormat,
-            String algorithm, TextInputControl targetOutputArea) {
-        try {
-            inputFormat = normalizeFormatName(inputFormat);
-            outputFormat = normalizeFormatName(outputFormat);
-            if (input == null || input.isEmpty()) {
-                statusReporter.showError("Input Error", "Please enter data to hash");
-                return;
-            }
-
-            if (algorithm == null || algorithm.isEmpty()) {
-                statusReporter.showError("Algorithm Error", "Please select a hash algorithm");
-                return;
-            }
-
-            // Parse input based on format
-            byte[] inputData;
-            try {
-                inputData = parseInput(input, inputFormat);
-            } catch (IllegalArgumentException e) {
-                statusReporter.showError("Input Error", e.getMessage());
-                return;
-            }
-
-            // Calculate hash
-            byte[] hash = HashOperations.calculateHash(inputData, algorithm);
-            String formattedHash = formatBytes(hash, outputFormat);
-
-            // Display result
-            targetOutputArea.setText(formattedHash);
-            statusReporter.publish(OperationResult.forOperation("Hashing: " + algorithm)
-                    .input(inputData).output(hash)
-                    .detail("Algorithm", algorithm).detail("Input Format", inputFormat)
-                    .detail("Output Format", outputFormat)
-                    .status("Hash calculated using " + algorithm).build());
-
-        } catch (NoSuchAlgorithmException e) {
-            statusReporter.showError("Algorithm Error", "Algorithm not supported: " + e.getMessage());
-        } catch (Exception e) {
-            statusReporter.showError("Hash Error", "Error calculating hash: " + e.getMessage());
-        }
-    }
-
-    @FXML
-
-    public void handleCalculateHash() {
-        if (statusReporter != null && !statusReporter.checkPreflightReadiness("Hashing", true)) {
-            return;
-        }
-        if (hashInputArea != null && hashAlgorithmCombo != null && hashOutputArea != null) {
-            calculateHash(hashInputArea.getText(),
-                    selectedFormatOrDefault(inputFormatCombo, "Text (UTF-8)"),
-                    selectedFormatOrDefault(outputFormatCombo, "Hexadecimal"),
-                    hashAlgorithmCombo.getValue(),
-                    hashOutputArea);
-        }
-    }
-
-    private static String selectedFormatOrDefault(ComboBox<String> combo, String defaultFormat) {
-        return combo != null && combo.getValue() != null ? combo.getValue() : defaultFormat;
-    }
-
-    /**
-     * Universal conversion
-     */
     public void fillManualConversionInput(String value, com.cryptocarver.model.ClipboardEntry.Format format) {
-        String targetFormat = "Text (UTF-8)";
-        switch (format) {
-            case HEX: targetFormat = "Hexadecimal"; break;
-            case BASE64: targetFormat = "Base64"; break;
-            case BASE64URL: targetFormat = "Base64URL"; break;
-            default: break;
-        }
-
-        if (manualInputFormatCombo != null && !manualInputFormatCombo.getItems().contains(targetFormat)) {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
-            alert.setTitle("Format Not Supported");
-            alert.setHeaderText("Incompatible Format");
-            alert.setContentText("The format " + format + " is not supported by Manual Conversion.");
-            alert.showAndWait();
-            return;
-        }
-
-        if (manualInputArea != null) {
-            manualInputArea.setText(value);
-        }
-        if (manualInputFormatCombo != null) {
-            manualInputFormatCombo.setValue(targetFormat);
-        }
-    }
-
-    public void convert(String input, String inputFormat, String outputFormat, TextInputControl targetOutputArea) {
-        try {
-            inputFormat = normalizeFormatName(inputFormat);
-            outputFormat = normalizeFormatName(outputFormat);
-            if (input == null || input.isEmpty()) {
-                statusReporter.showError("Input Error", "Please enter data to convert");
-                return;
-            }
-            if (inputFormat == null || outputFormat == null) {
-                statusReporter.showError("Format Error", "Please select both input and output formats");
-                return;
-            }
-
-            try {
-                com.cryptocarver.util.InputValidator.validateInput(input, inputFormat);
-            } catch (IllegalArgumentException e) {
-                statusReporter.showError("Format Error", e.getMessage());
-                return;
-            }
-
-            // Parse Input
-            byte[] inputData;
-            switch (inputFormat) {
-                case "Hexadecimal":
-                    String cleanHex = input.replaceAll("\\s+", "");
-                    if (!DataConverter.isValidHex(cleanHex)) {
-                        statusReporter.showError("Input Error", "Invalid hexadecimal input. Use 0-9, A-F.");
-                        return;
-                    }
-                    inputData = DataConverter.hexToBytes(cleanHex);
-                    break;
-                case "Base64":
-                    inputData = DataConverter.decodeBase64Flexible(input);
-                    break;
-                case "Base64URL":
-                    inputData = DataConverter.decodeBase64Url(input);
-                    break;
-                case "Text (UTF-8)":
-                case "Text":
-                    inputData = input.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                    break;
-                case "Binary":
-                    try {
-                        inputData = DataConverter.binaryToBytes(input.replaceAll("\\s+", ""));
-                    } catch (IllegalArgumentException e) {
-                        statusReporter.showError("Input Error", "Invalid binary input: " + e.getMessage());
-                        return;
-                    }
-                    break;
-                case "Decimal":
-                    inputData = DataConverter.decimalToBytes(input);
-                    break;
-                default:
-                    statusReporter.showError("Format Error", "Unsupported input format: " + inputFormat);
-                    return;
-            }
-
-            // Format Output
-            String outputResult;
-            switch (outputFormat) {
-                case "Hexadecimal":
-                    outputResult = bytesToHex(inputData);
-                    break;
-                case "Base64":
-                    outputResult = java.util.Base64.getEncoder().encodeToString(inputData);
-                    break;
-                case "Base64URL":
-                    outputResult = DataConverter.bytesToBase64Url(inputData);
-                    break;
-                case "Text (UTF-8)":
-                case "Text":
-                    outputResult = new String(inputData, java.nio.charset.StandardCharsets.UTF_8);
-                    break;
-                case "Binary":
-                    outputResult = DataConverter.bytesToBinary(inputData);
-                    break;
-                case "Decimal":
-                    outputResult = DataConverter.bytesToDecimal(inputData);
-                    break;
-                default:
-                    statusReporter.showError("Format Error", "Unsupported output format: " + outputFormat);
-                    return;
-            }
-
-            targetOutputArea.setText(outputResult);
-            statusReporter.publish(OperationResult.forOperation("Manual Conversion")
-                    .input(inputData).output(inputData)
-                    .detail("Input Format", inputFormat).detail("Output Format", outputFormat)
-                    .status(String.format("Converted from %s to %s", inputFormat, outputFormat)).build());
-
-        } catch (Exception e) {
-            statusReporter.showError("Conversion Error", "Error converting data: " + e.getMessage());
-        }
+        manualConversion().fillManualConversionInput(value, format);
     }
 
     @FXML
