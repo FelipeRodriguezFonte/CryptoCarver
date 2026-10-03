@@ -66,7 +66,7 @@ class ResultCapturePinSecurityUITest {
         assertTrue(done.await(45, TimeUnit.SECONDS)); if (error.get() != null) throw new AssertionError(error.get());
     }
 
-    private enum PinSurface { DECODED }
+    private enum PinSurface { DECODED, UNPROTECTED }
 
     @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
     @org.junit.jupiter.params.provider.EnumSource(PinSurface.class)
@@ -109,6 +109,12 @@ class ResultCapturePinSecurityUITest {
                             OperationResult decoded = (OperationResult) publishedField.get(shell);
                             assertEquals("Decode Encrypted PIN Block", decoded.getOperation());
                             assertTrue(java.util.Arrays.equals("1234".getBytes(java.nio.charset.StandardCharsets.UTF_8), decoded.getOutput()), "The real handler must recover the invented PIN");
+                            assertProtected(shell, shelf);
+                        }
+                        case UNPROTECTED -> {
+                            ((TextField) root.lookup("#encPinBlockKeyField")).clear();
+                            payments.handleEncodeEncryptedPinBlock();
+                            assertEquals("Encode Encrypted PIN Block", ((OperationResult) publishedField.get(shell)).getOperation());
                             assertProtected(shell, shelf);
                         }
                     }

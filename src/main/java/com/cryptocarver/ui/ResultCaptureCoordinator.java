@@ -236,7 +236,10 @@ final class ResultCaptureCoordinator {
     private boolean isPlainPinResult(com.cryptocarver.model.OperationResult result) {
         return result != null && ("Encode PIN Block".equals(result.getOperation())
                 || "Decode PIN Block".equals(result.getOperation())
-                || "Decode Encrypted PIN Block".equals(result.getOperation()));
+                || "Decode Encrypted PIN Block".equals(result.getOperation())
+                || ("Encode Encrypted PIN Block".equals(result.getOperation())
+                    && result.getDetails().stream().anyMatch(detail -> "Protected".equals(detail.name())
+                        && "No key supplied".equals(detail.value()))));
     }
 
     private boolean containsPrivateMaterial(String text) {
