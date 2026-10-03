@@ -804,167 +804,46 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Applies shell strings without changing operation names, routes or technical values. */
     public void applyLocalization() {
-        shellLocalizationCoordinator.applyLocalization(localizationView());
+        shellLocalizationCoordinator.applyLocalization(localizationView(), localizationState);
     }
 
-    private ShellLocalizationCoordinator.View localizationView() {
-        ShellLocalizationCoordinator.View view = new ShellLocalizationCoordinator.View(mainPane);
-        view.text(fileMenu, "menu.file");
-        view.text(editMenu, "menu.edit");
-        view.text(viewMenu, "menu.view");
-        view.text(securityMenu, "menu.security");
-        view.text(toolsMenu, "menu.tools");
-        view.text(helpMenu, "menu.help");
-        view.text(laboratoryMenu, "menu.laboratory");
-        view.text(languageMenu, "menu.language");
-        view.text(appearanceMenu, "menu.appearance");
-        view.text(importKeyMenuItem, "menu.importKey");
-        view.text(exportScreenMenuItem, "menu.exportScreen");
-        view.text(importScreenMenuItem, "menu.importScreen");
-        view.text(saveSessionMenuItem, "menu.saveSession");
-        view.text(exportSessionTrailMenuItem, "menu.exportSessionTrail");
-        view.text(exportHistoryMenuItem, "menu.exportHistory");
-        view.text(exitMenuItem, "menu.exit");
-        view.text(clearInputMenuItem, "menu.clearInput");
-        view.text(clearOutputMenuItem, "menu.clearOutput");
-        view.text(copyOutputMenuItem, "menu.copyOutput");
-        view.text(addToShelfMenuItem, "menu.addToShelf");
-        view.text(quickStartMenuItem, "menu.quickStart");
-        view.text(clipboardShelfMenuItem, "menu.clipboardShelf");
-        view.text(commandPaletteMenuItem, "menu.commandPalette");
-        view.text(toggleSidePanelMenuItem, "menu.toggleSidePanel");
-        view.text(toggleInspectorMenuItem, "menu.toggleInspector");
-        view.text(expandResultMenuItem, "menu.expandResult");
-        view.text(expandTableMenuItem, "menu.expandTable");
-        view.text(zoomInMenuItem, "menu.zoomIn");
-        view.text(zoomOutMenuItem, "menu.zoomOut");
-        view.text(resetViewMenuItem, "menu.resetView");
-        view.text(visibilityFullLabMenuItem, "menu.visibility.full");
-        view.text(visibilityMaskedMenuItem, "menu.visibility.masked");
-        view.text(visibilityRedactedMenuItem, "menu.visibility.redacted");
-        view.text(epochMenuItem, "menu.epoch");
-        view.text(jsonMenuItem, "menu.json");
-        view.text(byteInspectorMenuItem, "menu.byteInspector");
-        view.text(clearKeyCacheMenuItem, "menu.clearKeyCache");
-        view.text(shortcutsMenuItem, "menu.shortcuts");
-        view.text(diagnosticsMenuItem, "menu.diagnostics");
-        view.text(aboutMenuItem, "menu.about");
-        view.text(laboratoryQuickStartMenuItem, "menu.quickStart");
-        view.text(languageSystemMenuItem, "app.language.system");
-        view.text(languageEsMenuItem, "app.language.es");
-        view.text(languageEnMenuItem, "app.language.en");
-        view.text(themeSystemMenuItem, "app.theme.system");
-        view.text(themeLightMenuItem, "app.theme.light");
-        view.text(themeDarkMenuItem, "app.theme.dark");
-        view.text(toolbarSaveSessionButton, "menu.saveSession");
-        view.text(toolbarClearButton, "toolbar.clear");
-        view.text(toolbarExpandButton, "toolbar.expand");
-        view.text(toolbarShelfButton, "toolbar.addShelf");
-        view.text(toolbarCopyButton, "toolbar.copy");
-        view.text(inputFormatLabel, "toolbar.payloadFormat");
-        view.text(outputFormatLabel, "toolbar.output");
-        view.text(resultSaveStepButton, "sessionTrail.saveStep");
-        view.text(inspectorSessionTrailTitle, "sessionTrail.title");
-        view.text(inspectorAddSessionStepButton, "sessionTrail.addCurrent");
-        view.text(inspectorExportSessionTrailButton, "sessionTrail.exportAll");
-        view.text(inspectorClearSessionTrailButton, "sessionTrail.clearShort");
-        view.text(inspectorOpenSessionStepButton, "sessionTrail.viewData");
-        view.text(resultLastLabel, "result.last");
-        view.text(resultAlgorithmStaticLabel, "result.algorithm");
-        view.text(errorBannerTitle, "error.failed");
-        view.text(errorBannerRemedy, "error.remedy");
-        view.text(errorBannerGoToFieldBtn, "error.goToField");
-        view.text(errorBannerCopyDetailsBtn, "error.copyDetails");
-        view.text(guideBackBtn, "guide.back");
-        view.text(guideNextBtn, "guide.next");
-        view.text(guideSkipBtn, "guide.skip");
-        view.text(guideExitBtn, "guide.exit");
-        view.text(asyncProgressLabel, "progress.working");
-        view.text(asyncCancelBtn, "progress.cancel");
-        view.text(inspectorTitleLabel, "inspector.title");
-        view.text(inspectorInputBytesTitle, "inspector.inputBytes");
-        view.text(inspectorOutputBytesTitle, "inspector.outputBytes");
-        view.text(inspectorAlgorithmTitle, "inspector.algorithm");
-        view.text(inspectorSecurityTipsTitle, "inspector.securityTips");
-        view.text(inspectorWarningTitle, "inspector.warning");
-        view.text(inspectorHistoryTitle, "inspector.history");
-        view.text(inspectorExportJsonButton, "inspector.exportJson");
-        view.text(inspectorClearHistoryButton, "toolbar.clear");
-        view.text(commandEscapeLabel, "command.escape");
-        view.text(commandEmptyLabel, "command.empty");
-        view.text(commandNavigateLabel, "command.navigate");
-        view.text(commandSelectLabel, "command.select");
-        view.text(commandCancelLabel, "command.cancel");
-        view.text(commandTitleLabel, "command.title");
-        view.laboratoryMenu(laboratoryMenu);
-        view.languageItems(languageSystemMenuItem, languageEsMenuItem, languageEnMenuItem);
-        view.themeItems(themeSystemMenuItem, themeLightMenuItem, themeDarkMenuItem,
-                AppSettings.getInstance().getThemePreference());
-        view.toolbarSearch(toolbarSearchButton, COMMAND_PALETTE_SHORTCUT);
-        view.accessible(toolbarSearchButton);
-        view.accessible(toolbarSaveSessionButton);
-        view.accessible(toolbarClearButton);
-        view.accessible(toolbarExpandButton);
-        view.accessible(toolbarShelfButton);
-        view.accessible(toolbarCopyButton);
-        view.accessible(asyncCancelBtn);
-        view.accessible(resultExpandButton, "a11y.resultExpand");
-        view.accessible(resultShelfButton, "a11y.resultShelf");
-        view.accessible(resultCopyButton, "a11y.resultCopy");
-        view.accessible(resultSaveStepButton, "a11y.sessionTrailSaveStep");
-        view.accessible(inspectorAddSessionStepButton, "a11y.sessionTrailSaveStep");
-        view.accessible(inspectorPreviousSessionStepButton, "sessionTrail.previousStep");
-        view.accessible(inspectorNextSessionStepButton, "sessionTrail.nextStep");
-        view.accessible(inspectorOpenSessionStepButton, "sessionTrail.viewData");
-        view.accessible(inspectorToggleButton, "a11y.inspectorToggle");
-        view.accessible(errorBannerCloseBtn, "a11y.errorClose");
-        view.accessible(inspectorExportSessionTrailButton, "sessionTrail.exportTitle");
-        view.accessible(inspectorClearSessionTrailButton, "sessionTrail.clear");
-        view.accessible(inputFormatCombo, "a11y.payloadFormat");
-        view.accessible(outputFormatCombo, "a11y.outputFormat");
-        view.accessible(commandSearchField, "a11y.commandSearch");
-        view.accessible(favoriteToggleBtn, "a11y.favorite");
-        view.accessible(resultStatusBadge, "result.status");
-        view.accessible(errorBannerGoToFieldBtn, "a11y.errorGoToField");
-        view.accessible(errorBannerCopyDetailsBtn, "a11y.errorCopyDetails");
-        view.accessibleHelp(inputFormatCombo, "toolbar.payloadTooltip");
-        view.accessibleHelp(outputFormatCombo, "a11y.outputFormat");
-        view.accessibleHelp(commandSearchField, "command.prompt");
-        view.accessibleHelp(errorBannerTitle, "a11y.errorTitle");
-        view.accessibleHelp(errorBannerRemedy, "a11y.errorRemedy");
-        view.accessibleHelp(errorBannerGoToFieldBtn, "a11y.errorGoToFieldHelp");
-        view.accessibleHelp(errorBannerCopyDetailsBtn, "a11y.errorCopyDetailsHelp");
-        view.accessibleHelp(errorBannerCloseBtn, "a11y.errorCloseHelp");
-        view.accessibleHelp(favoriteToggleBtn, "favorite.tooltip", FAVORITE_SHORTCUT);
-        view.tooltip(inputFormatLabel, "toolbar.payloadTooltip");
-        view.tooltip(inputFormatCombo, "toolbar.payloadTooltip");
-        view.tooltip(inspectorExportJsonButton, "inspector.exportJsonTooltip");
-        view.tooltip(inspectorClearSessionTrailButton, "sessionTrail.clear");
-        view.prompt(commandSearchField, "command.prompt");
-        view.finishPainting(() -> {
-            refreshSessionTrailNavigation();
-            if (navigationRail != null) {
-                navigationRail.refreshLocalizedText();
-            }
-            if (sidePanel != null) {
-                sidePanel.refreshLocalizedText();
-            }
-            updateBreadcrumbs(currentActiveOperation);
-            updateFavoriteToggleState(currentActiveOperation);
-            if (statusLabel != null && (statusLabel.getText() == null || statusLabel.getText().isBlank()
-                    || statusLabel.getText().equals("Ready") || statusLabel.getText().equals("Listo"))) {
-                statusBarPresenter.showStatus(i18n.text("status.ready"));
-            }
-            if (statusBarPresenter != null) {
-                statusBarPresenter.refreshContext(AppSettings.getInstance().getSecretVisibilityProfile());
-            }
-            if (inlineErrorPresenter != null && inlineErrorPresenter.getCurrentError() != null) {
-                inlineErrorPresenter.showError(localizedError(inlineErrorPresenter.getCurrentError()),
-                        rootStackPane != null ? rootStackPane : mainPane);
-            }
-        });
-        return view;
+    private ShellLocalizationCoordinator.View localizationView() { return ShellLocalizationCoordinator.createView(localizationControls(), COMMAND_PALETTE_SHORTCUT, FAVORITE_SHORTCUT); }
+
+    private ShellLocalizationCoordinator.Controls localizationControls() {
+        return new ShellLocalizationCoordinator.Controls(
+                fileMenu, editMenu, viewMenu, securityMenu,
+                toolsMenu, helpMenu, laboratoryMenu, languageMenu,
+                appearanceMenu, importKeyMenuItem, exportScreenMenuItem, importScreenMenuItem,
+                saveSessionMenuItem, exportSessionTrailMenuItem, exportHistoryMenuItem, exitMenuItem,
+                clearInputMenuItem, clearOutputMenuItem, copyOutputMenuItem, addToShelfMenuItem,
+                quickStartMenuItem, clipboardShelfMenuItem, commandPaletteMenuItem, toggleSidePanelMenuItem,
+                toggleInspectorMenuItem, expandResultMenuItem, expandTableMenuItem, zoomInMenuItem,
+                zoomOutMenuItem, resetViewMenuItem, visibilityFullLabMenuItem, visibilityMaskedMenuItem,
+                visibilityRedactedMenuItem, epochMenuItem, jsonMenuItem, byteInspectorMenuItem,
+                clearKeyCacheMenuItem, shortcutsMenuItem, diagnosticsMenuItem, aboutMenuItem,
+                laboratoryQuickStartMenuItem, languageSystemMenuItem, languageEsMenuItem, languageEnMenuItem,
+                themeSystemMenuItem, themeLightMenuItem, themeDarkMenuItem, toolbarSaveSessionButton,
+                toolbarClearButton, toolbarExpandButton, toolbarShelfButton, toolbarCopyButton,
+                inputFormatLabel, outputFormatLabel, resultSaveStepButton, inspectorSessionTrailTitle,
+                inspectorAddSessionStepButton, inspectorExportSessionTrailButton, inspectorClearSessionTrailButton, inspectorOpenSessionStepButton,
+                resultLastLabel, resultAlgorithmStaticLabel, errorBannerTitle, errorBannerRemedy,
+                errorBannerGoToFieldBtn, errorBannerCopyDetailsBtn, guideBackBtn, guideNextBtn,
+                guideSkipBtn, guideExitBtn, asyncProgressLabel, asyncCancelBtn,
+                inspectorTitleLabel, inspectorInputBytesTitle, inspectorOutputBytesTitle, inspectorAlgorithmTitle,
+                inspectorSecurityTipsTitle, inspectorWarningTitle, inspectorHistoryTitle, inspectorExportJsonButton,
+                inspectorClearHistoryButton, commandEscapeLabel, commandEmptyLabel, commandNavigateLabel,
+                commandSelectLabel, commandCancelLabel, commandTitleLabel, toolbarSearchButton,
+                resultExpandButton, resultShelfButton, resultCopyButton, inspectorPreviousSessionStepButton,
+                inspectorNextSessionStepButton, inspectorToggleButton, errorBannerCloseBtn, inputFormatCombo,
+                outputFormatCombo, commandSearchField, favoriteToggleBtn, resultStatusBadge,
+                mainPane);
     }
+
+    private final ShellLocalizationCoordinator.LiveState localizationState = new ShellLocalizationCoordinator.LiveState(
+            () -> this, () -> navigationRail, () -> sidePanel, () -> currentActiveOperation,
+            () -> statusLabel, () -> statusBarPresenter, () -> inlineErrorPresenter,
+            () -> this.rootStackPane != null ? this.rootStackPane : mainPane,
+            this::refreshSessionTrailNavigation, this::updateBreadcrumbs, this::updateFavoriteToggleState);
 
     private String localizedSectionText(String value) {
         return shellTextResolver.localizedSectionText(value);
@@ -1945,35 +1824,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void updateNodeFonts(javafx.scene.Node node) {
-        if (node == null)
-            return;
-
-        if (node instanceof TextArea) {
-            ((TextArea) node).setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: " + currentFontSize + "px;");
-        } else if (node instanceof TextField) {
-            ((TextField) node).setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: " + currentFontSize + "px;");
-        }
-
-        // Recursive traversal
-        if (node instanceof ScrollPane) {
-            updateNodeFonts(((ScrollPane) node).getContent());
-        } else if (node instanceof TitledPane) {
-            updateNodeFonts(((TitledPane) node).getContent());
-        } else if (node instanceof Accordion) {
-            for (TitledPane pane : ((Accordion) node).getPanes()) {
-                updateNodeFonts(pane);
-            }
-        } else if (node instanceof SplitPane) {
-            for (javafx.scene.Node child : ((SplitPane) node).getItems()) {
-                updateNodeFonts(child);
-            }
-        } else if (node instanceof javafx.scene.Parent) {
-            for (javafx.scene.Node child : ((javafx.scene.Parent) node).getChildrenUnmodifiable()) {
-                updateNodeFonts(child);
-            }
-        }
-    }
+    private void updateNodeFonts(javafx.scene.Node node) { shellLocalizationCoordinator.updateNodeFonts(node, currentFontSize); }
 
     @FXML
     public void handleShowKeyboardShortcuts() {

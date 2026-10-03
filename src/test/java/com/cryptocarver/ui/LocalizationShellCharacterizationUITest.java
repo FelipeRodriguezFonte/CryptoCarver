@@ -126,6 +126,51 @@ class LocalizationShellCharacterizationUITest {
         });
     }
 
+    @Test void localizationReadsReplacedLiveStateAtPaintTime() throws Exception {
+        fx(() -> {
+            var coordinator = new ShellLocalizationCoordinator(I18nService.getInstance());
+            var view = new ShellLocalizationCoordinator.View(new javafx.scene.layout.VBox());
+            RadioMenuItem system = new RadioMenuItem(), light = new RadioMenuItem(), dark = new RadioMenuItem();
+            view.themeItems(system, light, dark, null);
+            AtomicReference<Label> status = new AtomicReference<>(new Label("Ready"));
+            AtomicReference<String> operation = new AtomicReference<>("old operation");
+            List<String> calls = new ArrayList<>();
+            AtomicReference<StatusReporter> reporter = new AtomicReference<>(new StatusReporter() {
+                public void updateStatus(String message) { calls.add("status=" + message); }
+                public void updateInspector(String name, byte[] input, byte[] output, List<OperationDetail> details) {}
+                public void showError(String title, String message) {}
+            });
+            AtomicReference<StatusBarPresenter> presenter = new AtomicReference<>();
+            AtomicReference<InlineErrorPresenter> errors = new AtomicReference<>();
+            var live = new ShellLocalizationCoordinator.LiveState(reporter::get, () -> null, () -> null,
+                    operation::get, status::get, presenter::get, errors::get, () -> root,
+                    () -> operation.set("current operation"),
+                    name -> calls.add("breadcrumbs=" + name), name -> calls.add("favorite=" + name));
+            AppSettings.getInstance().setThemePreference(ThemePreference.DARK);
+            coordinator.applyLocalization(view, live);
+            assertTrue(dark.isSelected());
+            assertEquals(List.of("breadcrumbs=current operation", "favorite=current operation", "status=Ready"), calls);
+            calls.clear();
+            // Replace values after constructing both View and LiveState; no stale snapshots may survive.
+            status.set(new Label("operation completed"));
+            Label context = new Label();
+            presenter.set(new StatusBarPresenter(null, null, context, I18nService.getInstance()));
+            AppSettings.getInstance().setThemePreference(ThemePreference.LIGHT);
+            I18nService.getInstance().setPreference(LanguagePreference.ES);
+            Label errorTitle = new Label();
+            errors.set(new InlineErrorPresenter(null, errorTitle, null, null, null, null));
+            errors.get().showError(new UserFacingError("Validation Error", "fixture", "retry", "fixtureField"), root);
+            coordinator.applyLocalization(view, live);
+            assertTrue(light.isSelected()); assertFalse(dark.isSelected());
+            assertEquals(List.of("breadcrumbs=current operation", "favorite=current operation"), calls);
+            assertEquals("Idioma: Español", context.getText());
+            assertEquals("Error de validación", errors.get().getCurrentError().title());
+            status.set(new Label("Listo")); calls.clear();
+            coordinator.applyLocalization(view, live);
+            assertEquals("status=Listo", calls.get(2));
+        });
+    }
+
     @SuppressWarnings("unchecked") private static <T> T field(Object object, String name) throws Exception {
         var field = object.getClass().getDeclaredField(name); field.setAccessible(true); return (T) field.get(object);
     }
