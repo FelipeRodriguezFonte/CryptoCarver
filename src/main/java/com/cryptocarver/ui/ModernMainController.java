@@ -225,6 +225,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     // Managers
     private com.cryptocarver.model.HistoryManager historyManager;
+    private HistoryCoordinator historyCoordinator;
     private ShellHistoryCoordinator shellHistoryCoordinator;
     private SavedSessionsCoordinator savedSessionsCoordinator;
     private SaveSessionCoordinator saveSessionCoordinator;
@@ -1132,6 +1133,10 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return UiStateSnapshot.capture(this);
     }
 
+    private java.util.Map<String, Object> captureHistoryState() {
+        return UiStateSnapshot.captureHistoryRecipe(this);
+    }
+
     com.cryptocarver.model.ScreenConfiguration captureActiveScreenConfiguration() {
         return screenConfigurationCoordinator().captureActiveScreenConfiguration();
     }
@@ -1171,7 +1176,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (shellHistoryCoordinator == null) {
             shellHistoryCoordinator = new ShellHistoryCoordinator(new ShellHistoryCoordinator.View(
                     this::historyManager, () -> sidePanel, () -> historyViewController,
-                    () -> UiStateSnapshot.captureHistoryRecipe(this), () -> currentActiveOperation,
+                    this::captureHistoryState, () -> currentActiveOperation,
                     () -> inputFormatCombo == null ? null : inputFormatCombo.getValue(),
                     () -> outputFormatCombo == null ? null : outputFormatCombo.getValue(),
                     this::navigateToModule, this::handleItemSelected, () -> this,
@@ -1198,7 +1203,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     private void initializeHistory() {
-        shellHistoryCoordinator().initialize();
+        historyCoordinator().initialize();
+    }
+
+    private HistoryCoordinator historyCoordinator() {
+        if (historyCoordinator == null) historyCoordinator = shellHistoryCoordinator().historyCoordinator();
+        return historyCoordinator;
     }
 
     /**
