@@ -53,8 +53,18 @@ final class StatusBarPresenter {
         }
     }
 
-    private static boolean isError(String message) {
-        if (message == null) return false;
+    private boolean isProfileLoad(String message) {
+        if (message.startsWith("Loaded TR-31 profile: ")) return true;
+        String marker = "{profile}";
+        String template = i18n.text("module.payments.status.profileLoaded", marker);
+        int slot = template.indexOf(marker);
+        return slot >= 0 && message.startsWith(template.substring(0, slot))
+                && message.endsWith(template.substring(slot + marker.length()))
+                && message.length() > template.length() - marker.length();
+    }
+
+    private boolean isError(String message) {
+        if (message == null || isProfileLoad(message)) return false;
         String normalized = message.toLowerCase(java.util.Locale.ROOT);
         return normalized.contains("error") || normalized.contains("failed") || normalized.contains("fall")
                 || normalized.contains("blocked") || normalized.contains("invalid") || normalized.contains("no ");
