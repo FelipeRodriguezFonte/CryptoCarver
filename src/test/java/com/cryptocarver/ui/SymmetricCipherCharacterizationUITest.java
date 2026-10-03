@@ -268,6 +268,27 @@ class SymmetricCipherCharacterizationUITest {
         assertEquals("24ad825113dd46296a99b924e29fbb5b411fb977a6e00b50eeb8879b78d95852", digest(transcript), String.join("\n", transcript));
     }
 
+    @Test
+    void personalTemplatesSetTheToolbarFormats() throws Exception {
+        String name = "Cipher formats " + java.util.UUID.randomUUID();
+        com.cryptocarver.model.PersonalTemplateStore store = com.cryptocarver.model.PersonalTemplateStore.getInstance();
+        com.cryptocarver.model.SafeOperationTemplate saved = new com.cryptocarver.model.SafeOperationTemplate(name, "Cipher", "formats-only",
+                java.util.Map.of("symmetricAlgorithmCombo", "AES-128", "inputFormatCombo", "Hexadecimal",
+                        "outputFormatCombo", "Base64"));
+        store.saveTemplate(saved);
+        try {
+            withPanel(panel -> {
+                panel.inputs("Text (UTF-8)", "", "Hexadecimal");
+                panel.template("[My Template] " + name);
+                assertEquals("AES-128", panel.combo("symmetricAlgorithmCombo").getValue());
+                assertEquals("Hexadecimal", panel.inputFormat().getValue());
+                assertEquals("Base64", panel.outputFormat().getValue());
+            });
+        } finally {
+            store.deleteTemplate(saved.getId());
+        }
+    }
+
     private static String digest(List<String> transcript) throws Exception {
         byte[] hash = MessageDigest.getInstance("SHA-256")
                 .digest(String.join("\n", transcript).getBytes(StandardCharsets.UTF_8));

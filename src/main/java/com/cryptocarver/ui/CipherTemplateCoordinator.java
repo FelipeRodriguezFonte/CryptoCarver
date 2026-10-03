@@ -97,7 +97,7 @@ final class CipherTemplateCoordinator {
                 "asymmetricOutputFormatCombo", v -> { if (asymmetricOutputFormatCombo != null) asymmetricOutputFormatCombo.setValue(v); },
                 "rsaPaddingCombo", v -> { if (rsaPaddingCombo != null) rsaPaddingCombo.setValue(v); },
                 "inputFormatCombo", v -> { if (reporter() != null) reporter().setInputFormat(v); },
-                "outputFormat()", v -> { if (reporter() != null) reporter().setOutputFormat(v); }
+                "outputFormatCombo", v -> { if (reporter() != null) reporter().setOutputFormat(v); }
         );
 
         SafeTemplateUIHelper.applySelectedTemplate(
@@ -150,7 +150,7 @@ final class CipherTemplateCoordinator {
         if (asymmetricInputFormatCombo != null && asymmetricInputFormatCombo.getValue() != null) params.put("asymmetricInputFormatCombo", asymmetricInputFormatCombo.getValue());
         if (asymmetricOutputFormatCombo != null && asymmetricOutputFormatCombo.getValue() != null) params.put("asymmetricOutputFormatCombo", asymmetricOutputFormatCombo.getValue());
         if (inputFormat() != null && inputFormat().getValue() != null) params.put("inputFormatCombo", inputFormat().getValue());
-        if (outputFormat() != null && outputFormat().getValue() != null) params.put("outputFormat()", outputFormat().getValue());
+        if (outputFormat() != null && outputFormat().getValue() != null) params.put("outputFormatCombo", outputFormat().getValue());
 
         javafx.stage.Window owner = cipherTemplateCombo != null && cipherTemplateCombo.getScene() != null ? cipherTemplateCombo.getScene().getWindow() : null;
         SafeTemplateUIHelper.saveCurrentAsTemplate(
