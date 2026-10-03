@@ -32,12 +32,19 @@ public final class LaboratoryMenuCoordinator {
         this.paymentsController = paymentsController;
     }
 
+    /** Marks a Laboratory menu that already lists the profiles, so setup never adds them twice. */
+    private static final String PROFILES_ADDED = "laboratory.profilesAdded";
+
     public void setup() {
         if (menuBar == null) {
             return;
         }
-        boolean hasLabMenu = menuBar.getMenus().stream().anyMatch(menu -> "laboratory".equals(menu.getUserData()));
-        if (hasLabMenu) {
+        Menu existing = menuBar.getMenus().stream()
+                .filter(menu -> "laboratory".equals(menu.getUserData()))
+                .findFirst().orElse(null);
+        if (existing != null) {
+            // The shell FXML declares the menu with Quick Start; the profiles still come from here.
+            addProfiles(existing);
             return;
         }
         I18nService i18n = I18nService.getInstance();
@@ -47,11 +54,19 @@ public final class LaboratoryMenuCoordinator {
         MenuItem quickStartItem = new MenuItem(i18n.text("menu.quickStart"));
         quickStartItem.setOnAction(event -> showQuickStart.run());
         labMenu.getItems().add(quickStartItem);
+        addProfiles(labMenu);
+        menuBar.getMenus().add(labMenu);
+    }
+
+    private void addProfiles(Menu labMenu) {
+        if (labMenu.getProperties().containsKey(PROFILES_ADDED)) {
+            return;
+        }
+        labMenu.getProperties().put(PROFILES_ADDED, Boolean.TRUE);
         labMenu.getItems().add(new SeparatorMenuItem());
         for (PaymentProfile profile : PaymentProfileManager.getAllProfiles()) {
             labMenu.getItems().add(createProfileMenu(profile));
         }
-        menuBar.getMenus().add(labMenu);
     }
 
     private Menu createProfileMenu(PaymentProfile profile) {

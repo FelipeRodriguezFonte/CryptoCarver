@@ -21,6 +21,7 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import java.util.List;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.stage.Stage;
@@ -116,6 +117,30 @@ class ModernMainShellLocalizationCharacterizationTest {
         });
     assertEquals("Laboratorio", laboratory.get().getText());
     assertEquals("Inicio rápido", laboratory.get().getItems().get(0).getText());
+  }
+
+  @Test
+  void laboratoryMenuListsEveryProfileOnceAndLocalizesTheirActions() throws Exception {
+    AtomicReference<Menu> laboratory = new AtomicReference<>();
+    runFx(
+        () -> {
+          MenuBar menuBar = field(controller, "mainMenuBar");
+          laboratory.set(
+              menuBar.getMenus().stream()
+                  .filter(menu -> "laboratory".equals(menu.getUserData()))
+                  .findFirst()
+                  .orElseThrow());
+          I18nService.getInstance().setPreference(LanguagePreference.ES);
+        });
+    List<Menu> profiles =
+        laboratory.get().getItems().stream()
+            .filter(item -> item instanceof Menu)
+            .map(item -> (Menu) item)
+            .toList();
+    assertEquals(
+        com.cryptocarver.model.payments.PaymentProfileManager.getAllProfiles().size(), profiles.size());
+    assertEquals("Cargar datos", profiles.get(0).getItems().get(0).getText());
+    assertEquals("Ejecutar y verificar", profiles.get(0).getItems().get(1).getText());
   }
 
   @Test
