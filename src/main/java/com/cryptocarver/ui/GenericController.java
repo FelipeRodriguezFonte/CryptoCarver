@@ -1,9 +1,7 @@
 package com.cryptocarver.ui;
 
-import com.cryptocarver.crypto.CheckDigitCalculator;
 import com.cryptocarver.crypto.EBCDICConverter;
 import com.cryptocarver.crypto.HashOperations;
-import com.cryptocarver.crypto.ModularArithmetic;
 import com.cryptocarver.crypto.UUIDGenerator;
 import com.cryptocarver.crypto.ByteStatistics;
 import com.cryptocarver.crypto.BitShifter;
@@ -238,6 +236,25 @@ public class GenericController {
         return batchRunner().lastReport();
     }
 
+    private CheckDigitCoordinator checkDigits;
+    private ModularArithmeticCoordinator modularArithmetic;
+
+    private CheckDigitCoordinator checkDigits() {
+        if (checkDigits == null) {
+            checkDigits = new CheckDigitCoordinator(new CheckDigitCoordinator.View(checkDigitInput,
+                    checkDigitAlgorithmCombo, checkDigitOutput), () -> statusReporter);
+        }
+        return checkDigits;
+    }
+
+    private ModularArithmeticCoordinator modularArithmetic() {
+        if (modularArithmetic == null) {
+            modularArithmetic = new ModularArithmeticCoordinator(new ModularArithmeticCoordinator.View(modOperationCombo,
+                    modOperandAField, modOperandBField, modModulusField, modResultArea), () -> statusReporter);
+        }
+        return modularArithmetic;
+    }
+
     private BatchRunnerCoordinator batchRunner;
     private FileConversionCoordinator fileConversion;
 
@@ -394,10 +411,7 @@ public class GenericController {
             for (HashOperations.Crc32Variant variant : HashOperations.Crc32Variant.values()) hashAlgorithmCombo.getItems().add(variant.displayName());
             hashAlgorithmCombo.setValue("SHA-256");
         }
-        if (checkDigitAlgorithmCombo != null) {
-            checkDigitAlgorithmCombo.getItems().addAll(CheckDigitCalculator.SUPPORTED_ALGORITHMS);
-            checkDigitAlgorithmCombo.setValue("Luhn (Mod 10)");
-        }
+        checkDigits().configure();
         if (randomFormatCombo != null) {
             randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
             randomFormatCombo.setValue("Hexadecimal");
@@ -425,22 +439,7 @@ public class GenericController {
             compressionFormatCombo.getItems().setAll("gzip", "zlib", "deflate");
             compressionFormatCombo.setValue("gzip");
         }
-        if (modOperationCombo != null) {
-            modOperationCombo.getItems().setAll(
-                    "Addition (a + b) mod m",
-                    "Subtraction (a - b) mod m",
-                    "Inverse -a mod m",
-                    "Multiplication (a * b) mod m",
-                    "Exponentiation (a^b) mod m",
-                    "Reciprocal (1/a) mod m",
-                    "GCD(a, b)",
-                    "LCM(a, b)",
-                    "Extended GCD",
-                    "Chinese Remainder Theorem",
-                    "XOR (Hex Input)",
-                    "XOR (Decimal Input)");
-            modOperationCombo.getSelectionModel().select(0);
-        }
+        modularArithmetic().configure();
         fileConversion().configure();
 
         refreshHashTemplateCombo();
@@ -761,20 +760,6 @@ public class GenericController {
         hashAlgorithmCombo.getItems().add("CRC32");
         for (HashOperations.Crc32Variant variant : HashOperations.Crc32Variant.values()) hashAlgorithmCombo.getItems().add(variant.displayName());
         hashAlgorithmCombo.setValue("SHA-256");
-    }
-
-    public void setCheckDigitAlgorithmCombo(ComboBox<String> combo) {
-        this.checkDigitAlgorithmCombo = combo;
-        checkDigitAlgorithmCombo.getItems().addAll(CheckDigitCalculator.SUPPORTED_ALGORITHMS);
-        checkDigitAlgorithmCombo.setValue("Luhn (Mod 10)");
-    }
-
-    public void setRandomGeneratorFields(javafx.scene.control.TextField bytesField, ComboBox<String> formatCombo) {
-        this.randomBytesField = bytesField;
-        this.randomFormatCombo = formatCombo;
-        randomFormatCombo.getItems().addAll("Hexadecimal", "Decimal", "Base64", "Binary");
-        randomFormatCombo.setValue("Hexadecimal");
-        setupRandomFormatComboListener();
     }
 
 
@@ -1294,80 +1279,11 @@ public class GenericController {
         }
     }
 
-    /**
-     * Calculate check digit
-     */
-    public void calculateCheckDigit(String input, String algorithm, TextInputControl targetOutputArea) {
-        try {
-            if (input == null || input.isEmpty()) {
-                statusReporter.showError("Input Error", "Please enter numeric data");
-                return;
-            }
-            if (algorithm == null || algorithm.isEmpty()) {
-                statusReporter.showError("Algorithm Error", "Please select a check digit algorithm");
-                return;
-            }
-
-            int checkDigit = CheckDigitCalculator.calculateCheckDigit(input, algorithm);
-            String result = CheckDigitCalculator.formatWithCheckDigit(input, algorithm);
-
-            targetOutputArea.setText("Check Digit: " + checkDigit + " - Complete: " + result);
-            statusReporter.publish(OperationResult.forOperation("Check Digits")
-                    .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .detail("Algorithm", algorithm).detail("Mode", "Calculate")
-                    .detail("Check Digit", String.valueOf(checkDigit))
-                    .status("Check digit calculated using " + algorithm).build());
-
-        } catch (Exception e) {
-            statusReporter.showError("Check Digit Error", "Error calculating check digit: " + e.getMessage());
-        }
-    }
+    @FXML
+    public void handleCalculateCheckDigit() { checkDigits().handleCalculateCheckDigit(); }
 
     @FXML
-
-
-    public void handleCalculateCheckDigit() {
-        if (checkDigitInput != null && checkDigitAlgorithmCombo != null && checkDigitOutput != null) {
-            calculateCheckDigit(checkDigitInput.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutput);
-        }
-    }
-
-    public void validateCheckDigit(String input, String algorithm, TextInputControl targetOutputArea) {
-        try {
-            if (input == null || input.isEmpty()) {
-                statusReporter.showError("Input Error", "Please enter data with check digit");
-                return;
-            }
-            if (algorithm == null || algorithm.isEmpty()) {
-                statusReporter.showError("Algorithm Error", "Please select a check digit algorithm");
-                return;
-            }
-
-            boolean isValid = CheckDigitCalculator.validateCheckDigit(input, algorithm);
-            String resultText = isValid ? "✅ VALID" : "❌ INVALID";
-
-            targetOutputArea.setText("Validation Result: " + resultText);
-            statusReporter.publish(OperationResult.forOperation("Check Digits")
-                    .input(input.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .output(resultText.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .detail("Algorithm", algorithm).detail("Mode", "Validate")
-                    .detail("Result", isValid ? "VALID" : "INVALID")
-                    .status("Check digit validation: " + resultText).build());
-
-        } catch (Exception e) {
-            statusReporter.showError("Validation Error", "Error validating: " + e.getMessage());
-        }
-    }
-
-    @FXML
-
-
-    public void handleValidateCheckDigit() {
-        if (checkDigitInput != null && checkDigitAlgorithmCombo != null && checkDigitOutput != null) {
-            validateCheckDigit(checkDigitInput.getText(), checkDigitAlgorithmCombo.getValue(), checkDigitOutput);
-        }
-    }
+    public void handleValidateCheckDigit() { checkDigits().handleValidateCheckDigit(); }
 
     /** Parse input string based on format. */
     public static byte[] parseInput(String input, String format) {
@@ -1459,249 +1375,8 @@ public class GenericController {
         }
     }
 
-    // ============================================================================
-    // MODULAR ARITHMETIC CALCULATOR
-    // ============================================================================
-
-    /**
-     * Initialize modular arithmetic components
-     */
-    public void initializeModularArithmetic(
-            ComboBox<String> operationCombo,
-            TextField operandAField,
-            TextField operandBField,
-            TextField modulusField,
-            TextArea resultArea) {
-
-        this.modOperationCombo = operationCombo;
-        this.modOperandAField = operandAField;
-        this.modOperandBField = operandBField;
-        this.modModulusField = modulusField;
-        this.modResultArea = resultArea;
-
-        modOperationCombo.getItems().addAll(
-                "Addition (a + b) mod m",
-                "Subtraction (a - b) mod m",
-                "Inverse -a mod m",
-                "Multiplication (a * b) mod m",
-                "Exponentiation (a^b) mod m",
-                "Reciprocal (1/a) mod m",
-                "GCD(a, b)",
-                "LCM(a, b)",
-                "Extended GCD",
-                "Chinese Remainder Theorem",
-                "XOR (Hex Input)",
-                "XOR (Decimal Input)");
-        modOperationCombo.setValue("Addition (a + b) mod m");
-    }
-
-    /**
-     * Calculate modular arithmetic operation
-     */
     @FXML
-
-    public void handleModularCalculate() {
-        try {
-            String operation = modOperationCombo.getValue();
-            String aInput = modOperandAField.getText().trim();
-            String bInput = modOperandBField.getText().trim();
-            String mInput = modModulusField.getText().trim();
-
-            // Default hex cleaning for standard operations
-            String aHex = "", bHex = "", mHex = "";
-
-            // Special handling for Decimal XOR
-            if (operation.contains("Decimal Input")) {
-                // For decimal, we just keep the raw digits
-                if (!aInput.matches("\\d+") || (!bInput.isEmpty() && !bInput.matches("\\d+"))) {
-                    statusReporter.showError("Input Error", "Please enter valid decimal numbers");
-                    return;
-                }
-                // Convert decimal to hex for internal processing/compatibility with existing
-                // modular logic if needed
-                // But for XOR we'll process directly.
-            } else {
-                // Standard Hex processing
-                aHex = aInput.replaceAll("[^0-9A-Fa-f]", "");
-                bHex = bInput.replaceAll("[^0-9A-Fa-f]", "");
-                mHex = mInput.replaceAll("[^0-9A-Fa-f]", "");
-            }
-
-            if (operation.contains("XOR")) {
-                if (aInput.isEmpty() || bInput.isEmpty()) {
-                    statusReporter.showError("Input Error", "Both operands required for XOR");
-                    return;
-                }
-
-                java.math.BigInteger aBig, bBig;
-                if (operation.contains("Decimal Input")) {
-                    aBig = new java.math.BigInteger(aInput);
-                    bBig = new java.math.BigInteger(bInput);
-                } else {
-                    aBig = new java.math.BigInteger(aHex, 16);
-                    bBig = new java.math.BigInteger(bHex, 16);
-                }
-
-                java.math.BigInteger result = aBig.xor(bBig);
-                String hexResult = result.toString(16).toUpperCase();
-
-                String opDesc = operation.contains("Decimal")
-                        ? aInput + " XOR " + bInput
-                        : aHex + " XOR " + bHex;
-
-                modResultArea.setText(ModularArithmetic.formatResult(opDesc, hexResult));
-                return;
-            }
-
-            // For standard modular operations, continue using clean Hex strings
-            if (aHex.isEmpty()) {
-                statusReporter.showError("Input Error", "Operand A is required");
-                return;
-            }
-
-            String result;
-            String operationDesc;
-
-            try {
-                switch (operation) {
-                    case "Addition (a + b) mod m":
-                        if (bHex.isEmpty() || mHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "All fields required for addition");
-                            return;
-                        }
-                        result = ModularArithmetic.modularAddition(aHex, bHex, mHex);
-                        operationDesc = "(" + aHex + " + " + bHex + ") mod " + mHex;
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "Subtraction (a - b) mod m":
-                        if (bHex.isEmpty() || mHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "All fields required for subtraction");
-                            return;
-                        }
-                        result = ModularArithmetic.modularSubtraction(aHex, bHex, mHex);
-                        operationDesc = "(" + aHex + " - " + bHex + ") mod " + mHex;
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "Inverse -a mod m":
-                        if (mHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "Modulus is required");
-                            return;
-                        }
-                        result = ModularArithmetic.modularInverse(aHex, mHex);
-                        operationDesc = "-" + aHex + " mod " + mHex;
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "Multiplication (a * b) mod m":
-                        if (bHex.isEmpty() || mHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "All fields required for multiplication");
-                            return;
-                        }
-                        result = ModularArithmetic.modularMultiplication(aHex, bHex, mHex);
-                        operationDesc = "(" + aHex + " * " + bHex + ") mod " + mHex;
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "Exponentiation (a^b) mod m":
-                        if (bHex.isEmpty() || mHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "All fields required for exponentiation");
-                            return;
-                        }
-                        result = ModularArithmetic.modularExponentiation(aHex, bHex, mHex);
-                        operationDesc = "(" + aHex + "^" + bHex + ") mod " + mHex;
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "Reciprocal (1/a) mod m":
-                        if (mHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "Modulus is required");
-                            return;
-                        }
-                        try {
-                            result = ModularArithmetic.modularReciprocal(aHex, mHex);
-                            operationDesc = "(1/" + aHex + ") mod " + mHex;
-
-                            StringBuilder output = new StringBuilder();
-                            output.append(ModularArithmetic.formatResult(operationDesc, result));
-
-                            boolean isPrime = ModularArithmetic.isProbablyPrime(mHex);
-                            output.append("\nModulus is ").append(isPrime ? "PROBABLY PRIME" : "COMPOSITE");
-
-                            modResultArea.setText(output.toString());
-                        } catch (ArithmeticException e) {
-                            modResultArea.setText("ERROR: " + e.getMessage() +
-                                    "\n\nModular reciprocal only exists when gcd(a, m) = 1");
-                        }
-                        break;
-
-                    case "GCD(a, b)":
-                        if (bHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "Operand B is required");
-                            return;
-                        }
-                        result = ModularArithmetic.gcd(aHex, bHex);
-                        operationDesc = "GCD(" + aHex + ", " + bHex + ")";
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "LCM(a, b)":
-                        if (bHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "Operand B is required");
-                            return;
-                        }
-                        result = ModularArithmetic.lcm(aHex, bHex);
-                        operationDesc = "LCM(" + aHex + ", " + bHex + ")";
-                        modResultArea.setText(ModularArithmetic.formatResult(operationDesc, result));
-                        break;
-
-                    case "Extended GCD":
-                        if (bHex.isEmpty()) {
-                            statusReporter.showError("Input Error", "Operand B is required");
-                            return;
-                        }
-                        result = ModularArithmetic.extendedGCD(aHex, bHex);
-                        modResultArea.setText("Extended Euclidean Algorithm\n" +
-                                "Finding x, y such that: ax + by = gcd(a,b)\n\n" + result);
-                        break;
-
-                    case "Chinese Remainder Theorem":
-                        // For CRT, A and M are first pair, B and another field for second pair
-                        if (bHex.isEmpty() || mHex.isEmpty()) {
-                            statusReporter.showError("Input Error",
-                                    "CRT requires: A=a1, B=m1, Modulus=a2\n" +
-                                            "Enter m2 in the operation history or use Extended GCD for setup");
-                            return;
-                        }
-                        // Simplified CRT - would need additional fields for full implementation
-                        modResultArea.setText("Chinese Remainder Theorem\n\n" +
-                                "Note: Full CRT requires 2 modular equations:\n" +
-                                "  x ≡ a1 (mod m1)\n" +
-                                "  x ≡ a2 (mod m2)\n\n" +
-                                "This would need additional UI fields for proper implementation.");
-                        break;
-
-                    default:
-                        modResultArea.setText("Unknown operation");
-                }
-
-                statusReporter.publish(OperationResult.forOperation("Modular Arithmetic")
-                        .input((aHex + " " + bHex + " " + mHex).getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                        .output(modResultArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                        .enrichedOutput(modResultArea.getText())
-                        .detail("Operation", operation).detail("Operand A", aHex)
-                        .detail("Operand B", bHex).detail("Modulus", mHex)
-                        .status("Modular operation completed").build());
-
-            } catch (ArithmeticException e) {
-                modResultArea.setText("ERROR: " + e.getMessage());
-            }
-
-        } catch (Exception e) {
-            statusReporter.showError("Calculation Error", "Error in modular arithmetic: " + e.getMessage());
-        }
-    }
+    public void handleModularCalculate() { modularArithmetic().handleModularCalculate(); }
 
     /**
      * Generate UUID
