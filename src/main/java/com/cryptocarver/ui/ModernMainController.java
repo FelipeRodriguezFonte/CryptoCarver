@@ -514,13 +514,19 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return operationExecutor;
     }
 
+    private String progressTitle(String operationName) {
+        return AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
+                && operationName != null && !operationName.isBlank() ? operationName : i18n.text("progress.operation");
+    }
+
     public void showAsyncProgress(String operationName) {
         if (asyncProgressBox != null) {
             if (asyncProgressLabel != null) {
-                String title = (operationName != null && !operationName.isBlank()) ? operationName : i18n.text("progress.operation");
+                String title = progressTitle(operationName);
                 asyncProgressLabel.setText(title + "…");
                 asyncProgressLabel.setAccessibleText(title);
             }
+            if (asyncProgressIndicator != null) asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(operationName));
             if (asyncCancelBtn != null) {
                 asyncCancelBtn.setDisable(false);
             }
@@ -536,10 +542,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             asyncProgressBox.setVisible(true);
         }
         if (asyncProgressLabel != null) {
-            asyncProgressLabel.setText(details.getFormattedText());
-            asyncProgressLabel.setAccessibleText(details.getFormattedText());
+            String text = AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
+                    ? details.getFormattedText() : OperationExecutor.formatProgressText(progressTitle(null),
+                            details.getBytesProcessed(), details.getTotalBytes(), details.getElapsedTimeMs());
+            asyncProgressLabel.setText(text);
+            asyncProgressLabel.setAccessibleText(text);
         }
 
+        if (asyncProgressIndicator != null) asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(details.getOperationName()));
         if (details.getTotalBytes() > 0) {
             double ratio = Math.min(1.0, (double) details.getBytesProcessed() / details.getTotalBytes());
             if (asyncProgressBar != null) {
@@ -555,7 +565,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         } else {
             if (asyncProgressIndicator != null) {
                 asyncProgressIndicator.setProgress(-1);
-                asyncProgressIndicator.setAccessibleText("Working: " + details.getOperationName());
+                asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(details.getOperationName()));
                 asyncProgressIndicator.setVisible(true);
                 asyncProgressIndicator.setManaged(true);
             }

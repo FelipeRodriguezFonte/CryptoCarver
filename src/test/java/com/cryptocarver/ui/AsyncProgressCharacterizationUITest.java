@@ -67,6 +67,8 @@ class AsyncProgressCharacterizationUITest {
             for (LanguagePreference locale : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
                 I18nService.getInstance().setPreference(locale);
                 for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
+                    AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
+                    shell.updateAsyncProgressDetails(new OperationExecutor.ProgressDetails("SYNTHETIC_PRIVATE_NAME", 0, 0, 2000, "SYNTHETIC_PRIVATE_PAYLOAD"));
                     AppSettings.getInstance().setSecretVisibilityProfile(profile);
                     shell.showAsyncProgress("SYNTHETIC_PRIVATE_NAME");
                     assertSafe();
