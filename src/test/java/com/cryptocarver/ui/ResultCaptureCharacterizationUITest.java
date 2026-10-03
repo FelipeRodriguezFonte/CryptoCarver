@@ -109,7 +109,7 @@ class ResultCaptureCharacterizationUITest {
         assertFalse(joined.contains("4000001234567899"));
         Files.createDirectories(Path.of("target"));
         Files.writeString(Path.of("target/result-capture-transcript.txt"), joined + "\n");
-        assertEquals("15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b", sha(joined));
+        assertEquals("bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed", sha(joined));
     }
 
     /** Runs the actual production module handlers inside the loaded modern shell. */
@@ -194,13 +194,31 @@ class ResultCaptureCharacterizationUITest {
             shell.handleAddCurrentOutputToShelf(); status.set(status());
         });
         ClipboardEntry entry = ClipboardShelfManager.getInstance().getEntries().isEmpty() ? null : ClipboardShelfManager.getInstance().getEntries().get(0);
-        String generatedSymmetric = "";
-        String generatedPrivate = "";
-        String generatedPublic = "";
-        if (operation.equals("Symmetric Key Generation")) generatedSymmetric = ((TextArea) root.lookup("#generatedKeyField")).getText();
+        AtomicReference<String> symmetricText = new AtomicReference<>(""), privateText = new AtomicReference<>(""), publicText = new AtomicReference<>("");
+        fx(() -> {
+            if (operation.equals("Symmetric Key Generation")) symmetricText.set(((TextArea) root.lookup("#generatedKeyField")).getText());
+            if (operation.equals("Asymmetric Key Generation")) {
+                privateText.set(((TextArea) root.lookup("#rsaPrivateKeyArea")).getText());
+                publicText.set(((TextArea) root.lookup("#rsaPublicKeyArea")).getText());
+            }
+        });
+        String generatedSymmetric = symmetricText.get(), generatedPrivate = privateText.get(), generatedPublic = publicText.get();
+        assertNotNull(resultRef.get(), "The real module handler must publish a result");
         if (operation.equals("Asymmetric Key Generation")) {
-            generatedPrivate = ((TextArea) root.lookup("#rsaPrivateKeyArea")).getText();
-            generatedPublic = ((TextArea) root.lookup("#rsaPublicKeyArea")).getText();
+            String privatePem = resultRef.get().getDetails().stream()
+                    .filter(detail -> "Private Key".equals(detail.name())).map(OperationDetail::value).findFirst().orElseThrow();
+            syntheticSecrets.add(privatePem);
+            if (profile == SecretVisibilityProfile.FULL_LAB) {
+                assertNotNull(entry); assertTrue(entry.isSessionOnlyPrivateKey());
+                assertEquals(privatePem, entry.getValue(), "Shelf must capture the complete generated private PEM");
+            } else {
+                assertNull(entry, "Restricted profiles must not add generated private material to Shelf");
+                assertFalse(current.get().contains(privatePem));
+            }
+        }
+        if (operation.equals("Symmetric Key Generation") && profile != SecretVisibilityProfile.FULL_LAB) {
+            assertNull(entry, "Restricted profiles must not add generated symmetric keys to Shelf");
+            assertFalse(current.get().contains(generatedSymmetric));
         }
         if (operation.equals("Symmetric Key Generation") && !generatedSymmetric.isBlank()) syntheticSecrets.add(generatedSymmetric);
         if (operation.equals("Asymmetric Key Generation") && !generatedPrivate.isBlank()) syntheticSecrets.add(generatedPrivate);
@@ -215,13 +233,19 @@ class ResultCaptureCharacterizationUITest {
         if (entry != null && profile != SecretVisibilityProfile.FULL_LAB)
             assertNotEquals(OperationDetail.Classification.SECRET, entry.getClassification());
         if (operation.equals("PIN Block")) {
-            assertEquals("041234FEDCBA9876", current.get());
-            assertEquals(current.get(), shelf.get());
-            copy = "<clear-PIN-block-captured>";
-            shelfCapture = "<clear-PIN-block-captured>";
-            entryContent = "<clear-PIN-block-captured>";
-            if (profile != SecretVisibilityProfile.FULL_LAB)
-                transcript.add(profile + " | BUG: restricted profile Copy/Expand and Shelf still capture clear PIN block (result/Shelf classification PUBLIC)");
+            if (profile == SecretVisibilityProfile.FULL_LAB) {
+                assertEquals("041234FEDCBA9876", current.get());
+                assertEquals(current.get(), shelf.get());
+                assertNotNull(entry);
+                assertEquals(OperationDetail.Classification.SECRET, entry.getClassification());
+                copy = "<clear-PIN-block-captured>";
+                shelfCapture = "<clear-PIN-block-captured>";
+                entryContent = "<clear-PIN-block-captured>";
+            } else {
+                assertEquals(profile == SecretVisibilityProfile.MASKED ? "***MASKED***" : "", current.get());
+                assertTrue(shelf.get().isBlank() || shelf.get().equals("***MASKED***"));
+                assertNull(entry, "Restricted profiles must not capture clear PIN material");
+            }
         }
         transcript.add(profile + " | " + operation + " | input=" + operationInput(operation)
                 + " | format=" + format + " | result-classification=" + classification.get()

@@ -77,3 +77,25 @@ Solo cambian dos filas normalizadas (generic private PEM candidate en MASKED y R
 La captura del resultado publicado añade una barrera de contenido privado después de renderizar: un PEM/marcador reconocible se redacta o enmascara con perfiles restringidos aunque el módulo lo etiquete PUBLIC. La clasificación de captura publicada también detecta ese contenido como SECRET para evitar una entrada pública persistente. Esto se aplica en Copy/Expand y en el fallback del Shelf; OperationResultRenderer y ResultPublicationCoordinator no cambian.
 
 Regresión explícita privatePayloadWithPublicMetadataCannotEscapeRestrictedProfiles: fallaba antes del arreglo; comprueba payload inventado PUBLIC (PEM y marcador), portapapeles real, captura del visor y Shelf vacío con MASKED/REDACTED. Verificación junto con caracterización y regresión de áreas: 3 tests, 0 fallos, 0 errores. No cambia ninguna fila de la caracterización anterior; digest intacto `15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b`.
+
+## Corrección 3: bloque PIN en claro
+
+La captura clasifica Encode PIN Block / Decode PIN Block como SECRET, aunque el modelo publicado sea PUBLIC. Solo estas operaciones en claro reciben la regla: no se reclasifica ciphertext de PIN cifrado ni se cambia Payments/crypto/ o los coordinadores excluidos. La barrera de captura publicada enmascara/redacta esos resultados; la clasificación usada por Shelf también pasa a SECRET.
+
+ResultCapturePinSecurityUITest.clearPinEncodeAndDecodeCannotEscapeRestrictedProfiles falla antes del arreglo con la captura de Encode PIN Block expuesta (1 test, 1 fallo, 0 errores); después genera y decodifica un bloque real con fixtures inventadas, verifica la publicación de Decode PIN Block y comprueba visor, portapapeles real y Shelf vacío en ambos perfiles restringidos. La caracterización ahora exige el bloqueo en MASKED/REDACTED y conserva la captura completa de FULL_LAB con Shelf SECRET. Cinco tests de captura/proveedores/seguridad: 0 fallos, 0 errores.
+
+SHA `15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b` → `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`. Cambian solo las tres filas PIN Block (Shelf SECRET en FULL_LAB, máscara/vacío y ninguna entrada en perfiles restringidos) y desaparecen las dos anotaciones BUG del transcript. Se revisó el diff completo antes de fijar el digest. La clasificación del modelo publicado sigue siendo PUBLIC por el límite de alcance; la clasificación efectiva de captura/Shelf es SECRET.
+
+Aviso residual de severidad baja: el mensaje genérico heredado de ResultViewerCoordinator dice “Added public output to Clipboard Shelf.” incluso cuando la entrada PIN en FULL_LAB ahora es SECRET. La clasificación de la entrada y las barreras son correctas; no se cambia ese coordinador por la exclusión explícita del encargo. Esta diferencia está fijada y visible en la transcripción, no se oculta.
+
+Estado de fallos: las tres fugas de severidad alta están corregidas. El aviso genérico de severidad baja queda documentado fuera del alcance. ModernMainController final: 2623 líneas (128 menos); ResultCaptureCoordinator: 250 líneas. Ningún archivo de crypto/, navegación ni los tres coordinadores excluidos se modifica. No se agregan imágenes ni .local.md.
+
+## Verificación final
+
+La revisión final refuerza las aserciones de las claves generadas: Shelf debe estar vacío con perfiles restringidos y el PEM privado completo debe coincidir con la entrada de sesión en FULL_LAB. Se comprueba también el PEM puro de los detalles publicados contra los logs, además del informe privado de pantalla. Las lecturas de controles se realizan en FX. No cambia el digest ni ninguna fila de la transcripción.
+
+Suite UI ejecutada por separado: `mvn -o -q test -Plow-cpu -DrunUiTests=true`, **456 tests, 0 fallos, 0 errores, 0 omitidos, 90 clases, exit 0**. Los informes anteriores se retiran antes de cada ejecución para obtener números independientes. El pase UI previo también daba los mismos números.
+
+Suite completa ejecutada después y con informes limpios: `mvn -o -q test -Plow-cpu`, **2799 tests, 0 fallos, 0 errores, 1 omitido, 404 clases, exit 0**. El omitido es el test existente `Pkcs11SessionEncapsulationTest.testSoftHsmUpdateCertificateChain`; no corresponde a esta fase. Los cinco tests nuevos de captura/proveedores/seguridad están incluidos y pasan sin omisiones. Digest final comprobado en ambos pases finales: `bfc9dc289167f2d99a03b8945f8cfaceb095ee86766cc5b63b90577c71caa7ed`.
+
+Los resultados finales y el refuerzo de las aserciones sin cambio de digest se incorporan al último commit de corrección para conservar un commit de mapa, uno de caracterización, uno de extracción y un commit independiente por cada fuga. No hay adaptaciones de tests anteriores ni otros desvíos de alcance; el aviso residual de baja severidad se explica arriba.
