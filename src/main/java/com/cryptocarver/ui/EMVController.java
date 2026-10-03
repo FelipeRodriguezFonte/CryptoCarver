@@ -1236,6 +1236,7 @@ public class EMVController {
                     }
                 }
             }
+            if (mainController != null) mainController.updateStatus(t("module.payments.status.profileLoaded", p.getName()));
             System.out.println("Loaded EMV profile: " + p.getName());
         } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
             // Secure Messaging uses MAC controls or specific SM UI if added.
