@@ -21,7 +21,7 @@ MASKED | BUG: restricted profile Copy/Expand and Shelf still capture clear PIN b
 MASKED | PIN Block | input=synthetic PIN+PAN fields | SECRET; ISO-0 | format | format=ISO-0 Hexadecimal | result-classification=PUBLIC | copy/expand=<clear-PIN-block-captured> | shelf-resolver=<clear-PIN-block-captured> | shelf-entry=content=<clear-PIN-block-captured>,format=HEX,classification=PUBLIC | status=✓ Added public output to Clipboard Shelf.
 MASKED | asymmetric key generation | Keys private-area=<generated-private-key> | blocked=true
 MASKED | private-material placeholder | rendered=***MASKED***
-MASKED | generic private PEM candidate | raw-private-material-exposed=true
+MASKED | generic private PEM candidate | raw-private-material-exposed=false
 MASKED | no-result | copy/expand=<empty> | shelf-resolver=<empty> | status=× No current output available.
 MASKED | visible-area-vs-publication | copy/expand=PUBLISHED-OUTPUT | shelf-resolver=VISIBLE-SCREEN-OUTPUT
 MASKED | published-on-other-screen | shelf-resolver=<empty>
@@ -35,7 +35,7 @@ REDACTED | BUG: restricted profile Copy/Expand and Shelf still capture clear PIN
 REDACTED | PIN Block | input=synthetic PIN+PAN fields | SECRET; ISO-0 | format | format=ISO-0 Hexadecimal | result-classification=PUBLIC | copy/expand=<clear-PIN-block-captured> | shelf-resolver=<clear-PIN-block-captured> | shelf-entry=content=<clear-PIN-block-captured>,format=HEX,classification=PUBLIC | status=✓ Added public output to Clipboard Shelf.
 REDACTED | asymmetric key generation | Keys private-area=<generated-private-key> | blocked=true
 REDACTED | private-material placeholder | rendered=<empty>
-REDACTED | generic private PEM candidate | raw-private-material-exposed=true
+REDACTED | generic private PEM candidate | raw-private-material-exposed=false
 REDACTED | no-result | copy/expand=<empty> | shelf-resolver=<empty> | status=× No current output available.
 REDACTED | visible-area-vs-publication | copy/expand=PUBLISHED-OUTPUT | shelf-resolver=VISIBLE-SCREEN-OUTPUT
 REDACTED | published-on-other-screen | shelf-resolver=<empty>

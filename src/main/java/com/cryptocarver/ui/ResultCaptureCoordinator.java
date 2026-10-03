@@ -184,6 +184,10 @@ final class ResultCaptureCoordinator {
     }
 
     com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
+        // Private material stays protected even in a generic or mislabeled result control.
+        if (area != null && containsPrivateMaterial(area.getText())) {
+            return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+        }
         if (ResultAreaTracker.isPrivateKeyResultArea(area)) {
             return com.cryptocarver.model.OperationDetail.Classification.SECRET;
         }
@@ -210,6 +214,12 @@ final class ResultCaptureCoordinator {
             return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(lastPublishedResultSnapshot.get());
         }
         return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
+    }
+
+    private boolean containsPrivateMaterial(String text) {
+        if (text == null) return false;
+        return isPrivateMaterialPlaceholder(text)
+                || text.toUpperCase(java.util.Locale.ROOT).contains("PRIVATE KEY-----");
     }
 
     private boolean isContainerVisible(javafx.scene.Node container) {

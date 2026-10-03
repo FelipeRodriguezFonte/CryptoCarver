@@ -63,3 +63,11 @@ ResultCaptureCoordinator recibe proveedores vivos de Keys, Generic, host Generic
 ModernMainController conserva los trece métodos del alcance como delegados de una línea. No se movieron campos consultados por reflexión: no hizo falta adaptar tests existentes ni FXML. Se renombró la variable local del perfil a `profile` para evitar que ocultase el Supplier `visibility`; no se sustituyeron identificadores dentro de cadenas literales. isContainerVisible conserva su equivalente local y el auxiliar compartido del shell permanece para Clear Input.
 
 Extracción: 2751 → 2623 líneas en ModernMainController; coordinador inicial 218 líneas. Verificación: ResultCaptureCharacterizationUITest y ResultCaptureCoordinatorTest, 2 tests, 0 fallos, 0 errores. SHA de caracterización intacto: `f9e29640f71909496daf18fd67a1098cf7653940603114e722a102522c84fc18`.
+
+## Corrección 1: material privado en área genérica
+
+classificationForResultArea comprueba primero el contenido: marcador de material privado o delimitador PRIVATE KEY----- (incluidos encabezados/pies incompletos). Esto precede al id y al snapshot. MASKED/REDACTED protegen incluso áreas mal rotuladas como públicas. FULL_LAB mantiene la captura y la clasificación SECRET hace que un PEM completo entre únicamente en el Shelf de sesión.
+
+Regresión explícita: privateMaterialInGenericAreaCannotEscapeRestrictedProfiles, que fallaba antes, ahora comprueba ambos perfiles restringidos para PEM y marcador, portapapeles real, captura del visor y Shelf vacío, además de sesión privada FULL_LAB. Ejecución con caracterización: 2 tests, 0 fallos, 0 errores.
+
+Solo cambian dos filas normalizadas (generic private PEM candidate en MASKED y REDACTED, exposición true → false). SHA anterior `f9e29640f71909496daf18fd67a1098cf7653940603114e722a102522c84fc18` → `15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b`. El cambio se debe a la corrección de fuga, no a la extracción.

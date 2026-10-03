@@ -109,7 +109,7 @@ class ResultCaptureCharacterizationUITest {
         assertFalse(joined.contains("4000001234567899"));
         Files.createDirectories(Path.of("target"));
         Files.writeString(Path.of("target/result-capture-transcript.txt"), joined + "\n");
-        assertEquals("f9e29640f71909496daf18fd67a1098cf7653940603114e722a102522c84fc18", sha(joined));
+        assertEquals("15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b", sha(joined));
     }
 
     /** Runs the actual production module handlers inside the loaded modern shell. */
