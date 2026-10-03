@@ -33,3 +33,23 @@ ModernMainController: 2623 → 2474 líneas (−149). localizationView() y updat
 El tema se consulta en cada pintura; el contexto de privacidad y el error actual se resuelven al finalizar. El recorrido de fuentes recibe tamaño explícito, conserva ramas/orden/estilos y no toca AppSettings. Comparación mecánica de todas las líneas de bindings antes/después: idénticas al normalizar accesores y separar la lectura viva del tema. No se cambiaron literales ni campos FXML.
 
 Caracterización después de extraer: 19 tests pasan y SHA idéntico. Regresión adicional (sin modificar transcripción): reemplazo tardío de label/presentadores, cambio de operación dentro de refreshSessionTrail, tema DARK→LIGHT, idioma ES, preservación de estado no Ready/Listo y repintado del error actual. Se mantienen los tres primeros commits separados: mapa, caracterización y extracción. Los fallos de compilación durante desarrollo (accesor generado sobre un método, forward reference y null ambiguo en fixture) se corrigieron antes de las comprobaciones; no eran fallos de comportamiento ni requirieron cambiar el digest.
+
+## Informe final
+
+JDK Temurin 21.0.8. Dos ejecuciones independientes, retirando los informes de Surefire entre ellas:
+
+| Suite | Comando | Tests | Clases | Fallos | Errores | Omitidos | Exit |
+|---|---|---:|---:|---:|---:|---:|---:|
+| UI | `mvn -o -q test -Plow-cpu -DrunUiTests=true` | 462 | 91 | 0 | 0 | 0 | 0 |
+| Completa | `mvn -o -q test -Plow-cpu` | 2805 | 405 | 0 | 0 | 1 | 0 |
+
+Única omisión preexistente: `Pkcs11SessionEncapsulationTest.testSoftHsmUpdateCertificateChain`. Los 10 tests de ModernMainShellLocalizationCharacterizationTest, los 7 de ShellTextResolverTest y los 3 de LocalizationShellCharacterizationUITest pasan en la suite completa. Informes independientes locales: target/localization-ui-reports y target/surefire-reports.
+
+SHA-256 transcripción antes de extraer, después de extraer, tras UI y tras suite completa: **idéntico**, `a57ad3eaf8e958a7768a7ecee4bbd22f16b43fee7d4e0985a1b5895df82fdbfb`. Archivo generado: target/localization-shell-transcript.txt, 90 filas UTF-8 con salto final.
+
+Digests finales de fuente:
+
+- ModernMainController.java: `c5361d0225253b6d4182d35b0142a8ad0ac93e418c6f7b3bb7e4af3bbb497c06`.
+- ShellLocalizationCoordinator.java: `262788b493566167c6c05d5f03003f715677572ab59d891720595891b5d188e9`.
+
+ModernMainController: **2623 → 2474** líneas; ShellLocalizationCoordinator: **273 → 599**. Se conserva comportamiento y transcripción. Sin cambios de producción después de los gates. Diff completo contra 2782ad6 comprobado sin errores de whitespace; archivos limitados a los dos componentes UI, dos fixtures de pruebas y este mapa. Sin modificaciones de crypto, imágenes, archivos .local.md ni secretos reales. Cuatro commits: mapa, caracterización, extracción y este informe. Rama final `codex/modern-main-localization`, sin cambios pendientes.
