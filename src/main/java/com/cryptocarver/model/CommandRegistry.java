@@ -20,6 +20,12 @@ public final class CommandRegistry {
             public void navigateToModule(String moduleName) { controller.navigateToModule(moduleName); }
 
             @Override
+            public void openBatchEncryptRecord() { controller.openBatchEncryptRecord(); }
+
+            @Override
+            public void openBatchDecryptRecord() { controller.openBatchDecryptRecord(); }
+
+            @Override
             public void toggleInspector() { controller.handleToggleInspector(); }
 
             @Override

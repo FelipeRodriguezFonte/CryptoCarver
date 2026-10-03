@@ -857,6 +857,14 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void navigateToModule(String moduleName) { navigationRouter.handleItemSelected(moduleName); }
 
+    private void openBatchRecordOperation(String operation) {
+        navigateToModule("Batch Runner");
+        if (genericContainerController != null) genericContainerController.selectBatchRecordOperation(operation);
+    }
+
+    public void openBatchEncryptRecord() { openBatchRecordOperation("Encrypt Record"); }
+    public void openBatchDecryptRecord() { openBatchRecordOperation("Decrypt Record"); }
+
     /** Opens the integrated Shelf view and refreshes its in-session contents. */
     @FXML
     public void handleOpenClipboardShelf() {
@@ -2251,6 +2259,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
             @Override
             public void navigateToModule(String moduleName) { ModernMainController.this.navigateToModule(moduleName); }
+
+            @Override
+            public void openBatchEncryptRecord() { ModernMainController.this.openBatchEncryptRecord(); }
+
+            @Override
+            public void openBatchDecryptRecord() { ModernMainController.this.openBatchDecryptRecord(); }
 
             @Override
             public void toggleInspector() { ModernMainController.this.handleToggleInspector(); }

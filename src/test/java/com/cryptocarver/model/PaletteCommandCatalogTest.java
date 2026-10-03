@@ -60,6 +60,12 @@ class PaletteCommandCatalogTest {
         public void navigateToModule(String moduleName) { navigated.add(moduleName); }
 
         @Override
+        public void openBatchEncryptRecord() { navigated.add("Encrypt Record"); }
+
+        @Override
+        public void openBatchDecryptRecord() { navigated.add("Decrypt Record"); }
+
+        @Override
         public void toggleInspector() { }
 
         @Override
