@@ -59,7 +59,7 @@ public class Iso8583Operations {
                               int encodedLength, List<String> warnings, String enrichment) { }
     public record Message(Mti mti, Profile profile, byte[] bitmap, List<byte[]> bitmapParts,
                           Map<Integer, ParsedField> fields, List<String> warnings) {
-        public Message { bitmap=bitmap.clone(); bitmapParts=List.copyOf(bitmapParts); fields=Map.copyOf(fields); warnings=List.copyOf(warnings); }
+        public Message { bitmap=bitmap.clone(); bitmapParts=List.copyOf(bitmapParts); fields=Collections.unmodifiableMap(new TreeMap<>(fields)); warnings=List.copyOf(warnings); }
         public Optional<ParsedField> field(int number) { return Optional.ofNullable(fields.get(number)); }
         public Set<Integer> presentFields() { return fields.keySet(); }
         public String report() { return Iso8583Operations.report(this); }
@@ -118,7 +118,7 @@ public class Iso8583Operations {
             out.put(24, new FieldDefinition(24, "Function code", legacy.type(), legacy.length(),
                     legacy.maxLength(), legacy.variable(), "ISO 8583:1993 clause 6 data-element table"));
         }
-        return Map.copyOf(out);
+        return Collections.unmodifiableMap(new TreeMap<>(out));
     }
     public static FieldDefinition fieldDefinition(int number, Version version) { return dictionary(version).get(number); }
 
