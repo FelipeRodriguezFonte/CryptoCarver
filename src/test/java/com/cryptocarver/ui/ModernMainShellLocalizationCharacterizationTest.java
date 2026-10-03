@@ -144,6 +144,31 @@ class ModernMainShellLocalizationCharacterizationTest {
   }
 
   @Test
+  void everyLaboratoryProfileLoadsIntoItsScreen() throws Exception {
+    List<String> outcomes = new java.util.ArrayList<>();
+    runFx(
+        () -> {
+          MenuBar menuBar = field(controller, "mainMenuBar");
+          Menu laboratory =
+              menuBar.getMenus().stream()
+                  .filter(menu -> "laboratory".equals(menu.getUserData()))
+                  .findFirst()
+                  .orElseThrow();
+          for (javafx.scene.control.MenuItem item : laboratory.getItems()) {
+            if (item instanceof Menu profile) {
+              try {
+                profile.getItems().get(0).fire();
+                outcomes.add(profile.getText() + " -> " + ((javafx.scene.control.Label) field(controller, "statusLabel")).getText());
+              } catch (RuntimeException error) {
+                outcomes.add(profile.getText() + " FAILED " + error);
+              }
+            }
+          }
+        });
+    assertTrue(outcomes.stream().noneMatch(line -> line.contains(" FAILED ")), String.join("\n", outcomes));
+  }
+
+  @Test
   void focusedControlRegainsFocusAfterLocaleChange() throws Exception {
     AtomicReference<TextField> sideSearch = new AtomicReference<>();
     runFx(
