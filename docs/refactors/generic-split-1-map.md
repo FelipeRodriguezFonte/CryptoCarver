@@ -50,3 +50,21 @@
 - El menú Laboratorio vuelve a listar los perfiles (DUKPT, TR-31, EMV, PIN, Secure Messaging):
   desde el 17 de septiembre el FXML declaraba el menú y el coordinador ya no los añadía. Un
   test carga todos los perfiles desde el menú real.
+
+# Fase 3: hashing y conversión manual
+
+- `HashingCoordinator` y `ManualConversionCoordinator`. La sincronización de formatos con la
+  barra superior sigue en el controlador. Caracterizado antes con
+  `GenericConversionCharacterizationUITest`.
+- Código muerto eliminado: `analyzeBytes`, `xorBuffers`, `compareBuffers`,
+  `visualizeControlCharacters`, `inspectHex`, `compareCharsets` y `setHashAlgorithmCombo`.
+- `GenericController` queda en unas 750 líneas (de 2421).
+
+## Fallos destapados y corregidos
+
+- «Base94» aparecía como formato de conversión manual pero la conversión lo rechazaba.
+- En hashing y conversión manual, una operación fallida dejaba visible el resultado anterior.
+- Plantillas personales de cifrado: la extracción de la fase 3 de `CipherController` había
+  renombrado la clave `"outputFormatCombo"`, así que el formato de salida no se guardaba ni se
+  aplicaba. Lo detectó, al repetirse aquí con hashing, un test del shell; ahora lo cubre
+  `SymmetricCipherCharacterizationUITest`.

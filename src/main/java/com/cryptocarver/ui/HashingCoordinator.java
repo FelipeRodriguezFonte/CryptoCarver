@@ -186,12 +186,16 @@ final class HashingCoordinator {
      * @param targetOutputArea The TextArea to display the result
      */
     void calculateHash(String input, String inputFormat, String algorithm, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         calculateHash(input, inputFormat, "Hexadecimal", algorithm, targetOutputArea);
     }
 
     /** Calculates a hash and serializes its bytes using the selected output format. */
     void calculateHash(String input, String inputFormat, String outputFormat,
             String algorithm, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             inputFormat = GenericController.normalizeFormatName(inputFormat);
             outputFormat = GenericController.normalizeFormatName(outputFormat);

@@ -94,7 +94,7 @@ class GenericConversionCharacterizationUITest {
             panel.invoke("handleResetHashDefaults");
             transcript.add(panel.step("reset algorithm " + panel.combo("hashAlgorithmCombo").getValue(), null));
         });
-        assertEquals("8dc1bbc417bb37d19aba7ffedf9f011ab73e0df3a245e2fa60edb5c352922ad6", digest(transcript), String.join("\n", transcript));
+        assertEquals("80a0cba713caef534744540b8cc186e3577a37ac27d1f7a2d65a1209bb96fd31", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -163,7 +163,7 @@ class GenericConversionCharacterizationUITest {
                 panel.combo("manualInputFormatCombo").setValue("Text (UTF-8)");
             }
         });
-        assertEquals("6871901310b20d63bf6f8829dbdde4088f650dda9818140f700ca963be408844", digest(transcript), String.join("\n", transcript));
+        assertEquals("3d59392a928a24e177ebc206613dee73fb20b212905ee10f9da28b49a9636d8c", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -219,7 +219,23 @@ class GenericConversionCharacterizationUITest {
             panel.controller().fillHashInput("616263", com.cryptocarver.model.ClipboardEntry.Format.HEX);
             transcript.add("fill hash " + panel.text("hashInputArea") + "\n" + panel.reporter().drain());
         });
-        assertEquals("ed3b2b11d2c5b8db178282571413e09d2af0495ed783d4cf5e8359791bfbeb1a", digest(transcript), String.join("\n", transcript));
+        assertEquals("b676cf999968fb1fc5d6d6bf028b78b68c5a68975c09c037ae995d1054e17cfc", digest(transcript), String.join("\n", transcript));
+    }
+
+    @Test
+    void base94RoundTripsThroughManualConversion() throws Exception {
+        withPanel(panel -> {
+            panel.combo("manualInputFormatCombo").setValue("Text (UTF-8)");
+            panel.combo("manualOutputFormatCombo").setValue("Base94");
+            panel.set("manualInputArea", "Hi there");
+            panel.controller().handleManualConvert();
+            String encoded = panel.text("manualOutputArea");
+            panel.combo("manualInputFormatCombo").setValue("Base94");
+            panel.combo("manualOutputFormatCombo").setValue("Text (UTF-8)");
+            panel.set("manualInputArea", encoded);
+            panel.controller().handleManualConvert();
+            assertEquals("Hi there", panel.text("manualOutputArea"), panel.reporter().drain());
+        });
     }
 
     private static String digest(List<String> transcript) throws Exception {

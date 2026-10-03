@@ -164,6 +164,7 @@ final class ManualConversionCoordinator {
     void handleShiftLeft() { shiftManualBits(true); }
     void handleShiftRight() { shiftManualBits(false); }
     void handleExtractTraceHex() {
+        manualOutputArea.clear();
         try {
             TraceHexExtractor.Extraction result = TraceHexExtractor.extract(manualInputArea.getText());
             manualOutputArea.setText(result.hex());
@@ -173,6 +174,7 @@ final class ManualConversionCoordinator {
         }
     }
     private void shiftManualBits(boolean left) {
+        manualOutputArea.clear();
         try {
             int bits = Integer.parseInt(bitShiftBitsField == null ? "1" : bitShiftBitsField.getText().trim());
             byte[] input = DataConverter.hexToBytes(manualInputArea.getText().replaceAll("\\s+", ""));
@@ -290,6 +292,8 @@ final class ManualConversionCoordinator {
 
     void convertEBCDIC(String input, String inputFormat, String outputFormat, String direction, String codePage,
                               TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             byte[] sourceBytes = GenericController.parseInput(input, inputFormat);
             if (sourceBytes == null) throw new IllegalArgumentException("Input cannot be empty");
@@ -326,6 +330,8 @@ final class ManualConversionCoordinator {
 
     /** Explicit Base64URL text conversion for JOSE-style payloads. */
     void convertBase64Url(String input, boolean encode, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             byte[] inputBytes;
             byte[] outputBytes;
@@ -352,6 +358,8 @@ final class ManualConversionCoordinator {
 
     /** Explicit Base32 conversion for RFC 4648 interoperability. */
     void convertBase32(String input, boolean encode, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             byte[] decoded;
             String output;
@@ -378,6 +386,8 @@ final class ManualConversionCoordinator {
     /** Reverses byte order inside each fixed-width integer (16/32/64/128 bits). */
     void convertEndian(String input, String inputFormat, String outputFormat, int wordBytes,
                               TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             byte[] source = GenericController.parseInput(input, inputFormat);
             if (source == null || source.length == 0) throw new IllegalArgumentException("Input cannot be empty");
@@ -409,6 +419,8 @@ final class ManualConversionCoordinator {
     }
 
     void convertUrlEncoding(String input, boolean encode, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             String result = encode
                     ? java.net.URLEncoder.encode(input, java.nio.charset.StandardCharsets.UTF_8)
@@ -426,6 +438,8 @@ final class ManualConversionCoordinator {
 
     void convertCompression(String input, String inputFormat, String outputFormat, String format, boolean compress,
                                   TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             byte[] source = GenericController.parseInput(input, inputFormat);
             byte[] converted = compress ? CompressionCodec.compress(source, format) : CompressionCodec.decompress(source, format);
@@ -443,6 +457,8 @@ final class ManualConversionCoordinator {
     }
 
     void convertPackedDecimal(String input, boolean comp3, boolean encode, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             byte[] bytes;
             String output;
@@ -493,6 +509,8 @@ final class ManualConversionCoordinator {
     }
 
     void convert(String input, String inputFormat, String outputFormat, TextInputControl targetOutputArea) {
+        // A failed conversion must not leave the previous result on screen.
+        targetOutputArea.clear();
         try {
             inputFormat = GenericController.normalizeFormatName(inputFormat);
             outputFormat = GenericController.normalizeFormatName(outputFormat);
@@ -544,6 +562,9 @@ final class ManualConversionCoordinator {
                 case "Decimal":
                     inputData = DataConverter.decimalToBytes(input);
                     break;
+                case "Base94":
+                    inputData = GenericController.parseInput(input, "Base94");
+                    break;
                 default:
                     reporter().showError("Format Error", "Unsupported input format: " + inputFormat);
                     return;
@@ -570,6 +591,9 @@ final class ManualConversionCoordinator {
                     break;
                 case "Decimal":
                     outputResult = DataConverter.bytesToDecimal(inputData);
+                    break;
+                case "Base94":
+                    outputResult = GenericController.formatBytes(inputData, "Base94");
                     break;
                 default:
                     reporter().showError("Format Error", "Unsupported output format: " + outputFormat);
