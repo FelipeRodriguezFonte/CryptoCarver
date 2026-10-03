@@ -69,6 +69,35 @@ class ResultCaptureSecurityUITest {
         });
     }
 
+    @Test void privatePayloadWithPublicMetadataCannotEscapeRestrictedProfiles() throws Exception {
+        fx(() -> {
+            AppSettings settings = AppSettings.getInstance();
+            SecretVisibilityProfile previous = settings.getSecretVisibilityProfile();
+            String route = settings.getLastRoute();
+            ClipboardShelfManager shelf = ClipboardShelfManager.getInstance();
+            ModernMainController shell = null;
+            String clipboard = Clipboard.getSystemClipboard().getString();
+            try {
+                settings.setLastRoute(""); shelf.clear();
+                var loader = Fxml.loader("/fxml/main-view-modern.fxml"); loader.load(); shell = loader.getController();
+                for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
+                    settings.setSecretVisibilityProfile(profile);
+                    for (String fixture : List.of(PRIVATE, MARKER)) {
+                        shell.publish(OperationResult.forOperation("Invented public metadata").output(fixture.getBytes(StandardCharsets.UTF_8)).build());
+                        assertFalse(shell.resolveCurrentOutputText().contains(fixture), "Expanded published capture must protect private material");
+                        putClipboard("CAPTURE_SENTINEL"); shell.handleCopyOutput();
+                        assertEquals("CAPTURE_SENTINEL", Clipboard.getSystemClipboard().getString());
+                        shelf.clear(); shell.handleAddCurrentOutputToShelf(); assertTrue(shelf.getEntries().isEmpty());
+                    }
+                }
+            } finally {
+                shelf.clear(); if (shell != null) shell.shutdown();
+                settings.setSecretVisibilityProfile(previous); settings.setLastRoute(route);
+                if (clipboard == null) Clipboard.getSystemClipboard().clear(); else putClipboard(clipboard);
+            }
+        });
+    }
+
     private static Object field(Object target, String name) throws Exception {
         Field field = target.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(target);
     }

@@ -114,8 +114,7 @@ final class ResultCaptureCoordinator {
             return renderResultArea(requestedArea);
         }
         if (lastPublishedResultSnapshot.get() != null) {
-            return OperationResultRenderer.render(lastPublishedResultSnapshot.get(),
-                    visibility.get());
+            return renderCapturePublishedResult(lastPublishedResultSnapshot.get());
         }
         if (resultAreaTracker.get().isRegistered(requestedArea) && !requestedArea.isEditable()) {
             String rendered = renderResultArea(requestedArea);
@@ -149,8 +148,7 @@ final class ResultCaptureCoordinator {
                 && !snapshot.getEnrichedOutput().isBlank())
                 || (snapshot.getOutput() != null
                 && snapshot.getOutput().length > 0);
-        return hasArtifact ? OperationResultRenderer.render(snapshot,
-                visibility.get()) : "";
+        return hasArtifact ? renderCapturePublishedResult(snapshot) : "";
     }
 
     com.cryptocarver.model.OperationResult shelfSnapshot() {
@@ -197,7 +195,7 @@ final class ResultCaptureCoordinator {
         }
         if (lastPublishedResultSnapshot.get() != null
                 && resultAreaTracker.get().isCurrentResultArea(area, true)) {
-            return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(lastPublishedResultSnapshot.get());
+            return classifyCapturePublishedResult(lastPublishedResultSnapshot.get());
         }
         if (area != null) {
             String id = area.getId() == null ? "" : area.getId().toLowerCase(java.util.Locale.ROOT);
@@ -211,9 +209,28 @@ final class ResultCaptureCoordinator {
             }
         }
         if (lastPublishedResultSnapshot.get() != null) {
-            return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(lastPublishedResultSnapshot.get());
+            return classifyCapturePublishedResult(lastPublishedResultSnapshot.get());
         }
         return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
+    }
+
+    private String renderCapturePublishedResult(com.cryptocarver.model.OperationResult result) {
+        String rendered = OperationResultRenderer.render(result, visibility.get());
+        if (containsPrivateMaterial(rendered)
+                && visibility.get() != com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB) {
+            return visibility.get() == com.cryptocarver.model.SecretVisibilityProfile.REDACTED
+                    ? "" : "***MASKED***";
+        }
+        return rendered;
+    }
+
+    private com.cryptocarver.model.OperationDetail.Classification classifyCapturePublishedResult(
+            com.cryptocarver.model.OperationResult result) {
+        if (containsPrivateMaterial(OperationResultRenderer.render(result,
+                com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB))) {
+            return com.cryptocarver.model.OperationDetail.Classification.SECRET;
+        }
+        return com.cryptocarver.model.ResultPresentationPolicy.classifyPublishedResult(result);
     }
 
     private boolean containsPrivateMaterial(String text) {

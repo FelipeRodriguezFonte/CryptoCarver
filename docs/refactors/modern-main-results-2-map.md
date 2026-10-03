@@ -71,3 +71,9 @@ classificationForResultArea comprueba primero el contenido: marcador de material
 Regresión explícita: privateMaterialInGenericAreaCannotEscapeRestrictedProfiles, que fallaba antes, ahora comprueba ambos perfiles restringidos para PEM y marcador, portapapeles real, captura del visor y Shelf vacío, además de sesión privada FULL_LAB. Ejecución con caracterización: 2 tests, 0 fallos, 0 errores.
 
 Solo cambian dos filas normalizadas (generic private PEM candidate en MASKED y REDACTED, exposición true → false). SHA anterior `f9e29640f71909496daf18fd67a1098cf7653940603114e722a102522c84fc18` → `15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b`. El cambio se debe a la corrección de fuga, no a la extracción.
+
+## Corrección 2: payload publicado con metadatos públicos
+
+La captura del resultado publicado añade una barrera de contenido privado después de renderizar: un PEM/marcador reconocible se redacta o enmascara con perfiles restringidos aunque el módulo lo etiquete PUBLIC. La clasificación de captura publicada también detecta ese contenido como SECRET para evitar una entrada pública persistente. Esto se aplica en Copy/Expand y en el fallback del Shelf; OperationResultRenderer y ResultPublicationCoordinator no cambian.
+
+Regresión explícita privatePayloadWithPublicMetadataCannotEscapeRestrictedProfiles: fallaba antes del arreglo; comprueba payload inventado PUBLIC (PEM y marcador), portapapeles real, captura del visor y Shelf vacío con MASKED/REDACTED. Verificación junto con caracterización y regresión de áreas: 3 tests, 0 fallos, 0 errores. No cambia ninguna fila de la caracterización anterior; digest intacto `15f9b8043aca2c9bb321205b121e7bb6272b162ce49f2115fd9092216e54237b`.
