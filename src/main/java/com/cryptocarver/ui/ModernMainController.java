@@ -651,6 +651,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     public void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
+            detachStartupListeners();
             detachWindowLifecycleListeners();
             expandedTextViewer.dispose();
             sessionStepViewer.dispose();
@@ -662,6 +663,17 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 operationExecutor.shutdown();
             }
         }
+    }
+
+    private javafx.beans.value.ChangeListener<String> securityTipListener;
+    private javafx.beans.value.ChangeListener<Number> responsiveWidthListener;
+
+    private void detachStartupListeners() {
+        i18n.removeLocaleChangeListener(i18nListener);
+        if (securityTipLabel != null && securityTipListener != null) securityTipLabel.textProperty().removeListener(securityTipListener);
+        if (mainPane != null && responsiveWidthListener != null) mainPane.widthProperty().removeListener(responsiveWidthListener);
+        if (navigationRail != null) navigationRail.setOnSectionSelected(null);
+        if (sidePanel != null) sidePanel.setOnItemSelected(null);
     }
 
     private javafx.scene.Node lifecycleNode;
@@ -756,11 +768,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         startupPhaseCompleted("errors");
 
         if (securityTipLabel != null && securityTipBox != null) {
-            securityTipLabel.textProperty().addListener((obs, oldVal, newVal) -> {
+            securityTipListener = (obs, oldVal, newVal) -> {
                 boolean hasTip = newVal != null && !newVal.trim().isEmpty();
                 securityTipBox.setVisible(hasTip);
                 securityTipBox.setManaged(hasTip);
-            });
+            };
+            securityTipLabel.textProperty().addListener(securityTipListener);
         }
 
         startupPhaseCompleted("security-tip");
@@ -824,7 +837,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         // The method is idempotent for any later/dynamic invocation.
         installResultViewerSupport();
         startupPhaseCompleted("results");
-        Platform.runLater(this::installTableViewerSupport);
+        Platform.runLater(() -> { if (!isShutdown.get()) installTableViewerSupport(); });
         startupPhaseCompleted("tables-scheduled");
 
         System.out.println("ModernMainController initialized successfully!");
@@ -918,9 +931,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         if (mainPane == null) {
             return;
         }
-        mainPane.widthProperty().addListener((observable, previousWidth, newWidth) ->
-                updateResponsiveLayout(newWidth.doubleValue()));
-        Platform.runLater(() -> updateResponsiveLayout(mainPane.getWidth()));
+        responsiveWidthListener = (observable, previousWidth, newWidth) -> updateResponsiveLayout(newWidth.doubleValue());
+        mainPane.widthProperty().addListener(responsiveWidthListener);
+        Platform.runLater(() -> { if (!isShutdown.get()) updateResponsiveLayout(mainPane.getWidth()); });
     }
 
     private void updateResponsiveLayout(double width) {

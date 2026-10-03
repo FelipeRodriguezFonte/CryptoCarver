@@ -88,7 +88,7 @@ class ShellStartupCharacterizationUITest {
         });
         String transcript = String.join("\n", shell.rows) + "\n";
         Files.writeString(Path.of("target/shell-startup-transcript.txt"), transcript);
-        assertEquals("BASELINE_PENDING", HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(transcript.getBytes(StandardCharsets.UTF_8))), transcript);
+        assertEquals("116b7045624997160c793f67818c6c4f42dd912650bd30b225a4633e1d58f4ba", HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(transcript.getBytes(StandardCharsets.UTF_8))), transcript);
     }
 
     @org.junit.jupiter.params.ParameterizedTest
