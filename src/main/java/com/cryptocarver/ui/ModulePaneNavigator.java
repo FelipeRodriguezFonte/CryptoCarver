@@ -169,26 +169,25 @@ final class ModulePaneNavigator {
 
     void expandAsymmetricAccordionPane(String paneName) {
         if (keysController.get() == null) return;
-        if ("DSA Key Generation".equals(paneName) || "EdDSA Key Generation".equals(paneName)) {
-            expandCanonicalAsymmetricPane(paneName);
-            return;
-        }
+        // Exact title first: substring matching lets "DSA" select ECDSA and "EdDSA" select DSA.
+        if (expandCanonicalAsymmetricPane(paneName)) return;
         revealExpandedPane(keysController.get().expandAsymmetricPane(paneName));
     }
 
     /** Canonical equality distinguishes DSA, ECDSA and EdDSA without substring collisions. */
-    private void expandCanonicalAsymmetricPane(String canonical) {
+    private boolean expandCanonicalAsymmetricPane(String canonical) {
         ModuleHost keysHost = host(UiNavigationRegistry.Module.KEYS_ASYMMETRIC);
         Node section = keysHost == null ? null : keysHost.lookup("#asymmetricKeysContainer");
         Accordion accordion = findAccordion(section);
-        if (accordion == null) return;
+        if (accordion == null || canonical == null) return false;
         for (TitledPane pane : accordion.getPanes()) {
             if (matchesCanonicalTitle(pane, canonical)) {
                 accordion.setExpandedPane(pane);
                 revealExpandedPane(pane);
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     private static boolean matchesCanonicalTitle(TitledPane pane, String canonical) {
