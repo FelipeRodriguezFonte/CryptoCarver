@@ -30,3 +30,9 @@ Arreglo 1, privacidad: en perfiles restrictivos se sustituye el nombre libre por
 Arreglo 2, siguiente operación: show reinicia spinner indeterminado visible/managed y bar a -1 oculto/no managed, limpiando su accesible. hide conserva el último ratio (éxito/commit 1.0; error/cancel 0.25) dentro de box oculto. Pase previo a fijar: 3 tests, 1 fallo deliberado BASELINE_PENDING; ambos defectos pasan. SHA revisado `49bf6210ad4fc9261a53a23d509546e1f96164f872e6e8ba6d16e3abcdf349ee`. Se amplía cobertura de referencias FXML opcionales y restauración defensiva de Shelf sin mutarlo si no cambió.
 
 Caracterización fijada antes de extracción: 4 tests, 0 fallos/errores/omisiones. Código previo a extracción: 2360 líneas. El SHA de 48 filas (UTF-8 con salto final) permanece `49bf6210ad4fc9261a53a23d509546e1f96164f872e6e8ba6d16e3abcdf349ee`.
+
+## Extracción
+
+ShellAsyncProgressCoordinator: record View con cinco controles; Supplier<StatusReporter> consultado al cancelar, sin campo de controller ni executor cacheado. El getter del coordinador es perezoso; asyncProgressView reconstruye referencias FXML en cada delegado. show/update/hide/cancel son delegados de una línea. Los callbacks del executor siguen registrados desde ShellStartupCoordinator, isShutdown/lifecycle/getOperationExecutor siguen en el shell. Locale y perfil se consultan al pintar. No hay renombrado de campos FXML ni cambio de sus cadenas literales.
+
+Pase dirigido después de extracción con -Plow-cpu: 9 tests (AsyncProgress 4, ShellStartup 5), 0 fallos/errores/omisiones. SHA async idéntico al fijado antes de extraer; SHA startup `116b7045624997160c793f67818c6c4f42dd912650bd30b225a4633e1d58f4ba` conservado.

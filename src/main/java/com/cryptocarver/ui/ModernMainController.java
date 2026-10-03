@@ -514,106 +514,24 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return operationExecutor;
     }
 
-    private String progressTitle(String operationName) {
-        return AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
-                && operationName != null && !operationName.isBlank() ? operationName : i18n.text("progress.operation");
+    private ShellAsyncProgressCoordinator asyncProgressCoordinator;
+
+    private ShellAsyncProgressCoordinator asyncProgressCoordinator() {
+        if (asyncProgressCoordinator == null) asyncProgressCoordinator = new ShellAsyncProgressCoordinator(i18n, () -> this);
+        return asyncProgressCoordinator;
     }
 
-    public void showAsyncProgress(String operationName) {
-        if (asyncProgressBox != null) {
-            if (asyncProgressLabel != null) {
-                String title = progressTitle(operationName);
-                asyncProgressLabel.setText(title + "…");
-                asyncProgressLabel.setAccessibleText(title);
-            }
-            if (asyncProgressIndicator != null) {
-                asyncProgressIndicator.setProgress(-1);
-                asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(operationName));
-                asyncProgressIndicator.setVisible(true);
-                asyncProgressIndicator.setManaged(true);
-            }
-            if (asyncProgressBar != null) {
-                asyncProgressBar.setProgress(-1);
-                asyncProgressBar.setAccessibleText(null);
-                asyncProgressBar.setVisible(false);
-                asyncProgressBar.setManaged(false);
-            }
-            if (asyncCancelBtn != null) {
-                asyncCancelBtn.setDisable(false);
-            }
-            asyncProgressBox.setManaged(true);
-            asyncProgressBox.setVisible(true);
-        }
+    private ShellAsyncProgressCoordinator.View asyncProgressView() {
+        return new ShellAsyncProgressCoordinator.View(asyncProgressBox, asyncProgressIndicator, asyncProgressBar, asyncProgressLabel, asyncCancelBtn);
     }
 
-    public void updateAsyncProgressDetails(OperationExecutor.ProgressDetails details) {
-        if (asyncProgressBox == null || details == null) return;
-        if (!asyncProgressBox.isVisible()) {
-            asyncProgressBox.setManaged(true);
-            asyncProgressBox.setVisible(true);
-        }
-        if (asyncProgressLabel != null) {
-            String text = AppSettings.getInstance().getSecretVisibilityProfile() == com.cryptocarver.model.SecretVisibilityProfile.FULL_LAB
-                    ? details.getFormattedText() : OperationExecutor.formatProgressText(progressTitle(null),
-                            details.getBytesProcessed(), details.getTotalBytes(), details.getElapsedTimeMs());
-            asyncProgressLabel.setText(text);
-            asyncProgressLabel.setAccessibleText(text);
-        }
-
-        if (asyncProgressIndicator != null) asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(details.getOperationName()));
-        if (details.getTotalBytes() > 0) {
-            double ratio = Math.min(1.0, (double) details.getBytesProcessed() / details.getTotalBytes());
-            if (asyncProgressBar != null) {
-                asyncProgressBar.setProgress(ratio);
-                asyncProgressBar.setAccessibleText(String.format(java.util.Locale.US, "Progress: %d%%", Math.round(ratio * 100)));
-                asyncProgressBar.setVisible(true);
-                asyncProgressBar.setManaged(true);
-            }
-            if (asyncProgressIndicator != null) {
-                asyncProgressIndicator.setVisible(false);
-                asyncProgressIndicator.setManaged(false);
-            }
-        } else {
-            if (asyncProgressIndicator != null) {
-                asyncProgressIndicator.setProgress(-1);
-                asyncProgressIndicator.setAccessibleText("Working: " + progressTitle(details.getOperationName()));
-                asyncProgressIndicator.setVisible(true);
-                asyncProgressIndicator.setManaged(true);
-            }
-            if (asyncProgressBar != null) {
-                asyncProgressBar.setVisible(false);
-                asyncProgressBar.setManaged(false);
-            }
-        }
-    }
-
-    public void hideAsyncProgress() {
-        if (asyncProgressBox != null) {
-            asyncProgressBox.setVisible(false);
-            asyncProgressBox.setManaged(false);
-        }
-    }
+    public void showAsyncProgress(String operationName) { asyncProgressCoordinator().show(asyncProgressView(), operationName); }
+    public void updateAsyncProgressDetails(OperationExecutor.ProgressDetails details) { asyncProgressCoordinator().update(asyncProgressView(), details); }
+    public void hideAsyncProgress() { asyncProgressCoordinator().hide(asyncProgressView()); }
+    public void handleCancelAsyncOperation() { asyncProgressCoordinator().cancel(asyncProgressView()); }
 
     @FXML
     private final java.util.concurrent.atomic.AtomicBoolean isShutdown = new java.util.concurrent.atomic.AtomicBoolean(false);
-
-    public void handleCancelAsyncOperation() {
-        boolean cancelled = operationExecutor.cancelCurrentOperation();
-        if (cancelled) {
-            if (asyncProgressLabel != null) {
-                asyncProgressLabel.setText(i18n.text("progress.cancelling"));
-            }
-        } else if (operationExecutor.isInCommitPhase()) {
-            if (asyncProgressLabel != null) {
-                asyncProgressLabel.setText(i18n.text("progress.finishing"));
-            }
-            if (asyncCancelBtn != null) {
-                asyncCancelBtn.setDisable(true);
-            }
-        } else {
-            hideAsyncProgress();
-        }
-    }
 
     public void shutdown() {
         if (isShutdown.compareAndSet(false, true)) {
