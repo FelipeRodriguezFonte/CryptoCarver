@@ -267,6 +267,7 @@ final class BatchRunnerCoordinator {
                 cs = java.nio.charset.Charset.forName(mapped != null ? mapped : csName);
 
                 compact = batchCompactModeCheck.isSelected();
+                if (key.length != 32) throw new IllegalArgumentException(t("module.batch.keyLengthInvalid"));
                 com.cryptocarver.crypto.LineRecordCipher.validateAlgorithmAndKey(alg, key);
                 com.cryptocarver.crypto.LineRecordCipher.validateIvAndAad(alg, iv, aad);
 
@@ -282,7 +283,8 @@ final class BatchRunnerCoordinator {
                     }
                 }
             } catch (Exception e) {
-                if (reporter() != null) reporter().showError(t("module.batch.errorTitle"), "Invalid crypto parameters: " + e.getMessage());
+                if (reporter() != null) reporter().showError(t("module.batch.errorTitle"),
+                        t("module.batch.invalidCryptoParameters", e.getMessage()));
                 return;
             }
         } else {
@@ -301,6 +303,10 @@ final class BatchRunnerCoordinator {
                     return java.util.Map.of(outCol, res);
                 } catch (Exception e) {
                     if (stopOnError) errorOccurred.set(true);
+                    if (e instanceof IllegalArgumentException && e.getMessage() != null
+                            && e.getMessage().equals("Invalid encrypted line " + rowNum)) {
+                        throw new IllegalArgumentException(t("module.batch.invalidRecord", rowNum));
+                    }
                     throw e;
                 }
             };

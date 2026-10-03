@@ -14,6 +14,8 @@ public final class PaletteCommandCatalog {
     public interface Actions {
         void showQuickStart();
         void navigateToModule(String moduleName);
+        void openBatchEncryptRecord();
+        void openBatchDecryptRecord();
         void toggleInspector();
         void toggleSidePanel();
         boolean hasCurrentResult();
@@ -53,6 +55,16 @@ public final class PaletteCommandCatalog {
                     i18n.text("command.category.navigation", descriptor.getCategory()), descriptor.getSubtitle(),
                     keywords, null, () -> true, () -> actions.navigateToModule(descriptor.getNavigationPath())));
         }
+        commands.add(command("batch_encrypt_record", i18n.text("command.batch.encryptRecord.title"),
+                i18n.text("command.category.navigation", i18n.text("command.batch.category")),
+                i18n.text("command.batch.encryptRecord.description"),
+                List.of("Encrypt Record", "Batch Runner", "record batch", "encrypt many"), null,
+                () -> true, actions::openBatchEncryptRecord));
+        commands.add(command("batch_decrypt_record", i18n.text("command.batch.decryptRecord.title"),
+                i18n.text("command.category.navigation", i18n.text("command.batch.category")),
+                i18n.text("command.batch.decryptRecord.description"),
+                List.of("Decrypt Record", "Batch Runner", "record batch", "decrypt many"), null,
+                () -> true, actions::openBatchDecryptRecord));
         commands.add(command("view_inspector", i18n.text("command.inspector.title"),
                 i18n.text("command.category.toolsView"), i18n.text("command.inspector.description"),
                 List.of("inspector", "details", "toggle", "panel"), "Ctrl+I", () -> true,

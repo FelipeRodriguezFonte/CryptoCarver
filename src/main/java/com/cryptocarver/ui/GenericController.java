@@ -283,6 +283,10 @@ public class GenericController {
 
     @FXML public void handleRunBatch() { batchRunner().handleRunBatch(); }
 
+    void selectBatchRecordOperation(String operation) {
+        if (batchOperationCombo != null) batchOperationCombo.setValue(operation);
+    }
+
     @FXML public void handleDryRunBatch() { batchRunner().handleDryRunBatch(); }
 
     @FXML public void handleCancelBatch() { batchRunner().handleCancelBatch(); }

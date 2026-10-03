@@ -202,7 +202,8 @@ class BatchAndFileCharacterizationUITest {
             transcript.add(panel.batchStep("reset") + " input='" + panel.text("batchInputArea") + "' key='"
                     + panel.text("batchKeyField") + "'");
         });
-        assertEquals("3a3cabfd064274cb44860c48e67ba320a4439755be12f5aa03a65175d29e5e2f", digest(transcript), String.join("\n", transcript));
+        // Updated because the invalid key error is now localized via the EN/ES bundles.
+        assertEquals("9474d302b27906800b6fdc5fcab8309c79269fa805f1d28bffa45f4309e7f191", digest(transcript), String.join("\n", transcript));
     }
 
     private Panel lastPanel;
