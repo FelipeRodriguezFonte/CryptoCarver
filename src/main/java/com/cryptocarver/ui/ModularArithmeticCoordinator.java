@@ -51,7 +51,6 @@ final class ModularArithmeticCoordinator {
                     "GCD(a, b)",
                     "LCM(a, b)",
                     "Extended GCD",
-                    "Chinese Remainder Theorem",
                     "XOR (Hex Input)",
                     "XOR (Decimal Input)");
             modOperationCombo.getSelectionModel().select(0);
@@ -66,6 +65,8 @@ final class ModularArithmeticCoordinator {
      * Calculate modular arithmetic operation
      */
     void handleModularCalculate() {
+        // A rejected input must not leave the previous result on screen.
+        modResultArea.clear();
         try {
             String operation = modOperationCombo.getValue();
             String aInput = modOperandAField.getText().trim();
@@ -229,22 +230,6 @@ final class ModularArithmeticCoordinator {
                         result = ModularArithmetic.extendedGCD(aHex, bHex);
                         modResultArea.setText("Extended Euclidean Algorithm\n" +
                                 "Finding x, y such that: ax + by = gcd(a,b)\n\n" + result);
-                        break;
-
-                    case "Chinese Remainder Theorem":
-                        // For CRT, A and M are first pair, B and another field for second pair
-                        if (bHex.isEmpty() || mHex.isEmpty()) {
-                            reporter().showError("Input Error",
-                                    "CRT requires: A=a1, B=m1, Modulus=a2\n" +
-                                            "Enter m2 in the operation history or use Extended GCD for setup");
-                            return;
-                        }
-                        // Simplified CRT - would need additional fields for full implementation
-                        modResultArea.setText("Chinese Remainder Theorem\n\n" +
-                                "Note: Full CRT requires 2 modular equations:\n" +
-                                "  x ≡ a1 (mod m1)\n" +
-                                "  x ≡ a2 (mod m2)\n\n" +
-                                "This would need additional UI fields for proper implementation.");
                         break;
 
                     default:

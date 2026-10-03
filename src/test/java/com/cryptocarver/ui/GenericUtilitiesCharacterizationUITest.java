@@ -66,7 +66,7 @@ class GenericUtilitiesCharacterizationUITest {
             panel.controller().handleCalculateCheckDigit();
             transcript.add(panel.step("non numeric", null));
         });
-        assertEquals("e15ca5c71c2989e1d6ca54c932d5ec5ad694f217725ba05f63ab3b1fb88af0c8", digest(transcript), String.join("\n", transcript));
+        assertEquals("6dfcfd1b2e95c72d913e11aa85fe44834a81b3dcd1ac760540475d58d669bfa1", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -112,7 +112,7 @@ class GenericUtilitiesCharacterizationUITest {
                 }
             }
         });
-        assertEquals("8bc92e5a1bb463ba5570562ee519854ba87f2bf7a25170a747c48a5fbe858412", digest(transcript), String.join("\n", transcript));
+        assertEquals("5253b5f1d0095ca9159de308e064dd9692182fe43250c42e6e61787acb2d8b97", digest(transcript), String.join("\n", transcript));
     }
 
     @Test
@@ -131,7 +131,7 @@ class GenericUtilitiesCharacterizationUITest {
             transcript.add("after clear check='" + panel.text("checkDigitOutput") + "' mod='" + panel.text("modResultArea")
                     + "' output='" + panel.controller().getOutputText() + "'");
         });
-        assertEquals("2de624309870b06db242f2fa06d3601cf06d46dd963c868600bb329e895be80d", digest(transcript), String.join("\n", transcript));
+        assertEquals("296c901de0781c39b12d66fe6b66f5f098cd247ead7b6d2710c91623446e0a96", digest(transcript), String.join("\n", transcript));
     }
 
     private static String digest(List<String> transcript) throws Exception {

@@ -55,6 +55,11 @@ final class CheckDigitCoordinator {
                 return;
             }
 
+            if (!input.matches("\\d+")) {
+                // The calculators treat other characters as digits and would print a wrong check digit.
+                reporter().showError("Input Error", "Check digits work on decimal digits only");
+                return;
+            }
             int checkDigit = CheckDigitCalculator.calculateCheckDigit(input, algorithm);
             String result = CheckDigitCalculator.formatWithCheckDigit(input, algorithm);
 
@@ -88,6 +93,11 @@ final class CheckDigitCoordinator {
                 return;
             }
 
+            if (!input.matches("\\d+")) {
+                // The calculators treat other characters as digits and would print a wrong check digit.
+                reporter().showError("Input Error", "Check digits work on decimal digits only");
+                return;
+            }
             boolean isValid = CheckDigitCalculator.validateCheckDigit(input, algorithm);
             String resultText = isValid ? "✅ VALID" : "❌ INVALID";
 

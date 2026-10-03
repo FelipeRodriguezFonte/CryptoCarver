@@ -27,3 +27,26 @@
 - Las operaciones «Encrypt Record» y «Decrypt Record» del Batch Runner no están en la lista de
   operaciones (el catálogo es deliberadamente solo de datos), así que su código no es accesible
   desde la interfaz.
+
+# Fase 2: dígitos de control y aritmética modular
+
+- `CheckDigitCoordinator` y `ModularArithmeticCoordinator`. Caracterizados antes con
+  `GenericUtilitiesCharacterizationUITest` (que cubre también aleatorios y UUID, que siguen en
+  el controlador por su enlace con los formatos de la barra).
+- Código muerto eliminado: `initializeModularArithmetic`, `setCheckDigitAlgorithmCombo` y
+  `setRandomGeneratorFields`.
+
+## Fallos destapados y corregidos
+
+- «Limpiar» no borraba el dígito de control y la salida del módulo no lo recogía: el código usaba
+  `checkDigitOutputArea`, que no existe en el FXML (el campo es `checkDigitOutput`).
+- Los dígitos de control aceptaban letras («12a4» daba dígito 8 y se publicaba).
+- En aritmética modular, un error dejaba visible el resultado anterior.
+- «Chinese Remainder Theorem» no estaba implementado: mostraba que harían falta más campos y lo
+  publicaba como operación correcta. Se quita de la lista.
+
+## Perfiles de laboratorio
+
+- El menú Laboratorio vuelve a listar los perfiles (DUKPT, TR-31, EMV, PIN, Secure Messaging):
+  desde el 17 de septiembre el FXML declaraba el menú y el coordinador ya no los añadía. Un
+  test carga todos los perfiles desde el menú real.

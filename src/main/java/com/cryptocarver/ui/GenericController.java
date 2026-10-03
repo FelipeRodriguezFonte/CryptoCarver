@@ -140,7 +140,6 @@ public class GenericController {
     @FXML private TextField uuidOutputField;
     // Specific Output Areas
     @FXML private TextArea randomOutputArea;
-    @FXML private TextInputControl checkDigitOutputArea;
 
     @FXML private TextArea fileResultArea;
     @FXML private TextField fileComparePathField;
@@ -1431,8 +1430,8 @@ public class GenericController {
             uuidOutputField.clear();
 
         // Clear Check Digit
-        if (checkDigitOutputArea != null)
-            checkDigitOutputArea.clear();
+        if (checkDigitOutput != null)
+            checkDigitOutput.clear();
 
         // Clear File Converter
         if (fileInputPathField != null)
@@ -1462,8 +1461,8 @@ public class GenericController {
             return uuidOutputField.getText();
         }
 
-        if (checkDigitOutputArea != null && !checkDigitOutputArea.getText().isEmpty()) {
-            return checkDigitOutputArea.getText();
+        if (checkDigitOutput != null && !checkDigitOutput.getText().isEmpty()) {
+            return checkDigitOutput.getText();
         }
 
         if (fileResultArea != null && !fileResultArea.getText().isEmpty()) {
