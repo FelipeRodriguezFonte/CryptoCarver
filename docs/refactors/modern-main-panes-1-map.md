@@ -58,4 +58,10 @@ La caracterización preserva provisionalmente los dos errores explícitamente an
 
 ## Extracción y verificación
 
-Pendiente: proveedores, líneas finales, digests y resultados separados UI/completos.
+`ModulePaneNavigator` recibe un mapa de Supplier<ModuleHost> para todos los módulos con acordeón, además de proveedores de Keys, Cipher y los controladores a los que ya delegaba el shell, scroll y contentContainer. El constructor solo guarda proveedores; no los evalúa ni captura controladores. Los campos se resuelven en cada navegación y dentro del callback diferido de revelado. El shell conserva todos los métodos expand* como delegados de una línea y sus callbacks de carga/restauración.
+
+Se movieron la clasificación, la búsqueda recursiva y revealExpandedPane. El delegado de reveal del shell se eliminó al quedarse sin llamadas; la búsqueda previa descarta FXML, otras clases y tests. Generic usa su delegado también desde el callback del router. No se modifican NavigationRouter, UiNavigationRegistry, KeysController ni load*Content.
+
+Extracción: ModernMainController pasa de 2905 a 2751 líneas; ModulePaneNavigator tiene inicialmente 235 líneas. Los dos digests iniciales permanecen idénticos tras la extracción. No hubo que adaptar tests de fuente ni reflexión: los puntos consultados por los tests siguen en el shell.
+
+Pendiente: fixes DSA/EdDSA y resultados separados UI/completos.

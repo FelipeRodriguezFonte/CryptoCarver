@@ -399,7 +399,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
                 else if(r.variant()==UiNavigationRegistry.Variant.ASN1_ENCODE) x.selectAsn1EncodeTab();
             }
         });
-        callbacks.put(UiNavigationRegistry.Module.GENERIC, (r,c) -> NavigationRouter.expandByTitle(genericContainer, r.section(), ModuleTextCatalog.generic(), this::revealExpandedPane));
+        callbacks.put(UiNavigationRegistry.Module.GENERIC, (r,c) -> expandGenericAccordionPane(r.section()));
         callbacks.put(UiNavigationRegistry.Module.POST_QUANTUM, (r,c) -> { loadPostQuantumContent(); expandPQCAccordionPane(r.section()); });
         callbacks.put(UiNavigationRegistry.Module.XML_SECURITY, (r,c) -> { loadXMLSecurityContent(); expandXMLAccordionPane(r.section()); });
         callbacks.put(UiNavigationRegistry.Module.WSS_SECURITY, (r,c) -> { loadWssSecurityContent(); expandWssAccordionPane(r.section()); });
@@ -1496,31 +1496,6 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     }
 
     /** Materializes and presents the modular Recent Operations view. */
-    /**
-     * The accordion of a materialized module, wherever it sits under its host.
-     *
-     * <p>A module used to be inlined into its container, which put its accordion one level
-     * down. Deferred modules are loaded into a {@link ModuleHost}, so the host's child is the
-     * module's FXML root and the accordion is deeper still. Looking only at direct children
-     * finds nothing, and since every caller here treats "no accordion" as "nothing to expand",
-     * that failure is silent: navigating to an operation opens its module but leaves the
-     * matching pane closed.
-     */
-    private static Accordion moduleAccordion(ModuleHost host) {
-        return host == null ? null : findAccordion(host);
-    }
-
-    private static Accordion findAccordion(Node node) {
-        if (node instanceof Accordion accordion) return accordion;
-        if (node instanceof Parent parent) {
-            for (Node child : parent.getChildrenUnmodifiable()) {
-                Accordion found = findAccordion(child);
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-
     /** Bring a newly produced result (or reused input) into view on compact layouts. */
     void revealCipherEditor(Node editor) {
         Platform.runLater(() -> {
@@ -1539,100 +1514,35 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         });
     }
 
-    private void expandCipherAccordionPane(String itemName) {
-        boolean symmetric = itemName.contains("Symmetric") || itemName.contains("AES")
-                || itemName.contains("DES") || itemName.contains("Padding");
-        if (cipherController != null) cipherController.showSymmetricWorkspace(symmetric);
-        if (symmetric) {
-            mainScrollPane.setVvalue(0);
-            return;
-        }
-        Accordion accordion = moduleAccordion(cipherContainer);
+    private ModulePaneNavigator modulePaneNavigator;
 
-        if (accordion != null) {
-            String targetPane = "";
-            if (itemName.contains("Format-Preserving")) {
-                targetPane = "Format-Preserving";
-            } else if (itemName.contains("File Cipher")) {
-                targetPane = "File Cipher";
-            } else if (itemName.contains("OpenPGP") || itemName.contains("GPG")) {
-                targetPane = "OpenPGP";
-            } else if (itemName.contains("Symmetric") || itemName.contains("AES") || itemName.contains("DES")
-                    || itemName.contains("Padding")) {
-                targetPane = "Symmetric";
-            } else if (itemName.contains("Asymmetric") || itemName.contains("RSA") || itemName.contains("ECC")) {
-                targetPane = "Asymmetric";
-            }
-
-            for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty()
-                        && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.cipher())) {
-                    accordion.setExpandedPane(pane);
-                    revealExpandedPane(pane);
-                    break;
-                }
-            }
+    private ModulePaneNavigator modulePaneNavigator() {
+        if (modulePaneNavigator == null) {
+            var hosts = new java.util.EnumMap<UiNavigationRegistry.Module, java.util.function.Supplier<ModuleHost>>(UiNavigationRegistry.Module.class);
+            hosts.put(UiNavigationRegistry.Module.KEYS_SYMMETRIC, () -> keysContainer);
+            hosts.put(UiNavigationRegistry.Module.KEYS_ASYMMETRIC, () -> keysContainer);
+            hosts.put(UiNavigationRegistry.Module.CERTIFICATES, () -> certificatesContainer);
+            hosts.put(UiNavigationRegistry.Module.GENERIC, () -> genericContainer);
+            hosts.put(UiNavigationRegistry.Module.POST_QUANTUM, () -> postQuantumContainer);
+            hosts.put(UiNavigationRegistry.Module.XML_SECURITY, () -> xmlSecurityContainer);
+            hosts.put(UiNavigationRegistry.Module.WSS_SECURITY, () -> wssSecurityContainer);
+            hosts.put(UiNavigationRegistry.Module.EMV, () -> emvContainer);
+            hosts.put(UiNavigationRegistry.Module.CIPHER, () -> cipherContainer);
+            hosts.put(UiNavigationRegistry.Module.AUTHENTICATION, () -> authenticationContainer);
+            hosts.put(UiNavigationRegistry.Module.PAYMENTS, () -> paymentsContainer);
+            modulePaneNavigator = new ModulePaneNavigator(hosts, () -> keysController, () -> cipherController,
+                    () -> certificatesContainerController, () -> postQuantumContainerController,
+                    () -> xmlSecurityContainerController, () -> wssSecurityContainerController,
+                    () -> mainScrollPane, () -> contentContainer);
         }
+        return modulePaneNavigator;
     }
 
-    private void expandAuthenticationAccordionPane(String itemName) {
-        Accordion accordion = moduleAccordion(authenticationContainer);
+    private void expandCipherAccordionPane(String itemName) { modulePaneNavigator().expandCipherAccordionPane(itemName); }
 
-        if (accordion != null) {
-            String targetPane = "";
-            if (itemName.contains("Signature") || itemName.contains("Sign")) {
-                targetPane = "Signatures";
-            } else if (itemName.contains("MAC")) {
-                targetPane = "MAC";
-            }
+    private void expandAuthenticationAccordionPane(String itemName) { modulePaneNavigator().expandAuthenticationAccordionPane(itemName); }
 
-            for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty()
-                        && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.authentication())) {
-                    accordion.setExpandedPane(pane);
-                    revealExpandedPane(pane);
-                    break;
-                }
-            }
-        }
-    }
-
-    private void expandPaymentsAccordionPane(String itemName) {
-        Accordion accordion = moduleAccordion(paymentsContainer);
-
-        if (accordion != null) {
-            String targetPane = "";
-            // ISO 8583 and the host commands first: their names would otherwise match "ISO"
-            // (Encrypted PIN Blocks) or nothing at all.
-            if (itemName.contains("ISO 8583") || itemName.contains("ISO8583")) {
-                targetPane = "ISO 8583 Message Inspector";
-            } else if (itemName.contains("Host Command")) {
-                targetPane = "Host Command Bank";
-            } else if (itemName.contains("DUKPT")) {
-                targetPane = "DUKPT KSN";
-            } else if (itemName.contains("CVV")) {
-                targetPane = "CVV";
-            } else if (itemName.contains("PIN Block Operations")) {
-                targetPane = "Clear PIN Blocks";
-            } else if (itemName.contains("Clear") || itemName.contains("Encode") || itemName.contains("Decode")) {
-                targetPane = "Clear PIN";
-            } else if (itemName.contains("Encrypted") || itemName.contains("ISO")) {
-                targetPane = "Encrypted PIN";
-            } else if (itemName.contains("Generation") || itemName.contains("IBM") || itemName.contains("Generate")
-                    || itemName.contains("Verify")) {
-                targetPane = "PIN Generation";
-            }
-
-            for (TitledPane pane : accordion.getPanes()) {
-                if (!targetPane.isEmpty()
-                        && ModulePaneMatcher.matches(pane, targetPane, ModuleTextCatalog.payments())) {
-                    accordion.setExpandedPane(pane);
-                    revealExpandedPane(pane);
-                    break;
-                }
-            }
-        }
-    }
+    private void expandPaymentsAccordionPane(String itemName) { modulePaneNavigator().expandPaymentsAccordionPane(itemName); }
 
     private void showPlaceholderContent(String title) {
         hideAllContainers();
@@ -1650,23 +1560,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         updateContentSubtitle("No module available");
     }
 
-    private void expandAccordionPane(String paneName) {
-        if (keysController == null) return;
-        // Keys was the one module that expanded a pane without scrolling to it. That went
-        // unnoticed while every destination lived in the accordion, which lifts the pane it
-        // opens near the top by collapsing the previous one; the included panes below it have
-        // no such effect and stayed off-screen.
-        revealExpandedPane(keysController.expandSymmetricPane(paneName));
-    }
+    private void expandAccordionPane(String paneName) { modulePaneNavigator().expandAccordionPane(paneName); }
 
-    private void expandAsymmetricAccordionPane(String paneName) {
-        if (keysController == null) return;
-        revealExpandedPane(keysController.expandAsymmetricPane(paneName));
-    }
+    private void expandAsymmetricAccordionPane(String paneName) { modulePaneNavigator().expandAsymmetricAccordionPane(paneName); }
 
-    private void expandCertificatesAccordionPane(String paneName) {
-        if (certificatesContainerController != null) certificatesContainerController.expandPane(paneName);
-    }
+    private void expandCertificatesAccordionPane(String paneName) { modulePaneNavigator().expandCertificatesAccordionPane(paneName); }
 
     @Override
     public void updateStatus(String message) {
@@ -2374,7 +2272,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return processDesignerContainerController;
     }
 
-    private void expandGenericAccordionPane(String paneName) { NavigationRouter.expandByTitle(genericContainer, paneName, ModuleTextCatalog.generic(), this::revealExpandedPane); }
+    private void expandGenericAccordionPane(String paneName) { modulePaneNavigator().expandGenericAccordionPane(paneName); }
 
     // Helper methods
     private byte[] hexToBytes(String hex) {
@@ -2405,47 +2303,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         return sb.toString();
     }
 
-    private void expandEMVAccordionPane(String title) {
-        Accordion acc = moduleAccordion(emvContainer);
-        if (title != null && !title.isBlank() && acc != null) {
-            for (TitledPane pane : acc.getPanes()) {
-                if (ModulePaneMatcher.matches(pane, title, ModuleTextCatalog.emv())) {
-                    acc.setExpandedPane(pane);
-                    revealExpandedPane(pane);
-                    break;
-                }
-            }
-        }
-    }
-
-    /**
-     * Makes a pane selected from the navigation tree immediately discoverable,
-     * even when it sits far down a long accordion. Layout must complete first,
-     * hence the deferred calculation.
-     */
-    private void revealExpandedPane(TitledPane pane) {
-        if (pane == null) {
-            return;
-        }
-        Platform.runLater(() -> {
-            pane.requestFocus();
-            if (mainScrollPane == null || contentContainer == null || pane.getScene() == null) {
-                return;
-            }
-            javafx.geometry.Bounds contentBounds = contentContainer.localToScene(contentContainer.getBoundsInLocal());
-            javafx.geometry.Bounds paneBounds = pane.localToScene(pane.getBoundsInLocal());
-            if (contentBounds == null || paneBounds == null) {
-                return;
-            }
-            double scrollableHeight = contentContainer.getBoundsInLocal().getHeight()
-                    - mainScrollPane.getViewportBounds().getHeight();
-            if (scrollableHeight <= 0) {
-                return;
-            }
-            double target = (paneBounds.getMinY() - contentBounds.getMinY()) / scrollableHeight;
-            mainScrollPane.setVvalue(Math.max(0, Math.min(1, target)));
-        });
-    }
+    private void expandEMVAccordionPane(String title) { modulePaneNavigator().expandEMVAccordionPane(title); }
 
     // ============================================================
     // SAVED SESSIONS LOGIC
@@ -2623,11 +2481,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void expandPQCAccordionPane(String itemName) {
-        if (postQuantumContainerController != null) {
-            postQuantumContainerController.expandAccordionPane(itemName);
-        }
-    }
+    private void expandPQCAccordionPane(String itemName) { modulePaneNavigator().expandPQCAccordionPane(itemName); }
 
     // ============================================================
     // XML SECURITY HANDLERS
@@ -2640,11 +2494,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void expandXMLAccordionPane(String itemName) {
-        if (xmlSecurityContainerController != null) {
-            xmlSecurityContainerController.expandAccordionPane(itemName);
-        }
-    }
+    private void expandXMLAccordionPane(String itemName) { modulePaneNavigator().expandXMLAccordionPane(itemName); }
 
     private void loadWssSecurityContent() {
         if (wssSecurityContainerController == null) wssSecurityContainerController = ensureModule(wssSecurityContainer, WssSecurityController.class);
@@ -2653,11 +2503,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         }
     }
 
-    private void expandWssAccordionPane(String itemName) {
-        if (wssSecurityContainerController != null) {
-            wssSecurityContainerController.expandAccordionPane(itemName);
-        }
-    }
+    private void expandWssAccordionPane(String itemName) { modulePaneNavigator().expandWssAccordionPane(itemName); }
 
     public void showQuickStart() {
         hideAllContainers();
