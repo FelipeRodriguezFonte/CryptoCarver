@@ -32,6 +32,7 @@ final class NavigationChromeCoordinator {
     private final ShellTextResolver textResolver = new ShellTextResolver(i18n::text);
     private final Map<String, String> rememberedInput = new HashMap<>(), rememberedOutput = new HashMap<>();
     private String currentProfileOperation = "Dashboard";
+    private boolean applyingFormatProfile;
 
     NavigationChromeCoordinator(ComboBox<String> input, ComboBox<String> output, Label inputLabel,
             Label contractLabel, Label title, Label subtitle, HBox breadcrumb, Button sectionButton,
@@ -48,6 +49,9 @@ final class NavigationChromeCoordinator {
         }
         this.profileOperationChanged=profileOperationChanged;
         this.breadcrumbSectionSelected=breadcrumbSectionSelected; this.breadcrumbModuleSelected=breadcrumbModuleSelected;
+        if (output != null) output.valueProperty().addListener((observable, previous, format) -> {
+            if (!applyingFormatProfile) AppSettings.getInstance().setOutputFormatPreference(currentProfileOperation, format);
+        });
     }
 
     void setInputFormat(String format) { setToolbarFormat(input, format); }
@@ -131,9 +135,15 @@ final class NavigationChromeCoordinator {
     private void applyFormatProfile(String name) {
         String key=FormatProfilePolicy.operation(name); OperationFormatProfile p=OperationFormatRegistry.getInstance().getProfile(key);
         if(currentProfileOperation!=null) { if(input!=null)rememberedInput.put(currentProfileOperation,input.getValue()); if(output!=null)rememberedOutput.put(currentProfileOperation,output.getValue()); }
-        applyFormat(input,p.allowedInputFormats(),p.defaultInputFormat(),rememberedInput.get(key));
-        applyFormat(output,p.allowedOutputFormats(),p.defaultOutputFormat(),rememberedOutput.get(key)); currentProfileOperation=key;
-        profileOperationChanged.accept(key);
+        applyingFormatProfile = true;
+        try {
+            applyFormat(input,p.allowedInputFormats(),p.defaultInputFormat(),rememberedInput.get(key));
+            String preferredOutput = AppSettings.getInstance().getOutputFormatPreference(key);
+            applyFormat(output,p.allowedOutputFormats(),p.defaultOutputFormat(),
+                    preferredOutput != null ? preferredOutput : rememberedOutput.get(key));
+            currentProfileOperation=key;
+            profileOperationChanged.accept(key);
+        } finally { applyingFormatProfile = false; }
         if(contractLabel!=null) {
             String text=OperationRegistry.getInstance().resolveNavigation(name).map(OperationDescriptor::getTitle).orElse(name); contractLabel.setText(text);
             String payload=i18n.text("toolbar.payloadTooltip");

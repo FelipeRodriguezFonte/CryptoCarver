@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Objects;
 
 /** Small persistent settings store for non-secret user preferences. */
@@ -88,6 +90,22 @@ public final class AppSettings {
     public synchronized void setThemePreference(ThemePreference preference) {
         data.themePreference = preference == null ? ThemePreference.SYSTEM : preference;
         save();
+    }
+
+    /** Stores only supported, non-secret output format names, separately for each operation. */
+    public synchronized String getOutputFormatPreference(String operation) {
+        String key = FormatProfilePolicy.operation(operation);
+        String format = data.outputFormats == null ? null : data.outputFormats.get(key);
+        return format != null && OperationFormatRegistry.getInstance().getProfile(key).allowedOutputFormats().contains(format)
+                ? format : null;
+    }
+
+    public synchronized void setOutputFormatPreference(String operation, String format) {
+        String key = FormatProfilePolicy.operation(operation);
+        String canonical = FormatProfilePolicy.normalize(format);
+        if (canonical == null || !OperationFormatRegistry.getInstance().getProfile(key).allowedOutputFormats().contains(canonical)) return;
+        if (data.outputFormats == null) data.outputFormats = new HashMap<>();
+        if (!canonical.equals(data.outputFormats.put(key, canonical))) save();
     }
 
     /** Centralized shell preferences. Values are deliberately non-secret. */
@@ -348,5 +366,6 @@ public final class AppSettings {
         private double workspaceInspectorDividerPosition = 0.78;
         private List<String> favorites = new ArrayList<>();
         private String lastRoute = "";
+        private Map<String, String> outputFormats = new HashMap<>();
     }
 }

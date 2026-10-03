@@ -44,9 +44,11 @@ class ToolbarOutputFormatsUITest extends UiMinorFixesFixture {
                 assertNotNull(toolbar.getValue(), "Toolbar selection cleared for " + format);
                 assertEquals(format, toolbar.getValue());
                 assertEquals(format, toolbar.getSelectionModel().getSelectedItem());
+            }
+            for (String format : List.copyOf(toolbar.getItems())) {
                 toolbar.getSelectionModel().select(format);
                 assertEquals(format, local.getValue());
-                assertNotNull(toolbar.getValue());
+                assertEquals(format, toolbar.getSelectionModel().getSelectedItem());
             }
         });
     }

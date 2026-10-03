@@ -425,7 +425,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             case EPOCH_CONVERTER, JSON_FORMATTER, SAVED_SESSIONS -> null;
             case KEYS_SYMMETRIC, KEYS_ASYMMETRIC -> keysController = keysContainerController = ensureModule(keysContainer, KeysController.class);
             case CERTIFICATES -> certificatesContainerController = ensureModule(certificatesContainer, CertificatesController.class);
-            case GENERIC -> genericContainerController = ensureModule(genericContainer, GenericController.class);
+            case GENERIC -> {
+                genericContainerController = ensureModule(genericContainer, GenericController.class);
+                if (genericContainerController != null) genericContainerController.setActiveFormatContractOperation(
+                        com.cryptocarver.model.FormatProfilePolicy.operation(currentActiveOperation));
+                yield genericContainerController;
+            }
             case POST_QUANTUM -> postQuantumContainerController = ensureModule(postQuantumContainer, PostQuantumController.class);
             case XML_SECURITY -> xmlSecurityContainerController = ensureModule(xmlSecurityContainer, XMLSignatureController.class);
             case WSS_SECURITY -> wssSecurityContainerController = ensureModule(wssSecurityContainer, WssSecurityController.class);
