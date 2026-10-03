@@ -32,16 +32,20 @@ import org.junit.jupiter.api.Test;
 class ModernMainShellLocalizationCharacterizationTest {
   private ModernMainController controller;
   private Stage stage;
+  @org.junit.jupiter.api.io.TempDir java.nio.file.Path settingsDirectory;
+  private AppSettings previousSettings;
+  private List<com.cryptocarver.model.ClipboardEntry> previousShelf;
   private LanguagePreference previousLanguage;
-  private String previousRoute;
 
   @BeforeEach
   void loadProductionFxmlInEnglish() throws Exception {
     startJavaFx();
-    previousLanguage = AppSettings.getInstance().getLanguagePreference();
-    previousRoute = AppSettings.getInstance().getLastRoute();
+    previousSettings = AppSettings.getInstance();
+    previousShelf = List.copyOf(com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries());
+    previousLanguage = I18nService.getInstance().getPreference();
     runFx(
         () -> {
+          AppSettings.setInstanceForTesting(new AppSettings(settingsDirectory.resolve("settings.json")));
           I18nService.getInstance().setPreference(LanguagePreference.EN);
           AppSettings.getInstance().setLastRoute("Hashing");
           try {
@@ -64,11 +68,17 @@ class ModernMainShellLocalizationCharacterizationTest {
   void restoreLanguageAndCloseWindow() throws Exception {
     runFx(
         () -> {
-          I18nService.getInstance().setPreference(previousLanguage);
-          AppSettings.getInstance().setLastRoute(previousRoute);
+          if (controller != null) {
+            I18nService.getInstance().removeLocaleChangeListener(field(controller, "i18nListener"));
+            controller.shutdown();
+          }
           if (stage != null) {
             stage.close();
+            stage.setScene(null);
           }
+          AppSettings.setInstanceForTesting(previousSettings);
+          I18nService.getInstance().setPreference(previousLanguage);
+          assertEquals(previousShelf, com.cryptocarver.model.ClipboardShelfManager.getInstance().getEntries());
         });
   }
 

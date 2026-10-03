@@ -19,3 +19,9 @@ Hay extracción razonable: factory tipado para los bindings fijos, getters perez
 ## Caracterización previa
 
 Se parte de ModernMainShellLocalizationCharacterizationTest (10 tests) y ShellTextResolverTest (7). Se añade una transcripción del FXML de producción EN → ES → EN, menús, barra, paneles, accesibilidad, fuentes, AppSettings en memoria y recarga desde disco. El tamaño de fuente se caracteriza como estado de sesión. Cada fixture conserva/restaura AppSettings y Shelf; no vacía el Shelf del usuario. Se revisan fallos y texto antes de fijar SHA-256.
+
+Antes de fijar el digest: primer pase UI, 2 tests/1 fallo por desreferenciar controles ausentes del FXML en la prueba nueva. Se corrigió la fixture para transcribir `<absent>` (cuatro botones legacy de barra e inspectorHistoryTitle); no es un fallo de producción. Segundo pase: 19 tests/1 fallo, únicamente la comparación deliberada BASELINE_PENDING. Se revisaron las 90 filas, EN/ES/EN, estilos 14→16→14→8→24 y persistencia ES. No se encontraron defectos de producción en esos resultados. SHA-256 sobre UTF-8 incluyendo salto final: `a57ad3eaf8e958a7768a7ecee4bbd22f16b43fee7d4e0985a1b5895df82fdbfb`. El shortcut se normaliza a SHORTCUT para independencia de plataforma.
+
+Observación existente: shutdown() no retira el listener i18n. Las fixtures lo retiran explícitamente para evitar shells residuales al restaurar idioma; no se modifica el ciclo de vida de producción en este encargo. ShellTextResolverTest usa un resolver puro y no modifica settings/Shelf. Las dos fixtures FXML conservan la instancia previa completa de AppSettings y comprueban el Shelf íntegro, sin mutarlo.
+
+Caracterización fijada antes de extraer: 19 tests, 0 fallos, 0 errores, 0 omitidos (10 existentes + 7 resolver + 2 nuevos), con `mvn -o -q test -Plow-cpu -Dtest=LocalizationShellCharacterizationUITest,ModernMainShellLocalizationCharacterizationTest,ShellTextResolverTest`.
