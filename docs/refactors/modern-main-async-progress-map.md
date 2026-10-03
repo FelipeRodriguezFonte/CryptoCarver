@@ -36,3 +36,31 @@ Caracterización fijada antes de extracción: 4 tests, 0 fallos/errores/omisione
 ShellAsyncProgressCoordinator: record View con cinco controles; Supplier<StatusReporter> consultado al cancelar, sin campo de controller ni executor cacheado. El getter del coordinador es perezoso; asyncProgressView reconstruye referencias FXML en cada delegado. show/update/hide/cancel son delegados de una línea. Los callbacks del executor siguen registrados desde ShellStartupCoordinator, isShutdown/lifecycle/getOperationExecutor siguen en el shell. Locale y perfil se consultan al pintar. No hay renombrado de campos FXML ni cambio de sus cadenas literales.
 
 Pase dirigido después de extracción con -Plow-cpu: 9 tests (AsyncProgress 4, ShellStartup 5), 0 fallos/errores/omisiones. SHA async idéntico al fijado antes de extraer; SHA startup `116b7045624997160c793f67818c6c4f42dd912650bd30b225a4633e1d58f4ba` conservado.
+
+## Informe final
+
+Base CI verde: [run 37141775449](https://github.com/FelipeRodriguezFonte/CryptoCarver/actions/runs/37141775449), tres checks success para `966b730`. Entorno local: macOS, Temurin 21.0.8; JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home. Suites ejecutadas secuencialmente, con directorios de informes separados y -Plow-cpu:
+
+| Pase | Comando | Tests | Clases | Fallos | Errores | Omitidos | Exit |
+|---|---|---:|---:|---:|---:|---:|---:|
+| UI | `mvn -o -q test -Plow-cpu -DrunUiTests=true -Dgroups=ui` | 472 | 94 | 3 | 0 | 0 | 1 |
+| Completa | `mvn -o -q test -Plow-cpu` | 2815 | 408 | 0 | 0 | 1 | 0 |
+| Main, comprobación dirigida | `mvn -o -q test -Plow-cpu -Dtest=ExpandedViewerLifecycleUITest` | 3 | 1 | 3 | 0 | 0 | 1 |
+
+Los tres fallos UI son preexistentes y se reprodujeron con el mismo entorno en una copia aislada creada con git archive de main `966b730`: ExpandedViewerLifecycleUITest.closingTableViewerDropsItsSnapshotAndScene, closingTextViewerReleasesItsSceneWhileViewerRemainsAlive y shellShutdownClosesAnOpenResultWindow. En los tres, assertReleased todavía encuentra el Stage cerrado fuertemente alcanzable. En la suite completa las tres pruebas pasan: el resultado varía entre pases/orden de ejecución; no se atribuye una causa no comprobada ni se modifica ese código. Informes preservados en target/async-progress-ui-reports, target/surefire-reports y target/async-progress-main-lifecycle-reports. Única omisión completa: Pkcs11SessionEncapsulationTest.testSoftHsmUpdateCertificateChain.
+
+AsyncProgressCharacterizationUITest (4) y ShellStartupCharacterizationUITest (5) pasan en ambos gates. Los defectos de progreso se observaron antes de modificar producción: el commit de caracterización 12fafb4 tiene src/main idéntico a main; blob original de ModernMainController `6a5a23c3775ecaafaa7b3a58326de8fcb1568b12` en ambas revisiones.
+
+Líneas ModernMainController: **2339 → 2278 (−61)**. Tras los arreglos y antes de extraer: 2360 → 2278 (−82). Coordinador nuevo: **120 líneas**. updateAsyncProgressDetails original: **37 → 1 línea**. show/hide/cancel también quedan como delegados de una línea.
+
+SHA-256 comprobados tras ambos gates, sin cambios de código entre ellos:
+
+| Artefacto | SHA-256 |
+|---|---|
+| Async transcript, 48 filas UTF-8 con salto final | `49bf6210ad4fc9261a53a23d509546e1f96164f872e6e8ba6d16e3abcdf349ee` |
+| Startup transcript | `116b7045624997160c793f67818c6c4f42dd912650bd30b225a4633e1d58f4ba` |
+| ModernMainController.java | `da18fa63b2e5a0a2eb480ffb6391e995e37c80abb5584a552003c7738d8f91ee` |
+| ShellAsyncProgressCoordinator.java | `23cdc9e3e481ef68e27cdd87ea88c15b6a520ef9a0671735994a1e4fd244f07e` |
+| AsyncProgressCharacterizationUITest.java | `9a299ead1f9423c6673fdb552d75f4b7280cc5a74f8a318bbd0e150b100e795b` |
+
+Rama codex/modern-main-async-progress con seis commits: caracterización/fallos, arreglo de privacidad, arreglo del inicio de barra, fijación del digest, extracción e informe. Un commit por arreglo, cada fallo anotado previamente. Diff contra main sin errores de whitespace. Solo cuatro archivos del encargo; sin cambios en crypto/, imágenes, .local.md ni secretos reales. AppSettings y Shelf restaurados por la fixture. Rama sin cambios pendientes tras el commit del informe.
