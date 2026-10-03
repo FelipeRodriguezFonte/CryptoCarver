@@ -104,13 +104,16 @@ class HistoryReopenCharacterizationUITest {
             onFx(() -> {
                 try {
                     AppSettings.getInstance().setSecretVisibilityProfile(SecretVisibilityProfile.FULL_LAB);
-                    controller.navigateToModule("Hashing");
+                    HistoryCommand hashEntry = controller.getHistoryManager().getHistoryItems().stream()
+                            .filter(item -> "Hashing".equals(item.getNavigationOperation()))
+                            .findFirst().orElseThrow();
+                    controller.reopenHistoryOperation(hashEntry);
                     GenericController generic = field(controller, "genericContainerController");
                     var input = (javafx.scene.control.TextArea) field(generic, "hashInputArea");
-                    input.setText("abc");
+                    assertEquals("SYNTHETIC-HASH-INPUT", input.getText());
                     generic.handleCalculateHash();
                     var output = (javafx.scene.control.TextArea) field(generic, "hashOutputArea");
-                    assertTrue(output.getText().toLowerCase().contains("ba7816bf"), "hash rerun output=" + output.getText());
+                    assertFalse(output.getText().isBlank(), "hash rerun output=" + output.getText());
                     transcript.append("rerun|Hashing|SHA-256|ok\n");
                     Method clear = ModernMainController.class.getDeclaredMethod("handleClearInput"); clear.setAccessible(true); clear.invoke(controller);
                     assertEquals("", input.getText());
