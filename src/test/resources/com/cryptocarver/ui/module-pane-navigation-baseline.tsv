@@ -37,7 +37,7 @@ EN	Compare Public / Private Key	KEYS_SYMMETRIC	Compare Public / Private Key	🔗
 EN	Compressed Hex (2-row)	GENERIC	Compressed Hex	↔️ Compressed Hex (2-row)	Utilities > Compressed Hex > Compressed Hex (2-row)
 EN	Crypto Envelope Inspector	GENERIC	Crypto Envelope Inspector	🔎 Crypto Envelope Inspector	Utilities > Crypto Envelope Inspector
 EN	DES/3DES Encryption	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > DES/3DES Encryption
-EN	DSA Key Generation	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > DSA Key Generation
+EN	DSA Key Generation	KEYS_ASYMMETRIC	DSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > DSA Key Generation
 EN	DUKPT TDES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES & AES	Payment Cryptography > DUKPT KSN > DUKPT TDES
 EN	DUKPT TDES / AES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES & AES	Payment Cryptography > DUKPT KSN > DUKPT TDES / AES
 EN	Decode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > Decode ASN.1
@@ -70,7 +70,7 @@ EN	File Conversion	GENERIC	File Conversion	🔄 File Conversion	Utilities > File
 EN	Format-Preserving Encryption	CIPHER	Format-Preserving	🔢 Format-Preserving Encryption (FF1 / FF3-1)	Ciphers > Format-Preserving > Format-Preserving Encryption
 EN	GPG	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Ciphers > OpenPGP > OpenPGP (GPG Compatible)
 EN	Generate Certificate	CERTIFICATES	Generate Certificate	📜 Generate Certificate	Certificates & CMS > Generate Certificate
-EN	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > DSA Key Generation > Generate DSA Key
+EN	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > DSA Key Generation > Generate DSA Key
 EN	Generate ECDSA Key	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > ECDSA Key Generation > Generate ECDSA Key
 EN	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > EdDSA Key Generation > Generate EdDSA Key
 EN	Generate MAC	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > Generate MAC
@@ -226,7 +226,7 @@ ES	Compare Public / Private Key	KEYS_SYMMETRIC	Compare Public / Private Key	🔗
 ES	Compressed Hex (2-row)	GENERIC	Compressed Hex	↔️ Compressed Hex (2-row)	Utilidades > Compressed Hex > Compressed Hex (2-row)
 ES	Crypto Envelope Inspector	GENERIC	Crypto Envelope Inspector	🔎 Inspector de Crypto Envelope	Utilidades > Crypto Envelope Inspector
 ES	DES/3DES Encryption	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > DES/3DES Encryption
-ES	DSA Key Generation	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > DSA Key Generation
+ES	DSA Key Generation	KEYS_ASYMMETRIC	DSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > DSA Key Generation
 ES	DUKPT TDES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES y AES	Criptografía de pagos > DUKPT KSN > DUKPT TDES
 ES	DUKPT TDES / AES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES y AES	Criptografía de pagos > DUKPT KSN > DUKPT TDES / AES
 ES	Decode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > Decode ASN.1
@@ -259,7 +259,7 @@ ES	File Conversion	GENERIC	File Conversion	🔄 Conversión de archivos	Utilidad
 ES	Format-Preserving Encryption	CIPHER	Format-Preserving	🔢 Format-Preserving Encryption (FF1 / FF3-1)	Cifrados > Format-Preserving > Format-Preserving Encryption
 ES	GPG	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Cifrados > OpenPGP > OpenPGP (GPG Compatible)
 ES	Generate Certificate	CERTIFICATES	Generate Certificate	📜 Generar certificado	Certificados y CMS > Generate Certificate
-ES	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > DSA Key Generation > Generate DSA Key
+ES	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > DSA Key Generation > Generate DSA Key
 ES	Generate ECDSA Key	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > ECDSA Key Generation > Generate ECDSA Key
 ES	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > EdDSA Key Generation > Generate EdDSA Key
 ES	Generate MAC	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > Generate MAC

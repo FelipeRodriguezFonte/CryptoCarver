@@ -169,7 +169,42 @@ final class ModulePaneNavigator {
 
     void expandAsymmetricAccordionPane(String paneName) {
         if (keysController.get() == null) return;
+        if ("DSA Key Generation".equals(paneName)) {
+            expandCanonicalAsymmetricPane(paneName);
+            return;
+        }
         revealExpandedPane(keysController.get().expandAsymmetricPane(paneName));
+    }
+
+    /** Canonical equality prevents DSA from selecting ECDSA through substring matching. */
+    private void expandCanonicalAsymmetricPane(String canonical) {
+        ModuleHost keysHost = host(UiNavigationRegistry.Module.KEYS_ASYMMETRIC);
+        Node section = keysHost == null ? null : keysHost.lookup("#asymmetricKeysContainer");
+        Accordion accordion = findAccordion(section);
+        if (accordion == null) return;
+        for (TitledPane pane : accordion.getPanes()) {
+            if (matchesCanonicalTitle(pane, canonical)) {
+                accordion.setExpandedPane(pane);
+                revealExpandedPane(pane);
+                return;
+            }
+        }
+    }
+
+    private static boolean matchesCanonicalTitle(TitledPane pane, String canonical) {
+        String visible = pane.getText() == null ? "" : pane.getText();
+        if (undecorated(visible).equals(canonical)) return true;
+        for (var entry : ModuleTextCatalog.keys().entrySet()) {
+            if (undecorated(entry.getKey()).equals(canonical)
+                    && visible.equals(com.cryptocarver.service.I18nService.getInstance().text(entry.getValue()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String undecorated(String title) {
+        return title.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}]", "").trim();
     }
 
     void expandCertificatesAccordionPane(String paneName) {

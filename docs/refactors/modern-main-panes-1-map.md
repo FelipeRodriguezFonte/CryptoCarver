@@ -64,4 +64,17 @@ Se movieron la clasificación, la búsqueda recursiva y revealExpandedPane. El d
 
 Extracción: ModernMainController pasa de 2905 a 2751 líneas; ModulePaneNavigator tiene inicialmente 235 líneas. Los dos digests iniciales permanecen idénticos tras la extracción. No hubo que adaptar tests de fuente ni reflexión: los puntos consultados por los tests siguen en el shell.
 
-Pendiente: fixes DSA/EdDSA y resultados separados UI/completos.
+## Corrección DSA
+
+La prueba `dsaRoutesSelectTheirOwnPane` identifica el panel por su control propio dsaKeySizeCombo, no por el matcher de producción. Antes del arreglo falla con DSA → ECDSA (1 fallo, 0 errores). Después verifica ambos alias en EN y ES.
+
+Para la sección canónica DSA Key Generation, el navegador elige por igualdad del título sin decoraciones (o por igualdad con la traducción de la entrada canónica del catálogo Keys). El resto de destinos mantiene la delegación literal. No se amplían reglas contains ni se cambia el matcher compartido.
+
+Solo cambian cuatro filas: el título expandido de DSA Key Generation y Generate DSA Key, en cada idioma; módulo, sección y breadcrumb permanecen iguales.
+
+| SHA-256 | Antes | Después de DSA |
+| --- | --- | --- |
+| EN | `a8845d4bd744d7ee6e2f6da2ba19692fcfc7836cc70fa479956c7ba8a32a35eb` | `4cd76346b8916a3acd35bdc222301d26d25cc27b53cdf5c270898fd814d4a4ee` |
+| ES | `42cbb38964e7d098b50ab0f1c06fca1b26fb9c35add4e31b9c324c977a8f54ce` | `e58cb04e849926b3173a9d3bba09f352f20fc0ec13d9c4a34432f7e59638a995` |
+
+Pendiente: fix EdDSA y resultados separados UI/completos.

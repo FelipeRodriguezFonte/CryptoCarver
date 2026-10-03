@@ -30,14 +30,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Real-shell navigation transcript for all routes into accordion modules. */
 @Tag("ui")
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class ModulePaneNavigationUITest {
-    private static final String EXPECTED_EN_SHA256 = "a8845d4bd744d7ee6e2f6da2ba19692fcfc7836cc70fa479956c7ba8a32a35eb";
-    private static final String EXPECTED_ES_SHA256 = "42cbb38964e7d098b50ab0f1c06fca1b26fb9c35add4e31b9c324c977a8f54ce";
+    private static final String EXPECTED_EN_SHA256 = "4cd76346b8916a3acd35bdc222301d26d25cc27b53cdf5c270898fd814d4a4ee";
+    private static final String EXPECTED_ES_SHA256 = "e58cb04e849926b3173a9d3bba09f352f20fc0ec13d9c4a34432f7e59638a995";
     private static final List<UiNavigationRegistry.Module> MODULES = List.of(
             UiNavigationRegistry.Module.KEYS_SYMMETRIC,
             UiNavigationRegistry.Module.KEYS_ASYMMETRIC,
@@ -148,6 +149,46 @@ class ModulePaneNavigationUITest {
         assertEquals(EXPECTED_ES_SHA256, sha256(es));
         System.out.println("Reviewed module route transcript: " + transcript.size()
                 + " rows; EN sha256=" + sha256(en) + "; ES sha256=" + sha256(es));
+    }
+
+    @Test
+    void dsaRoutesSelectTheirOwnPane() throws Exception {
+        assertAsymmetricRoutes("DSA Key Generation", "dsaKeySizeCombo");
+    }
+
+    private void assertAsymmetricRoutes(String section, String controlId) throws Exception {
+        var aliases = UiNavigationRegistry.routes().entrySet().stream()
+                .filter(entry -> entry.getValue().module() == UiNavigationRegistry.Module.KEYS_ASYMMETRIC
+                        && section.equals(entry.getValue().section()))
+                .map(Map.Entry::getKey).sorted().toList();
+        assertTrue(!aliases.isEmpty());
+        for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
+            for (String alias : aliases) {
+                fx(() -> {
+                    I18nService.getInstance().setPreference(language);
+                    shell.navigateToModule(alias);
+                    root.applyCss();
+                    root.layout();
+                    Accordion accordion = findAccordion(root.lookup("#asymmetricKeysContainer"));
+                    assertNotNull(accordion);
+                    TitledPane expected = accordion.getPanes().stream()
+                            .filter(pane -> pane.getContent().lookup("#" + controlId) != null)
+                            .findFirst().orElseThrow();
+                    assertSame(expected, accordion.getExpandedPane(), language + " " + alias);
+                });
+            }
+        }
+    }
+
+    private static Accordion findAccordion(Node node) {
+        if (node instanceof Accordion accordion) return accordion;
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                Accordion found = findAccordion(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private String breadcrumb() {
