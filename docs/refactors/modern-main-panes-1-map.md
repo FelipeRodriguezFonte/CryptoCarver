@@ -32,7 +32,29 @@ La navegación resuelve primero los alias en `UiNavigationRegistry` y entrega `R
 
 ## Caracterización y revisión
 
-Pendiente: transcripción exhaustiva EN/ES anterior a extracción, anomalías, SHA-256 y cobertura de alias.
+Revisión anterior a fijar digests: 189 rutas por idioma (378 filas), con cierre previo de paneles para evitar selecciones heredadas y observación de las secciones visibles e incluidos de Keys.
+
+Fallos reales que **no** son comportamiento a conservar:
+
+| Fallo | Rutas (EN y ES) | Panel previo incorrecto | Destino esperado |
+| --- | --- | --- | --- |
+| DSA | DSA Key Generation; Generate DSA Key | ECDSA Key Generation | DSA Key Generation |
+| EdDSA | EdDSA Key Generation; Generate EdDSA Key | DSA Key Generation | EdDSA Key Generation |
+
+Causa: `ModulePaneMatcher.containsEither` acepta subcadenas en ambos sentidos; ECDSA incluye DSA y EdDSA incluye DSA. Se arreglarán por identidad canónica de panel en el navegador, sin alterar el matcher compartido ni KeysController.
+
+Excepción deliberada `<none>`: AES Encryption, DES/3DES Encryption, Modes & Padding, Symmetric Ciphers, Symmetric Decrypt, Symmetric Encrypt y Symmetric Encryption usan el workspace simétrico de Cipher, que no tiene acordeón visible.
+
+Observación fuera de la selección de panel: el callback EMV llama updateContentHeader("EMV Operations") y sobrescribe el breadcrumb de todas sus rutas con Session Key / EMV Operations. Sus paneles sí son correctos; se conserva y se documenta como límite de esta fase (no se cambia el callback de encabezado).
+
+Los nombres heredados del banco host y su fabricante se normalizan dinámicamente en las transcripciones nuevas. Se recorren las entradas originales del registro, incluidos los alias; la normalización solo afecta el texto guardado. Recurso revisado: `src/test/resources/com/cryptocarver/ui/module-pane-navigation-baseline.tsv`, filas tabuladas idioma/ruta/módulo/sección/panel/breadcrumb, orden estable por nombre original de ruta.
+
+Digests iniciales SHA-256 por idioma (UTF-8, LF final):
+
+- EN: `a8845d4bd744d7ee6e2f6da2ba19692fcfc7836cc70fa479956c7ba8a32a35eb`
+- ES: `42cbb38964e7d098b50ab0f1c06fca1b26fb9c35add4e31b9c324c977a8f54ce`
+
+La caracterización preserva provisionalmente los dos errores explícitamente anotados, únicamente para demostrar la extracción sin cambios; las correcciones posteriores actualizarán las cuatro filas por fallo (dos alias × dos idiomas).
 
 ## Extracción y verificación
 

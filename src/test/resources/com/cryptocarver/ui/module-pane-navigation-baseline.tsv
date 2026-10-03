@@ -1,0 +1,378 @@
+EN	AES Encryption	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > AES Encryption
+EN	AES Key Wrap	KEYS_SYMMETRIC	AES Key Wrap	🔗 AES Key Wrap (RFC 3394 / RFC 5649)	Symmetric Keys > AES Key Wrap
+EN	AKB	KEYS_SYMMETRIC	Atalla Key Block (AKB)	🏷 Atalla Key Block (AKB)	Symmetric Keys > Atalla Key Block (AKB)
+EN	ARPC Generation	EMV	ARPC	🔄 ARQC Validation & ARPC	EMV & Smartcards > Session Key > EMV Operations
+EN	ARQC Generation	EMV	ARQC	💳 ARQC Generation	EMV & Smartcards > Session Key > EMV Operations
+EN	ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > ASN.1
+EN	ASN.1 Decoder	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder
+EN	ASN.1 Encode	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > ASN.1 Encode
+EN	ASN.1 Parse	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > ASN.1 Parse
+EN	ASiC	CERTIFICATES	ASiC-S Containers	📦 ASiC-S Containers	Certificates & CMS > ASiC-S Containers
+EN	ASiC-S	CERTIFICATES	ASiC-S Containers	📦 ASiC-S Containers	Certificates & CMS > ASiC-S Containers
+EN	ASiC-S Containers	CERTIFICATES	ASiC-S Containers	📦 ASiC-S Containers	Certificates & CMS > ASiC-S Containers
+EN	Add UsernameToken (WSS)	WSS_SECURITY	Add UsernameToken	👤 Add UsernameToken (WSS)	WSS Security > Add UsernameToken > Add UsernameToken (WSS)
+EN	Asymmetric Ciphers	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Ciphers > Asymmetric Cipher > Asymmetric Ciphers
+EN	Asymmetric Decrypt	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Ciphers > Asymmetric Cipher > Asymmetric Decrypt
+EN	Asymmetric Encrypt	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Ciphers > Asymmetric Cipher > Asymmetric Encrypt
+EN	Atalla Key Block	KEYS_SYMMETRIC	Atalla Key Block (AKB)	🏷 Atalla Key Block (AKB)	Symmetric Keys > Atalla Key Block (AKB)
+EN	Atalla Key Block (AKB)	KEYS_SYMMETRIC	Atalla Key Block (AKB)	🏷 Atalla Key Block (AKB)	Symmetric Keys > Atalla Key Block (AKB)
+EN	Batch Runner	GENERIC	Batch Runner	📦 Batch Runner	Utilities > Batch Runner
+EN	CMS Decrypt	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS Decrypt
+EN	CMS Encrypt	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS Encrypt
+EN	CMS Encrypt/Decrypt	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS Encrypt/Decrypt
+EN	CMS Inspector	CERTIFICATES	Inspect / Validate CMS	🔍 Inspect / Validate CMS	Certificates & CMS > Inspect / Validate CMS > CMS Inspector
+EN	CMS Sign	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS Sign
+EN	CMS Sign/Verify	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS Sign/Verify
+EN	CMS Verify	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS Verify
+EN	CMS/PKCS#7 Operations	CERTIFICATES	CMS Operations	📦 CMS Operations	Certificates & CMS > CMS Operations > CMS/PKCS#7 Operations
+EN	CVV Generation	PAYMENTS	CVV Operations	💳 CVV Operations (CVV/CVV2/iCVV)	Payment Cryptography > CVV Operations > CVV Generation
+EN	CVV Operations	PAYMENTS	CVV Operations	💳 CVV Operations (CVV/CVV2/iCVV)	Payment Cryptography > CVV Operations
+EN	Certificate Chain	CERTIFICATES	Validate Chain	🔗 Validate Chain	Certificates & CMS > Validate Chain > Certificate Chain
+EN	Check Digits	GENERIC	Check Digits	✅ Check Digits	Utilities > Check Digits
+EN	Check Digits: Validate	GENERIC	Check Digits	✅ Check Digits	Utilities > Check Digits > Check Digits: Validate
+EN	Clear PIN Blocks	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks
+EN	Combine Components	KEYS_SYMMETRIC	Key Sharing	🔀 Key Sharing (XOR Split/Combine)	Symmetric Keys > Key Sharing > Combine Components
+EN	Compare Certificates	CERTIFICATES	Compare Certificates	⚖ Compare Certificates	Certificates & CMS > Compare Certificates
+EN	Compare Public / Private Key	KEYS_SYMMETRIC	Compare Public / Private Key	🔗 Compare Public / Private Key	Symmetric Keys > Compare Public / Private Key
+EN	Compressed Hex (2-row)	GENERIC	Compressed Hex	↔️ Compressed Hex (2-row)	Utilities > Compressed Hex > Compressed Hex (2-row)
+EN	Crypto Envelope Inspector	GENERIC	Crypto Envelope Inspector	🔎 Crypto Envelope Inspector	Utilities > Crypto Envelope Inspector
+EN	DES/3DES Encryption	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > DES/3DES Encryption
+EN	DSA Key Generation	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > DSA Key Generation
+EN	DUKPT TDES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES & AES	Payment Cryptography > DUKPT KSN > DUKPT TDES
+EN	DUKPT TDES / AES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES & AES	Payment Cryptography > DUKPT KSN > DUKPT TDES / AES
+EN	Decode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > Decode ASN.1
+EN	Decode EBCDIC	GENERIC	Manual Conversion	🔤 Manual Conversion	Utilities > Manual Conversion > Decode EBCDIC
+EN	Decode PIN Block	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > Decode PIN Block
+EN	Decrypt SOAP Body (WSS)	WSS_SECURITY	Decrypt SOAP Body	🔓 Decrypt SOAP Body (WSS)	WSS Security > Decrypt SOAP Body > Decrypt SOAP Body (WSS)
+EN	Derive Key	KEYS_SYMMETRIC	Key Derivation	🔐 Key Derivation (KDF)	Symmetric Keys > Key Derivation > Derive Key
+EN	Digital Signatures	AUTHENTICATION	Digital Signatures	🔏 Digital Signatures	Signatures & MAC > Digital Signatures
+EN	Dilithium (ML-DSA)	POST_QUANTUM	Key Generation	🔑 PQC Key Generation	Post-Quantum PQC > Key Generation > Dilithium (ML-DSA)
+EN	ECC Encryption	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Ciphers > Asymmetric Cipher > ECC Encryption
+EN	ECDSA Key Generation	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > ECDSA Key Generation
+EN	EMV Offline Data Authentication	EMV	Offline Data Authentication	🧾 Offline Data Authentication (SDA/DDA/CDA)	EMV & Smartcards > Session Key > EMV Operations
+EN	EMV Operations	EMV	Session Key	🔑 Session Key Derivation	EMV & Smartcards > Session Key > EMV Operations
+EN	EMV TLV Inspector	EMV	EMV TLV Inspector	🔬 EMV TLV Inspector	EMV & Smartcards > Session Key > EMV Operations
+EN	EMV Tool	EMV	Session Key	🔑 Session Key Derivation	EMV & Smartcards > Session Key > EMV Operations
+EN	EdDSA Key Generation	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > EdDSA Key Generation
+EN	Encode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificates & CMS > ASN.1 Decoder > Encode ASN.1
+EN	Encode EBCDIC	GENERIC	Manual Conversion	🔤 Manual Conversion	Utilities > Manual Conversion > Encode EBCDIC
+EN	Encode PIN Block	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > Encode PIN Block
+EN	Encoding/Conversion	GENERIC	File Conversion	🔄 File Conversion	Utilities > File Conversion > Encoding/Conversion
+EN	Encrypt SOAP Body (WSS)	WSS_SECURITY	Encrypt SOAP Body	🔒 Encrypt SOAP Body (WSS)	WSS Security > Encrypt SOAP Body > Encrypt SOAP Body (WSS)
+EN	Encrypted PIN Block Decoded	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > Encrypted PIN Block Decoded
+EN	Encrypted PIN Block Decoding	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > Encrypted PIN Block Decoding
+EN	Encrypted PIN Block Encoded	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > Encrypted PIN Block Encoded
+EN	Encrypted PIN Block Encoding	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > Encrypted PIN Block Encoding
+EN	Encrypted PIN Block Operations	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > Encrypted PIN Block Operations
+EN	Encrypted PIN Blocks	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks
+EN	File Cipher (Streaming)	CIPHER	File Cipher	📁 File Cipher (Streaming)	Ciphers > File Cipher > File Cipher (Streaming)
+EN	File Conversion	GENERIC	File Conversion	🔄 File Conversion	Utilities > File Conversion
+EN	Format-Preserving Encryption	CIPHER	Format-Preserving	🔢 Format-Preserving Encryption (FF1 / FF3-1)	Ciphers > Format-Preserving > Format-Preserving Encryption
+EN	GPG	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Ciphers > OpenPGP > OpenPGP (GPG Compatible)
+EN	Generate Certificate	CERTIFICATES	Generate Certificate	📜 Generate Certificate	Certificates & CMS > Generate Certificate
+EN	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > DSA Key Generation > Generate DSA Key
+EN	Generate ECDSA Key	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Asymmetric Keys > ECDSA Key Generation > Generate ECDSA Key
+EN	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Asymmetric Keys > EdDSA Key Generation > Generate EdDSA Key
+EN	Generate MAC	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > Generate MAC
+EN	Generate PIN	PAYMENTS	PIN Generation	🔑 PIN Generation (IBM 3624)	Payment Cryptography > PIN Generation > Generate PIN
+EN	Generate RSA Key	KEYS_ASYMMETRIC	RSA Key Generation	🔐 RSA Key Generation	Asymmetric Keys > RSA Key Generation > Generate RSA Key
+EN	Generate Symmetric Key	KEYS_SYMMETRIC	Key Generation	🔑 Key Generation	Symmetric Keys > Key Generation > Generate Symmetric Key
+EN	Generate UUID	GENERIC	UUID Generator	🆔 UUID Generator	Utilities > UUID Generator > Generate UUID
+EN	Hashing	GENERIC	Hashing	🔐 Hashing	Utilities > Hashing
+EN	Host Command Bank	PAYMENTS	Host Command Bank	🖥  Host Command Bank	Payment Cryptography >  Host Command Bank > Host Command Bank
+EN	IBM 3624	PAYMENTS	PIN Generation	🔑 PIN Generation (IBM 3624)	Payment Cryptography > PIN Generation > IBM 3624
+EN	ICSF / CCA Batch Analysis	KEYS_SYMMETRIC	ICSF / CCA Batch Analysis	🖥 ICSF / CCA Batch Analysis	Symmetric Keys > ICSF / CCA Batch Analysis
+EN	ICSF / CCA Key Export / Import	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Symmetric Keys > ICSF / CCA Key Export / Import
+EN	ICSF / CCA Key Token Analyzer	KEYS_SYMMETRIC	ICSF / CCA Key Token Analyzer	🖥 ICSF / CCA Key Token Analyzer	Symmetric Keys > ICSF / CCA Key Token Analyzer
+EN	ICSF Batch	KEYS_SYMMETRIC	ICSF / CCA Batch Analysis	🖥 ICSF / CCA Batch Analysis	Symmetric Keys > ICSF / CCA Batch Analysis > ICSF Batch
+EN	ICSF Batch Analysis	KEYS_SYMMETRIC	ICSF / CCA Batch Analysis	🖥 ICSF / CCA Batch Analysis	Symmetric Keys > ICSF / CCA Batch Analysis > ICSF Batch Analysis
+EN	ICSF Export	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Symmetric Keys > ICSF / CCA Key Export / Import > ICSF Export
+EN	ICSF Import	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Symmetric Keys > ICSF / CCA Key Export / Import > ICSF Import
+EN	ICSF Key Export	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Symmetric Keys > ICSF / CCA Key Export / Import > ICSF Key Export
+EN	ICSF Key Import	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Symmetric Keys > ICSF / CCA Key Export / Import > ICSF Key Import
+EN	ICSF Key Token	KEYS_SYMMETRIC	ICSF / CCA Key Token Analyzer	🖥 ICSF / CCA Key Token Analyzer	Symmetric Keys > ICSF / CCA Key Token Analyzer > ICSF Key Token
+EN	ICSF Key Token Analyzer	KEYS_SYMMETRIC	ICSF / CCA Key Token Analyzer	🖥 ICSF / CCA Key Token Analyzer	Symmetric Keys > ICSF / CCA Key Token Analyzer > ICSF Key Token Analyzer
+EN	ISO 0	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > ISO 0
+EN	ISO 2	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > ISO 2
+EN	ISO 8583	PAYMENTS	ISO 8583 Message Inspector	ISO 8583 Message Inspector	Payment Cryptography > ISO 8583 Message Inspector
+EN	ISO 8583 Message Inspector	PAYMENTS	ISO 8583 Message Inspector	ISO 8583 Message Inspector	Payment Cryptography > ISO 8583 Message Inspector
+EN	ISO 8583 parser	PAYMENTS	ISO 8583 Message Inspector	ISO 8583 Message Inspector	Payment Cryptography > ISO 8583 Message Inspector
+EN	ISO PIN Blocks	PAYMENTS	Encrypted PIN Blocks	🔐 Encrypted PIN Blocks (ISO)	Payment Cryptography > Encrypted PIN Blocks > ISO PIN Blocks
+EN	ISO8583	PAYMENTS	ISO 8583 Message Inspector	ISO 8583 Message Inspector	Payment Cryptography > ISO 8583 Message Inspector
+EN	Inspect Signed XML	XML_SECURITY	Inspect Signed XML	🔬 Inspect Signed XML	XML Security > Inspect Signed XML
+EN	Issue Certificate from CSR	CERTIFICATES	Issue Certificate from CSR	🏛 Issue Certificate from CSR (Laboratory CA)	Certificates & CMS > Issue Certificate from CSR
+EN	Key & Certificate Format Workbench	GENERIC	Key & Certificate Format Workbench	🛠 Key & Certificate Format Workbench	Utilities > Key & Certificate Format Workbench
+EN	Key Derivation (KDF)	KEYS_SYMMETRIC	Key Derivation	🔐 Key Derivation (KDF)	Symmetric Keys > Key Derivation > Key Derivation (KDF)
+EN	Key Generation	KEYS_SYMMETRIC	Key Generation	🔑 Key Generation	Symmetric Keys > Key Generation
+EN	Key Lab	KEYS_SYMMETRIC	Key Lab	🎛 Key Lab	Symmetric Keys > Key Lab
+EN	Key Material Inspector	KEYS_SYMMETRIC	Key Material Inspector	🔎 Key Material Inspector	Symmetric Keys > Key Material Inspector
+EN	Key Sharing (XOR Split/Combine)	KEYS_SYMMETRIC	Key Sharing	🔀 Key Sharing (XOR Split/Combine)	Symmetric Keys > Key Sharing > Key Sharing (XOR Split/Combine)
+EN	KeyStore Inspector	KEYS_SYMMETRIC	KeyStore Inspector	🗄 KeyStore Inspector	Symmetric Keys > KeyStore Inspector
+EN	Kyber (ML-KEM)	POST_QUANTUM	Key Generation	🔑 PQC Key Generation	Post-Quantum PQC > Key Generation > Kyber (ML-KEM)
+EN	MAC	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC
+EN	MAC Generated	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > MAC Generated
+EN	MAC Verified	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > MAC Verified
+EN	ML-KEM Decapsulate	POST_QUANTUM	KEM Educational Demo	🎓 KEM Educational Demo (Alice & Bob)	Post-Quantum PQC > KEM Educational Demo > ML-KEM Decapsulate
+EN	ML-KEM Encapsulate	POST_QUANTUM	KEM Educational Demo	🎓 KEM Educational Demo (Alice & Bob)	Post-Quantum PQC > KEM Educational Demo > ML-KEM Encapsulate
+EN	Manual Conversion	GENERIC	Manual Conversion	🔤 Manual Conversion	Utilities > Manual Conversion
+EN	Message Authentication Codes	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > Message Authentication Codes
+EN	Modes & Padding	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > Modes & Padding
+EN	Modular Arithmetic	GENERIC	Modular Arithmetic	🔢 Modular Arithmetic	Utilities > Modular Arithmetic
+EN	Offline Data Authentication	EMV	Offline Data Authentication	🧾 Offline Data Authentication (SDA/DDA/CDA)	EMV & Smartcards > Session Key > EMV Operations
+EN	OpenPGP	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Ciphers > OpenPGP
+EN	OpenPGP (GPG Compatible)	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Ciphers > OpenPGP > OpenPGP (GPG Compatible)
+EN	PAdES	CERTIFICATES	PAdES PDF Signatures	📄 PAdES PDF Signatures	Certificates & CMS > PAdES PDF Signatures
+EN	PAdES PDF Signatures	CERTIFICATES	PAdES PDF Signatures	📄 PAdES PDF Signatures	Certificates & CMS > PAdES PDF Signatures
+EN	PDF Signatures	CERTIFICATES	PAdES PDF Signatures	📄 PAdES PDF Signatures	Certificates & CMS > PAdES PDF Signatures > PDF Signatures
+EN	PIN Block Decoded	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > PIN Block Decoded
+EN	PIN Block Decoding	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > PIN Block Decoding
+EN	PIN Block Encoded	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > PIN Block Encoded
+EN	PIN Block Encoding	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > PIN Block Encoding
+EN	PIN Block Operations	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > PIN Block Operations
+EN	PIN Generation	PAYMENTS	PIN Generation	🔑 PIN Generation (IBM 3624)	Payment Cryptography > PIN Generation
+EN	PIN Verification	PAYMENTS	PIN Generation	🔑 PIN Generation (IBM 3624)	Payment Cryptography > PIN Generation > PIN Verification
+EN	PKCS#11 Profiles	KEYS_SYMMETRIC	PKCS#11 Profiles	🔐 PKCS#11 Profiles & Public Inventory	Symmetric Keys > PKCS#11 Profiles
+EN	PKCS#11 Token	KEYS_SYMMETRIC	PKCS#11 Token	🔐 PKCS#11 Token	Symmetric Keys > PKCS#11 Token
+EN	PQC Key Export	POST_QUANTUM	Key Generation	🔑 PQC Key Generation	Post-Quantum PQC > Key Generation > PQC Key Export
+EN	PQC Key Generation	POST_QUANTUM	Key Generation	🔑 PQC Key Generation	Post-Quantum PQC > Key Generation > PQC Key Generation
+EN	PQC Key Import	POST_QUANTUM	Key Generation	🔑 PQC Key Generation	Post-Quantum PQC > Key Generation > PQC Key Import
+EN	PQC Sign	POST_QUANTUM	Sign	🔏 PQC Sign / Verify	Post-Quantum PQC > Sign > PQC Sign
+EN	PQC Sign/Verify	POST_QUANTUM	Sign	🔏 PQC Sign / Verify	Post-Quantum PQC > Sign > PQC Sign/Verify
+EN	PQC Verify	POST_QUANTUM	Sign	🔏 PQC Sign / Verify	Post-Quantum PQC > Sign > PQC Verify
+EN	Parse Certificate	CERTIFICATES	Parse Certificate	🔍 Parse Certificate	Certificates & CMS > Parse Certificate
+EN	Payments	PAYMENTS	Clear PIN Blocks	🔢 Clear PIN Blocks	Payment Cryptography > Clear PIN Blocks > Payments
+EN	Post-Quantum Cryptography	POST_QUANTUM	Key Generation	🔑 PQC Key Generation	Post-Quantum PQC > Key Generation > Post-Quantum Cryptography
+EN	RFC 3161 Timestamp	XML_SECURITY	RFC 3161 Timestamp	⏱ RFC 3161 Timestamp	XML Security > RFC 3161 Timestamp
+EN	RSA Encryption	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Ciphers > Asymmetric Cipher > RSA Encryption
+EN	RSA Key Exchange	KEYS_SYMMETRIC	RSA Key Exchange	🔁 RSA Key Exchange	Symmetric Keys > RSA Key Exchange
+EN	RSA Key Generation	KEYS_ASYMMETRIC	RSA Key Generation	🔐 RSA Key Generation	Asymmetric Keys > RSA Key Generation
+EN	Random Generation	GENERIC	Random Generator	🎲 Random Generator	Utilities > Random Generator > Random Generation
+EN	Random Number Generator	GENERIC	Random Generator	🎲 Random Generator	Utilities > Random Generator > Random Number Generator
+EN	Save XAdES XML	XML_SECURITY	Sign XML	📝 Sign XML (XAdES)	XML Security > Sign XML > Save XAdES XML
+EN	Secure Key Inventory	KEYS_SYMMETRIC	Key Lab	🎛 Key Lab	Symmetric Keys > Key Lab > Secure Key Inventory
+EN	Session Key Derivation	EMV	Session Key	🔑 Session Key Derivation	EMV & Smartcards > Session Key > EMV Operations
+EN	Sign	AUTHENTICATION	Digital Signatures	🔏 Digital Signatures	Signatures & MAC > Digital Signatures > Sign
+EN	Sign SOAP (WSS)	WSS_SECURITY	Sign SOAP	🔐 Sign SOAP (WSS)	WSS Security > Sign SOAP > Sign SOAP (WSS)
+EN	Sign XML (XAdES)	XML_SECURITY	Sign XML	📝 Sign XML (XAdES)	XML Security > Sign XML > Sign XML (XAdES)
+EN	Split Key	KEYS_SYMMETRIC	Key Sharing	🔀 Key Sharing (XOR Split/Combine)	Symmetric Keys > Key Sharing > Split Key
+EN	Symmetric Ciphers	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > Symmetric Ciphers
+EN	Symmetric Decrypt	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > Symmetric Decrypt
+EN	Symmetric Encrypt	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > Symmetric Encrypt
+EN	Symmetric Encryption	CIPHER	Symmetric Cipher	<none>	Ciphers > Symmetric Cipher > Symmetric Encryption
+EN	Symmetric Keys	KEYS_SYMMETRIC	Key Generation	🔑 Key Generation	Symmetric Keys > Key Generation
+EN	TR-31 Export	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 TR-31 Key Blocks	Symmetric Keys > TR-31 Key Blocks > TR-31 Export
+EN	TR-31 Import	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 TR-31 Key Blocks	Symmetric Keys > TR-31 Key Blocks > TR-31 Import
+EN	TR-31 Key Blocks	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 TR-31 Key Blocks	Symmetric Keys > TR-31 Key Blocks
+EN	TR-31 Parse	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 TR-31 Key Blocks	Symmetric Keys > TR-31 Key Blocks > TR-31 Parse
+EN	TR-34 Key Distribution	KEYS_SYMMETRIC	TR-34 Key Distribution	🔀 TR-34 Key Distribution	Symmetric Keys > TR-34 Key Distribution
+EN	Key Block	KEYS_SYMMETRIC	Key Block	🧱  Key Block	Symmetric Keys >  Key Block
+EN	Variant LMK	KEYS_SYMMETRIC	Variant LMK	🏛  Variant LMK	Symmetric Keys >  Variant LMK
+EN	Track 2 Decoding	EMV	Track 2	🎞 Track 2 Data	EMV & Smartcards > Session Key > EMV Operations
+EN	Track 2 Encoding	EMV	Track 2	🎞 Track 2 Data	EMV & Smartcards > Session Key > EMV Operations
+EN	Track 2 Operations	EMV	Track 2	🎞 Track 2 Data	EMV & Smartcards > Session Key > EMV Operations
+EN	Validate Cert Chain	CERTIFICATES	Validate Chain	🔗 Validate Chain	Certificates & CMS > Validate Chain > Validate Cert Chain
+EN	Validate Certificate	CERTIFICATES	Validate Certificate	🛡 Validate Certificate	Certificates & CMS > Validate Certificate
+EN	Validate Chain	CERTIFICATES	Validate Chain	🔗 Validate Chain	Certificates & CMS > Validate Chain
+EN	Validate Symmetric Key	KEYS_SYMMETRIC	Validation & KCV	✓ Validation & KCV	Symmetric Keys > Validation & KCV > Validate Symmetric Key
+EN	Validation & KCV	KEYS_SYMMETRIC	Validation & KCV	✓ Validation & KCV	Symmetric Keys > Validation & KCV
+EN	Variant LMK	KEYS_SYMMETRIC	Variant LMK	🏛  Variant LMK	Symmetric Keys >  Variant LMK > Variant LMK
+EN	Verify MAC	AUTHENTICATION	MAC	🔐 Message Authentication Codes (MAC)	Signatures & MAC > MAC > Verify MAC
+EN	Verify PIN	PAYMENTS	PIN Generation	🔑 PIN Generation (IBM 3624)	Payment Cryptography > PIN Generation > Verify PIN
+EN	Verify SOAP (WSS)	WSS_SECURITY	Verify SOAP	✅ Verify SOAP (WSS)	WSS Security > Verify SOAP > Verify SOAP (WSS)
+EN	Verify Signature	AUTHENTICATION	Digital Signatures	🔏 Digital Signatures	Signatures & MAC > Digital Signatures > Verify Signature
+EN	Verify UsernameToken (WSS)	WSS_SECURITY	Verify UsernameToken	🔎 Verify UsernameToken (WSS)	WSS Security > Verify UsernameToken > Verify UsernameToken (WSS)
+EN	Verify XML (XAdES)	XML_SECURITY	Verify XML	🔍 Verify XML (XAdES)	XML Security > Verify XML > Verify XML (XAdES)
+EN	WSS Security	WSS_SECURITY	Sign SOAP	🔐 Sign SOAP (WSS)	WSS Security > Sign SOAP
+EN	XAdES Sign	XML_SECURITY	Sign XML	📝 Sign XML (XAdES)	XML Security > Sign XML > XAdES Sign
+EN	XAdES Verify	XML_SECURITY	Verify XML	🔍 Verify XML (XAdES)	XML Security > Verify XML > XAdES Verify
+EN	XML Security	XML_SECURITY	Sign XML	📝 Sign XML (XAdES)	XML Security > Sign XML
+EN	Host Command Bank	PAYMENTS	Host Command Bank	🖥  Host Command Bank	Payment Cryptography >  Host Command Bank
+ES	AES Encryption	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > AES Encryption
+ES	AES Key Wrap	KEYS_SYMMETRIC	AES Key Wrap	🔗 AES Key Wrap (RFC 3394 / RFC 5649)	Claves simétricas > AES Key Wrap
+ES	AKB	KEYS_SYMMETRIC	Atalla Key Block (AKB)	🏷 Atalla Key Block (AKB)	Claves simétricas > Atalla Key Block (AKB)
+ES	ARPC Generation	EMV	ARPC	🔄 Validación ARQC y ARPC	EMV y smartcards > Session Key > EMV Operations
+ES	ARQC Generation	EMV	ARQC	💳 Generación ARQC	EMV y smartcards > Session Key > EMV Operations
+ES	ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > ASN.1
+ES	ASN.1 Decoder	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder
+ES	ASN.1 Encode	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > ASN.1 Encode
+ES	ASN.1 Parse	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > ASN.1 Parse
+ES	ASiC	CERTIFICATES	ASiC-S Containers	📦 Contenedores ASiC-S	Certificados y CMS > ASiC-S Containers
+ES	ASiC-S	CERTIFICATES	ASiC-S Containers	📦 Contenedores ASiC-S	Certificados y CMS > ASiC-S Containers
+ES	ASiC-S Containers	CERTIFICATES	ASiC-S Containers	📦 Contenedores ASiC-S	Certificados y CMS > ASiC-S Containers
+ES	Add UsernameToken (WSS)	WSS_SECURITY	Add UsernameToken	👤 Añadir UsernameToken (WSS)	Seguridad WSS > Add UsernameToken > Add UsernameToken (WSS)
+ES	Asymmetric Ciphers	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Cifrados > Asymmetric Cipher > Asymmetric Ciphers
+ES	Asymmetric Decrypt	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Cifrados > Asymmetric Cipher > Asymmetric Decrypt
+ES	Asymmetric Encrypt	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Cifrados > Asymmetric Cipher > Asymmetric Encrypt
+ES	Atalla Key Block	KEYS_SYMMETRIC	Atalla Key Block (AKB)	🏷 Atalla Key Block (AKB)	Claves simétricas > Atalla Key Block (AKB)
+ES	Atalla Key Block (AKB)	KEYS_SYMMETRIC	Atalla Key Block (AKB)	🏷 Atalla Key Block (AKB)	Claves simétricas > Atalla Key Block (AKB)
+ES	Batch Runner	GENERIC	Batch Runner	📦 Ejecutor por lotes	Utilidades > Batch Runner
+ES	CMS Decrypt	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS Decrypt
+ES	CMS Encrypt	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS Encrypt
+ES	CMS Encrypt/Decrypt	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS Encrypt/Decrypt
+ES	CMS Inspector	CERTIFICATES	Inspect / Validate CMS	🔍 Inspeccionar / validar CMS	Certificados y CMS > Inspect / Validate CMS > CMS Inspector
+ES	CMS Sign	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS Sign
+ES	CMS Sign/Verify	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS Sign/Verify
+ES	CMS Verify	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS Verify
+ES	CMS/PKCS#7 Operations	CERTIFICATES	CMS Operations	📦 Operaciones CMS	Certificados y CMS > CMS Operations > CMS/PKCS#7 Operations
+ES	CVV Generation	PAYMENTS	CVV Operations	💳 Operaciones CVV (CVV/CVV2/iCVV)	Criptografía de pagos > CVV Operations > CVV Generation
+ES	CVV Operations	PAYMENTS	CVV Operations	💳 Operaciones CVV (CVV/CVV2/iCVV)	Criptografía de pagos > CVV Operations
+ES	Certificate Chain	CERTIFICATES	Validate Chain	🔗 Validar cadena	Certificados y CMS > Validate Chain > Certificate Chain
+ES	Check Digits	GENERIC	Check Digits	✅ Check Digits	Utilidades > Check Digits
+ES	Check Digits: Validate	GENERIC	Check Digits	✅ Check Digits	Utilidades > Check Digits > Check Digits: Validate
+ES	Clear PIN Blocks	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks
+ES	Combine Components	KEYS_SYMMETRIC	Key Sharing	🔀 Compartición de clave (dividir/combinar XOR)	Claves simétricas > Key Sharing > Combine Components
+ES	Compare Certificates	CERTIFICATES	Compare Certificates	⚖ Comparar certificados	Certificados y CMS > Compare Certificates
+ES	Compare Public / Private Key	KEYS_SYMMETRIC	Compare Public / Private Key	🔗 Comparar clave pública/privada	Claves simétricas > Compare Public / Private Key
+ES	Compressed Hex (2-row)	GENERIC	Compressed Hex	↔️ Compressed Hex (2-row)	Utilidades > Compressed Hex > Compressed Hex (2-row)
+ES	Crypto Envelope Inspector	GENERIC	Crypto Envelope Inspector	🔎 Inspector de Crypto Envelope	Utilidades > Crypto Envelope Inspector
+ES	DES/3DES Encryption	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > DES/3DES Encryption
+ES	DSA Key Generation	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > DSA Key Generation
+ES	DUKPT TDES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES y AES	Criptografía de pagos > DUKPT KSN > DUKPT TDES
+ES	DUKPT TDES / AES	PAYMENTS	DUKPT KSN	🔐 DUKPT KSN, TDES y AES	Criptografía de pagos > DUKPT KSN > DUKPT TDES / AES
+ES	Decode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > Decode ASN.1
+ES	Decode EBCDIC	GENERIC	Manual Conversion	🔤 Conversión manual	Utilidades > Manual Conversion > Decode EBCDIC
+ES	Decode PIN Block	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > Decode PIN Block
+ES	Decrypt SOAP Body (WSS)	WSS_SECURITY	Decrypt SOAP Body	🔓 Descifrar cuerpo SOAP (WSS)	Seguridad WSS > Decrypt SOAP Body > Decrypt SOAP Body (WSS)
+ES	Derive Key	KEYS_SYMMETRIC	Key Derivation	🔐 Derivación de clave (KDF)	Claves simétricas > Key Derivation > Derive Key
+ES	Digital Signatures	AUTHENTICATION	Digital Signatures	🔏 Firmas digitales	Firmas y MAC > Digital Signatures
+ES	Dilithium (ML-DSA)	POST_QUANTUM	Key Generation	🔑 Generación de claves PQC	Post-cuántica PQC > Key Generation > Dilithium (ML-DSA)
+ES	ECC Encryption	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Cifrados > Asymmetric Cipher > ECC Encryption
+ES	ECDSA Key Generation	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > ECDSA Key Generation
+ES	EMV Offline Data Authentication	EMV	Offline Data Authentication	🧾 Autenticación de datos offline (SDA/DDA/CDA)	EMV y smartcards > Session Key > EMV Operations
+ES	EMV Operations	EMV	Session Key	🔑 Derivación de clave de sesión	EMV y smartcards > Session Key > EMV Operations
+ES	EMV TLV Inspector	EMV	EMV TLV Inspector	🔬 Inspector EMV TLV	EMV y smartcards > Session Key > EMV Operations
+ES	EMV Tool	EMV	Session Key	🔑 Derivación de clave de sesión	EMV y smartcards > Session Key > EMV Operations
+ES	EdDSA Key Generation	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > EdDSA Key Generation
+ES	Encode ASN.1	CERTIFICATES	ASN.1 Decoder	🔍 ASN.1 Decoder	Certificados y CMS > ASN.1 Decoder > Encode ASN.1
+ES	Encode EBCDIC	GENERIC	Manual Conversion	🔤 Conversión manual	Utilidades > Manual Conversion > Encode EBCDIC
+ES	Encode PIN Block	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > Encode PIN Block
+ES	Encoding/Conversion	GENERIC	File Conversion	🔄 Conversión de archivos	Utilidades > File Conversion > Encoding/Conversion
+ES	Encrypt SOAP Body (WSS)	WSS_SECURITY	Encrypt SOAP Body	🔒 Cifrar cuerpo SOAP (WSS)	Seguridad WSS > Encrypt SOAP Body > Encrypt SOAP Body (WSS)
+ES	Encrypted PIN Block Decoded	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > Encrypted PIN Block Decoded
+ES	Encrypted PIN Block Decoding	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > Encrypted PIN Block Decoding
+ES	Encrypted PIN Block Encoded	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > Encrypted PIN Block Encoded
+ES	Encrypted PIN Block Encoding	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > Encrypted PIN Block Encoding
+ES	Encrypted PIN Block Operations	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > Encrypted PIN Block Operations
+ES	Encrypted PIN Blocks	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks
+ES	File Cipher (Streaming)	CIPHER	File Cipher	📁 File Cipher (Streaming)	Cifrados > File Cipher > File Cipher (Streaming)
+ES	File Conversion	GENERIC	File Conversion	🔄 Conversión de archivos	Utilidades > File Conversion
+ES	Format-Preserving Encryption	CIPHER	Format-Preserving	🔢 Format-Preserving Encryption (FF1 / FF3-1)	Cifrados > Format-Preserving > Format-Preserving Encryption
+ES	GPG	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Cifrados > OpenPGP > OpenPGP (GPG Compatible)
+ES	Generate Certificate	CERTIFICATES	Generate Certificate	📜 Generar certificado	Certificados y CMS > Generate Certificate
+ES	Generate DSA Key	KEYS_ASYMMETRIC	DSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > DSA Key Generation > Generate DSA Key
+ES	Generate ECDSA Key	KEYS_ASYMMETRIC	ECDSA Key Generation	📈 ECDSA Key Generation	Claves asimétricas > ECDSA Key Generation > Generate ECDSA Key
+ES	Generate EdDSA Key	KEYS_ASYMMETRIC	EdDSA Key Generation	🔑 DSA Key Generation	Claves asimétricas > EdDSA Key Generation > Generate EdDSA Key
+ES	Generate MAC	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > Generate MAC
+ES	Generate PIN	PAYMENTS	PIN Generation	🔑 Generación de PIN (IBM 3624)	Criptografía de pagos > PIN Generation > Generate PIN
+ES	Generate RSA Key	KEYS_ASYMMETRIC	RSA Key Generation	🔐 RSA Key Generation	Claves asimétricas > RSA Key Generation > Generate RSA Key
+ES	Generate Symmetric Key	KEYS_SYMMETRIC	Key Generation	🔑 Generación de claves	Claves simétricas > Key Generation > Generate Symmetric Key
+ES	Generate UUID	GENERIC	UUID Generator	🆔 UUID Generator	Utilidades > UUID Generator > Generate UUID
+ES	Hashing	GENERIC	Hashing	🔐 Hashing	Utilidades > Hashing
+ES	Host Command Bank	PAYMENTS	Host Command Bank	🖥 Banco de comandos host	Criptografía de pagos >  Host Command Bank > Host Command Bank
+ES	IBM 3624	PAYMENTS	PIN Generation	🔑 Generación de PIN (IBM 3624)	Criptografía de pagos > PIN Generation > IBM 3624
+ES	ICSF / CCA Batch Analysis	KEYS_SYMMETRIC	ICSF / CCA Batch Analysis	🖥 Analisis en lote ICSF / CCA	Claves simétricas > ICSF / CCA Batch Analysis
+ES	ICSF / CCA Key Export / Import	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Claves simétricas > ICSF / CCA Key Export / Import
+ES	ICSF / CCA Key Token Analyzer	KEYS_SYMMETRIC	ICSF / CCA Key Token Analyzer	🖥 Analizador de key tokens ICSF / CCA	Claves simétricas > ICSF / CCA Key Token Analyzer
+ES	ICSF Batch	KEYS_SYMMETRIC	ICSF / CCA Batch Analysis	🖥 Analisis en lote ICSF / CCA	Claves simétricas > ICSF / CCA Batch Analysis > ICSF Batch
+ES	ICSF Batch Analysis	KEYS_SYMMETRIC	ICSF / CCA Batch Analysis	🖥 Analisis en lote ICSF / CCA	Claves simétricas > ICSF / CCA Batch Analysis > ICSF Batch Analysis
+ES	ICSF Export	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Claves simétricas > ICSF / CCA Key Export / Import > ICSF Export
+ES	ICSF Import	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Claves simétricas > ICSF / CCA Key Export / Import > ICSF Import
+ES	ICSF Key Export	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Claves simétricas > ICSF / CCA Key Export / Import > ICSF Key Export
+ES	ICSF Key Import	KEYS_SYMMETRIC	ICSF / CCA Key Export / Import	🖥 ICSF / CCA Key Export / Import	Claves simétricas > ICSF / CCA Key Export / Import > ICSF Key Import
+ES	ICSF Key Token	KEYS_SYMMETRIC	ICSF / CCA Key Token Analyzer	🖥 Analizador de key tokens ICSF / CCA	Claves simétricas > ICSF / CCA Key Token Analyzer > ICSF Key Token
+ES	ICSF Key Token Analyzer	KEYS_SYMMETRIC	ICSF / CCA Key Token Analyzer	🖥 Analizador de key tokens ICSF / CCA	Claves simétricas > ICSF / CCA Key Token Analyzer > ICSF Key Token Analyzer
+ES	ISO 0	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > ISO 0
+ES	ISO 2	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > ISO 2
+ES	ISO 8583	PAYMENTS	ISO 8583 Message Inspector	Inspector de mensajes ISO 8583	Criptografía de pagos > ISO 8583 Message Inspector
+ES	ISO 8583 Message Inspector	PAYMENTS	ISO 8583 Message Inspector	Inspector de mensajes ISO 8583	Criptografía de pagos > ISO 8583 Message Inspector
+ES	ISO 8583 parser	PAYMENTS	ISO 8583 Message Inspector	Inspector de mensajes ISO 8583	Criptografía de pagos > ISO 8583 Message Inspector
+ES	ISO PIN Blocks	PAYMENTS	Encrypted PIN Blocks	🔐 Bloques PIN cifrados (ISO)	Criptografía de pagos > Encrypted PIN Blocks > ISO PIN Blocks
+ES	ISO8583	PAYMENTS	ISO 8583 Message Inspector	Inspector de mensajes ISO 8583	Criptografía de pagos > ISO 8583 Message Inspector
+ES	Inspect Signed XML	XML_SECURITY	Inspect Signed XML	🔬 Inspeccionar XML firmado	Seguridad XML > Inspect Signed XML
+ES	Issue Certificate from CSR	CERTIFICATES	Issue Certificate from CSR	🏛 Emitir certificado desde CSR (CA de laboratorio)	Certificados y CMS > Issue Certificate from CSR
+ES	Key & Certificate Format Workbench	GENERIC	Key & Certificate Format Workbench	🛠 Workbench de formatos de claves y certificados	Utilidades > Key & Certificate Format Workbench
+ES	Key Derivation (KDF)	KEYS_SYMMETRIC	Key Derivation	🔐 Derivación de clave (KDF)	Claves simétricas > Key Derivation > Key Derivation (KDF)
+ES	Key Generation	KEYS_SYMMETRIC	Key Generation	🔑 Generación de claves	Claves simétricas > Key Generation
+ES	Key Lab	KEYS_SYMMETRIC	Key Lab	🎛 Laboratorio de claves	Claves simétricas > Key Lab
+ES	Key Material Inspector	KEYS_SYMMETRIC	Key Material Inspector	🔎 Inspector de material de clave	Claves simétricas > Key Material Inspector
+ES	Key Sharing (XOR Split/Combine)	KEYS_SYMMETRIC	Key Sharing	🔀 Compartición de clave (dividir/combinar XOR)	Claves simétricas > Key Sharing > Key Sharing (XOR Split/Combine)
+ES	KeyStore Inspector	KEYS_SYMMETRIC	KeyStore Inspector	🗄 Inspector de KeyStore	Claves simétricas > KeyStore Inspector
+ES	Kyber (ML-KEM)	POST_QUANTUM	Key Generation	🔑 Generación de claves PQC	Post-cuántica PQC > Key Generation > Kyber (ML-KEM)
+ES	MAC	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC
+ES	MAC Generated	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > MAC Generated
+ES	MAC Verified	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > MAC Verified
+ES	ML-KEM Decapsulate	POST_QUANTUM	KEM Educational Demo	🎓 Demostración educativa KEM (Alice y Bob)	Post-cuántica PQC > KEM Educational Demo > ML-KEM Decapsulate
+ES	ML-KEM Encapsulate	POST_QUANTUM	KEM Educational Demo	🎓 Demostración educativa KEM (Alice y Bob)	Post-cuántica PQC > KEM Educational Demo > ML-KEM Encapsulate
+ES	Manual Conversion	GENERIC	Manual Conversion	🔤 Conversión manual	Utilidades > Manual Conversion
+ES	Message Authentication Codes	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > Message Authentication Codes
+ES	Modes & Padding	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > Modes & Padding
+ES	Modular Arithmetic	GENERIC	Modular Arithmetic	🔢 Modular Arithmetic	Utilidades > Modular Arithmetic
+ES	Offline Data Authentication	EMV	Offline Data Authentication	🧾 Autenticación de datos offline (SDA/DDA/CDA)	EMV y smartcards > Session Key > EMV Operations
+ES	OpenPGP	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Cifrados > OpenPGP
+ES	OpenPGP (GPG Compatible)	CIPHER	OpenPGP	🔐 OpenPGP (GPG compatible)	Cifrados > OpenPGP > OpenPGP (GPG Compatible)
+ES	PAdES	CERTIFICATES	PAdES PDF Signatures	📄 Firmas PDF PAdES	Certificados y CMS > PAdES PDF Signatures
+ES	PAdES PDF Signatures	CERTIFICATES	PAdES PDF Signatures	📄 Firmas PDF PAdES	Certificados y CMS > PAdES PDF Signatures
+ES	PDF Signatures	CERTIFICATES	PAdES PDF Signatures	📄 Firmas PDF PAdES	Certificados y CMS > PAdES PDF Signatures > PDF Signatures
+ES	PIN Block Decoded	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > PIN Block Decoded
+ES	PIN Block Decoding	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > PIN Block Decoding
+ES	PIN Block Encoded	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > PIN Block Encoded
+ES	PIN Block Encoding	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > PIN Block Encoding
+ES	PIN Block Operations	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > PIN Block Operations
+ES	PIN Generation	PAYMENTS	PIN Generation	🔑 Generación de PIN (IBM 3624)	Criptografía de pagos > PIN Generation
+ES	PIN Verification	PAYMENTS	PIN Generation	🔑 Generación de PIN (IBM 3624)	Criptografía de pagos > PIN Generation > PIN Verification
+ES	PKCS#11 Profiles	KEYS_SYMMETRIC	PKCS#11 Profiles	🔐 Perfiles PKCS#11 e inventario público	Claves simétricas > PKCS#11 Profiles
+ES	PKCS#11 Token	KEYS_SYMMETRIC	PKCS#11 Token	🔐 Token PKCS#11	Claves simétricas > PKCS#11 Token
+ES	PQC Key Export	POST_QUANTUM	Key Generation	🔑 Generación de claves PQC	Post-cuántica PQC > Key Generation > PQC Key Export
+ES	PQC Key Generation	POST_QUANTUM	Key Generation	🔑 Generación de claves PQC	Post-cuántica PQC > Key Generation > PQC Key Generation
+ES	PQC Key Import	POST_QUANTUM	Key Generation	🔑 Generación de claves PQC	Post-cuántica PQC > Key Generation > PQC Key Import
+ES	PQC Sign	POST_QUANTUM	Sign	🔏 Firmar / verificar PQC	Post-cuántica PQC > Sign > PQC Sign
+ES	PQC Sign/Verify	POST_QUANTUM	Sign	🔏 Firmar / verificar PQC	Post-cuántica PQC > Sign > PQC Sign/Verify
+ES	PQC Verify	POST_QUANTUM	Sign	🔏 Firmar / verificar PQC	Post-cuántica PQC > Sign > PQC Verify
+ES	Parse Certificate	CERTIFICATES	Parse Certificate	🔍 Analizar certificado	Certificados y CMS > Parse Certificate
+ES	Payments	PAYMENTS	Clear PIN Blocks	🔢 Bloques PIN en claro	Criptografía de pagos > Clear PIN Blocks > Payments
+ES	Post-Quantum Cryptography	POST_QUANTUM	Key Generation	🔑 Generación de claves PQC	Post-cuántica PQC > Key Generation > Post-Quantum Cryptography
+ES	RFC 3161 Timestamp	XML_SECURITY	RFC 3161 Timestamp	⏱ Marca de tiempo RFC 3161	Seguridad XML > RFC 3161 Timestamp
+ES	RSA Encryption	CIPHER	Asymmetric Cipher	🔑 Asymmetric Cipher (RSA)	Cifrados > Asymmetric Cipher > RSA Encryption
+ES	RSA Key Exchange	KEYS_SYMMETRIC	RSA Key Exchange	🔁 Intercambio de claves RSA	Claves simétricas > RSA Key Exchange
+ES	RSA Key Generation	KEYS_ASYMMETRIC	RSA Key Generation	🔐 RSA Key Generation	Claves asimétricas > RSA Key Generation
+ES	Random Generation	GENERIC	Random Generator	🎲 Random Generator	Utilidades > Random Generator > Random Generation
+ES	Random Number Generator	GENERIC	Random Generator	🎲 Random Generator	Utilidades > Random Generator > Random Number Generator
+ES	Save XAdES XML	XML_SECURITY	Sign XML	📝 Firmar XML (XAdES)	Seguridad XML > Sign XML > Save XAdES XML
+ES	Secure Key Inventory	KEYS_SYMMETRIC	Key Lab	🎛 Laboratorio de claves	Claves simétricas > Key Lab > Secure Key Inventory
+ES	Session Key Derivation	EMV	Session Key	🔑 Derivación de clave de sesión	EMV y smartcards > Session Key > EMV Operations
+ES	Sign	AUTHENTICATION	Digital Signatures	🔏 Firmas digitales	Firmas y MAC > Digital Signatures > Sign
+ES	Sign SOAP (WSS)	WSS_SECURITY	Sign SOAP	🔐 Firmar SOAP (WSS)	Seguridad WSS > Sign SOAP > Sign SOAP (WSS)
+ES	Sign XML (XAdES)	XML_SECURITY	Sign XML	📝 Firmar XML (XAdES)	Seguridad XML > Sign XML > Sign XML (XAdES)
+ES	Split Key	KEYS_SYMMETRIC	Key Sharing	🔀 Compartición de clave (dividir/combinar XOR)	Claves simétricas > Key Sharing > Split Key
+ES	Symmetric Ciphers	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > Symmetric Ciphers
+ES	Symmetric Decrypt	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > Symmetric Decrypt
+ES	Symmetric Encrypt	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > Symmetric Encrypt
+ES	Symmetric Encryption	CIPHER	Symmetric Cipher	<none>	Cifrados > Symmetric Cipher > Symmetric Encryption
+ES	Symmetric Keys	KEYS_SYMMETRIC	Key Generation	🔑 Generación de claves	Claves simétricas > Key Generation > Symmetric Keys
+ES	TR-31 Export	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 Bloques de clave TR-31	Claves simétricas > TR-31 Key Blocks > TR-31 Export
+ES	TR-31 Import	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 Bloques de clave TR-31	Claves simétricas > TR-31 Key Blocks > TR-31 Import
+ES	TR-31 Key Blocks	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 Bloques de clave TR-31	Claves simétricas > TR-31 Key Blocks
+ES	TR-31 Parse	KEYS_SYMMETRIC	TR-31 Key Blocks	🔒 Bloques de clave TR-31	Claves simétricas > TR-31 Key Blocks > TR-31 Parse
+ES	TR-34 Key Distribution	KEYS_SYMMETRIC	TR-34 Key Distribution	🔀 Distribución de claves TR-34	Claves simétricas > TR-34 Key Distribution
+ES	Key Block	KEYS_SYMMETRIC	Key Block	🧱 Key Block de	Claves simétricas >  Key Block
+ES	Variant LMK	KEYS_SYMMETRIC	Variant LMK	🏛 LMK de variante	Claves simétricas >  Variant LMK
+ES	Track 2 Decoding	EMV	Track 2	🎞 Datos Track 2	EMV y smartcards > Session Key > EMV Operations
+ES	Track 2 Encoding	EMV	Track 2	🎞 Datos Track 2	EMV y smartcards > Session Key > EMV Operations
+ES	Track 2 Operations	EMV	Track 2	🎞 Datos Track 2	EMV y smartcards > Session Key > EMV Operations
+ES	Validate Cert Chain	CERTIFICATES	Validate Chain	🔗 Validar cadena	Certificados y CMS > Validate Chain > Validate Cert Chain
+ES	Validate Certificate	CERTIFICATES	Validate Certificate	🛡 Validar certificado	Certificados y CMS > Validate Certificate
+ES	Validate Chain	CERTIFICATES	Validate Chain	🔗 Validar cadena	Certificados y CMS > Validate Chain
+ES	Validate Symmetric Key	KEYS_SYMMETRIC	Validation & KCV	✓ Validation & KCV	Claves simétricas > Validation & KCV > Validate Symmetric Key
+ES	Validation & KCV	KEYS_SYMMETRIC	Validation & KCV	✓ Validation & KCV	Claves simétricas > Validation & KCV
+ES	Variant LMK	KEYS_SYMMETRIC	Variant LMK	🏛 LMK de variante	Claves simétricas >  Variant LMK > Variant LMK
+ES	Verify MAC	AUTHENTICATION	MAC	🔐 Códigos de autenticación de mensaje (MAC)	Firmas y MAC > MAC > Verify MAC
+ES	Verify PIN	PAYMENTS	PIN Generation	🔑 Generación de PIN (IBM 3624)	Criptografía de pagos > PIN Generation > Verify PIN
+ES	Verify SOAP (WSS)	WSS_SECURITY	Verify SOAP	✅ Verificar SOAP (WSS)	Seguridad WSS > Verify SOAP > Verify SOAP (WSS)
+ES	Verify Signature	AUTHENTICATION	Digital Signatures	🔏 Firmas digitales	Firmas y MAC > Digital Signatures > Verify Signature
+ES	Verify UsernameToken (WSS)	WSS_SECURITY	Verify UsernameToken	🔎 Verificar UsernameToken (WSS)	Seguridad WSS > Verify UsernameToken > Verify UsernameToken (WSS)
+ES	Verify XML (XAdES)	XML_SECURITY	Verify XML	🔍 Verificar XML (XAdES)	Seguridad XML > Verify XML > Verify XML (XAdES)
+ES	WSS Security	WSS_SECURITY	Sign SOAP	🔐 Firmar SOAP (WSS)	Seguridad WSS > Sign SOAP > WSS Security
+ES	XAdES Sign	XML_SECURITY	Sign XML	📝 Firmar XML (XAdES)	Seguridad XML > Sign XML > XAdES Sign
+ES	XAdES Verify	XML_SECURITY	Verify XML	🔍 Verificar XML (XAdES)	Seguridad XML > Verify XML > XAdES Verify
+ES	XML Security	XML_SECURITY	Sign XML	📝 Firmar XML (XAdES)	Seguridad XML > Sign XML > XML Security
+ES	Host Command Bank	PAYMENTS	Host Command Bank	🖥 Banco de comandos host	Criptografía de pagos >  Host Command Bank
