@@ -709,37 +709,51 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         lifecycleNode = null;
     }
 
+    /** Observation boundary for startup diagnostics; production has no observer. */
+    void startupPhaseCompleted(String phase) {}
+
     @FXML
     public void initialize() {
         shellDialogCoordinator = new ShellDialogCoordinator(dialogService, () -> windowOf(mainPane));
+        startupPhaseCompleted("dialogs");
         configureDeferredModules();
+        startupPhaseCompleted("deferred");
         navigationRouter = createNavigationRouter();
+        startupPhaseCompleted("router");
         navigationChrome = new NavigationChromeCoordinator(inputFormatCombo, outputFormatCombo, inputFormatLabel,
                 contractOperationLabel, contentTitleLabel, contentSubtitleLabel, breadcrumbContainer,
                 breadcrumbSectionBtn, breadcrumbSep1, breadcrumbModuleBtn, breadcrumbSep2,
                 breadcrumbOperationLabel, favoriteToggleBtn, FAVORITE_SHORTCUT, key -> {
                     if (genericContainerController != null) genericContainerController.setActiveFormatContractOperation(key);
                 }, this::selectBreadcrumbSection, this::navigateToModule);
+        startupPhaseCompleted("chrome");
         // Module reporters are wired in connectShellServices as each module materializes.
         System.out.println("ModernMainController initializing...");
         com.cryptocarver.model.ClipboardShelfManager.getInstance().setReporter(this);
+        startupPhaseCompleted("shelf");
 
         operationExecutor.setProgressHandlers(
                 this::showAsyncProgress,
                 this::updateAsyncProgressDetails,
                 this::hideAsyncProgress
         );
+        startupPhaseCompleted("progress");
 
         setupWindowLifecycleListeners();
+        startupPhaseCompleted("lifecycle");
 
         setupLaboratoryMenu();
+        startupPhaseCompleted("laboratory");
         initializeCommandPalette();
+        startupPhaseCompleted("palette");
         syncMenuBarAccelerators();
+        startupPhaseCompleted("accelerators");
 
         inlineErrorPresenter = new InlineErrorPresenter(
                 errorBanner, errorBannerTitle, errorBannerRemedy,
                 errorBannerGoToFieldBtn, errorBannerCopyDetailsBtn, errorBannerCloseBtn
         );
+        startupPhaseCompleted("errors");
 
         if (securityTipLabel != null && securityTipBox != null) {
             securityTipLabel.textProperty().addListener((obs, oldVal, newVal) -> {
@@ -749,7 +763,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             });
         }
 
+        startupPhaseCompleted("security-tip");
         statusBarPresenter = new StatusBarPresenter(statusLabel, statusVisibilityButton, statusLanguageLabel, i18n);
+        startupPhaseCompleted("status");
 
         if (visibilityProfileGroup != null) {
             com.cryptocarver.model.SecretVisibilityProfile profile = com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
@@ -761,7 +777,9 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
             }
         }
 
+        startupPhaseCompleted("visibility");
         installResponsiveLayoutSupport();
+        startupPhaseCompleted("responsive");
 
         // Connect Rail to SidePanel
         navigationRail.setSidePanel(sidePanel);
@@ -770,6 +788,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         sidePanel.setOnItemSelected(this::handleItemSelected);
         navigationController = new NavigationController(navigationRail, sidePanel, this::handleItemSelected);
         navigationController.install();
+        startupPhaseCompleted("navigation");
 
         i18n.refreshFromSettings();
         i18nListener = locale -> {
@@ -779,25 +798,34 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         };
         i18n.addLocaleChangeListener(i18nListener);
         applyLocalization();
+        startupPhaseCompleted("localization");
 
         // Initialize History
         initializeHistory();
+        startupPhaseCompleted("history");
         refreshSessionTrailUI();
+        startupPhaseCompleted("trail");
 
         // Load symmetric keys content (default)
         loadSymmetricKeysContent();
+        startupPhaseCompleted("keys-load");
 
         // Show the symmetric keys by default
         showSymmetricKeys();
+        startupPhaseCompleted("keys-show");
         restoreStartupLastRoute();
+        startupPhaseCompleted("route");
 
         // Apply default font size
         applyFontSize();
+        startupPhaseCompleted("fonts");
         // All static FXML content is available at this point. Install now so a
         // result written immediately after loading cannot miss the listener.
         // The method is idempotent for any later/dynamic invocation.
         installResultViewerSupport();
+        startupPhaseCompleted("results");
         Platform.runLater(this::installTableViewerSupport);
+        startupPhaseCompleted("tables-scheduled");
 
         System.out.println("ModernMainController initialized successfully!");
     }
