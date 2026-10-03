@@ -56,6 +56,25 @@ Digests iniciales SHA-256 por idioma (UTF-8, LF final):
 
 La caracterización preserva provisionalmente los dos errores explícitamente anotados, únicamente para demostrar la extracción sin cambios; las correcciones posteriores actualizarán las cuatro filas por fallo (dos alias × dos idiomas).
 
+## Rutas de sección sin destino de panel del shell
+
+JOSE, COSE y Wallet contienen acordeones internos dentro de sus secciones. Sus rutas del registro tienen `section == null`; el shell llama a `showSection(currentActiveOperation)`, no a ningún método expand*AccordionPane. Se mantienen fuera de la extracción de esta fase y se registran en una transcripción complementaria separada del digest de destinos de panel. No se atribuye a sus acordeones internos el comportamiento de un expander del shell. Se documenta esta distinción para mantener la extracción dentro de los métodos enumerados en el encargo, cubriendo también la lectura literal de todas las rutas a módulos que contienen acordeones.
+
+| Módulo | Reglas existentes / estado | Rutas documentadas fuera del digest |
+| --- | --- | --- |
+| JOSE | showSection oculta JWT/JWE/JWK/JWA/Inspector y muestra según prefijo JWT, JWE, JWK, JWA o Token Inspector; controlador y secciones VBox, catálogos jose; no selecciona panel interno | JWT (Signed); JWE (Encrypted); JWK (Keys); JWA (Algorithms); Generate JWE; Decrypt JWE; Generate JWT; Validate JWT; Generate Nested JWT; Token Inspector; PEM to JWK; JWK to PEM; JWK Thumbprint; JWKS Rotate Key; Load JWKS File; Import Key (PEM); Import Key (JSON) |
+| COSE | showSection oculta Sign1/MAC0/Encrypt0 y muestra por prefijos COSE Sign1/Verify1, COSE MAC0, COSE Encrypt0/Decrypt0; controlador y secciones VBox, catálogo cose; no selecciona panel interno | COSE Sign1; COSE Verify1; COSE MAC0; COSE Verify MAC0; COSE Encrypt0; COSE Decrypt0 |
+| Wallet | showSection elige SD-JWT/mdoc/Status List/eIDAS Certificate/Trusted List o Trusted Entity List/CBOR/SCA/AdES, con fallback SD-JWT; controlador y secciones VBox, catálogo wallet; no selecciona panel interno | SD-JWT VC; mdoc / mDL; Status List; eIDAS Certificate Profiles; Trusted List; Trusted Entity List JSON; CBOR Inspector; SCA / OpenID4VP; AdES Validation |
+
+Estas 32 rutas se recorren igualmente con navigateToModule, EN y ES, en `sectionOnlyAccordionModulesAreRecordedSeparately`, con el shell real y restauración de AppSettings. La transcripción complementaria `module-section-navigation-baseline.tsv` tiene 64 filas. Tras cerrar los paneles para aislar cada ruta, las 32 muestran `<none>`: showSection solo revela secciones, no abre un panel interno y Route.section no define qué panel expandir. Se anotan como limitaciones de navegación entre secciones ajenas a los expanders extraídos, no como elecciones de panel correctas. Resolverlas exige ampliar la lógica de los controladores de sección y definir destinos; no se inventa una selección en esta fase.
+
+Antes de fijar el anexo se revisaron sus 64 filas; módulo y breadcrumb siempre están presentes. Digests complementarios, sin cambiar los digests previos de la extracción:
+
+- EN: `d724ed9eea9748381aa32d7012c2553733ef147d09991ea7e2015bb61b41d8af`
+- ES: `7029a5c66e7b736b7ac6cac553f9cdb184de1989e24c98e46dce458831e9a17c`
+
+La cobertura combinada es **221 rutas × 2 idiomas = 442 filas**. Se añade un commit complementario de caracterización por esta distinción encontrada en la revisión final. Los otros módulos excluidos (historial, sesiones, Shelf, conversores independientes y Process Designer) no ofrecen destinos en un acordeón del shell. No se han cambiado sus callbacks ni controladores.
+
 ## Extracción y verificación
 
 `ModulePaneNavigator` recibe un mapa de Supplier<ModuleHost> para todos los módulos con acordeón, además de proveedores de Keys, Cipher y los controladores a los que ya delegaba el shell, scroll y contentContainer. El constructor solo guarda proveedores; no los evalúa ni captura controladores. Los campos se resuelven en cada navegación y dentro del callback diferido de revelado. El shell conserva todos los métodos expand* como delegados de una línea y sus callbacks de carga/restauración.

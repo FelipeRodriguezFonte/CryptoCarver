@@ -1,0 +1,64 @@
+EN	AdES Validation	WALLET	<none>	Wallet / eIDAS > AdES Validation
+EN	CBOR Inspector	WALLET	<none>	Wallet / eIDAS > CBOR Inspector
+EN	COSE Decrypt0	COSE	<none>	COSE / Sign1 > COSE Decrypt0
+EN	COSE Encrypt0	COSE	<none>	COSE / Sign1 > COSE Encrypt0
+EN	COSE MAC0	COSE	<none>	COSE / Sign1 > COSE MAC0
+EN	COSE Sign1	COSE	<none>	COSE / Sign1 > COSE Sign1
+EN	COSE Verify MAC0	COSE	<none>	COSE / Sign1 > COSE Verify MAC0
+EN	COSE Verify1	COSE	<none>	COSE / Sign1 > COSE Verify1
+EN	Decrypt JWE	JOSE	<none>	JOSE / JWT > Decrypt JWE
+EN	Generate JWE	JOSE	<none>	JOSE / JWT > Generate JWE
+EN	Generate JWT	JOSE	<none>	JOSE / JWT > Generate JWT
+EN	Generate Nested JWT	JOSE	<none>	JOSE / JWT > Generate Nested JWT
+EN	Import Key (JSON)	JOSE	<none>	JOSE / JWT > Import Key (JSON)
+EN	Import Key (PEM)	JOSE	<none>	JOSE / JWT > Import Key (PEM)
+EN	JWA (Algorithms)	JOSE	<none>	JOSE / JWT > JWA (Algorithms)
+EN	JWE (Encrypted)	JOSE	<none>	JOSE / JWT > JWE (Encrypted)
+EN	JWK (Keys)	JOSE	<none>	JOSE / JWT > JWK (Keys)
+EN	JWK Thumbprint	JOSE	<none>	JOSE / JWT > JWK Thumbprint
+EN	JWK to PEM	JOSE	<none>	JOSE / JWT > JWK to PEM
+EN	JWKS Rotate Key	JOSE	<none>	JOSE / JWT > JWKS Rotate Key
+EN	JWT (Signed)	JOSE	<none>	JOSE / JWT > JWT (Signed)
+EN	Load JWKS File	JOSE	<none>	JOSE / JWT > Load JWKS File
+EN	PEM to JWK	JOSE	<none>	JOSE / JWT > PEM to JWK
+EN	SCA / OpenID4VP	WALLET	<none>	Wallet / eIDAS > SCA / OpenID4VP
+EN	SD-JWT VC	WALLET	<none>	Wallet / eIDAS > SD-JWT VC
+EN	Status List	WALLET	<none>	Wallet / eIDAS > Status List
+EN	Token Inspector	JOSE	<none>	JOSE / JWT > Token Inspector
+EN	Trusted Entity List JSON	WALLET	<none>	Wallet / eIDAS > Trusted Entity List JSON
+EN	Trusted List	WALLET	<none>	Wallet / eIDAS > Trusted List
+EN	Validate JWT	JOSE	<none>	JOSE / JWT > Validate JWT
+EN	eIDAS Certificate Profiles	WALLET	<none>	Wallet / eIDAS > eIDAS Certificate Profiles
+EN	mdoc / mDL	WALLET	<none>	Wallet / eIDAS > mdoc / mDL
+ES	AdES Validation	WALLET	<none>	Wallet / eIDAS > AdES Validation
+ES	CBOR Inspector	WALLET	<none>	Wallet / eIDAS > CBOR Inspector
+ES	COSE Decrypt0	COSE	<none>	COSE / Sign1 > COSE Decrypt0
+ES	COSE Encrypt0	COSE	<none>	COSE / Sign1 > COSE Encrypt0
+ES	COSE MAC0	COSE	<none>	COSE / Sign1 > COSE MAC0
+ES	COSE Sign1	COSE	<none>	COSE / Sign1 > COSE Sign1
+ES	COSE Verify MAC0	COSE	<none>	COSE / Sign1 > COSE Verify MAC0
+ES	COSE Verify1	COSE	<none>	COSE / Sign1 > COSE Verify1
+ES	Decrypt JWE	JOSE	<none>	JOSE / JWT > Decrypt JWE
+ES	Generate JWE	JOSE	<none>	JOSE / JWT > Generate JWE
+ES	Generate JWT	JOSE	<none>	JOSE / JWT > Generate JWT
+ES	Generate Nested JWT	JOSE	<none>	JOSE / JWT > Generate Nested JWT
+ES	Import Key (JSON)	JOSE	<none>	JOSE / JWT > Import Key (JSON)
+ES	Import Key (PEM)	JOSE	<none>	JOSE / JWT > Import Key (PEM)
+ES	JWA (Algorithms)	JOSE	<none>	JOSE / JWT > JWA (Algorithms)
+ES	JWE (Encrypted)	JOSE	<none>	JOSE / JWT > JWE (Encrypted)
+ES	JWK (Keys)	JOSE	<none>	JOSE / JWT > JWK (Keys)
+ES	JWK Thumbprint	JOSE	<none>	JOSE / JWT > JWK Thumbprint
+ES	JWK to PEM	JOSE	<none>	JOSE / JWT > JWK to PEM
+ES	JWKS Rotate Key	JOSE	<none>	JOSE / JWT > JWKS Rotate Key
+ES	JWT (Signed)	JOSE	<none>	JOSE / JWT > JWT (Signed)
+ES	Load JWKS File	JOSE	<none>	JOSE / JWT > Load JWKS File
+ES	PEM to JWK	JOSE	<none>	JOSE / JWT > PEM to JWK
+ES	SCA / OpenID4VP	WALLET	<none>	Wallet / eIDAS > SCA / OpenID4VP
+ES	SD-JWT VC	WALLET	<none>	Wallet / eIDAS > SD-JWT VC
+ES	Status List	WALLET	<none>	Wallet / eIDAS > Status List
+ES	Token Inspector	JOSE	<none>	JOSE / JWT > Token Inspector
+ES	Trusted Entity List JSON	WALLET	<none>	Wallet / eIDAS > Trusted Entity List JSON
+ES	Trusted List	WALLET	<none>	Wallet / eIDAS > Trusted List
+ES	Validate JWT	JOSE	<none>	JOSE / JWT > Validate JWT
+ES	eIDAS Certificate Profiles	WALLET	<none>	Wallet / eIDAS > eIDAS Certificate Profiles
+ES	mdoc / mDL	WALLET	<none>	Wallet / eIDAS > mdoc / mDL

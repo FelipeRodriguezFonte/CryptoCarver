@@ -191,6 +191,53 @@ class ModulePaneNavigationUITest {
         return null;
     }
 
+    /** These modules route to sections, with no canonical accordion pane in Route.section(). */
+    @Test
+    void sectionOnlyAccordionModulesAreRecordedSeparately() throws Exception {
+        List<UiNavigationRegistry.Module> modules = List.of(UiNavigationRegistry.Module.JOSE,
+                UiNavigationRegistry.Module.COSE, UiNavigationRegistry.Module.WALLET);
+        var routes = UiNavigationRegistry.routes().entrySet().stream()
+                .filter(entry -> modules.contains(entry.getValue().module()))
+                .sorted(Map.Entry.comparingByKey()).toList();
+        Map<UiNavigationRegistry.Module, String> warmRoutes = new java.util.EnumMap<>(UiNavigationRegistry.Module.class);
+        routes.forEach(entry -> warmRoutes.putIfAbsent(entry.getValue().module(), entry.getKey()));
+        fx(() -> {
+            I18nService.getInstance().setPreference(LanguagePreference.EN);
+            for (String route : warmRoutes.values()) shell.navigateToModule(route);
+            root.applyCss();
+            root.layout();
+        });
+        List<String> rows = new ArrayList<>();
+        for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
+            for (var entry : routes) {
+                AtomicReference<String> row = new AtomicReference<>();
+                fx(() -> {
+                    I18nService.getInstance().setPreference(language);
+                    Node host = root.lookup("#" + entry.getValue().module().name().toLowerCase(java.util.Locale.ROOT));
+                    assertNotNull(host);
+                    assertEquals(null, entry.getValue().section(), "section routes have no pane destination");
+                    setCollapsed(host);
+                    shell.navigateToModule(entry.getKey());
+                    root.applyCss();
+                    root.layout();
+                    assertTrue(!breadcrumb().isBlank() && !breadcrumb().equals("<missing>"));
+                    row.set(language.name() + "\t" + safe(entry.getKey()) + "\t" + entry.getValue().module().name()
+                            + "\t" + selectedPane(host) + "\t" + breadcrumb());
+                });
+                rows.add(row.get());
+            }
+        }
+        String content = String.join("\n", rows) + "\n";
+        try (var stream = getClass().getResourceAsStream("/com/cryptocarver/ui/module-section-navigation-baseline.tsv")) {
+            assertNotNull(stream);
+            assertEquals(new String(stream.readAllBytes(), StandardCharsets.UTF_8), content);
+        }
+        String en = String.join("\n", rows.stream().filter(row -> row.startsWith("EN\t")).toList()) + "\n";
+        String es = String.join("\n", rows.stream().filter(row -> row.startsWith("ES\t")).toList()) + "\n";
+        assertEquals("d724ed9eea9748381aa32d7012c2553733ef147d09991ea7e2015bb61b41d8af", sha256(en));
+        assertEquals("7029a5c66e7b736b7ac6cac553f9cdb184de1989e24c98e46dce458831e9a17c", sha256(es));
+    }
+
     private String breadcrumb() {
         Node node = root.lookup("#breadcrumbContainer");
         if (!(node instanceof Parent parent)) return "<missing>";
