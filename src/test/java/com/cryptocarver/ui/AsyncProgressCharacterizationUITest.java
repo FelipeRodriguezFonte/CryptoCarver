@@ -148,7 +148,7 @@ class AsyncProgressCharacterizationUITest {
         }
         String transcript = String.join("\n", rows) + "\n";
         Files.writeString(Path.of("target/async-progress-transcript.txt"), transcript);
-        assertEquals("BASELINE_PENDING", HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(transcript.getBytes(StandardCharsets.UTF_8))), transcript);
+        assertEquals("49bf6210ad4fc9261a53a23d509546e1f96164f872e6e8ba6d16e3abcdf349ee", HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(transcript.getBytes(StandardCharsets.UTF_8))), transcript);
     }
 
     private void runOutcome(String outcome, boolean commit) throws Exception {
