@@ -58,6 +58,7 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
     private final ResultAreaTracker resultAreaTracker = new ResultAreaTracker();
     private ResultViewerCoordinator resultViewerCoordinator;
     private ResultPublicationCoordinator resultPublicationCoordinator;
+    private ResultCaptureCoordinator resultCaptureCoordinator;
     private CommandPaletteCoordinator commandPaletteCoordinator;
     private LaboratoryMenuCoordinator laboratoryMenuCoordinator;
     private final com.cryptocarver.model.SessionTrailState sessionTrailState = new com.cryptocarver.model.SessionTrailState();
@@ -1662,51 +1663,11 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     /** Adds the active rendered result to the in-session Clipboard Shelf. */
     @FXML
-    public void handleAddCurrentOutputToShelf() {
-        if (keysController != null && isActiveAsymmetricKeyGeneration()) {
-            keysController.handleGlobalAsymmetricShelfAction(currentActiveOperation);
-            return;
-        }
-        // The generated symmetric key lives in a TextField the result tracker does not capture.
-        if (keysController != null && "Key Generation".equals(currentActiveOperation)) {
-            keysController.handleGlobalSymmetricShelfAction();
-            return;
-        }
-        // An explicitly focused/updated rendered result wins over a sibling
-        // Workbench that happens to remain visible in the generic accordion.
-        TextArea area = resultAreaTracker.shelfCaptureArea(null);
-        if (area == null) {
-            KeyCertificateWorkbenchController workbench = activeWorkbenchForShelf();
-            if (workbench != null) {
-                workbench.sendCurrentMaterialToShelf();
-                return;
-            }
-            area = resultAreaTracker.shelfCaptureArea(mainPane);
-        }
-        String content = resolveShelfCaptureText(area);
-        if (content == null || content.isBlank()) {
-            updateStatus(isShelfCaptureBlockedByVisibility(area)
-                    ? "Action blocked: output hidden by visibility policy."
-                    : "No current output available.");
-            showInfo("No result available", "Run an operation with output before adding it to Clipboard Shelf.");
-            return;
-        }
-        handleAddToClipboardShelfSecure(area, null);
-    }
+    public void handleAddCurrentOutputToShelf() { resultCaptureCoordinator().handleAddCurrentOutputToShelf(); }
 
-    private boolean isActiveAsymmetricKeyGeneration() {
-        return switch (currentActiveOperation) {
-            case "RSA Key Generation", "ECDSA Key Generation", "DSA Key Generation", "EdDSA Key Generation" -> true;
-            default -> false;
-        };
-    }
+    private boolean isActiveAsymmetricKeyGeneration() { return resultCaptureCoordinator().isActiveAsymmetricKeyGeneration(); }
 
-    private KeyCertificateWorkbenchController activeWorkbenchForShelf() {
-        if (!isContainerVisible(genericContainer) || genericContainerController == null) return null;
-        KeyCertificateWorkbenchController workbench =
-                genericContainerController.getKeyCertificateWorkbenchController();
-        return workbench != null && workbench.isShelfMaterialViewVisible() ? workbench : null;
-    }
+    private KeyCertificateWorkbenchController activeWorkbenchForShelf() { return resultCaptureCoordinator().activeWorkbenchForShelf(); }
 
     /** Opens the active operation result in a large, independent viewer. */
     @FXML
@@ -1723,132 +1684,43 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
         expandedTextViewer.show(owner, "Expanded Result — " + operation, content);
     }
 
-    String resolveCurrentOutputText() {
-        return resolveResultText(preferredResultArea());
-    }
+    String resolveCurrentOutputText() { return resultCaptureCoordinator().resolveCurrentOutputText(); }
 
-    private TextArea preferredResultArea() {
-        return resultAreaTracker.preferred(mainPane, hasPublishedPayload());
-    }
+    private TextArea preferredResultArea() { return resultCaptureCoordinator().preferredResultArea(); }
 
-    private boolean hasPublishedPayload() {
-        if (lastPublishedResultSnapshot == null) return false;
-        if (lastPublishedResultSnapshot.getEnrichedOutput() != null
-                && !lastPublishedResultSnapshot.getEnrichedOutput().isBlank()) return true;
-        byte[] output = lastPublishedResultSnapshot.getOutput();
-        return output != null && output.length > 0;
-    }
+    private boolean hasPublishedPayload() { return resultCaptureCoordinator().hasPublishedPayload(); }
 
-    private String resolveResultText(TextArea requestedArea) {
-        if (ResultAreaTracker.isKeyPairResultArea(requestedArea) && resultAreaTracker.isRegistered(requestedArea)) {
-            return renderResultArea(requestedArea);
-        }
-        if (lastPublishedResultSnapshot != null) {
-            return renderPublishedResult(lastPublishedResultSnapshot,
-                    com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
-        }
-        if (resultAreaTracker.isRegistered(requestedArea) && !requestedArea.isEditable()) {
-            String rendered = renderResultArea(requestedArea);
-            if (rendered != null && !rendered.isBlank()) return rendered;
-        }
-        TextArea fallback = resultAreaTracker.findVisible(mainPane);
-        if (fallback != null && resultAreaTracker.isRegistered(fallback) && !fallback.isEditable()) {
-            String rendered = renderResultArea(fallback);
-            if (rendered != null && !rendered.isBlank()) return rendered;
-        }
-        return "";
-    }
+    private String resolveResultText(TextArea requestedArea) { return resultCaptureCoordinator().resolveResultText(requestedArea); }
 
     /**
      * Resolves only a real output for Shelf capture. A summary assembled from
      * public details is useful to the viewer but is not a captured artifact.
      */
-    private String resolveShelfCaptureText(TextArea requestedArea) {
-        TextArea area = requestedArea;
-        if (area == null) {
-            area = resultAreaTracker.shelfCaptureArea(mainPane);
-        }
-        if (resultAreaTracker.isValidShelfCaptureArea(area)) {
-            String visible = renderResultArea(area);
-            if (visible == null || visible.isBlank()
-                    || "***MASKED***".equals(visible)
-                    || isPrivateMaterialPlaceholder(visible)) {
-                return "";
-            }
-            return visible;
-        }
-        com.cryptocarver.model.OperationResult snapshot = shelfSnapshot();
-        if (snapshot == null) return "";
-        boolean hasArtifact = (snapshot.getEnrichedOutput() != null
-                && !snapshot.getEnrichedOutput().isBlank())
-                || (snapshot.getOutput() != null
-                && snapshot.getOutput().length > 0);
-        return hasArtifact ? renderPublishedResult(snapshot,
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile()) : "";
-    }
+    private String resolveShelfCaptureText(TextArea requestedArea) { return resultCaptureCoordinator().resolveShelfCaptureText(requestedArea); }
 
     /**
      * The published result, but only while its screen is still the active one:
      * after navigating elsewhere it must not be added to the Shelf under the
      * new screen's name.
      */
-    private com.cryptocarver.model.OperationResult shelfSnapshot() {
-        return java.util.Objects.equals(lastPublishedScreen, currentActiveOperation) ? lastPublishedResultSnapshot : null;
-    }
+    private com.cryptocarver.model.OperationResult shelfSnapshot() { return resultCaptureCoordinator().shelfSnapshot(); }
 
-    private boolean isShelfCaptureBlockedByVisibility(TextArea area) {
-        return com.cryptocarver.model.ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
-                classificationForResultArea(area), com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile());
-    }
+    private boolean isShelfCaptureBlockedByVisibility(TextArea area) { return resultCaptureCoordinator().isShelfCaptureBlockedByVisibility(area); }
 
-    private boolean isPrivateMaterialPlaceholder(String text) {
-        return com.cryptocarver.model.ResultPresentationPolicy.isPrivateMaterialPlaceholder(text);
-    }
+    private boolean isPrivateMaterialPlaceholder(String text) { return resultCaptureCoordinator().isPrivateMaterialPlaceholder(text); }
 
-    private String renderResultArea(TextArea area) {
-        if (area == null || area.getText() == null || area.getText().isBlank()) {
-            return "";
-        }
-        com.cryptocarver.model.OperationDetail.Classification classification = classificationForResultArea(area);
-        com.cryptocarver.model.SecretVisibilityProfile visibility =
-                com.cryptocarver.model.AppSettings.getInstance().getSecretVisibilityProfile();
-        if (classification == com.cryptocarver.model.OperationDetail.Classification.SECRET) {
-            if (visibility == com.cryptocarver.model.SecretVisibilityProfile.REDACTED) return "";
-            if (visibility == com.cryptocarver.model.SecretVisibilityProfile.MASKED) return "***MASKED***";
-        } else if (classification == com.cryptocarver.model.OperationDetail.Classification.SENSITIVE
-                && !AppSettings.isFullLab()) {
-            return "***MASKED***";
-        }
-        return area.getText();
-    }
+    private String renderResultArea(TextArea area) { return resultCaptureCoordinator().renderResultArea(area); }
 
-    private com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) {
-        if (ResultAreaTracker.isPrivateKeyResultArea(area)) {
-            return com.cryptocarver.model.OperationDetail.Classification.SECRET;
-        }
-        if (ResultAreaTracker.isKeyPairResultArea(area)
-                && area.getId().toLowerCase(java.util.Locale.ROOT).contains("publickeyarea")) {
-            return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
-        }
-        if (lastPublishedResultSnapshot != null
-                && resultAreaTracker.isCurrentResultArea(area, true)) {
-            return classifyPublishedResult(lastPublishedResultSnapshot);
-        }
-        if (area != null) {
-            String id = area.getId() == null ? "" : area.getId().toLowerCase(java.util.Locale.ROOT);
-            if (id.contains("privatekey") || id.contains("secret") || id.contains("kdf") || id.contains("pin")
-                    || id.contains("pass") || id.contains("pwd") || id.contains("cvv") || id.contains("dukpt")
-                    || id.contains("keywrap")) {
-                return com.cryptocarver.model.OperationDetail.Classification.SECRET;
-            }
-            if (id.contains("key") || id.contains("mac") || id.contains("iv") || id.contains("cipher")) {
-                return com.cryptocarver.model.OperationDetail.Classification.SENSITIVE;
-            }
-        }
-        if (lastPublishedResultSnapshot != null) {
-            return classifyPublishedResult(lastPublishedResultSnapshot);
-        }
-        return com.cryptocarver.model.OperationDetail.Classification.PUBLIC;
+    private com.cryptocarver.model.OperationDetail.Classification classificationForResultArea(TextArea area) { return resultCaptureCoordinator().classificationForResultArea(area); }
+
+    private ResultCaptureCoordinator resultCaptureCoordinator() {
+        if (resultCaptureCoordinator == null) resultCaptureCoordinator = new ResultCaptureCoordinator(
+                () -> keysController, () -> genericContainerController, () -> genericContainer,
+                () -> mainPane, () -> resultAreaTracker, () -> lastPublishedResultSnapshot,
+                () -> lastPublishedScreen, () -> currentActiveOperation,
+                () -> AppSettings.getInstance().getSecretVisibilityProfile(),
+                this::updateStatus, this::showInfo, this::handleAddToClipboardShelfSecure);
+        return resultCaptureCoordinator;
     }
 
     String renderPublishedResult(com.cryptocarver.model.OperationResult result, com.cryptocarver.model.SecretVisibilityProfile visibility) {
