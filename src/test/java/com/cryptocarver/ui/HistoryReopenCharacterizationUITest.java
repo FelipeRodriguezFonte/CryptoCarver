@@ -35,8 +35,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "runUiTests", matches = "true")
 class HistoryReopenCharacterizationUITest {
     private static final String PRIVATE_FIXTURE = "SYNTHETIC_HISTORY_PRIVATE_FIXTURE_55";
+    private static final String RERUN_SHA256 = "507dafb638c78ee3f9837720585cee44abc5f7555c79b6cfa6e6f735af8da854";
     private static final Path TRANSCRIPT = Path.of("src/test/resources/com/cryptocarver/ui/history-reopen-transcript.txt");
-    private static final String EXPECTED_SHA256 = "ec1d322ebeea489e3d32e8a64c3f17e8849af910958ad5675cb956a51dd0a5a0";
+    private static final String EXPECTED_SHA256 = "2775479c43a6ac309bd0b5c156a9b50e62bc2a4c5b656dc99c7feccb49eb6294";
     @TempDir Path tempDir;
 
     @BeforeAll static void startJavaFx() throws Exception {
@@ -113,8 +114,9 @@ class HistoryReopenCharacterizationUITest {
                     assertEquals("SYNTHETIC-HASH-INPUT", input.getText());
                     generic.handleCalculateHash();
                     var output = (javafx.scene.control.TextArea) field(generic, "hashOutputArea");
-                    assertFalse(output.getText().isBlank(), "hash rerun output=" + output.getText());
-                    transcript.append("rerun|Hashing|SHA-256|ok\n");
+                    assertTrue(output.getText().toLowerCase(java.util.Locale.ROOT).contains(RERUN_SHA256),
+                            "hash rerun output=" + output.getText());
+                    transcript.append("rerun|Hashing|SHA-256|").append(RERUN_SHA256).append('\n');
                     Method clear = ModernMainController.class.getDeclaredMethod("handleClearInput"); clear.setAccessible(true); clear.invoke(controller);
                     assertEquals("", input.getText());
                     transcript.append("clear|Hashing|empty\n");

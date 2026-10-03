@@ -10,5 +10,5 @@ FULL_LAB|Symmetric Ciphers|Symmetric Ciphers|restored|private=full-lab
 FULL_LAB|Hashing|Hashing|restored|private=full-lab
 FULL_LAB|Clear PIN Blocks|Clear PIN Blocks|restored|private=full-lab
 FULL_LAB|JWT (Signed)|JWT (Signed)|restored|private=full-lab
-rerun|Hashing|SHA-256|ok
+rerun|Hashing|SHA-256|507dafb638c78ee3f9837720585cee44abc5f7555c79b6cfa6e6f735af8da854
 clear|Hashing|empty
