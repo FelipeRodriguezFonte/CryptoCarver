@@ -67,3 +67,27 @@ from extraction. After phase 3, run separately:
 
 Record each total and status count; the test counts must differ. Do not claim
 phase 3 complete without both gates passing cleanly.
+
+## Phase 3 baseline findings (before pinning the transcript)
+
+The first strict real-shell run observed these failures before any production
+change:
+
+- KEM encapsulation stored the Bob secret locally but did not expose it through
+  shared result surfaces. KEM decapsulation published its output as PUBLIC.
+  Under `MASKED` and `REDACTED`, the shared secret appeared in the shared
+  result viewer, Shelf and expanded viewer. Inspector, history, status bar,
+  captured stdout/stderr and checked private-key surfaces had no secret bytes.
+- Selecting ML-KEM-768 with an ML-KEM-512 pair showed the English
+  “Generate a key pair for the selected ML-KEM/Kyber algorithm first.” message
+  under both EN and ES. Only the generic fallback remedy changed to Spanish.
+- The malformed-ciphertext response was readable in both EN and ES.
+- The benchmark result area was blank after the task returned. The controller
+  called `Task.run()` and then read `Task.getValue()` before the JavaFX task
+  value property had been published; the user-visible result was therefore
+  null. This needs a separate benchmark-result fix.
+
+The initial strict run stopped before digest pinning. A predicate in the test
+currently treats the English word “Generate” as Spanish because it shares the
+prefix “genera”; correct that test predicate and rerun the baseline before
+recording the complete digest.
