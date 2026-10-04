@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.SymmetricCipher;
+import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import javafx.scene.control.ComboBox;
@@ -197,7 +198,7 @@ final class SymmetricCipherCoordinator {
                 details.put("Key Size", (symmetricKeyField.getText().trim().length() * 4) + " bits");
             }
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext).output(ciphertext).details(details)
+                    .input(plaintext).output(ciphertext, OperationDetail.Classification.PUBLIC).details(details)
                     .status(String.format("Encrypted using %s/%s/%s", algorithm, mode, padding)).build());
 
         } catch (IllegalArgumentException e) {
@@ -345,9 +346,9 @@ final class SymmetricCipherCoordinator {
             details.put("Mode", mode);
             details.put("Padding", padding);
             OperationResult.Builder b = OperationResult.forOperation("Symmetric Decrypt")
-                    .input(ciphertext).output(plaintext).details(details)
+                    .input(ciphertext).output(plaintext, OperationDetail.Classification.SENSITIVE).details(details)
                     .status(String.format("Decrypted using %s/%s/%s", algorithm, mode, padding));
-            if (enriched != null) b.enrichedOutput(enriched);
+            if (enriched != null) b.enrichedOutput(enriched, OperationDetail.Classification.SENSITIVE);
             reporter().publish(b.build());
 
         } catch (IllegalArgumentException e) {
@@ -552,7 +553,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using ChaCha20");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(ciphertext)
+                    .output(ciphertext, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "ChaCha20")
                     .status("Encrypted using ChaCha20")
                     .build());
@@ -576,7 +577,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using ChaCha20");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(ciphertext)
-                    .output(plaintext)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "ChaCha20")
                     .status("Decrypted using ChaCha20")
                     .build());
@@ -596,7 +597,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(ciphertext, com.cryptocarver.model.OperationDetail.Classification.SENSITIVE)
+                    .output(ciphertext, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "Salsa20")
                     .status("Encrypted using Salsa20")
                     .build());
@@ -623,8 +624,8 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using ChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(combined)
-                    .enrichedOutput(enriched)
+                    .output(combined, OperationDetail.Classification.PUBLIC)
+                    .enrichedOutput(enriched, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "ChaCha20-Poly1305")
                     .status("Encrypted using ChaCha20-Poly1305")
                     .build());
@@ -643,7 +644,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(ciphertext)
-                    .output(plaintext, com.cryptocarver.model.OperationDetail.Classification.SENSITIVE)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "Salsa20")
                     .status("Decrypted using Salsa20")
                     .build());
@@ -677,7 +678,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using ChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(combined)
-                    .output(plaintext)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "ChaCha20-Poly1305")
                     .status("Decrypted using ChaCha20-Poly1305")
                     .build());
@@ -706,8 +707,8 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using XChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(combined)
-                    .enrichedOutput(enriched)
+                    .output(combined, OperationDetail.Classification.PUBLIC)
+                    .enrichedOutput(enriched, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "XChaCha20-Poly1305")
                     .status("Encrypted using XChaCha20-Poly1305")
                     .build());
@@ -741,7 +742,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using XChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(combined)
-                    .output(plaintext)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "XChaCha20-Poly1305")
                     .status("Decrypted using XChaCha20-Poly1305")
                     .build());
