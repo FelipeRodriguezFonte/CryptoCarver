@@ -127,8 +127,8 @@ public class ProcessDesignerController {
         void redo();
     }
 
-    private final Deque<DesignerCommand> undoStack = new ArrayDeque<>();
-    private final Deque<DesignerCommand> redoStack = new ArrayDeque<>();
+    private final ProcessUndoRedoCoordinator undoRedoCoordinator = new ProcessUndoRedoCoordinator(
+            new ProcessUndoRedoCoordinator.View(this::toDefinition, this::load));
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -388,55 +388,17 @@ public class ProcessDesignerController {
     }
 
     // --- Undo / Redo Command Pattern ---
-    private record SnapshotCommand(String desc, ProcessDefinition before, ProcessDefinition after) implements DesignerCommand {
-        @Override public void undo() { restoreDef(before); }
-        @Override public void redo() { restoreDef(after); }
-        private void restoreDef(ProcessDefinition def) {}
-    }
-
     public void executeCommand(DesignerCommand command) {
-        command.redo();
-        undoStack.push(command);
-        if (undoStack.size() > 60) {
-            ((ArrayDeque<DesignerCommand>) undoStack).removeLast();
-        }
-        redoStack.clear();
+        undoRedoCoordinator.execute(command);
     }
 
     private void recordStateChange(String desc, ProcessDefinition before) {
-        ProcessDefinition after = snapshot(toDefinition());
-        ProcessDefinition beforeSnapshot = snapshot(before);
-        undoStack.push(new DesignerCommand() {
-            @Override
-            public void undo() {
-                load(beforeSnapshot);
-            }
-            @Override
-            public void redo() {
-                load(after);
-            }
-        });
-        if (undoStack.size() > 60) {
-            ((ArrayDeque<DesignerCommand>) undoStack).removeLast();
-        }
-        redoStack.clear();
+        undoRedoCoordinator.recordStateChange(desc, before);
     }
 
-    @FXML public void handleUndo() {
-        if (!undoStack.isEmpty()) {
-            DesignerCommand cmd = undoStack.pop();
-            cmd.undo();
-            redoStack.push(cmd);
-        }
-    }
+    @FXML public void handleUndo() { undoRedoCoordinator.undo(); }
 
-    @FXML public void handleRedo() {
-        if (!redoStack.isEmpty()) {
-            DesignerCommand cmd = redoStack.pop();
-            cmd.redo();
-            undoStack.push(cmd);
-        }
-    }
+    @FXML public void handleRedo() { undoRedoCoordinator.redo(); }
 
     // --- Duplicate & Tidy Layout ---
     @FXML public void handleDuplicateSelected() {
@@ -462,7 +424,7 @@ public class ProcessDesignerController {
 
     @FXML public void handleTidyLayout() {
         if (nodes.isEmpty()) return;
-        ProcessDefinition before = toDefinition();
+        ProcessDefinition before = snapshot(toDefinition());
         List<String> order = ProcessValidator.computeTopologicalOrder(toDefinition());
 
         Map<String, Integer> depthMap = new HashMap<>();
@@ -1012,19 +974,7 @@ public class ProcessDesignerController {
     }
 
     static ProcessDefinition snapshot(ProcessDefinition def) {
-        if (def == null) return null;
-        ProcessDefinition copy = new ProcessDefinition();
-        copy.name = def.name;
-        copy.version = def.version;
-        for (ProcessDefinition.Node n : def.nodes) {
-            ProcessDefinition.Node nc = new ProcessDefinition.Node(n.id, n.type, n.label, n.x, n.y);
-            nc.configuration.putAll(n.configuration);
-            copy.nodes.add(nc);
-        }
-        for (ProcessDefinition.Connection c : def.connections) {
-            copy.connections.add(new ProcessDefinition.Connection(c.from, c.to, c.targetPort));
-        }
-        return copy;
+        return ProcessUndoRedoCoordinator.snapshot(def);
     }
 
     ProcessDefinition toExecutableDefinition() {
