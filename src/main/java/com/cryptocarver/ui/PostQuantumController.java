@@ -26,6 +26,7 @@ public class PostQuantumController {
     private StatusReporter statusReporter;
     private final AtomicReference<StatusReporter> coordinatorStatusReporter = new AtomicReference<>();
     private PostQuantumKeyCoordinator keyCoordinator;
+    private PostQuantumSignatureCoordinator signatureCoordinator;
 
     @FXML
     private Accordion pqcAccordion;
@@ -99,6 +100,16 @@ public class PostQuantumController {
         return keyCoordinator;
     }
 
+    private PostQuantumSignatureCoordinator signatureCoordinator() {
+        if (signatureCoordinator == null) {
+            PostQuantumSignatureCoordinator.View view = new PostQuantumSignatureCoordinator.View(
+                    () -> pqcSignAlgoCombo, () -> pqcSignInputArea, () -> pqcSignOutputArea,
+                    () -> pqcVerifySignatureField, () -> keyState);
+            signatureCoordinator = new PostQuantumSignatureCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return signatureCoordinator;
+    }
+
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(pqcAccordion, ModuleTextCatalog.pqc());
@@ -168,103 +179,10 @@ public class PostQuantumController {
     public void handleExportPQCPrivateKey() { keyCoordinator().handleExportPQCPrivateKey(); }
 
     @FXML
-    public void handlePQCSign() {
-        try {
-            String algo = pqcSignAlgoCombo.getValue();
-            String inputData = pqcSignInputArea.getText();
-
-            if (keyState.privateKey() == null) {
-                if (statusReporter != null) statusReporter.showError("Key Error", "Please generate or import a compatible PQC signature private key first.");
-                return;
-            }
-            if (!PostQuantumOperations.areAlgorithmsCompatible(algo, keyState.privateKey().getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError(
-                        t("module.pqc.error.signatureAlgorithmMismatchTitle"),
-                        t("module.pqc.error.signatureAlgorithmMismatch", algo, keyState.privateKey().getAlgorithm()));
-                return;
-            }
-
-            if (inputData.isEmpty()) {
-                if (statusReporter != null) statusReporter.showError("Input Error", "Please enter data to sign");
-                return;
-            }
-
-            byte[] data = inputData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] signature = PostQuantumOperations.sign(keyState.privateKey(), data, algo);
-
-            pqcSignOutputArea.setText(DataConverter.bytesToHex(signature));
-
-            String kpDescription = keyState.privateKey().getAlgorithm();
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", algo),
-                com.cryptocarver.model.OperationDetail.publicDetail("Key Pair", kpDescription),
-                com.cryptocarver.model.OperationDetail.publicDetail("Data Size", data.length + " bytes"),
-                com.cryptocarver.model.OperationDetail.publicDetail("Signature Size", signature.length + " bytes")
-            );
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Sign")
-                        .input(data).output(signature, com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
-                        .status("PQC signature generated")
-                        .build());
-            }
-
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Signing Error", "Error signing data: " + e.getMessage());
-        }
-    }
+    public void handlePQCSign() { signatureCoordinator().handlePQCSign(); }
 
     @FXML
-    public void handlePQCVerify() {
-        try {
-            String algo = pqcSignAlgoCombo.getValue();
-            String inputData = pqcSignInputArea.getText();
-            String signatureHex = pqcVerifySignatureField.getText();
-
-            if (keyState.publicKey() == null) {
-                if (statusReporter != null) statusReporter.showError("Key Error", "Please generate a key pair first");
-                return;
-            }
-            if (!PostQuantumOperations.areAlgorithmsCompatible(algo, keyState.publicKey().getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError(
-                        t("module.pqc.error.signatureAlgorithmMismatchTitle"),
-                        t("module.pqc.error.signatureAlgorithmMismatch", algo, keyState.publicKey().getAlgorithm()));
-                return;
-            }
-
-            if (inputData.isEmpty() || signatureHex.isEmpty()) {
-                if (statusReporter != null) statusReporter.showError("Input Error", "Please enter data and signature");
-                return;
-            }
-
-            byte[] data = inputData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] signature = DataConverter.hexToBytes(signatureHex);
-
-            boolean verified = PostQuantumOperations.verify(keyState.publicKey(), data, signature, algo);
-
-            if (verified) {
-                if (statusReporter != null) statusReporter.showInfo("Verification Result", "✓ Signature is VALID");
-            } else {
-                if (statusReporter != null) statusReporter.showError(
-                        t("module.pqc.error.invalidSignatureTitle"), t("module.pqc.error.invalidSignature"));
-            }
-            String kpDescription = keyState.publicKey().getAlgorithm();
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", algo),
-                com.cryptocarver.model.OperationDetail.publicDetail("Key Pair", kpDescription),
-                com.cryptocarver.model.OperationDetail.publicDetail("Result", verified ? "VALID" : "INVALID"),
-                com.cryptocarver.model.OperationDetail.publicDetail("Data Size", data.length + " bytes")
-            );
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Verify")
-                        .input(data).output(signature, com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
-                        .status(verified ? "PQC signature is valid" : "PQC signature is invalid")
-                        .build());
-            }
-
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Verification Error", "Error verifying: " + e.getMessage());
-        }
-    }
+    public void handlePQCVerify() { signatureCoordinator().handlePQCVerify(); }
 
     @FXML
     public void handlePQCEncapsulate() {

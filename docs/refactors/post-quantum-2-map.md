@@ -119,3 +119,23 @@ The characterization now records readable, relevant EN and ES messages and
 finds no private-key/signature exposure in restricted result surfaces or logs.
 Its complete pinned transcript SHA-256 is
 `d622604c232a47c738c86f97b3d5f6a6579d21c88ea0098dea404cc3ba67138f`.
+
+## Phase 2 extraction and gates
+
+`handlePQCSign` and `handlePQCVerify` are now one-line public delegates to
+`PostQuantumSignatureCoordinator`. The extracted class takes a `View` of lazy
+control/state suppliers plus `Supplier<StatusReporter>`; it contains no
+reference to `PostQuantumController`. The public API remains the same 18
+methods. `PostQuantumController` decreased from 414 to 335 lines, and the new
+coordinator is 134 lines.
+
+Both required phase gates passed separately after extraction:
+
+- `mvn -o -q test -Plow-cpu`: 2866 tests, 0 failures, 0 errors, 1 skipped.
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: 522 UI-tagged tests across
+  109 suites, 0 failures, 0 errors, 0 skipped. `ExpandedViewerLifecycleUITest`
+  passed (3 tests).
+
+The selected counts differ (2866 vs. 522). The final, passing signature
+characterization transcript SHA-256 is
+`d622604c232a47c738c86f97b3d5f6a6579d21c88ea0098dea404cc3ba67138f`.
