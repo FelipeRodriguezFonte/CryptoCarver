@@ -4,8 +4,6 @@ import com.cryptocarver.crypto.SignatureOperations;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.util.DataConverter;
-import com.cryptocarver.model.OperationDetail;
-import com.cryptocarver.model.OperationResult;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -16,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.security.interfaces.RSAKey;
 import java.security.interfaces.ECKey;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,6 +36,7 @@ public class AuthenticationController {
     private final AtomicReference<StatusReporter> coordinatorStatusReporter = new AtomicReference<>();
     private final AuthenticationKeyState authenticationKeyState = new AuthenticationKeyState();
     private AuthenticationSignatureCoordinator signatureCoordinator;
+    private AuthenticationMacCoordinator macCoordinator;
     private boolean preflightListenersInstalled;
 
     // Shared UI components
@@ -168,6 +166,7 @@ public class AuthenticationController {
         this.inputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
         signatureCoordinator = null;
+        macCoordinator = null;
         installPreflightListeners();
     }
 
@@ -341,6 +340,7 @@ public class AuthenticationController {
         this.authMacWarningLabel = warningLabel;
         this.macKeySourceCombo = keySourceCombo;
         this.macHsmKeyCombo = hsmKeyCombo;
+        macCoordinator = null;
         if (hsmKeyCombo != null) {
             hsmKeyCombo.setCellFactory(lv -> new javafx.scene.control.ListCell<String>() {
                 @Override
@@ -727,6 +727,30 @@ public class AuthenticationController {
         return signatureCoordinator;
     }
 
+    private AuthenticationMacCoordinator macCoordinator() {
+        if (macCoordinator == null) {
+            ComboBox<String> algorithm = authMacAlgorithmCombo;
+            TextField key = authMacKeyField;
+            ComboBox<String> truncation = authMacTruncationCombo;
+            TextField verifyValue = authMacVerifyField;
+            TextField nonce = authMacNonceField;
+            ComboBox<String> keySource = macKeySourceCombo;
+            ComboBox<String> hsmKey = macHsmKeyCombo;
+            TextArea inputArea = authInputArea;
+            ComboBox<String> inputFormat = inputFormatCombo;
+            TextArea outputArea = authOutputArea;
+            ComboBox<String> outputFormat = outputFormatCombo;
+            Supplier<StatusReporter> reporter = coordinatorStatusReporter::get;
+            macCoordinator = new AuthenticationMacCoordinator(
+                    new AuthenticationMacCoordinator.View(
+                            () -> algorithm, () -> key, () -> truncation, () -> verifyValue,
+                            () -> nonce, () -> keySource, () -> hsmKey,
+                            () -> inputArea, () -> inputFormat, () -> outputArea, () -> outputFormat),
+                    reporter);
+        }
+        return macCoordinator;
+    }
+
     // ============================================================
     // MAC OPERATIONS
     // ============================================================
@@ -823,7 +847,7 @@ public class AuthenticationController {
             String current = macHsmKeyCombo.getValue();
             macHsmKeyCombo.getItems().clear();
             try {
-                if (isPkcs11MacSource()) {
+                if (macKeySourceCombo != null && "PKCS#11 Token".equals(macKeySourceCombo.getValue())) {
                     macHsmKeyCombo.getItems().addAll(com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance()
                             .listSecretKeyAliases());
                 } else {
@@ -918,243 +942,14 @@ public class AuthenticationController {
         authMacNonceField.clear();
     }
 
-    private String getHsmMacKeyId() {
-        if (macKeySourceCombo != null && "Simulated HSM".equals(macKeySourceCombo.getValue())) {
-            String keyId = macHsmKeyCombo.getValue();
-            if (keyId == null || keyId.isEmpty()) {
-                throw new IllegalArgumentException("Please select a key from the Lab Cache");
-            }
-            var km = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().getKeyMetadata(keyId);
-            if (km != null && !km.hasKeyMaterial()) {
-                throw new IllegalStateException("Selected Key Lab entry contains metadata only. Re-import or regenerate the key bytes.");
-            }
-            return keyId;
-        }
-        return null;
-    }
-
-    private boolean isPkcs11MacSource() {
-        return macKeySourceCombo != null && "PKCS#11 Token".equals(macKeySourceCombo.getValue());
-    }
-
-    private String getPkcs11MacKeyAlias() {
-        if (!isPkcs11MacSource()) return null;
-        String alias = macHsmKeyCombo == null ? null : macHsmKeyCombo.getValue();
-        if (alias == null || alias.isBlank()) {
-            throw new IllegalArgumentException("Connect a PKCS#11 token and select one of its secret-key objects");
-        }
-        return alias;
-    }
-
-    private byte[] getManualMacKey() {
-        String keyHex = authMacKeyField.getText().trim();
-        if (keyHex.isEmpty()) {
-            throw new IllegalArgumentException("Please enter MAC key in hexadecimal");
-        }
-        return DataConverter.hexToBytes(keyHex);
-    }
-
     /**
      * Handle generate MAC
      */
-    public void handleGenerateMAC() {
-        if (mainController != null && !mainController.checkPreflightReadiness("Message Authentication Codes", true)) {
-            return;
-        }
-        try {
-            String algorithm = authMacAlgorithmCombo.getValue();
-            if (algorithm == null) {
-                mainController.showError(new UserFacingError("Algorithm Error", "Please select a MAC algorithm.", "Select an algorithm from the dropdown list.", "authMacAlgorithmCombo"));
-                return;
-            }
-
-            // Get MAC key
-            String hsmKeyId = getHsmMacKeyId();
-            String pkcs11KeyAlias = getPkcs11MacKeyAlias();
-            byte[] manualKey = hsmKeyId == null && pkcs11KeyAlias == null ? getManualMacKey() : null;
-
-            // Get data
-            byte[] data = getInputDataAsBytes();
-            if (data == null || data.length == 0) {
-                mainController.showError(new UserFacingError("Missing Input Data", "Please enter data to MAC.", "Provide text or binary data in the message field.", "authInputArea"));
-                return;
-            }
-
-            // Get truncation
-            int truncation = getTruncationBytes();
-
-            // Generate MAC
-            byte[] mac = generateMac(data, hsmKeyId, pkcs11KeyAlias, manualKey, algorithm);
-
-            // Truncate if needed
-            if (truncation > 0 && truncation < mac.length) {
-                byte[] truncatedMac = new byte[truncation];
-                System.arraycopy(mac, 0, truncatedMac, 0, truncation);
-                mac = truncatedMac;
-            }
-
-            // Format output
-            setOutputData(mac);
-
-            mainController.showInfo("Success",
-                    String.format("MAC generated successfully!\nAlgorithm: %s\nMAC size: %d bytes",
-                            algorithm, mac.length));
-
-            Map<String, String> details = new HashMap<>();
-            details.put("Algorithm", algorithm);
-            details.put("Data Size", data.length + " bytes");
-            details.put("MAC Size", mac.length + " bytes");
-            details.put("Truncation", truncation > 0 ? truncation + " bytes" : "None");
-            details.put("Key Source", pkcs11KeyAlias != null ? "PKCS#11 Token" : hsmKeyId != null ? "Simulated HSM" : "Manual Input");
-            mainController.publish(OperationResult.forOperation("MAC Generated")
-                    .input(data).output(mac, OperationDetail.Classification.SECRET).details(details)
-                    .status("MAC generated with " + algorithm).build());
-
-        } catch (Exception e) {
-            mainController.showError(e, "MAC Error", "authMacKeyField");
-            LOG.error("MAC generation failed", e);
-        }
-    }
+    public void handleGenerateMAC() { macCoordinator().handleGenerateMAC(); }
 
     /**
      * Handle verify MAC
      */
-    public void handleVerifyMAC() {
-        if (mainController != null && !mainController.checkPreflightReadiness("Message Authentication Codes", false)) {
-            return;
-        }
-        try {
-            String algorithm = authMacAlgorithmCombo.getValue();
-            if (algorithm == null) {
-                mainController.showError(new UserFacingError("Algorithm Error", "Please select a MAC algorithm.", "Select an algorithm from the dropdown list.", "authMacAlgorithmCombo"));
-                return;
-            }
+    public void handleVerifyMAC() { macCoordinator().handleVerifyMAC(); }
 
-            // Get MAC key
-            String hsmKeyId = getHsmMacKeyId();
-            String pkcs11KeyAlias = getPkcs11MacKeyAlias();
-            byte[] manualKey = hsmKeyId == null && pkcs11KeyAlias == null ? getManualMacKey() : null;
-
-            // Get MAC from verify field
-            String macText = authMacVerifyField.getText().trim();
-            if (macText.isEmpty()) {
-                mainController.showError(new UserFacingError("Missing MAC Verification Value", "Please paste the MAC in the verification field.", "Enter MAC value to verify.", "authMacVerifyField"));
-                return;
-            }
-
-            byte[] providedMac;
-            try {
-                providedMac = com.cryptocarver.crypto.SharedMaterialParser.parseBytesByFormat(macText, "Hex / Base64");
-            } catch (Exception e) {
-                mainController.showError(new UserFacingError("MAC Error", "Invalid MAC format: " + e.getMessage(), "Check MAC format (Hex or Base64).", "authMacVerifyField"));
-                return;
-            }
-
-            // Get original data
-            byte[] data = getInputDataAsBytes();
-            if (data == null || data.length == 0) {
-                mainController.showError(new UserFacingError("Data Error", "Please enter the original data that was MACed.", "Provide original message text in the input area.", "authInputArea"));
-                return;
-            }
-
-            // Generate MAC to compare
-            byte[] calculatedMac = generateMac(data, hsmKeyId, pkcs11KeyAlias, manualKey, algorithm);
-
-            // Truncate if needed (match provided MAC length)
-            if (providedMac.length < calculatedMac.length) {
-                byte[] truncatedMac = new byte[providedMac.length];
-                System.arraycopy(calculatedMac, 0, truncatedMac, 0, providedMac.length);
-                calculatedMac = truncatedMac;
-            }
-
-            // Verify
-            boolean valid = MACOperations.constantTimeEquals(calculatedMac, providedMac);
-
-            if (valid) {
-                mainController.showInfo("Verification Success",
-                        "✅ MAC is VALID!\n\nThe data has not been tampered with.");
-            } else {
-                mainController.showError(new UserFacingError("Verification Failed",
-                        "MAC is INVALID! The data may have been tampered with or the wrong key was used.",
-                        "Check MAC key and message content.",
-                        "authMacVerifyField"));
-            }
-
-            Map<String, String> details = new HashMap<>();
-            details.put("Algorithm", algorithm);
-            details.put("Result", valid ? "VALID" : "INVALID");
-            details.put("Data Size", data.length + " bytes");
-            details.put("Truncation", providedMac.length + " bytes (provided)");
-            details.put("Key Source", pkcs11KeyAlias != null ? "PKCS#11 Token" : hsmKeyId != null ? "Simulated HSM" : "Manual Input");
-            mainController.publish(OperationResult.forOperation("MAC Verified")
-                    .input(data).output(providedMac, OperationDetail.Classification.SECRET).details(details)
-                    .status("MAC verification: " + (valid ? "VALID" : "INVALID")).build());
-
-        } catch (Exception e) {
-            mainController.showError(e, "Verification Error", "authMacVerifyField");
-            LOG.error("MAC verification failed", e);
-        }
-    }
-
-    /**
-     * Get truncation value in bytes from combo (0 = full MAC)
-     */
-    private int getTruncationBytes() {
-        String value = authMacTruncationCombo.getValue();
-        if (value == null || value.startsWith("0")) {
-            return 0; // Full MAC, no truncation
-        }
-        try {
-            // Extract number from "4 (standard)" etc.
-            if (value.contains(" ")) {
-                return Integer.parseInt(value.split(" ")[0]);
-            }
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
-    private byte[] generateMac(byte[] data, String hsmKeyId, String pkcs11KeyAlias, byte[] manualKey, String algorithm) throws Exception {
-        if (pkcs11KeyAlias != null) {
-            if ("GMAC-AES".equals(algorithm) || "Poly1305".equals(algorithm)) {
-                throw new IllegalArgumentException(algorithm + " is not available through the generic PKCS#11 MAC path");
-            }
-            return com.cryptocarver.crypto.hsm.Pkcs11SessionManager.getInstance().requireSession()
-                    .mac(pkcs11KeyAlias, data, algorithm);
-        }
-        if ("GMAC-AES".equals(algorithm)) {
-            String nonceHex = authMacNonceField.getText().trim();
-            if (nonceHex.isEmpty()) {
-                throw new IllegalArgumentException("GMAC requires a unique nonce/IV in hexadecimal");
-            }
-            byte[] nonce = DataConverter.hexToBytes(nonceHex.replaceAll("\\s+", ""));
-            if (hsmKeyId != null) {
-                return com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().generateGmac(hsmKeyId, data, nonce);
-            }
-            return MACOperations.generateGmac(data, manualKey, nonce);
-        }
-        if ("Poly1305".equals(algorithm)) {
-            if (hsmKeyId != null) {
-                return com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().generatePoly1305(hsmKeyId, data);
-            }
-            return MACOperations.generatePoly1305(data, manualKey);
-        }
-        if (hsmKeyId != null) {
-            return com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().generateMac(hsmKeyId, data, algorithm);
-        }
-        return MACOperations.generate(data, manualKey, algorithm);
-    }
-
-    // ============================================================
-    // HELPER METHODS
-    // ============================================================
-
-    private byte[] getInputDataAsBytes() {
-        return AuthenticationDataFormatter.read(authInputArea, inputFormatCombo, mainController);
-    }
-
-    private void setOutputData(byte[] data) {
-        AuthenticationDataFormatter.write(authOutputArea, outputFormatCombo, data, mainController);
-    }
 }

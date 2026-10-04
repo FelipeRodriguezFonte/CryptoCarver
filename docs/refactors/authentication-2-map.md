@@ -42,13 +42,17 @@ El límite previsto de AuthenticationMacCoordinator comprende los dos handlers y
 - Parsear/validar la clave manual, resolver la fuente elegida, validar nonce y truncado, producir MAC, parsear el valor pegado y comparar con tiempo constante son lógica del coordinador.
 - Obtener texto/formato de los controles, mostrar validaciones/preflight, mostrar el MAC generado y publicar OperationResult son dependencias de UI/servicios que entran por un record View de Supplier y el Supplier<StatusReporter>.
 - MACOperations, SharedMaterialParser, SimulatedHsmProvider y Pkcs11SessionManager siguen siendo las dependencias existentes. No se toca crypto/.
-- Riesgo de confidencialidad a reproducir antes de corregir: generación agrega el MAC en el detalle Output y usa .output(mac) sin clasificación; verificación también publica .output(providedMac) sin clasificar. La caracterización comprobará si esto expone bytes en superficies restringidas.
+- Defecto de confidencialidad reproducido y corregido antes de extraer: generación duplicaba el MAC en el detalle Output y tanto generación como verificación publicaban los bytes sin clasificación. La prueba previa observó fugas en perfiles restringidos; el arreglo elimina el detalle y clasifica ambos outputs como SECRET. El detalle de reproducción y el digest están en authentication-2-characterization-failures.md.
 - Los handlers son síncronos y consumen el estado actual del formulario dentro de una única acción. El límite es separable pasando proveedores vivos de controles; no requiere callback al controlador ni altera el orden de eventos. Si la caracterización contradice este análisis, no se fuerza la extracción.
 
 ## Caracterización
 
-La nueva AuthenticationMacCharacterizationUITest cubrirá generación/verificación completa con clave inventada, MAC alterado, clave ausente, clave de longitud incorrecta y mensajes legibles en EN/ES. Observará FULL_LAB, MASKED y REDACTED, incluyendo historial, Shelf, barra de estado, visor expandido, inspector y telemetría/logs; el test aislará y restaurará AppSettings, Shelf e historial. Anotará todos los fallos observados en authentication-2-characterization-failures.md antes de cualquier arreglo de producto y antes de fijar el digest protegido.
+AuthenticationMacCharacterizationUITest cubre generación/verificación completa con clave inventada, MAC alterado, clave ausente, clave de longitud incorrecta y mensajes legibles en EN/ES. Observa FULL_LAB, MASKED y REDACTED, incluyendo historial, Shelf, barra de estado, visor expandido, inspector y logs; el test aísla/restaura AppSettings, Shelf e historial. El ensayo defectuoso se anotó antes del arreglo y el transcript protegido quedó fijado después.
 
-## Extracción prevista
+## Extracción aplicada
 
-El coordinador se creará perezosamente. handleGenerateMAC() y handleVerifyMAC() seguirán siendo API pública y delegados de una línea. El coordinador recibirá un record View con Supplier de los controles/estado necesarios y Supplier<StatusReporter>, sin capturar AuthenticationController.
+AuthenticationMacCoordinator recibe un record View de proveedores para algoritmos, material/fuente de clave, nonce, truncado, controles de entrada/salida y formatos. El getter perezoso captura referencias directas a controles y Supplier<StatusReporter>; no captura AuthenticationController. Los dos handlers públicos son delegados de una línea. La comprobación de fuente PKCS#11 que usa refreshHsmKeys quedó inline en el controlador de UI y el coordinador conserva su propio helper para resolver la clave al operar.
+
+InlineErrorBannerTest ajusta un único fixture: antes mutaba por reflexión mainController, lo que no actualiza el Supplier del coordinador; ahora llama al init público con el reporter de prueba y conserva los formatos cargados. La suite normal detectó el desajuste porque quedó visible el banner de preflight anterior, no porque cambiara la validación de producción.
+
+El SHA-256 del transcript protegido, verificado antes y después de la extracción, es 95e2692fb07d42fca1f02df27fda47240d1cdb0120120ed8e153031880dad598. AuthenticationController pasa de 1163 a 955 líneas (−208).
