@@ -40,4 +40,8 @@ La selección de nodo y la presentación de inspector son separables mediante ca
 
 `ProcessSelectionCoordinator` recibe un `View` nuevo por invocación. Sus suppliers consultan nodos, conexiones, selección, secretos transitorios y controles JavaFX al usarlos; callbacks conectan guardado, renderer, cálculo de contratos, redibujado, conexión y texto localizado. La vista no se guarda en el coordinador. El controlador conserva `select(ProcessDefinition.Node)`, `selectNodeById(String)` y `updateSelectionUi()` como delegados de una línea; la firma pública de `selectNodeById` no cambia. `orderedConnectionPair`, la selección de conexión, el guardado del inspector y el cálculo de etiquetas/representación siguen como puertos del controlador.
 
-La caracterización previa no encontró defectos. El SHA de la transcripción antes y después de extraer es `76ea24e9f0beb0df58d8ad4b8e0fd978e7968ac2086c3d659173bd6c22d88fdd`. El controlador queda en 1739 líneas (−64 respecto a la base). El test caracterizador enfocado pasó después de la extracción; la puerta completa de dos suites se ejecuta antes de cerrar la fase.
+La caracterización previa no encontró defectos. El SHA de la transcripción antes y después de extraer es `76ea24e9f0beb0df58d8ad4b8e0fd978e7968ac2086c3d659173bd6c22d88fdd`. El controlador queda en 1739 líneas (−64 respecto a la base). El test caracterizador enfocado pasó después de la extracción, conservando el SHA.
+
+## Puerta de control
+
+Tras la extracción, `mvn -o -q test -Plow-cpu` pasó: 2858 tests, 0 fallos, 0 errores y 1 omitido. Por separado, `mvn -o -q test -Plow-cpu -DrunUiTests=true` pasó: 514 tests, 0 fallos, 0 errores y 0 omitidos. Los informes de Process Designer no registran fallos; `ExpandedViewerLifecycleUITest` pasó (3 tests), por lo que no fue necesario comprobarlo contra `main`. Fase 2 verificada.
