@@ -57,3 +57,11 @@ AuthenticationKeyCharacterizationUITest usa un par RSA generado para el test. Pr
 AuthenticationKeyCoordinator recibe un record View con Supplier de algoritmo, controles PEM, menús Shelf, etiqueta y AuthenticationKeyState, junto a Supplier<StatusReporter>. El getter perezoso contiene proveedores de referencias a los controles y al holder compartido; no captura AuthenticationController. Los métodos públicos loadGeneratedKeyPair y las rutas FXML de archivo/portapapeles/Shelf permanecen en AuthenticationController como delegados de una línea. El reporter se resuelve al invocar, de forma que init(...) puede sustituirlo sin retener un controlador.
 
 El transcript mantuvo el digest cb01b7abb468fe19fabe21f76351bfc80a20c0706809ce5f6a06c275c090c805 antes y después de extraer. AuthenticationController pasa de 955 a 814 líneas (−141). Los estados de etiqueta observados para selección Shelf siguen siendo Public solamente al elegir privada→pública y Private solamente al elegir pública→privada.
+
+## Puerta de control de fase 3
+
+- `mvn -o -q test -Plow-cpu`: 2864 tests, 0 fallos, 0 errores, 1 omitido (422 informes Surefire actualizados en esta ejecución).
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: 520 tests, 0 fallos, 0 errores, 0 omitidos (107 informes UI actualizados; recuento distinto de la suite normal).
+- ExpandedViewerLifecycleUITest pasó (3 tests). No hubo fallos que comparar contra main.
+- AuthenticationSignatureCharacterizationUITest, AuthenticationMacCharacterizationUITest y AuthenticationKeyCharacterizationUITest pasaron; sus asserts verificaron los SHA-256 completos fijados arriba después de la extracción.
+- Rama `codex/authentication-1`; ambas puertas están limpias.
