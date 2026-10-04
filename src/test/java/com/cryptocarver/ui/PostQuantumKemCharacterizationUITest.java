@@ -224,8 +224,8 @@ class PostQuantumKemCharacterizationUITest {
                     Files.writeString(Path.of("target/pqc-kem-characterization.txt"), joined, StandardCharsets.UTF_8);
                     String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                             .digest(joined.getBytes(StandardCharsets.UTF_8)));
-                    assertEquals(2, violations.size(), String.join("\n", violations) + "\n" + joined);
-                    assertEquals("cbc6ecb8aa880d65b899199f0b853489812ddbcf3b37606bdf3c5ff8c6686368",
+                    assertEquals(1, violations.size(), String.join("\n", violations) + "\n" + joined);
+                    assertEquals("20caaf8a3c033c1b4cab90ee5484cb6db874bf45f158a5fa51ca35f4ff7088b6",
                             digest, joined);
                 } catch (Throwable error) { throw new AssertionError(error); }
             });
@@ -269,12 +269,9 @@ class PostQuantumKemCharacterizationUITest {
     }
     private static boolean readableKEMMismatch(LanguagePreference language, String error) {
         String lower = error == null ? "" : error.toLowerCase(java.util.Locale.ROOT);
-        int separator = lower.indexOf('|');
-        String message = separator >= 0 ? lower.substring(separator + 1) : lower;
-        return !message.isBlank() && (language == LanguagePreference.EN
-                ? message.contains("generate a key pair")
-                : message.contains("genera un par") || message.contains("generar un par")
-                        || message.contains("algoritmo seleccionado"));
+        return language == LanguagePreference.EN
+                ? lower.contains("kem algorithm mismatch") && lower.contains("does not match the loaded key")
+                : lower.contains("algoritmo kem incompatible") && lower.contains("no coincide con la clave cargada");
     }
     private static boolean readableMalformedCiphertext(LanguagePreference language, String error) {
         String lower = error == null ? "" : error.toLowerCase(java.util.Locale.ROOT);

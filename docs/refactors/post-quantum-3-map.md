@@ -101,5 +101,8 @@ its secret detail and the existing encapsulation policy. The characterization
 checks the raw output classification and all MASKED/REDACTED surfaces again.
 The post-fix transcript SHA-256 is
 `cbc6ecb8aa880d65b899199f0b853489812ddbcf3b37606bdf3c5ff8c6686368`; the
-remaining recorded defects are untranslated algorithm-mismatch feedback and
-the blank benchmark result.
+remaining recorded defect is the blank benchmark result. The KEM mismatch
+feedback has been localized in a separate fix; its characterization digest is
+`20caaf8a3c033c1b4cab90ee5484cb6db874bf45f158a5fa51ca35f4ff7088b6`. The
+focused rerun recorded both localized EN/ES titles and mismatch messages; only
+the benchmark's blank output remains to be fixed.

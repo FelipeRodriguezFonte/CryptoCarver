@@ -190,7 +190,9 @@ public class PostQuantumController {
             requireKemKeyPair();
             String selectedAlgorithm = pqcKemAlgoCombo.getValue();
             if (selectedAlgorithm == null || !PostQuantumOperations.areAlgorithmsCompatible(selectedAlgorithm, keyState.publicKey().getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError("KEM Algorithm Error", "Generate a key pair for the selected ML-KEM/Kyber algorithm first.");
+                if (statusReporter != null) statusReporter.showError(
+                        t("module.pqc.error.kemAlgorithmMismatchTitle"),
+                        t("module.pqc.error.kemAlgorithmMismatch", selectedAlgorithm, keyState.publicKey().getAlgorithm()));
                 return;
             }
             PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(keyState.publicKey(), selectedAlgorithm);
