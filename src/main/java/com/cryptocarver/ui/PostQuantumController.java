@@ -202,7 +202,7 @@ public class PostQuantumController {
             );
             if (statusReporter != null) {
                 statusReporter.publish(OperationResult.forOperation("PQC Sign")
-                        .input(data).output(signature).details(details)
+                        .input(data).output(signature, com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
                         .status("PQC signature generated")
                         .build());
             }
@@ -253,7 +253,7 @@ public class PostQuantumController {
             );
             if (statusReporter != null) {
                 statusReporter.publish(OperationResult.forOperation("PQC Verify")
-                        .input(data).output(signature).details(details)
+                        .input(data).output(signature, com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
                         .status(verified ? "PQC signature is valid" : "PQC signature is invalid")
                         .build());
             }

@@ -92,3 +92,17 @@ unmodified phase-2 baseline. Its normalized transcript digest was
   transcript digest. `PostQuantumSignatureCharacterizationUITest` pins the
   recorded transcript with SHA-256
   `8d714330589f20b66158732e13ce884051777331101d9fdeb055dff892ca0cfe`.
+
+## Fix 1: classify raw signatures as SECRET
+
+Both `PQC Sign` and `PQC Verify` now publish output bytes with
+`OperationDetail.Classification.SECRET`. This preserves the local signing
+output field and `FULL_LAB` result access, while the shell suppresses raw
+signature bytes from result viewer, Shelf, and expanded viewer in `MASKED` and
+`REDACTED`. Inspector, history, status bar, and captured logs remain free of
+signature bytes. The localization findings below remain open for a separate
+fix.
+
+The updated characterization expects exactly those three localized-feedback
+findings in its transcript and passes. The full transcript SHA-256 is
+`ddd817577ea1a0cceba67afa8a5feb94c1c224b5e2d8637d8c5a84ad4a4aec3f`.

@@ -168,6 +168,7 @@ class PostQuantumSignatureCharacterizationUITest {
                         controller.handlePQCSign();
                         OperationResult signed = lastResult(shell);
                         assertNotNull(signed);
+                        assertEquals(OperationDetail.Classification.SECRET, signed.getOutputClassification());
                         String signature = HexFormat.of().withUpperCase().formatHex(signed.getOutput());
                         signatures.add(signature);
                         assertEquals(signature, output.getText());
@@ -178,6 +179,7 @@ class PostQuantumSignatureCharacterizationUITest {
                         controller.handlePQCVerify();
                         OperationResult verified = lastResult(shell);
                         assertEquals("PQC Verify", verified.getOperation());
+                        assertEquals(OperationDetail.Classification.SECRET, verified.getOutputClassification());
                         signatures.add(HexFormat.of().withUpperCase().formatHex(verified.getOutput()));
                         inspectSurfaces(profile, signature, privatePem, "valid verification", transcript, violations);
                         transcript.add(profile + " sign+verify=valid local-output=available classification="
@@ -228,8 +230,8 @@ class PostQuantumSignatureCharacterizationUITest {
                     Files.writeString(Path.of("target/pqc-signature-characterization.txt"), joined, StandardCharsets.UTF_8);
                     String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                             .digest(joined.getBytes(StandardCharsets.UTF_8)));
-                    assertEquals(9, violations.size(), String.join("\n", violations) + "\n" + joined);
-                    assertEquals("8d714330589f20b66158732e13ce884051777331101d9fdeb055dff892ca0cfe",
+                    assertEquals(3, violations.size(), String.join("\n", violations) + "\n" + joined);
+                    assertEquals("ddd817577ea1a0cceba67afa8a5feb94c1c224b5e2d8637d8c5a84ad4a4aec3f",
                             digest, joined);
                 } catch (Throwable error) {
                     throw new AssertionError(error);
