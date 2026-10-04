@@ -4,6 +4,7 @@ import com.cryptocarver.crypto.SignatureOperations;
 import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.util.DataConverter;
+import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -757,7 +758,7 @@ public class AuthenticationController {
             details.put("Signature Size", signature.length + " bytes");
             details.put("Key Type", currentPrivateKey != null ? currentPrivateKey.getAlgorithm() : "Unknown");
             mainController.publish(OperationResult.forOperation("Data Signed")
-                    .input(data).output(signature).details(details)
+                    .input(data).output(signature, OperationDetail.Classification.SECRET).details(details)
                     .status("Signature created with " + algorithm).build());
 
         } catch (Exception e) {
@@ -838,7 +839,7 @@ public class AuthenticationController {
             details.put("Data Size", data.length + " bytes");
             details.put("Key Type", currentPublicKey != null ? currentPublicKey.getAlgorithm() : "Unknown");
             mainController.publish(OperationResult.forOperation("Signature Verified")
-                    .input(data).output(signature).details(details)
+                    .input(data).output(signature, OperationDetail.Classification.SECRET).details(details)
                     .status("Signature verification: " + (valid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {

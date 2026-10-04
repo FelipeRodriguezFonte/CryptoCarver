@@ -15,3 +15,7 @@ La transcripción de línea base no incluye PEM, firmas, secretos ni bytes de me
 `3cc974344c23208d6ed8ac63a3d0f5576f4d6f571e951a6d55a1dd6157291cc4`
 
 El defecto de clasificación se corregirá en su commit propio después de este commit de caracterización. La prueba exigirá entonces que la captura de resultado, Shelf y visor expandido queden protegidos bajo ambos perfiles restringidos; el nuevo digest representará el resultado protegido.
+
+## Resultado tras el arreglo de clasificación
+
+Se publicó la firma de `Data Signed` y `Signature Verified` como `SECRET`, dejando que la política común aplique `***MASKED***` o contenido vacío. La captura, Shelf y visor quedan protegidos; el historial continúa enmascarado y el inspector, estado y logs siguen sin contener claves ni firmas. La transcripción protegida fijada por la prueba tiene SHA-256 `892112128b7a2f5d274d3f4c845d1298c3488e6296ac0da48c2fbc6b94d8d62f`. El nuevo digest corresponde al cambio de estado `visible/leaked` → `protected/blocked` y está justificado por el fallo anterior.

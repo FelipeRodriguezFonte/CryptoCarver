@@ -245,7 +245,7 @@ class AuthenticationSignatureCharacterizationUITest {
         String joined = String.join("\n", transcript);
         Files.writeString(Path.of("target/authentication-signature-transcript.txt"), joined + "\n");
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
-        assertEquals("3cc974344c23208d6ed8ac63a3d0f5576f4d6f571e951a6d55a1dd6157291cc4", digest(joined), joined);
+        assertEquals("892112128b7a2f5d274d3f4c845d1298c3488e6296ac0da48c2fbc6b94d8d62f", digest(joined), joined);
         onFx(() -> {
             ModernMainController shell = shellRef.get();
             if (shell != null) shell.shutdown();
