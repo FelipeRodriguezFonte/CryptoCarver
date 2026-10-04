@@ -624,8 +624,8 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using ChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(combined)
-                    .enrichedOutput(enriched)
+                    .output(combined, OperationDetail.Classification.PUBLIC)
+                    .enrichedOutput(enriched, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "ChaCha20-Poly1305")
                     .status("Encrypted using ChaCha20-Poly1305")
                     .build());
@@ -678,7 +678,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using ChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(combined)
-                    .output(plaintext)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "ChaCha20-Poly1305")
                     .status("Decrypted using ChaCha20-Poly1305")
                     .build());
@@ -707,8 +707,8 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using XChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(combined)
-                    .enrichedOutput(enriched)
+                    .output(combined, OperationDetail.Classification.PUBLIC)
+                    .enrichedOutput(enriched, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "XChaCha20-Poly1305")
                     .status("Encrypted using XChaCha20-Poly1305")
                     .build());
@@ -742,7 +742,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using XChaCha20-Poly1305");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(combined)
-                    .output(plaintext)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "XChaCha20-Poly1305")
                     .status("Decrypted using XChaCha20-Poly1305")
                     .build());
