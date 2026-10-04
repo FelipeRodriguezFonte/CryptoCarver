@@ -1006,11 +1006,8 @@ public class AuthenticationController {
             details.put("MAC Size", mac.length + " bytes");
             details.put("Truncation", truncation > 0 ? truncation + " bytes" : "None");
             details.put("Key Source", pkcs11KeyAlias != null ? "PKCS#11 Token" : hsmKeyId != null ? "Simulated HSM" : "Manual Input");
-            // Add MAC Output preview
-            details.put("Output", DataConverter.bytesToHex(mac));
-
             mainController.publish(OperationResult.forOperation("MAC Generated")
-                    .input(data).output(mac).details(details)
+                    .input(data).output(mac, OperationDetail.Classification.SECRET).details(details)
                     .status("MAC generated with " + algorithm).build());
 
         } catch (Exception e) {
@@ -1090,7 +1087,7 @@ public class AuthenticationController {
             details.put("Truncation", providedMac.length + " bytes (provided)");
             details.put("Key Source", pkcs11KeyAlias != null ? "PKCS#11 Token" : hsmKeyId != null ? "Simulated HSM" : "Manual Input");
             mainController.publish(OperationResult.forOperation("MAC Verified")
-                    .input(data).output(providedMac).details(details)
+                    .input(data).output(providedMac, OperationDetail.Classification.SECRET).details(details)
                     .status("MAC verification: " + (valid ? "VALID" : "INVALID")).build());
 
         } catch (Exception e) {

@@ -30,6 +30,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -257,6 +258,9 @@ class AuthenticationMacCharacterizationUITest {
         String joined = String.join("\n", transcript);
         Files.writeString(Path.of("target/authentication-mac-transcript.txt"), joined + "\n");
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(joined.getBytes(StandardCharsets.UTF_8)));
+        assertEquals("95e2692fb07d42fca1f02df27fda47240d1cdb0120120ed8e153031880dad598", digest, joined);
         onFx(() -> {
             ModernMainController shell = shellRef.get();
             if (shell != null) shell.shutdown();

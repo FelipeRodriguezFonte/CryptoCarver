@@ -14,3 +14,7 @@ Defecto reproducido:
 - El fallo se reprodujo para los tres perfiles y con datos inventados. La transcripción del ensayo previo no se fija como digest protegido porque representa el estado defectuoso; la prueba fijará el SHA-256 cuando el fallo esté reparado.
 
 No se ajustaron umbrales de CI ni se modificó ningún test preexistente.
+
+## Arreglo caracterizado
+
+En el commit de arreglo, ambos resultados MAC clasifican el output como SECRET y se elimina el detalle público duplicado Output. La prueba volvió a pasar y confirmó que MASKED/REDACTED no filtran los valores MAC en resultado, inspector, historial, Shelf, barra, visor expandido ni logs. El transcript protegido tiene SHA-256 `95e2692fb07d42fca1f02df27fda47240d1cdb0120120ed8e153031880dad598`; el nuevo digest corresponde al cambio observado de valores expuestos a superficies protegidas.
