@@ -54,4 +54,17 @@ La ejecución de firma y verificación forma una unidad separable del resto del 
 
 `AuthenticationDataFormatter` mantiene el parseo/formateo común que también usan los handlers MAC pendientes de fase 2. La caché mutable de claves vive en un holder compartido que fase 3 usará para extraer la carga y selección. `InlineErrorBannerTest` dejó de escribir por reflexión el antiguo campo privado `currentPublicKey`: esa configuración redundante se sustituyó por el PEM público que el propio handler consume y valida. La API pública del controlador no cambia.
 
-La caracterización no añadió defectos de comportamiento. La clasificación de la firma como `SECRET` se corrigió antes de extraer y queda documentada en `authentication-1-characterization-failures.md`. El digest protegido verificado antes y después de la extracción es `892112128b7a2f5d274d3f4c845d1298c3488e6296ac0da48c2fbc6b94d8d62f`. El controlador pasa de 1359 a 1163 líneas (−196).
+La caracterización sí encontró un defecto: las firmas se publicaban con clasificación predeterminada `PUBLIC`, lo que exponía el resultado en vistas de visibilidad restringida. Se corrigió antes de extraer y el fallo y su arreglo están documentados en `authentication-1-characterization-failures.md`.
+
+El digest protegido verificado antes y después de la extracción es `892112128b7a2f5d274d3f4c845d1298c3488e6296ac0da48c2fbc6b94d8d62f`. El controlador pasa de 1359 a 1163 líneas (−196).
+
+## Puerta de control
+
+Ambas suites pasaron en ejecuciones separadas:
+
+| Comando | Pruebas | Fallos | Errores | Omitidas |
+|---|---:|---:|---:|---:|
+| `mvn -o -q test -Plow-cpu` | 2862 | 0 | 0 | 1 |
+| `mvn -o -q test -Plow-cpu -DrunUiTests=true` | 518 | 0 | 0 | 0 |
+
+El recuento UI se obtuvo de los informes Surefire actualizados por esa ejecución (105 XML; 518 pruebas), no de los informes normales que permanecían en el directorio. Los recuentos son distintos. `ExpandedViewerLifecycleUITest` pasó; no hizo falta una comparación contra `main`.
