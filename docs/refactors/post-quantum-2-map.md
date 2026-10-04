@@ -66,3 +66,26 @@ stable. After phase 2, run separately:
 
 Record each suite's count, failures, errors, and skips. Do not begin phase 3
 unless both gates pass cleanly and the counts differ.
+
+## Phase 2 baseline characterization findings (before pinning the digest)
+
+The first real-shell characterization run failed its strict checks on the
+unmodified phase-2 baseline. Its normalized transcript digest was
+`8d714330589f20b66158732e13ce884051777331101d9fdeb055dff892ca0cfe`.
+
+- Signing and verification published both raw signature outputs as PUBLIC.
+  Under both `MASKED` and `REDACTED`, the signature appeared in the shared
+  result viewer, Shelf, and expanded viewer for valid sign/verify flows and for
+  altered-signature verification. The inspector, history, status bar, and
+  captured stdout/stderr did not contain signature bytes. The private key was
+  absent from checked surfaces. The local PQC signature output field remains
+  the intended operator-facing copy area.
+- An altered signature produced readable English feedback in EN, but remained
+  “Signature is INVALID” in ES; the generic fallback remedy was Spanish, while
+  the result itself was not translated.
+- Selecting ML-DSA-65 for an ML-DSA-44 key produced an unrelated symmetric-key
+  length/structure message about the selected cipher and AES bit lengths in
+  both EN and ES. It did not identify either PQC parameter set or explain the
+  mismatch.
+- These findings are baseline defects to fix in separate commits. No
+  characterization digest is pinned until these outcomes have been recorded.
