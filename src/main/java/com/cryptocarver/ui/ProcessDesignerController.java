@@ -129,6 +129,7 @@ public class ProcessDesignerController {
 
     private final ProcessUndoRedoCoordinator undoRedoCoordinator = new ProcessUndoRedoCoordinator();
     private final ProcessLayoutCoordinator layoutCoordinator = new ProcessLayoutCoordinator();
+    private final ProcessSelectionCoordinator selectionCoordinator = new ProcessSelectionCoordinator();
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -443,35 +444,38 @@ public class ProcessDesignerController {
     }
 
     // --- Node Selection & Descriptor Inspector ---
-    void select(ProcessDefinition.Node node) {
-        saveSelectedNodeSettings();
-        selectedConnection = null;
-        if (!selectedNodeIds.contains(node.id) && selectedNodeIds.size() == 2) selectedNodeIds.clear();
-        selectedNodeIds.add(node.id);
-        selected = node;
-        selectedNodeLabel.setText(node.type + " · " + node.label);
-        if (nodeNameFieldGroup != null) {
-            nodeNameFieldGroup.setVisible(true);
-            nodeNameFieldGroup.setManaged(true);
-        }
-        if (nodeNameField != null) nodeNameField.setText(node.label == null ? "" : node.label);
+    void select(ProcessDefinition.Node node) { selectionCoordinator.select(selectionView(), node); }
 
-        NodeDescriptor desc = NodeCatalog.descriptor(node.type).orElse(null);
-        if (desc != null && dynamicInspectorContainer != null) {
-            dynamicInspectorRenderer = NodeInspectorRenderer.render(
-                    desc,
-                    node,
-                    dynamicInspectorContainer,
-                    transientSecrets.computeIfAbsent(node.id, k -> new HashMap<>()),
-                    k -> {
-                        updateRepresentationContract(selected);
-                        redraw();
-                    }
-            );
-        }
-
-        updateRepresentationContract(node);
-        updateSelectionUi();
+    private ProcessSelectionCoordinator.View selectionView() {
+        return new ProcessSelectionCoordinator.View(
+                () -> nodes,
+                () -> connections,
+                () -> selectedNodeIds,
+                () -> selected,
+                node -> selected = node,
+                () -> selectedConnection,
+                connection -> selectedConnection = connection,
+                this::saveSelectedNodeSettings,
+                () -> selectedNodeLabel,
+                () -> nodeNameFieldGroup,
+                () -> nodeNameField,
+                () -> dynamicInspectorContainer,
+                () -> transientSecrets,
+                renderer -> dynamicInspectorRenderer = renderer,
+                this::updateRepresentationContract,
+                this::redraw,
+                () -> connectSelectedButton,
+                () -> connectMenuButton,
+                () -> reverseConnectionButton,
+                () -> reverseConnectionToolbarButton,
+                () -> deleteSelectedButton,
+                this::orderedConnectionPair,
+                this::outputRepresentationOf,
+                this::connectionBetweenSelectedNodes,
+                this::nodeLabel,
+                this::portLabel,
+                this::connectToPort,
+                key -> t(key));
     }
 
     private void saveSelectedNodeSettings() {
@@ -1018,70 +1022,7 @@ public class ProcessDesignerController {
         outputContractLabel.setVisible(true); outputContractLabel.setManaged(true);
     }
 
-    private void updateSelectionUi() {
-        if (connectSelectedButton == null && connectMenuButton == null) return;
-        int count = selectedNodeIds.size();
-
-        if (count == 2) {
-            List<String> pair = orderedConnectionPair();
-            ProcessDefinition.Node dest = nodes.stream().filter(n -> n.id.equals(pair.get(1))).findFirst().orElse(null);
-            if (dest != null) {
-                com.cryptocarver.model.process.ProcessNodeHandler handler = ProcessEngine.getHandlerFor(dest.type);
-                List<com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition> ports = handler != null ? handler.inputPorts(dest) : List.of();
-                ProcessDefinition.Node sourceNode = nodes.stream().filter(n -> n.id.equals(pair.get(0))).findFirst().orElse(null);
-                Representation sourceRepresentation = sourceNode == null ? null : outputRepresentationOf(sourceNode);
-                List<com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition> availablePorts = ports.stream()
-                        .filter(port -> connections.stream().noneMatch(c -> c.to.equals(dest.id) && port.name().equals(c.targetPort)))
-                        .filter(port -> sourceRepresentation == null || port.acceptedRepresentations().contains(sourceRepresentation))
-                        .toList();
-
-                if (availablePorts.size() > 1) {
-                    if (connectSelectedButton != null) { connectSelectedButton.setVisible(false); connectSelectedButton.setManaged(false); }
-                    if (connectMenuButton != null) {
-                        connectMenuButton.getItems().clear();
-                        connectMenuButton.setText("Connect " + nodeLabel(pair.get(0)) + " to...");
-                        for (com.cryptocarver.model.process.ProcessNodeHandler.PortDefinition port : availablePorts) {
-                            javafx.scene.control.MenuItem item = new javafx.scene.control.MenuItem("Connect to " + portLabel(port.name()));
-                            item.setOnAction(e -> connectToPort(port.name()));
-                            connectMenuButton.getItems().add(item);
-                        }
-                        connectMenuButton.setVisible(true); connectMenuButton.setManaged(true);
-                    }
-                } else {
-                    if (connectMenuButton != null) {
-                        connectMenuButton.getItems().clear();
-                        connectMenuButton.setVisible(false);
-                        connectMenuButton.setManaged(false);
-                    }
-                    if (connectSelectedButton != null) {
-                        connectSelectedButton.setVisible(true); connectSelectedButton.setManaged(true);
-                        connectSelectedButton.setDisable(availablePorts.isEmpty());
-                        connectSelectedButton.setText(availablePorts.isEmpty()
-                                ? "No compatible free input ports"
-                                : "Connect " + nodeLabel(pair.get(0)) + " → " + nodeLabel(pair.get(1)));
-                        connectSelectedButton.setOnAction(e -> connectToPort(availablePorts.isEmpty() ? null : availablePorts.get(0).name()));
-                    }
-                }
-            }
-        } else {
-            if (connectMenuButton != null) { connectMenuButton.getItems().clear(); connectMenuButton.setVisible(false); connectMenuButton.setManaged(false); }
-            if (connectSelectedButton != null) {
-                connectSelectedButton.setVisible(true); connectSelectedButton.setManaged(true);
-                connectSelectedButton.setDisable(true);
-                connectSelectedButton.setText(t("module.process.selectTwo"));
-            }
-        }
-
-        boolean hasSelectedConnection = selectedConnection != null || connectionBetweenSelectedNodes() != null;
-        if (reverseConnectionButton != null) reverseConnectionButton.setDisable(!hasSelectedConnection);
-        if (reverseConnectionToolbarButton != null) reverseConnectionToolbarButton.setDisable(!hasSelectedConnection);
-        if (deleteSelectedButton != null) {
-            deleteSelectedButton.setText(hasSelectedConnection
-                    ? t("module.process.deleteSelectedConnectionShortcut")
-                    : t("module.process.deleteSelectedShortcut"));
-            deleteSelectedButton.setDisable(selected == null && selectedConnection == null && selectedNodeIds.isEmpty());
-        }
-    }
+    private void updateSelectionUi() { selectionCoordinator.updateSelectionUi(selectionView()); }
 
     private Representation outputRepresentationOf(ProcessDefinition.Node node) {
         try {
@@ -1329,12 +1270,7 @@ public class ProcessDesignerController {
     }
 
     public void selectNodeById(String nodeId) {
-        if (nodeId == null) return;
-        ProcessDefinition.Node target = nodes.stream().filter(n -> nodeId.equals(n.id)).findFirst().orElse(null);
-        if (target != null) {
-            select(target);
-            redraw();
-        }
+        selectionCoordinator.selectNodeById(selectionView(), nodeId);
     }
 
     // --- Presets ---

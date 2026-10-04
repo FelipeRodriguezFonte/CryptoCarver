@@ -35,3 +35,9 @@ La caracterización de fase 2 debe añadir una transcripción SHA-256 para selec
 ## Decisión de separabilidad
 
 La selección de nodo y la presentación de inspector son separables mediante callbacks y estado consultado al invocar el coordinador. La selección de conexiones queda en el controlador porque comparte el ciclo de guardado de inspector y selección, pero no se moverá en esta fase. Cualquier acoplamiento de orden descubierto en la caracterización obliga a documentar/saltar la extracción, no a cambiar ese orden.
+
+## Extracción aplicada
+
+`ProcessSelectionCoordinator` recibe un `View` nuevo por invocación. Sus suppliers consultan nodos, conexiones, selección, secretos transitorios y controles JavaFX al usarlos; callbacks conectan guardado, renderer, cálculo de contratos, redibujado, conexión y texto localizado. La vista no se guarda en el coordinador. El controlador conserva `select(ProcessDefinition.Node)`, `selectNodeById(String)` y `updateSelectionUi()` como delegados de una línea; la firma pública de `selectNodeById` no cambia. `orderedConnectionPair`, la selección de conexión, el guardado del inspector y el cálculo de etiquetas/representación siguen como puertos del controlador.
+
+La caracterización previa no encontró defectos. El SHA de la transcripción antes y después de extraer es `76ea24e9f0beb0df58d8ad4b8e0fd978e7968ac2086c3d659173bd6c22d88fdd`. El controlador queda en 1739 líneas (−64 respecto a la base). El test caracterizador enfocado pasó después de la extracción; la puerta completa de dos suites se ejecuta antes de cerrar la fase.
