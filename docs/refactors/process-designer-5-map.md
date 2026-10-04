@@ -32,3 +32,16 @@ La nueva `ProcessDesignerPreflightCharacterizationUITest` fijará el comportamie
 ## Decisión de separabilidad
 
 La presentación común de siete líneas es separable: solo recibe un mensaje y modifica dos controles UI. El controlador retiene los chequeos, el orden y el retorno temprano. La diferencia entre el tamaño indicado en el encargo (148 líneas) y el archivo de esta rama queda registrada; no se ampliará la extracción a la ejecución asíncrona ni al resto de `handleRunProcess`.
+
+## Cierre de fase 5
+
+Extracción realizada en `a297c9d`: `ProcessPreflightPresenter` crea la misma fila y traduce la misma envoltura de error. El controlador construye el `View` con suppliers en cada llamada y delega el método privado. La API pública no cambia. Como el método de esta rama solo tenía siete líneas, la configuración del getter y el `View` aumentan el controlador de 1333 a 1340 líneas; el controlador queda 463 líneas más corto que al inicio del encargo.
+
+`ProcessDesignerPreflightCharacterizationUITest` mantiene el digest SHA-256 `1234b586aacd1d973763894b18878d474d46a5849630a6a8e3b061ff0137cf74` (64 caracteres); se comprobó con los tres fallos y ambos perfiles.
+
+Puertas tras la extracción, ejecutadas por separado:
+
+- `mvn -o -q test -Plow-cpu`: exit 0; 2861 tests, 0 fallos, 0 errores, 1 omitido.
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: exit 0; 2861 tests, 0 fallos, 0 errores, 1 omitido. `ExpandedViewerLifecycleUITest`: 3 tests, 0 fallos, 0 errores, 0 omitidos; no se necesitó cotejo con `main`.
+
+El fallo inicial del fixture y el digest provisional están anotados en `process-designer-5-characterization-failures.md` antes de modificar el fixture y fijar el SHA. No se detectaron defectos de producto en esta fase.
