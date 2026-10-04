@@ -298,7 +298,8 @@ public class PostQuantumController {
 
             String detectedAlgorithm = result.nistName();
             if (lastDetectedAlgorithm != null && !lastDetectedAlgorithm.equals(detectedAlgorithm)) {
-                throw new IllegalArgumentException("Mismatched keys: You are trying to load a " + lastDetectedAlgorithm + " key and a " + detectedAlgorithm + " key simultaneously.");
+                throw new IllegalArgumentException(t("module.pqc.error.mismatchedAlgorithms",
+                        lastDetectedAlgorithm, detectedAlgorithm));
             }
             lastDetectedAlgorithm = detectedAlgorithm;
 
@@ -404,7 +405,7 @@ public class PostQuantumController {
             }
             return new ParsedPqcKey(publicKey, encoded, value);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("PEM key contains invalid or truncated base64/DER content.", e);
+            throw new IllegalArgumentException(t("module.pqc.error.malformedPem"), e);
         }
     }
 
@@ -456,13 +457,13 @@ public class PostQuantumController {
                 PostQuantumOperations.KEMResult kem = PostQuantumOperations.encapsulate(publicKey, publicResult.nistName());
                 byte[] recovered = PostQuantumOperations.decapsulate(privateKey, kem.encapsulation(), publicResult.nistName());
                 if (!MessageDigest.isEqual(kem.sharedSecret(), recovered)) {
-                    throw new IllegalArgumentException("Public/private keys do not form a matching " + publicResult.nistName() + " pair.");
+                    throw new IllegalArgumentException(t("module.pqc.error.nonmatchingPair", publicResult.nistName()));
                 }
             } else {
                 byte[] challenge = "CryptoCarver PQC key-pair validation".getBytes(StandardCharsets.UTF_8);
                 byte[] signature = PostQuantumOperations.sign(privateKey, challenge, publicResult.nistName());
                 if (!PostQuantumOperations.verify(publicKey, challenge, signature, publicResult.nistName())) {
-                    throw new IllegalArgumentException("Public/private keys do not form a matching " + publicResult.nistName() + " pair.");
+                    throw new IllegalArgumentException(t("module.pqc.error.nonmatchingPair", publicResult.nistName()));
                 }
             }
         } catch (IllegalArgumentException e) {

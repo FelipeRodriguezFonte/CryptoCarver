@@ -229,7 +229,7 @@ class PostQuantumKeyCharacterizationUITest {
                     Files.writeString(Path.of("target/pqc-key-characterization.txt"), joined, StandardCharsets.UTF_8);
                     String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                             .digest(joined.getBytes(StandardCharsets.UTF_8)));
-                    assertEquals("f5dcccdbce3260cdb79321da02c3d53ae36302ed999c4875fa251ccb05928871",
+                    assertEquals("7831be3ff9b4b83497f849c73ffe77c918abc8ba0e610e785c1835d7bc9a1a40",
                             digest, joined);
                     assertTrue(violations.isEmpty(), String.join("\n", violations)
                             + "\nTranscript:\n" + joined);
@@ -268,11 +268,12 @@ class PostQuantumKeyCharacterizationUITest {
     }
 
     private static boolean spanishFragment(String label, String message) {
+        String lower = message.toLowerCase(java.util.Locale.ROOT);
         return switch (label) {
-            case "malformed PEM" -> message.toLowerCase(java.util.Locale.ROOT).contains("clave pem")
-                    && message.toLowerCase(java.util.Locale.ROOT).contains("inválida");
-            case "different algorithm" -> message.toLowerCase(java.util.Locale.ROOT).contains("claves incompatibles");
-            case "nonmatching pair" -> message.toLowerCase(java.util.Locale.ROOT).contains("no forman un par");
+            case "malformed PEM" -> lower.contains("clave pem")
+                    && (lower.contains("no válidos") || lower.contains("inválidos"));
+            case "different algorithm" -> lower.contains("claves incompatibles");
+            case "nonmatching pair" -> lower.contains("no forman un par");
             default -> false;
         };
     }

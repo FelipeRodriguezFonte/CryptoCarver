@@ -106,3 +106,10 @@ EN invalid inputs=3 readable messages=3
 ES invalid inputs=3 readable messages=0
 telemetry/logs=private-key-absent
 ```
+
+The localization fix kept the English diagnostics unchanged and added Spanish
+messages for the three characterized errors. The corrected transcript is now
+3/3 readable in both EN and ES; its complete UTF-8 SHA-256 is
+`7831be3ff9b4b83497f849c73ffe77c918abc8ba0e610e785c1835d7bc9a1a40`.
+This digest change is expected because the transcript now records the corrected
+Spanish outcome (`3` instead of `0`).
