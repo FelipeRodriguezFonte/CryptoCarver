@@ -585,24 +585,18 @@ final class SymmetricCipherCoordinator {
         }
     }
 
-    /** Key Lab keys cannot run Salsa20: the lab only offers the generic and ChaCha20 operations. */
-    private static byte[] salsa20Key(String hsmKeyId, byte[] manualKey) {
-        if (hsmKeyId != null) {
-            throw new IllegalArgumentException("Salsa20 is not available for Key Lab keys; use a manual key");
-        }
-        return manualKey;
-    }
-
     private void handleSalsa20Encrypt(byte[] plaintext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
             warnIfNonceReused("Salsa20", null, hsmKeyId, manualKey, iv);
-            byte[] ciphertext = SymmetricCipher.encryptSalsa20(plaintext, salsa20Key(hsmKeyId, manualKey), iv);
+            byte[] ciphertext = hsmKeyId != null
+                    ? com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().encryptSalsa20(hsmKeyId, plaintext, iv)
+                    : SymmetricCipher.encryptSalsa20(plaintext, manualKey, iv);
             setOutputData(ciphertext);
             reporter().updateStatus("Encrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(ciphertext)
+                    .output(ciphertext, com.cryptocarver.model.OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "Salsa20")
                     .status("Encrypted using Salsa20")
                     .build());
@@ -642,12 +636,14 @@ final class SymmetricCipherCoordinator {
     private void handleSalsa20Decrypt(byte[] ciphertext, String hsmKeyId, byte[] manualKey) {
         try {
             byte[] iv = DataConverter.hexToBytes(ivField.getText().trim());
-            byte[] plaintext = SymmetricCipher.decryptSalsa20(ciphertext, salsa20Key(hsmKeyId, manualKey), iv);
+            byte[] plaintext = hsmKeyId != null
+                    ? com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().decryptSalsa20(hsmKeyId, ciphertext, iv)
+                    : SymmetricCipher.decryptSalsa20(ciphertext, manualKey, iv);
             setOutputData(plaintext);
             reporter().updateStatus("Decrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(ciphertext)
-                    .output(plaintext)
+                    .output(plaintext, com.cryptocarver.model.OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "Salsa20")
                     .status("Decrypted using Salsa20")
                     .build());

@@ -2,6 +2,11 @@ package com.cryptocarver.ui;
 
 import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
+import com.cryptocarver.model.AppSettings;
+import com.cryptocarver.model.LanguagePreference;
+import com.cryptocarver.model.OperationDetail.Classification;
+import com.cryptocarver.model.ResultPresentationPolicy;
+import com.cryptocarver.model.SecretVisibilityProfile;
 import com.cryptocarver.model.ShelfPackage;
 import com.cryptocarver.util.DataConverter;
 import javafx.application.Platform;
@@ -20,6 +25,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -178,6 +185,148 @@ class SymmetricCipherCharacterizationUITest {
             panel.select("ChaCha20", null, null);
             assertEquals("Hex Nonce (12 bytes recommended for ChaCha20)", panel.field("ivField").getPromptText());
         });
+    }
+
+    @Test
+    void salsa20KeyLabMatchesManualRoundTripAndEnforcesUsage() throws Exception {
+        var provider = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance();
+        var usable = importLabKey(32, Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT,
+                com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT));
+        var shortKey = importLabKey(16, Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT,
+                com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT));
+        var encryptOnly = importLabKey(32, Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT));
+        var decryptOnly = importLabKey(32, Set.of(com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT));
+        LanguagePreference previousLanguage = AppSettings.getInstance().getLanguagePreference();
+        try {
+            withPanel(panel -> {
+                panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
+                panel.material("", NONCE_8, "", "");
+                panel.controller().selectLabKey(usable.getId());
+                panel.select("Salsa20", null, null);
+                panel.encrypt();
+                String hsmCiphertext = panel.output().getText();
+                byte[] manualCiphertext;
+                try {
+                    manualCiphertext = com.cryptocarver.crypto.SymmetricCipher.encryptSalsa20(
+                            MESSAGE.getBytes(StandardCharsets.UTF_8), DataConverter.hexToBytes(KEY_256),
+                            DataConverter.hexToBytes(NONCE_8));
+                } catch (Exception error) {
+                    throw new AssertionError(error);
+                }
+                assertEquals(DataConverter.bytesToHex(manualCiphertext), hsmCiphertext);
+
+                panel.combo("symKeySourceCombo").setValue("Manual Input");
+                panel.combo("symKeySourceCombo").getOnAction().handle(null);
+                panel.material(KEY_256, NONCE_8, "", "");
+                panel.encrypt();
+                assertEquals(hsmCiphertext, panel.output().getText());
+
+                panel.controller().selectLabKey(usable.getId());
+                panel.select("Salsa20", null, null);
+                panel.inputs("Hexadecimal", hsmCiphertext, "Text (UTF-8)");
+                panel.material("", NONCE_8, "", "");
+                panel.decrypt();
+                String recovered = panel.output().getText();
+                assertEquals(MESSAGE, recovered);
+                try {
+                    assertEquals("4821c5b9fb3654a56a591d5f12d56c120ac49fe57444bbb049f74b6073b5a54d",
+                            digest(List.of("Salsa20 Key Lab ciphertext=" + hsmCiphertext,
+                                    "plaintext=" + recovered)));
+                } catch (Exception error) {
+                    throw new AssertionError(error);
+                }
+
+                for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
+                    AppSettings.getInstance().setLanguagePreference(language);
+                    panel.controller().selectLabKey(shortKey.getId());
+                    panel.select("Salsa20", null, null);
+                    panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
+                    panel.encrypt();
+                    String error = panel.reporter().drain();
+                    assertTrue(error.contains("256-bit") && error.contains("32 byte"),
+                            language + " should explain the required key length: " + error);
+                }
+
+                panel.controller().selectLabKey(decryptOnly.getId());
+                panel.select("Salsa20", null, null);
+                panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
+                panel.encrypt();
+                assertTrue(panel.reporter().drain().contains("does not support usage: ENCRYPT"));
+
+                panel.controller().selectLabKey(encryptOnly.getId());
+                panel.select("Salsa20", null, null);
+                panel.inputs("Hexadecimal", hsmCiphertext, "Text (UTF-8)");
+                panel.decrypt();
+                assertTrue(panel.reporter().drain().contains("does not support usage: DECRYPT"));
+            });
+        } finally {
+            AppSettings.getInstance().setLanguagePreference(previousLanguage);
+            provider.deleteKey(usable.getId());
+            provider.deleteKey(shortKey.getId());
+            provider.deleteKey(encryptOnly.getId());
+            provider.deleteKey(decryptOnly.getId());
+        }
+    }
+
+    @Test
+    void salsa20RestrictedProfilesProtectDecryptedOutputFromHistoryShelfAndStatus() throws Exception {
+        var provider = com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance();
+        var key = importLabKey(32, Set.of(com.cryptocarver.crypto.hsm.KeyUsage.ENCRYPT,
+                com.cryptocarver.crypto.hsm.KeyUsage.DECRYPT));
+        SecretVisibilityProfile previous = AppSettings.getInstance().getSecretVisibilityProfile();
+        try {
+            withPanel(panel -> {
+                panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
+                panel.material("", NONCE_8, "", "");
+                panel.controller().selectLabKey(key.getId());
+                panel.select("Salsa20", null, null);
+                panel.encrypt();
+                String ciphertext = panel.output().getText();
+                panel.inputs("Hexadecimal", ciphertext, "Text (UTF-8)");
+                panel.decrypt();
+                assertEquals(MESSAGE, panel.output().getText());
+                OperationResult result = panel.reporter().published.get(panel.reporter().published.size() - 1);
+                panel.reporter().drain();
+                String statuses = panel.reporter().statusText();
+
+                for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED,
+                        SecretVisibilityProfile.REDACTED)) {
+                    AppSettings.getInstance().setSecretVisibilityProfile(profile);
+                    assertFalse(OperationResultRenderer.render(result, profile).contains(MESSAGE),
+                            "published output under " + profile);
+                    assertTrue(ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
+                            ResultPresentationPolicy.classifyPublishedResult(result), profile),
+                            "Shelf capture under " + profile);
+                    String historyView = ResultPresentationPolicy.detailsForHistory(result).stream()
+                            .map(detail -> detail.classification() == Classification.SENSITIVE
+                                    ? "***MASKED***" : detail.value())
+                            .reduce((a, b) -> a + "\\n" + b).orElse("");
+                    assertFalse(historyView.contains(MESSAGE));
+                    assertFalse(historyView.contains(KEY_256));
+                    assertFalse(historyView.contains(NONCE_8));
+                    assertFalse(statuses.contains(MESSAGE));
+                    assertFalse(statuses.contains(KEY_256));
+                    assertFalse(statuses.contains(NONCE_8));
+                    assertNull(panel.controller().createAuthenticatedCipherShelfPackage());
+                }
+            });
+        } finally {
+            AppSettings.getInstance().setSecretVisibilityProfile(previous);
+            provider.deleteKey(key.getId());
+        }
+    }
+
+    private static com.cryptocarver.crypto.hsm.KeyMaterial importLabKey(int length,
+            Set<com.cryptocarver.crypto.hsm.KeyUsage> usages) {
+        String id = "salsa20-fixture-" + java.util.UUID.randomUUID();
+        byte[] bytes = new byte[length];
+        for (int i = 0; i < bytes.length; i++) bytes[i] = (byte) i;
+        var key = com.cryptocarver.crypto.hsm.KeyMaterialFactory.fromSecretKey(id,
+                new javax.crypto.spec.SecretKeySpec(bytes, "AES"),
+                com.cryptocarver.crypto.hsm.KeyExportability.EXPORTABLE, usages);
+        key.setName("Invented Salsa20 test key");
+        com.cryptocarver.crypto.hsm.SimulatedHsmProvider.getInstance().importKey(key);
+        return key;
     }
 
     @Test
@@ -386,6 +535,7 @@ class SymmetricCipherCharacterizationUITest {
         private final ComboBox<String> inputFormat;
         private final ComboBox<String> outputFormat;
         private final List<String> lines = new ArrayList<>();
+        private final List<OperationResult> published = new ArrayList<>();
 
         Recorder(ComboBox<String> inputFormat, ComboBox<String> outputFormat) {
             this.inputFormat = inputFormat;
@@ -432,6 +582,7 @@ class SymmetricCipherCharacterizationUITest {
 
         @Override
         public void publish(OperationResult result) {
+            published.add(result);
             List<String> details = result.getDetails().stream()
                     .map(detail -> detail.name() + "=" + detail.value())
                     .sorted()
@@ -440,6 +591,11 @@ class SymmetricCipherCharacterizationUITest {
                     + String.join(",", details) + "|" + DataConverter.bytesToHex(result.getInput())
                     + "|" + DataConverter.bytesToHex(result.getOutput())
                     + "|" + (result.getEnrichedOutput() == null ? "-" : result.getEnrichedOutput().length()));
+        }
+
+        String statusText() {
+            return lines.stream().filter(line -> line.startsWith("status "))
+                    .reduce((a, b) -> a + "\n" + b).orElse("");
         }
     }
 }
