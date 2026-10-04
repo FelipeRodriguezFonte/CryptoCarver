@@ -89,7 +89,7 @@ final class ProcessConnectionCoordinator {
 
         Representation sourceRepresentation = view.outputRepresentationOf().apply(sourceNode);
         for (Circle circle : view.inputPortHandles().get()) {
-            if (circle.getUserData() instanceof ProcessDesignerController.PortHandleData data) {
+            if (circle.getUserData() instanceof ProcessCanvasRenderer.PortHandleData data) {
                 if (data.node().id.equals(sourceNode.id)) {
                     circle.setOpacity(0.3);
                     continue;

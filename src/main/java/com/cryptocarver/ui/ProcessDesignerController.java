@@ -11,7 +11,6 @@ import com.cryptocarver.model.process.NodeParameter;
 import com.cryptocarver.model.process.ProcessDefinition;
 import com.cryptocarver.model.process.ProcessDefinitionCodec;
 import com.cryptocarver.model.process.ProcessEngine;
-import com.cryptocarver.model.process.ProcessNodeHandler;
 import com.cryptocarver.model.process.ProcessValidator;
 import com.cryptocarver.model.process.Representation;
 import com.cryptocarver.model.process.handlers.SymmetricCipherSpec;
@@ -28,9 +27,6 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.CubicCurve;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -39,7 +35,6 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Controller for Process Designer.
@@ -96,7 +91,6 @@ public class ProcessDesignerController {
     // --- State & Canvas ---
     final List<ProcessDefinition.Node> nodes = new ArrayList<>();
     final List<ProcessDefinition.Connection> connections = new ArrayList<>();
-    private final Map<String, StackPane> views = new LinkedHashMap<>();
     final LinkedHashSet<String> selectedNodeIds = new LinkedHashSet<>();
     private ProcessDefinition.Node selected;
     private ProcessDefinition.Connection selectedConnection;
@@ -112,10 +106,6 @@ public class ProcessDesignerController {
     final Map<String, Map<String, char[]>> transientSecrets = new HashMap<>();
     private NodeInspectorRenderer dynamicInspectorRenderer;
 
-    // Interactive connection drag state
-    record PortHandleData(ProcessDefinition.Node node, ProcessNodeHandler.PortDefinition port) {}
-    final List<Circle> inputPortHandles = new ArrayList<>();
-
     // Performance tracking
     public int validationCounter = 0;
 
@@ -129,6 +119,7 @@ public class ProcessDesignerController {
     private final ProcessLayoutCoordinator layoutCoordinator = new ProcessLayoutCoordinator();
     private final ProcessSelectionCoordinator selectionCoordinator = new ProcessSelectionCoordinator();
     private final ProcessConnectionCoordinator connectionCoordinator = new ProcessConnectionCoordinator();
+    private ProcessCanvasRenderer processCanvasRenderer;
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -502,285 +493,37 @@ public class ProcessDesignerController {
     }
 
     // --- Redraw and Node/Connection Rendering ---
-    void redraw() {
-        if (workflowCanvas == null) return;
-        workflowCanvas.getChildren().clear();
-        views.clear();
-        inputPortHandles.clear();
+    void redraw() { processCanvasRenderer().redraw(canvasView()); }
 
-        Map<String, Representation> reps = new HashMap<>();
-        try {
-            validationCounter++;
-            // Validate a copy: the engine fills in a connection's target port as it goes, and a
-            // repaint must not rewrite the live graph. Losing the distinction between a link the
-            // user aimed at a port and one the engine defaulted would let the canvas stack two
-            // links on one port and only complain when the process is run.
-            reps = ProcessEngine.validate(snapshot(toDefinition()));
-        } catch (Exception ignored) {}
-
-        for (ProcessDefinition.Connection connection : connections) {
-            ProcessDefinition.Node from = nodes.stream().filter(n -> n.id.equals(connection.from)).findFirst().orElse(null);
-            ProcessDefinition.Node to = nodes.stream().filter(n -> n.id.equals(connection.to)).findFirst().orElse(null);
-            if (from != null && to != null) addConnectionView(connection, from, to);
-        }
-
-        for (ProcessDefinition.Node node : nodes) {
-            StackPane nodeView = createNodeView(node, reps.get(node.id));
-            views.put(node.id, nodeView);
-            workflowCanvas.getChildren().add(nodeView);
-        }
-
-        updateCanvasGeometry();
+    private ProcessCanvasRenderer processCanvasRenderer() {
+        if (processCanvasRenderer == null) processCanvasRenderer = new ProcessCanvasRenderer();
+        return processCanvasRenderer;
     }
 
-    private StackPane createNodeView(ProcessDefinition.Node node, Representation rep) {
-        String badge = rep != null ? " [" + rep.name() + "]" : "";
-        Label label = new Label(node.label + badge);
-        label.setWrapText(true);
-        label.setMaxWidth(135);
-        label.setStyle("-fx-text-fill: white; -fx-font-size: 11px;");
-
-        StackPane view = new StackPane(label);
-        view.setLayoutX(node.x);
-        view.setLayoutY(node.y);
-        view.setPrefSize(150, 70);
-
-        // Port indicators & circular input handles on node
-        List<ProcessNodeHandler.PortDefinition> ports = ProcessEngine.getHandlerFor(node.type).inputPorts(node);
-        for (int index = 0; index < ports.size(); index++) {
-            ProcessNodeHandler.PortDefinition port = ports.get(index);
-            double yOffset = (ports.size() == 1) ? 0 : (index - (ports.size() - 1) / 2.0) * 16;
-
-            Circle inHandle = new Circle(5, Color.web("#58a6ff"));
-            inHandle.setStyle("-fx-cursor: crosshair;");
-            inHandle.setTranslateX(-70);
-            inHandle.setTranslateY(yOffset);
-            inHandle.setUserData(new PortHandleData(node, port));
-
-            String repsStr = (port.acceptedRepresentations() == null || port.acceptedRepresentations().isEmpty())
-                    ? "any"
-                    : port.acceptedRepresentations().stream().map(Enum::name).collect(Collectors.joining(", "));
-            Tooltip.install(inHandle, new Tooltip(portLabel(port.name()) + " (" + repsStr + ")"));
-
-            inHandle.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-                if (connectionCoordinator.isDragging()) {
-                    ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
-                    if (!dragSource.id.equals(node.id)) {
-                        completeConnectionDragToPort(dragSource, node, port.name());
-                    } else {
-                        cancelConnectionDrag();
-                    }
-                    e.consume();
-                }
-            });
-
-            view.getChildren().add(inHandle);
-            inputPortHandles.add(inHandle);
-
-            if (ports.size() > 1) {
-                Label inputLabel = new Label("• " + portLabel(port.name()));
-                inputLabel.setStyle("-fx-text-fill: #aaa; -fx-font-size: 9px;");
-                inputLabel.setTranslateX(-44);
-                inputLabel.setTranslateY(yOffset);
-                view.getChildren().add(inputLabel);
-            }
-        }
-
-        // Circular Output Port handle on right
-        Circle outHandle = new Circle(5, Color.web("#58a6ff"));
-        outHandle.setTranslateX(70);
-        outHandle.setStyle("-fx-cursor: crosshair;");
-        outHandle.setOnMousePressed(e -> {
-            startConnectionDrag(node);
-            e.consume();
-        });
-        outHandle.setOnMouseDragged(e -> {
-            if (connectionCoordinator.isDragging()) {
-                ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
-                Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
-                updateInteractiveCurve(dragSource.x + 150, dragSource.y + 35, local.getX(), local.getY());
-            }
-            e.consume();
-        });
-        outHandle.setOnMouseReleased(e -> {
-            if (connectionCoordinator.isDragging()) {
-                ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
-                Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
-                Circle targetHandle = null;
-                for (Circle circle : inputPortHandles) {
-                    Point2D pt = circle.sceneToLocal(e.getSceneX(), e.getSceneY());
-                    if (circle.contains(pt)) {
-                        targetHandle = circle;
-                        break;
-                    }
-                }
-                if (targetHandle != null && targetHandle.getUserData() instanceof PortHandleData data) {
-                    if (!data.node.id.equals(dragSource.id)) {
-                        completeConnectionDragToPort(dragSource, data.node, data.port.name());
-                    } else {
-                        cancelConnectionDrag();
-                    }
-                } else {
-                    ProcessDefinition.Node target = nodes.stream()
-                            .filter(n -> !n.id.equals(dragSource.id))
-                            .filter(n -> local.getX() >= n.x && local.getX() <= n.x + 150 && local.getY() >= n.y && local.getY() <= n.y + 70)
-                            .findFirst()
-                            .orElse(null);
-                    if (target != null) {
-                        completeConnectionDrag(dragSource, target, e.getScreenX(), e.getScreenY());
-                    } else {
-                        cancelConnectionDrag();
-                    }
-                }
-            }
-            e.consume();
-        });
-        view.getChildren().add(outHandle);
-
-        boolean active = selected != null && selected.id.equals(node.id);
-        boolean pending = !active && selectedNodeIds.contains(node.id);
-        if (active) {
-            view.setStyle("-fx-background-color: #287bb5; -fx-border-color: white; -fx-border-width: 3; -fx-background-radius: 5;");
-        } else if (pending) {
-            view.setStyle("-fx-background-color: #5a4a20; -fx-border-color: #f6c344; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5;");
-            Label sourceMarker = new Label("SOURCE");
-            sourceMarker.setStyle("-fx-text-fill: #f6c344; -fx-font-size: 8px; -fx-font-weight: bold; -fx-background-color: #202a33;");
-            sourceMarker.setTranslateX(46);
-            sourceMarker.setTranslateY(-25);
-            view.getChildren().add(sourceMarker);
-        } else {
-            view.setStyle("-fx-background-color: #33495e; -fx-border-color: #6f97bb; -fx-border-width: 1; -fx-background-radius: 5;");
-        }
-
-        final double[] dragStartPos = new double[4]; // [initialNodeX, initialNodeY, initialSceneX, initialSceneY]
-        view.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-            if (connectionCoordinator.isDragging()) {
-                ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
-                if (!dragSource.id.equals(node.id)) {
-                    completeConnectionDrag(dragSource, node);
-                } else {
-                    cancelConnectionDrag();
-                }
-                e.consume();
-                return;
-            }
-            workflowCanvas.requestFocus();
-            dragStartPos[0] = node.x;
-            dragStartPos[1] = node.y;
-            dragStartPos[2] = e.getSceneX();
-            dragStartPos[3] = e.getSceneY();
-            select(node);
-            e.consume();
-        });
-
-        view.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
-            Point2D startLocal = workflowCanvas.sceneToLocal(dragStartPos[2], dragStartPos[3]);
-            Point2D currentLocal = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
-            double deltaX = currentLocal.getX() - startLocal.getX();
-            double deltaY = currentLocal.getY() - startLocal.getY();
-
-            double newX = dragStartPos[0] + deltaX;
-            double newY = dragStartPos[1] + deltaY;
-            if (snapToGrid) {
-                newX = Math.round(newX / 10.0) * 10;
-                newY = Math.round(newY / 10.0) * 10;
-            }
-            node.x = Math.max(0, newX);
-            node.y = Math.max(0, newY);
-            view.setLayoutX(node.x);
-            view.setLayoutY(node.y);
-            updateConnectedCurves(node);
-            e.consume();
-        });
-
-        view.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
-            updateCanvasGeometry();
-            if (node.x != dragStartPos[0] || node.y != dragStartPos[1]) {
-                ProcessDefinition before = snapshot(toDefinition());
-                before.nodes.stream().filter(n -> n.id.equals(node.id)).findFirst().ifPresent(n -> {
-                    n.x = dragStartPos[0];
-                    n.y = dragStartPos[1];
-                });
-                recordStateChange("Move node", before);
-            }
-            e.consume();
-        });
-
-        return view;
-    }
-
-    private void updateConnectedCurves(ProcessDefinition.Node node) {
-        for (javafx.scene.Node child : workflowCanvas.getChildren()) {
-            if (child instanceof CubicCurve curve) {
-                ProcessDefinition.Connection conn = (ProcessDefinition.Connection) curve.getUserData();
-                if (conn != null) {
-                    if (conn.from.equals(node.id)) {
-                        curve.setStartX(node.x + 150);
-                        curve.setStartY(node.y + 35);
-                        updateCurveControls(curve);
-                    } else if (conn.to.equals(node.id)) {
-                        curve.setEndX(node.x);
-                        curve.setEndY(node.y + 35);
-                        updateCurveControls(curve);
-                    }
-                }
-            }
-        }
-    }
-
-    private void updateCurveControls(CubicCurve curve) {
-        double startX = curve.getStartX();
-        double startY = curve.getStartY();
-        double endX = curve.getEndX();
-        double endY = curve.getEndY();
-        double offset = Math.max(40, Math.abs(endX - startX) * 0.5);
-        curve.setControlX1(startX + offset);
-        curve.setControlY1(startY);
-        curve.setControlX2(endX - offset);
-        curve.setControlY2(endY);
-    }
-
-    private void addConnectionView(ProcessDefinition.Connection connection, ProcessDefinition.Node from, ProcessDefinition.Node to) {
-        double startX = from.x + 150;
-        double startY = from.y + 35;
-        double endX = to.x;
-        double endY = to.y + 35;
-
-        if (connection.targetPort != null) {
-            List<ProcessNodeHandler.PortDefinition> targetPorts = ProcessEngine.getHandlerFor(to.type).inputPorts(to);
-            int portIndex = -1;
-            for (int index = 0; index < targetPorts.size(); index++) {
-                if (connection.targetPort.equals(targetPorts.get(index).name())) {
-                    portIndex = index;
-                    break;
-                }
-            }
-            if (portIndex >= 0) {
-                endY += (portIndex - (targetPorts.size() - 1) / 2.0) * 13;
-            }
-
-            Label portLabel = new Label(connection.targetPort);
-            portLabel.setStyle("-fx-text-fill: #f6c344; -fx-font-size: 9px; -fx-background-color: #202a33;");
-            portLabel.setLayoutX(endX - 35);
-            portLabel.setLayoutY(endY - 15);
-            workflowCanvas.getChildren().add(portLabel);
-        }
-
-        CubicCurve curve = new CubicCurve();
-        curve.setStartX(startX);
-        curve.setStartY(startY);
-        curve.setEndX(endX);
-        curve.setEndY(endY);
-        updateCurveControls(curve);
-        curve.setFill(null);
-
-        boolean isSelected = connection == selectedConnection;
-        curve.setStroke(isSelected ? Color.web("#f6c344") : Color.web("#58a6ff"));
-        curve.setStrokeWidth(isSelected ? 4.0 : 2.5);
-        curve.setUserData(connection);
-
-        curve.setOnMouseClicked(event -> selectConnection(connection));
-        workflowCanvas.getChildren().add(curve);
+    private ProcessCanvasRenderer.View canvasView() {
+        return new ProcessCanvasRenderer.View(
+                () -> workflowCanvas,
+                () -> nodes,
+                () -> connections,
+                this::toDefinition,
+                () -> selectedNodeIds,
+                () -> selected,
+                () -> selectedConnection,
+                this::selectConnection,
+                () -> snapToGrid,
+                connectionCoordinator::isDragging,
+                connectionCoordinator::dragSourceNode,
+                this::select,
+                this::startConnectionDrag,
+                this::updateInteractiveCurve,
+                this::cancelConnectionDrag,
+                this::completeConnectionDragToPort,
+                (from, to) -> completeConnectionDrag(from, to),
+                (from, to, screenX, screenY) -> completeConnectionDrag(from, to, screenX, screenY),
+                this::updateCanvasGeometry,
+                () -> validationCounter++,
+                this::recordStateChange,
+                this::portLabel);
     }
 
     private void startConnectionDrag(ProcessDefinition.Node sourceNode) { connectionCoordinator.startConnectionDrag(connectionView(), sourceNode); }
@@ -803,9 +546,9 @@ public class ProcessDesignerController {
                 () -> selected,
                 node -> selected = node,
                 () -> workflowCanvas,
-                () -> inputPortHandles,
+                () -> processCanvasRenderer().inputPortHandles(),
                 this::outputRepresentationOf,
-                this::updateCurveControls,
+                processCanvasRenderer()::updateCurveControls,
                 this::toDefinition,
                 this::orderedConnectionPair,
                 this::nodeLabel,
@@ -1007,7 +750,7 @@ public class ProcessDesignerController {
         if (selected == null) return;
         connections.removeIf(c -> c.from.equals(selected.id) || c.to.equals(selected.id));
         nodes.remove(selected);
-        views.remove(selected.id);
+        processCanvasRenderer().removeView(selected.id);
         selectedNodeIds.remove(selected.id);
         transientSecrets.remove(selected.id);
         selected = null;
@@ -1038,7 +781,7 @@ public class ProcessDesignerController {
         ModuleResetPolicy.apply(processDesignerRoot, ModuleResetPolicy.Action.CLEAR, () -> {
             nodes.clear();
             connections.clear();
-            views.clear();
+            processCanvasRenderer().clearViews();
             selectedNodeIds.clear();
             selected = null;
             selectedConnection = null;

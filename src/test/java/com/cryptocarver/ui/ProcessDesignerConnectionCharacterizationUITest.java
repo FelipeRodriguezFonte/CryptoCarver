@@ -195,8 +195,9 @@ class ProcessDesignerConnectionCharacterizationUITest {
     }
 
     private static Circle inputHandle(ProcessDesignerController controller, ProcessDefinition.Node node, String port) {
-        return controller.inputPortHandles.stream().filter(Circle.class::isInstance).map(Circle.class::cast)
-                .filter(circle -> circle.getUserData() instanceof ProcessDesignerController.PortHandleData data
+        ProcessCanvasRenderer renderer = (ProcessCanvasRenderer) field(controller, "processCanvasRenderer");
+        return renderer.inputPortHandles().stream()
+                .filter(circle -> circle.getUserData() instanceof ProcessCanvasRenderer.PortHandleData data
                         && data.node().id.equals(node.id) && data.port().name().equals(port))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing input handle " + port));
     }
