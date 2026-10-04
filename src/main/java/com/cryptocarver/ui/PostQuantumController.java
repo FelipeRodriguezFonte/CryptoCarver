@@ -178,8 +178,9 @@ public class PostQuantumController {
                 return;
             }
             if (!PostQuantumOperations.areAlgorithmsCompatible(algo, keyState.privateKey().getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError("Key Parameter Error", "The selected signature parameter set (" + algo
-                        + ") does not match the loaded private key (" + keyState.privateKey().getAlgorithm() + ").");
+                if (statusReporter != null) statusReporter.showError(
+                        t("module.pqc.error.signatureAlgorithmMismatchTitle"),
+                        t("module.pqc.error.signatureAlgorithmMismatch", algo, keyState.privateKey().getAlgorithm()));
                 return;
             }
 
@@ -224,8 +225,9 @@ public class PostQuantumController {
                 return;
             }
             if (!PostQuantumOperations.areAlgorithmsCompatible(algo, keyState.publicKey().getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError("Key Parameter Error", "The selected signature parameter set (" + algo
-                        + ") does not match the loaded public key (" + keyState.publicKey().getAlgorithm() + ").");
+                if (statusReporter != null) statusReporter.showError(
+                        t("module.pqc.error.signatureAlgorithmMismatchTitle"),
+                        t("module.pqc.error.signatureAlgorithmMismatch", algo, keyState.publicKey().getAlgorithm()));
                 return;
             }
 
@@ -242,7 +244,8 @@ public class PostQuantumController {
             if (verified) {
                 if (statusReporter != null) statusReporter.showInfo("Verification Result", "✓ Signature is VALID");
             } else {
-                if (statusReporter != null) statusReporter.showError("Verification Result", "✗ Signature is INVALID");
+                if (statusReporter != null) statusReporter.showError(
+                        t("module.pqc.error.invalidSignatureTitle"), t("module.pqc.error.invalidSignature"));
             }
             String kpDescription = keyState.publicKey().getAlgorithm();
             java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(

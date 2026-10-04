@@ -106,3 +106,16 @@ fix.
 The updated characterization expects exactly those three localized-feedback
 findings in its transcript and passes. The full transcript SHA-256 is
 `ddd817577ea1a0cceba67afa8a5feb94c1c224b5e2d8637d8c5a84ad4a4aec3f`.
+
+## Fix 2: localize signature validation feedback
+
+The sign and verify handlers now use dedicated EN/ES messages for an
+incompatible selected parameter set and an altered signature. This also avoids
+routing an ML-DSA mismatch through the shell's generic “Key Parameter” mapper,
+which had described AES key lengths. The selected and loaded algorithm labels
+are retained in the mismatch feedback.
+
+The characterization now records readable, relevant EN and ES messages and
+finds no private-key/signature exposure in restricted result surfaces or logs.
+Its complete pinned transcript SHA-256 is
+`d622604c232a47c738c86f97b3d5f6a6579d21c88ea0098dea404cc3ba67138f`.
