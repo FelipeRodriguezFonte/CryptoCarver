@@ -1,31 +1,13 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.PostQuantumOperations;
-import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.stage.FileChooser;
-import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.security.KeyPair;
-import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Controller for Post-Quantum Cryptography operations
@@ -34,10 +16,12 @@ public class PostQuantumController {
     /** Held so the locale listener stays registered: I18nService keeps only a weak reference. */
     private java.util.function.Consumer<java.util.Locale> localeChangeListener;
 
-
-    private static final Logger LOG = LoggerFactory.getLogger(PostQuantumController.class);
-
     private StatusReporter statusReporter;
+    private final AtomicReference<StatusReporter> coordinatorStatusReporter = new AtomicReference<>();
+    private PostQuantumKeyCoordinator keyCoordinator;
+    private PostQuantumSignatureCoordinator signatureCoordinator;
+    private PostQuantumKemCoordinator kemCoordinator;
+    private PostQuantumBenchmarkCoordinator benchmarkCoordinator;
 
     @FXML
     private Accordion pqcAccordion;
@@ -85,31 +69,65 @@ public class PostQuantumController {
     @FXML private Button pqcBenchmarkBtn;
     @FXML private ProgressIndicator pqcBenchmarkProgress;
     @FXML private TextArea pqcBenchmarkArea;
-    private com.cryptocarver.crypto.pqc.PQCBenchmark activeBenchmarkTask;
-
 
     // Internal state
-    private PublicKey currentPublicKey;
-    private PrivateKey currentPrivateKey;
-    private byte[] bobSecret;
+    private final PostQuantumKeyState keyState = new PostQuantumKeyState();
 
-    private record ParsedPqcKey(boolean publicKey, byte[] encoded, String displayValue) { }
-
-    PublicKey getCurrentPublicKey() { return currentPublicKey; }
-    PrivateKey getCurrentPrivateKey() { return currentPrivateKey; }
+    PublicKey getCurrentPublicKey() { return keyState.publicKey(); }
+    PrivateKey getCurrentPrivateKey() { return keyState.privateKey(); }
 
     public PostQuantumController() {
     }
 
     public void initModule(StatusReporter reporter) {
         this.statusReporter = reporter;
+        this.coordinatorStatusReporter.set(reporter);
+    }
+
+    private PostQuantumKeyCoordinator keyCoordinator() {
+        if (keyCoordinator == null) {
+            PostQuantumKeyCoordinator.View view = new PostQuantumKeyCoordinator.View(
+                    pqcAlgorithmCombo, pqcGenerateKeyBtn, pqcPublicKeyArea, pqcPrivateKeyArea,
+                    pqcKeyDetailsArea, pqcKeyStatusLabel, pqcKemAlgoCombo, pqcSignAlgoCombo, keyState);
+            keyCoordinator = new PostQuantumKeyCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return keyCoordinator;
+    }
+
+    private PostQuantumSignatureCoordinator signatureCoordinator() {
+        if (signatureCoordinator == null) {
+            PostQuantumSignatureCoordinator.View view = new PostQuantumSignatureCoordinator.View(
+                    () -> pqcSignAlgoCombo, () -> pqcSignInputArea, () -> pqcSignOutputArea,
+                    () -> pqcVerifySignatureField, () -> keyState);
+            signatureCoordinator = new PostQuantumSignatureCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return signatureCoordinator;
+    }
+
+    private PostQuantumKemCoordinator kemCoordinator() {
+        if (kemCoordinator == null) {
+            PostQuantumKemCoordinator.View view = new PostQuantumKemCoordinator.View(
+                    pqcKemAlgoCombo, pqcKemCiphertextArea, pqcKemSharedSecretField,
+                    pqcAliceSecretField, pqcKemStatusLabel, keyState);
+            kemCoordinator = new PostQuantumKemCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return kemCoordinator;
+    }
+
+    private PostQuantumBenchmarkCoordinator benchmarkCoordinator() {
+        if (benchmarkCoordinator == null) {
+            PostQuantumBenchmarkCoordinator.View view = new PostQuantumBenchmarkCoordinator.View(
+                    pqcBenchmarkAlgoCombo, pqcBenchmarkBtn, pqcBenchmarkProgress, pqcBenchmarkArea);
+            benchmarkCoordinator = new PostQuantumBenchmarkCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return benchmarkCoordinator;
     }
 
     @FXML
     public void initialize() {
         moduleI18n = ModuleI18n.bind(pqcAccordion, ModuleTextCatalog.pqc());
         localeChangeListener = locale -> {
-            if (pqcKeyStatusLabel != null && currentPublicKey == null) pqcKeyStatusLabel.setText(t("status.ready"));
+            if (pqcKeyStatusLabel != null && keyState.publicKey() == null) pqcKeyStatusLabel.setText(t("status.ready"));
         };
         com.cryptocarver.service.I18nService.getInstance().addLocaleChangeListener(localeChangeListener);
         IngestionUIHelper.bindField(pqcSignInputArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
@@ -154,665 +172,39 @@ public class PostQuantumController {
     }
 
     @FXML
-    public void handleGeneratePQCKeyPair() {
-        try {
-            String algo = pqcAlgorithmCombo.getValue();
-            if (algo == null || algo.startsWith("---")) {
-                if (statusReporter != null) statusReporter.showError("Algorithm Error", "Please select a valid algorithm");
-                return;
-            }
-
-            Callable<KeyPair> task = () -> PostQuantumOperations.generateKeyPair(algo);
-
-            Consumer<KeyPair> onSuccess = kp -> {
-                try {
-                    currentPublicKey = kp.getPublic();
-                    currentPrivateKey = kp.getPrivate();
-
-                    String pubHex = DataConverter.bytesToHex(currentPublicKey.getEncoded());
-                    String privHex = DataConverter.bytesToHex(currentPrivateKey.getEncoded());
-
-                    try {
-                        pqcPublicKeyArea.setText("-----BEGIN PUBLIC KEY-----\n" +
-                            java.util.Base64.getEncoder().encodeToString(currentPublicKey.getEncoded()) +
-                            "\n-----END PUBLIC KEY-----");
-
-                        pqcPrivateKeyArea.setText("-----BEGIN PRIVATE KEY-----\n" +
-                            java.util.Base64.getEncoder().encodeToString(currentPrivateKey.getEncoded()) +
-                            "\n-----END PRIVATE KEY-----");
-                    } catch (Exception e) {
-                        pqcPublicKeyArea.setText(pubHex);
-                        pqcPrivateKeyArea.setText(privHex);
-                    }
-
-                    if (pqcKeyStatusLabel != null) {
-                        pqcKeyStatusLabel.setText("Generated " + algo + " Key Pair");
-                    }
-                    java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(algo, "Generated");
-                    if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
-                    if (statusReporter != null) {
-                        statusReporter.publish(OperationResult.forOperation("PQC Key Generation")
-                                .output(currentPublicKey.getEncoded())
-                                .details(detailsWithPublicKeyMaterial(details))
-                                .status("Generated " + algo + " Key Pair")
-                                .build());
-                    }
-                } catch (Exception e) {
-                    if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + e.getMessage());
-                }
-            };
-
-            Consumer<Throwable> onFailure = err -> {
-                if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + (err != null ? err.getMessage() : "Unknown error"));
-            };
-
-            Runnable onCancelled = () -> {
-                if (pqcKeyStatusLabel != null) pqcKeyStatusLabel.setText(t("module.pqc.cancelled"));
-                if (statusReporter != null) statusReporter.updateStatus(t("module.pqc.cancelled"));
-            };
-
-            if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
-                statusReporter.getOperationExecutor().execute("PQC-" + algo + " Key Generation", pqcGenerateKeyBtn, task, onSuccess, onFailure, onCancelled);
-            } else {
-                KeyPair kp = task.call();
-                onSuccess.accept(kp);
-            }
-
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Generation Error", "Error generating key: " + e.getMessage());
-            LOG.error("PQC key generation failed", e);
-        }
-    }
+    public void handleGeneratePQCKeyPair() { keyCoordinator().handleGeneratePQCKeyPair(); }
 
     @FXML
-    public void handleImportPQCKeys() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select PQC public and/or private PEM/DER keys");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-                "PQC key files (PEM/DER)", "*.pem", "*.der", "*.pub", "*.key"));
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All files", "*.*"));
-        java.util.List<File> files = chooser.showOpenMultipleDialog(null);
-        if (files == null || files.isEmpty()) return;
-
-        try {
-            importKeysFromFiles(files);
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Import Error", "Failed to load keys: " + e.getMessage());
-        }
-    }
-
+    public void handleImportPQCKeys() { keyCoordinator().handleImportPQCKeys(); }
     public void importKeysFromContents(java.util.List<String> pems) throws Exception {
-        if (pems == null || pems.isEmpty()) {
-            throw new IllegalArgumentException("Select at least one PQC public or private key.");
-        }
-        List<ParsedPqcKey> parsedKeys = new ArrayList<>();
-        for (String pem : pems) {
-            parsedKeys.add(parsePemKey(pem));
-        }
-        importParsedKeys(parsedKeys);
+        keyCoordinator().importKeysFromContents(pems);
     }
 
     /** Imports one or both unencrypted PQC key files. Each file must contain one PEM or DER key. */
     public void importKeysFromFiles(java.util.List<File> files) throws Exception {
-        if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("Select at least one PQC public or private key.");
-        }
-        List<ParsedPqcKey> parsedKeys = new ArrayList<>();
-        for (File file : files) {
-            if (file == null) {
-                throw new IllegalArgumentException("The selected key file is missing.");
-            }
-            byte[] contents = Files.readAllBytes(file.toPath());
-            if (contents.length == 0) {
-                throw new IllegalArgumentException("Key file " + file.getName() + " is empty.");
-            }
-            String ascii = new String(contents, StandardCharsets.US_ASCII).stripLeading();
-            if (ascii.startsWith("-----BEGIN ")) {
-                parsedKeys.add(parsePemKey(ascii));
-            } else {
-                parsedKeys.add(parseDerKey(contents, file.getName()));
-            }
-        }
-        importParsedKeys(parsedKeys);
-    }
-
-    private void importParsedKeys(List<ParsedPqcKey> parsedKeys) throws Exception {
-        if (parsedKeys == null || parsedKeys.isEmpty()) {
-            throw new IllegalArgumentException("Select at least one PQC public or private key.");
-        }
-        String lastDetectedAlgorithm = null;
-        PublicKey tempPubKey = null;
-        PrivateKey tempPrivKey = null;
-        String tempPubKeyStr = null;
-        String tempPrivKeyStr = null;
-
-        for (ParsedPqcKey parsedKey : parsedKeys) {
-            byte[] encoded = parsedKey.encoded();
-            boolean isPublic = parsedKey.publicKey();
-            com.cryptocarver.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult result = PostQuantumOperations.detectAlgorithmFromEncoded(encoded, isPublic);
-            if (result == null || !result.isSupported()) {
-                String oid = result != null ? result.originalOid() : "Unknown";
-                throw new IllegalArgumentException("Cannot detect PQC algorithm in key (OID: " + oid
-                        + "). The key is not a supported PQC parameter set or its encoding is ambiguous.");
-            }
-
-            String detectedAlgorithm = result.nistName();
-            if (lastDetectedAlgorithm != null && !lastDetectedAlgorithm.equals(detectedAlgorithm)) {
-                throw new IllegalArgumentException("Mismatched keys: You are trying to load a " + lastDetectedAlgorithm + " key and a " + detectedAlgorithm + " key simultaneously.");
-            }
-            lastDetectedAlgorithm = detectedAlgorithm;
-
-            if (isPublic) {
-                if (tempPubKey != null) {
-                    throw new IllegalArgumentException("Only one public PQC key may be imported at a time.");
-                }
-                try {
-                    tempPubKey = PostQuantumOperations.importPublicKey(detectedAlgorithm, encoded);
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Unable to import the complete PQC public key for "
-                            + detectedAlgorithm + ". Expected X.509 SubjectPublicKeyInfo DER.", e);
-                }
-                tempPubKeyStr = parsedKey.displayValue();
-            } else {
-                if (tempPrivKey != null) {
-                    throw new IllegalArgumentException("Only one private PQC key may be imported at a time.");
-                }
-                try {
-                    tempPrivKey = PostQuantumOperations.importPrivateKey(detectedAlgorithm, encoded);
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Unable to import the complete PQC private key for "
-                            + detectedAlgorithm + ". Expected unencrypted PKCS#8 DER.", e);
-                }
-                tempPrivKeyStr = parsedKey.displayValue();
-            }
-        }
-
-        // Validate both sides before changing controller state. This also covers
-        // importing one side against an already loaded counterpart.
-        PublicKey candidatePublicKey = tempPubKey != null ? tempPubKey : currentPublicKey;
-        PrivateKey candidatePrivateKey = tempPrivKey != null ? tempPrivKey : currentPrivateKey;
-        if ((tempPubKey != null || tempPrivKey != null)
-                && candidatePublicKey != null && candidatePrivateKey != null) {
-            validateImportedKeyPair(candidatePublicKey, candidatePrivateKey);
-        }
-
-        // All files verified successfully, apply state
-        if (tempPubKey != null) {
-            currentPublicKey = tempPubKey;
-            if (pqcPublicKeyArea != null) pqcPublicKeyArea.setText(tempPubKeyStr);
-        }
-        if (tempPrivKey != null) {
-            currentPrivateKey = tempPrivKey;
-            if (pqcPrivateKeyArea != null) pqcPrivateKeyArea.setText(tempPrivKeyStr);
-        }
-
-        // Update combo if it's one of the known primary names
-        if (lastDetectedAlgorithm != null && pqcAlgorithmCombo != null) {
-            if (PostQuantumOperations.ML_KEM_ALGORITHMS.contains(lastDetectedAlgorithm)) {
-                pqcAlgorithmCombo.setValue(lastDetectedAlgorithm);
-                if (pqcKemAlgoCombo != null) pqcKemAlgoCombo.setValue(lastDetectedAlgorithm);
-            } else if (PostQuantumOperations.ML_DSA_ALGORITHMS.contains(lastDetectedAlgorithm) || PostQuantumOperations.SLH_DSA_ALGORITHMS.contains(lastDetectedAlgorithm)) {
-                pqcAlgorithmCombo.setValue(lastDetectedAlgorithm);
-                if (pqcSignAlgoCombo != null) pqcSignAlgoCombo.setValue(lastDetectedAlgorithm);
-            }
-        }
-
-        if (lastDetectedAlgorithm != null) {
-            if (pqcKeyStatusLabel != null) pqcKeyStatusLabel.setText("Imported PQC key material for " + lastDetectedAlgorithm);
-            java.util.List<com.cryptocarver.model.OperationDetail> details = describeKeyPair(lastDetectedAlgorithm, "Imported");
-            if (pqcKeyDetailsArea != null) pqcKeyDetailsArea.setText(formatDetails(details));
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Import")
-                        .details(details).status("Success").build());
-            }
-        }
-    }
-
-    private ParsedPqcKey parsePemKey(String pem) {
-        if (pem == null || pem.isBlank()) {
-            throw new IllegalArgumentException("PEM key content is empty.");
-        }
-        String value = pem.trim();
-        String begin;
-        String end;
-        boolean publicKey;
-        if (value.startsWith("-----BEGIN PUBLIC KEY-----")) {
-            begin = "-----BEGIN PUBLIC KEY-----";
-            end = "-----END PUBLIC KEY-----";
-            publicKey = true;
-        } else if (value.startsWith("-----BEGIN PRIVATE KEY-----")) {
-            begin = "-----BEGIN PRIVATE KEY-----";
-            end = "-----END PRIVATE KEY-----";
-            publicKey = false;
-        } else if (value.startsWith("-----BEGIN ")) {
-            throw new IllegalArgumentException("Unsupported PEM label. Use PUBLIC KEY or unencrypted PRIVATE KEY (PKCS#8).");
-        } else {
-            throw new IllegalArgumentException("Content is not a PEM public key or unencrypted PKCS#8 private key.");
-        }
-        if (!value.endsWith(end)) {
-            throw new IllegalArgumentException("PEM key is truncated or has mismatched BEGIN/END labels.");
-        }
-
-        String body = value.substring(begin.length(), value.length() - end.length()).trim();
-        if (body.isEmpty() || body.contains("-----BEGIN") || body.contains("-----END")) {
-            throw new IllegalArgumentException("PEM key contains no complete base64 body or contains multiple PEM blocks.");
-        }
-        try {
-            byte[] encoded = Base64.getDecoder().decode(body.replaceAll("\\s", ""));
-            if (encoded.length == 0) {
-                throw new IllegalArgumentException("PEM key contains an empty DER body.");
-            }
-            return new ParsedPqcKey(publicKey, encoded, value);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("PEM key contains invalid or truncated base64/DER content.", e);
-        }
-    }
-
-    private ParsedPqcKey parseDerKey(byte[] encoded, String fileName) {
-        boolean publicKey = isDerSubjectPublicKeyInfo(encoded);
-        boolean privateKey = isDerPrivateKeyInfo(encoded);
-        if (publicKey == privateKey) {
-            throw new IllegalArgumentException("DER key file " + fileName
-                    + " is not exactly one X.509 SubjectPublicKeyInfo or PKCS#8 PrivateKeyInfo.");
-        }
-        String display = "[DER " + (publicKey ? "PUBLIC KEY" : "PRIVATE KEY") + " imported]";
-        return new ParsedPqcKey(publicKey, encoded.clone(), display);
-    }
-
-    private boolean isDerSubjectPublicKeyInfo(byte[] encoded) {
-        try {
-            SubjectPublicKeyInfo.getInstance(ASN1Primitive.fromByteArray(encoded));
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean isDerPrivateKeyInfo(byte[] encoded) {
-        try {
-            PrivateKeyInfo.getInstance(ASN1Primitive.fromByteArray(encoded));
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void validateImportedKeyPair(PublicKey publicKey, PrivateKey privateKey) throws Exception {
-        com.cryptocarver.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult publicResult =
-                PostQuantumOperations.detectAlgorithmFromEncoded(publicKey.getEncoded(), true);
-        com.cryptocarver.crypto.PostQuantumOperations.PqcAlgorithmDetectionResult privateResult =
-                PostQuantumOperations.detectAlgorithmFromEncoded(privateKey.getEncoded(), false);
-        if (publicResult == null || privateResult == null
-                || !publicResult.isSupported() || !privateResult.isSupported()) {
-            throw new IllegalArgumentException("Public/private keys are not supported PQC keys.");
-        }
-        if (!publicResult.nistName().equals(privateResult.nistName())) {
-            throw new IllegalArgumentException("Incompatible public/private PQC parameter sets: public key is "
-                    + publicResult.nistName() + " but private key is " + privateResult.nistName() + ".");
-        }
-
-        try {
-            if (isKemAlgorithm(publicResult.nistName())) {
-                PostQuantumOperations.KEMResult kem = PostQuantumOperations.encapsulate(publicKey, publicResult.nistName());
-                byte[] recovered = PostQuantumOperations.decapsulate(privateKey, kem.encapsulation(), publicResult.nistName());
-                if (!MessageDigest.isEqual(kem.sharedSecret(), recovered)) {
-                    throw new IllegalArgumentException("Public/private keys do not form a matching " + publicResult.nistName() + " pair.");
-                }
-            } else {
-                byte[] challenge = "CryptoCarver PQC key-pair validation".getBytes(StandardCharsets.UTF_8);
-                byte[] signature = PostQuantumOperations.sign(privateKey, challenge, publicResult.nistName());
-                if (!PostQuantumOperations.verify(publicKey, challenge, signature, publicResult.nistName())) {
-                    throw new IllegalArgumentException("Public/private keys do not form a matching " + publicResult.nistName() + " pair.");
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unable to validate the imported " + publicResult.nistName()
-                    + " public/private key pair.", e);
-        }
+        keyCoordinator().importKeysFromFiles(files);
     }
 
     @FXML
-    public void handleExportPQCPublicKey() {
-        exportKey(currentPublicKey, "pqc-public-key.pem", "PUBLIC KEY");
-    }
+    public void handleExportPQCPublicKey() { keyCoordinator().handleExportPQCPublicKey(); }
 
     @FXML
-    public void handleExportPQCPrivateKey() {
-        exportKey(currentPrivateKey, "pqc-private-key.pem", "PRIVATE KEY");
-    }
-
-    private void exportKey(java.security.Key key, String filename, String pemType) {
-        if (key == null) {
-            if (statusReporter != null) statusReporter.showError("PQC Export Error", "Generate or import a key first.");
-            return;
-        }
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export PQC " + pemType);
-        chooser.setInitialFileName(filename);
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PEM files", "*.pem"));
-        File file = chooser.showSaveDialog(null);
-        if (file == null) return;
-        try {
-            Files.writeString(file.toPath(), toPem(pemType, key.getEncoded()), StandardCharsets.US_ASCII);
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Key Type", pemType),
-                com.cryptocarver.model.OperationDetail.publicDetail("Output", file.getAbsolutePath())
-            );
-            if (statusReporter != null) {
-                OperationResult.Builder result = OperationResult.forOperation("PQC Key Export")
-                        .details(details)
-                        .status("PQC key exported: " + file.getName());
-                // A private key is written only to the explicitly selected file;
-                // it must never become an inspector/history payload.
-                if (!"PRIVATE KEY".equals(pemType)) {
-                    result.output(key.getEncoded());
-                }
-                statusReporter.publish(result.build());
-            }
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("PQC Export Error", "Unable to export key: " + e.getMessage());
-        }
-    }
-
-    private String toPem(String type, byte[] encoded) {
-        String base64 = java.util.Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII)).encodeToString(encoded);
-        return "-----BEGIN " + type + "-----\n" + base64 + "\n-----END " + type + "-----\n";
-    }
-
-    private byte[] decodePem(String pem) {
-        String normalized = pem.replaceAll("-----BEGIN [A-Z ]+-----", "")
-                .replaceAll("-----END [A-Z ]+-----", "")
-                .replaceAll("\\s", "");
-        return java.util.Base64.getDecoder().decode(normalized);
-    }
-
-    private java.util.List<com.cryptocarver.model.OperationDetail> describeKeyPair(String selectedAlgorithm, String source) {
-        java.util.List<com.cryptocarver.model.OperationDetail> details = new java.util.ArrayList<>();
-        details.add(com.cryptocarver.model.OperationDetail.publicDetail("Operation", source + " PQC key pair"));
-        details.add(com.cryptocarver.model.OperationDetail.publicDetail("Parameter Set", selectedAlgorithm));
-        details.add(com.cryptocarver.model.OperationDetail.publicDetail("Purpose", isKemAlgorithm(selectedAlgorithm) ? "Key encapsulation (ML-KEM)" : "Digital signatures"));
-        if (currentPublicKey != null) {
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key Algorithm", currentPublicKey.getAlgorithm()));
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key Format", safeValue(currentPublicKey.getFormat())));
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key Size", currentPublicKey.getEncoded().length + " bytes"));
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key SHA-256", fingerprint(currentPublicKey.getEncoded())));
-        } else {
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key", "Not available"));
-        }
-        if (currentPrivateKey != null) {
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Private Key Algorithm", currentPrivateKey.getAlgorithm()));
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Private Key Format", safeValue(currentPrivateKey.getFormat())));
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Private Key Size", currentPrivateKey.getEncoded().length + " bytes"));
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Private Key Handling", "Held in memory; never recorded in history"));
-        } else {
-            details.add(com.cryptocarver.model.OperationDetail.publicDetail("Private Key", "Not available"));
-        }
-        return details;
-    }
-
-    private String formatDetails(java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        StringBuilder result = new StringBuilder("PQC KEY PAIR DETAILS\n\n");
-        for (com.cryptocarver.model.OperationDetail d : details) {
-            result.append(d.name()).append(": ").append(d.value()).append('\n');
-        }
-        result.append("\nSecurity note: export a private key only to protected storage.");
-        return result.toString();
-    }
-
-    private java.util.List<com.cryptocarver.model.OperationDetail> detailsWithPublicKeyMaterial(java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        java.util.List<com.cryptocarver.model.OperationDetail> historyDetails = new java.util.ArrayList<>(details);
-        if (currentPublicKey != null) {
-            historyDetails.add(com.cryptocarver.model.OperationDetail.publicDetail("Public Key PEM", toPem("PUBLIC KEY", currentPublicKey.getEncoded())));
-        }
-        return historyDetails;
-    }
-
-    private String fingerprint(byte[] encoded) {
-        try {
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(encoded);
-            String hex = DataConverter.bytesToHex(hash);
-            return hex.substring(0, 16) + "…";
-        } catch (Exception e) {
-            return "Unavailable";
-        }
-    }
-
-    private String safeValue(String value) {
-        return value == null || value.isBlank() ? "Unspecified" : value;
-    }
+    public void handleExportPQCPrivateKey() { keyCoordinator().handleExportPQCPrivateKey(); }
 
     @FXML
-    public void handlePQCSign() {
-        try {
-            String algo = pqcSignAlgoCombo.getValue();
-            String inputData = pqcSignInputArea.getText();
-
-            if (currentPrivateKey == null) {
-                if (statusReporter != null) statusReporter.showError("Key Error", "Please generate or import a compatible PQC signature private key first.");
-                return;
-            }
-            if (!PostQuantumOperations.areAlgorithmsCompatible(algo, currentPrivateKey.getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError("Key Parameter Error", "The selected signature parameter set (" + algo
-                        + ") does not match the loaded private key (" + currentPrivateKey.getAlgorithm() + ").");
-                return;
-            }
-
-            if (inputData.isEmpty()) {
-                if (statusReporter != null) statusReporter.showError("Input Error", "Please enter data to sign");
-                return;
-            }
-
-            byte[] data = inputData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] signature = PostQuantumOperations.sign(currentPrivateKey, data, algo);
-
-            pqcSignOutputArea.setText(DataConverter.bytesToHex(signature));
-
-            String kpDescription = currentPrivateKey.getAlgorithm();
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", algo),
-                com.cryptocarver.model.OperationDetail.publicDetail("Key Pair", kpDescription),
-                com.cryptocarver.model.OperationDetail.publicDetail("Data Size", data.length + " bytes"),
-                com.cryptocarver.model.OperationDetail.publicDetail("Signature Size", signature.length + " bytes")
-            );
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Sign")
-                        .input(data).output(signature).details(details)
-                        .status("PQC signature generated")
-                        .build());
-            }
-
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Signing Error", "Error signing data: " + e.getMessage());
-        }
-    }
+    public void handlePQCSign() { signatureCoordinator().handlePQCSign(); }
 
     @FXML
-    public void handlePQCVerify() {
-        try {
-            String algo = pqcSignAlgoCombo.getValue();
-            String inputData = pqcSignInputArea.getText();
-            String signatureHex = pqcVerifySignatureField.getText();
-
-            if (currentPublicKey == null) {
-                if (statusReporter != null) statusReporter.showError("Key Error", "Please generate a key pair first");
-                return;
-            }
-            if (!PostQuantumOperations.areAlgorithmsCompatible(algo, currentPublicKey.getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError("Key Parameter Error", "The selected signature parameter set (" + algo
-                        + ") does not match the loaded public key (" + currentPublicKey.getAlgorithm() + ").");
-                return;
-            }
-
-            if (inputData.isEmpty() || signatureHex.isEmpty()) {
-                if (statusReporter != null) statusReporter.showError("Input Error", "Please enter data and signature");
-                return;
-            }
-
-            byte[] data = inputData.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] signature = DataConverter.hexToBytes(signatureHex);
-
-            boolean verified = PostQuantumOperations.verify(currentPublicKey, data, signature, algo);
-
-            if (verified) {
-                if (statusReporter != null) statusReporter.showInfo("Verification Result", "✓ Signature is VALID");
-            } else {
-                if (statusReporter != null) statusReporter.showError("Verification Result", "✗ Signature is INVALID");
-            }
-            String kpDescription = currentPublicKey.getAlgorithm();
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", algo),
-                com.cryptocarver.model.OperationDetail.publicDetail("Key Pair", kpDescription),
-                com.cryptocarver.model.OperationDetail.publicDetail("Result", verified ? "VALID" : "INVALID"),
-                com.cryptocarver.model.OperationDetail.publicDetail("Data Size", data.length + " bytes")
-            );
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("PQC Verify")
-                        .input(data).output(signature).details(details)
-                        .status(verified ? "PQC signature is valid" : "PQC signature is invalid")
-                        .build());
-            }
-
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("Verification Error", "Error verifying: " + e.getMessage());
-        }
-    }
+    public void handlePQCVerify() { signatureCoordinator().handlePQCVerify(); }
 
     @FXML
-    public void handlePQCEncapsulate() {
-        try {
-            requireKemKeyPair();
-            String selectedAlgorithm = pqcKemAlgoCombo.getValue();
-            if (selectedAlgorithm == null || !PostQuantumOperations.areAlgorithmsCompatible(selectedAlgorithm, currentPublicKey.getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError("KEM Algorithm Error", "Generate a key pair for the selected ML-KEM/Kyber algorithm first.");
-                return;
-            }
-            PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(currentPublicKey, selectedAlgorithm);
-            pqcKemCiphertextArea.setText(DataConverter.bytesToHex(result.encapsulation()));
-            pqcKemSharedSecretField.setText(DataConverter.bytesToHex(result.sharedSecret()));
-            bobSecret = result.sharedSecret();
-            if (pqcAliceSecretField != null) pqcAliceSecretField.clear();
-            pqcKemStatusLabel.setText(t("module.pqc.encapsulated"));
-            pqcKemStatusLabel.setStyle("");
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", selectedAlgorithm),
-                com.cryptocarver.model.OperationDetail.publicDetail("Ciphertext Size", result.encapsulation().length + " bytes"),
-                com.cryptocarver.model.OperationDetail.secretDetail("Secret Size", result.sharedSecret().length + " bytes")
-            );
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("ML-KEM Encapsulate")
-                        .output(result.encapsulation()).details(details)
-                        .status("ML-KEM encapsulation completed")
-                        .build());
-            }
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("KEM Error", "Unable to encapsulate: " + e.getMessage());
-        }
-    }
+    public void handlePQCEncapsulate() { kemCoordinator().handlePQCEncapsulate(); }
 
     @FXML
-    public void handlePQCDecapsulate() {
-        try {
-            requireKemKeyPair();
-            String ciphertextHex = pqcKemCiphertextArea.getText().trim();
-            if (ciphertextHex.isEmpty()) {
-                if (statusReporter != null) statusReporter.showError("KEM Input Error", "Encapsulate first or paste an encapsulation in hexadecimal.");
-                return;
-            }
-            String selectedAlgorithm = pqcKemAlgoCombo.getValue();
-            byte[] secret = PostQuantumOperations.decapsulate(currentPrivateKey, DataConverter.hexToBytes(ciphertextHex), selectedAlgorithm);
-            if (pqcAliceSecretField != null) pqcAliceSecretField.setText(DataConverter.bytesToHex(secret));
-            if (bobSecret != null) {
-                boolean match = java.security.MessageDigest.isEqual(bobSecret, secret);
-                if (match) {
-                    pqcKemStatusLabel.setText(t("module.pqc.match"));
-                    pqcKemStatusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-                } else {
-                    pqcKemStatusLabel.setText(t("module.pqc.mismatch"));
-                    pqcKemStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-                }
-            } else {
-                pqcKemStatusLabel.setText(t("module.pqc.bobSecretUnknown"));
-            }
-            Map<String, String> legacyDetails = new HashMap<>();
-            legacyDetails.put("Algorithm", pqcKemAlgoCombo.getValue());
-            legacyDetails.put("Encapsulation Length", ciphertextHex.length() / 2 + " bytes");
-            legacyDetails.put("Shared Secret", "Recovered (not displayed in history)");
-
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", pqcKemAlgoCombo.getValue()),
-                com.cryptocarver.model.OperationDetail.publicDetail("Encapsulation Length", ciphertextHex.length() / 2 + " bytes"),
-                com.cryptocarver.model.OperationDetail.publicDetail("Shared Secret", "Recovered (not displayed in history)")
-            );
-
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("ML-KEM Decapsulate")
-                        .input(DataConverter.hexToBytes(ciphertextHex)).output(secret).details(details)
-                        .status("ML-KEM decapsulation completed")
-                        .build());
-            }
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("KEM Error", "Unable to decapsulate: " + e.getMessage());
-        }
-    }
-
-    private void requireKemKeyPair() {
-        if (currentPublicKey == null || currentPrivateKey == null || !isKemAlgorithm(currentPublicKey.getAlgorithm())) {
-            throw new IllegalStateException("Generate an ML-KEM/Kyber key pair first.");
-        }
-    }
-
-    private boolean isKemAlgorithm(String algorithm) {
-        if (algorithm == null) return false;
-        String normalized = algorithm.toUpperCase(java.util.Locale.ROOT);
-        return normalized.startsWith("KYBER") || normalized.startsWith("ML-KEM");
-    }
+    public void handlePQCDecapsulate() { kemCoordinator().handlePQCDecapsulate(); }
 
     @FXML
-    public void handlePQCBenchmark() {
-        String algo = pqcBenchmarkAlgoCombo.getValue();
-        if (algo == null) {
-            if (statusReporter != null) statusReporter.showError("Benchmark Error", "Select an algorithm to benchmark");
-            return;
-        }
-
-        if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(true);
-        if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarking", algo));
-
-        Callable<String> task = () -> {
-            com.cryptocarver.crypto.pqc.PQCBenchmark bench = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
-            bench.run();
-            return bench.getValue();
-        };
-
-        Consumer<String> onSuccess = resultText -> {
-            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(resultText);
-            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
-        };
-
-        Consumer<Throwable> onFailure = err -> {
-            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarkFailed", err != null ? err.getMessage() : t("error.unknown")));
-            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
-            if (statusReporter != null) statusReporter.showError("Benchmark Error", err != null ? err.getMessage() : "Unknown error");
-        };
-
-        Runnable onCancelled = () -> {
-            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarkCancelled"));
-            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
-        };
-
-        if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
-            statusReporter.getOperationExecutor().execute("PQC Benchmark (" + algo + ")", pqcBenchmarkBtn, task, onSuccess, onFailure, onCancelled);
-        } else {
-            try {
-                String res = task.call();
-                onSuccess.accept(res);
-            } catch (Exception e) {
-                onFailure.accept(e);
-            }
-        }
-    }
+    public void handlePQCBenchmark() { benchmarkCoordinator().handlePQCBenchmark(); }
 
     @FXML
     public void handlePopulatePqcKeyShelf() {
