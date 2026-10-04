@@ -92,3 +92,14 @@ the shared prefix “genera”. The predicate now checks the localized message
 phrase rather than that ambiguous substring. After this baseline finding was
 recorded, the test pinned its normalized transcript with SHA-256
 `966775804cfbe1aef70e67ee937dded76eedc2a63b8a466f6110c5bfe7043d4e`.
+
+## Fix 1 — classify the decapsulated secret
+
+The baseline defect was fixed independently before coordinator extraction:
+`handlePQCDecapsulate` now publishes its recovered output as SECRET, matching
+its secret detail and the existing encapsulation policy. The characterization
+checks the raw output classification and all MASKED/REDACTED surfaces again.
+The post-fix transcript SHA-256 is
+`cbc6ecb8aa880d65b899199f0b853489812ddbcf3b37606bdf3c5ff8c6686368`; the
+remaining recorded defects are untranslated algorithm-mismatch feedback and
+the blank benchmark result.

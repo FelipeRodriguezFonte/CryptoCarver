@@ -248,12 +248,13 @@ public class PostQuantumController {
             java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
                 com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", pqcKemAlgoCombo.getValue()),
                 com.cryptocarver.model.OperationDetail.publicDetail("Encapsulation Length", ciphertextHex.length() / 2 + " bytes"),
-                com.cryptocarver.model.OperationDetail.publicDetail("Shared Secret", "Recovered (not displayed in history)")
+                com.cryptocarver.model.OperationDetail.secretDetail("Shared Secret", "Recovered (not displayed in history)")
             );
 
             if (statusReporter != null) {
                 statusReporter.publish(OperationResult.forOperation("ML-KEM Decapsulate")
-                        .input(DataConverter.hexToBytes(ciphertextHex)).output(secret).details(details)
+                        .input(DataConverter.hexToBytes(ciphertextHex))
+                        .output(secret, com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
                         .status("ML-KEM decapsulation completed")
                         .build());
             }

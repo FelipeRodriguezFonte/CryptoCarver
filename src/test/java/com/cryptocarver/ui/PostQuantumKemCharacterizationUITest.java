@@ -169,6 +169,8 @@ class PostQuantumKemCharacterizationUITest {
                         controller.handlePQCDecapsulate();
                         OperationResult decapsulated = lastResult(shell);
                         assertEquals("ML-KEM Decapsulate", decapsulated.getOperation());
+                        assertEquals(com.cryptocarver.model.OperationDetail.Classification.SECRET,
+                                decapsulated.getOutputClassification());
                         assertEquals(bobHex, aliceSecret.getText());
                         assertTrue(MessageDigest.isEqual(hex(bobHex), hex(aliceSecret.getText())));
                         sharedSecrets.add(aliceSecret.getText());
@@ -222,8 +224,8 @@ class PostQuantumKemCharacterizationUITest {
                     Files.writeString(Path.of("target/pqc-kem-characterization.txt"), joined, StandardCharsets.UTF_8);
                     String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                             .digest(joined.getBytes(StandardCharsets.UTF_8)));
-                    assertEquals(4, violations.size(), String.join("\n", violations) + "\n" + joined);
-                    assertEquals("966775804cfbe1aef70e67ee937dded76eedc2a63b8a466f6110c5bfe7043d4e",
+                    assertEquals(2, violations.size(), String.join("\n", violations) + "\n" + joined);
+                    assertEquals("cbc6ecb8aa880d65b899199f0b853489812ddbcf3b37606bdf3c5ff8c6686368",
                             digest, joined);
                 } catch (Throwable error) { throw new AssertionError(error); }
             });
