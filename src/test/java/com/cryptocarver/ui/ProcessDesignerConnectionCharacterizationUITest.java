@@ -114,8 +114,9 @@ class ProcessDesignerConnectionCharacterizationUITest {
                 assertEquals(1, curves(drag.scene).size(), "releasing over empty canvas cancels the transient curve");
                 assertEquals(1.0, ownInput.getOpacity(), 0.001, "cancel restores port opacity");
                 assertTrue(controller.connections.size() == 1);
-                assertNull(field(controller, "connectionDragSourceNode"));
-                assertNull(field(controller, "interactiveConnectionCurve"));
+                Object connectionCoordinator = field(controller, "connectionCoordinator");
+                assertNull(field(connectionCoordinator, "connectionDragSourceNode"));
+                assertNull(field(connectionCoordinator, "interactiveConnectionCurve"));
                 transcript.add("drag=started moved empty-release=cancel own-port=dim occupied-port=dim free-port=bright opacity=restored");
 
                 output.fireEvent(mouseEvent(MouseEvent.MOUSE_PRESSED, 1, 1));

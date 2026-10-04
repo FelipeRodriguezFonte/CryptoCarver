@@ -113,8 +113,6 @@ public class ProcessDesignerController {
     private NodeInspectorRenderer dynamicInspectorRenderer;
 
     // Interactive connection drag state
-    private ProcessDefinition.Node connectionDragSourceNode;
-    private CubicCurve interactiveConnectionCurve;
     record PortHandleData(ProcessDefinition.Node node, ProcessNodeHandler.PortDefinition port) {}
     final List<Circle> inputPortHandles = new ArrayList<>();
 
@@ -130,6 +128,7 @@ public class ProcessDesignerController {
     private final ProcessUndoRedoCoordinator undoRedoCoordinator = new ProcessUndoRedoCoordinator();
     private final ProcessLayoutCoordinator layoutCoordinator = new ProcessLayoutCoordinator();
     private final ProcessSelectionCoordinator selectionCoordinator = new ProcessSelectionCoordinator();
+    private final ProcessConnectionCoordinator connectionCoordinator = new ProcessConnectionCoordinator();
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -219,11 +218,7 @@ public class ProcessDesignerController {
                 selected = null;
                 selectedNodeIds.clear();
                 selectedConnection = null;
-                if (interactiveConnectionCurve != null) {
-                    workflowCanvas.getChildren().remove(interactiveConnectionCurve);
-                    interactiveConnectionCurve = null;
-                    connectionDragSourceNode = null;
-                }
+                if (connectionCoordinator.interactiveCurve() != null) cancelConnectionDrag();
                 updateSelectionUi();
                 redraw();
                 e.consume();
@@ -242,9 +237,10 @@ public class ProcessDesignerController {
         });
 
         workflowCanvas.setOnMouseMoved(e -> {
-            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+            if (connectionCoordinator.isDragging()) {
+                ProcessDefinition.Node sourceNode = connectionCoordinator.dragSourceNode();
                 Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
-                updateInteractiveCurve(connectionDragSourceNode.x + 150, connectionDragSourceNode.y + 35, local.getX(), local.getY());
+                updateInteractiveCurve(sourceNode.x + 150, sourceNode.y + 35, local.getX(), local.getY());
             }
         });
     }
@@ -567,9 +563,10 @@ public class ProcessDesignerController {
             Tooltip.install(inHandle, new Tooltip(portLabel(port.name()) + " (" + repsStr + ")"));
 
             inHandle.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-                if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
-                    if (!connectionDragSourceNode.id.equals(node.id)) {
-                        completeConnectionDragToPort(connectionDragSourceNode, node, port.name());
+                if (connectionCoordinator.isDragging()) {
+                    ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
+                    if (!dragSource.id.equals(node.id)) {
+                        completeConnectionDragToPort(dragSource, node, port.name());
                     } else {
                         cancelConnectionDrag();
                     }
@@ -598,14 +595,16 @@ public class ProcessDesignerController {
             e.consume();
         });
         outHandle.setOnMouseDragged(e -> {
-            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+            if (connectionCoordinator.isDragging()) {
+                ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
                 Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
-                updateInteractiveCurve(connectionDragSourceNode.x + 150, connectionDragSourceNode.y + 35, local.getX(), local.getY());
+                updateInteractiveCurve(dragSource.x + 150, dragSource.y + 35, local.getX(), local.getY());
             }
             e.consume();
         });
         outHandle.setOnMouseReleased(e -> {
-            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
+            if (connectionCoordinator.isDragging()) {
+                ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
                 Point2D local = workflowCanvas.sceneToLocal(e.getSceneX(), e.getSceneY());
                 Circle targetHandle = null;
                 for (Circle circle : inputPortHandles) {
@@ -616,19 +615,19 @@ public class ProcessDesignerController {
                     }
                 }
                 if (targetHandle != null && targetHandle.getUserData() instanceof PortHandleData data) {
-                    if (!data.node.id.equals(connectionDragSourceNode.id)) {
-                        completeConnectionDragToPort(connectionDragSourceNode, data.node, data.port.name());
+                    if (!data.node.id.equals(dragSource.id)) {
+                        completeConnectionDragToPort(dragSource, data.node, data.port.name());
                     } else {
                         cancelConnectionDrag();
                     }
                 } else {
                     ProcessDefinition.Node target = nodes.stream()
-                            .filter(n -> !n.id.equals(connectionDragSourceNode.id))
+                            .filter(n -> !n.id.equals(dragSource.id))
                             .filter(n -> local.getX() >= n.x && local.getX() <= n.x + 150 && local.getY() >= n.y && local.getY() <= n.y + 70)
                             .findFirst()
                             .orElse(null);
                     if (target != null) {
-                        completeConnectionDrag(connectionDragSourceNode, target, e.getScreenX(), e.getScreenY());
+                        completeConnectionDrag(dragSource, target, e.getScreenX(), e.getScreenY());
                     } else {
                         cancelConnectionDrag();
                     }
@@ -655,9 +654,10 @@ public class ProcessDesignerController {
 
         final double[] dragStartPos = new double[4]; // [initialNodeX, initialNodeY, initialSceneX, initialSceneY]
         view.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-            if (interactiveConnectionCurve != null && connectionDragSourceNode != null) {
-                if (!connectionDragSourceNode.id.equals(node.id)) {
-                    completeConnectionDrag(connectionDragSourceNode, node);
+            if (connectionCoordinator.isDragging()) {
+                ProcessDefinition.Node dragSource = connectionCoordinator.dragSourceNode();
+                if (!dragSource.id.equals(node.id)) {
+                    completeConnectionDrag(dragSource, node);
                 } else {
                     cancelConnectionDrag();
                 }
@@ -783,118 +783,38 @@ public class ProcessDesignerController {
         workflowCanvas.getChildren().add(curve);
     }
 
-    private void startConnectionDrag(ProcessDefinition.Node sourceNode) {
-        connectionDragSourceNode = sourceNode;
-        interactiveConnectionCurve = new CubicCurve();
-        interactiveConnectionCurve.setStartX(sourceNode.x + 150);
-        interactiveConnectionCurve.setStartY(sourceNode.y + 35);
-        interactiveConnectionCurve.setEndX(sourceNode.x + 150);
-        interactiveConnectionCurve.setEndY(sourceNode.y + 35);
-        updateCurveControls(interactiveConnectionCurve);
-        interactiveConnectionCurve.setFill(null);
-        interactiveConnectionCurve.setStroke(Color.web("#f6c344"));
-        interactiveConnectionCurve.setStrokeWidth(2.0);
-        interactiveConnectionCurve.getStrokeDashArray().addAll(6.0, 4.0);
-        workflowCanvas.getChildren().add(interactiveConnectionCurve);
+    private void startConnectionDrag(ProcessDefinition.Node sourceNode) { connectionCoordinator.startConnectionDrag(connectionView(), sourceNode); }
 
-        Representation srcRep = outputRepresentationOf(sourceNode);
-        for (Circle circle : inputPortHandles) {
-            if (circle.getUserData() instanceof PortHandleData data) {
-                if (data.node.id.equals(sourceNode.id)) {
-                    circle.setOpacity(0.3);
-                    continue;
-                }
-                boolean portOccupied = connections.stream().anyMatch(c -> c.to.equals(data.node.id) && data.port.name().equals(c.targetPort));
-                boolean compatible = !portOccupied && (srcRep == null || data.port.acceptedRepresentations().isEmpty() || data.port.acceptedRepresentations().contains(srcRep));
-                circle.setOpacity(compatible ? 1.0 : 0.3);
-            }
-        }
-    }
+    private void updateInteractiveCurve(double startX, double startY, double endX, double endY) { connectionCoordinator.updateInteractiveCurve(connectionView(), startX, startY, endX, endY); }
 
-    private void updateInteractiveCurve(double startX, double startY, double endX, double endY) {
-        if (interactiveConnectionCurve == null) return;
-        interactiveConnectionCurve.setStartX(startX);
-        interactiveConnectionCurve.setStartY(startY);
-        interactiveConnectionCurve.setEndX(endX);
-        interactiveConnectionCurve.setEndY(endY);
-        updateCurveControls(interactiveConnectionCurve);
-    }
+    void cancelConnectionDrag() { connectionCoordinator.cancelConnectionDrag(connectionView()); }
 
-    void cancelConnectionDrag() {
-        if (interactiveConnectionCurve != null) {
-            workflowCanvas.getChildren().remove(interactiveConnectionCurve);
-            interactiveConnectionCurve = null;
-        }
-        connectionDragSourceNode = null;
-        for (Circle circle : inputPortHandles) {
-            circle.setOpacity(1.0);
-        }
-    }
+    void completeConnectionDragToPort(ProcessDefinition.Node from, ProcessDefinition.Node to, String targetPort) { connectionCoordinator.completeConnectionDragToPort(connectionView(), from, to, targetPort); }
 
-    void completeConnectionDragToPort(ProcessDefinition.Node from, ProcessDefinition.Node to, String targetPort) {
-        cancelConnectionDrag();
-        if (from == null || to == null) return;
-        selectedNodeIds.clear();
-        selectedNodeIds.add(from.id);
-        selectedNodeIds.add(to.id);
-        connectToPort(targetPort);
-    }
+    void completeConnectionDrag(ProcessDefinition.Node from, ProcessDefinition.Node to) { connectionCoordinator.completeConnectionDrag(connectionView(), from, to); }
 
-    void completeConnectionDrag(ProcessDefinition.Node from, ProcessDefinition.Node to) {
-        completeConnectionDrag(from, to, 0, 0);
-    }
+    void completeConnectionDrag(ProcessDefinition.Node from, ProcessDefinition.Node to, double screenX, double screenY) { connectionCoordinator.completeConnectionDrag(connectionView(), from, to, screenX, screenY); }
 
-    void completeConnectionDrag(ProcessDefinition.Node from, ProcessDefinition.Node to, double screenX, double screenY) {
-        cancelConnectionDrag();
-        if (from == null || to == null) return;
-        ProcessNodeHandler toHandler = ProcessEngine.getHandlerFor(to.type);
-        if (toHandler == null) return;
-        List<ProcessNodeHandler.PortDefinition> ports = toHandler.inputPorts(to);
-        Representation srcRep = outputRepresentationOf(from);
-        List<ProcessNodeHandler.PortDefinition> available = ports.stream()
-                .filter(p -> connections.stream().noneMatch(c -> c.to.equals(to.id) && p.name().equals(c.targetPort)))
-                .filter(p -> srcRep == null || p.acceptedRepresentations().contains(srcRep))
-                .toList();
-
-        if (available.isEmpty()) {
-            if (executionOutputArea != null) {
-                executionOutputArea.setText(t("module.process.feedback.incompatible", from.label, to.label));
-            }
-            return;
-        }
-
-        if (available.size() == 1) {
-            selectedNodeIds.clear();
-            selectedNodeIds.add(from.id);
-            selectedNodeIds.add(to.id);
-            connectToPort(available.get(0).name());
-            return;
-        }
-
-        // Multiple available ports on target node: offer explicit selection menu or request specific port handle
-        if (workflowCanvas != null && workflowCanvas.getScene() != null && workflowCanvas.getScene().getWindow() != null) {
-            ContextMenu menu = new ContextMenu();
-            for (ProcessNodeHandler.PortDefinition port : available) {
-                MenuItem item = new MenuItem(t("module.process.connectToPort", portLabel(port.name())));
-                item.setOnAction(ev -> completeConnectionDragToPort(from, to, port.name()));
-                menu.getItems().add(item);
-            }
-            if (screenX > 0 && screenY > 0) {
-                menu.show(workflowCanvas.getScene().getWindow(), screenX, screenY);
-            } else {
-                Point2D p2d = workflowCanvas.localToScreen(to.x + 20, to.y + 20);
-                if (p2d != null) {
-                    menu.show(workflowCanvas.getScene().getWindow(), p2d.getX(), p2d.getY());
-                } else {
-                    menu.show(workflowCanvas.getScene().getWindow());
-                }
-            }
-        } else {
-            if (executionOutputArea != null) {
-                executionOutputArea.setText(t("module.process.feedback.ambiguousPorts",
-                        available.stream().map(ProcessNodeHandler.PortDefinition::name).collect(java.util.stream.Collectors.joining(", "))));
-            }
-        }
+    private ProcessConnectionCoordinator.View connectionView() {
+        return new ProcessConnectionCoordinator.View(
+                () -> nodes,
+                () -> connections,
+                () -> selectedNodeIds,
+                () -> selected,
+                node -> selected = node,
+                () -> workflowCanvas,
+                () -> inputPortHandles,
+                this::outputRepresentationOf,
+                this::updateCurveControls,
+                this::toDefinition,
+                this::orderedConnectionPair,
+                this::nodeLabel,
+                this::portLabel,
+                this::t,
+                () -> executionOutputArea,
+                this::updateSelectionUi,
+                this::redraw,
+                this::recordStateChange);
     }
 
     void selectConnection(ProcessDefinition.Connection connection) {
@@ -1054,11 +974,6 @@ public class ProcessDesignerController {
                 || "KDF_PBKDF2".equals(node.type) || "RSA_KEYPAIR_GENERATE".equals(node.type);
     }
 
-    private static boolean isReusableKeySource(ProcessDefinition.Node node) {
-        return node != null && ("AES_KEY_GENERATE".equals(node.type)
-                || "KDF_PBKDF2".equals(node.type) || "RSA_KEYPAIR_GENERATE".equals(node.type));
-    }
-
     private static boolean isOutputNode(ProcessDefinition.Node node) {
         return "CONSOLE_OUTPUT".equals(node.type) || "FILE_OUTPUT".equals(node.type);
     }
@@ -1072,71 +987,7 @@ public class ProcessDesignerController {
                 || (c.from.equals(destination) && c.to.equals(source))).findFirst().orElse(null);
     }
 
-    /**
-     * The port an unnamed connection into {@code nodeId} would bind to, following the same rule
-     * {@link ProcessEngine#validate} applies. Returns null when the engine would demand an
-     * explicit port, or when the node takes no input at all.
-     */
-    private String defaultInputPort(String nodeId) {
-        ProcessDefinition.Node node = nodes.stream().filter(n -> n.id.equals(nodeId)).findFirst().orElse(null);
-        if (node == null) return null;
-        List<ProcessNodeHandler.PortDefinition> ports;
-        try {
-            ports = ProcessEngine.getHandlerFor(node.type).inputPorts(node);
-        } catch (RuntimeException unknownType) {
-            return null;
-        }
-        if (ports.size() == 1) return ports.get(0).name();
-        boolean payloadAndKey = ports.stream().anyMatch(p -> "payload".equals(p.name()))
-                && ports.stream().anyMatch(p -> "key".equals(p.name()));
-        return payloadAndKey ? "payload" : null;
-    }
-
-    private void connectToPort(String targetPort) {
-        if (selectedNodeIds.size() != 2) return;
-        ProcessDefinition before = snapshot(toDefinition());
-        List<String> pair = orderedConnectionPair();
-        String source = pair.get(0);
-        String destination = pair.get(1);
-
-        // A connection created without an explicit port is not portless: ProcessEngine.validate
-        // later assigns it the target's default input port. Resolve that same port here, or the
-        // graph can end up with two links bound to one port and only fail once it is run.
-        String effectivePort = targetPort != null ? targetPort : defaultInputPort(destination);
-        if (effectivePort != null) {
-            // Reconnecting through the default path replaces the previous default link, which is
-            // what it has always done; it must not stack a second one on an occupied port.
-            connections.removeIf(c -> c.to.equals(destination) && c.targetPort == null
-                    && effectivePort.equals(defaultInputPort(destination)));
-            String port = effectivePort;
-            boolean occupied = connections.stream().anyMatch(c -> c.to.equals(destination) && port.equals(c.targetPort));
-            if (occupied) {
-                executionOutputArea.setText(t("module.process.connectionOccupied", effectivePort, nodeLabel(destination)));
-                return;
-            }
-        } else {
-            connections.removeIf(c -> c.to.equals(destination) && c.targetPort == null);
-        }
-
-        ProcessDefinition.Connection newConn = new ProcessDefinition.Connection(source, destination, targetPort);
-        connections.add(newConn);
-        if ("key".equals(targetPort)) {
-            nodes.stream().filter(n -> n.id.equals(destination)).findFirst().ifPresent(n -> n.configuration.put("keyFromFlow", "true"));
-        }
-
-        ProcessDefinition.Node sourceNode = nodes.stream().filter(n -> n.id.equals(source)).findFirst().orElse(null);
-        ProcessDefinition.Node destinationNode = nodes.stream().filter(n -> n.id.equals(destination)).findFirst().orElse(null);
-        boolean keepReusableKeySourceSelected = "key".equals(targetPort) && isReusableKeySource(sourceNode);
-        selected = keepReusableKeySourceSelected ? sourceNode : destinationNode;
-        selectedNodeIds.clear();
-        if (selected != null) selectedNodeIds.add(selected.id);
-        String portStr = targetPort != null ? " [" + targetPort + "]" : "";
-        executionOutputArea.setText(t("module.process.connected", nodeLabel(source), nodeLabel(destination), portStr
-                + (keepReusableKeySourceSelected ? ". Select another crypto node to reuse this key." : "")));
-        updateSelectionUi();
-        redraw();
-        recordStateChange("Connect nodes", before);
-    }
+    private void connectToPort(String targetPort) { connectionCoordinator.connectToPort(connectionView(), targetPort); }
 
     @FXML public void handleConnectSelected() { connectToPort(null); }
     @FXML public void handleSaveNodeSettings() { saveSelectedNodeSettings(); redraw(); }

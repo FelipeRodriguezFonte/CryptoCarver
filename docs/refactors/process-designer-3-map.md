@@ -24,7 +24,7 @@ El método `connectToPort(String)` ocupa 45 líneas (1095–1139 en la base de f
 - Buscar destinos, resolver `ProcessNodeHandler`/`Representation`, mutar `nodes`/`connections`/selección y registrar undo son coordinables mediante proveedores y delegados.
 - Construir/añadir la curva JavaFX, mover sus extremos, atenuar círculos, mostrar menú contextual y escribir feedback son cableado de UI. El cálculo de los puntos de control de curva se comparte con el renderer; durante esta fase será un callback y se revisará al extraer el canvas.
 - Las operaciones deben mantener su orden: cancelar drag antes de completar, asignar el par de selección antes de resolver el puerto, y no registrar undo ni redibujar cuando se rechaza una conexión ocupada/incompatible.
-- `Escape` actualmente quita curva y estado, pero no restaura explícitamente la opacidad de los círculos; `cancelConnectionDrag()` sí restaura todos a 1.0. La caracterización comprobará esa ruta antes de fijar la transcripción.
+- `Escape` actualmente quita curva y estado y luego redibuja el canvas; `cancelConnectionDrag()` restaura los círculos a 1.0. La transcripción caracteriza la cancelación al soltar fuera y al completar sobre un puerto ocupado; Escape queda conectado al mismo callback de cancelación antes del redibujado.
 - El coordinador tendrá `record View` efímero con suppliers/getters perezosos y callbacks de estado/UI. No retendrá vista ni controlador. Las funciones que el renderer de fase 4 necesite consultar (nodo de origen y trazo activo) se expondrán como getters del coordinador sin cambiar la API pública del controlador.
 
 ## Cobertura de partida y huecos
@@ -35,4 +35,14 @@ La nueva `ProcessDesignerConnectionCharacterizationUITest` añadirá una transcr
 
 ## Decisión de separabilidad
 
-El flujo de conexión puede moverse solo si mantiene el mismo orden de selección, mutación, feedback, dibujo y undo. La cancelación Escape y la cancelación por soltar en vacío se comprobarán junto a la ruta pública `cancelConnectionDrag`. Si los tests muestran que la curva, los círculos y el renderer dependen de un orden imposible de preservar con callbacks, se documentará y se saltará la extracción.
+El flujo de conexión puede moverse solo si mantiene el mismo orden de selección, mutación, feedback, dibujo y undo. La transcripción cubre cancelación al soltar en vacío y al intentar completar sobre un puerto ocupado; el handler Escape ahora delega en el mismo cancelador antes de volver a dibujar. Si los tests muestran que la curva, los círculos y el renderer dependen de un orden imposible de preservar con callbacks, se documentará y se saltará la extracción.
+
+## Hallazgo y arreglo previo a la extracción
+
+La caracterización encontró que Undo retiraba un enlace al puerto `key` pero dejaba `keyFromFlow=true`. `connectToPort()` tomaba una definición superficial antes de mutar la configuración viva. El hallazgo se anotó en `process-designer-3-characterization-failures.md`; el arreglo separado `a186257` toma `snapshot(toDefinition())` antes de mutar. La caracterización confirmó que Undo quita enlace y marca y Redo los restaura.
+
+## Extracción aplicada
+
+`ProcessConnectionCoordinator` posee ahora únicamente la fuente de arrastre y la curva temporal. La lógica de `startConnectionDrag`, movimiento/cancelación/compleción, cálculo de puertos por defecto, compatibilidad/ocupación, política de `keyFromFlow`, selección posterior y `connectToPort` vive en ese coordinador. El `View` se crea para cada llamada y contiene suppliers para grafo, selección y controles, además de callbacks para geometría de curva, inspector, feedback, dibujo y undo; el coordinador no guarda la vista ni una referencia al controlador. `isDragging()`, `dragSourceNode()` e `interactiveCurve()` permiten que los handlers existentes y el próximo renderer consulten el estado.
+
+`inputPortHandles`, `PortHandleData`, `addConnectionView`, `updateCurveControls` y `createNodeView` permanecen en el canvas/controlador para la fase 4. Los métodos de conexión del controlador conservan su visibilidad y firma y delegan en una línea. La caracterización mantiene el SHA `e8baa0c2d865ec4f5267eb2cc6aeecdaae884985cb7b6be4686151adb1b97310` tras la extracción. `ProcessDesignerController.java` queda en 1590 líneas (1739 antes de fase 3, −149 líneas). El test caracterizador enfocado pasa; las dos suites de puerta se ejecutan antes de cerrar la fase.
