@@ -234,7 +234,10 @@ public class InlineErrorBannerTest {
                 // The handler's own input validation is the subject of this test. Let the
                 // real banner render errors, but keep global preflight from intercepting
                 // before handleGenerateMAC/handleVerifyMAC reaches its explicit branches.
-                setPrivateField(authController, "mainController", allowingPreflightReporter(controller));
+                // init also wires the reporter supplier used by the extracted coordinators.
+                authController.init(allowingPreflightReporter(controller),
+                        (ComboBox<String>) getPrivateField(authController, "inputFormatCombo"),
+                        (ComboBox<String>) getPrivateField(authController, "outputFormatCombo"));
 
                 ComboBox<String> macAlgoCombo = (ComboBox<String>) getPrivateField(authController, "authMacAlgorithmCombo");
                 macAlgoCombo.setValue("HMAC-SHA256");
@@ -278,7 +281,6 @@ public class InlineErrorBannerTest {
 
                 // Generate RSA key pair for testing
                 java.security.KeyPair keyPair = com.cryptocarver.crypto.AsymmetricKeyOperations.generateRSAKeyPair(2048);
-                setPrivateField(authController, "currentPublicKey", keyPair.getPublic());
 
                 String validPubKeyPem = com.cryptocarver.crypto.AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic());
                 TextArea pubKeyArea = (TextArea) getPrivateField(authController, "signaturePublicKeyArea");
@@ -351,12 +353,6 @@ public class InlineErrorBannerTest {
         Field f = obj.getClass().getDeclaredField(fieldName);
         f.setAccessible(true);
         return f.get(obj);
-    }
-
-    private void setPrivateField(Object obj, String fieldName, Object val) throws Exception {
-        Field f = obj.getClass().getDeclaredField(fieldName);
-        f.setAccessible(true);
-        f.set(obj, val);
     }
 
     private StatusReporter allowingPreflightReporter(ModernMainController controller) {
