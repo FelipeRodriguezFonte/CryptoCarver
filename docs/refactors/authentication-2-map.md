@@ -56,3 +56,14 @@ AuthenticationMacCoordinator recibe un record View de proveedores para algoritmo
 InlineErrorBannerTest ajusta un único fixture: antes mutaba por reflexión mainController, lo que no actualiza el Supplier del coordinador; ahora llama al init público con el reporter de prueba y conserva los formatos cargados. La suite normal detectó el desajuste porque quedó visible el banner de preflight anterior, no porque cambiara la validación de producción.
 
 El SHA-256 del transcript protegido, verificado antes y después de la extracción, es 95e2692fb07d42fca1f02df27fda47240d1cdb0120120ed8e153031880dad598. AuthenticationController pasa de 1163 a 955 líneas (−208).
+
+## Puerta de control
+
+Las ejecuciones completas finales pasaron:
+
+| Comando | XML frescos | Pruebas | Fallos | Errores | Omitidas |
+|---|---:|---:|---:|---:|---:|
+| mvn -o -q test -Plow-cpu | 421 | 2863 | 0 | 0 | 1 |
+| mvn -o -q test -Plow-cpu -DrunUiTests=true | 106 | 519 | 0 | 0 | 0 |
+
+Los recuentos son distintos; los XML UI se contaron solo entre los actualizados por la segunda ejecución, sin sumar informes normales antiguos. ExpandedViewerLifecycleUITest pasó. Hubo un fallo inicial en InlineErrorBannerTest porque ese fixture sustituía solo el campo antiguo del reporter; el mapa documenta el ajuste del fixture a init(...), y la repetición de ambas suites quedó limpia.
