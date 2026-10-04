@@ -47,7 +47,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Approved classification policy and user-visible behavior for symmetric results. */
@@ -125,6 +124,12 @@ class SymmetricOutputClassificationCharacterizationUITest {
                 String salsaCiphertext = OperationResultRenderer.render(salsa[0], profile);
                 assertFalse(chachaCiphertext.equals("***MASKED***"), "ChaCha20 ciphertext under " + profile);
                 assertFalse(salsaCiphertext.equals("***MASKED***"), "Salsa20 ciphertext under " + profile);
+                assertEquals(
+                        ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
+                                ResultPresentationPolicy.classifyPublishedResult(chacha[0]), profile),
+                        ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
+                                ResultPresentationPolicy.classifyPublishedResult(salsa[0]), profile),
+                        "ciphertext Shelf decision under " + profile);
                 assertEquals(chachaCiphertext, OperationResultRenderer.render(chacha[0], SecretVisibilityProfile.FULL_LAB));
                 assertEquals(salsaCiphertext, OperationResultRenderer.render(salsa[0], SecretVisibilityProfile.FULL_LAB));
             }
@@ -167,7 +172,7 @@ class SymmetricOutputClassificationCharacterizationUITest {
             assertNotNull(encrypted);
             assertEquals(OperationDetail.Classification.PUBLIC, encrypted.getOutputClassification());
             String ciphertext = fxValue(() -> textArea("cipherOutputArea").getText());
-            assertFullLabCaptureWorks(ciphertext, encrypted);
+            assertFullLabCaptureWorks(ciphertext);
             assertEquals(1, ClipboardShelfManager.getInstance().getEntries().size());
             assertEquals(ciphertext, ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
 
@@ -183,7 +188,7 @@ class SymmetricOutputClassificationCharacterizationUITest {
             OperationResult decrypted = fxValue(() -> read(shell, "lastPublishedResultSnapshot"));
             assertNotNull(decrypted);
             assertEquals(OperationDetail.Classification.SENSITIVE, decrypted.getOutputClassification());
-            assertFullLabCaptureWorks(MESSAGE, decrypted);
+            assertFullLabCaptureWorks(MESSAGE);
             assertEquals(1, ClipboardShelfManager.getInstance().getEntries().size());
             assertEquals(MESSAGE, ClipboardShelfManager.getInstance().getEntries().get(0).getValue());
             assertEquals(OperationDetail.Classification.SENSITIVE,
@@ -314,7 +319,7 @@ class SymmetricOutputClassificationCharacterizationUITest {
         return panel.reporter().published.get(panel.reporter().published.size() - 1);
     }
 
-    private void assertFullLabCaptureWorks(String expected, OperationResult result) throws Exception {
+    private void assertFullLabCaptureWorks(String expected) throws Exception {
         fx(() -> {
             assertEquals(expected, shell.resolveCurrentOutputText());
             TextArea output = textArea("cipherOutputArea");
