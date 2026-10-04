@@ -553,7 +553,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using ChaCha20");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(ciphertext)
+                    .output(ciphertext, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "ChaCha20")
                     .status("Encrypted using ChaCha20")
                     .build());
@@ -577,7 +577,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using ChaCha20");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(ciphertext)
-                    .output(plaintext)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "ChaCha20")
                     .status("Decrypted using ChaCha20")
                     .build());
@@ -597,7 +597,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Encrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
                     .input(plaintext)
-                    .output(ciphertext, com.cryptocarver.model.OperationDetail.Classification.SENSITIVE)
+                    .output(ciphertext, OperationDetail.Classification.PUBLIC)
                     .detail("Algorithm", "Salsa20")
                     .status("Encrypted using Salsa20")
                     .build());
@@ -644,7 +644,7 @@ final class SymmetricCipherCoordinator {
             reporter().updateStatus("Decrypted using Salsa20");
             reporter().publish(OperationResult.forOperation("Symmetric Decrypt")
                     .input(ciphertext)
-                    .output(plaintext, com.cryptocarver.model.OperationDetail.Classification.SENSITIVE)
+                    .output(plaintext, OperationDetail.Classification.SENSITIVE)
                     .detail("Algorithm", "Salsa20")
                     .status("Decrypted using Salsa20")
                     .build());
