@@ -51,3 +51,9 @@ Los cargadores son separables si reciben proveedores de la vista y del Authentic
 ## Caracterización
 
 AuthenticationKeyCharacterizationUITest usa un par RSA generado para el test. Prueba selección de privada/pública desde Shelf en ambos órdenes bajo FULL_LAB, carga del par generado bajo MASKED y REDACTED, errores de parseo privado/público legibles en EN/ES, firma/verificación después de cada ruta y ausencia de PEM privado/codificación DER en las superficies restringidas. El Shelf se vacía antes de auditar. No se detectó defecto de producto que requiera arreglo. El SHA-256 protegido es cb01b7abb468fe19fabe21f76351bfc80a20c0706809ce5f6a06c275c090c805.
+
+## Extracción aplicada
+
+AuthenticationKeyCoordinator recibe un record View con Supplier de algoritmo, controles PEM, menús Shelf, etiqueta y AuthenticationKeyState, junto a Supplier<StatusReporter>. El getter perezoso contiene proveedores de referencias a los controles y al holder compartido; no captura AuthenticationController. Los métodos públicos loadGeneratedKeyPair y las rutas FXML de archivo/portapapeles/Shelf permanecen en AuthenticationController como delegados de una línea. El reporter se resuelve al invocar, de forma que init(...) puede sustituirlo sin retener un controlador.
+
+El transcript mantuvo el digest cb01b7abb468fe19fabe21f76351bfc80a20c0706809ce5f6a06c275c090c805 antes y después de extraer. AuthenticationController pasa de 955 a 814 líneas (−141). Los estados de etiqueta observados para selección Shelf siguen siendo Public solamente al elegir privada→pública y Private solamente al elegir pública→privada.

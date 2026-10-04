@@ -1,7 +1,6 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.SignatureOperations;
-import com.cryptocarver.crypto.AsymmetricKeyOperations;
 import com.cryptocarver.crypto.MACOperations;
 import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
@@ -12,8 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.security.interfaces.RSAKey;
-import java.security.interfaces.ECKey;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,6 +34,7 @@ public class AuthenticationController {
     private final AuthenticationKeyState authenticationKeyState = new AuthenticationKeyState();
     private AuthenticationSignatureCoordinator signatureCoordinator;
     private AuthenticationMacCoordinator macCoordinator;
+    private AuthenticationKeyCoordinator keyCoordinator;
     private boolean preflightListenersInstalled;
 
     // Shared UI components
@@ -167,6 +165,7 @@ public class AuthenticationController {
         this.outputFormatCombo = outputFormatCombo;
         signatureCoordinator = null;
         macCoordinator = null;
+        keyCoordinator = null;
         installPreflightListeners();
     }
 
@@ -174,19 +173,7 @@ public class AuthenticationController {
      * Receives an in-memory laboratory key pair from the asymmetric key workbench.
      * This prepares the signature form only; it never signs or verifies data.
      */
-    public void loadGeneratedKeyPair(java.security.KeyPair keyPair, String publicPem, String privatePem) {
-        if (keyPair == null || keyPair.getPublic() == null || keyPair.getPrivate() == null) {
-            throw new IllegalArgumentException("A complete generated key pair is required");
-        }
-        authenticationKeyState.setPublicKey(keyPair.getPublic());
-        authenticationKeyState.setPrivateKey(keyPair.getPrivate());
-        if (signaturePublicKeyArea != null) signaturePublicKeyArea.setText(publicPem == null ? "" : publicPem);
-        if (signaturePrivateKeyArea != null) signaturePrivateKeyArea.setText(privatePem == null ? "" : privatePem);
-        if (signatureKeyStatusLabel != null) {
-            signatureKeyStatusLabel.setText("Generated " + keyPair.getPublic().getAlgorithm() + " key pair loaded");
-            signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
-        }
-    }
+    public void loadGeneratedKeyPair(java.security.KeyPair keyPair, String publicPem, String privatePem) { keyCoordinator().loadGeneratedKeyPair(keyPair, publicPem, privatePem); }
 
     private void installPreflightListeners() {
         if (preflightListenersInstalled) return;
@@ -227,6 +214,7 @@ public class AuthenticationController {
         this.signaturePrivateKeyArea = privateKeyArea;
         this.signaturePublicKeyArea = publicKeyArea;
         signatureCoordinator = null;
+        keyCoordinator = null;
 
         // Populate signature algorithms
         signatureAlgorithmCombo.getItems().addAll(SignatureOperations.SUPPORTED_ALGORITHMS);
@@ -501,57 +489,26 @@ public class AuthenticationController {
     /**
      * Handle load private key
      */
-    public void handleLoadSignPrivateKey() {
-        IngestionUIHelper.loadFile(resolveWindow(signaturePrivateKeyArea), signaturePrivateKeyArea,
-                signatureKeyStatusLabel, () -> loadPrivateKey(signaturePrivateKeyArea.getText()),
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
-    }
+    public void handleLoadSignPrivateKey() { keyCoordinator().handleLoadPrivateKey(); }
 
     /**
      * Handle load public key
      */
-    public void handleLoadSignPublicKey() {
-        IngestionUIHelper.loadFile(resolveWindow(signaturePublicKeyArea), signaturePublicKeyArea,
-                signatureKeyStatusLabel, () -> loadPublicKey(signaturePublicKeyArea.getText()),
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
-    }
-
-    private javafx.stage.Window resolveWindow(javafx.scene.control.Control control) {
-        return control != null && control.getScene() != null ? control.getScene().getWindow() : null;
-    }
+    public void handleLoadSignPublicKey() { keyCoordinator().handleLoadPublicKey(); }
 
     /** Paste, validate and load a private PEM key without requiring a temporary file. */
     @FXML
-    public void handlePasteSignPrivateKey() {
-        IngestionUIHelper.pasteFromClipboard(signaturePrivateKeyArea, signatureKeyStatusLabel,
-                () -> loadPrivateKey(signaturePrivateKeyArea.getText()),
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
-    }
+    public void handlePasteSignPrivateKey() { keyCoordinator().handlePastePrivateKey(); }
 
     /** Paste, validate and load a public PEM key without requiring a temporary file. */
     @FXML
-    public void handlePasteSignPublicKey() {
-        IngestionUIHelper.pasteFromClipboard(signaturePublicKeyArea, signatureKeyStatusLabel,
-                () -> loadPublicKey(signaturePublicKeyArea.getText()),
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
-    }
+    public void handlePasteSignPublicKey() { keyCoordinator().handlePastePublicKey(); }
 
     @FXML
-    public void handlePopulateSigPrivKeyShelf() {
-        IngestionUIHelper.populateShelfMenu(sigPrivKeyShelfMenu, signaturePrivateKeyArea, signatureKeyStatusLabel,
-                () -> loadPrivateKey(signaturePrivateKeyArea.getText()),
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY);
-    }
+    public void handlePopulateSigPrivKeyShelf() { keyCoordinator().handlePopulatePrivateKeyShelf(); }
 
     @FXML
-    public void handlePopulateSigPubKeyShelf() {
-        IngestionUIHelper.populateShelfMenu(sigPubKeyShelfMenu, signaturePublicKeyArea, signatureKeyStatusLabel,
-                () -> loadPublicKey(signaturePublicKeyArea.getText()),
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PUBLIC_KEY,
-                com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_CERTIFICATE);
-    }
+    public void handlePopulateSigPubKeyShelf() { keyCoordinator().handlePopulatePublicKeyShelf(); }
 
     @FXML
     public void handlePopulateMacKeyShelf() {
@@ -576,123 +533,6 @@ public class AuthenticationController {
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX,
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.BASE64,
                 com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
-    }
-
-    /**
-     * Load private key from PEM file
-     */
-    /**
-     * Load private key from PEM file
-     */
-    private void loadPrivateKey(String pem) {
-        try {
-            // Determine expected algorithm
-            String selectedAlgo = signatureAlgorithmCombo.getValue();
-            if (selectedAlgo == null)
-                selectedAlgo = "RSA"; // Default
-
-            if (selectedAlgo.contains("Ed25519")) {
-                authenticationKeyState.setPrivateKey(AsymmetricKeyOperations.importEd25519PrivateKeyPEM(pem));
-            } else if (selectedAlgo.contains("ECDSA")) {
-                authenticationKeyState.setPrivateKey(AsymmetricKeyOperations.importECPrivateKeyPEM(pem));
-            } else {
-                // Default to RSA/Generic
-                authenticationKeyState.setPrivateKey(AsymmetricKeyOperations.importPrivateKeyPEM(pem));
-            }
-
-            String keyType = authenticationKeyState.privateKey().getAlgorithm();
-            int keySize = getKeySize(authenticationKeyState.privateKey());
-
-            signatureKeyStatusLabel.setText(String.format("Private: %s %d bits", keyType, keySize));
-            signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
-
-            mainController.updateStatus("Private key loaded: " + keyType);
-
-        } catch (Exception e) {
-            authenticationKeyState.setPrivateKey(null);
-            signatureKeyStatusLabel.setText("Error loading private key");
-            signatureKeyStatusLabel.setStyle("-fx-text-fill: red; -fx-font-size: 10px;");
-
-            String help = "";
-            String selectedAlgo = signatureAlgorithmCombo.getValue();
-            if (selectedAlgo != null && selectedAlgo.contains("Ed25519")) {
-                help = "\n\nEnsure you are loading a valid Ed25519 PKCS#8 private key.";
-            } else if (e.getMessage().contains("RSA")) {
-                help = "\n\nHint: Ensure the selected algorithm matches the key type.";
-            }
-
-            mainController.showError("Key Error", "Error loading private key: " + e.getMessage() + help);
-        }
-    }
-
-    /**
-     * Load public key from PEM file
-     */
-    /**
-     * Load public key from PEM file
-     */
-    private void loadPublicKey(String pem) {
-        try {
-            // Determine expected algorithm
-            String selectedAlgo = signatureAlgorithmCombo.getValue();
-            if (selectedAlgo == null)
-                selectedAlgo = "RSA"; // Default
-
-            if (selectedAlgo.contains("Ed25519")) {
-                authenticationKeyState.setPublicKey(AsymmetricKeyOperations.importEd25519PublicKeyPEM(pem));
-            } else if (selectedAlgo.contains("ECDSA")) {
-                authenticationKeyState.setPublicKey(AsymmetricKeyOperations.importECPublicKeyPEM(pem));
-            } else {
-                // Default to RSA/Generic
-                authenticationKeyState.setPublicKey(AsymmetricKeyOperations.importPublicKeyPEM(pem));
-            }
-
-            String keyType = authenticationKeyState.publicKey().getAlgorithm();
-            int keySize = getKeySize(authenticationKeyState.publicKey());
-
-            String currentText = signatureKeyStatusLabel.getText();
-            if (currentText.contains("Private")) {
-                signatureKeyStatusLabel.setText(String.format("%s | Public: %s %d bits",
-                        currentText, keyType, keySize));
-            } else {
-                signatureKeyStatusLabel.setText(String.format("Public: %s %d bits", keyType, keySize));
-            }
-            signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
-
-            mainController.updateStatus("Public key loaded: " + keyType);
-
-        } catch (Exception e) {
-            authenticationKeyState.setPublicKey(null);
-            signatureKeyStatusLabel.setText("Error loading public key");
-            signatureKeyStatusLabel.setStyle("-fx-text-fill: red; -fx-font-size: 10px;");
-
-            String help = "";
-            String selectedAlgo = signatureAlgorithmCombo.getValue();
-            if (selectedAlgo != null && selectedAlgo.contains("Ed25519")) {
-                help = "\n\nEnsure you are loading a valid Ed25519 public key.";
-            } else if (e.getMessage().contains("RSA")) {
-                help = "\n\nHint: Ensure the selected algorithm matches the key type.";
-            }
-
-            mainController.showError("Key Error", "Error loading public key: " + e.getMessage() + help);
-        }
-    }
-
-    /**
-     * Get key size in bits
-     */
-    private int getKeySize(Object key) {
-        try {
-            if (key instanceof RSAKey) {
-                return ((RSAKey) key).getModulus().bitLength();
-            } else if (key instanceof ECKey) {
-                return ((ECKey) key).getParams().getOrder().bitLength();
-            } else {
-                return 0; // Unknown
-            }
-        } catch (Exception e) {
-            return 0;
-        }
     }
 
     /**
@@ -749,6 +589,25 @@ public class AuthenticationController {
                     reporter);
         }
         return macCoordinator;
+    }
+
+    private AuthenticationKeyCoordinator keyCoordinator() {
+        if (keyCoordinator == null) {
+            ComboBox<String> algorithm = signatureAlgorithmCombo;
+            TextArea privateKeyArea = signaturePrivateKeyArea;
+            TextArea publicKeyArea = signaturePublicKeyArea;
+            MenuButton privateKeyShelf = sigPrivKeyShelfMenu;
+            MenuButton publicKeyShelf = sigPubKeyShelfMenu;
+            Label keyStatus = signatureKeyStatusLabel;
+            AuthenticationKeyState keys = authenticationKeyState;
+            Supplier<StatusReporter> reporter = coordinatorStatusReporter::get;
+            keyCoordinator = new AuthenticationKeyCoordinator(
+                    new AuthenticationKeyCoordinator.View(
+                            () -> algorithm, () -> privateKeyArea, () -> publicKeyArea,
+                            () -> privateKeyShelf, () -> publicKeyShelf, () -> keyStatus, () -> keys),
+                    reporter);
+        }
+        return keyCoordinator;
     }
 
     // ============================================================
