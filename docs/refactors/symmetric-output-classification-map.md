@@ -58,19 +58,39 @@ El repositorio no aplica una regla global según la operación; decide por tipo 
 
 La comparación no da una respuesta única preexistente: hashing/JOSE suelen dejar `PUBLIC` por defecto, COSE clasifica como `SECRET` incluso el cifrado, y EMV/claves expresan la política explícitamente según el artefacto.
 
-## Criterio propuesto para aprobación
+## Criterio aprobado
+
+El usuario aprobó este criterio antes de empezar los tests y la implementación:
 
 1. El texto claro recuperado por cualquier operación de descifrado simétrico se publica como `SENSITIVE`.
 2. El ciphertext y su tag de autenticación se publican como `PUBLIC`.
 3. Un informe enriquecido de descifrado que incluya texto claro recibe también `SENSITIVE`; el informe enriquecido de cifrado que solo muestre ciphertext/tag recibe `PUBLIC`.
 4. Claves, nonces e información de autenticación secreta no se agregan a `output` ni a informes públicos; el criterio de esta propuesta se limita a clasificar la salida.
 
-Si se aprueba, el cambio de Salsa20 cifrado de `SENSITIVE` a `PUBLIC` es deliberado para cumplir la regla ciphertext público; Salsa20 descifrado permanece `SENSITIVE`. El test existente `salsa20RestrictedProfilesProtectDecryptedOutputFromHistoryShelfAndStatus` caracteriza la protección del texto claro descifrado ([`SymmetricCipherCharacterizationUITest.java:271–317`](../../src/test/java/com/cryptocarver/ui/SymmetricCipherCharacterizationUITest.java#L271)); no se ha editado ni ejecutado en esta fase.
+El cambio de Salsa20 cifrado de `SENSITIVE` a `PUBLIC` es deliberado para cumplir la regla ciphertext público; Salsa20 descifrado permanece `SENSITIVE`. Así Salsa20 y ChaCha20 comparten el mismo comportamiento de visibilidad por operación.
 
 La propuesta es más estricta con salidas simétricas de descifrado que los ejemplos actuales de JOSE y hashing. No se infiere que esos otros módulos deban cambiarse: cualquier ampliación de alcance requeriría una decisión aparte.
 
-## Alcance y estado
+## Prueba roja antes del arreglo
 
-- Solo se creó este mapa en esta fase; no se modificó código de producción, tests ni archivos bajo `crypto/`.
-- No se añadieron ni ejecutaron tests.
-- La implementación, los tests rojos/caracterización y cualquier cambio de digest quedan pendientes de aprobación explícita del criterio.
+Se añadió [`SymmetricOutputClassificationCharacterizationUITest.java`](../../src/test/java/com/cryptocarver/ui/SymmetricOutputClassificationCharacterizationUITest.java) y se ejecutó antes de modificar producción:
+
+```text
+mvn -Plow-cpu -Dtest=SymmetricOutputClassificationCharacterizationUITest test
+Tests run: 22, Failures: 12, Errors: 0
+```
+
+Fallos observados sobre el código de producción sin cambios de `main` (`88d04fa`):
+
+- Los nueve descifrados esperados `SENSITIVE` de DES, 3DES, AES-CBC, AES-GCM, ChaCha20, ChaCha20-Poly1305 y XChaCha20-Poly1305 publicaban `PUBLIC`. Salsa20 ya publicaba `SENSITIVE` al descifrar.
+- El cifrado Salsa20 publicaba `SENSITIVE` frente al `PUBLIC` de ChaCha20 y el resto, contrario al criterio aprobado para ciphertext.
+- La comparación explícita ChaCha20/Salsa20 fallaba en la clasificación de cifrado.
+- La comprobación de la salida descifrada en `FULL_LAB` recibía `PUBLIC` donde el criterio fija `SENSITIVE`; el test de integración se detuvo en esa aserción, antes de comprobar los perfiles restringidos para esa salida.
+
+La suite no modificó archivos globales: el test de integración usa un historial temporal, guarda y restaura `AppSettings`, Shelf y portapapeles; los tests de caracterización directa no mutan esos almacenes.
+
+## Estado de implementación
+
+- Esta nota y el test rojo se registran antes del arreglo.
+- No se modificarán archivos bajo `crypto/`.
+- Se preservarán los digests de caracterización existentes si su transcripción no cambia; cualquier modificación se justificará caso por caso.
