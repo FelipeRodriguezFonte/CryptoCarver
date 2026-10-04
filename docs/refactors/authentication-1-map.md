@@ -47,3 +47,11 @@ La prueba aislará y restaurará `AppSettings`, el Shelf y el historial. Los fal
 ## Decisión de separabilidad
 
 La ejecución de firma y verificación forma una unidad separable del resto del controlador: solo comparte las claves cacheadas y los helpers de formato/entrada, que se exponen mediante getters y callbacks de la vista. La fase 3 podrá cambiar cómo se cargan esas claves sin que el coordinador de firma capture el controlador. Si la transcripción muestra orden observable adicional, el mapa se actualizará antes de extraer.
+
+## Extracción aplicada
+
+`AuthenticationSignatureCoordinator` recibe un `record View` con proveedores de los controles y del `AuthenticationKeyState`. El `Supplier<StatusReporter>` apunta a un `AtomicReference` de servicio mantenido al inicializar el controlador. Los proveedores capturan referencias a controles y al holder de claves, nunca al controlador. El coordinador se crea de forma perezosa y `handleSign()` / `handleVerify()` públicos delegan en una línea.
+
+`AuthenticationDataFormatter` mantiene el parseo/formateo común que también usan los handlers MAC pendientes de fase 2. La caché mutable de claves vive en un holder compartido que fase 3 usará para extraer la carga y selección. `InlineErrorBannerTest` dejó de escribir por reflexión el antiguo campo privado `currentPublicKey`: esa configuración redundante se sustituyó por el PEM público que el propio handler consume y valida. La API pública del controlador no cambia.
+
+La caracterización no añadió defectos de comportamiento. La clasificación de la firma como `SECRET` se corrigió antes de extraer y queda documentada en `authentication-1-characterization-failures.md`. El digest protegido verificado antes y después de la extracción es `892112128b7a2f5d274d3f4c845d1298c3488e6296ac0da48c2fbc6b94d8d62f`. El controlador pasa de 1359 a 1163 líneas (−196).

@@ -14,14 +14,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.interfaces.RSAKey;
 import java.security.interfaces.ECKey;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * Controller for Authentication operations (Digital Signatures and MAC)
@@ -37,6 +36,9 @@ public class AuthenticationController {
     private static final Logger LOG = LoggerFactory.getLogger(AuthenticationController.class);
 
     private StatusReporter mainController;
+    private final AtomicReference<StatusReporter> coordinatorStatusReporter = new AtomicReference<>();
+    private final AuthenticationKeyState authenticationKeyState = new AuthenticationKeyState();
+    private AuthenticationSignatureCoordinator signatureCoordinator;
     private boolean preflightListenersInstalled;
 
     // Shared UI components
@@ -53,8 +55,6 @@ public class AuthenticationController {
     @FXML private TextField signatureVerifyField;
 
     // Digital Signatures Keys
-    private PrivateKey currentPrivateKey;
-    private PublicKey currentPublicKey;
     @FXML private TextArea signaturePrivateKeyArea;
     @FXML private TextArea signaturePublicKeyArea;
     @FXML private MenuButton sigPrivKeyShelfMenu;
@@ -164,8 +164,10 @@ public class AuthenticationController {
             ComboBox<String> inputFormatCombo,
             ComboBox<String> outputFormatCombo) {
         this.mainController = mainController;
+        coordinatorStatusReporter.set(mainController);
         this.inputFormatCombo = inputFormatCombo;
         this.outputFormatCombo = outputFormatCombo;
+        signatureCoordinator = null;
         installPreflightListeners();
     }
 
@@ -177,8 +179,8 @@ public class AuthenticationController {
         if (keyPair == null || keyPair.getPublic() == null || keyPair.getPrivate() == null) {
             throw new IllegalArgumentException("A complete generated key pair is required");
         }
-        currentPublicKey = keyPair.getPublic();
-        currentPrivateKey = keyPair.getPrivate();
+        authenticationKeyState.setPublicKey(keyPair.getPublic());
+        authenticationKeyState.setPrivateKey(keyPair.getPrivate());
         if (signaturePublicKeyArea != null) signaturePublicKeyArea.setText(publicPem == null ? "" : publicPem);
         if (signaturePrivateKeyArea != null) signaturePrivateKeyArea.setText(privatePem == null ? "" : privatePem);
         if (signatureKeyStatusLabel != null) {
@@ -225,6 +227,7 @@ public class AuthenticationController {
         this.signatureVerifyField = verifyField;
         this.signaturePrivateKeyArea = privateKeyArea;
         this.signaturePublicKeyArea = publicKeyArea;
+        signatureCoordinator = null;
 
         // Populate signature algorithms
         signatureAlgorithmCombo.getItems().addAll(SignatureOperations.SUPPORTED_ALGORITHMS);
@@ -589,16 +592,16 @@ public class AuthenticationController {
                 selectedAlgo = "RSA"; // Default
 
             if (selectedAlgo.contains("Ed25519")) {
-                currentPrivateKey = AsymmetricKeyOperations.importEd25519PrivateKeyPEM(pem);
+                authenticationKeyState.setPrivateKey(AsymmetricKeyOperations.importEd25519PrivateKeyPEM(pem));
             } else if (selectedAlgo.contains("ECDSA")) {
-                currentPrivateKey = AsymmetricKeyOperations.importECPrivateKeyPEM(pem);
+                authenticationKeyState.setPrivateKey(AsymmetricKeyOperations.importECPrivateKeyPEM(pem));
             } else {
                 // Default to RSA/Generic
-                currentPrivateKey = AsymmetricKeyOperations.importPrivateKeyPEM(pem);
+                authenticationKeyState.setPrivateKey(AsymmetricKeyOperations.importPrivateKeyPEM(pem));
             }
 
-            String keyType = currentPrivateKey.getAlgorithm();
-            int keySize = getKeySize(currentPrivateKey);
+            String keyType = authenticationKeyState.privateKey().getAlgorithm();
+            int keySize = getKeySize(authenticationKeyState.privateKey());
 
             signatureKeyStatusLabel.setText(String.format("Private: %s %d bits", keyType, keySize));
             signatureKeyStatusLabel.setStyle("-fx-text-fill: green; -fx-font-size: 10px;");
@@ -606,7 +609,7 @@ public class AuthenticationController {
             mainController.updateStatus("Private key loaded: " + keyType);
 
         } catch (Exception e) {
-            currentPrivateKey = null;
+            authenticationKeyState.setPrivateKey(null);
             signatureKeyStatusLabel.setText("Error loading private key");
             signatureKeyStatusLabel.setStyle("-fx-text-fill: red; -fx-font-size: 10px;");
 
@@ -636,16 +639,16 @@ public class AuthenticationController {
                 selectedAlgo = "RSA"; // Default
 
             if (selectedAlgo.contains("Ed25519")) {
-                currentPublicKey = AsymmetricKeyOperations.importEd25519PublicKeyPEM(pem);
+                authenticationKeyState.setPublicKey(AsymmetricKeyOperations.importEd25519PublicKeyPEM(pem));
             } else if (selectedAlgo.contains("ECDSA")) {
-                currentPublicKey = AsymmetricKeyOperations.importECPublicKeyPEM(pem);
+                authenticationKeyState.setPublicKey(AsymmetricKeyOperations.importECPublicKeyPEM(pem));
             } else {
                 // Default to RSA/Generic
-                currentPublicKey = AsymmetricKeyOperations.importPublicKeyPEM(pem);
+                authenticationKeyState.setPublicKey(AsymmetricKeyOperations.importPublicKeyPEM(pem));
             }
 
-            String keyType = currentPublicKey.getAlgorithm();
-            int keySize = getKeySize(currentPublicKey);
+            String keyType = authenticationKeyState.publicKey().getAlgorithm();
+            int keySize = getKeySize(authenticationKeyState.publicKey());
 
             String currentText = signatureKeyStatusLabel.getText();
             if (currentText.contains("Private")) {
@@ -659,7 +662,7 @@ public class AuthenticationController {
             mainController.updateStatus("Public key loaded: " + keyType);
 
         } catch (Exception e) {
-            currentPublicKey = null;
+            authenticationKeyState.setPublicKey(null);
             signatureKeyStatusLabel.setText("Error loading public key");
             signatureKeyStatusLabel.setStyle("-fx-text-fill: red; -fx-font-size: 10px;");
 
@@ -695,157 +698,33 @@ public class AuthenticationController {
     /**
      * Handle sign operation
      */
-    public void handleSign() {
-        if (mainController != null && !mainController.checkPreflightReadiness("Digital Signatures", true)) {
-            return;
-        }
-        try {
-            String algorithm = signatureAlgorithmCombo.getValue();
-            if (algorithm == null) {
-                mainController.showError("Algorithm Error", "Please select a signature algorithm");
-                return;
-            }
-
-            // A PEM pasted into the text area is a first-class key source.
-            if (signaturePrivateKeyArea != null && !signaturePrivateKeyArea.getText().trim().isEmpty()) {
-                try {
-                    String pem = signaturePrivateKeyArea.getText().trim();
-                    currentPrivateKey = com.cryptocarver.crypto.SharedMaterialParser.parsePrivateKeyPem(pem);
-                } catch (Exception e) {
-                    mainController.showError("Key Parse Error",
-                            "Could not parse private key from text area: " + e.getMessage());
-                    return;
-                }
-            }
-
-            if (currentPrivateKey == null) {
-                mainController.showError(new UserFacingError("Missing Signing Key", "Paste or load a private key first.", "Provide a private key PEM in the key area.", "signaturePrivateKeyArea"));
-                return;
-            }
-
-            // Get data to sign
-            byte[] data = getInputDataAsBytes();
-            if (data == null || data.length == 0) {
-                mainController.showError(new UserFacingError("Missing Input Data", "Please enter data to sign.", "Provide text or binary input in the message field.", "authInputArea"));
-                return;
-            }
-
-            // Verify key type matches algorithm after parsing pasted PEM.
-            String expectedKeyType = SignatureOperations.getExpectedKeyType(algorithm);
-            String actualKeyType = currentPrivateKey.getAlgorithm();
-            if (!actualKeyType.equals(expectedKeyType)) {
-                mainController.showError(new UserFacingError("Key Mismatch",
-                        String.format("Algorithm %s requires %s key, but pasted/loaded key is %s",
-                                algorithm, expectedKeyType, actualKeyType),
-                        "Provide a matching private key for the selected algorithm.",
-                        "signaturePrivateKeyArea"));
-                return;
-            }
-
-            // Sign
-            byte[] signature = SignatureOperations.sign(data, currentPrivateKey, algorithm);
-
-            // Format output
-            setOutputData(signature);
-
-            mainController.showInfo("Success",
-                    String.format("Signature created successfully!\nAlgorithm: %s\nSignature size: %d bytes",
-                            algorithm, signature.length));
-
-            Map<String, String> details = new HashMap<>();
-            details.put("Algorithm", algorithm);
-            details.put("Data Size", data.length + " bytes");
-            details.put("Signature Size", signature.length + " bytes");
-            details.put("Key Type", currentPrivateKey != null ? currentPrivateKey.getAlgorithm() : "Unknown");
-            mainController.publish(OperationResult.forOperation("Data Signed")
-                    .input(data).output(signature, OperationDetail.Classification.SECRET).details(details)
-                    .status("Signature created with " + algorithm).build());
-
-        } catch (Exception e) {
-            mainController.showError(e, "Signature Error", "signaturePrivateKeyArea");
-            LOG.error("Digital signature creation failed", e);
-        }
-    }
+    public void handleSign() { signatureCoordinator().handleSign(); }
 
     /**
      * Handle verify signature operation
      */
-    public void handleVerify() {
-        if (mainController != null && !mainController.checkPreflightReadiness("Digital Signatures", false)) {
-            return;
+    public void handleVerify() { signatureCoordinator().handleVerify(); }
+
+    private AuthenticationSignatureCoordinator signatureCoordinator() {
+        if (signatureCoordinator == null) {
+            ComboBox<String> algorithm = signatureAlgorithmCombo;
+            TextArea privateKeyArea = signaturePrivateKeyArea;
+            TextArea publicKeyArea = signaturePublicKeyArea;
+            TextField signatureValue = signatureVerifyField;
+            TextArea inputArea = authInputArea;
+            ComboBox<String> inputFormat = inputFormatCombo;
+            TextArea outputArea = authOutputArea;
+            ComboBox<String> outputFormat = outputFormatCombo;
+            AuthenticationKeyState keys = authenticationKeyState;
+            Supplier<StatusReporter> reporter = coordinatorStatusReporter::get;
+            signatureCoordinator = new AuthenticationSignatureCoordinator(
+                    new AuthenticationSignatureCoordinator.View(
+                            () -> algorithm, () -> privateKeyArea, () -> publicKeyArea,
+                            () -> signatureValue, () -> inputArea, () -> inputFormat,
+                            () -> outputArea, () -> outputFormat, () -> keys),
+                    reporter);
         }
-        try {
-            String algorithm = signatureAlgorithmCombo.getValue();
-            if (algorithm == null) {
-                mainController.showError("Algorithm Error", "Please select a signature algorithm");
-                return;
-            }
-
-            // Ensure key is current from TextArea if possible
-            if (signaturePublicKeyArea != null && !signaturePublicKeyArea.getText().trim().isEmpty()) {
-                try {
-                    String pem = signaturePublicKeyArea.getText().trim();
-                    currentPublicKey = com.cryptocarver.crypto.SharedMaterialParser.parsePublicKeyPem(pem);
-                } catch (Exception e) {
-                    mainController.showError("Key Parse Error",
-                            "Could not parse public key from text area: " + e.getMessage());
-                    return;
-                }
-            }
-
-            if (currentPublicKey == null) {
-                mainController.showError(new UserFacingError("Missing Public Key", "Paste or load a public key first.", "Provide a public key PEM in the key area.", "signaturePublicKeyArea"));
-                return;
-            }
-
-            // Get signature from verify field
-            String signatureText = signatureVerifyField.getText().trim();
-            if (signatureText.isEmpty()) {
-                mainController.showError(new UserFacingError("Missing Signature", "Please paste the signature in the verification field.", "Enter signature bytes/text to verify.", "signatureVerifyField"));
-                return;
-            }
-
-            byte[] signature;
-            try {
-                signature = com.cryptocarver.crypto.SharedMaterialParser.parseBytesByFormat(signatureText, "Hex / Base64");
-            } catch (Exception e) {
-                mainController.showError(new UserFacingError("Signature Error", "Invalid signature format: " + e.getMessage(), "Check that the signature is valid Hex or Base64.", "signatureVerifyField"));
-                return;
-            }
-
-            // Get original data from input area
-            byte[] data = getInputDataAsBytes();
-            if (data == null || data.length == 0) {
-                mainController.showError(new UserFacingError("Missing Data to Verify", "Please enter the original data that was signed.", "Provide original message text in the input area.", "authInputArea"));
-                return;
-            }
-
-            // Verify
-            boolean valid = SignatureOperations.verify(data, signature, currentPublicKey, algorithm);
-
-            if (valid) {
-                mainController.showInfo("Verification Success",
-                        "✅ Signature is VALID!\n\nThe data has not been tampered with.");
-            } else {
-                mainController.showError(new UserFacingError("Verification Failed",
-                        "Signature is INVALID! The data may have been tampered with or the wrong key was used.",
-                        "Check that the public key matches the private key used for signing, and verify the message text.",
-                        "signatureVerifyField"));
-            }
-
-            Map<String, String> details = new HashMap<>();
-            details.put("Algorithm", algorithm);
-            details.put("Result", valid ? "VALID" : "INVALID");
-            details.put("Data Size", data.length + " bytes");
-            details.put("Key Type", currentPublicKey != null ? currentPublicKey.getAlgorithm() : "Unknown");
-            mainController.publish(OperationResult.forOperation("Signature Verified")
-                    .input(data).output(signature, OperationDetail.Classification.SECRET).details(details)
-                    .status("Signature verification: " + (valid ? "VALID" : "INVALID")).build());
-
-        } catch (Exception e) {
-            mainController.showError(e, "Verification Error", "signatureVerifyField");
-            LOG.error("Digital signature verification failed", e);
-        }
+        return signatureCoordinator;
     }
 
     // ============================================================
@@ -1274,87 +1153,11 @@ public class AuthenticationController {
     // HELPER METHODS
     // ============================================================
 
-    /**
-     * Get input data as bytes based on input format
-     */
     private byte[] getInputDataAsBytes() {
-        if (authInputArea == null) {
-            // No input area available, show error
-            mainController.showError("Configuration Error",
-                    "Input area not available. Authentication operations require proper UI setup.");
-            return null;
-        }
-
-        String input = authInputArea.getText().trim();
-        if (input.isEmpty()) {
-            return null;
-        }
-
-        String format = inputFormatCombo.getValue();
-        com.cryptocarver.util.InputValidator.validateInput(input, format);
-        return parseDataWithFormat(input, format);
+        return AuthenticationDataFormatter.read(authInputArea, inputFormatCombo, mainController);
     }
 
-    /**
-     * Set output data based on output format
-     */
     private void setOutputData(byte[] data) {
-        if (authOutputArea == null) {
-            // No output area available, show data in popup
-            String format = outputFormatCombo != null ? outputFormatCombo.getValue() : "Hexadecimal";
-            String output = formatDataWithFormat(data, format);
-            mainController.showInfo("Output", output);
-            return;
-        }
-
-        String format = outputFormatCombo.getValue();
-        String output = formatDataWithFormat(data, format);
-        authOutputArea.setText(output);
-    }
-
-    /**
-     * Parse data with specified format
-     */
-    private byte[] parseDataWithFormat(String data, String format) {
-        try {
-            if (format == null)
-                format = "Hexadecimal";
-
-            switch (format) {
-                case "Hexadecimal":
-                    return DataConverter.hexToBytes(data);
-                case "Base64":
-                    return Base64.getDecoder().decode(data.replaceAll("\\s", ""));
-                case "Text (UTF-8)":
-                    return data.getBytes("UTF-8");
-                default:
-                    return data.getBytes();
-            }
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * Format data with specified format
-     */
-    private String formatDataWithFormat(byte[] data, String format) {
-        try {
-            if (format == null)
-                format = "Hexadecimal";
-
-            switch (format) {
-                case "Hexadecimal":
-                    return DataConverter.bytesToHex(data);
-                case "Base64":
-                    return Base64.getEncoder().encodeToString(data);
-                case "Text (UTF-8)":
-                    return new String(data, "UTF-8");
-                default:
-                    return DataConverter.bytesToHex(data);
-            }
-        } catch (Exception e) {
-            return "";
-        }
+        AuthenticationDataFormatter.write(authOutputArea, outputFormatCombo, data, mainController);
     }
 }

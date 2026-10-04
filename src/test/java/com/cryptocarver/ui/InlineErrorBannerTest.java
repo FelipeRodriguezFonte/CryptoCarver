@@ -278,7 +278,6 @@ public class InlineErrorBannerTest {
 
                 // Generate RSA key pair for testing
                 java.security.KeyPair keyPair = com.cryptocarver.crypto.AsymmetricKeyOperations.generateRSAKeyPair(2048);
-                setPrivateField(authController, "currentPublicKey", keyPair.getPublic());
 
                 String validPubKeyPem = com.cryptocarver.crypto.AsymmetricKeyOperations.exportPublicKeyPEM(keyPair.getPublic());
                 TextArea pubKeyArea = (TextArea) getPrivateField(authController, "signaturePublicKeyArea");
