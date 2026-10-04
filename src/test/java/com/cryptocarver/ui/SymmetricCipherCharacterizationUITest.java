@@ -199,10 +199,10 @@ class SymmetricCipherCharacterizationUITest {
         LanguagePreference previousLanguage = AppSettings.getInstance().getLanguagePreference();
         try {
             withPanel(panel -> {
-                panel.select("Salsa20", null, null);
                 panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
                 panel.material("", NONCE_8, "", "");
                 panel.controller().selectLabKey(usable.getId());
+                panel.select("Salsa20", null, null);
                 panel.encrypt();
                 String hsmCiphertext = panel.output().getText();
                 byte[] manualCiphertext;
@@ -222,14 +222,24 @@ class SymmetricCipherCharacterizationUITest {
                 assertEquals(hsmCiphertext, panel.output().getText());
 
                 panel.controller().selectLabKey(usable.getId());
+                panel.select("Salsa20", null, null);
                 panel.inputs("Hexadecimal", hsmCiphertext, "Text (UTF-8)");
                 panel.material("", NONCE_8, "", "");
                 panel.decrypt();
-                assertEquals(MESSAGE, panel.output().getText());
+                String recovered = panel.output().getText();
+                assertEquals(MESSAGE, recovered);
+                try {
+                    assertEquals("4821c5b9fb3654a56a591d5f12d56c120ac49fe57444bbb049f74b6073b5a54d",
+                            digest(List.of("Salsa20 Key Lab ciphertext=" + hsmCiphertext,
+                                    "plaintext=" + recovered)));
+                } catch (Exception error) {
+                    throw new AssertionError(error);
+                }
 
                 for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
                     AppSettings.getInstance().setLanguagePreference(language);
                     panel.controller().selectLabKey(shortKey.getId());
+                    panel.select("Salsa20", null, null);
                     panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
                     panel.encrypt();
                     String error = panel.reporter().drain();
@@ -238,11 +248,13 @@ class SymmetricCipherCharacterizationUITest {
                 }
 
                 panel.controller().selectLabKey(decryptOnly.getId());
+                panel.select("Salsa20", null, null);
                 panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
                 panel.encrypt();
                 assertTrue(panel.reporter().drain().contains("does not support usage: ENCRYPT"));
 
                 panel.controller().selectLabKey(encryptOnly.getId());
+                panel.select("Salsa20", null, null);
                 panel.inputs("Hexadecimal", hsmCiphertext, "Text (UTF-8)");
                 panel.decrypt();
                 assertTrue(panel.reporter().drain().contains("does not support usage: DECRYPT"));
@@ -264,10 +276,10 @@ class SymmetricCipherCharacterizationUITest {
         SecretVisibilityProfile previous = AppSettings.getInstance().getSecretVisibilityProfile();
         try {
             withPanel(panel -> {
-                panel.select("Salsa20", null, null);
                 panel.inputs("Text (UTF-8)", MESSAGE, "Hexadecimal");
                 panel.material("", NONCE_8, "", "");
                 panel.controller().selectLabKey(key.getId());
+                panel.select("Salsa20", null, null);
                 panel.encrypt();
                 String ciphertext = panel.output().getText();
                 panel.inputs("Hexadecimal", ciphertext, "Text (UTF-8)");

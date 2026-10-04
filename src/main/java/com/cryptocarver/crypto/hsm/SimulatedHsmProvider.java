@@ -399,6 +399,16 @@ public class SimulatedHsmProvider {
         return com.cryptocarver.crypto.SymmetricCipher.decryptChaCha20(ciphertext, getBytes(key), iv);
     }
 
+    public byte[] encryptSalsa20(String keyId, byte[] plaintext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.ENCRYPT);
+        return com.cryptocarver.crypto.SymmetricCipher.encryptSalsa20(plaintext, getBytes(key), iv);
+    }
+
+    public byte[] decryptSalsa20(String keyId, byte[] ciphertext, byte[] iv) throws Exception {
+        Key key = getUsableKey(keyId, KeyUsage.DECRYPT);
+        return com.cryptocarver.crypto.SymmetricCipher.decryptSalsa20(ciphertext, getBytes(key), iv);
+    }
+
     public byte[] encryptChaCha20Poly1305(String keyId, byte[] plaintext, byte[] iv) throws Exception {
         Key key = getUsableKey(keyId, KeyUsage.ENCRYPT);
         return com.cryptocarver.crypto.SymmetricCipher.encryptChaCha20Poly1305(plaintext, getBytes(key), iv);
