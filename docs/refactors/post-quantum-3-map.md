@@ -101,15 +101,65 @@ its secret detail and the existing encapsulation policy. The characterization
 checks the raw output classification and all MASKED/REDACTED surfaces again.
 The post-fix transcript SHA-256 is
 `cbc6ecb8aa880d65b899199f0b853489812ddbcf3b37606bdf3c5ff8c6686368`; the
-remaining recorded defect is the blank benchmark result. The KEM mismatch
-feedback has been localized in a separate fix; its characterization digest is
-`20caaf8a3c033c1b4cab90ee5484cb6db874bf45f158a5fa51ca35f4ff7088b6`. The
-focused rerun recorded both localized EN/ES titles and mismatch messages; only
-the benchmark's blank output remained to be fixed. `PQCBenchmark.call()` builds
-its complete or partial output via `getPartialResult()`, while `Task.getValue()`
-is only populated through JavaFX task state publication. The benchmark handler
-now returns `getPartialResult()` after `run()`. The focused run will verify
-stable report sections and completion without pinning measured timings. With
-the benchmark output complete, the final phase-3 characterization transcript
+initially remaining defects were untranslated KEM mismatch feedback and the
+blank benchmark result.
+
+## Fix 2 — localize KEM algorithm mismatch feedback
+
+The selected-versus-loaded algorithm error and title now use EN/ES message
+catalog entries with both algorithm names. The characterization checks that
+both languages render the mismatch meaning and title correctly. Its transcript
+SHA-256 after localization is
+`20caaf8a3c033c1b4cab90ee5484cb6db874bf45f158a5fa51ca35f4ff7088b6`.
+
+## Fix 3 — publish benchmark output
+
+`PQCBenchmark.call()` builds its complete or partial output via
+`getPartialResult()`, while `Task.getValue()` is only populated through JavaFX
+task state publication. The benchmark handler now returns `getPartialResult()`
+after `run()`. The characterization verifies stable report sections and
+completion without pinning measured timings. Its final phase-3 transcript
 SHA-256 is
 `a3887b8dea0bce62dc6a4be1ad2b6d868d5e02d8c2600acf81dae0eb2829aab4`.
+
+## Phase 3 extraction
+
+`PostQuantumController` went from 335 lines at the phase baseline to 227 lines
+after extraction. Its public FXML handlers now delegate with one-line methods;
+the public signatures were compared with commit `49af76e` and are unchanged.
+
+- `PostQuantumKemCoordinator.View` holds the KEM controls and the shared
+  `PostQuantumKeyState`. It owns encapsulation, decapsulation, compatibility
+  checks, secret classification, and result publication.
+- `PostQuantumBenchmarkCoordinator.View` holds only benchmark controls. It
+  owns algorithm validation, the fixed 1000-iteration task and its progress,
+  completion, failure, and cancellation callbacks. Benchmark result retrieval
+  uses `PQCBenchmark.getPartialResult()` after `run()`.
+- The controller lazily creates each coordinator once. Both receive
+  `coordinatorStatusReporter::get`; neither receives nor captures a controller.
+  Their `View` records contain direct references to the already injected JavaFX
+  controls and shared key state.
+- The benchmark coordinator is separate because it has an independent selector,
+  progress/result controls, executor lifecycle, and no KEM key-state access.
+
+Focused post-extraction verification passed for all three characterization
+classes and `PostQuantumControllerTest`: 5 tests, 4 suites, 0 failures, 0
+errors, 0 skipped. All three pinned transcript files retained their digests:
+key `7831be3ff9b4b83497f849c73ffe77c918abc8ba0e610e785c1835d7bc9a1a40`,
+signature `d622604c232a47c738c86f97b3d5f6a6579d21c88ea0098dea404cc3ba67138f`,
+and KEM/benchmark
+`a3887b8dea0bce62dc6a4be1ad2b6d868d5e02d8c2600acf81dae0eb2829aab4`.
+
+## Phase 3 gates
+
+Both required gates passed after extraction. The UI gate was repeated after
+clearing stale Surefire XML so its count reflects only the `ui` tag profile.
+
+- `mvn -o -q test -Plow-cpu`: 2867 tests across 425 suites, 0 failures,
+  0 errors, 1 skipped.
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: 523 tests across 110 suites,
+  0 failures, 0 errors, 0 skipped.
+- The selected counts differ (2867 vs. 523). `ExpandedViewerLifecycleUITest`
+  passed (3 tests) in the UI gate.
+
+No pre-existing test failure required comparison against `main`.

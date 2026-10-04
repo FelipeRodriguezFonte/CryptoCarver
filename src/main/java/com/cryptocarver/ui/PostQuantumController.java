@@ -1,19 +1,12 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.PostQuantumOperations;
-import com.cryptocarver.model.OperationResult;
-import com.cryptocarver.util.DataConverter;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.function.Consumer;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -27,6 +20,8 @@ public class PostQuantumController {
     private final AtomicReference<StatusReporter> coordinatorStatusReporter = new AtomicReference<>();
     private PostQuantumKeyCoordinator keyCoordinator;
     private PostQuantumSignatureCoordinator signatureCoordinator;
+    private PostQuantumKemCoordinator kemCoordinator;
+    private PostQuantumBenchmarkCoordinator benchmarkCoordinator;
 
     @FXML
     private Accordion pqcAccordion;
@@ -74,7 +69,6 @@ public class PostQuantumController {
     @FXML private Button pqcBenchmarkBtn;
     @FXML private ProgressIndicator pqcBenchmarkProgress;
     @FXML private TextArea pqcBenchmarkArea;
-    private com.cryptocarver.crypto.pqc.PQCBenchmark activeBenchmarkTask;
 
     // Internal state
     private final PostQuantumKeyState keyState = new PostQuantumKeyState();
@@ -108,6 +102,25 @@ public class PostQuantumController {
             signatureCoordinator = new PostQuantumSignatureCoordinator(view, coordinatorStatusReporter::get);
         }
         return signatureCoordinator;
+    }
+
+    private PostQuantumKemCoordinator kemCoordinator() {
+        if (kemCoordinator == null) {
+            PostQuantumKemCoordinator.View view = new PostQuantumKemCoordinator.View(
+                    pqcKemAlgoCombo, pqcKemCiphertextArea, pqcKemSharedSecretField,
+                    pqcAliceSecretField, pqcKemStatusLabel, keyState);
+            kemCoordinator = new PostQuantumKemCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return kemCoordinator;
+    }
+
+    private PostQuantumBenchmarkCoordinator benchmarkCoordinator() {
+        if (benchmarkCoordinator == null) {
+            PostQuantumBenchmarkCoordinator.View view = new PostQuantumBenchmarkCoordinator.View(
+                    pqcBenchmarkAlgoCombo, pqcBenchmarkBtn, pqcBenchmarkProgress, pqcBenchmarkArea);
+            benchmarkCoordinator = new PostQuantumBenchmarkCoordinator(view, coordinatorStatusReporter::get);
+        }
+        return benchmarkCoordinator;
     }
 
     @FXML
@@ -185,137 +198,13 @@ public class PostQuantumController {
     public void handlePQCVerify() { signatureCoordinator().handlePQCVerify(); }
 
     @FXML
-    public void handlePQCEncapsulate() {
-        try {
-            requireKemKeyPair();
-            String selectedAlgorithm = pqcKemAlgoCombo.getValue();
-            if (selectedAlgorithm == null || !PostQuantumOperations.areAlgorithmsCompatible(selectedAlgorithm, keyState.publicKey().getAlgorithm())) {
-                if (statusReporter != null) statusReporter.showError(
-                        t("module.pqc.error.kemAlgorithmMismatchTitle"),
-                        t("module.pqc.error.kemAlgorithmMismatch", selectedAlgorithm, keyState.publicKey().getAlgorithm()));
-                return;
-            }
-            PostQuantumOperations.KEMResult result = PostQuantumOperations.encapsulate(keyState.publicKey(), selectedAlgorithm);
-            pqcKemCiphertextArea.setText(DataConverter.bytesToHex(result.encapsulation()));
-            pqcKemSharedSecretField.setText(DataConverter.bytesToHex(result.sharedSecret()));
-            keyState.setBobSecret(result.sharedSecret());
-            if (pqcAliceSecretField != null) pqcAliceSecretField.clear();
-            pqcKemStatusLabel.setText(t("module.pqc.encapsulated"));
-            pqcKemStatusLabel.setStyle("");
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", selectedAlgorithm),
-                com.cryptocarver.model.OperationDetail.publicDetail("Ciphertext Size", result.encapsulation().length + " bytes"),
-                com.cryptocarver.model.OperationDetail.secretDetail("Secret Size", result.sharedSecret().length + " bytes")
-            );
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("ML-KEM Encapsulate")
-                        .output(result.encapsulation()).details(details)
-                        .status("ML-KEM encapsulation completed")
-                        .build());
-            }
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("KEM Error", "Unable to encapsulate: " + e.getMessage());
-        }
-    }
+    public void handlePQCEncapsulate() { kemCoordinator().handlePQCEncapsulate(); }
 
     @FXML
-    public void handlePQCDecapsulate() {
-        try {
-            requireKemKeyPair();
-            String ciphertextHex = pqcKemCiphertextArea.getText().trim();
-            if (ciphertextHex.isEmpty()) {
-                if (statusReporter != null) statusReporter.showError("KEM Input Error", "Encapsulate first or paste an encapsulation in hexadecimal.");
-                return;
-            }
-            String selectedAlgorithm = pqcKemAlgoCombo.getValue();
-            byte[] secret = PostQuantumOperations.decapsulate(keyState.privateKey(), DataConverter.hexToBytes(ciphertextHex), selectedAlgorithm);
-            if (pqcAliceSecretField != null) pqcAliceSecretField.setText(DataConverter.bytesToHex(secret));
-            if (keyState.bobSecret() != null) {
-                boolean match = java.security.MessageDigest.isEqual(keyState.bobSecret(), secret);
-                if (match) {
-                    pqcKemStatusLabel.setText(t("module.pqc.match"));
-                    pqcKemStatusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-                } else {
-                    pqcKemStatusLabel.setText(t("module.pqc.mismatch"));
-                    pqcKemStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-                }
-            } else {
-                pqcKemStatusLabel.setText(t("module.pqc.bobSecretUnknown"));
-            }
-            Map<String, String> legacyDetails = new HashMap<>();
-            legacyDetails.put("Algorithm", pqcKemAlgoCombo.getValue());
-            legacyDetails.put("Encapsulation Length", ciphertextHex.length() / 2 + " bytes");
-            legacyDetails.put("Shared Secret", "Recovered (not displayed in history)");
-
-            java.util.List<com.cryptocarver.model.OperationDetail> details = java.util.List.of(
-                com.cryptocarver.model.OperationDetail.publicDetail("Algorithm", pqcKemAlgoCombo.getValue()),
-                com.cryptocarver.model.OperationDetail.publicDetail("Encapsulation Length", ciphertextHex.length() / 2 + " bytes"),
-                com.cryptocarver.model.OperationDetail.secretDetail("Shared Secret", "Recovered (not displayed in history)")
-            );
-
-            if (statusReporter != null) {
-                statusReporter.publish(OperationResult.forOperation("ML-KEM Decapsulate")
-                        .input(DataConverter.hexToBytes(ciphertextHex))
-                        .output(secret, com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
-                        .status("ML-KEM decapsulation completed")
-                        .build());
-            }
-        } catch (Exception e) {
-            if (statusReporter != null) statusReporter.showError("KEM Error", "Unable to decapsulate: " + e.getMessage());
-        }
-    }
-
-    private void requireKemKeyPair() {
-        if (keyState.publicKey() == null || keyState.privateKey() == null || !isKemAlgorithm(keyState.publicKey().getAlgorithm())) {
-            throw new IllegalStateException("Generate an ML-KEM/Kyber key pair first.");
-        }
-    }
-    private boolean isKemAlgorithm(String algorithm) { return PostQuantumKeyCoordinator.isKemAlgorithm(algorithm); }
+    public void handlePQCDecapsulate() { kemCoordinator().handlePQCDecapsulate(); }
 
     @FXML
-    public void handlePQCBenchmark() {
-        String algo = pqcBenchmarkAlgoCombo.getValue();
-        if (algo == null) {
-            if (statusReporter != null) statusReporter.showError("Benchmark Error", "Select an algorithm to benchmark");
-            return;
-        }
-
-        if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(true);
-        if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarking", algo));
-
-        Callable<String> task = () -> {
-            com.cryptocarver.crypto.pqc.PQCBenchmark bench = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
-            bench.run();
-            return bench.getPartialResult();
-        };
-
-        Consumer<String> onSuccess = resultText -> {
-            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(resultText);
-            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
-        };
-
-        Consumer<Throwable> onFailure = err -> {
-            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarkFailed", err != null ? err.getMessage() : t("error.unknown")));
-            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
-            if (statusReporter != null) statusReporter.showError("Benchmark Error", err != null ? err.getMessage() : "Unknown error");
-        };
-
-        Runnable onCancelled = () -> {
-            if (pqcBenchmarkArea != null) pqcBenchmarkArea.setText(t("module.pqc.benchmarkCancelled"));
-            if (pqcBenchmarkProgress != null) pqcBenchmarkProgress.setVisible(false);
-        };
-
-        if (statusReporter != null && statusReporter.getOperationExecutor() != null) {
-            statusReporter.getOperationExecutor().execute("PQC Benchmark (" + algo + ")", pqcBenchmarkBtn, task, onSuccess, onFailure, onCancelled);
-        } else {
-            try {
-                String res = task.call();
-                onSuccess.accept(res);
-            } catch (Exception e) {
-                onFailure.accept(e);
-            }
-        }
-    }
+    public void handlePQCBenchmark() { benchmarkCoordinator().handlePQCBenchmark(); }
 
     @FXML
     public void handlePopulatePqcKeyShelf() {
