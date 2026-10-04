@@ -286,7 +286,7 @@ public class PostQuantumController {
         Callable<String> task = () -> {
             com.cryptocarver.crypto.pqc.PQCBenchmark bench = new com.cryptocarver.crypto.pqc.PQCBenchmark(algo, 1000);
             bench.run();
-            return bench.getValue();
+            return bench.getPartialResult();
         };
 
         Consumer<String> onSuccess = resultText -> {

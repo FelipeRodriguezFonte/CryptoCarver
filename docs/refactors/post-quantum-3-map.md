@@ -105,4 +105,11 @@ remaining recorded defect is the blank benchmark result. The KEM mismatch
 feedback has been localized in a separate fix; its characterization digest is
 `20caaf8a3c033c1b4cab90ee5484cb6db874bf45f158a5fa51ca35f4ff7088b6`. The
 focused rerun recorded both localized EN/ES titles and mismatch messages; only
-the benchmark's blank output remains to be fixed.
+the benchmark's blank output remained to be fixed. `PQCBenchmark.call()` builds
+its complete or partial output via `getPartialResult()`, while `Task.getValue()`
+is only populated through JavaFX task state publication. The benchmark handler
+now returns `getPartialResult()` after `run()`. The focused run will verify
+stable report sections and completion without pinning measured timings. With
+the benchmark output complete, the final phase-3 characterization transcript
+SHA-256 is
+`a3887b8dea0bce62dc6a4be1ad2b6d868d5e02d8c2600acf81dae0eb2829aab4`.

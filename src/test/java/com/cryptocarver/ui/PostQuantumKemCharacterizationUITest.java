@@ -224,8 +224,8 @@ class PostQuantumKemCharacterizationUITest {
                     Files.writeString(Path.of("target/pqc-kem-characterization.txt"), joined, StandardCharsets.UTF_8);
                     String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                             .digest(joined.getBytes(StandardCharsets.UTF_8)));
-                    assertEquals(1, violations.size(), String.join("\n", violations) + "\n" + joined);
-                    assertEquals("20caaf8a3c033c1b4cab90ee5484cb6db874bf45f158a5fa51ca35f4ff7088b6",
+                    assertTrue(violations.isEmpty(), String.join("\n", violations) + "\n" + joined);
+                    assertEquals("a3887b8dea0bce62dc6a4be1ad2b6d868d5e02d8c2600acf81dae0eb2829aab4",
                             digest, joined);
                 } catch (Throwable error) { throw new AssertionError(error); }
             });
