@@ -76,3 +76,33 @@ commit. After phase 1, run separately:
 
 Record both total test counts and the UI-tagged test count. Do not begin phase
 2 unless both gates pass and their selected test counts differ.
+
+## Phase 1 initial characterization observation
+
+Before pinning the test digest or changing production behavior, the first
+targeted UI run recorded:
+
+- Generated ML-DSA-44 and serialized/re-imported both key files successfully.
+- The private key was absent from the result viewer, inspector, history, Shelf,
+  status bar, expanded viewer, published result snapshot, and captured logs in
+  `FULL_LAB`, `MASKED`, and `REDACTED`.
+- The three invalid-import cases were readable in EN (3/3), but were not
+  localized in ES (0/3): malformed PEM, different parameter sets, and a
+  non-matching same-algorithm pair. The messages originate in hard-coded
+  English validation branches. This is the phase-1 defect to fix after the
+  characterization commit.
+
+Initial stable transcript, SHA-256
+`f5dcccdbce3260cdb79321da02c3d53ae36302ed999c4875fa251ccb05928871`:
+
+```text
+generated algorithm=ML-DSA-44 public=present private=held-in-memory
+export public/private PEM=valid file-roundtrip=valid
+FULL_LAB private-key=absent history=checked shelf=checked status=checked expanded=checked
+MASKED private-key=absent history=checked shelf=checked status=checked expanded=checked
+REDACTED private-key=absent history=checked shelf=checked status=checked expanded=checked
+import public/private=ML-DSA-44 state=updated atomically
+EN invalid inputs=3 readable messages=3
+ES invalid inputs=3 readable messages=0
+telemetry/logs=private-key-absent
+```
