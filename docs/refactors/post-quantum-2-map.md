@@ -87,5 +87,8 @@ unmodified phase-2 baseline. Its normalized transcript digest was
   length/structure message about the selected cipher and AES bit lengths in
   both EN and ES. It did not identify either PQC parameter set or explain the
   mismatch.
-- These findings are baseline defects to fix in separate commits. No
-  characterization digest is pinned until these outcomes have been recorded.
+- These findings are baseline defects to fix in separate commits. They were
+  recorded in the preceding map commit before the test pinned this baseline
+  transcript digest. `PostQuantumSignatureCharacterizationUITest` pins the
+  recorded transcript with SHA-256
+  `8d714330589f20b66158732e13ce884051777331101d9fdeb055dff892ca0cfe`.
