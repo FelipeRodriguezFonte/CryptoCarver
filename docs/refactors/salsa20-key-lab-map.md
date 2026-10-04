@@ -21,3 +21,7 @@
 - La caracterización usará solo claves, nonce y texto inventados; cubrirá round-trip, equivalencia frente a clave manual, clave de 16 bytes en EN y ES, permisos de uso y ausencia de filtraciones bajo `MASKED`/`REDACTED` en barra de estado, historial y Shelf.
 - Los tests que cambien configuración, Shelf o historial guardarán el estado anterior y lo restaurarán en `finally`/`@AfterEach`.
 - Las únicas modificaciones permitidas dentro de `crypto/` son en `src/main/java/com/cryptocarver/crypto/hsm/SimulatedHsmProvider.java`.
+
+## Fallo caracterizado antes del arreglo
+
+Contra `main` en `14b23eb`, `mvn -Plow-cpu -Dtest=SymmetricCipherCharacterizationUITest test` falla en las nuevas pruebas: al intentar Salsa20 con una clave del Key Lab, la salida queda vacía en lugar del texto cifrado manual esperado (`7DD462327D235BA7B552D0C1499635945BBE36C101FDACBB768ACC79CB8AB5DD10DA`). La prueba de perfiles tampoco puede llegar al round-trip porque el camino se detiene en el mismo rechazo. No había un test previo que fijara el mensaje antiguo; la suite anterior caracterizaba únicamente Salsa20 manual.
