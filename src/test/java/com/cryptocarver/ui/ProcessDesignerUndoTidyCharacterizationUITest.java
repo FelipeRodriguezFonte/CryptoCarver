@@ -220,7 +220,7 @@ class ProcessDesignerUndoTidyCharacterizationUITest {
                 fixture.stage.close();
             }
         });
-        assertTranscript("PENDING", transcript);
+        assertTranscript("e6c767633e5bd532a6e05f55f8dbe54ed2b883fb960fd562a22aa2acc3a95da1", transcript);
     }
 
     @Test
@@ -317,8 +317,13 @@ class ProcessDesignerUndoTidyCharacterizationUITest {
         }
         var status = field(controller, "processStatusLabel", javafx.scene.control.Label.class).getText();
         TextArea output = field(controller, "executionOutputArea", TextArea.class);
+        Object coordinator = field(controller, "undoRedoCoordinator", Object.class);
+        String undoHistory = String.valueOf(field(coordinator, "undoStack", Object.class));
+        String redoHistory = String.valueOf(field(coordinator, "redoStack", Object.class));
         assertFalse(status.contains(TEST_ONLY_SECRET_SENTINEL), profile + " status leaked the test-only secret");
         assertFalse(output.getText().contains(TEST_ONLY_SECRET_SENTINEL), profile + " output leaked the test-only secret");
+        assertFalse(undoHistory.contains(TEST_ONLY_SECRET_SENTINEL), profile + " undo history leaked the test-only secret");
+        assertFalse(redoHistory.contains(TEST_ONLY_SECRET_SENTINEL), profile + " redo history leaked the test-only secret");
     }
 
     private static double[][] positions(List<ProcessDefinition.Node> nodes) {

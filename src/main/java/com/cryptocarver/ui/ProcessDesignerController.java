@@ -127,8 +127,8 @@ public class ProcessDesignerController {
         void redo();
     }
 
-    private final ProcessUndoRedoCoordinator undoRedoCoordinator = new ProcessUndoRedoCoordinator(
-            new ProcessUndoRedoCoordinator.View(this::toDefinition, this::load));
+    private final ProcessUndoRedoCoordinator undoRedoCoordinator = new ProcessUndoRedoCoordinator();
+    private final ProcessLayoutCoordinator layoutCoordinator = new ProcessLayoutCoordinator();
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -393,68 +393,25 @@ public class ProcessDesignerController {
     }
 
     private void recordStateChange(String desc, ProcessDefinition before) {
-        undoRedoCoordinator.recordStateChange(desc, before);
+        undoRedoCoordinator.recordStateChange(desc, before, undoRedoView());
     }
 
-    @FXML public void handleUndo() { undoRedoCoordinator.undo(); }
+    @FXML public void handleUndo() { undoRedoCoordinator.undo(undoRedoView()); }
 
-    @FXML public void handleRedo() { undoRedoCoordinator.redo(); }
+    @FXML public void handleRedo() { undoRedoCoordinator.redo(undoRedoView()); }
+
+    private ProcessUndoRedoCoordinator.View undoRedoView() {
+        return new ProcessUndoRedoCoordinator.View(this::toDefinition, this::load);
+    }
 
     // --- Duplicate & Tidy Layout ---
-    @FXML public void handleDuplicateSelected() {
-        if (selected == null) return;
-        ProcessDefinition before = toDefinition();
-        ProcessDefinition.Node dup = new ProcessDefinition.Node(
-                UUID.randomUUID().toString(),
-                selected.type,
-                selected.label + " (Copy)",
-                selected.x + 30,
-                selected.y + 30
-        );
-        dup.configuration.putAll(selected.configuration);
-        for (String sk : NodeCatalog.allSensitiveKeys()) {
-            dup.configuration.remove(sk);
-        }
-        nodes.add(dup);
-        select(dup);
-        updateCanvasGeometry();
-        redraw();
-        recordStateChange("Duplicate node", before);
-    }
+    @FXML public void handleDuplicateSelected() { layoutCoordinator.duplicateSelected(layoutView()); }
 
-    @FXML public void handleTidyLayout() {
-        if (nodes.isEmpty()) return;
-        ProcessDefinition before = snapshot(toDefinition());
-        List<String> order = ProcessValidator.computeTopologicalOrder(toDefinition());
+    @FXML public void handleTidyLayout() { layoutCoordinator.tidyLayout(layoutView()); }
 
-        Map<String, Integer> depthMap = new HashMap<>();
-        for (String id : order) {
-            int maxParentDepth = -1;
-            for (ProcessDefinition.Connection c : connections) {
-                if (c.to.equals(id)) {
-                    int pDepth = depthMap.getOrDefault(c.from, 0);
-                    maxParentDepth = Math.max(maxParentDepth, pDepth);
-                }
-            }
-            depthMap.put(id, maxParentDepth + 1);
-        }
-
-        Map<Integer, Integer> layerCounts = new HashMap<>();
-        for (String id : order) {
-            int layer = depthMap.getOrDefault(id, 0);
-            int row = layerCounts.getOrDefault(layer, 0);
-            layerCounts.put(layer, row + 1);
-
-            ProcessDefinition.Node n = nodes.stream().filter(node -> node.id.equals(id)).findFirst().orElse(null);
-            if (n != null) {
-                n.x = 60 + layer * 220;
-                n.y = 80 + row * 110;
-            }
-        }
-
-        updateCanvasGeometry();
-        redraw();
-        recordStateChange("Tidy layout", before);
+    private ProcessLayoutCoordinator.View layoutView() {
+        return new ProcessLayoutCoordinator.View(() -> selected, this::toDefinition, nodes::add,
+                this::select, () -> { updateCanvasGeometry(); redraw(); }, this::recordStateChange);
     }
 
     // --- Detached Window & Focus Mode ---

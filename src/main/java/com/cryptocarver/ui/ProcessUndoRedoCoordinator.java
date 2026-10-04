@@ -20,43 +20,50 @@ final class ProcessUndoRedoCoordinator {
         }
     }
 
-    private final View view;
-    private final Deque<ProcessDesignerController.DesignerCommand> undoStack = new ArrayDeque<>();
-    private final Deque<ProcessDesignerController.DesignerCommand> redoStack = new ArrayDeque<>();
+    private sealed interface Entry permits SnapshotEntry, PublicCommandEntry { }
+    private record SnapshotEntry(String description, ProcessDefinition before, ProcessDefinition after) implements Entry { }
+    private record PublicCommandEntry(ProcessDesignerController.DesignerCommand command) implements Entry { }
 
-    ProcessUndoRedoCoordinator(View view) {
-        this.view = Objects.requireNonNull(view);
-    }
+    private final Deque<Entry> undoStack = new ArrayDeque<>();
+    private final Deque<Entry> redoStack = new ArrayDeque<>();
 
     void execute(ProcessDesignerController.DesignerCommand command) {
         command.redo();
-        push(command);
+        push(new PublicCommandEntry(command));
     }
 
-    private void push(ProcessDesignerController.DesignerCommand command) {
-        undoStack.push(command);
+    private void push(Entry entry) {
+        undoStack.push(entry);
         trimUndoStack();
         redoStack.clear();
     }
 
-    void recordStateChange(String description, ProcessDefinition before) {
+    void recordStateChange(String description, ProcessDefinition before, View view) {
         ProcessDefinition beforeSnapshot = snapshot(before);
         ProcessDefinition afterSnapshot = snapshot(view.currentDefinition().get());
-        push(new SnapshotCommand(description, beforeSnapshot, afterSnapshot));
+        push(new SnapshotEntry(description, beforeSnapshot, afterSnapshot));
     }
 
-    void undo() {
+    void undo(View view) {
         if (undoStack.isEmpty()) return;
-        ProcessDesignerController.DesignerCommand command = undoStack.pop();
-        command.undo();
-        redoStack.push(command);
+        Entry entry = undoStack.pop();
+        if (entry instanceof SnapshotEntry snapshot) {
+            view.restoreDefinition().accept(snapshot(snapshot.before()));
+        } else if (entry instanceof PublicCommandEntry command) {
+            command.command().undo();
+        }
+        redoStack.push(entry);
     }
 
-    void redo() {
+    void redo(View view) {
         if (redoStack.isEmpty()) return;
-        ProcessDesignerController.DesignerCommand command = redoStack.pop();
-        command.redo();
-        undoStack.push(command);
+        Entry entry = redoStack.pop();
+        if (entry instanceof SnapshotEntry snapshot) {
+            view.restoreDefinition().accept(snapshot(snapshot.after()));
+        } else if (entry instanceof PublicCommandEntry command) {
+            command.command().redo();
+        }
+        undoStack.push(entry);
         trimUndoStack();
     }
 
@@ -82,22 +89,4 @@ final class ProcessUndoRedoCoordinator {
         while (undoStack.size() > MAX_UNDO_STEPS) undoStack.removeLast();
     }
 
-    private final class SnapshotCommand implements ProcessDesignerController.DesignerCommand {
-        private final String description;
-        private final ProcessDefinition before;
-        private final ProcessDefinition after;
-
-        private SnapshotCommand(String description, ProcessDefinition before, ProcessDefinition after) {
-            this.description = description;
-            this.before = before;
-            this.after = after;
-        }
-
-        @Override public void undo() { restore(before); }
-        @Override public void redo() { restore(after); }
-
-        private void restore(ProcessDefinition definition) {
-            view.restoreDefinition().accept(snapshot(definition));
-        }
-    }
 }
