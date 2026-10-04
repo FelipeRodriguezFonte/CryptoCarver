@@ -120,6 +120,7 @@ public class ProcessDesignerController {
     private final ProcessSelectionCoordinator selectionCoordinator = new ProcessSelectionCoordinator();
     private final ProcessConnectionCoordinator connectionCoordinator = new ProcessConnectionCoordinator();
     private ProcessCanvasRenderer processCanvasRenderer;
+    private ProcessPreflightPresenter processPreflightPresenter;
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -1131,11 +1132,17 @@ public class ProcessDesignerController {
     }
 
     private void showPreflightFailure(String message) {
-        if (executionStatusTable != null) {
-            executionStatusTable.getItems().setAll(new ProcessExecutionRow("validation", "-", "Validation",
-                    "PRE-FLIGHT", "-", "-", "ERROR", "0 ms"));
-        }
-        executionOutputArea.setText(t("module.process.feedback.failed", message));
+        processPreflightPresenter().show(preflightView(), message);
+    }
+
+    private ProcessPreflightPresenter processPreflightPresenter() {
+        if (processPreflightPresenter == null) processPreflightPresenter = new ProcessPreflightPresenter();
+        return processPreflightPresenter;
+    }
+
+    private ProcessPreflightPresenter.View preflightView() {
+        return new ProcessPreflightPresenter.View(() -> executionStatusTable, () -> executionOutputArea,
+                message -> t("module.process.feedback.failed", message));
     }
 
     String renderExecutionResult(ProcessDefinition definition, Map<String, com.cryptocarver.model.process.FlowValue> result,
