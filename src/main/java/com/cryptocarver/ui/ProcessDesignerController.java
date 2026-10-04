@@ -1094,7 +1094,7 @@ public class ProcessDesignerController {
 
     private void connectToPort(String targetPort) {
         if (selectedNodeIds.size() != 2) return;
-        ProcessDefinition before = toDefinition();
+        ProcessDefinition before = snapshot(toDefinition());
         List<String> pair = orderedConnectionPair();
         String source = pair.get(0);
         String destination = pair.get(1);
