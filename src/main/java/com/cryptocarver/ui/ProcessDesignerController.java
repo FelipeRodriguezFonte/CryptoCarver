@@ -127,8 +127,8 @@ public class ProcessDesignerController {
         void redo();
     }
 
-    private final Deque<DesignerCommand> undoStack = new ArrayDeque<>();
-    private final Deque<DesignerCommand> redoStack = new ArrayDeque<>();
+    private final ProcessUndoRedoCoordinator undoRedoCoordinator = new ProcessUndoRedoCoordinator();
+    private final ProcessLayoutCoordinator layoutCoordinator = new ProcessLayoutCoordinator();
 
     public Runnable onExecutionFinished;
     public java.util.function.Consumer<NodeExecutionEvent> onNodeExecutionEvent;
@@ -388,111 +388,30 @@ public class ProcessDesignerController {
     }
 
     // --- Undo / Redo Command Pattern ---
-    private record SnapshotCommand(String desc, ProcessDefinition before, ProcessDefinition after) implements DesignerCommand {
-        @Override public void undo() { restoreDef(before); }
-        @Override public void redo() { restoreDef(after); }
-        private void restoreDef(ProcessDefinition def) {}
-    }
-
     public void executeCommand(DesignerCommand command) {
-        command.redo();
-        undoStack.push(command);
-        if (undoStack.size() > 60) {
-            ((ArrayDeque<DesignerCommand>) undoStack).removeLast();
-        }
-        redoStack.clear();
+        undoRedoCoordinator.execute(command);
     }
 
     private void recordStateChange(String desc, ProcessDefinition before) {
-        ProcessDefinition after = snapshot(toDefinition());
-        ProcessDefinition beforeSnapshot = snapshot(before);
-        undoStack.push(new DesignerCommand() {
-            @Override
-            public void undo() {
-                load(beforeSnapshot);
-            }
-            @Override
-            public void redo() {
-                load(after);
-            }
-        });
-        if (undoStack.size() > 60) {
-            ((ArrayDeque<DesignerCommand>) undoStack).removeLast();
-        }
-        redoStack.clear();
+        undoRedoCoordinator.recordStateChange(desc, before, undoRedoView());
     }
 
-    @FXML public void handleUndo() {
-        if (!undoStack.isEmpty()) {
-            DesignerCommand cmd = undoStack.pop();
-            cmd.undo();
-            redoStack.push(cmd);
-        }
-    }
+    @FXML public void handleUndo() { undoRedoCoordinator.undo(undoRedoView()); }
 
-    @FXML public void handleRedo() {
-        if (!redoStack.isEmpty()) {
-            DesignerCommand cmd = redoStack.pop();
-            cmd.redo();
-            undoStack.push(cmd);
-        }
+    @FXML public void handleRedo() { undoRedoCoordinator.redo(undoRedoView()); }
+
+    private ProcessUndoRedoCoordinator.View undoRedoView() {
+        return new ProcessUndoRedoCoordinator.View(this::toDefinition, this::load);
     }
 
     // --- Duplicate & Tidy Layout ---
-    @FXML public void handleDuplicateSelected() {
-        if (selected == null) return;
-        ProcessDefinition before = toDefinition();
-        ProcessDefinition.Node dup = new ProcessDefinition.Node(
-                UUID.randomUUID().toString(),
-                selected.type,
-                selected.label + " (Copy)",
-                selected.x + 30,
-                selected.y + 30
-        );
-        dup.configuration.putAll(selected.configuration);
-        for (String sk : NodeCatalog.allSensitiveKeys()) {
-            dup.configuration.remove(sk);
-        }
-        nodes.add(dup);
-        select(dup);
-        updateCanvasGeometry();
-        redraw();
-        recordStateChange("Duplicate node", before);
-    }
+    @FXML public void handleDuplicateSelected() { layoutCoordinator.duplicateSelected(layoutView()); }
 
-    @FXML public void handleTidyLayout() {
-        if (nodes.isEmpty()) return;
-        ProcessDefinition before = toDefinition();
-        List<String> order = ProcessValidator.computeTopologicalOrder(toDefinition());
+    @FXML public void handleTidyLayout() { layoutCoordinator.tidyLayout(layoutView()); }
 
-        Map<String, Integer> depthMap = new HashMap<>();
-        for (String id : order) {
-            int maxParentDepth = -1;
-            for (ProcessDefinition.Connection c : connections) {
-                if (c.to.equals(id)) {
-                    int pDepth = depthMap.getOrDefault(c.from, 0);
-                    maxParentDepth = Math.max(maxParentDepth, pDepth);
-                }
-            }
-            depthMap.put(id, maxParentDepth + 1);
-        }
-
-        Map<Integer, Integer> layerCounts = new HashMap<>();
-        for (String id : order) {
-            int layer = depthMap.getOrDefault(id, 0);
-            int row = layerCounts.getOrDefault(layer, 0);
-            layerCounts.put(layer, row + 1);
-
-            ProcessDefinition.Node n = nodes.stream().filter(node -> node.id.equals(id)).findFirst().orElse(null);
-            if (n != null) {
-                n.x = 60 + layer * 220;
-                n.y = 80 + row * 110;
-            }
-        }
-
-        updateCanvasGeometry();
-        redraw();
-        recordStateChange("Tidy layout", before);
+    private ProcessLayoutCoordinator.View layoutView() {
+        return new ProcessLayoutCoordinator.View(() -> selected, this::toDefinition, nodes::add,
+                this::select, () -> { updateCanvasGeometry(); redraw(); }, this::recordStateChange);
     }
 
     // --- Detached Window & Focus Mode ---
@@ -1012,19 +931,7 @@ public class ProcessDesignerController {
     }
 
     static ProcessDefinition snapshot(ProcessDefinition def) {
-        if (def == null) return null;
-        ProcessDefinition copy = new ProcessDefinition();
-        copy.name = def.name;
-        copy.version = def.version;
-        for (ProcessDefinition.Node n : def.nodes) {
-            ProcessDefinition.Node nc = new ProcessDefinition.Node(n.id, n.type, n.label, n.x, n.y);
-            nc.configuration.putAll(n.configuration);
-            copy.nodes.add(nc);
-        }
-        for (ProcessDefinition.Connection c : def.connections) {
-            copy.connections.add(new ProcessDefinition.Connection(c.from, c.to, c.targetPort));
-        }
-        return copy;
+        return ProcessUndoRedoCoordinator.snapshot(def);
     }
 
     ProcessDefinition toExecutableDefinition() {
