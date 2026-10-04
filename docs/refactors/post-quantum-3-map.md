@@ -87,7 +87,8 @@ change:
   value property had been published; the user-visible result was therefore
   null. This needs a separate benchmark-result fix.
 
-The initial strict run stopped before digest pinning. A predicate in the test
-currently treats the English word “Generate” as Spanish because it shares the
-prefix “genera”; correct that test predicate and rerun the baseline before
-recording the complete digest.
+The initial test predicate treated English “Generate” as Spanish because of
+the shared prefix “genera”. The predicate now checks the localized message
+phrase rather than that ambiguous substring. After this baseline finding was
+recorded, the test pinned its normalized transcript with SHA-256
+`966775804cfbe1aef70e67ee937dded76eedc2a63b8a466f6110c5bfe7043d4e`.
