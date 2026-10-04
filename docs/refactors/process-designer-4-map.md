@@ -37,3 +37,14 @@ La nueva `ProcessDesignerCanvasCharacterizationUITest` fijará por SHA-256 una t
 ## Decisión de separabilidad
 
 `ProcessCanvasRenderer` es separable usando el `ProcessConnectionCoordinator` ya extraído como un conjunto de callbacks/getters. El renderer no guardará un `View` ni una referencia al controlador. Si redibujar y mover nodos requieren un orden que no puede mantenerse al pasar callbacks, se documentará y se saltará la extracción.
+
+## Cierre de fase 4
+
+Extracción realizada en `5934d9d`: `ProcessCanvasRenderer` posee los views, handles de entrada, redibujado, creación de nodos/conexiones, geometría de curvas y handlers del canvas. El controlador entrega un `View` por operación y conserva sus métodos públicos; `validationCounter` se incrementa mediante callback. `handleClearCanvas` conserva su estado previo: limpia el mapa de vistas y el pane, pero no la lista de círculos hasta el próximo redraw.
+
+`ProcessDesignerController` pasa de 1590 a 1333 líneas. La caracterización `ProcessDesignerCanvasCharacterizationUITest` mantiene el digest SHA-256 `e8d1bafcbc0a35484c18428979328002eb7658976c380b61f40c2a63118ff014` (64 caracteres); se verificó antes y después de extraer.
+
+Puertas tras la extracción, ejecutadas por separado:
+
+- `mvn -o -q test -Plow-cpu`: exit 0; 2860 tests, 0 fallos, 0 errores, 1 omitido.
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: exit 0; 2860 tests, 0 fallos, 0 errores, 1 omitido. `ExpandedViewerLifecycleUITest`: 3 tests, 0 fallos, 0 errores, 0 omitidos; no se necesitó cotejo con `main`.
