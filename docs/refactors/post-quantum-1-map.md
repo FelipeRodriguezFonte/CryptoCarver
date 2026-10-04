@@ -113,3 +113,30 @@ messages for the three characterized errors. The corrected transcript is now
 `7831be3ff9b4b83497f849c73ffe77c918abc8ba0e610e785c1835d7bc9a1a40`.
 This digest change is expected because the transcript now records the corrected
 Spanish outcome (`3` instead of `0`).
+
+Extraction preserves key material in a shared `PostQuantumKeyState`; the
+controller's existing package getters read that state, and later signature/KEM
+delegates will use the same holder. `PostQuantumKeyCoordinator` receives only a
+`View`, that state, and a reporter supplier. The key characterization helper
+now reflects the moved pure PEM serializer instead of the controller's removed
+private helper; this test adjustment preserves the same exported text and
+transcript.
+
+## Phase 1 extraction and gates
+
+The extraction reduced `PostQuantumController` from 835 lines at the base
+revision to 414 lines. The public method signatures remain unchanged. The new
+coordinator owns key generation/import parsing, validation, export and key
+summary behavior; the controller delegates through a lazy coordinator using a
+`View`, a shared `PostQuantumKeyState`, and `Supplier<StatusReporter>`.
+
+Both required gates passed after extraction, run separately:
+
+- `mvn -o -q test -Plow-cpu`: 2865 tests, 0 failures, 0 errors, 1 skipped.
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: 521 UI-tagged tests across 108
+  suites, 0 failures, 0 errors, 0 skipped. `ExpandedViewerLifecycleUITest`
+  passed (3 tests).
+
+The suite counts differ (2865 vs. 521). The characterization transcript still
+matches SHA-256
+`7831be3ff9b4b83497f849c73ffe77c918abc8ba0e610e785c1835d7bc9a1a40`.

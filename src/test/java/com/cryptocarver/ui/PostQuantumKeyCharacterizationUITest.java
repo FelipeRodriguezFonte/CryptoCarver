@@ -279,9 +279,9 @@ class PostQuantumKeyCharacterizationUITest {
     }
 
     private String exportedPem(String type, byte[] encoded) throws Exception {
-        Method method = PostQuantumController.class.getDeclaredMethod("toPem", String.class, byte[].class);
+        Method method = PostQuantumKeyCoordinator.class.getDeclaredMethod("toPem", String.class, byte[].class);
         method.setAccessible(true);
-        return (String) method.invoke(controller, type, encoded);
+        return (String) method.invoke(null, type, encoded);
     }
 
     private static String pem(String type, byte[] encoded) {
