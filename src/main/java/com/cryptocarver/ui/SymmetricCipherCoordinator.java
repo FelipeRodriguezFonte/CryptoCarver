@@ -1,6 +1,7 @@
 package com.cryptocarver.ui;
 
 import com.cryptocarver.crypto.SymmetricCipher;
+import com.cryptocarver.model.OperationDetail;
 import com.cryptocarver.model.OperationResult;
 import com.cryptocarver.util.DataConverter;
 import javafx.scene.control.ComboBox;
@@ -197,7 +198,7 @@ final class SymmetricCipherCoordinator {
                 details.put("Key Size", (symmetricKeyField.getText().trim().length() * 4) + " bits");
             }
             reporter().publish(OperationResult.forOperation("Symmetric Encrypt")
-                    .input(plaintext).output(ciphertext).details(details)
+                    .input(plaintext).output(ciphertext, OperationDetail.Classification.PUBLIC).details(details)
                     .status(String.format("Encrypted using %s/%s/%s", algorithm, mode, padding)).build());
 
         } catch (IllegalArgumentException e) {
@@ -345,9 +346,9 @@ final class SymmetricCipherCoordinator {
             details.put("Mode", mode);
             details.put("Padding", padding);
             OperationResult.Builder b = OperationResult.forOperation("Symmetric Decrypt")
-                    .input(ciphertext).output(plaintext).details(details)
+                    .input(ciphertext).output(plaintext, OperationDetail.Classification.SENSITIVE).details(details)
                     .status(String.format("Decrypted using %s/%s/%s", algorithm, mode, padding));
-            if (enriched != null) b.enrichedOutput(enriched);
+            if (enriched != null) b.enrichedOutput(enriched, OperationDetail.Classification.SENSITIVE);
             reporter().publish(b.build());
 
         } catch (IllegalArgumentException e) {
