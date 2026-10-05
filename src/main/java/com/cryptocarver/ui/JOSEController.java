@@ -1276,7 +1276,7 @@ public class JOSEController implements Initializable {
 
             statusReporter.publish(OperationResult.forOperation("Nested JWT Verification")
                 .input(nestedToken.getBytes(StandardCharsets.US_ASCII))
-                .output(payloadOut.getText().getBytes(StandardCharsets.UTF_8))
+                .output(payloadOut.getText().getBytes(StandardCharsets.UTF_8), com.cryptocarver.model.OperationDetail.Classification.SECRET)
                 .status(t("module.jose.feedback.statusNested")).build());
 
         } catch (Exception e) {
