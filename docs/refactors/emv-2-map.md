@@ -1,0 +1,24 @@
+# EMV refactor 2 — ARQC
+
+Base branch: `codex/emv-1` after phase 1. The phase 1 gate commit is `96cfb67`; its parent chain starts at `main` commit `f31bb8917d6a3f599c14f211da0981a5b476e101`. `EMVController.java` has 1352 lines before phase 2.
+
+The requested original method spans were checked by matching braces in `main` at `f31bb89`: `handleGenerateARQC` L715–L846 (132 lines), and `handleVerifyARQC` L848–L932 (85 lines). After phase 1, their current spans are `handleGenerateARQC` L622–L753 (132 lines) and `handleVerifyARQC` L755–L839 (85 lines).
+
+| Method | Current lines | State read | State written | Pure EMV logic vs UI wiring |
+|---|---:|---|---|---|
+| `handleGenerateARQC` | 622–753 (132) | `skARQCField`; optional `arqcTerminalDataField`; amount, amount-other, currency, country, `atcARQCField`, TVR, date, type, UN; optional ICC data; padding combo; localized messages; `StatusReporter` | `arqcResultArea`; private `lastArqcTransactionData`, `lastArqcPaddingMethod`, `lastArqcValue`; published output/details/history/status through reporter | Field parsing/defaults, report formatting, visibility and publication are UI wiring. `EMVOperations.buildARQCData` and `generateARQC` perform data validation and cryptography in `crypto/` (out of scope). |
+| `handleVerifyARQC` | 755–839 (85) | session-key field; `amountField`; ARQC parsed from `arqcResultArea`; cached generated input/padding/value; fallback transaction fields including UN and optional ICC data; padding combo; localized messages; optional reporter | replaces `arqcResultArea`; publishes a verification report with validity/padding and localized status; does not change cached generated state | Parsing the generated report, fallback defaults, result formatting and publication are UI wiring. `EMVOperations.verifyARQC` validates and computes in `crypto/` (out of scope). |
+
+## State and extraction boundary
+
+The coordinator can take a `record View` of lazy suppliers for the fields, cached ARQC state, and result area, plus `Supplier<StatusReporter>`. It must not retain `EMVController`. The two FXML methods stay public one-line delegates; no public controller API changes. The verification cache belongs with ARQC generation/verification because it binds the generated cryptogram to its exact transaction data and padding selection. Profile data and the `loadProfile` menu remain phase 3.
+
+All cryptographic/data validation logic is in `crypto/EMVOperations`: `buildARQCData`, `generateARQC`, and `verifyARQC`. Do not edit `crypto/`. The UI coordinator should preserve the generated report and default behavior, aside from a characterized/fixed localization or result-classification defect.
+
+`AppSettings` is not read in these handlers. The shell classifies published results and applies visibility policy to the result viewer, inspector, history, Shelf, expanded viewer and status surfaces. `handleGenerateARQC` currently publishes raw ARQC bytes with the default `PUBLIC` output classification; `handleVerifyARQC` publishes a report containing both the entered session key and ARQC, also defaulting to `PUBLIC`. This predicts a MASKED/REDACTED leak through shared result surfaces and is recorded before digest-pinning. The error catch paths forward English `EMVOperations` details through generic localized templates; invalid UN/key-length feedback may therefore fail locale-specific characterization. No fixes have been made for these phase 2 findings yet.
+
+## Existing tests and vector provenance
+
+`PaymentControlValuesTest.emvArqcAndArpcMethod1` contains the repository's cross-checked EMV Book 2 A1.4.1/A1.3 house-key vector: method 1 ARQC `E8499E593250A030` and method 2 ARQC `A8DB2B65F9C821F1`. The repository marks these as cross-checked with an independent implementation, not as an explicitly published specification example; the characterization will say so and reuse only this invented key/vector. `EMVOperationsValidationTest` already covers crypto-level malformed transaction data and padding behavior and will remain unchanged. `EmvProfileStatusUITest` remains unchanged and is included in the UI suite.
+
+`EmvArqcCharacterizationUITest` will characterize both UI actions, verify a known invented-key ARQC, verify an altered ARQC as invalid, and try malformed UN and session-key length in EN and ES. It will check output classification and the inspector, history, Shelf, status bar, expanded viewer, and captured logs under `FULL_LAB`, `MASKED`, and `REDACTED`, with invented keys only. Its UTF-8 transcript digest will exclude paths, times, unordered data, and normalize provider/JDK exception spans to `<jdk-exception>`. Record any failure here before changing the pinned digest or fixing behavior.
