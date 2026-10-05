@@ -742,7 +742,8 @@ public class EMVController {
             details.put("Transaction Data", txData.substring(0, Math.min(20, txData.length())) + "...");
             details.put("Session Key", "[not persisted]");
             mainController.publish(OperationResult.forOperation("ARQC Generation")
-                    .output(com.cryptocarver.util.DataConverter.hexToBytes(arqc)).details(details)
+                    .output(com.cryptocarver.util.DataConverter.hexToBytes(arqc), OperationDetail.Classification.SECRET)
+                    .details(details)
                     .status(t("module.emv.status.arqc")).build());
 
         } catch (Exception e) {
@@ -827,7 +828,8 @@ public class EMVController {
 
             if (mainController != null) {
                 mainController.publish(OperationResult.forOperation("ARQC Verification")
-                        .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                                OperationDetail.Classification.SECRET)
                         .detail("Valid", String.valueOf(valid))
                         .detail("Padding", "Method " + paddingMethod)
                         .status(t(valid ? "module.emv.feedback.arqcValid" : "module.emv.feedback.arqcInvalid")).build());
