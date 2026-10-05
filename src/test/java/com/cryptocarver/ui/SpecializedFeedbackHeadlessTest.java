@@ -37,8 +37,7 @@ class SpecializedFeedbackHeadlessTest {
                 "module.cms.feedback.statusInspected", "module.cms.feedback.statusExported"));
         controllerKeys.put("EMVController", List.of(
                 "module.emv.feedback.dolFormat",
-                "module.emv.feedback.arpcRequired", "module.emv.feedback.trackRequired",
-                "module.emv.feedback.trackDataRequired"));
+                "module.emv.feedback.trackRequired", "module.emv.feedback.trackDataRequired"));
         controllerKeys.put("JOSEController", List.of(
                 "module.jose.feedback.fileRead", "module.jose.feedback.copyEmpty",
                 "module.jose.feedback.algorithmRequired", "module.jose.feedback.keyFormat",
@@ -89,7 +88,9 @@ class SpecializedFeedbackHeadlessTest {
         Map<String, List<String>> coordinatorKeys = Map.of(
                 "EmvSessionKeyCoordinator", List.of("module.emv.feedback.sessionRequired"),
                 "EmvArqcCoordinator", List.of("module.emv.feedback.arqcRequired",
-                        "module.emv.feedback.arqcAmountRequired", "module.emv.feedback.arqcValid"));
+                        "module.emv.feedback.arqcAmountRequired", "module.emv.feedback.arqcValid"),
+                "EmvArpcCoordinator", List.of("module.emv.feedback.arpcRequired",
+                        "module.emv.error.arpcSessionKeyLength"));
         for (Map.Entry<String, List<String>> entry : coordinatorKeys.entrySet()) {
             String source = Files.readString(Path.of(
                     "src/main/java/com/cryptocarver/ui/" + entry.getKey() + ".java"));
