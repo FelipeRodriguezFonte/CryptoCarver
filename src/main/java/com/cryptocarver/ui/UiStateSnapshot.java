@@ -47,11 +47,11 @@ public final class UiStateSnapshot {
     );
 
     private static final Set<String> HISTORY_SENSITIVE_TOKENS = Set.of(
-            "kbpk", "cvk", "pvk", "pin", "pan", "cvv",
-            "key", "password", "secret", "private", "certificate", "cert",
+        "kbpk", "cvk", "pvk", "pin", "pan", "cvv",
+            "key", "imk", "mk", "udk", "sk", "arqc", "arpc", "password", "secret", "private", "certificate", "cert",
             "iv", "nonce", "aad", "salt", "token", "mac", "signature",
-            // Existing input controls whose contents are secret material in
-            // the crypto/payment modules, even when their id is generic.
+            // EMV issuer/master-key abbreviations and existing input controls
+            // whose contents are secret despite a generic or abbreviated id.
             "input", "payload", "info", "verify", "tag"
     );
     /** Lower-case field names: the subject field id is spelled certCNField. */
