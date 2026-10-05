@@ -747,10 +747,27 @@ public class EMVController {
                     .status(t("module.emv.status.arqc")).build());
 
         } catch (Exception e) {
-            arqcResultArea.setText(t("module.emv.error.generate", e.getMessage()));
+            arqcResultArea.setText(arqcGenerationErrorMessage(e));
             arqcResultArea.setVisible(true);
             arqcResultArea.setManaged(true);
         }
+    }
+
+    private String arqcGenerationErrorMessage(Exception error) {
+        String sessionKey = skARQCField == null || skARQCField.getText() == null ? ""
+                : skARQCField.getText().trim().replaceAll("\\s+", "");
+        if (!sessionKey.isEmpty() && !sessionKey.matches("(?i)[0-9a-f]{32}")) {
+            return t("module.emv.error.arqcSessionKeyLength");
+        }
+
+        String rawData = arqcTerminalDataField == null || arqcTerminalDataField.getText() == null ? ""
+                : arqcTerminalDataField.getText().trim().replaceAll("\\s+", "");
+        String un = unField == null || unField.getText() == null ? ""
+                : unField.getText().trim().replaceAll("\\s+", "");
+        if (rawData.isEmpty() && !un.isEmpty() && !un.matches("(?i)[0-9a-f]{8}")) {
+            return t("module.emv.error.arqcUnFormat");
+        }
+        return t("module.emv.error.generate", error.getMessage());
     }
 
     public void handleVerifyARQC() {
