@@ -36,8 +36,7 @@ class SpecializedFeedbackHeadlessTest {
                 "module.cms.inputRequired", "module.cms.inspectFailed",
                 "module.cms.feedback.statusInspected", "module.cms.feedback.statusExported"));
         controllerKeys.put("EMVController", List.of(
-                "module.emv.feedback.dolFormat", "module.emv.feedback.sessionRequired",
-                "module.emv.feedback.arqcRequired", "module.emv.feedback.arqcAmountRequired",
+                "module.emv.feedback.dolFormat", "module.emv.feedback.arqcRequired", "module.emv.feedback.arqcAmountRequired",
                 "module.emv.feedback.arpcRequired", "module.emv.feedback.trackRequired",
                 "module.emv.feedback.trackDataRequired", "module.emv.feedback.arqcValid"));
         controllerKeys.put("JOSEController", List.of(
@@ -86,6 +85,21 @@ class SpecializedFeedbackHeadlessTest {
                 service.setPreference(LanguagePreference.EN);
             }
         }
+
+        String sessionCoordinator = Files.readString(Path.of(
+                "src/main/java/com/cryptocarver/ui/EmvSessionKeyCoordinator.java"));
+        String sessionRequiredKey = "module.emv.feedback.sessionRequired";
+        assertTrue(sessionCoordinator.contains(sessionRequiredKey),
+                "EmvSessionKeyCoordinator must use " + sessionRequiredKey);
+        String sessionRequiredEnglish = service.text(sessionRequiredKey, "TECHNICAL_DETAIL");
+        assertNotEquals(sessionRequiredKey, sessionRequiredEnglish,
+                "EmvSessionKeyCoordinator missing EN text for " + sessionRequiredKey);
+        service.setPreference(LanguagePreference.ES);
+        String sessionRequiredSpanish = service.text(sessionRequiredKey, "TECHNICAL_DETAIL");
+        assertNotEquals(sessionRequiredKey, sessionRequiredSpanish,
+                "EmvSessionKeyCoordinator missing ES text for " + sessionRequiredKey);
+        assertNotEquals(sessionRequiredEnglish, sessionRequiredSpanish,
+                sessionRequiredKey + " must be distinguishable in ES");
     }
 
     @Test
