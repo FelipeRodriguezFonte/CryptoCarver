@@ -1252,7 +1252,7 @@ public class JOSEController implements Initializable {
     OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject, String keyMaterial) {
         OperationResult.Builder result = OperationResult.forOperation("JWE Decryption")
                 .input(jweString.getBytes(StandardCharsets.US_ASCII))
-                .output(payload.getBytes(StandardCharsets.UTF_8))
+                .output(payload.getBytes(StandardCharsets.UTF_8), com.cryptocarver.model.OperationDetail.Classification.SECRET)
                 .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
                 .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
                 ;
