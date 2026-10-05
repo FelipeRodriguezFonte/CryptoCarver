@@ -30,3 +30,5 @@ Lógica pura: construcción/lectura JOSE y formato con servicios existentes. UI:
 Caracterización: claves inventadas, salidas aleatorias comprobadas semánticamente y normalizadas antes del SHA-256; errores de proveedor solo comprobados como legibles, no incluidos textualmente. EN/ES y FULL_LAB/MASKED/REDACTED. Tests existentes intactos; cualquier fallo se anota antes del arreglo en el registro de la fase.
 
 JWT/JWS comparten firmantes, validación y controles; un solo JoseJwtCoordinator evita dividir el JWT anidado entre dos propietarios. La plantilla seleccionada en initialize mantiene su listener y orden; handleApplyJWTClaims sí se extrae.
+
+Digest JWT/JWS fijado y verificado antes de extracción: `526ed1435a5950126aae7065abbaeee3b6c9bb81c8cee77c3a4841e7e599537e`. Las nuevas comprobaciones de algoritmos permitidos/RFC9068/OIDC/crit preservan el comportamiento observado; una prohibición de algoritmo impide verificar (rojo), no es solo una advertencia (naranja).

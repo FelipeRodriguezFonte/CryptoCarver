@@ -58,6 +58,36 @@ class JoseJwtCharacterizationUITest {
                 assertTrue(p.label("jwtStatusLabel").getStyle().contains("green"));
                 p.published("validated");
                 p.privacy(p.reporter.result, KEY);
+                ((TextField)p.control("jwtAllowedAlgorithmsField")).setText("RS256");
+                p.invoke("handleValidateJWT");
+                assertTrue(p.label("jwtStatusLabel").getStyle().contains("red"));
+                p.line("allowed_algorithms", p.area("jwtFindingsArea").getText());
+                ((TextField)p.control("jwtAllowedAlgorithmsField")).clear();
+                p.check("jwtRfc9068Check").setSelected(true);
+                p.invoke("handleValidateJWT");
+                assertTrue(p.label("jwtStatusLabel").getStyle().contains("orange"));
+                p.line("rfc9068", p.area("jwtFindingsArea").getText());
+                p.check("jwtRfc9068Check").setSelected(false);
+                p.check("jwtOidcStrictCheck").setSelected(true);
+                ((TextField)p.control("jwtExpectedNonceField")).setText("invented-nonce");
+                p.invoke("handleValidateJWT");
+                assertTrue(p.label("jwtStatusLabel").getStyle().contains("orange"));
+                p.line("oidc", p.area("jwtFindingsArea").getText());
+                p.check("jwtOidcStrictCheck").setSelected(false);
+                ((TextField)p.control("jwtExpectedNonceField")).clear();
+                p.area("jwtProtectedHeaderArea").setText("{\"crit\":[\"toy\"],\"toy\":true}");
+                p.invoke("handleGenerateSignedJWT");
+                p.area("jwtValidateTokenArea").setText(p.area("jwtOutputArea").getText());
+                p.check("jwtIgnoreCritCheck").setSelected(true);
+                p.invoke("handleValidateJWT");
+                p.line("crit_ignore", p.area("jwtFindingsArea").getText());
+                p.check("jwtIgnoreCritCheck").setSelected(false);
+                ((TextField)p.control("jwtUnderstoodCritField")).setText("toy");
+                p.invoke("handleValidateJWT");
+                assertTrue(p.label("jwtStatusLabel").getStyle().contains("green"));
+                p.line("crit_understood", p.label("jwtStatusLabel").getText());
+                ((TextField)p.control("jwtUnderstoodCritField")).clear();
+                p.area("jwtProtectedHeaderArea").clear();
                 p.combo("jwtAlgoCombo").setValue("none");
                 p.area("jwtKeyArea").clear();
                 p.invoke("handleGenerateSignedJWT");
@@ -93,7 +123,7 @@ class JoseJwtCharacterizationUITest {
                     assertFalse(p.label("jwtStatusLabel").getText().isBlank());
                     p.line(language+"_invalid", "readable provider error normalized");
                 }
-                p.digest("UNFIXED");
+                p.digest("526ed1435a5950126aae7065abbaeee3b6c9bb81c8cee77c3a4841e7e599537e");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }
