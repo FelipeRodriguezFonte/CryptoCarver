@@ -392,10 +392,29 @@ public class EMVController {
                     .status(t("module.emv.status.session")).build());
 
         } catch (Exception e) {
-            sessionKeyResultArea.setText(t("module.emv.error.generate", e.getMessage()));
+            sessionKeyResultArea.setText(sessionKeyErrorMessage(e));
             sessionKeyResultArea.setVisible(true);
             sessionKeyResultArea.setManaged(true);
         }
+    }
+
+    private String sessionKeyErrorMessage(Exception error) {
+        String pan = panFieldSession == null || panFieldSession.getText() == null ? ""
+                : panFieldSession.getText().trim().replaceAll("\\s+", "");
+        if (!pan.matches("[0-9]+")) return t("module.emv.error.panDigits");
+
+        String imk = imkField == null || imkField.getText() == null ? ""
+                : imkField.getText().trim().replaceAll("\\s+", "");
+        String compactImk = imk.replace(":", "").replace("-", "");
+        if (!compactImk.matches("(?i)[0-9a-f]+")
+                || (compactImk.length() != 32 && compactImk.length() != 48)) {
+            return t("module.emv.error.imkLength");
+        }
+
+        String atc = atcField == null || atcField.getText() == null ? ""
+                : atcField.getText().trim().replaceAll("\\s+", "");
+        if (!atc.isEmpty() && !atc.matches("(?i)[0-9a-f]{4}")) return t("module.emv.error.atcFormat");
+        return t("module.emv.error.generate", error.getMessage());
     }
 
     // ============================================================================
