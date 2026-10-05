@@ -241,7 +241,7 @@ public class EMVController {
                     () -> panTrack2Field,
                     () -> expiryTrack2Field,
                     () -> serviceCodeFieldTrack2,
-                    () -> discretionaryDataField,
+                    () -> track2DiscretionaryInputField,
                     () -> track2InputField,
                     () -> emvTlvInputArea,
                     () -> emvTlvResultArea,
@@ -259,7 +259,7 @@ public class EMVController {
     @FXML private TextField panTrack2Field;
     @FXML private TextField expiryTrack2Field;
     @FXML private TextField serviceCodeFieldTrack2;
-    @FXML private TextField discretionaryDataField;
+    @FXML private TextField track2DiscretionaryInputField;
     @FXML private TextField track2InputField;
     @FXML private TextArea track2ResultArea;
 
@@ -394,7 +394,7 @@ public class EMVController {
         this.panTrack2Field = panTrack2Field;
         this.expiryTrack2Field = expiryTrack2Field;
         this.serviceCodeFieldTrack2 = serviceCodeFieldTrack2;
-        this.discretionaryDataField = discretionaryDataField;
+        this.track2DiscretionaryInputField = discretionaryDataField;
         this.track2InputField = track2InputField;
         this.track2ResultArea = track2ResultArea;
 
@@ -721,7 +721,7 @@ public class EMVController {
             String pan = panTrack2Field.getText().trim().replaceAll("\\s+", "");
             String expiry = expiryTrack2Field.getText().trim();
             String serviceCode = serviceCodeFieldTrack2.getText().trim();
-            String discretionaryData = discretionaryDataField.getText().trim();
+            String discretionaryData = track2DiscretionaryInputField.getText().trim();
 
             if (pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
                 track2ResultArea.setText(t("module.emv.feedback.trackRequired"));

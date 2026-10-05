@@ -48,7 +48,7 @@ class EmvTrack2CharacterizationUITest {
     private static final String PAN = "4761739001010119";
     private static final String EXPIRY = "2912";
     private static final String SERVICE_CODE = "201";
-    private static final String DISCRETIONARY = "123456";
+    private static final String DISCRETIONARY = "8264917350";
 
     @TempDir Path tempDir;
     private AppSettings previousSettings;
@@ -143,7 +143,7 @@ class EmvTrack2CharacterizationUITest {
                 TextField pan = (TextField) get(controller, "panTrack2Field");
                 TextField expiry = (TextField) get(controller, "expiryTrack2Field");
                 TextField service = (TextField) get(controller, "serviceCodeFieldTrack2");
-                TextField discretionary = (TextField) get(controller, "discretionaryDataField");
+                TextField discretionary = (TextField) get(controller, "track2DiscretionaryInputField");
                 TextField trackInput = (TextField) get(controller, "track2InputField");
 
                 for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
@@ -215,7 +215,7 @@ class EmvTrack2CharacterizationUITest {
         Files.writeString(Path.of("target/emv-track2-transcript.txt"), joined);
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("6f876c3e2473de4d727e719ab04d4f41aa92bc493e4b79759b187d517e7cf043", digest, "Transcript:\n" + joined);
+        assertEquals("39128893df5f4cd98991a05cb66d90fa221a92646c64bf25e264f838a6e1e3f1", digest, "Transcript:\n" + joined);
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
     }
 
