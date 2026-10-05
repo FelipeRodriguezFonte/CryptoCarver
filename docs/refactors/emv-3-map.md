@@ -18,7 +18,7 @@ All cryptogram and key calculations remain in `crypto/EMVOperations` (`generateA
 
 The characterization must restore `AppSettings`, its language/visibility settings, the test-mode property, Clipboard Shelf, and history (use a temporary history store). It will use only invented keys and record the result viewer, inspector, history, Shelf, status, expanded viewer and captured logs/telemetry for `FULL_LAB`, `MASKED`, and `REDACTED`. Its SHA-256 transcript must contain deterministic surface states and localized strings only; omit status timestamps, paths, filesystem names, and collection order. Any JDK or provider exception span is normalized to `<jdk-exception>` before hashing. Record characterization failures and digest before each repair.
 
-Existing `EmvProfileStatusUITest` remains unchanged and continues to verify three loaded EMV profiles in both EN and ES. This phase adds ARPC/state assertions not already covered there. No existing-test change is currently proposed; if characterization or extraction demonstrates one is needed, record its concrete failing assumption here before editing it.
+Existing `EmvProfileStatusUITest` remains unchanged and continues to verify three loaded EMV profiles in both EN and ES. This phase adds ARPC/state assertions not already covered there. The History classifier regression required adding positive `skARPCField`, `arqcField`, and `arpcField` assertions to `Ux21HeadlessTest`; the UI characterization had already recorded the concrete recipe leak before this adjustment.
 
 ## Characterization findings before fixes
 
@@ -34,6 +34,11 @@ The remaining History leak is field classification: `UiStateSnapshot` already re
 
 After adding the explicit cryptogram tokens in commit `3559427`, all six shared result surfaces are safe under `MASKED`/`REDACTED`; the portable post-history-classification digest is `e9f7206912a51806577e3ac2197efa073b06f926f8b332332d1e06b31a5c5f1b`. The repeated characterization matches its pinned transition digest and fails only the still-recorded EN/ES provider-error localization. That remaining failure is isolated to a two-byte invented Session Key passing the ARPC UI through to the cryptographic provider without a localized input-length check.
 
-## Repairs, extraction and phase gates
+## Repairs and digest transitions
 
-Record separate commits for the ARPC classification fix, its characterized digest transition, localized key-length feedback, the resulting digest transition, and extraction. Once those and the three requested phase gates pass, record all command counts and the final digest here.
+- Commit `99111e3` explicitly classifies the published ARPC bytes as `SECRET`. Transcript: `16d6afa05a55ea4009261158eb5f435ed8efdbc2f50163af43dff0b14c62dbe7` → `4803cbad2a058bc4ccba31d6133090d89aa4c61cf10ef186bb6c47b2d290a89b`. The result, Shelf and expanded-view leaks are gone; the characterization exposed the separate recipe-classification defect.
+- Commit `3559427` adds `arqc` and `arpc` to history-sensitive field tokens and asserts them in `Ux21HeadlessTest`. Transcript: `4803cbad2a058bc4ccba31d6133090d89aa4c61cf10ef186bb6c47b2d290a89b` → `e9f7206912a51806577e3ac2197efa073b06f926f8b332332d1e06b31a5c5f1b`. History now masks the ARQC input under both restricted visibility profiles; ARC/CSU remain public metadata.
+- Commit `38c9b11` adds a pre-provider ARPC session-key length check and EN/ES resources. A two-byte key now receives a stable localized diagnostic before `crypto/` is invoked. Transcript: `e9f7206912a51806577e3ac2197efa073b06f926f8b332332d1e06b31a5c5f1b` → `6cf3f9748b45372e6dd05403e01b1197d220bdecd79d0a6ee1c1b817faaf3f33`.
+- Digest pin commits are `e7b4bff` (post-publication classification), `e3284a0` (post-history redaction), and `f1f1589` (post-localization). The final `EmvArpcCharacterizationUITest` passed with SHA-256 `6cf3f9748b45372e6dd05403e01b1197d220bdecd79d0a6ee1c1b817faaf3f33`. All JDK/provider exception spans are normalized to `<jdk-exception>` before hashing.
+
+Extraction and the three phase gates remain to be completed and recorded here.
