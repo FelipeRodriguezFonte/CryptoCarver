@@ -255,6 +255,21 @@ public class EMVController {
         return emvModuleStateCoordinator;
     }
 
+    private EmvTrack2Coordinator emvTrack2Coordinator;
+
+    private EmvTrack2Coordinator emvTrack2Coordinator() {
+        if (emvTrack2Coordinator == null) {
+            emvTrack2Coordinator = new EmvTrack2Coordinator(new EmvTrack2Coordinator.View(
+                    () -> panTrack2Field,
+                    () -> expiryTrack2Field,
+                    () -> serviceCodeFieldTrack2,
+                    () -> track2DiscretionaryInputField,
+                    () -> track2InputField,
+                    () -> track2ResultArea), () -> mainController);
+        }
+        return emvTrack2Coordinator;
+    }
+
     // Track 2 controls
     @FXML private TextField panTrack2Field;
     @FXML private TextField expiryTrack2Field;
@@ -707,99 +722,13 @@ public class EMVController {
 
     public void handleGenerateARPC() { emvArpcCoordinator().handleGenerateARPC(); }
 
-    private String maskPan(String pan) {
-        if (pan == null || pan.length() < 5) return "[redacted]";
-        return "*".repeat(Math.max(0, pan.length() - 4)) + pan.substring(pan.length() - 4);
-    }
-
     // ============================================================================
     // TRACK 2 OPERATIONS
     // ============================================================================
 
-    public void handleEncodeTrack2() {
-        try {
-            String pan = panTrack2Field.getText().trim().replaceAll("\\s+", "");
-            String expiry = expiryTrack2Field.getText().trim();
-            String serviceCode = serviceCodeFieldTrack2.getText().trim();
-            String discretionaryData = track2DiscretionaryInputField.getText().trim();
+    public void handleEncodeTrack2() { emvTrack2Coordinator().handleEncodeTrack2(); }
 
-            if (pan.isEmpty() || expiry.isEmpty() || serviceCode.isEmpty()) {
-                track2ResultArea.setText(t("module.emv.feedback.trackRequired"));
-                return;
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("TRACK 2 ENCODING\n");
-            result.append("════════════════\n\n");
-
-            String track2 = EMVOperations.encodeTrack2(pan, expiry, serviceCode, discretionaryData);
-
-            result.append("Input Data:\n");
-            result.append("───────────\n");
-            result.append("PAN: ").append(pan).append("\n");
-            result.append("Expiry: ").append(expiry).append(" (YYMM)\n");
-            result.append("Service Code: ").append(serviceCode).append("\n");
-            if (!discretionaryData.isEmpty()) {
-                result.append("Discretionary Data: ").append(discretionaryData).append("\n");
-            }
-            result.append("\n");
-
-            result.append("Track 2 Equivalent Data:\n");
-            result.append("────────────────────────\n");
-            result.append(track2).append("\n\n");
-
-            result.append("Format: PAN + 'D' + Expiry + Service Code + Discretionary Data\n");
-            result.append("✅ Track 2 encoded successfully\n");
-
-            track2ResultArea.setText(result.toString());
-            track2ResultArea.setVisible(true);
-            track2ResultArea.setManaged(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("PAN", maskPan(pan));
-            details.put("Expiry", expiry);
-            details.put("Service Code", serviceCode);
-            mainController.publish(OperationResult.forOperation("Track 2 Encoding")
-                    .output(track2.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
-                            OperationDetail.Classification.SECRET).details(details)
-                    .status(t("module.emv.status.trackEncoded")).build());
-
-        } catch (Exception e) {
-            track2ResultArea.setText(t("module.emv.error.generate", e.getMessage()));
-        }
-    }
-
-    public void handleDecodeTrack2() {
-        try {
-            String track2Input = track2InputField.getText().trim().replaceAll("\\s+", "");
-
-            if (track2Input.isEmpty()) {
-                track2ResultArea.setText(t("module.emv.feedback.trackDataRequired"));
-                return;
-            }
-            if (!track2Input.matches("(?i)[0-9]{12,19}(?:D|=)[0-9]{7}[0-9A-F]*")) {
-                track2ResultArea.setText(t("module.emv.track2.invalid"));
-                track2ResultArea.setVisible(true);
-                track2ResultArea.setManaged(true);
-                return;
-            }
-
-            String result = EMVOperations.decodeTrack2(track2Input);
-            track2ResultArea.setText(result);
-            track2ResultArea.setVisible(true);
-            track2ResultArea.setManaged(true);
-
-            mainController.publish(OperationResult.forOperation("Track 2 Decoding")
-                    .input(track2Input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
-                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                            OperationDetail.Classification.SECRET)
-                    .detail("PAN", "[contained in Track 2; not persisted]")
-                    .status(t("module.emv.status.trackDecoded")).build());
-
-        } catch (Exception e) {
-            track2ResultArea.setText(t("module.emv.error.generate", e.getMessage()));
-        }
-    }
+    public void handleDecodeTrack2() { emvTrack2Coordinator().handleDecodeTrack2(); }
 
     // --- Helper Methods for Global Toolbar ---
 
