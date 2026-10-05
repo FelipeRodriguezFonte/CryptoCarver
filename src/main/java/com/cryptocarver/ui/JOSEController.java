@@ -1141,7 +1141,7 @@ public class JOSEController implements Initializable {
                 statusLabel.setStyle("-fx-text-fill: green;");
                 OperationResult.Builder published = OperationResult.forOperation("JWE Decryption")
                         .input(jweString.getBytes(StandardCharsets.UTF_8))
-                        .output(result.payload().getBytes(StandardCharsets.UTF_8))
+                        .output(result.payload().getBytes(StandardCharsets.UTF_8), com.cryptocarver.model.OperationDetail.Classification.SECRET)
                         .detail("Key Algorithm", String.valueOf(result.effectiveHeader().get("alg")))
                         .detail("Content Algorithm", String.valueOf(result.effectiveHeader().get("enc")))
                         .detail("Serialization", "JSON")
