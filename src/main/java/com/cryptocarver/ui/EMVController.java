@@ -117,6 +117,7 @@ public class EMVController {
     }
 
     private StatusReporter mainController;
+    private EmvSessionKeyCoordinator emvSessionKeyCoordinator;
 
     // Session Key Derivation controls
     @FXML private TextField imkField;
@@ -126,6 +127,31 @@ public class EMVController {
     @FXML private TextField emvAtcField;
     private TextField atcField;
     @FXML private TextArea sessionKeyResultArea;
+
+    private EmvSessionKeyCoordinator emvSessionKeyCoordinator() {
+        if (emvSessionKeyCoordinator == null) {
+            emvSessionKeyCoordinator = new EmvSessionKeyCoordinator(new EmvSessionKeyCoordinator.View(
+                    () -> imkField,
+                    () -> panFieldSession,
+                    () -> panSeqFieldSession,
+                    () -> iccMethodCombo,
+                    () -> atcField,
+                    () -> sessionKeyResultArea,
+                    () -> smSchemeCombo,
+                    () -> smMkSmiField,
+                    () -> smMkSmcField,
+                    () -> smPanSeqField,
+                    () -> smUdkSmiField,
+                    () -> smUdkSmcField,
+                    () -> smAcField,
+                    () -> smCommandNumberField,
+                    () -> smAtcField,
+                    () -> smSkMacField,
+                    () -> smSkEncField,
+                    () -> smResultArea), () -> mainController);
+        }
+        return emvSessionKeyCoordinator;
+    }
 
     // ARQC Generation controls
     @FXML private TextField skARQCField;
@@ -214,15 +240,6 @@ public class EMVController {
         iccMethodCombo.getItems().setAll(t("module.emv.iccMethod.auto"),
                 t("module.emv.iccMethod.a"), t("module.emv.iccMethod.b"));
         iccMethodCombo.getSelectionModel().selectFirst();
-    }
-
-    private EMVOperations.IccMasterKeyMethod selectedIccMethod() {
-        if (iccMethodCombo == null) return EMVOperations.IccMasterKeyMethod.AUTO;
-        return switch (iccMethodCombo.getSelectionModel().getSelectedIndex()) {
-            case 1 -> EMVOperations.IccMasterKeyMethod.A;
-            case 2 -> EMVOperations.IccMasterKeyMethod.B;
-            default -> EMVOperations.IccMasterKeyMethod.AUTO;
-        };
     }
 
     public void initialize(StatusReporter mainController,
@@ -328,94 +345,7 @@ public class EMVController {
     // SESSION KEY DERIVATION
     // ============================================================================
 
-    public void handleDeriveSessionKey() {
-        try {
-            String imk = imkField.getText().trim().replaceAll("\\s+", "");
-            String pan = panFieldSession.getText().trim().replaceAll("\\s+", "");
-            String panSeq = panSeqFieldSession.getText().trim();
-            String atc = atcField.getText().trim().replaceAll("\\s+", "");
-
-            if (imk.isEmpty() || pan.isEmpty()) {
-                sessionKeyResultArea.setText(t("module.emv.feedback.sessionRequired"));
-                return;
-            }
-
-            if (panSeq.isEmpty()) {
-                panSeq = "00";
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("EMV SESSION KEY DERIVATION\n");
-            result.append("═══════════════════════════\n\n");
-
-            // Step 1: Derive ICC Master Key
-            result.append("Step 1: Derive ICC Master Key (UDK)\n");
-            result.append("───────────────────────────────────\n");
-            EMVOperations.IccMasterKeyDerivation derivation = EMVOperations.deriveICCMasterKey(
-                    imk, pan, panSeq, selectedIccMethod());
-            String iccMK = derivation.key();
-            result.append("IMK: ").append(imk).append("\n");
-            result.append("PAN: ").append(pan).append("\n");
-            result.append("PAN Sequence: ").append(panSeq).append("\n");
-            result.append(t("module.emv.iccResult.method")).append(' ').append(derivation.method()).append("\n");
-            result.append(t("module.emv.iccResult.input")).append(' ').append(derivation.input()).append("\n");
-            if (derivation.method() == EMVOperations.IccMasterKeyMethod.B) {
-                result.append(t("module.emv.iccResult.sha1")).append(' ').append(derivation.sha1()).append("\n");
-                result.append(t("module.emv.iccResult.decimalized")).append(' ').append(derivation.decimalizedDigits()).append("\n");
-                result.append(t("module.emv.iccResult.y")).append(' ').append(derivation.y()).append("\n");
-            }
-            result.append("➜ ICC Master Key: ").append(iccMK).append("\n\n");
-
-            // Step 2: Derive Session Key (if ATC provided)
-            if (!atc.isEmpty()) {
-                result.append("Step 2: Derive Session Key\n");
-                result.append("───────────────────────────\n");
-                String sessionKey = EMVOperations.deriveSessionKey(iccMK, atc, "");
-                result.append("ICC Master Key: ").append(iccMK).append("\n");
-                result.append("ATC: ").append(atc).append(" (").append(EMVOperations.formatATC(atc)).append(")\n");
-                result.append("➜ Session Key: ").append(sessionKey).append("\n\n");
-            }
-
-            result.append("✅ Session key derivation complete\n");
-            sessionKeyResultArea.setText(result.toString());
-            sessionKeyResultArea.setVisible(true);
-            sessionKeyResultArea.setManaged(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("PAN", maskPan(pan));
-            details.put("PAN Sequence", panSeq);
-            details.put("ATC", atc);
-            details.put("IMK", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("Session Key Derivation")
-                    .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                            OperationDetail.Classification.SECRET).details(details)
-                    .status(t("module.emv.status.session")).build());
-
-        } catch (Exception e) {
-            sessionKeyResultArea.setText(sessionKeyErrorMessage(e));
-            sessionKeyResultArea.setVisible(true);
-            sessionKeyResultArea.setManaged(true);
-        }
-    }
-
-    private String sessionKeyErrorMessage(Exception error) {
-        String pan = panFieldSession == null || panFieldSession.getText() == null ? ""
-                : panFieldSession.getText().trim().replaceAll("\\s+", "");
-        if (!pan.matches("[0-9]+")) return t("module.emv.error.panDigits");
-
-        String imk = imkField == null || imkField.getText() == null ? ""
-                : imkField.getText().trim().replaceAll("\\s+", "");
-        String compactImk = imk.replace(":", "").replace("-", "");
-        if (!compactImk.matches("(?i)[0-9a-f]+")
-                || (compactImk.length() != 32 && compactImk.length() != 48)) {
-            return t("module.emv.error.imkLength");
-        }
-
-        String atc = atcField == null || atcField.getText() == null ? ""
-                : atcField.getText().trim().replaceAll("\\s+", "");
-        if (!atc.isEmpty() && !atc.matches("(?i)[0-9a-f]{4}")) return t("module.emv.error.atcFormat");
-        return t("module.emv.error.generate", error.getMessage());
-    }
+    public void handleDeriveSessionKey() { emvSessionKeyCoordinator().handleDeriveSessionKey(); }
 
     // ============================================================================
     // ISSUER-SCRIPT SECURE MESSAGING (all cryptography in EmvSecureMessaging)
@@ -469,50 +399,7 @@ public class EMVController {
         smShow(t("module.emv.sm.exampleLoaded", smSchemeCombo.getValue()));
     }
 
-    public void handleSmDeriveSessionKeys() {
-        try {
-            StringBuilder report = new StringBuilder();
-            String skMac;
-            String skEnc;
-            if (smVisa()) {
-                String atc = smText(smAtcField);
-                skMac = EmvSecureMessaging.visaSessionKey(smText(smUdkSmiField), atc);
-                skEnc = EmvSecureMessaging.visaSessionKey(smText(smUdkSmcField), atc);
-                report.append("Visa: session key = UDK with ATC ").append(atc)
-                        .append(" XORed into the left half and its complement into the right\n");
-            } else {
-                if (!smText(smMkSmiField).isEmpty() || !smText(smMkSmcField).isEmpty()) {
-                    String panSeq = smText(smPanSeqField);
-                    smUdkSmiField.setText(EmvSecureMessaging.mastercardUdk(smText(smMkSmiField), panSeq));
-                    smUdkSmcField.setText(EmvSecureMessaging.mastercardUdk(smText(smMkSmcField), panSeq));
-                    report.append("UDK-SMI: ").append(smUdkSmiField.getText()).append('\n')
-                            .append("UDK-SMC: ").append(smUdkSmcField.getText()).append("   (EMV option A, odd parity)\n");
-                }
-                String commandText = smText(smCommandNumberField);
-                int command;
-                try {
-                    command = commandText.isEmpty() ? 0 : Integer.parseInt(commandText);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException(t("module.emv.sm.commandInvalid"));
-                }
-                if (command < 0) throw new IllegalArgumentException(t("module.emv.sm.commandInvalid"));
-                String ac = smText(smAcField);
-                skMac = EmvSecureMessaging.mastercardSessionKey(smText(smUdkSmiField), ac, command);
-                skEnc = EmvSecureMessaging.mastercardSessionKey(smText(smUdkSmcField), ac, command);
-                report.append("Mastercard SKD: R = AC + ").append(command).append('\n');
-            }
-            smSkMacField.setText(skMac);
-            smSkEncField.setText(skEnc);
-            report.append("SK MAC: ").append(skMac).append('\n').append("SK ENC: ").append(skEnc).append('\n');
-            smShow(report.toString());
-            smPublish("Secure Messaging Session Keys", report.toString(), java.util.List.of(
-                    com.cryptocarver.model.OperationDetail.publicDetail("Scheme", smSchemeCombo.getValue()),
-                    com.cryptocarver.model.OperationDetail.secretDetail("SK MAC", skMac),
-                    com.cryptocarver.model.OperationDetail.secretDetail("SK ENC", skEnc)));
-        } catch (Exception e) {
-            smShow(t("module.emv.sm.error", e.getMessage()));
-        }
-    }
+    public void handleSmDeriveSessionKeys() { emvSessionKeyCoordinator().handleSmDeriveSessionKeys(); }
 
     public void handleSmEncipherPin() {
         try {
@@ -1228,7 +1115,7 @@ public class EMVController {
 
     public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) {
         if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.EMV) {
-            String derivedSessionKey = deriveLaboratorySessionKey(p);
+            String derivedSessionKey = emvSessionKeyCoordinator().deriveLaboratorySessionKey(p);
             if (p.getName().contains("ARQC")) {
                 if (skARQCField != null) skARQCField.setText(derivedSessionKey);
                 if (imkField != null && p.getInputs().containsKey("imk")) imkField.setText(p.getInputs().get("imk"));
@@ -1262,30 +1149,6 @@ public class EMVController {
             // Secure Messaging uses MAC controls or specific SM UI if added.
             // Currently EMVController does not have Secure Messaging UI mapped, it relies on MAC in PaymentsController or a future SM tab.
             System.out.println("Loaded Secure Messaging profile: " + p.getName());
-        }
-    }
-
-    /**
-     * Laboratory EMV profiles carry the ICC master-key inputs, not a copied
-     * session key.  Derive it before filling ARQC/ARPC so the loaded screen is
-     * immediately executable.  Invalid laboratory vectors deliberately keep an
-     * empty field and show their expected validation error when executed.
-     */
-    private String deriveLaboratorySessionKey(com.cryptocarver.model.payments.PaymentProfile profile) {
-        if (profile.getInputs().containsKey("sessionKey")) {
-            return profile.getInputs().get("sessionKey");
-        }
-        try {
-            String imk = profile.getInput("imk");
-            String pan = profile.getInput("pan");
-            String panSeq = profile.getInput("panSeq");
-            String atc = profile.getInput("atc");
-            if (imk == null || pan == null || panSeq == null || atc == null) return "";
-            String iccMasterKey = EMVOperations.deriveICCMasterKey(imk, pan, panSeq,
-                    EMVOperations.IccMasterKeyMethod.AUTO).key();
-            return EMVOperations.deriveSessionKey(iccMasterKey, atc, "");
-        } catch (Exception ignored) {
-            return "";
         }
     }
 
