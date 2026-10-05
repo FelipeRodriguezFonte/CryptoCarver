@@ -211,7 +211,7 @@ class EmvSessionKeyCharacterizationUITest {
         Files.writeString(Path.of("target/emv-session-transcript.txt"), joined + "\n");
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("2fe5b9dd253fba2f0cf818555fe07f1c377f6d33ac019b570259720831d3cfa1", digest, joined);
+        assertEquals("4e03e03f85aabfabe314eb78edc38796fd9fca12ff3bb94897d83a6be6c3bf7c", digest, joined);
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
     }
 

@@ -1061,10 +1061,12 @@ public class ModernMainController implements StatusReporter, OperationNavigator 
 
     @Override
     public void updateInspector(String operation, byte[] input, byte[] output, java.util.List<com.cryptocarver.model.OperationDetail> details) {
-        inspectorPresenter().present(operation, input, output, details);
+        java.util.List<com.cryptocarver.model.OperationDetail> visibleDetails =
+                details == null ? null : visibleOperationDetails(details);
+        inspectorPresenter().present(operation, input, output, visibleDetails);
 
-        if (details != null && inlineErrorPresenter != null) {
-            boolean isInvalidResult = details.stream().anyMatch(d ->
+        if (visibleDetails != null && inlineErrorPresenter != null) {
+            boolean isInvalidResult = visibleDetails.stream().anyMatch(d ->
                     "Result".equalsIgnoreCase(d.name()) && d.value() != null && d.value().toUpperCase().contains("INVALID"));
             if (!isInvalidResult) {
                 inlineErrorPresenter.hideBanner();
