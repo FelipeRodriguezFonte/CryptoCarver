@@ -80,6 +80,26 @@ class ProcessValidatorTest {
     }
 
     @Test
+    void dryRunResolvesLegacyPayloadAndImplicitPortsLikeExecution() {
+        ProcessDefinition def = new ProcessDefinition();
+        ProcessDefinition.Node input = new ProcessDefinition.Node("input", "CONSOLE_INPUT", "Input", 0, 0);
+        input.configuration.put("value", "Test Hello");
+        ProcessDefinition.Node hash = new ProcessDefinition.Node("hash", "HASH", "SHA-256", 100, 0);
+        hash.configuration.put("algorithm", "SHA-256");
+        ProcessDefinition.Node output = new ProcessDefinition.Node("output", "CONSOLE_OUTPUT", "Output", 200, 0);
+        def.nodes.addAll(List.of(input, hash, output));
+        def.connections.add(new ProcessDefinition.Connection("input", "hash", "payload"));
+        def.connections.add(new ProcessDefinition.Connection("hash", "output"));
+
+        DryRunSummary summary = ProcessValidator.dryRun(def);
+
+        assertTrue(summary.isRunnable());
+        assertEquals(3, summary.readyCount());
+        assertEquals(0, summary.incompleteCount());
+        assertEquals(0, summary.blockedCount());
+    }
+
+    @Test
     void testCancellationPreventsSubsequentSteps() throws Exception {
         ProcessDefinition def = new ProcessDefinition();
         ProcessDefinition.Node n1 = new ProcessDefinition.Node("n1", "CONSOLE_INPUT", "Step 1", 0, 0);

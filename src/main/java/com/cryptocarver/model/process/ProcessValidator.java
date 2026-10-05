@@ -104,7 +104,7 @@ public final class ProcessValidator {
                 results.add(StepValidationResult.blocked(conn.from, "connection", "Node cannot connect to itself (self-link)"));
             }
             if (ids.contains(conn.to) && ids.contains(conn.from)) {
-                String targetPort = conn.targetPort != null && !conn.targetPort.isEmpty() ? conn.targetPort : "payload";
+                String targetPort = effectiveTargetPort(conn, nodeMap);
                 portBindings.get(conn.to).put(targetPort, conn.from);
             }
         }
@@ -141,6 +141,33 @@ public final class ProcessValidator {
         }
 
         return results;
+    }
+
+    private static String effectiveTargetPort(ProcessDefinition.Connection connection,
+            Map<String, ProcessDefinition.Node> nodeMap) {
+        String targetPort = connection.targetPort;
+        ProcessDefinition.Node targetNode = nodeMap.get(connection.to);
+        if (targetNode == null || targetNode.type == null || targetNode.type.isBlank()) {
+            return targetPort != null && !targetPort.isEmpty() ? targetPort : "payload";
+        }
+
+        List<ProcessNodeHandler.PortDefinition> targetPorts;
+        try {
+            targetPorts = ProcessEngine.getHandlerFor(targetNode.type).inputPorts(targetNode);
+        } catch (IllegalArgumentException unknownOperation) {
+            return targetPort != null && !targetPort.isEmpty() ? targetPort : "payload";
+        }
+
+        if (targetPort == null || targetPort.isEmpty()) {
+            if (targetPorts.size() == 1) return targetPorts.get(0).name();
+            return "payload";
+        }
+
+        if ("payload".equals(targetPort) && targetPorts.size() == 1
+                && "input".equals(targetPorts.get(0).name())) {
+            return "input";
+        }
+        return targetPort;
     }
 
     public static StepValidationResult validateNode(ProcessDefinition.Node node, Map<String, String> boundPorts) {
