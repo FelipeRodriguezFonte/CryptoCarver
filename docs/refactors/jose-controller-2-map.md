@@ -25,3 +25,7 @@ Digests fijados y verificados antes de extracción:
 - Algoritmos/avisos/CEK/errores: `784d6a61e011dee39d8c2c5f6798bd4a29484f2fbc86d8f041d4e39ed69272fd`.
 
 Caracterización destapó PUBLIC por omisión en plaintext Compact y JSON; ambas corregidas como SECRET, en commits separados y antes de fijar los digests. Las cuatro pruebas JOSE originales no se modifican.
+
+Extracción: 1828 → 1608 líneas en JOSEController. Se extraen 7 métodos, sin mover listeners ni selectores del arranque. Ambos digests se mantienen tras extracción.
+
+Aserción fuente obsoleta prevista: `module.jose.feedback.statusJweDecrypted` pasa de JOSEController a JoseJweCoordinator. SpecializedFeedbackHeadlessTest comprobará el mismo contrato de presencia/traducciones EN/ES en el nuevo propietario, sin relajar ninguna aserción. Las pruebas JOSEInspector/JweSecurity/JwkConversion no cambian. Nota de ejecución: `-DrunUiTests=true` activa el perfil con groups=ui, por lo que las pruebas headless se verifican en la puerta default sin esa propiedad explícita.

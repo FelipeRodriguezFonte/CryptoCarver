@@ -58,6 +58,14 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    private JoseJweCoordinator jweCoordinator;
+    private JoseJweCoordinator jweCoordinator() {
+        if (jweCoordinator == null) jweCoordinator = new JoseJweCoordinator(
+                () -> new JoseJweCoordinator.View(jweAadField, jweApuField, jweApvField, jweAuthTagArea, jweCiphertextArea, jweCompressCheck, jweContentAlgoCombo, jweCtyField, jweCustomHeaderArea, jweDecodedHeaderArea, jweDecodedPayloadArea, jweDecryptKeyFormatCombo, jweDecryptedKeyArea, jweEncryptedKeyArea, jweHeaderArea, jweIVArea, jweInputArea, jweKeyAlgoCombo, jweKeyFormatCombo, jweKidField, jweOutputArea, jwePayloadArea, jwePbes2IterField, jwePrivateKeyArea, jwePublicKeyArea, jweSerializationCombo, jweStatusLabel, jweTypField), () -> statusReporter);
+        return jweCoordinator;
+    }
+
+
     private JoseJwtCoordinator jwtCoordinator;
     private JoseJwtCoordinator jwtCoordinator() {
         if (jwtCoordinator == null) jwtCoordinator = new JoseJwtCoordinator(
@@ -786,60 +794,10 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    private void handleGenerateJWE() {
-
-            if (isBlank(jwePayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwePayloadArea"); return; }
-            if (isBlank(jwePublicKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePublicKeyArea"); return; }
-            int iterations = JweComposer.DEFAULT_PBES2_ITERATIONS;
-            if (jwePbes2IterField != null && !jwePbes2IterField.getText().isBlank()) {
-                try {
-                    iterations = Integer.parseInt(jwePbes2IterField.getText().trim());
-                } catch (NumberFormatException e) {
-                    iterations = -1;
-                }
-                if (iterations < 1000) {
-                    showValidation(t("module.jose.feedback.pbes2Iterations"), "jwePbes2IterField");
-                    return;
-                }
-            }
-
-            this.generateJWE(
-                    jwePayloadArea.getText(),
-                    jweKeyAlgoCombo.getValue(),
-                    jweContentAlgoCombo.getValue(),
-                    jwePublicKeyArea.getText(),
-                    jweCompressCheck.isSelected(),
-                    new JweComposer.HeaderOptions(textOf(jweKidField), textOf(jweTypField), textOf(jweCtyField),
-                            textOf(jweApuField), textOf(jweApvField), textOf(jweCustomHeaderArea)),
-                    secretEncoding(jweKeyFormatCombo),
-                    iterations,
-                    JweComposer.Serialization.fromLabel(jweSerializationCombo == null ? null : jweSerializationCombo.getValue()),
-                    textOf(jweAadField),
-                    jweOutputArea);
-
-        }
+    private void handleGenerateJWE() { jweCoordinator().handleGenerateJWE(); }
 
     @FXML
-    private void handleDecryptJWE() {
-
-            if (isBlank(jweInputArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jweInputArea"); return; }
-            if (isBlank(jwePrivateKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwePrivateKeyArea"); return; }
-
-            this.decryptJWE(
-                    jweInputArea.getText(),
-                    jwePrivateKeyArea.getText(),
-                    secretEncoding(jweDecryptKeyFormatCombo),
-                    jweDecodedHeaderArea,
-                    jweDecodedPayloadArea,
-                    jweHeaderArea,
-                    jweEncryptedKeyArea,
-                    jweDecryptedKeyArea,
-                    jweIVArea,
-                    jweCiphertextArea,
-                    jweAuthTagArea,
-                    jweStatusLabel);
-
-        }
+    private void handleDecryptJWE() { jweCoordinator().handleDecryptJWE(); }
 
     @FXML
     private void handleInspectToken() {
@@ -1074,197 +1032,19 @@ public class JOSEController implements Initializable {
     // --- JWE (Encrypted) ---
     public void generateJWE(String payload, String keyAlgo, String contentAlgo, String keyMaterial, boolean compress,
             JweComposer.HeaderOptions headerOptions, JoseKeyMaterial.SecretEncoding secretEncoding,
-            int pbes2Iterations, JweComposer.Serialization serialization, String aad, TextArea outputArea) {
-        try {
-            String serialized = JweComposer.encrypt(payload, keyAlgo, contentAlgo, compress, headerOptions,
-                    keyMaterial, secretEncoding, pbes2Iterations, serialization, aad);
-            outputArea.setText(serialized);
-            String status = "JWE Encrypted (" + keyAlgo + " / " + contentAlgo + ")";
-            if (compress)
-                status += " [Compressed]";
-            OperationResult.Builder result = OperationResult.forOperation("JWE Encryption")
-                    .input(payload.getBytes(StandardCharsets.UTF_8))
-                    .output(serialized.getBytes(StandardCharsets.US_ASCII))
-                    .detail("Key Algorithm", keyAlgo).detail("Content Algorithm", contentAlgo)
-                    .detail("Compression", String.valueOf(compress))
-                    .detail("Serialization", serialization == null ? "Compact" : serialization.label())
-                    .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyMaterial));
-            if (aad != null && !aad.isBlank()) result.detail("AAD", aad);
-            if (headerOptions != null && headerOptions.kid() != null && !headerOptions.kid().isBlank()) {
-                result.detail("kid", headerOptions.kid().trim());
-            }
-            if (JWEAlgorithm.Family.PBES2.contains(JWEAlgorithm.parse(keyAlgo))) {
-                result.detail("PBES2 Iterations", String.valueOf(pbes2Iterations));
-            }
-            addSecurityWarning(result, jweSecurityWarning(keyAlgo));
-            String metadataWarning = metadataWarning(keyMaterial, JoseJwkPolicy.Operation.ENCRYPT);
-            if (metadataWarning != null) result.detail("Security warning", metadataWarning);
-            statusReporter.publish(result.status(status).build());
-
-        } catch (Exception e) {
-            statusReporter.showError("JWE Encryption Error", e.getMessage());
-            // No exception attached: provider messages may echo key material.
-            LOG.error("JWE encryption failed for key-management algorithm {}", keyAlgo);
-        }
-    }
+            int pbes2Iterations, JweComposer.Serialization serialization, String aad, TextArea outputArea) { jweCoordinator().generateJWE(payload, keyAlgo, contentAlgo, keyMaterial, compress, headerOptions, secretEncoding, pbes2Iterations, serialization, aad, outputArea); }
 
     public void decryptJWE(String jweString, String privateKeyPEM, JoseKeyMaterial.SecretEncoding secretEncoding,
             TextArea headerOut, TextArea payloadOut,
             TextArea jweHeaderArea, TextArea jweEncryptedKeyArea, TextArea jweDecryptedKeyArea,
             TextArea jweIVArea, TextArea jweCiphertextArea, TextArea jweAuthTagArea,
-            Label statusLabel) {
-        String algorithmName = "(unknown)";
-        try {
-            if (jweString == null || jweString.isBlank()) {
-                throw new IllegalArgumentException("A JWE compact serialization is required.");
-            }
-            if (privateKeyPEM == null || privateKeyPEM.isBlank()) {
-                throw new IllegalArgumentException("Key material is required to decrypt the JWE.");
-            }
-            if (jweString.trim().startsWith("{")) {
-                algorithmName = "(JSON serialization)";
-                JweComposer.JsonDecryption result = JweComposer.decryptJson(jweString.trim(), privateKeyPEM.trim(),
-                        secretEncoding);
-                String header = com.nimbusds.jose.util.JSONObjectUtils.toJSONString(result.effectiveHeader());
-                headerOut.setText(header);
-                payloadOut.setText(result.payload());
-                jweHeaderArea.setText(header);
-                jweEncryptedKeyArea.setText(result.encryptedKey() == null ? "" : result.encryptedKey().toString());
-                jweDecryptedKeyArea.setText("Manual CEK preview is only available for compact serialization.");
-                jweIVArea.setText(result.iv() == null ? "" : result.iv() + " \n[Hex: "
-                        + DataConverter.bytesToHex(result.iv().decode()) + "]");
-                jweCiphertextArea.setText(result.cipherText().toString());
-                jweAuthTagArea.setText(result.authTag() == null ? "" : result.authTag() + " \n[Hex: "
-                        + DataConverter.bytesToHex(result.authTag().decode()) + "]");
-                statusLabel.setText(t("module.jose.decryptionSuccessful") + " (recipient "
-                        + (result.recipientIndex() + 1) + "/" + result.recipientCount() + ")");
-                statusLabel.setStyle("-fx-text-fill: green;");
-                OperationResult.Builder published = OperationResult.forOperation("JWE Decryption")
-                        .input(jweString.getBytes(StandardCharsets.UTF_8))
-                        .output(result.payload().getBytes(StandardCharsets.UTF_8), com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                        .detail("Key Algorithm", String.valueOf(result.effectiveHeader().get("alg")))
-                        .detail("Content Algorithm", String.valueOf(result.effectiveHeader().get("enc")))
-                        .detail("Serialization", "JSON")
-                        .detail("Recipient", (result.recipientIndex() + 1) + " of " + result.recipientCount());
-                if (result.aad() != null) published.detail("AAD", result.aad());
-                addSecurityWarning(published, jweSecurityWarning(String.valueOf(result.effectiveHeader().get("alg"))));
-                statusReporter.publish(published.status(t("module.jose.feedback.statusJweDecrypted")).build());
-                return;
-            }
+            Label statusLabel) { jweCoordinator().decryptJWE(jweString, privateKeyPEM, secretEncoding, headerOut, payloadOut, jweHeaderArea, jweEncryptedKeyArea, jweDecryptedKeyArea, jweIVArea, jweCiphertextArea, jweAuthTagArea, statusLabel); }
 
-            final JWEObject jweObject;
-            try {
-                jweObject = JWEObject.parse(jweString);
-            } catch (java.text.ParseException e) {
-                throw new IllegalArgumentException("The JWE is corrupt or has an invalid compact serialization.", e);
-            }
+    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject) { return jweCoordinator().buildJweDecryptionResult(jweString, payload, jweObject); }
 
-            JWEAlgorithm alg = jweObject.getHeader().getAlgorithm();
-            algorithmName = alg == null ? "(missing)" : alg.getName();
-            if (alg == null) {
-                throw new IllegalArgumentException("The JWE header has no 'alg' parameter.");
-            }
+    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject, String keyMaterial) { return jweCoordinator().buildJweDecryptionResult(jweString, payload, jweObject, keyMaterial); }
 
-            JWEDecrypter decrypter;
-            JweComposer.LoadedKey loaded = new JweComposer.LoadedKey();
-            try {
-                decrypter = JweComposer.decrypter(alg, privateKeyPEM.trim(), secretEncoding, loaded);
-            } catch (IllegalArgumentException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Key material is missing or incompatible with JWE algorithm " + algorithmName + ".", e);
-            }
-            PrivateKey privateKey = loaded.privateKey;
-            byte[] secret = loaded.secret;
-
-            try {
-                jweObject.decrypt(decrypter);
-            } catch (Exception e) {
-                throw new IllegalArgumentException(
-                        "JWE authentication failed for " + algorithmName
-                                + ": the supplied key may be incorrect/incompatible or the JWE header/ciphertext may be corrupt.", e);
-            }
-
-            // 4. Display Parts
-            headerOut.setText(jweObject.getHeader().toString());
-            payloadOut.setText(jweObject.getPayload().toString());
-
-            // 5. Visual Breakdown
-            jweHeaderArea.setText(jweObject.getHeader().toString());
-
-            Base64URL encryptedKey = jweObject.getEncryptedKey();
-            jweEncryptedKeyArea.setText(encryptedKey != null ? encryptedKey.toString() : "");
-
-            if (JWEAlgorithm.DIR.equals(alg)) {
-                // The direct key is the CEK. Keep it out of automatic preview,
-                // OperationResult, history, reports, clipboard and logs.
-                jweDecryptedKeyArea.setText(directCekPreviewMessage());
-            } else if (!JWEManualCekRecovery.isSupported(alg)) {
-                jweDecryptedKeyArea.setText("Manual CEK preview is not available for " + algorithmName + ".");
-            } else {
-                try {
-                    byte[] cek = JWEManualCekRecovery.recover(jweObject, privateKey, secret);
-                    jweDecryptedKeyArea.setText(DataConverter.bytesToHex(cek));
-                    java.util.Arrays.fill(cek, (byte) 0);
-                } catch (JWEManualCekRecovery.ManualCekRecoveryException ex) {
-                    jweDecryptedKeyArea.setText("Manual CEK preview error: " + ex.getMessage());
-                }
-            }
-
-            jweIVArea.setText(jweObject.getIV() != null
-                    ? jweObject.getIV().toString() + " \n[Hex: "
-                            + com.cryptocarver.util.DataConverter.bytesToHex(jweObject.getIV().decode()) + "]"
-                    : "");
-            jweCiphertextArea.setText(jweObject.getCipherText() != null ? jweObject.getCipherText().toString() : "");
-            jweAuthTagArea
-                    .setText(
-                            jweObject.getAuthTag() != null
-                                    ? jweObject.getAuthTag().toString() + " \n[Hex: "
-                                            + com.cryptocarver.util.DataConverter
-                                                    .bytesToHex(jweObject.getAuthTag().decode())
-                                            + "]"
-                                    : "");
-
-            statusLabel.setText(t("module.jose.decryptionSuccessful"));
-            statusLabel.setStyle("-fx-text-fill: green;");
-
-            String payload = jweObject.getPayload().toString();
-            statusReporter.publish(buildJweDecryptionResult(jweString, payload, jweObject, privateKeyPEM));
-
-        } catch (Exception e) {
-            statusLabel.setText(t("module.jose.decryptionFailed"));
-            statusLabel.setStyle("-fx-text-fill: red;");
-            String message = e.getMessage();
-            if (message == null || message.isBlank()) {
-                message = "JWE decryption failed for " + algorithmName + ".";
-            }
-            statusReporter.showError("JWE Decryption Error", message);
-            // Do not attach the exception: CEKs and other secret material must
-            // never reach application logs through a provider exception.
-            LOG.error("JWE decryption failed for key-management algorithm {}", algorithmName);
-        }
-    }
-
-    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject) {
-        return buildJweDecryptionResult(jweString, payload, jweObject, null);
-    }
-
-    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject, String keyMaterial) {
-        OperationResult.Builder result = OperationResult.forOperation("JWE Decryption")
-                .input(jweString.getBytes(StandardCharsets.US_ASCII))
-                .output(payload.getBytes(StandardCharsets.UTF_8), com.cryptocarver.model.OperationDetail.Classification.SECRET)
-                .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
-                .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
-                ;
-        addSecurityWarning(result, jweSecurityWarning(jweObject.getHeader().getAlgorithm().getName()));
-        String metadataWarning = metadataWarning(keyMaterial, JoseJwkPolicy.Operation.DECRYPT);
-        if (metadataWarning != null) result.detail("Security warning", metadataWarning);
-        return result.status(t("module.jose.feedback.statusJweDecrypted")).build();
-    }
-
-    static String directCekPreviewMessage() {
-        return "Direct encryption: the CEK is the supplied direct key and is not displayed automatically.";
-    }
+    static String directCekPreviewMessage() { return JoseJweCoordinator.directCekPreviewMessage(); }
 
     // --- Enterprise Features (level 4 & 5) ---
 
