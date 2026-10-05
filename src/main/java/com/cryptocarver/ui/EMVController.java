@@ -387,7 +387,8 @@ public class EMVController {
             details.put("ATC", atc);
             details.put("IMK", "[not persisted]");
             mainController.publish(OperationResult.forOperation("Session Key Derivation")
-                    .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).details(details)
+                    .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                            OperationDetail.Classification.SECRET).details(details)
                     .status(t("module.emv.status.session")).build());
 
         } catch (Exception e) {
