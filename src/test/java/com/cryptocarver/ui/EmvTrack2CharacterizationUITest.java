@@ -215,7 +215,7 @@ class EmvTrack2CharacterizationUITest {
         Files.writeString(Path.of("target/emv-track2-transcript.txt"), joined);
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("f8296666e538f82c31fb1b9c3f0a4fa19adb79f92b5e847e5457462135ed064e", digest, "Transcript:\n" + joined);
+        assertEquals("6f876c3e2473de4d727e719ab04d4f41aa92bc493e4b79759b187d517e7cf043", digest, "Transcript:\n" + joined);
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
     }
 

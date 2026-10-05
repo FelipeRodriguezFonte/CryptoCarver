@@ -760,7 +760,8 @@ public class EMVController {
             details.put("Expiry", expiry);
             details.put("Service Code", serviceCode);
             mainController.publish(OperationResult.forOperation("Track 2 Encoding")
-                    .output(track2.getBytes(java.nio.charset.StandardCharsets.US_ASCII)).details(details)
+                    .output(track2.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                            OperationDetail.Classification.SECRET).details(details)
                     .status(t("module.emv.status.trackEncoded")).build());
 
         } catch (Exception e) {
@@ -784,7 +785,8 @@ public class EMVController {
 
             mainController.publish(OperationResult.forOperation("Track 2 Decoding")
                     .input(track2Input.getBytes(java.nio.charset.StandardCharsets.US_ASCII))
-                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .output(result.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                            OperationDetail.Classification.SECRET)
                     .detail("PAN", "[contained in Track 2; not persisted]")
                     .status(t("module.emv.status.trackDecoded")).build());
 
