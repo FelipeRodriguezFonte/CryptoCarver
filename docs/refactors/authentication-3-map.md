@@ -65,3 +65,7 @@ El transcript mantuvo el digest cb01b7abb468fe19fabe21f76351bfc80a20c0706809ce5f
 - ExpandedViewerLifecycleUITest pasó (3 tests). No hubo fallos que comparar contra main.
 - AuthenticationSignatureCharacterizationUITest, AuthenticationMacCharacterizationUITest y AuthenticationKeyCharacterizationUITest pasaron; sus asserts verificaron los SHA-256 completos fijados arriba después de la extracción.
 - Rama `codex/authentication-1`; ambas puertas están limpias.
+
+## Nota de portabilidad (CI Linux, Java 17)
+
+El transcript original incluía el texto de la excepción de JDK/BouncyCastle (`IOException : null`), que varía según la versión de Java y rompía el digest en el CI de Linux. Las líneas `malformed-private` y `malformed-public` sustituyen ese tramo por `<jdk-exception>`; el resto del transcript es idéntico. El SHA-256 protegido pasa de `cb01b7abb468fe19fabe21f76351bfc80a20c0706809ce5f6a06c275c090c805` a `9d07a8f5e036b5f8c9a634e5ddfc2ebb69e340613fe0e338e55936e980ad42b9`.

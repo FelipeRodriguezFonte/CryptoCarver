@@ -190,7 +190,7 @@ class AuthenticationKeyCharacterizationUITest {
                     assertEquals("Error loading private key", keyStatus.getText());
                     String privateError = errorText(root);
                     assertFalse(privateError.isBlank(), "Malformed private key must show a readable error in " + language);
-                    transcript.add(language + " malformed-private=" + concise(privateError));
+                    transcript.add(language + " malformed-private=" + jdkNeutral(concise(privateError)));
 
                     keys.setPublicKey(null);
                     publicArea.clear();
@@ -204,7 +204,7 @@ class AuthenticationKeyCharacterizationUITest {
                     assertEquals("Error loading public key", keyStatus.getText());
                     String publicError = errorText(root);
                     assertFalse(publicError.isBlank(), "Malformed public key must show a readable error in " + language);
-                    transcript.add(language + " malformed-public=" + concise(publicError));
+                    transcript.add(language + " malformed-public=" + jdkNeutral(concise(publicError)));
                 }
 
                 KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
@@ -291,7 +291,7 @@ class AuthenticationKeyCharacterizationUITest {
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("cb01b7abb468fe19fabe21f76351bfc80a20c0706809ce5f6a06c275c090c805", digest, joined);
+        assertEquals("9d07a8f5e036b5f8c9a634e5ddfc2ebb69e340613fe0e338e55936e980ad42b9", digest, joined);
         onFx(() -> {
             ModernMainController shell = shellRef.get();
             if (shell != null) shell.shutdown();
@@ -385,6 +385,11 @@ class AuthenticationKeyCharacterizationUITest {
             for (Node child : parent.getChildrenUnmodifiable()) own += "\n" + nodeText(child);
         }
         return own;
+    }
+
+    /** The JDK/BouncyCastle exception text between the redacted marker and the localized hint varies by JDK build. */
+    private static String jdkNeutral(String text) {
+        return text.replaceAll("=\\[REDACTED\\] .*? (Review the parameters|Revisa los par)", "=[REDACTED] <jdk-exception> $1");
     }
 
     private static String concise(String text) { return text.replace('\n', ' ').replaceAll("\\s+", " ").trim(); }
