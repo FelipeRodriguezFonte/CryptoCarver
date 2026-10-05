@@ -197,6 +197,64 @@ public class EMVController {
     @FXML private ComboBox<String> arpcMethodCombo;
     @FXML private TextArea arpcResultArea;
 
+    private EmvArpcCoordinator emvArpcCoordinator;
+
+    private EmvArpcCoordinator emvArpcCoordinator() {
+        if (emvArpcCoordinator == null) {
+            emvArpcCoordinator = new EmvArpcCoordinator(new EmvArpcCoordinator.View(
+                    () -> skARPCField,
+                    () -> arqcField,
+                    () -> arcField,
+                    () -> csuField,
+                    () -> arpcMethodCombo,
+                    () -> arpcResultArea), () -> mainController);
+        }
+        return emvArpcCoordinator;
+    }
+
+    private EmvModuleStateCoordinator emvModuleStateCoordinator;
+
+    private EmvModuleStateCoordinator emvModuleStateCoordinator() {
+        if (emvModuleStateCoordinator == null) {
+            emvModuleStateCoordinator = new EmvModuleStateCoordinator(new EmvModuleStateCoordinator.View(
+                    () -> emvContainer,
+                    () -> sessionKeyResultArea,
+                    () -> arqcResultArea,
+                    () -> arpcResultArea,
+                    () -> track2ResultArea,
+                    () -> imkField,
+                    () -> panFieldSession,
+                    () -> panSeqFieldSession,
+                    () -> atcField,
+                    () -> skARQCField,
+                    () -> amountField,
+                    () -> amountOtherField,
+                    () -> atcARQCField,
+                    () -> unField,
+                    () -> arqcTerminalDataField,
+                    () -> iccDataField,
+                    () -> skARPCField,
+                    () -> arqcField,
+                    () -> arcField,
+                    () -> csuField,
+                    () -> propAuthDataField,
+                    () -> panTrack2Field,
+                    () -> expiryTrack2Field,
+                    () -> serviceCodeFieldTrack2,
+                    () -> discretionaryDataField,
+                    () -> track2InputField,
+                    () -> emvTlvInputArea,
+                    () -> emvTlvResultArea,
+                    () -> emvDolTemplateField,
+                    () -> emvDolValuesArea,
+                    () -> emvDolResultArea,
+                    () -> arqcPaddingMethodCombo,
+                    () -> arpcMethodCombo,
+                    () -> emvArqcState), () -> mainController);
+        }
+        return emvModuleStateCoordinator;
+    }
+
     // Track 2 controls
     @FXML private TextField panTrack2Field;
     @FXML private TextField expiryTrack2Field;
@@ -647,74 +705,7 @@ public class EMVController {
     // ARPC GENERATION
     // ============================================================================
 
-    public void handleGenerateARPC() {
-        try {
-            String sk = skARPCField.getText().trim().replaceAll("\\s+", "");
-            String arqc = arqcField.getText().trim().replaceAll("\\s+", "");
-            String arc = arcField.getText().trim().replaceAll("\\s+", "");
-            String csu = csuField.getText().trim().replaceAll("\\s+", "");
-
-            if (sk.isEmpty() || arqc.isEmpty() || arc.isEmpty()) {
-                arpcResultArea.setText(t("module.emv.feedback.arpcRequired"));
-                return;
-            }
-
-            if (sk.length() != 32 && sk.length() != 48) {
-                arpcResultArea.setText(t("module.emv.error.arpcSessionKeyLength"));
-                arpcResultArea.setVisible(true);
-                arpcResultArea.setManaged(true);
-                return;
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("ARPC GENERATION (Authorization Response Cryptogram)\n");
-            result.append("═══════════════════════════════════════════════════\n\n");
-
-            String selectedMethod = arpcMethodCombo.getSelectionModel().getSelectedItem();
-            String arpc;
-
-            if (selectedMethod.contains("Method 1")) {
-                result.append("Method: Method 1 (ARPC = Encrypt(ARQC ⊕ ARC))\n");
-                result.append("──────────────────────────────────────────────\n");
-                result.append("Session Key: ").append(sk).append("\n");
-                result.append("ARQC: ").append(arqc).append("\n");
-                result.append("ARC: ").append(arc).append("\n\n");
-
-                arpc = EMVOperations.generateARPC_Method1(sk, arqc, arc);
-
-            } else {
-                result.append("Method: Method 2 (ARPC = MAC(ARQC || CSU), 4 bytes)\n");
-                result.append("─────────────────────────────\n");
-                result.append("Session Key: ").append(sk).append("\n");
-                result.append("ARQC: ").append(arqc).append("\n");
-                result.append("CSU: ").append(csu.isEmpty() ? "00000000" : csu).append("\n\n");
-
-                arpc = EMVOperations.generateARPC_Method2(sk, arqc, csu.isEmpty() ? "00000000" : csu);
-            }
-
-            result.append("➜ ARPC: ").append(arpc).append("\n\n");
-            result.append("✅ ARPC generated successfully\n");
-            result.append("\nℹ️  Send this ARPC to the card in the authorization response (Tag 91)\n");
-
-            arpcResultArea.setText(result.toString());
-            arpcResultArea.setVisible(true);
-            arpcResultArea.setManaged(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Method", arpcMethodCombo == null ? "Default" : arpcMethodCombo.getValue());
-            details.put("ARC", arc);
-            details.put("Session Key", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("ARPC Generation")
-                    .output(com.cryptocarver.util.DataConverter.hexToBytes(arpc),
-                            com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
-                    .status(t("module.emv.status.arpc")).build());
-
-        } catch (Exception e) {
-            arpcResultArea.setText(t("module.emv.error.generate", e.getMessage()));
-            arpcResultArea.setVisible(true);
-            arpcResultArea.setManaged(true);
-        }
-    }
+    public void handleGenerateARPC() { emvArpcCoordinator().handleGenerateARPC(); }
 
     private String maskPan(String pan) {
         if (pan == null || pan.length() < 5) return "[redacted]";
@@ -815,74 +806,7 @@ public class EMVController {
         if (mainController != null) mainController.updateStatus(t("module.emv.clearStatus"));
     }
 
-    private void clearModuleData() {
-        if (emvContainer != null) ModuleResetPolicy.clearTextInputs(emvContainer);
-        // Clear Result Areas
-        if (sessionKeyResultArea != null)
-            sessionKeyResultArea.clear();
-        if (arqcResultArea != null)
-            arqcResultArea.clear();
-        if (arpcResultArea != null)
-            arpcResultArea.clear();
-        if (track2ResultArea != null)
-            track2ResultArea.clear();
-
-        // Clear Inputs (Session Key)
-        if (imkField != null)
-            imkField.clear();
-        if (panFieldSession != null)
-            panFieldSession.clear();
-        if (panSeqFieldSession != null)
-            panSeqFieldSession.clear();
-        if (atcField != null)
-            atcField.clear();
-
-        // Clear Inputs (ARQC)
-        if (skARQCField != null)
-            skARQCField.clear();
-        if (amountField != null)
-            amountField.clear();
-        if (amountOtherField != null)
-            amountOtherField.clear();
-        if (atcARQCField != null)
-            atcARQCField.clear();
-        if (unField != null)
-            unField.clear();
-        if (arqcTerminalDataField != null)
-            arqcTerminalDataField.clear();
-        if (iccDataField != null)
-            iccDataField.clear();
-
-        // Clear Inputs (ARPC)
-        if (skARPCField != null)
-            skARPCField.clear();
-        if (arqcField != null)
-            arqcField.clear();
-        if (arcField != null)
-            arcField.clear();
-        if (csuField != null)
-            csuField.clear();
-        if (propAuthDataField != null)
-            propAuthDataField.clear();
-
-        // Clear Inputs (Track2)
-        if (panTrack2Field != null)
-            panTrack2Field.clear();
-        if (expiryTrack2Field != null)
-            expiryTrack2Field.clear();
-        if (serviceCodeFieldTrack2 != null)
-            serviceCodeFieldTrack2.clear();
-        if (discretionaryDataField != null)
-            discretionaryDataField.clear();
-        if (track2InputField != null)
-            track2InputField.clear();
-        if (emvTlvInputArea != null) emvTlvInputArea.clear();
-        if (emvTlvResultArea != null) emvTlvResultArea.clear();
-        if (emvDolTemplateField != null) emvDolTemplateField.clear();
-        if (emvDolValuesArea != null) emvDolValuesArea.clear();
-        if (emvDolResultArea != null) emvDolResultArea.clear();
-        emvArqcState.clear();
-    }
+    private void clearModuleData() { emvModuleStateCoordinator().clearModuleData(); }
 
     @FXML
     public void handleReset() {
@@ -925,44 +849,7 @@ public class EMVController {
         return arpcResultArea != null ? arpcResultArea.getText() : "";
     }
 
-    public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) {
-        if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.EMV) {
-            String derivedSessionKey = emvSessionKeyCoordinator().deriveLaboratorySessionKey(p);
-            if (p.getName().contains("ARQC")) {
-                if (skARQCField != null) skARQCField.setText(derivedSessionKey);
-                if (imkField != null && p.getInputs().containsKey("imk")) imkField.setText(p.getInputs().get("imk"));
-                if (panFieldSession != null && p.getInputs().containsKey("pan")) panFieldSession.setText(p.getInputs().get("pan"));
-                if (panSeqFieldSession != null && p.getInputs().containsKey("panSeq")) panSeqFieldSession.setText(p.getInputs().get("panSeq"));
-                if (atcARQCField != null && p.getInputs().containsKey("atc")) atcARQCField.setText(p.getInputs().get("atc"));
-                if (unField != null && p.getInputs().containsKey("unpredictableNumber")) unField.setText(p.getInputs().get("unpredictableNumber"));
-                if (arqcTerminalDataField != null && p.getInputs().containsKey("transactionData")) arqcTerminalDataField.setText(p.getInputs().get("transactionData"));
-                if (arqcPaddingMethodCombo != null && p.getParameters().containsKey("padding")) {
-                    String padding = p.getParameters().get("padding");
-                    for (String item : arqcPaddingMethodCombo.getItems()) {
-                        if (item.contains(padding)) { arqcPaddingMethodCombo.setValue(item); break; }
-                    }
-                }
-            } else if (p.getName().contains("ARPC")) {
-                if (skARPCField != null) skARPCField.setText(derivedSessionKey);
-                if (arqcField != null && p.getInputs().containsKey("arqc")) arqcField.setText(p.getInputs().get("arqc"));
-                if (arcField != null && p.getInputs().containsKey("arc")) arcField.setText(p.getInputs().get("arc"));
-                if (csuField != null && p.getInputs().containsKey("csu")) csuField.setText(p.getInputs().get("csu"));
-                if (arpcMethodCombo != null) {
-                    String method = p.getName().contains("Method 1") ? "Method 1"
-                            : p.getParameters().getOrDefault("method", "");
-                    for (String item : arpcMethodCombo.getItems()) {
-                        if (item.contains(method)) { arpcMethodCombo.setValue(item); break; }
-                    }
-                }
-            }
-            if (mainController != null) mainController.updateStatus(t("module.payments.status.profileLoaded", p.getName()));
-            System.out.println("Loaded EMV profile: " + p.getName());
-        } else if (p.getType() == com.cryptocarver.model.payments.PaymentProfile.ProfileType.SECURE_MESSAGING) {
-            // Secure Messaging uses MAC controls or specific SM UI if added.
-            // Currently EMVController does not have Secure Messaging UI mapped, it relies on MAC in PaymentsController or a future SM tab.
-            System.out.println("Loaded Secure Messaging profile: " + p.getName());
-        }
-    }
+    public void loadProfile(com.cryptocarver.model.payments.PaymentProfile p) { emvModuleStateCoordinator().loadProfile(p); }
 
     // =====================================================================
     // Offline Data Authentication — EMV Book 2 clauses 5 and 6

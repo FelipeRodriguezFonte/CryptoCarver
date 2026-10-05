@@ -167,7 +167,7 @@ final class EmvSessionKeyCoordinator {
         }
     }
 
-    String deriveLaboratorySessionKey(PaymentProfile profile) {
+    static String deriveLaboratorySessionKey(PaymentProfile profile) {
         if (profile.getInputs().containsKey("sessionKey")) {
             return profile.getInputs().get("sessionKey");
         }
