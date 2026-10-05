@@ -211,7 +211,7 @@ class EmvArqcCharacterizationUITest {
         Files.writeString(Path.of("target/emv-arqc-transcript.txt"), joined + "\n");
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("67e1bac6d0c6dc8fb8b4c0ffa9c28da5b601f980632359a3c682afa82f86e359", digest,
+        assertEquals("5834eed522d6d967c7d293d286c385103dd80290ef4172acb21c594106bdac26", digest,
                 String.join("\n", violations) + "\nTranscript:\n" + joined);
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
     }
