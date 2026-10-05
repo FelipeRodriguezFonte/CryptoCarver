@@ -206,12 +206,13 @@ class EmvSessionKeyCharacterizationUITest {
             if (logs.contains(secret)) violations.add("telemetry/logs leaked an invented key");
         }
         transcript.add("telemetry/logs=" + (violations.stream().anyMatch(v -> v.startsWith("telemetry/")) ? "leaked" : "safe"));
+        violations.addAll(localizationFailures);
         String joined = String.join("\n", transcript);
         Files.createDirectories(Path.of("target"));
         Files.writeString(Path.of("target/emv-session-transcript.txt"), joined + "\n");
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("4e03e03f85aabfabe314eb78edc38796fd9fca12ff3bb94897d83a6be6c3bf7c", digest, joined);
+        assertEquals("429715cbed6ef4bd832d024d11a92698aa86cd84013f4a1fac66218bfb8935cc", digest, joined);
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
     }
 
@@ -223,12 +224,25 @@ class EmvSessionKeyCharacterizationUITest {
         String message = concise(result.getText());
         assertFalse(message.isBlank(), name + " must show readable feedback in " + language);
         assertTrue(message.startsWith("Error:") || message.startsWith("Error de"), message);
-        // Only the stable fact that feedback is readable enters the transcript; provider-specific
-        // key-length exception text therefore never changes the digest between JDKs.
-        invalidTranscript.add(language + " " + name + "=readable");
+        String messageKey = switch (name) {
+            case "invalid-pan" -> "module.emv.error.panDigits";
+            case "invalid-atc" -> "module.emv.error.atcFormat";
+            case "invalid-key-length" -> "module.emv.error.imkLength";
+            default -> throw new IllegalArgumentException("Unexpected EMV validation case: " + name);
+        };
+        String localized = I18nService.getInstance().text(messageKey);
+        if (!localized.equals(message)) localizationFailures.add(language + " " + name + " is not localized");
+        invalidTranscript.add(language + " " + name + "=" + stableDiagnostic(name, message, localized));
     }
 
     private final List<String> invalidTranscript = new ArrayList<>();
+    private final List<String> localizationFailures = new ArrayList<>();
+
+    private static String stableDiagnostic(String name, String actual, String expected) {
+        if (expected.equals(actual)) return expected;
+        // Normalize the JDK/provider key-length span before including this diagnostic in the digest.
+        return "invalid-key-length".equals(name) ? "Error: <jdk-exception>" : actual;
+    }
 
     private void setSessionInputs(EMVController controller, String imk, String pan, String panSequence, String atc)
             throws Exception {
