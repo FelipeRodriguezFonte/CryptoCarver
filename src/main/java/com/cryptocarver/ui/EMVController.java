@@ -164,10 +164,30 @@ public class EMVController {
     @FXML private TextField txTypeField;
     @FXML private TextField unField;
     @FXML private TextArea arqcResultArea;
-    /** Captures the exact bytes and padding used by the last local ARQC calculation. */
-    private String lastArqcTransactionData;
-    private int lastArqcPaddingMethod = 1;
-    private String lastArqcValue;
+    private final EmvArqcCoordinator.State emvArqcState = new EmvArqcCoordinator.State();
+    private EmvArqcCoordinator emvArqcCoordinator;
+
+    private EmvArqcCoordinator emvArqcCoordinator() {
+        if (emvArqcCoordinator == null) {
+            emvArqcCoordinator = new EmvArqcCoordinator(new EmvArqcCoordinator.View(
+                    () -> skARQCField,
+                    () -> amountField,
+                    () -> amountOtherField,
+                    () -> currencyField,
+                    () -> countryField,
+                    () -> atcARQCField,
+                    () -> tvrField,
+                    () -> txDateField,
+                    () -> txTypeField,
+                    () -> unField,
+                    () -> arqcTerminalDataField,
+                    () -> iccDataField,
+                    () -> arqcPaddingMethodCombo,
+                    () -> arqcResultArea,
+                    emvArqcState), () -> mainController);
+        }
+        return emvArqcCoordinator;
+    }
 
     // ARPC Generation controls
     @FXML private TextField skARPCField;
@@ -619,243 +639,9 @@ public class EMVController {
     // ARQC GENERATION
     // ============================================================================
 
-    public void handleGenerateARQC() {
-        try {
-            String sk = skARQCField.getText().trim().replaceAll("\\s+", "");
+    public void handleGenerateARQC() { emvArqcCoordinator().handleGenerateARQC(); }
 
-            // Check for Raw Data override
-            String rawData = arqcTerminalDataField != null
-                    ? arqcTerminalDataField.getText().trim().replaceAll("\\s+", "")
-                    : "";
-
-            String txData;
-            String amount = "";
-            String amountOther = "";
-            String currency = "";
-            String country = "";
-            String atc = "";
-            String tvr = "";
-            String txDate = "";
-            String txType = "";
-            String un = "";
-
-            if (!rawData.isEmpty()) {
-                // Use Raw Data directly
-                txData = rawData;
-                atc = atcARQCField.getText().trim(); // Still read for history/info
-            } else {
-                // Construct from Individual Fields (external tool structure)
-                amount = amountField.getText().trim().replaceAll("\\s+", "");
-                amountOther = amountOtherField != null ? amountOtherField.getText().trim().replaceAll("\\s+", "")
-                        : "";
-                currency = currencyField.getText().trim().replaceAll("\\s+", "");
-                country = countryField.getText().trim().replaceAll("\\s+", "");
-                atc = atcARQCField.getText().trim().replaceAll("\\s+", ""); // Info/Key derivation context
-                tvr = tvrField.getText().trim().replaceAll("\\s+", "");
-                txDate = txDateField.getText().trim().replaceAll("\\s+", "");
-                txType = txTypeField.getText().trim().replaceAll("\\s+", "");
-                un = unField.getText().trim().replaceAll("\\s+", "");
-
-                if (sk.isEmpty() || amount.isEmpty()) {
-                    arqcResultArea.setText(t("module.emv.feedback.arqcRequired"));
-                    return;
-                }
-
-                // Set defaults if not provided
-                if (amountOther.isEmpty())
-                    amountOther = "000000000000";
-                if (currency.isEmpty())
-                    currency = "0978"; // EUR
-                if (country.isEmpty())
-                    country = "0724"; // Spain
-                if (tvr.isEmpty())
-                    tvr = "0000000000"; // All zeros
-                if (txDate.isEmpty())
-                    txDate = "251207"; // YYMMDD
-                if (txType.isEmpty())
-                    txType = "00"; // Purchase
-                if (un.isEmpty())
-                    un = "12345678"; // Random UN
-
-                // Build transaction data (New Structure: Amt, AmtOther, Ctry, TVR, Cur, Date,
-                // Type, UN)
-                txData = EMVOperations.buildARQCData(
-                        amount, amountOther, country, tvr, currency, txDate, txType, un);
-            }
-
-            // Append ICC Data if present (Applicable to BOTH Raw and Constructed modes)
-            String iccData = iccDataField != null ? iccDataField.getText().trim().replaceAll("\\s+", "") : "";
-            if (!iccData.isEmpty()) {
-                txData += iccData;
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append("ARQC GENERATION (Authorization Request Cryptogram)\n");
-            result.append("═══════════════════════════════════════════════════\n\n");
-
-            if (!rawData.isEmpty()) {
-                result.append("Using Raw Terminal Data:\n").append(rawData).append("\n");
-                if (!iccData.isEmpty()) {
-                    result.append("Appended ICC Data:\n").append(iccData).append("\n");
-                }
-                result.append("Total Input for MAC:\n").append(txData).append("\n\n");
-            } else {
-                result.append("Transaction Data (external tool structure):\n");
-                result.append("─────────────────\n");
-                result.append("Amount: ").append(amount).append("\n");
-                result.append("Amount Other: ")
-                        .append(amountOther).append("\n");
-                result.append("Country: ").append(country).append(" (Spain/ES)\n");
-                result.append("TVR: ").append(tvr).append("\n");
-                // ... (simplified logs)
-                result.append("Concatenated Data: ").append(txData).append("\n\n");
-            }
-
-            // Generate ARQC
-            result.append("ARQC Calculation:\n");
-            result.append("─────────────────\n");
-            result.append("Session Key: ").append(sk).append("\n");
-
-            // Determine Padding Method
-            int paddingMethod = 1; // Default
-            if (arqcPaddingMethodCombo != null && arqcPaddingMethodCombo.getValue() != null) {
-                if (arqcPaddingMethodCombo.getValue().contains("Method 2")) {
-                    paddingMethod = 2;
-                }
-            }
-            result.append("Padding Method: ").append(paddingMethod == 2 ? "Method 2" : "Method 1").append("\n");
-
-            String arqc = EMVOperations.generateARQC(sk, txData, paddingMethod);
-            lastArqcTransactionData = txData;
-            lastArqcPaddingMethod = paddingMethod;
-            lastArqcValue = arqc;
-            result.append("➜ ARQC: ").append(arqc).append("\n\n");
-
-            result.append("✅ ARQC generated successfully\n");
-
-            arqcResultArea.setText(result.toString());
-            arqcResultArea.setVisible(true);
-            arqcResultArea.setManaged(true);
-
-            java.util.Map<String, String> details = new java.util.LinkedHashMap<>();
-            details.put("Padding", "Method " + paddingMethod);
-            details.put("Transaction Data", txData.substring(0, Math.min(20, txData.length())) + "...");
-            details.put("Session Key", "[not persisted]");
-            mainController.publish(OperationResult.forOperation("ARQC Generation")
-                    .output(com.cryptocarver.util.DataConverter.hexToBytes(arqc), OperationDetail.Classification.SECRET)
-                    .details(details)
-                    .status(t("module.emv.status.arqc")).build());
-
-        } catch (Exception e) {
-            arqcResultArea.setText(arqcGenerationErrorMessage(e));
-            arqcResultArea.setVisible(true);
-            arqcResultArea.setManaged(true);
-        }
-    }
-
-    private String arqcGenerationErrorMessage(Exception error) {
-        String sessionKey = skARQCField == null || skARQCField.getText() == null ? ""
-                : skARQCField.getText().trim().replaceAll("\\s+", "");
-        if (!sessionKey.isEmpty() && !sessionKey.matches("(?i)[0-9a-f]{32}")) {
-            return t("module.emv.error.arqcSessionKeyLength");
-        }
-
-        String rawData = arqcTerminalDataField == null || arqcTerminalDataField.getText() == null ? ""
-                : arqcTerminalDataField.getText().trim().replaceAll("\\s+", "");
-        String un = unField == null || unField.getText() == null ? ""
-                : unField.getText().trim().replaceAll("\\s+", "");
-        if (rawData.isEmpty() && !un.isEmpty() && !un.matches("(?i)[0-9a-f]{8}")) {
-            return t("module.emv.error.arqcUnFormat");
-        }
-        return t("module.emv.error.generate", error.getMessage());
-    }
-
-    public void handleVerifyARQC() {
-        try {
-            String sk = skARQCField.getText().trim().replaceAll("\\s+", "");
-            String amount = amountField.getText().trim().replaceAll("\\s+", "");
-            String arqcToVerify = arqcResultArea.getText();
-
-            // Extract ARQC from result area if it contains the full output
-            if (arqcToVerify.contains("ARQC: ")) {
-                int start = arqcToVerify.indexOf("ARQC: ") + 6;
-                int end = arqcToVerify.indexOf("\n", start);
-                if (end == -1)
-                    end = arqcToVerify.length();
-                arqcToVerify = arqcToVerify.substring(start, end).trim();
-            }
-
-            if (sk.isEmpty() || arqcToVerify.isEmpty() || arqcToVerify.length() != 16) {
-                arqcResultArea.setText(t("module.emv.error.generateFirst"));
-                return;
-            }
-
-            String txData;
-            int paddingMethod;
-            if (lastArqcTransactionData != null && arqcToVerify.equalsIgnoreCase(lastArqcValue)) {
-                txData = lastArqcTransactionData;
-                paddingMethod = lastArqcPaddingMethod;
-            } else {
-                if (amount.isEmpty()) throw new IllegalArgumentException(t("module.emv.feedback.arqcAmountRequired"));
-                String amountOther = amountOtherField == null ? "" : amountOtherField.getText().trim().replaceAll("\\s+", "");
-                String currency = currencyField.getText().trim().replaceAll("\\s+", "");
-                String country = countryField.getText().trim().replaceAll("\\s+", "");
-                String tvr = tvrField.getText().trim().replaceAll("\\s+", "");
-                String txDate = txDateField.getText().trim().replaceAll("\\s+", "");
-                String txType = txTypeField.getText().trim().replaceAll("\\s+", "");
-                String un = unField.getText().trim().replaceAll("\\s+", "");
-                if (amountOther.isEmpty()) amountOther = "000000000000";
-                if (currency.isEmpty()) currency = "0978";
-                if (country.isEmpty()) country = "0724";
-                if (tvr.isEmpty()) tvr = "0000000000";
-                if (txDate.isEmpty()) txDate = "251207";
-                if (txType.isEmpty()) txType = "00";
-                if (un.isEmpty()) un = "12345678";
-                txData = EMVOperations.buildARQCData(amount, amountOther, country, tvr, currency, txDate, txType, un);
-                String iccData = iccDataField == null ? "" : iccDataField.getText().trim().replaceAll("\\s+", "");
-                if (!iccData.isEmpty()) txData += iccData;
-                paddingMethod = arqcPaddingMethodCombo != null && arqcPaddingMethodCombo.getValue() != null
-                        && arqcPaddingMethodCombo.getValue().contains("Method 2") ? 2 : 1;
-            }
-
-            boolean valid = EMVOperations.verifyARQC(sk, arqcToVerify, txData, paddingMethod);
-
-            StringBuilder result = new StringBuilder();
-            result.append("ARQC VERIFICATION\n");
-            result.append("═════════════════\n\n");
-            result.append("ARQC to Verify: ").append(arqcToVerify).append("\n");
-            result.append("Padding Method: ").append(paddingMethod).append("\n");
-            result.append("MAC input bytes: ").append(txData.length() / 2).append("\n");
-            result.append("Session Key: ").append(sk).append("\n\n");
-
-            if (valid) {
-                result.append("✅ ARQC IS VALID\n");
-                result.append("\nThe cryptogram is authentic and the transaction data has not been tampered with.\n");
-            } else {
-                result.append("❌ ARQC IS INVALID\n");
-                result.append("\nThe cryptogram does not match. Possible reasons:\n");
-                result.append("- Wrong session key\n");
-                result.append("- Transaction data has been modified\n");
-                result.append("- ARQC was generated with different parameters\n");
-            }
-
-            arqcResultArea.setText(result.toString());
-            arqcResultArea.setVisible(true);
-            arqcResultArea.setManaged(true);
-
-            if (mainController != null) {
-                mainController.publish(OperationResult.forOperation("ARQC Verification")
-                        .output(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                                OperationDetail.Classification.SECRET)
-                        .detail("Valid", String.valueOf(valid))
-                        .detail("Padding", "Method " + paddingMethod)
-                        .status(t(valid ? "module.emv.feedback.arqcValid" : "module.emv.feedback.arqcInvalid")).build());
-            }
-
-        } catch (Exception e) {
-            arqcResultArea.setText(t("module.emv.error.verification", e.getMessage()));
-        }
-    }
+    public void handleVerifyARQC() { emvArqcCoordinator().handleVerifyARQC(); }
 
     // ============================================================================
     // ARPC GENERATION
@@ -1087,8 +873,7 @@ public class EMVController {
         if (emvDolTemplateField != null) emvDolTemplateField.clear();
         if (emvDolValuesArea != null) emvDolValuesArea.clear();
         if (emvDolResultArea != null) emvDolResultArea.clear();
-        lastArqcTransactionData = null;
-        lastArqcValue = null;
+        emvArqcState.clear();
     }
 
     @FXML
