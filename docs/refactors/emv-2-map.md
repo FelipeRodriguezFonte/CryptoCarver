@@ -41,10 +41,24 @@ The separate localization fix now maps invalid session-key length and malformed 
 
 All calculation and transaction-data validation still comes from `crypto/EMVOperations`; no crypto source changed. The ARQC characterization passed after the extraction with the same portable digest `83596873ab42981366e1570edeac8c53a8a0b0f301cc496faa90aaeec49c851d`.
 
-Line counts: phase 2 began from the phase 1 result at 1352 lines. The two localized validation messages temporarily brought `EMVController` to 1371 lines before extraction; after extraction it is 1156 lines. The two ARQC public handlers are one-line delegates. No public API signature changed. The phase 2 three-suite gate results are pending.
+Line counts: phase 2 began from the phase 1 result at 1352 lines. The two localized validation messages temporarily brought `EMVController` to 1371 lines before extraction; after extraction it is 1156 lines. The two ARQC public handlers are one-line delegates. No public API signature changed.
 
 ### Gate finding: validation-feedback source ownership
 
 The first normal-suite gate after extraction ran 2869 tests: 1 failure, 0 errors, 1 skipped. `SpecializedFeedbackHeadlessTest.specializedValidationFeedbackHasDistinctEnglishAndSpanishKeys` still expects `module.emv.feedback.arqcRequired` to be used directly by `EMVController`; ARQC input validation now lives in `EmvArqcCoordinator`. This is a stale source-ownership assertion, not a runtime or localization failure. The same test already checks the session-required message in `EmvSessionKeyCoordinator`. Before rerunning the gate, move the ARQC-required key assertion to `EmvArqcCoordinator`, preserving its EN/ES translation checks. This is a justified existing-test adjustment for the extracted ownership boundary.
 
 The focused headless rerun exposed the same stale ownership assumption for `module.emv.feedback.arqcAmountRequired` and `module.emv.feedback.arqcValid`. Both are also used only by `EmvArqcCoordinator`; move their source checks alongside `arqcRequired`, retaining the per-key EN/ES assertions. The focused run had 2 tests: 1 failure, 0 errors, 0 skipped, caused by this static assertion.
+
+After moving all three ARQC-owned message assertions to the coordinator and retaining the English/Spanish resource checks, `SpecializedFeedbackHeadlessTest` passed 2/2. This existing-test update is commit `0de98b1`; it does not alter characterization output. The characterization's final portable digest remains `83596873ab42981366e1570edeac8c53a8a0b0f301cc496faa90aaeec49c851d`.
+
+### Phase 2 gates
+
+After the stale source-ownership assertion was recorded and adjusted, all three requested commands passed:
+
+| Command | Tests | Failures | Errors | Skipped |
+|---|---:|---:|---:|---:|
+| `mvn -o -q test -Plow-cpu` | 2869 | 0 | 0 | 1 |
+| `mvn -o -q test -Plow-cpu -DrunUiTests=true` | 2869 | 0 | 0 | 1 |
+| `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test` | 525 | 0 | 0 | 0 |
+
+The CI-filtered UI count (525) differs from the full normal-suite count (2869). `ExpandedViewerLifecycleUITest` passed 3/3 in the CI-filtered run, so no baseline comparison against `main` was necessary. No gate or CI threshold was relaxed.
