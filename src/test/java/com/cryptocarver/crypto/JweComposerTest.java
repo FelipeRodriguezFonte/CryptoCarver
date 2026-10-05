@@ -120,11 +120,13 @@ class JweComposerTest {
     }
 
     @Test
-    void legacyRsaAlgorithmsAreRefusedForEncryption() {
+    void explicitlySelectedLegacyRsaAlgorithmsEncryptAndDecrypt() throws Exception {
         String publicPem = pem("PUBLIC KEY", rsa.getPublic().getEncoded());
+        String privatePem = pem("PRIVATE KEY", rsa.getPrivate().getEncoded());
         for (String alg : new String[] { "RSA1_5", "RSA-OAEP" }) {
-            assertThrows(IllegalArgumentException.class, () -> JweComposer.encrypt(PAYLOAD, alg, "A256GCM", false,
-                    HeaderOptions.none(), publicPem, SecretEncoding.UTF8, 1000));
+            String token = JweComposer.encrypt(PAYLOAD, alg, "A256GCM", false,
+                    HeaderOptions.none(), publicPem, SecretEncoding.UTF8, 1000);
+            assertEquals(PAYLOAD, decrypt(token, privatePem), alg);
         }
     }
 

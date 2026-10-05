@@ -91,7 +91,9 @@ class JwtValidatorTest {
         String token = hs256(new JWTClaimsSet.Builder().build(), null);
         String pem = "-----BEGIN PUBLIC KEY-----\n" + java.util.Base64.getMimeEncoder().encodeToString(
                 new RSAKeyGenerator(2048).generate().toRSAPublicKey().getEncoded()) + "\n-----END PUBLIC KEY-----";
-        assertThrows(IllegalArgumentException.class, () -> JwtValidator.validate(token, pem, LAX, NOW));
+        JwtValidator.Result result = JwtValidator.validate(token, pem, LAX, NOW);
+        assertFalse(result.signatureValid());
+        assertTrue(result.warnings().stream().anyMatch(warning -> warning.code().equals("algorithmConfusion")));
     }
 
     private static String hs256(JWTClaimsSet claims, Set<String> critical) throws Exception {
