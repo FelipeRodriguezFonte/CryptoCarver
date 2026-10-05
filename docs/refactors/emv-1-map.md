@@ -29,3 +29,13 @@ The repository has EMV test vectors in `PaymentControlValuesTest`: its EMV Book 
 Before extraction, `EmvSessionKeyCharacterizationUITest` will record localized validation feedback for malformed PAN, ATC, and key length, session-key derivation and the included secure-messaging session-key action. It will exercise `FULL_LAB`, `MASKED`, and `REDACTED` against the shell's result surfaces with invented keys, and pin a UTF-8 transcript digest. JDK/provider exception substrings, filesystem paths, dates, timings, and unordered collection iteration must be normalized or excluded before digesting. Any failures found will be recorded here before a separate defect-fix commit.
 
 The requested group is separable from track 2, ODA, the rest of secure messaging, HCE, and TLV. Those behaviors and their crypto implementations remain untouched.
+
+## Characterization failures recorded before fixes
+
+Ran `EmvSessionKeyCharacterizationUITest` against the unmodified `f31bb89` behavior with invented keys. The portable transcript uses fixed operation ordering, contains no exception text, date, path, duration, or unordered collection values, and its initial SHA-256 is `f2b88fb327543532ac61caad4c4448fb3a2f11abc620b0ef43ab093e481e1eba`.
+
+- Under `MASKED` and `REDACTED`, `handleDeriveSessionKey` published its full report with `PUBLIC` classification. The result viewer, Shelf, and expanded viewer contained the IMK, ICC master key, and session key. Inspector, stored history, status, and captured application logs did not contain those needles.
+- Under `MASKED` and `REDACTED`, the secure-messaging publication correctly had `SECRET` classification and its result viewer, Shelf, expanded viewer, status, and captured logs were safe. However, the inspector displayed the secret UDK/session-key details, and the persisted history recipe kept `EMVController.smMkSmiField` and `smMkSmcField` in clear. These are separate classification omissions: inspector publication bypasses the existing visibility filter, and `UiStateSnapshot` does not recognize the standalone `mk` field-name token.
+- The corresponding `FULL_LAB` results showed the invented keys, as expected. Malformed PAN, ATC, and key length produced readable messages in both EN and ES.
+
+These observations are recorded before either classification fix. They are characterization failures, not expected behavior to preserve.
