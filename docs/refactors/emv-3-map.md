@@ -30,7 +30,7 @@ The portable pre-fix UTF-8 transcript SHA-256 is `16d6afa05a55ea4009261158eb5f43
 
 The separate output-classification correction is commit `99111e3`. After that change both outputs classify as `SECRET`; result, Shelf, and expanded viewer are safe in MASKED/REDACTED, while History still contains an EMV input secret and the provider error remains unlocalized in EN/ES. The portable post-classification digest is `4803cbad2a058bc4ccba31d6133090d89aa4c61cf10ef186bb6c47b2d290a89b`. The repeated test matched this transcript and failed only the still-recorded History/localization defects.
 
-The remaining History leak is field classification: `UiStateSnapshot` already redacts `skARPCField` using the `sk` token but does not recognize `arqcField`, so the recipe retains the invented input ARQC under both restricted profiles. Add `arqc` to the existing history-sensitive field tokens, preserving public ARC/CSU metadata. Record this finding before changing the history classifier.
+The remaining History leak is field classification: `UiStateSnapshot` already redacts `skARPCField` using the `sk` token but does not recognize `arqcField`, so the recipe retains the invented input ARQC under both restricted profiles. The existing token policy should recognize both `arqcField` and any ARPC input field by adding the explicit `arqc`/`arpc` abbreviations; ARC/CSU metadata remains public. A positive unit assertion will guard this classification. Record this finding before changing the history classifier.
 
 ## Repairs, extraction and phase gates
 
