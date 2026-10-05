@@ -777,6 +777,12 @@ public class EMVController {
                 track2ResultArea.setText(t("module.emv.feedback.trackDataRequired"));
                 return;
             }
+            if (!track2Input.matches("(?i)[0-9]{12,19}(?:D|=)[0-9]{7}[0-9A-F]*")) {
+                track2ResultArea.setText(t("module.emv.track2.invalid"));
+                track2ResultArea.setVisible(true);
+                track2ResultArea.setManaged(true);
+                return;
+            }
 
             String result = EMVOperations.decodeTrack2(track2Input);
             track2ResultArea.setText(result);
