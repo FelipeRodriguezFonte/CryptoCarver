@@ -61,3 +61,11 @@ The session-key transcript still passes at SHA-256 `555bcb916084063782e97253bd59
 Phase 1 gate attempt 1: `mvn -o -q test -Plow-cpu` ran 2868 tests, with one failure in `SpecializedFeedbackHeadlessTest.specializedValidationFeedbackHasDistinctEnglishAndSpanishKeys`. That existing static source check required `module.emv.feedback.sessionRequired` to occur in `EMVController.java`, even though the session-key handler now owns it in `EmvSessionKeyCoordinator`. The other EMV feedback keys remain in `EMVController`. This is a test-ownership assumption invalidated by the intended extraction; adjust that single key's source owner assertion to the coordinator. No runtime or characterization failure was reported. The other two phase 1 gates have not been run yet.
 
 The static source check now assigns only `module.emv.feedback.sessionRequired` to `EmvSessionKeyCoordinator` and still verifies distinct EN/ES text there. The focused `SpecializedFeedbackHeadlessTest` passes. Because the first complete suite was not clean, all three phase gates must be rerun before phase 1 can pass.
+
+Phase 1 gate rerun results:
+
+- `mvn -o -q test -Plow-cpu`: passed; 2868 tests, 0 failures, 0 errors, 1 skipped.
+- `mvn -o -q test -Plow-cpu -DrunUiTests=true`: passed; 2868 tests, 0 failures, 0 errors, 1 skipped.
+- `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test`: passed; 524 UI tests, 0 failures, 0 errors, 0 skipped (111 updated Surefire XML reports).
+
+The filtered UI count (524) is distinct from the normal suite count (2868). `ExpandedViewerLifecycleUITest` was included in the CI-options run and passed 3/3. It did not need a comparison against `main`.
