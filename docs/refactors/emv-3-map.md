@@ -28,6 +28,10 @@ Before any implementation fix, both ARPC outputs were classified `PUBLIC`. Under
 
 The portable pre-fix UTF-8 transcript SHA-256 is `16d6afa05a55ea4009261158eb5f435ed8efdbc2f50163af43dff0b14c62dbe7`. It records only localized profile-status outcomes, output classification and per-surface visibility states, normalized invalid-key diagnostics, local/shared clear state, and a telemetry safety outcome. It contains no time-appended status label, path, date, system exception text, filesystem name, or unordered collection serialization. Pin this baseline in the characterization before addressing either defect.
 
+The separate output-classification correction is commit `99111e3`. After that change both outputs classify as `SECRET`; result, Shelf, and expanded viewer are safe in MASKED/REDACTED, while History still contains an EMV input secret and the provider error remains unlocalized in EN/ES. The portable post-classification digest is `4803cbad2a058bc4ccba31d6133090d89aa4c61cf10ef186bb6c47b2d290a89b`. The repeated test matched this transcript and failed only the still-recorded History/localization defects.
+
+The remaining History leak is field classification: `UiStateSnapshot` already redacts `skARPCField` using the `sk` token but does not recognize `arqcField`, so the recipe retains the invented input ARQC under both restricted profiles. Add `arqc` to the existing history-sensitive field tokens, preserving public ARC/CSU metadata. Record this finding before changing the history classifier.
+
 ## Repairs, extraction and phase gates
 
 Record separate commits for the ARPC classification fix, its characterized digest transition, localized key-length feedback, the resulting digest transition, and extraction. Once those and the three requested phase gates pass, record all command counts and the final digest here.
