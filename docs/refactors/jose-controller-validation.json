@@ -44,5 +44,66 @@
     "errors": 0,
     "skipped": 0,
     "failed": []
+  },
+  {
+    "phase": 2,
+    "gate": "default",
+    "exit": 0,
+    "reports": 436,
+    "tests": 2895,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "failed": []
+  },
+  {
+    "phase": 2,
+    "gate": "ui",
+    "exit": 0,
+    "reports": 118,
+    "tests": 534,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failed": []
+  },
+  {
+    "phase": 2,
+    "gate": "ci",
+    "exit": 1,
+    "reports": 118,
+    "tests": 534,
+    "failures": 3,
+    "errors": 0,
+    "skipped": 0,
+    "failed": [
+      "com.cryptocarver.ui.ExpandedViewerLifecycleUITest"
+    ]
+  },
+  {
+    "phase": 2,
+    "gate": "ci-lifecycle-isolated",
+    "exit": 1,
+    "reports": 1,
+    "tests": 3,
+    "failures": 3,
+    "errors": 0,
+    "skipped": 0,
+    "failed": [
+      "com.cryptocarver.ui.ExpandedViewerLifecycleUITest"
+    ]
+  },
+  {
+    "phase": 2,
+    "gate": "ci-lifecycle-main-controller",
+    "exit": 1,
+    "reports": 1,
+    "tests": 3,
+    "failures": 3,
+    "errors": 0,
+    "skipped": 0,
+    "failed": [
+      "com.cryptocarver.ui.ExpandedViewerLifecycleUITest"
+    ]
   }
 ]
