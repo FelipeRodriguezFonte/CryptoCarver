@@ -42,3 +42,7 @@ The separate localization fix now maps invalid session-key length and malformed 
 All calculation and transaction-data validation still comes from `crypto/EMVOperations`; no crypto source changed. The ARQC characterization passed after the extraction with the same portable digest `83596873ab42981366e1570edeac8c53a8a0b0f301cc496faa90aaeec49c851d`.
 
 Line counts: phase 2 began from the phase 1 result at 1352 lines. The two localized validation messages temporarily brought `EMVController` to 1371 lines before extraction; after extraction it is 1156 lines. The two ARQC public handlers are one-line delegates. No public API signature changed. The phase 2 three-suite gate results are pending.
+
+### Gate finding: validation-feedback source ownership
+
+The first normal-suite gate after extraction ran 2869 tests: 1 failure, 0 errors, 1 skipped. `SpecializedFeedbackHeadlessTest.specializedValidationFeedbackHasDistinctEnglishAndSpanishKeys` still expects `module.emv.feedback.arqcRequired` to be used directly by `EMVController`; ARQC input validation now lives in `EmvArqcCoordinator`. This is a stale source-ownership assertion, not a runtime or localization failure. The same test already checks the session-required message in `EmvSessionKeyCoordinator`. Before rerunning the gate, move the ARQC-required key assertion to `EmvArqcCoordinator`, preserving its EN/ES translation checks. This is a justified existing-test adjustment for the extracted ownership boundary.
