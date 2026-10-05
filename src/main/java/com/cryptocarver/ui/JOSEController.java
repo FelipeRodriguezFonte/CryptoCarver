@@ -11,8 +11,10 @@ import java.util.Map;
 
 import com.cryptocarver.util.DataConverter;
 import com.cryptocarver.crypto.JOSEService;
+import com.cryptocarver.crypto.JoseNoneJws;
 import com.cryptocarver.crypto.JWEManualCekRecovery;
 import com.cryptocarver.crypto.JoseKeyMaterial;
+import com.cryptocarver.crypto.JoseJwkPolicy;
 import com.cryptocarver.crypto.JweComposer;
 import com.cryptocarver.crypto.JwtClaimsBuilder;
 import com.cryptocarver.crypto.JwtValidator;
@@ -68,19 +70,125 @@ public class JOSEController implements Initializable {
     private static final List<String> JWS_ALGORITHMS = List.of(
             "HS256", "HS384", "HS512",
             "RS256", "RS384", "RS512",
-            "ES256", "ES384", "ES512",
+            "ES256", "ES256K", "ES384", "ES512",
             "PS256", "PS384", "PS512",
-            "EdDSA");
+            "EdDSA", "none");
 
     private String t(String key, Object... args) {
         return com.cryptocarver.service.I18nService.getInstance().text(key, args);
     }
 
+    private void refreshCapabilityLabels() {
+        if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
+        if (jwtTrustHeaderKeyCheck != null) jwtTrustHeaderKeyCheck.setText(t("module.jose.trustHeaderKey"));
+        if (jwtProtectedHeaderLabel != null) jwtProtectedHeaderLabel.setText(t("module.jose.protectedHeaderAdditional"));
+        if (jwtAllowedAlgorithmsLabel != null) jwtAllowedAlgorithmsLabel.setText(t("module.jose.jwtAllowedAlgorithms"));
+        if (jwtExpectedTypeLabel != null) jwtExpectedTypeLabel.setText(t("module.jose.jwtExpectedType"));
+        if (jwtExpectedContentTypeLabel != null) jwtExpectedContentTypeLabel.setText(t("module.jose.jwtExpectedContentType"));
+        if (jwtExpectedNonceLabel != null) jwtExpectedNonceLabel.setText(t("module.jose.jwtExpectedNonce"));
+        if (jwtAccessTokenLabel != null) jwtAccessTokenLabel.setText(t("module.jose.jwtAccessToken"));
+        if (jwtAuthorizationCodeLabel != null) jwtAuthorizationCodeLabel.setText(t("module.jose.jwtAuthorizationCode"));
+        if (jwtExpectedJktLabel != null) jwtExpectedJktLabel.setText(t("module.jose.jwtExpectedJkt"));
+        if (jwtExpectedX5tLabel != null) jwtExpectedX5tLabel.setText(t("module.jose.jwtExpectedX5t"));
+        if (jwtUnderstoodCritLabel != null) jwtUnderstoodCritLabel.setText(t("module.jose.jwtUnderstoodCrit"));
+        if (jwtRfc9068Check != null) jwtRfc9068Check.setText(t("module.jose.jwtRfc9068"));
+        if (jwtIgnoreCritCheck != null) jwtIgnoreCritCheck.setText(t("module.jose.jwtIgnoreCrit"));
+        if (jwkUseLabel != null) jwkUseLabel.setText(t("module.jose.jwkUse"));
+        if (jwkKeyOpsLabel != null) jwkKeyOpsLabel.setText(t("module.jose.jwkKeyOps"));
+        if (jwkInspectMetadataBtn != null) jwkInspectMetadataBtn.setText(t("module.jose.inspectMetadata"));
+        if (jwkKeyOpsField != null) jwkKeyOpsField.setPromptText(t("module.jose.jwkKeyOpsPrompt"));
+    }
+
+    private String jwsSecurityWarning(String algorithm, String key, JoseKeyMaterial.SecretEncoding encoding) {
+        String alg = algorithm == null ? "" : algorithm.trim();
+        if ("none".equalsIgnoreCase(alg)) return t("module.jose.warning.none");
+        if (alg.startsWith("HS") && key != null && !key.isBlank()) {
+            try {
+                int expectedBytes = Integer.parseInt(alg.substring(2)) / 8;
+                if (JoseKeyMaterial.secret(key, encoding).length < expectedBytes) return t("module.jose.warning.shortHmac");
+            } catch (Exception ignored) { }
+        }
+        return null;
+    }
+
+    private String jweSecurityWarning(String algorithm) {
+        if ("RSA1_5".equals(algorithm)) return t("module.jose.warning.rsa15");
+        if ("RSA-OAEP".equals(algorithm)) return t("module.jose.warning.oaepSha1");
+        return null;
+    }
+
+    private String jwtTokenSecurityWarning(String token, String key, JoseKeyMaterial.SecretEncoding encoding) {
+        try {
+            String header = token.trim().split("\\.", -1)[0];
+            Map<String, Object> values = com.nimbusds.jose.util.JSONObjectUtils.parse(new Base64URL(header).decodeToString());
+            String algorithm = String.valueOf(values.get("alg"));
+            String warning = jwsSecurityWarning(algorithm, key, encoding);
+            return warning;
+        } catch (Exception ignored) { return null; }
+    }
+
+    private static void addSecurityWarning(OperationResult.Builder result, String warning) {
+        if (warning != null) result.detail("Security warning", warning);
+    }
+
+    private String metadataWarning(String json, JoseJwkPolicy.Operation operation) {
+        String details = JoseJwkPolicy.metadataWarning(json, operation);
+        return details == null ? null : t("module.jose.jwkMetadataWarning", details);
+    }
+
+    private void refreshSecurityWarnings() {
+        setSecurityWarning(jwtSecurityWarningLabel,
+                combineWarnings(jwsSecurityWarning(valueOf(jwtAlgoCombo), textOf(jwtKeyArea), secretEncoding(jwtSecretFormatCombo)),
+                        jwsSecurityWarning(valueOf(jwtAlgo2Combo), textOf(jwtKeyArea2), secretEncoding(jwtSecretFormatCombo))));
+        setSecurityWarning(detachedSecurityWarningLabel,
+                jwsSecurityWarning(valueOf(detachedAlgoCombo), textOf(detachedSigningKeyArea), secretEncoding(detachedSecretFormatCombo)));
+        setSecurityWarning(nestedSecurityWarningLabel,
+                combineWarnings(jwsSecurityWarning(valueOf(nestedSignAlgoCombo), textOf(nestedSigningKeyArea), secretEncoding(nestedSecretFormatCombo)),
+                        jweSecurityWarning(valueOf(nestedKeyAlgoCombo))));
+        setSecurityWarning(jweSecurityWarningLabel, jweSecurityWarning(valueOf(jweKeyAlgoCombo)));
+    }
+
+    private void setSecurityWarning(Label label, String text) {
+        if (label == null) return;
+        label.setText(text == null ? "" : text);
+        label.setAccessibleText(text == null ? "" : text);
+    }
+
+    private String combineWarnings(String first, String second) {
+        if (first == null) return second;
+        return second == null || first.equals(second) ? first : first + "\n" + second;
+    }
+
+    private static String valueOf(ComboBox<String> combo) { return combo == null ? null : combo.getValue(); }
+
+    private void markUnsafeOptions(ComboBox<String> combo) {
+        if (combo == null) return;
+        javafx.util.Callback<javafx.scene.control.ListView<String>, ListCell<String>> cells = view -> new ListCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setAccessibleText(null); return; }
+                boolean unsafe = "none".equalsIgnoreCase(item) || "RSA1_5".equals(item) || "RSA-OAEP".equals(item);
+                String label = unsafe ? item + " — " + t("module.jose.unsafeMarker") : item;
+                setText(label);
+                setAccessibleText(label);
+            }
+        };
+        combo.setCellFactory(cells);
+        combo.setButtonCell(cells.call(null));
+    }
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         moduleI18n = ModuleI18n.bind(joseContainer, ModuleTextCatalog.jose());
+        if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
         localeChangeListener = locale -> {
             updateJwkInputPresentation();
+            refreshCapabilityLabels();
+            for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
+                    nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
+                markUnsafeOptions(combo);
+            }
+            refreshSecurityWarnings();
             if (detachedStatusLabel != null && detachedStatusLabel.getText() != null
                     && detachedStatusLabel.getText().isBlank()) detachedStatusLabel.setText("");
         };
@@ -141,9 +249,7 @@ public class JOSEController implements Initializable {
                 nestedSignAlgoCombo.getSelectionModel().select("HS256");
             }
             if (nestedKeyAlgoCombo != null && nestedKeyAlgoCombo.getItems().isEmpty()) {
-                nestedKeyAlgoCombo.getItems().setAll(
-                        "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512",
-                        "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW");
+                nestedKeyAlgoCombo.getItems().setAll(JweComposer.KEY_ALGORITHMS);
                 nestedKeyAlgoCombo.getSelectionModel().selectFirst();
             }
             if (nestedContentAlgoCombo != null && nestedContentAlgoCombo.getItems().isEmpty()) {
@@ -161,12 +267,28 @@ public class JOSEController implements Initializable {
                 });
                 jwkKeyTypeCombo.getSelectionModel().selectFirst();
             }
+            if (jwkUseCombo != null && jwkUseCombo.getItems().isEmpty()) {
+                jwkUseCombo.getItems().setAll("sig", "enc");
+                jwkUseCombo.getSelectionModel().selectFirst();
+            }
+            refreshCapabilityLabels();
             if (jwksRotateAlgoCombo != null && jwksRotateAlgoCombo.getItems().isEmpty()) {
                 jwksRotateAlgoCombo.getItems().setAll(
-                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA",
+                        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES256K", "ES384", "ES512", "EdDSA",
+                        "RSA1_5", "RSA-OAEP", "ECDH-ES", "ECDH-ES-X448", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW",
                         "HS256", "HS384", "HS512", "A128KW", "A256KW", "A128GCM", "A256GCM", "dir");
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
+
+            for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
+                    nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
+                markUnsafeOptions(combo);
+                if (combo != null) combo.valueProperty().addListener((obs, oldValue, newValue) -> refreshSecurityWarnings());
+            }
+            for (TextInputControl key : java.util.Arrays.asList(jwtKeyArea, jwtKeyArea2, detachedSigningKeyArea, nestedSigningKeyArea)) {
+                if (key != null) key.textProperty().addListener((obs, oldValue, newValue) -> refreshSecurityWarnings());
+            }
+            refreshSecurityWarnings();
 
         IngestionUIHelper.bindField(jwtKeyArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.PEM_PRIVATE_KEY, com.cryptocarver.model.MaterialDetectionResult.MaterialType.HEX, com.cryptocarver.model.MaterialDetectionResult.MaterialType.TEXT_UNKNOWN);
         IngestionUIHelper.bindField(jwtValidateTokenArea, null, com.cryptocarver.model.MaterialDetectionResult.MaterialType.JWT);
@@ -395,6 +517,8 @@ public class JOSEController implements Initializable {
     private TextArea inspectorInputArea;
 @FXML
     private TextArea jwtPayloadArea;
+    @FXML private TextArea jwtProtectedHeaderArea;
+    @FXML private Label jwtProtectedHeaderLabel;
 @FXML
     private ComboBox<String> jwtTemplateCombo;
 @FXML
@@ -449,10 +573,18 @@ public class JOSEController implements Initializable {
     private TextArea jwtDecodedHeaderArea;
 @FXML
     private TableColumn<SimpleAlgo, String> jwaTypeCol;
-@FXML
+    @FXML
     private CheckBox jwtCheckExpiryCheck;
+    @FXML private CheckBox jwtAcceptNoneCheck;
+    @FXML private CheckBox jwtTrustHeaderKeyCheck;
+    @FXML private Label jwtSecurityWarningLabel, detachedSecurityWarningLabel;
+    @FXML private Label jweSecurityWarningLabel, nestedSecurityWarningLabel;
 @FXML
     private TextField jwkKeyIdField;
+    @FXML private ComboBox<String> jwkUseCombo;
+    @FXML private TextField jwkKeyOpsField;
+    @FXML private Label jwkUseLabel, jwkKeyOpsLabel;
+    @FXML private Button jwkInspectMetadataBtn;
 @FXML
     private TextArea jwePublicKeyArea;
 @FXML private TextArea detachedPayloadArea, detachedTokenArea, detachedSigningKeyArea, detachedVerificationKeyArea;
@@ -512,6 +644,7 @@ public class JOSEController implements Initializable {
             }
 
             this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
+                    jwkUseCombo == null ? null : jwkUseCombo.getValue(), textOf(jwkKeyOpsField),
                     jwkOutputArea);
 
         }
@@ -695,7 +828,8 @@ public class JOSEController implements Initializable {
     private void handleGenerateSignedJWT() {
 
             if (isBlank(jwtPayloadArea)) { showValidation(t("module.jose.feedback.inputRequired"), "jwtPayloadArea"); return; }
-            if (isBlank(jwtKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtKeyArea"); return; }
+            String selectedAlgorithm = jwtAlgoCombo == null ? null : jwtAlgoCombo.getValue();
+            if (isBlank(jwtKeyArea) && !"none".equalsIgnoreCase(selectedAlgorithm)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtKeyArea"); return; }
             if (jwtAlgoCombo == null || jwtAlgoCombo.getValue() == null) {
                 showValidation(t("module.jose.feedback.algorithmRequired"), "jwtAlgoCombo", "preflight.remedy.algorithm");
                 return;
@@ -717,6 +851,7 @@ public class JOSEController implements Initializable {
                     signers,
                     serialization,
                     unencoded,
+                    textOf(jwtProtectedHeaderArea),
                     jwtOutputArea);
 
         }
@@ -731,7 +866,9 @@ public class JOSEController implements Initializable {
     private void handleValidateJWT() {
 
             if (isBlank(jwtValidateTokenArea)) { showValidation(t("module.jose.feedback.tokenRequired"), "jwtValidateTokenArea"); return; }
-            if (isBlank(jwtValidateKeyArea)) { showValidation(t("module.jose.feedback.keyRequired"), "jwtValidateKeyArea"); return; }
+            boolean unsecured = JoseNoneJws.isUnsecuredCompact(jwtValidateTokenArea.getText());
+            boolean trustHeaderKey = jwtTrustHeaderKeyCheck != null && jwtTrustHeaderKeyCheck.isSelected();
+            if (isBlank(jwtValidateKeyArea) && !unsecured && !trustHeaderKey) { showValidation(t("module.jose.feedback.keyRequired"), "jwtValidateKeyArea"); return; }
 
             String iss = jwtExpectedIssField.getText();
             String aud = jwtExpectedAudField.getText();
@@ -743,10 +880,18 @@ public class JOSEController implements Initializable {
             }
             boolean checkExp = jwtCheckExpiryCheck.isSelected();
             boolean oidcStrict = jwtOidcStrictCheck != null && jwtOidcStrictCheck.isSelected();
+            JwtValidator.Advanced advanced = new JwtValidator.Advanced(
+                    textOf(jwtAllowedAlgorithmsField), textOf(jwtExpectedTypeField), textOf(jwtExpectedContentTypeField),
+                    jwtRfc9068Check != null && jwtRfc9068Check.isSelected(), textOf(jwtExpectedNonceField),
+                    textOf(jwtAccessTokenField), textOf(jwtAuthorizationCodeField), textOf(jwtExpectedJktField),
+                    textOf(jwtExpectedX5tField), parseHeaderNames(textOf(jwtUnderstoodCritField)),
+                    jwtIgnoreCritCheck != null && jwtIgnoreCritCheck.isSelected());
             this.validateJWTAdvanced(
                     jwtValidateTokenArea.getText(),
                     jwtValidateKeyArea.getText(),
                     iss, aud, skew, checkExp, oidcStrict,
+                    trustHeaderKey,
+                    advanced,
                     secretEncoding(jwtValidateSecretFormatCombo),
                     jwtDecodedHeaderArea,
                     jwtDecodedPayloadArea,
@@ -776,8 +921,10 @@ public class JOSEController implements Initializable {
                     return;
                 }
             }
-            String use = alg.startsWith("A") || alg.equals("dir") ? "enc" : "sig";
-            com.nimbusds.jose.jwk.JWK newKey = this.generateNewJWK(alg, use);
+            String use = alg.startsWith("A") || alg.equals("dir") || alg.startsWith("RSA1_5")
+                    || alg.startsWith("RSA-OAEP") || alg.startsWith("ECDH-ES") ? "enc" : "sig";
+            com.nimbusds.jose.jwk.JWK newKey = JoseJwkPolicy.withMetadata(this.generateNewJWK(alg, use), use,
+                    textOf(jwkKeyOpsField));
             String currentJson = jwksArea.getText();
             if (currentJson == null || currentJson.isBlank())
                 currentJson = "{\"keys\":[]}";
@@ -950,6 +1097,12 @@ public class JOSEController implements Initializable {
         return control == null ? null : control.getText();
     }
 
+    private static Set<String> parseHeaderNames(String value) {
+        if (value == null || value.isBlank()) return Set.of();
+        return java.util.Arrays.stream(value.split(",")).map(String::trim).filter(name -> !name.isEmpty())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
     private static JoseKeyMaterial.SecretEncoding secretEncoding(ComboBox<String> combo) {
         return JoseKeyMaterial.SecretEncoding.fromLabel(combo == null ? null : combo.getValue());
     }
@@ -1011,12 +1164,15 @@ public class JOSEController implements Initializable {
             if (unencodedPayload) {
                 statusReporter.showInfo("JWS Unencoded Payload (b64=false)", "WARNING: b64=false is enabled. The payload is detached if using standard JSON parsing.");
             }
-            statusReporter.publish(OperationResult.forOperation("Detached JWS Generation")
+            OperationResult.Builder result = OperationResult.forOperation("Detached JWS Generation")
                     .input(payload.getBytes(StandardCharsets.UTF_8)).output(serialized.getBytes(StandardCharsets.US_ASCII))
                     .detail("Algorithm", algorithm)
                     .detail("Serialization", serializationType != null ? serializationType : "Compact")
-                    .detail("Unencoded", Boolean.toString(unencodedPayload))
-                    .status(t("module.jose.feedback.statusDetachedGenerated")).build());
+                    .detail("Unencoded", Boolean.toString(unencodedPayload));
+            addSecurityWarning(result, jwsSecurityWarning(algorithm, key, secretEncoding));
+            String metadataWarning = metadataWarning(key, JoseJwkPolicy.Operation.SIGN);
+            if (metadataWarning != null) result.detail("Security warning", metadataWarning);
+            statusReporter.publish(result.status(t("module.jose.feedback.statusDetachedGenerated")).build());
         } catch (Exception e) { statusReporter.showError("Detached JWS", t("module.jose.error", e.getMessage())); }
     }
 
@@ -1026,10 +1182,13 @@ public class JOSEController implements Initializable {
             boolean valid = JOSEService.verifyDetachedJWS(detached, payload, algorithm, key, secretEncoding);
             status.setText(valid ? "VALID DETACHED SIGNATURE" : "INVALID DETACHED SIGNATURE");
             status.setStyle(valid ? "-fx-text-fill: green;" : "-fx-text-fill: red;");
-            statusReporter.publish(OperationResult.forOperation("Detached JWS Verification")
+            OperationResult.Builder result = OperationResult.forOperation("Detached JWS Verification")
                     .input(detached.getBytes(StandardCharsets.US_ASCII)).detail("Algorithm", algorithm)
-                    .detail("Result", valid ? "VALID" : "INVALID")
-                    .status(t("module.jose.feedback.statusDetachedVerification", valid ? "valid" : "invalid")).build());
+                    .detail("Result", valid ? "VALID" : "INVALID");
+            addSecurityWarning(result, jwsSecurityWarning(algorithm, key, secretEncoding));
+            String metadataWarning = metadataWarning(key, JoseJwkPolicy.Operation.VERIFY);
+            if (metadataWarning != null) result.detail("Security warning", metadataWarning);
+            statusReporter.publish(result.status(t("module.jose.feedback.statusDetachedVerification", valid ? "valid" : "invalid")).build());
         } catch (Exception e) { status.setText(t("module.jose.error", e.getMessage())); status.setStyle("-fx-text-fill: red;"); }
     }
 
@@ -1046,8 +1205,14 @@ public class JOSEController implements Initializable {
 
     // --- JWT (Signed) ---
     public void generateSignedJWT(String payloadJson, java.util.List<SignerConfig> signers, String serializationType, boolean unencodedPayload, TextArea outputArea) {
+        generateSignedJWT(payloadJson, signers, serializationType, unencodedPayload, null, outputArea);
+    }
+
+    public void generateSignedJWT(String payloadJson, java.util.List<SignerConfig> signers, String serializationType,
+            boolean unencodedPayload, String protectedHeaderJson, TextArea outputArea) {
         try {
-            String serialized = JOSEService.generateSignedJWT(payloadJson, signers, serializationType, unencodedPayload);
+            String serialized = JOSEService.generateSignedJWT(payloadJson, signers, serializationType,
+                    unencodedPayload, protectedHeaderJson);
 
             outputArea.setText(serialized);
             if (unencodedPayload) {
@@ -1055,13 +1220,18 @@ public class JOSEController implements Initializable {
             }
 
             String primaryAlgo = signers.get(0).getAlgorithm();
-            statusReporter.publish(OperationResult.forOperation("Signed JWT Generation")
+            OperationResult.Builder result = OperationResult.forOperation("Signed JWT Generation")
                     .input(payloadJson.getBytes(StandardCharsets.UTF_8))
                     .output(serialized.getBytes(StandardCharsets.US_ASCII))
                     .detail("Algorithms", signers.stream().map(SignerConfig::getAlgorithm).reduce((a,b) -> a + ", " + b).orElse(""))
                     .detail("Serialization", serializationType != null ? serializationType : "Compact")
-                    .detail("Unencoded", Boolean.toString(unencodedPayload))
-                    .status(t("module.jose.feedback.statusJwtGenerated", primaryAlgo)).build());
+                    .detail("Unencoded", Boolean.toString(unencodedPayload));
+            for (SignerConfig signer : signers) {
+                addSecurityWarning(result, jwsSecurityWarning(signer.getAlgorithm(), signer.getSecretOrKey(), signer.getSecretEncoding()));
+                String metadataWarning = metadataWarning(signer.getSecretOrKey(), JoseJwkPolicy.Operation.SIGN);
+                if (metadataWarning != null) result.detail("Security warning", metadataWarning);
+            }
+            statusReporter.publish(result.status(t("module.jose.feedback.statusJwtGenerated", primaryAlgo)).build());
 
         } catch (Exception e) {
             statusReporter.showError("JWT Generation Error", e.getMessage());
@@ -1081,12 +1251,14 @@ public class JOSEController implements Initializable {
             String status = "Nested JWT Generated (Signed: " + signAlgoStr + ", Encrypted: " + keyAlgoStr + ")";
             if (compress)
                 status += " [Compressed]";
-            statusReporter.publish(OperationResult.forOperation("Nested JWT Generation")
+            OperationResult.Builder result = OperationResult.forOperation("Nested JWT Generation")
                     .input(payloadJson.getBytes(StandardCharsets.UTF_8))
                     .output(serialized.getBytes(StandardCharsets.US_ASCII))
                     .detail("Signature Algorithm", signAlgoStr).detail("Key Algorithm", keyAlgoStr)
-                    .detail("Compression", String.valueOf(compress)).detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", signKey + " / " + encKeyPEM))
-                    .status(status).build());
+                    .detail("Compression", String.valueOf(compress)).detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", signKey + " / " + encKeyPEM));
+            addSecurityWarning(result, jwsSecurityWarning(signAlgoStr, signKey, secretEncoding));
+            addSecurityWarning(result, jweSecurityWarning(keyAlgoStr));
+            statusReporter.publish(result.status(status).build());
 
         } catch (Exception e) {
             statusReporter.showError("Nested JWT Error", e.getMessage());
@@ -1117,6 +1289,26 @@ public class JOSEController implements Initializable {
 
     @FXML private ComboBox<String> jwtSecretFormatCombo;
     @FXML private TextArea jwtFindingsArea;
+    @FXML private Label jwtAllowedAlgorithmsLabel;
+    @FXML private TextField jwtAllowedAlgorithmsField;
+    @FXML private Label jwtExpectedTypeLabel;
+    @FXML private TextField jwtExpectedTypeField;
+    @FXML private Label jwtExpectedContentTypeLabel;
+    @FXML private TextField jwtExpectedContentTypeField;
+    @FXML private Label jwtExpectedNonceLabel;
+    @FXML private TextField jwtExpectedNonceField;
+    @FXML private Label jwtAccessTokenLabel;
+    @FXML private TextField jwtAccessTokenField;
+    @FXML private Label jwtAuthorizationCodeLabel;
+    @FXML private TextField jwtAuthorizationCodeField;
+    @FXML private Label jwtExpectedJktLabel;
+    @FXML private TextField jwtExpectedJktField;
+    @FXML private Label jwtExpectedX5tLabel;
+    @FXML private TextField jwtExpectedX5tField;
+    @FXML private Label jwtUnderstoodCritLabel;
+    @FXML private TextField jwtUnderstoodCritField;
+    @FXML private CheckBox jwtRfc9068Check;
+    @FXML private CheckBox jwtIgnoreCritCheck;
     @FXML private ComboBox<String> jwtValidateSecretFormatCombo;
     @FXML private ComboBox<String> detachedSecretFormatCombo;
     @FXML private ComboBox<String> nestedSecretFormatCombo;
@@ -1157,6 +1349,9 @@ public class JOSEController implements Initializable {
             if (JWEAlgorithm.Family.PBES2.contains(JWEAlgorithm.parse(keyAlgo))) {
                 result.detail("PBES2 Iterations", String.valueOf(pbes2Iterations));
             }
+            addSecurityWarning(result, jweSecurityWarning(keyAlgo));
+            String metadataWarning = metadataWarning(keyMaterial, JoseJwkPolicy.Operation.ENCRYPT);
+            if (metadataWarning != null) result.detail("Security warning", metadataWarning);
             statusReporter.publish(result.status(status).build());
 
         } catch (Exception e) {
@@ -1205,6 +1400,7 @@ public class JOSEController implements Initializable {
                         .detail("Serialization", "JSON")
                         .detail("Recipient", (result.recipientIndex() + 1) + " of " + result.recipientCount());
                 if (result.aad() != null) published.detail("AAD", result.aad());
+                addSecurityWarning(published, jweSecurityWarning(String.valueOf(result.effectiveHeader().get("alg"))));
                 statusReporter.publish(published.status(t("module.jose.feedback.statusJweDecrypted")).build());
                 return;
             }
@@ -1286,7 +1482,7 @@ public class JOSEController implements Initializable {
             statusLabel.setStyle("-fx-text-fill: green;");
 
             String payload = jweObject.getPayload().toString();
-            statusReporter.publish(buildJweDecryptionResult(jweString, payload, jweObject));
+            statusReporter.publish(buildJweDecryptionResult(jweString, payload, jweObject, privateKeyPEM));
 
         } catch (Exception e) {
             statusLabel.setText(t("module.jose.decryptionFailed"));
@@ -1303,12 +1499,20 @@ public class JOSEController implements Initializable {
     }
 
     OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject) {
-        return OperationResult.forOperation("JWE Decryption")
+        return buildJweDecryptionResult(jweString, payload, jweObject, null);
+    }
+
+    OperationResult buildJweDecryptionResult(String jweString, String payload, JWEObject jweObject, String keyMaterial) {
+        OperationResult.Builder result = OperationResult.forOperation("JWE Decryption")
                 .input(jweString.getBytes(StandardCharsets.US_ASCII))
                 .output(payload.getBytes(StandardCharsets.UTF_8))
                 .detail("Key Algorithm", jweObject.getHeader().getAlgorithm().getName())
                 .detail("Content Algorithm", jweObject.getHeader().getEncryptionMethod().getName())
-                .status(t("module.jose.feedback.statusJweDecrypted")).build();
+                ;
+        addSecurityWarning(result, jweSecurityWarning(jweObject.getHeader().getAlgorithm().getName()));
+        String metadataWarning = metadataWarning(keyMaterial, JoseJwkPolicy.Operation.DECRYPT);
+        if (metadataWarning != null) result.detail("Security warning", metadataWarning);
+        return result.status(t("module.jose.feedback.statusJweDecrypted")).build();
     }
 
     static String directCekPreviewMessage() {
@@ -1319,12 +1523,16 @@ public class JOSEController implements Initializable {
 
     // 1. JWK Managemen
     public JWK generateNewJWK(String alg, String use) throws Exception {
-        if (alg.startsWith("RS") || alg.startsWith("PS")) {
+        if (java.util.Set.of("RS256", "RS384", "RS512", "PS256", "PS384", "PS512").contains(alg)) {
             return new RSAKeyGenerator(2048)
                     .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
                     .algorithm(new JWSAlgorithm(alg))
                     .keyID(UUID.randomUUID().toString())
                     .generate();
+        } else if ("RSA1_5".equals(alg) || "RSA-OAEP".equals(alg)
+                || "RSA-OAEP-256".equals(alg) || "RSA-OAEP-384".equals(alg) || "RSA-OAEP-512".equals(alg)) {
+            return new RSAKeyGenerator(2048).keyUse(KeyUse.ENCRYPTION).algorithm(new JWEAlgorithm(alg))
+                    .keyID(UUID.randomUUID().toString()).generate();
         } else if (alg.equals("EdDSA")) {
             java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
             return new OctetKeyPair.Builder(Curve.Ed25519,
@@ -1334,7 +1542,32 @@ public class JOSEController implements Initializable {
                     .algorithm(JWSAlgorithm.EdDSA)
                     .keyID(UUID.randomUUID().toString())
                     .build();
+        } else if (alg.startsWith("ECDH-ES")) {
+            boolean x448 = alg.contains("X448");
+            Curve curve = x448 ? Curve.X448 : Curve.X25519;
+            String xdhAlgorithm = x448 ? "X448" : "X25519";
+            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance(xdhAlgorithm).generateKeyPair();
+            return new OctetKeyPair.Builder(curve,
+                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(pair.getPublic())))
+                    .d(Base64URL.encode(JoseKeyMaterial.rawXPrivateKey(pair.getPrivate())))
+                    .keyUse(KeyUse.ENCRYPTION)
+                    .algorithm(new JWEAlgorithm("ECDH-ES-X448".equals(alg) ? "ECDH-ES" : alg))
+                    .keyID(UUID.randomUUID().toString())
+                    .build();
         } else if (alg.startsWith("ES")) {
+            if ("ES256K".equals(alg)) {
+                java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC",
+                        new org.bouncycastle.jce.provider.BouncyCastleProvider());
+                generator.initialize(new java.security.spec.ECGenParameterSpec("secp256k1"));
+                java.security.KeyPair pair = generator.generateKeyPair();
+                return new ECKey.Builder(Curve.SECP256K1,
+                        (java.security.interfaces.ECPublicKey) pair.getPublic())
+                        .privateKey(pair.getPrivate())
+                        .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
+                        .algorithm(new JWSAlgorithm(alg))
+                        .keyID(UUID.randomUUID().toString())
+                        .build();
+            }
             Curve curve = Curve.P_256;
             if (alg.contains("384"))
                 curve = Curve.P_384;
@@ -1404,11 +1637,27 @@ public class JOSEController implements Initializable {
     public void validateJWTAdvanced(String tokenString, String keyString,
             String expectedIss, String expectedAud, long clockSkewSec, boolean checkExpiry, boolean oidcStrict,
             JoseKeyMaterial.SecretEncoding secretEncoding, TextArea headerOut, TextArea payloadOut, Label statusLabel) {
+        validateJWTAdvanced(tokenString, keyString, expectedIss, expectedAud, clockSkewSec, checkExpiry,
+                oidcStrict, false, secretEncoding, headerOut, payloadOut, statusLabel);
+    }
+
+    public void validateJWTAdvanced(String tokenString, String keyString,
+            String expectedIss, String expectedAud, long clockSkewSec, boolean checkExpiry, boolean oidcStrict,
+            boolean trustHeaderKey, JoseKeyMaterial.SecretEncoding secretEncoding,
+            TextArea headerOut, TextArea payloadOut, Label statusLabel) {
+        validateJWTAdvanced(tokenString, keyString, expectedIss, expectedAud, clockSkewSec, checkExpiry,
+                oidcStrict, trustHeaderKey, JwtValidator.Advanced.defaults(), secretEncoding, headerOut, payloadOut, statusLabel);
+    }
+
+    public void validateJWTAdvanced(String tokenString, String keyString,
+            String expectedIss, String expectedAud, long clockSkewSec, boolean checkExpiry, boolean oidcStrict,
+            boolean trustHeaderKey, JwtValidator.Advanced advanced, JoseKeyMaterial.SecretEncoding secretEncoding,
+            TextArea headerOut, TextArea payloadOut, Label statusLabel) {
         if (jwtFindingsArea != null) jwtFindingsArea.clear();
         try {
             JwtValidator.Result result = JwtValidator.validate(tokenString, keyString,
                     new JwtValidator.Options(expectedIss, expectedAud, clockSkewSec, checkExpiry, oidcStrict,
-                            secretEncoding),
+                            secretEncoding, jwtAcceptNoneCheck != null && jwtAcceptNoneCheck.isSelected(), trustHeaderKey, advanced),
                     java.time.Instant.now());
             headerOut.setText(result.header());
             payloadOut.setText(result.payload());
@@ -1417,7 +1666,12 @@ public class JOSEController implements Initializable {
             for (JwtValidator.Finding finding : result.findings()) {
                 findings.add(t("module.jose.claim." + finding.code(), finding.argument()));
             }
-            if (jwtFindingsArea != null) jwtFindingsArea.setText(String.join("\n", findings));
+            List<String> securityWarnings = new ArrayList<>();
+            for (JwtValidator.Warning warning : result.warnings()) {
+                securityWarnings.add(t("module.jose.warning." + warning.code(), warning.argument()));
+            }
+            if (jwtFindingsArea != null) jwtFindingsArea.setText(String.join("\n", findings)
+                    + (securityWarnings.isEmpty() ? "" : (findings.isEmpty() ? "" : "\n") + String.join("\n", securityWarnings)));
 
             String status;
             if (!result.signatureValid()) {
@@ -1431,12 +1685,19 @@ public class JOSEController implements Initializable {
                 statusLabel.setStyle("-fx-text-fill: green;");
             }
             statusLabel.setText(status);
-            statusReporter.publish(OperationResult.forOperation("JWT Validation")
+            OperationResult.Builder validationResult = OperationResult.forOperation("JWT Validation")
                     .input(tokenString.getBytes(StandardCharsets.US_ASCII))
                     .detail("Signature", result.signatureValid() ? "VALID" : "INVALID")
                     .detail("Claim Checks", findings.isEmpty() ? "OK" : String.join("; ", findings))
                     .detail(com.cryptocarver.model.OperationDetail.secretDetail("Key Material", keyString))
-                    .status(t("module.jose.feedback.statusJwtValidation", status)).build());
+                    .detail("Security warning", jwtTokenSecurityWarning(tokenString, keyString, secretEncoding));
+            String metadataWarning = metadataWarning(keyString, JoseJwkPolicy.Operation.VERIFY);
+            if (metadataWarning != null) validationResult.detail("Security warning", metadataWarning);
+            if (trustHeaderKey) validationResult.detail("Security warning", t("module.jose.warning.trustHeaderKey"));
+            for (String warning : securityWarnings) {
+                validationResult.detail("Security warning", warning);
+            }
+            statusReporter.publish(validationResult.status(t("module.jose.feedback.statusJwtValidation", status)).build());
         } catch (Exception e) {
             headerOut.setText("");
             payloadOut.setText("");
@@ -1510,6 +1771,10 @@ public class JOSEController implements Initializable {
     // --- JWK Logic (Capa 5) ---
 
     public void convertPemToJwk(String pem, String keyType, String keyId, TextArea outputArea) {
+        convertPemToJwk(pem, keyType, keyId, null, null, outputArea);
+    }
+
+    public void convertPemToJwk(String pem, String keyType, String keyId, String use, String keyOps, TextArea outputArea) {
         if (pem == null || pem.trim().isEmpty()) {
             outputArea.setText("Error: Input PEM is empty.");
             return;
@@ -1520,6 +1785,7 @@ public class JOSEController implements Initializable {
                     ? new OctetSequenceKey.Builder(DataConverter.decodeBase64Flexible(pem.replaceAll("\\s+", "")))
                             .keyID(kid).build()
                     : asymmetricJwk(pem, keyType, kid);
+            jwk = JoseJwkPolicy.withMetadata(jwk, use, keyOps);
             String thumbprint = jwk.computeThumbprint().toString();
             if (kid == null) jwk = withKeyId(jwk, thumbprint);
 
@@ -1529,6 +1795,23 @@ public class JOSEController implements Initializable {
             outputArea.setText("Error converting to JWK: " + e.getMessage());
             // No exception attached: parser messages may echo key bytes.
             LOG.error("PEM key import failed for key type {}", keyType);
+        }
+    }
+
+    @FXML
+    private void handleInspectJwkMetadata() {
+        try {
+            JWK key = JWK.parse(jwkInputArea.getText());
+            Map<String, Object> metadata = new java.util.LinkedHashMap<>();
+            metadata.put("kty", key.getKeyType().getValue());
+            if (key.getKeyID() != null) metadata.put("kid", key.getKeyID());
+            if (key.getKeyUse() != null) metadata.put("use", key.getKeyUse().identifier());
+            if (key.getKeyOperations() != null) metadata.put("key_ops", key.getKeyOperations().stream()
+                    .map(KeyOperation::identifier).sorted().toList());
+            if (key.getAlgorithm() != null) metadata.put("alg", key.getAlgorithm().getName());
+            jwkOutputArea.setText(com.nimbusds.jose.util.JSONObjectUtils.toJSONString(metadata));
+        } catch (Exception e) {
+            jwkOutputArea.setText(t("module.jose.jwkMetadataReadError", e.getMessage()));
         }
     }
 
@@ -1565,6 +1848,16 @@ public class JOSEController implements Initializable {
             OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x.length == 32 ? Curve.Ed25519 : Curve.Ed448,
                     Base64URL.encode(x)).keyID(kid);
             if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(privateKey)));
+            return builder.build();
+        }
+        if (publicKey instanceof java.security.interfaces.XECPublicKey) {
+            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
+                throw new IllegalArgumentException("The key is an X25519/X448 (OKP) key but key type " + keyType + " is selected.");
+            }
+            boolean x25519 = "X25519".equalsIgnoreCase(JoseKeyMaterial.xdhCurveName(publicKey));
+            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x25519 ? Curve.X25519 : Curve.X448,
+                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(publicKey))).keyID(kid);
+            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawXPrivateKey(privateKey)));
             return builder.build();
         }
         throw new IllegalArgumentException("Unsupported key algorithm: " + publicKey.getAlgorithm());
@@ -1615,14 +1908,18 @@ public class JOSEController implements Initializable {
                 com.nimbusds.jose.jwk.ECKey ecKey = (com.nimbusds.jose.jwk.ECKey) jwk;
                 // Public
                 sb.append("=== Public Key (PEM) ===\n");
-                java.security.interfaces.ECPublicKey pub = ecKey.toECPublicKey();
+                java.security.Provider provider = Curve.SECP256K1.equals(ecKey.getCurve())
+                        ? new org.bouncycastle.jce.provider.BouncyCastleProvider() : null;
+                java.security.interfaces.ECPublicKey pub = provider == null ? ecKey.toECPublicKey()
+                        : ecKey.toECPublicKey(provider);
                 String pubPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
                         .encodeToString(pub.getEncoded());
                 sb.append("-----BEGIN PUBLIC KEY-----\n").append(pubPem).append("\n-----END PUBLIC KEY-----\n\n");
 
                 if (ecKey.isPrivate()) {
                     sb.append("=== Private Key (PEM) ===\n");
-                    java.security.interfaces.ECPrivateKey priv = ecKey.toECPrivateKey();
+                    java.security.interfaces.ECPrivateKey priv = provider == null ? ecKey.toECPrivateKey()
+                            : ecKey.toECPrivateKey(provider);
                     String privPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
                             .encodeToString(priv.getEncoded());
                     sb.append("-----BEGIN PRIVATE KEY-----\n").append(privPem).append("\n-----END PRIVATE KEY-----\n");

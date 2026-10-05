@@ -27,6 +27,7 @@
                             <Label text="Algorithm:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="jwtAlgoCombo" prefWidth="150" styleClass="form-field"/>
+                                <Label fx:id="jwtSecurityWarningLabel" wrapText="true" styleClass="helper-text"/>
                                 <Label text="Template:" styleClass="form-label"/>
                                 <ComboBox fx:id="jwtTemplateCombo" prefWidth="150" promptText="Select Template..." styleClass="form-field"/>
                             </HBox>
@@ -93,11 +94,42 @@
                                         <Button text="Apply to Payload" onAction="#handleApplyJWTClaims" styleClass="secondary-button"/>
                                     </HBox>
                                 </GridPane>
+                                <GridPane hgap="10" vgap="9" styleClass="form-grid">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="150" prefWidth="150"/>
+                                        <ColumnConstraints hgrow="ALWAYS"/>
+                                    </columnConstraints>
+                                    <Label fx:id="jwtAllowedAlgorithmsLabel" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtAllowedAlgorithmsField" promptText="RS256, ES256" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtExpectedTypeLabel" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtExpectedTypeField" promptText="at+jwt" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtExpectedContentTypeLabel" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtExpectedContentTypeField" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtExpectedNonceLabel" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtExpectedNonceField" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtAccessTokenLabel" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtAccessTokenField" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtAuthorizationCodeLabel" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtAuthorizationCodeField" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtExpectedJktLabel" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtExpectedJktField" GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtExpectedX5tLabel" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <TextField fx:id="jwtExpectedX5tField" GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="form-field"/>
+                                    <Label fx:id="jwtUnderstoodCritLabel" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
+                                    <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="8" GridPane.columnIndex="1">
+                                        <TextField fx:id="jwtUnderstoodCritField" text="b64" styleClass="form-field" HBox.hgrow="ALWAYS"/>
+                                        <CheckBox fx:id="jwtIgnoreCritCheck" selected="false"/>
+                                    </HBox>
+                                    <CheckBox fx:id="jwtRfc9068Check" selected="false" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+                                </GridPane>
                             </VBox>
                         </TitledPane>
 
                         <Label text="Payload (JSON):" styleClass="form-label"/>
                         <TextArea fx:id="jwtPayloadArea" promptText='{"sub":"1234567890", "name":"John Doe", "iat":1516239022}' prefRowCount="4" styleClass="monospace-field"/>
+
+                        <Label fx:id="jwtProtectedHeaderLabel" text="Additional protected header (JSON, optional):" styleClass="form-label"/>
+                        <TextArea fx:id="jwtProtectedHeaderArea" promptText='{"kid":"key-1", "jku":"https://example.invalid/jwks.json"}' prefRowCount="2" styleClass="monospace-field"/>
 
                         <Button text="Generate Signed JWT" onAction="#handleGenerateSignedJWT" styleClass="action-button,primary-action"/>
 
@@ -153,6 +185,8 @@
                                         <TextField fx:id="jwtClockSkewField" text="60" prefWidth="80" styleClass="form-field"/>
                                         <CheckBox fx:id="jwtCheckExpiryCheck" text="Check Expiration (exp/nbf/iat)" selected="true"/>
                                         <CheckBox fx:id="jwtOidcStrictCheck" text="Strict OIDC Profile"/>
+                                        <CheckBox fx:id="jwtAcceptNoneCheck" selected="false"/>
+                                        <CheckBox fx:id="jwtTrustHeaderKeyCheck" selected="false"/>
                                     </HBox>
                                 </GridPane>
                             </VBox>
@@ -188,7 +222,10 @@
                                 <ColumnConstraints hgrow="ALWAYS"/>
                             </columnConstraints>
                             <Label text="Algorithm:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
-                            <ComboBox fx:id="detachedAlgoCombo" prefWidth="180" promptText="HS256 / RS256 / ES256" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="form-field"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                                <ComboBox fx:id="detachedAlgoCombo" prefWidth="180" promptText="HS256 / RS256 / ES256" styleClass="form-field"/>
+                                <Label fx:id="detachedSecurityWarningLabel" wrapText="true" styleClass="helper-text"/>
+                            </HBox>
 
                             <Label text="Serialization:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="1" GridPane.columnIndex="1">
@@ -243,17 +280,22 @@
                                 <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="120" styleClass="form-field"/>
                                 <Label text="Key ID (kid):" styleClass="form-label"/>
                                 <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" styleClass="form-field"/>
+                                <Label fx:id="jwkUseLabel" text="use:" styleClass="form-label"/>
+                                <ComboBox fx:id="jwkUseCombo" prefWidth="100" styleClass="form-field"/>
+                                <Label fx:id="jwkKeyOpsLabel" text="key_ops:" styleClass="form-label"/>
+                                <TextField fx:id="jwkKeyOpsField" promptText="sign, verify" styleClass="form-field"/>
                             </HBox>
 
                             <Label fx:id="jwkInputLabel" text="Input:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                             <TextArea fx:id="jwkInputArea" promptText="Paste PEM Key or JWK JSON..." prefRowCount="4" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="monospace-field"/>
                         </GridPane>
 
-                        <HBox spacing="10" alignment="CENTER_LEFT">
+                        <FlowPane hgap="10" vgap="10" alignment="CENTER_LEFT" styleClass="responsive-action-bar">
                             <Button fx:id="pemToJwkBtn" text="PEM -> JWK" onAction="#handlePemToJwk" styleClass="action-button,primary-action"/>
                             <Button fx:id="jwkToPemBtn" text="JWK -> PEM" onAction="#handleJwkToPem" styleClass="secondary-button"/>
                             <Button text="Calc Thumbprint" onAction="#handleCalculateThumbprint" styleClass="secondary-button"/>
-                        </HBox>
+                            <Button fx:id="jwkInspectMetadataBtn" text="Inspect Metadata" onAction="#handleInspectJwkMetadata" styleClass="secondary-button"/>
+                        </FlowPane>
 
                         <Label text="Output:" styleClass="form-label"/>
                         <TextArea fx:id="jwkOutputArea" promptText="Result..." prefRowCount="6" styleClass="result-area,monospace-field" editable="false"/>
@@ -304,6 +346,7 @@
                             <Label text="Key Management:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="jweKeyAlgoCombo" prefWidth="150" styleClass="form-field"/>
+                                <Label fx:id="jweSecurityWarningLabel" wrapText="true" styleClass="helper-text"/>
                                 <Label text="Content:" styleClass="form-label"/>
                                 <ComboBox fx:id="jweContentAlgoCombo" prefWidth="150" styleClass="form-field"/>
                                 <CheckBox fx:id="jweCompressCheck" text="Compress (DEF)"/>
@@ -453,6 +496,7 @@
                             <Label text="Sign Algo:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="nestedSignAlgoCombo" prefWidth="120" styleClass="form-field"/>
+                                <Label fx:id="nestedSecurityWarningLabel" wrapText="true" styleClass="helper-text"/>
                                 <Label text="Signing Key:" styleClass="form-label"/>
                                 <Button text="Import..." onAction="#handleLoadNestedSigningKey" styleClass="link-button"/>
                             </HBox>

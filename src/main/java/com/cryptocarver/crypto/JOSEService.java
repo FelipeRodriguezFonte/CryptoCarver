@@ -26,6 +26,7 @@ public class JOSEService {
     /** Signs an arbitrary payload as compact JWS (unlike generateSignedJWT, no claims parsing). */
     public static String signJws(String payload, String algorithm, String key) throws Exception {
         JWSAlgorithm selected = JWSAlgorithm.parse(algorithm);
+        if ("none".equalsIgnoreCase(selected.getName())) return JoseNoneJws.compact(payload);
         JWSObject object = new JWSObject(new JWSHeader(selected), new Payload(payload));
         object.sign(createSigner(selected, key));
         return object.serialize();
@@ -33,8 +34,9 @@ public class JOSEService {
 
     /** Verifies compact JWS and returns its authenticated payload. */
     public static String verifyJws(String token, String algorithm, String key) throws Exception {
-        JWSObject object = JWSObject.parse(token);
         JWSAlgorithm selected = JWSAlgorithm.parse(algorithm);
+        if ("none".equalsIgnoreCase(selected.getName())) return JoseNoneJws.payloadIfUnsigned(token);
+        JWSObject object = JWSObject.parse(token);
         if (!selected.equals(object.getHeader().getAlgorithm())) {
             throw new IllegalArgumentException("Header algorithm does not match selection");
         }
@@ -86,6 +88,12 @@ public class JOSEService {
     }
 
     public static String generateSignedJWT(String payloadJson, List<SignerConfig> signers, String serializationType, boolean unencodedPayload) throws Exception {
+        return generateSignedJWT(payloadJson, signers, serializationType, unencodedPayload, null);
+    }
+
+    /** Generates a JWT with optional caller-authored protected JWS header parameters. */
+    public static String generateSignedJWT(String payloadJson, List<SignerConfig> signers, String serializationType,
+            boolean unencodedPayload, String customHeaderJson) throws Exception {
         if (signers == null || signers.isEmpty()) {
             throw new IllegalArgumentException("At least one signer must be provided.");
         }
@@ -94,6 +102,13 @@ public class JOSEService {
         }
 
         JWTClaimsSet claimsSet = JWTClaimsSet.parse(payloadJson);
+        if (signers.size() == 1 && "none".equalsIgnoreCase(signers.get(0).getAlgorithm())) {
+            if (unencodedPayload) throw new IllegalArgumentException("alg=none JWT generation does not support b64=false.");
+            if (customHeaderJson != null && !customHeaderJson.isBlank()) {
+                throw new IllegalArgumentException("Custom protected headers are not supported for alg=none.");
+            }
+            return JoseNoneJws.signedJwt(claimsSet.toJSONObject(), serializationType);
+        }
         Payload payload = unencodedPayload ? new Payload(payloadJson) : new Payload(claimsSet.toJSONObject());
 
         if ("Compact".equals(serializationType) && signers.size() == 1) {
@@ -104,7 +119,7 @@ public class JOSEService {
                 headerBuilder.base64URLEncodePayload(false);
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
-            JWSHeader header = headerBuilder.build();
+            JWSHeader header = withCustomJwsHeader(headerBuilder, customHeaderJson);
             JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
@@ -125,7 +140,7 @@ public class JOSEService {
                 headerBuilder.base64URLEncodePayload(false);
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
-            JWSHeader header = headerBuilder.build();
+            JWSHeader header = withCustomJwsHeader(headerBuilder, customHeaderJson);
             JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
 
             JWSObject jwsObject = new JWSObject(header, payload);
@@ -153,6 +168,10 @@ public class JOSEService {
         }
         if (signers.size() > 1 && !("General JSON".equals(serializationType))) {
             throw new IllegalArgumentException("Multiple signatures are only supported when using General JSON serialization.");
+        }
+
+        if (signers.size() == 1 && "none".equalsIgnoreCase(signers.get(0).getAlgorithm())) {
+            return JoseNoneJws.detached(serializationType);
         }
 
         Payload payload = new Payload(rawPayload);
@@ -212,6 +231,7 @@ public class JOSEService {
 
     public static boolean verifyDetachedJWS(String detachedToken, String rawPayload, String algorithmStr, String keyStr,
             JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
+        if ("none".equalsIgnoreCase(algorithmStr)) return JoseNoneJws.verifyDetached(detachedToken, rawPayload);
         JWSObject object;
         try {
             // Try to parse as Compact
@@ -269,7 +289,28 @@ public class JOSEService {
      */
     public static JWSVerifier resolveVerifier(JWSHeader header, String key,
             JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
+        return resolveVerifier(header, key, secretEncoding, false);
+    }
+
+    /** Token-resident keys are considered only when the caller explicitly enables this option. */
+    public static JWSVerifier resolveVerifier(JWSHeader header, String key,
+            JoseKeyMaterial.SecretEncoding secretEncoding, boolean trustHeaderKey) throws Exception {
+        return resolveVerifier(header, key, secretEncoding, trustHeaderKey, Collections.emptySet(), Collections.emptySet());
+    }
+
+    /** Critical parameters explicitly accepted by the validator are surfaced to Nimbus as processed/deferred. */
+    public static JWSVerifier resolveVerifier(JWSHeader header, String key,
+            JoseKeyMaterial.SecretEncoding secretEncoding, boolean trustHeaderKey,
+            java.util.Set<String> processedCritical, java.util.Set<String> deferredCritical) throws Exception {
+        java.util.Set<String> acceptedCritical = new java.util.HashSet<>(processedCritical);
+        acceptedCritical.addAll(deferredCritical);
+        if ((key == null || key.isBlank()) && trustHeaderKey) {
+            key = JoseJwkPolicy.publicKeyMaterialFromHeader(header);
+        }
         JWSAlgorithm algorithm = header.getAlgorithm();
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Provide a verification key or explicitly enable an embedded header key.");
+        }
         String trimmed = key.trim();
         com.nimbusds.jose.jwk.JWK match = null;
         if (trimmed.startsWith("{") && trimmed.contains("\"keys\"")) {
@@ -291,19 +332,80 @@ public class JOSEService {
             if (!JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
                 throw new IllegalArgumentException("A symmetric JWK cannot verify " + algorithm + ".");
             }
-            return new PromiscuousMACVerifier(oct.toByteArray(), algorithm);
+            return withCriticalParams(new PromiscuousMACVerifier(oct.toByteArray(), algorithm), processedCritical, deferredCritical);
         }
         if (match instanceof com.nimbusds.jose.jwk.RSAKey rsa) {
-            return new RSASSAVerifier(rsa.toRSAPublicKey());
+            return withCriticalParams(new RSASSAVerifier(rsa.toRSAPublicKey(), acceptedCritical), processedCritical, deferredCritical);
         }
         if (match instanceof com.nimbusds.jose.jwk.ECKey ec) {
-            return new ECDSAVerifier(ec.toECPublicKey());
+            if (JWSAlgorithm.ES256K.equals(algorithm)) {
+                return withCriticalParams(JoseSecp256k1Jws.verifier(ec.toECPublicKey()), processedCritical, deferredCritical);
+            }
+            return withCriticalParams(new ECDSAVerifier(ec.toECPublicKey(), acceptedCritical), processedCritical, deferredCritical);
         }
         if (match instanceof com.nimbusds.jose.jwk.OctetKeyPair okp) {
-            return EdDsaJws.verifier(JoseKeyMaterial.publicKey(okp.toPublicJWK().toJSONString()));
+            return withCriticalParams(EdDsaJws.verifier(JoseKeyMaterial.publicKey(okp.toPublicJWK().toJSONString())), processedCritical, deferredCritical);
         }
         if (match != null) throw new IllegalArgumentException("Unsupported JWK type: " + match.getKeyType());
-        return createVerifier(algorithm, key, secretEncoding);
+        return withCriticalParams(createVerifier(algorithm, key, secretEncoding), processedCritical, deferredCritical);
+    }
+
+    private static JWSVerifier withCriticalParams(JWSVerifier verifier, java.util.Set<String> processed,
+            java.util.Set<String> deferred) {
+        return new CriticalAwareVerifier(verifier, processed, deferred);
+    }
+
+    private static final class CriticalAwareVerifier implements JWSVerifier, CriticalHeaderParamsAware {
+        private final JWSVerifier delegate;
+        private final java.util.Set<String> processed;
+        private final java.util.Set<String> deferred;
+
+        private CriticalAwareVerifier(JWSVerifier delegate, java.util.Set<String> processed,
+                java.util.Set<String> deferred) {
+            this.delegate = delegate;
+            this.processed = java.util.Set.copyOf(processed);
+            this.deferred = java.util.Set.copyOf(deferred);
+        }
+
+        @Override public boolean verify(JWSHeader header, byte[] signedContent, com.nimbusds.jose.util.Base64URL signature)
+                throws JOSEException {
+            JWSHeader verificationHeader = header;
+            if (!deferred.isEmpty() && header.getCriticalParams() != null) {
+                java.util.Set<String> remaining = new java.util.HashSet<>(header.getCriticalParams());
+                remaining.removeAll(deferred);
+                java.util.Map<String, Object> json = new java.util.LinkedHashMap<>(header.toJSONObject());
+                if (remaining.isEmpty()) json.remove("crit"); else json.put("crit", remaining);
+                try {
+                    verificationHeader = JWSHeader.parse(json);
+                } catch (java.text.ParseException ex) {
+                    throw new JOSEException("Could not prepare explicitly deferred critical parameters.", ex);
+                }
+            }
+            return delegate.verify(verificationHeader, signedContent, signature);
+        }
+        @Override public java.util.Set<JWSAlgorithm> supportedJWSAlgorithms() { return delegate.supportedJWSAlgorithms(); }
+        @Override public com.nimbusds.jose.jca.JCAContext getJCAContext() { return delegate.getJCAContext(); }
+        @Override public java.util.Set<String> getProcessedCriticalHeaderParams() { return processed; }
+        @Override public java.util.Set<String> getDeferredCriticalHeaderParams() { return deferred; }
+    }
+
+    static JWSHeader withCustomJwsHeader(JWSHeader.Builder builder, String customHeaderJson) throws Exception {
+        JWSHeader base = builder.build();
+        if (customHeaderJson == null || customHeaderJson.isBlank()) return base;
+        Map<String, Object> custom;
+        try {
+            custom = com.nimbusds.jose.util.JSONObjectUtils.parse(customHeaderJson);
+        } catch (java.text.ParseException e) {
+            throw new IllegalArgumentException("Protected header parameters must be a JSON object: " + e.getMessage(), e);
+        }
+        for (String reserved : List.of("alg", "b64", "crit")) {
+            if (custom.containsKey(reserved)) {
+                throw new IllegalArgumentException("Protected header JSON cannot override '" + reserved + "'.");
+            }
+        }
+        Map<String, Object> merged = new java.util.LinkedHashMap<>(base.toJSONObject());
+        merged.putAll(custom);
+        return JWSHeader.parse(merged);
     }
 
     public static String generateNestedJWT(String payloadJson, String signAlgoStr, String signKey, String keyAlgoStr, String encAlgoStr, String encKey) throws Exception {
@@ -393,6 +495,8 @@ public class JOSEService {
     /** {@code secretEncoding} decodes HMAC secrets; RSA/EC keys ignore it. */
     public static JWSSigner createSigner(JWSAlgorithm jwsAlgo, String secretOrKey,
             JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
+        if ("none".equalsIgnoreCase(jwsAlgo.getName())) return JoseNoneJws.signer();
+        if (JWSAlgorithm.ES256K.equals(jwsAlgo)) return JoseSecp256k1Jws.signer(JoseKeyMaterial.privateKey(secretOrKey));
         if (JWSAlgorithm.Family.HMAC_SHA.contains(jwsAlgo)) {
             if (secretOrKey.trim().startsWith("-----BEGIN")) {
                 throw new IllegalArgumentException("Detected PEM Key for HMAC Algorithm. HMAC uses a shared secret.");
@@ -414,7 +518,9 @@ public class JOSEService {
             java.security.PublicKey pubKey = parseRSAPublicKey(encKey);
             return new RSAEncrypter((java.security.interfaces.RSAPublicKey) pubKey);
         } else if (JWEAlgorithm.Family.ECDH_ES.contains(jweAlgo)) {
-            return new ECDHEncrypter(JoseKeyMaterial.ecPublicKey(encKey));
+            java.security.PublicKey publicKey = JoseKeyMaterial.publicKey(encKey);
+            if (publicKey instanceof java.security.interfaces.XECPublicKey) return JoseXdhJwe.encrypter(publicKey);
+            return new ECDHEncrypter((java.security.interfaces.ECPublicKey) publicKey);
         } else if (JWEAlgorithm.DIR.equals(jweAlgo)) {
             byte[] keyBytes = encKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             return new DirectEncrypter(keyBytes);
@@ -425,17 +531,14 @@ public class JOSEService {
 
     private static JWEAlgorithm requireStrongJweAlgorithm(String name) {
         JWEAlgorithm algorithm = JWEAlgorithm.parse(name);
-        if (JWEAlgorithm.RSA_OAEP.equals(algorithm)) {
-            throw new IllegalArgumentException("RSA-OAEP with SHA-1 is disabled; use RSA-OAEP-256");
-        }
-        if (!JWEAlgorithm.RSA_OAEP_256.equals(algorithm) && !JWEAlgorithm.DIR.equals(algorithm)) {
+        if (!JWEAlgorithm.Family.RSA.contains(algorithm) && !JWEAlgorithm.DIR.equals(algorithm)) {
             throw new IllegalArgumentException("Unsupported JWE key algorithm: " + name);
         }
         return algorithm;
     }
 
     private static JWEDecrypter createDecrypter(JWEAlgorithm algorithm, String key) throws Exception {
-        if (JWEAlgorithm.RSA_OAEP_256.equals(algorithm)) {
+        if (JWEAlgorithm.Family.RSA.contains(algorithm)) {
             return new RSADecrypter(parseRSAPrivateKey(key));
         }
         return new DirectDecrypter(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -450,6 +553,8 @@ public class JOSEService {
     /** {@code secretEncoding} decodes HMAC secrets; RSA/EC keys ignore it. */
     public static JWSVerifier createVerifier(JWSAlgorithm algorithm, String key,
             JoseKeyMaterial.SecretEncoding secretEncoding) throws Exception {
+        if ("none".equalsIgnoreCase(algorithm.getName())) return JoseNoneJws.verifier();
+        if (JWSAlgorithm.ES256K.equals(algorithm)) return JoseSecp256k1Jws.verifier(JoseKeyMaterial.publicKey(key));
         if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
             return new PromiscuousMACVerifier(JoseKeyMaterial.secret(key, secretEncoding), algorithm);
         }

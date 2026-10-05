@@ -41,7 +41,7 @@ public final class JweComposer {
 
     /** Key-management algorithms offered for encryption, in UI order. */
     public static final List<String> KEY_ALGORITHMS = List.of(
-            "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512",
+            "RSA1_5", "RSA-OAEP", "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512",
             "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW",
             "A128KW", "A192KW", "A256KW",
             "A128GCMKW", "A192GCMKW", "A256GCMKW",
@@ -199,11 +199,12 @@ public final class JweComposer {
     public static JWEEncrypter encrypter(JWEAlgorithm alg, String keyInput, SecretEncoding secretEncoding,
             int pbes2Iterations) throws Exception {
         if (JWEAlgorithm.Family.RSA.contains(alg)) {
-            requireStrongRsa(alg);
             return new RSAEncrypter(JoseKeyMaterial.rsaPublicKey(keyInput));
         }
         if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-            return new ECDHEncrypter(JoseKeyMaterial.ecPublicKey(keyInput));
+            java.security.PublicKey publicKey = JoseKeyMaterial.publicKey(keyInput);
+            if (publicKey instanceof java.security.interfaces.XECPublicKey) return JoseXdhJwe.encrypter(publicKey);
+            return new ECDHEncrypter((java.security.interfaces.ECPublicKey) publicKey);
         }
         if (JWEAlgorithm.Family.AES_KW.contains(alg) || JWEAlgorithm.Family.AES_GCM_KW.contains(alg)) {
             return new AESEncrypter(requireAesKey(alg, JoseKeyMaterial.secret(keyInput, secretEncoding)));
@@ -229,9 +230,10 @@ public final class JweComposer {
             return new RSADecrypter(loaded.privateKey);
         }
         if (JWEAlgorithm.Family.ECDH_ES.contains(alg)) {
-            java.security.interfaces.ECPrivateKey key = JoseKeyMaterial.ecPrivateKey(keyInput);
+            java.security.PrivateKey key = JoseKeyMaterial.privateKey(keyInput);
             loaded.privateKey = key;
-            return new ECDHDecrypter(key);
+            if (key instanceof java.security.interfaces.XECPrivateKey) return JoseXdhJwe.decrypter(key);
+            return new ECDHDecrypter((java.security.interfaces.ECPrivateKey) key);
         }
         loaded.secret = JoseKeyMaterial.secret(keyInput, secretEncoding);
         if (JWEAlgorithm.Family.AES_KW.contains(alg) || JWEAlgorithm.Family.AES_GCM_KW.contains(alg)) {
@@ -315,12 +317,6 @@ public final class JweComposer {
     public static final class LoadedKey {
         public java.security.PrivateKey privateKey;
         public byte[] secret;
-    }
-
-    private static void requireStrongRsa(JWEAlgorithm alg) {
-        if (JWEAlgorithm.RSA1_5.equals(alg) || JWEAlgorithm.RSA_OAEP.equals(alg)) {
-            throw new IllegalArgumentException(alg.getName() + " is disabled for encryption; use RSA-OAEP-256 or stronger.");
-        }
     }
 
     private static byte[] requireAesKey(JWEAlgorithm alg, byte[] key) {

@@ -144,6 +144,8 @@ public final class JoseKeyMaterial {
             jwk = JWK.parse(json);
         }
         if (jwk instanceof OctetKeyPair okp) return fromOkp(okp);
+        if (jwk instanceof com.nimbusds.jose.jwk.ECKey ecKey
+                && Curve.SECP256K1.equals(ecKey.getCurve())) return fromSecp256k1Jwk(ecKey);
         if (!(jwk instanceof AsymmetricJWK asymmetric)) {
             throw new IllegalArgumentException("A symmetric (oct) JWK is not an RSA/EC key; use it as a shared secret instead.");
         }
@@ -151,7 +153,6 @@ public final class JoseKeyMaterial {
     }
 
     private static Object fromPem(String pem) throws Exception {
-        JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
         try (PEMParser parser = new PEMParser(new StringReader(pem))) {
             Object object = parser.readObject();
             if (object == null) throw new IllegalArgumentException("No PEM object found in the supplied key material.");
@@ -159,10 +160,10 @@ public final class JoseKeyMaterial {
                 throw new IllegalArgumentException("Encrypted PEM keys are not supported; decrypt the key first.");
             }
             if (object instanceof PEMKeyPair pair) return fromTraditional(pair.getPrivateKeyInfo());
-            if (object instanceof PrivateKeyInfo info) return converter.getPrivateKey(info);
-            if (object instanceof SubjectPublicKeyInfo info) return converter.getPublicKey(info);
+            if (object instanceof PrivateKeyInfo info) return convertPrivateKey(info);
+            if (object instanceof SubjectPublicKeyInfo info) return convertPublicKey(info);
             if (object instanceof X509CertificateHolder certificate) {
-                return converter.getPublicKey(certificate.getSubjectPublicKeyInfo());
+                return convertPublicKey(certificate.getSubjectPublicKeyInfo());
             }
             throw new IllegalArgumentException("Unsupported PEM object: " + object.getClass().getSimpleName());
         }
@@ -182,7 +183,37 @@ public final class JoseKeyMaterial {
             info = new PrivateKeyInfo(new AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey,
                     sec1.getParametersObject()), sec1);
         }
-        return new JcaPEMKeyConverter().getPrivateKey(info);
+        return convertPrivateKey(info);
+    }
+
+    private static PrivateKey convertPrivateKey(PrivateKeyInfo info) throws Exception {
+        try { return new JcaPEMKeyConverter().getPrivateKey(info); }
+        catch (Exception platformFailure) {
+            try { return new JcaPEMKeyConverter().setProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider()).getPrivateKey(info); }
+            catch (Exception bcFailure) { bcFailure.addSuppressed(platformFailure); throw bcFailure; }
+        }
+    }
+
+    private static PublicKey convertPublicKey(SubjectPublicKeyInfo info) throws Exception {
+        try { return new JcaPEMKeyConverter().getPublicKey(info); }
+        catch (Exception platformFailure) {
+            try { return new JcaPEMKeyConverter().setProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider()).getPublicKey(info); }
+            catch (Exception bcFailure) { bcFailure.addSuppressed(platformFailure); throw bcFailure; }
+        }
+    }
+
+    private static Object fromSecp256k1Jwk(com.nimbusds.jose.jwk.ECKey jwk) throws Exception {
+        org.bouncycastle.asn1.x9.X9ECParameters named = org.bouncycastle.asn1.x9.ECNamedCurveTable
+                .getByName("secp256k1");
+        if (named == null) throw new IllegalStateException("The bundled EC provider has no secp256k1 parameters.");
+        java.security.spec.ECParameterSpec params = EC5Util.convertToSpec(named);
+        KeyFactory factory = KeyFactory.getInstance("EC", new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        if (jwk.isPrivate()) {
+            return factory.generatePrivate(new java.security.spec.ECPrivateKeySpec(
+                    new java.math.BigInteger(1, jwk.getD().decode()), params));
+        }
+        return factory.generatePublic(new ECPublicKeySpec(new ECPoint(
+                new java.math.BigInteger(1, jwk.getX().decode()), new java.math.BigInteger(1, jwk.getY().decode())), params));
     }
 
     /** DER prefixes that wrap a raw RFC 8037 key into SubjectPublicKeyInfo / PKCS#8. */
@@ -190,20 +221,30 @@ public final class JoseKeyMaterial {
     private static final byte[] ED448_SPKI = DataConverter.hexToBytes("3043300506032b6571033a00");
     private static final byte[] ED25519_PKCS8 = DataConverter.hexToBytes("302e020100300506032b657004220420");
     private static final byte[] ED448_PKCS8 = DataConverter.hexToBytes("3047020100300506032b6571043b0439");
+    private static final byte[] X25519_SPKI = DataConverter.hexToBytes("302a300506032b656e032100");
+    private static final byte[] X448_SPKI = DataConverter.hexToBytes("3042300506032b656f033900");
+    private static final byte[] X25519_PKCS8 = DataConverter.hexToBytes("302e020100300506032b656e04220420");
+    private static final byte[] X448_PKCS8 = DataConverter.hexToBytes("3046020100300506032b656f043a0438");
 
-    /** Ed25519 / Ed448 OKP JWK to JDK keys; Nimbus needs Tink for this conversion. */
+    /** RFC 8037 OKP JWK to JDK keys. Nimbus's XDH conversion needs optional Tink. */
     private static Object fromOkp(OctetKeyPair okp) throws Exception {
         boolean ed25519 = Curve.Ed25519.equals(okp.getCurve());
-        if (!ed25519 && !Curve.Ed448.equals(okp.getCurve())) {
-            throw new IllegalArgumentException("Only Ed25519 and Ed448 OKP keys are supported (got " + okp.getCurve() + ").");
+        boolean ed448 = Curve.Ed448.equals(okp.getCurve());
+        boolean x25519 = Curve.X25519.equals(okp.getCurve());
+        boolean x448 = Curve.X448.equals(okp.getCurve());
+        if (!ed25519 && !ed448 && !x25519 && !x448) {
+            throw new IllegalArgumentException("Only Ed25519, Ed448, X25519 and X448 OKP keys are supported (got " + okp.getCurve() + ").");
         }
-        KeyFactory factory = KeyFactory.getInstance(ed25519 ? "Ed25519" : "Ed448");
+        String algorithm = ed25519 ? "Ed25519" : ed448 ? "Ed448" : x25519 ? "X25519" : "X448";
+        KeyFactory factory = KeyFactory.getInstance(algorithm);
         if (okp.isPrivate()) {
             return factory.generatePrivate(new PKCS8EncodedKeySpec(
-                    concat(ed25519 ? ED25519_PKCS8 : ED448_PKCS8, okp.getDecodedD())));
+                    concat(ed25519 ? ED25519_PKCS8 : ed448 ? ED448_PKCS8
+                            : x25519 ? X25519_PKCS8 : X448_PKCS8, okp.getDecodedD())));
         }
         return factory.generatePublic(new X509EncodedKeySpec(
-                concat(ed25519 ? ED25519_SPKI : ED448_SPKI, okp.getDecodedX())));
+                concat(ed25519 ? ED25519_SPKI : ed448 ? ED448_SPKI
+                        : x25519 ? X25519_SPKI : X448_SPKI, okp.getDecodedX())));
     }
 
     /** Raw RFC 8037 public key bytes of an Ed25519 / Ed448 key. */
@@ -219,6 +260,29 @@ public final class JoseKeyMaterial {
         return org.bouncycastle.asn1.ASN1OctetString.getInstance(info.parsePrivateKey()).getOctets();
     }
 
+    /** Raw RFC 8037 public coordinate for an X25519 / X448 key. */
+    public static byte[] rawXPublicKey(PublicKey key) {
+        byte[] der = key.getEncoded();
+        int length = "X448".equalsIgnoreCase(xdhCurveName(key)) ? 56 : 32;
+        return java.util.Arrays.copyOfRange(der, der.length - length, der.length);
+    }
+
+    /** Raw RFC 8037 private scalar for an X25519 / X448 key. */
+    public static byte[] rawXPrivateKey(PrivateKey key) {
+        if (key instanceof java.security.interfaces.XECPrivateKey xec) {
+            return xec.getScalar().orElseThrow(() -> new IllegalArgumentException("The XDH private scalar is unavailable."));
+        }
+        throw new IllegalArgumentException("The supplied key is not an X25519 or X448 private key.");
+    }
+
+    public static String xdhCurveName(java.security.Key key) {
+        if (key instanceof java.security.interfaces.XECKey xec
+                && xec.getParams() instanceof java.security.spec.NamedParameterSpec named) {
+            return named.getName();
+        }
+        return key.getAlgorithm();
+    }
+
     private static byte[] concat(byte[] prefix, byte[] raw) {
         byte[] out = java.util.Arrays.copyOf(prefix, prefix.length + raw.length);
         System.arraycopy(raw, 0, out, prefix.length, raw.length);
@@ -226,7 +290,7 @@ public final class JoseKeyMaterial {
     }
 
     private static Object fromBareDer(byte[] der) {
-        for (String algorithm : new String[] { "RSA", "EC", "Ed25519", "Ed448" }) {
+        for (String algorithm : new String[] { "RSA", "EC", "Ed25519", "Ed448", "X25519", "X448" }) {
             try {
                 return KeyFactory.getInstance(algorithm).generatePrivate(new PKCS8EncodedKeySpec(der));
             } catch (Exception ignored) {
@@ -260,6 +324,21 @@ public final class JoseKeyMaterial {
                     : new org.bouncycastle.crypto.params.Ed448PrivateKeyParameters(seed).generatePublicKey().getEncoded();
             return KeyFactory.getInstance(ed25519 ? "Ed25519" : "Ed448")
                     .generatePublic(new X509EncodedKeySpec(concat(ed25519 ? ED25519_SPKI : ED448_SPKI, raw)));
+        }
+        if (key instanceof java.security.interfaces.XECPrivateKey xec) {
+            String curve = xdhCurveName(key);
+            boolean x25519 = "X25519".equalsIgnoreCase(curve);
+            byte[] scalar = xec.getScalar().orElseThrow(() -> new IllegalArgumentException("The XDH private scalar is unavailable."));
+            byte[] raw;
+            if (x25519) {
+                raw = new org.bouncycastle.crypto.params.X25519PrivateKeyParameters(scalar, 0).generatePublicKey().getEncoded();
+            } else if ("X448".equalsIgnoreCase(curve)) {
+                raw = new org.bouncycastle.crypto.params.X448PrivateKeyParameters(scalar, 0).generatePublicKey().getEncoded();
+            } else {
+                throw new IllegalArgumentException("Unsupported XDH curve: " + curve);
+            }
+            return KeyFactory.getInstance(x25519 ? "X25519" : "X448")
+                    .generatePublic(new X509EncodedKeySpec(concat(x25519 ? X25519_SPKI : X448_SPKI, raw)));
         }
         throw new IllegalArgumentException("Cannot derive a public key from a " + key.getAlgorithm() + " private key.");
     }
