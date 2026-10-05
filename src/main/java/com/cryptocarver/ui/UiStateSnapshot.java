@@ -48,7 +48,7 @@ public final class UiStateSnapshot {
 
     private static final Set<String> HISTORY_SENSITIVE_TOKENS = Set.of(
         "kbpk", "cvk", "pvk", "pin", "pan", "cvv",
-            "key", "imk", "mk", "udk", "sk", "password", "secret", "private", "certificate", "cert",
+            "key", "imk", "mk", "udk", "sk", "arqc", "arpc", "password", "secret", "private", "certificate", "cert",
             "iv", "nonce", "aad", "salt", "token", "mac", "signature",
             // EMV issuer/master-key abbreviations and existing input controls
             // whose contents are secret despite a generic or abbreviated id.

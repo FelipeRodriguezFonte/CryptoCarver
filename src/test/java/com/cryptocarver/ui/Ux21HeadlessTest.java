@@ -75,7 +75,8 @@ class Ux21HeadlessTest {
                 "pinField", "panField", "cvvField", "keyField", "passwordField",
                 "secretField", "privateCertificateField", "certInputArea", "certIssueCaKeyArea",
                 "certField", "ivField", "nonceField",
-                "aadField", "saltField", "tokenField", "macField", "signatureField")) {
+                "aadField", "saltField", "tokenField", "macField", "signatureField",
+                "skARPCField", "arqcField", "arpcField")) {
             assertTrue(UiStateSnapshot.isHistorySensitiveField(field), field);
         }
         for (String selector : List.of("algorithmCombo", "formatChoice", "modeCombo",
