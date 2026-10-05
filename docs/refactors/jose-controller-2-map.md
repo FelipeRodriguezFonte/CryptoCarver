@@ -19,3 +19,9 @@ Estado común: no hay claves cargadas independientes: viven en TextArea; no se c
 Lógica pura: construcción/lectura JOSE y formato con servicios existentes. UI: lectura de controles, validación, colores, publicación y diálogos. No se cambia crypto/, OperationResult, StatusReporter ni las políticas del shell.
 
 Caracterización: claves inventadas, salidas aleatorias comprobadas semánticamente y normalizadas antes del SHA-256; errores de proveedor solo comprobados como legibles, no incluidos textualmente. EN/ES y FULL_LAB/MASKED/REDACTED. Tests existentes intactos; cualquier fallo se anota antes del arreglo en el registro de la fase.
+
+Digests fijados y verificados antes de extracción:
+- Serializaciones/opciones/privacidad: `898aa2dc9da06352c580966e0a54dee58d8db86d94ea2bcc3febe5beb7d42401`.
+- Algoritmos/avisos/CEK/errores: `784d6a61e011dee39d8c2c5f6798bd4a29484f2fbc86d8f041d4e39ed69272fd`.
+
+Caracterización destapó PUBLIC por omisión en plaintext Compact y JSON; ambas corregidas como SECRET, en commits separados y antes de fijar los digests. Las cuatro pruebas JOSE originales no se modifican.

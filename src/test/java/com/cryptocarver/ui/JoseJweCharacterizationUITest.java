@@ -74,7 +74,7 @@ class JoseJweCharacterizationUITest {
                     p.published("decrypted_"+serialization);
                     p.privacy(p.reporter.result, KEY, PAYLOAD);
                 }
-                p.digest("UNFIXED");
+                p.digest("898aa2dc9da06352c580966e0a54dee58d8db86d94ea2bcc3febe5beb7d42401");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }
@@ -173,7 +173,7 @@ class JoseJweCharacterizationUITest {
                     p.line(language+"_invalid_iterations", p.reporter.error);
                 }
 
-                p.digest("UNFIXED");
+                p.digest("784d6a61e011dee39d8c2c5f6798bd4a29484f2fbc86d8f041d4e39ed69272fd");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }
