@@ -698,7 +698,8 @@ public class EMVController {
             details.put("ARC", arc);
             details.put("Session Key", "[not persisted]");
             mainController.publish(OperationResult.forOperation("ARPC Generation")
-                    .output(com.cryptocarver.util.DataConverter.hexToBytes(arpc)).details(details)
+                    .output(com.cryptocarver.util.DataConverter.hexToBytes(arpc),
+                            com.cryptocarver.model.OperationDetail.Classification.SECRET).details(details)
                     .status(t("module.emv.status.arpc")).build());
 
         } catch (Exception e) {
