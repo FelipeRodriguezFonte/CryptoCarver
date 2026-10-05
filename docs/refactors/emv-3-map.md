@@ -59,4 +59,4 @@ After extraction, the source-ownership assertion was moved to `EmvArpcCoordinato
 
 The CI-filtered UI count (526) differs from the full suite (2870). Its `ExpandedViewerLifecycleUITest` passed 3/3, so no comparison against `main` was needed. The phase 3 characterization ran in the enabled and CI-filtered UI suites with its final digest unchanged. No CI thresholds were relaxed.
 
-Controller line counts across the three phases: phase 1 `1469 → 1352`; phase 2 `1352 → 1156`; phase 3 `1156 → 1051`. This phase's ARPC, module clear and profile-load handlers are one-line delegates and the public controller API is unchanged. The branch is intended to finish clean; verify the final working tree after this map entry is committed.
+Controller line counts across the three phases: phase 1 `1469 → 1352`; phase 2 `1352 → 1156`; phase 3 `1156 → 1051`. This phase's ARPC, module clear and profile-load handlers are one-line delegates and the public controller API is unchanged. The final audit confirmed a clean `codex/emv-1` working tree; the primary `main` checkout remains clean at `f31bb891`.
