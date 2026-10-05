@@ -47,4 +47,16 @@ The extraction is implemented locally in `EmvArpcCoordinator` and `EmvModuleStat
 
 The focused real-UI `EmvArpcCharacterizationUITest` plus existing `EmvProfileStatusUITest` passed after extraction, preserving final SHA-256 `6cf3f9748b45372e6dd05403e01b1197d220bdecd79d0a6ee1c1b817faaf3f33` and the two EN/ES profile status checks. `SpecializedFeedbackHeadlessTest` then ran 2 tests and failed 1 assertion: it still requires `module.emv.feedback.arpcRequired` in `EMVController`, but that validation is now owned by `EmvArpcCoordinator`. This is a stale source-ownership expectation, not a runtime/localization regression. Before editing it, move this key assertion to `EmvArpcCoordinator` while retaining the existing EN and ES resource checks, as was done for the earlier coordinator extractions.
 
-The three full phase 3 gates remain to be completed and recorded here.
+## Phase 3 gates
+
+After extraction, the source-ownership assertion was moved to `EmvArpcCoordinator`; its focused headless test passed 2/2. The three full phase gates then passed:
+
+| Command | Tests | Failures | Errors | Skipped |
+|---|---:|---:|---:|---:|
+| `mvn -o -q test -Plow-cpu` | 2870 | 0 | 0 | 1 |
+| `mvn -o -q test -Plow-cpu -DrunUiTests=true` | 2870 | 0 | 0 | 1 |
+| `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test` | 526 | 0 | 0 | 0 |
+
+The CI-filtered UI count (526) differs from the full suite (2870). Its `ExpandedViewerLifecycleUITest` passed 3/3, so no comparison against `main` was needed. The phase 3 characterization ran in the enabled and CI-filtered UI suites with its final digest unchanged. No CI thresholds were relaxed.
+
+Controller line counts across the three phases: phase 1 `1469 → 1352`; phase 2 `1352 → 1156`; phase 3 `1156 → 1051`. This phase's ARPC, module clear and profile-load handlers are one-line delegates and the public controller API is unchanged. The branch is intended to finish clean; verify the final working tree after this map entry is committed.
