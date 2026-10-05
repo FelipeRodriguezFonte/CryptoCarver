@@ -483,7 +483,7 @@
                                               GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="form-field"/>
 
                                     <Label text="Discretionary Data:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label" wrapText="true" minHeight="-Infinity"/>
-                                    <TextField fx:id="discretionaryDataField" promptText="Optional" maxWidth="Infinity"
+                                    <TextField fx:id="track2DiscretionaryInputField" promptText="Optional" maxWidth="Infinity"
                                               GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="form-field"/>
                                 </GridPane>
 
