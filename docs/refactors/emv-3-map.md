@@ -32,6 +32,8 @@ The separate output-classification correction is commit `99111e3`. After that ch
 
 The remaining History leak is field classification: `UiStateSnapshot` already redacts `skARPCField` using the `sk` token but does not recognize `arqcField`, so the recipe retains the invented input ARQC under both restricted profiles. The existing token policy should recognize both `arqcField` and any ARPC input field by adding the explicit `arqc`/`arpc` abbreviations; ARC/CSU metadata remains public. A positive unit assertion will guard this classification. Record this finding before changing the history classifier.
 
+After adding the explicit cryptogram tokens in commit `3559427`, all six shared result surfaces are safe under `MASKED`/`REDACTED`; the portable post-history-classification digest is `e9f7206912a51806577e3ac2197efa073b06f926f8b332332d1e06b31a5c5f1b`. The repeated characterization matches its pinned transition digest and fails only the still-recorded EN/ES provider-error localization. That remaining failure is isolated to a two-byte invented Session Key passing the ARPC UI through to the cryptographic provider without a localized input-length check.
+
 ## Repairs, extraction and phase gates
 
 Record separate commits for the ARPC classification fix, its characterized digest transition, localized key-length feedback, the resulting digest transition, and extraction. Once those and the three requested phase gates pass, record all command counts and the final digest here.
