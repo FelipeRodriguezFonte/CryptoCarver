@@ -13,7 +13,18 @@ Segunda ejecución dirigida, con la etiqueta de estado ajustada y la normalizaci
 - `completeRunDryRunAndPaletteHaveStableTranscript` alcanzó el digest provisional y reveló que `normalizeDryRun()` sustituye IDs simples en cualquier parte del texto: transformó por accidente etiquetas visibles como `Console input` y `Console output`. El ID del preset es estable, así que se anotó esta discrepancia del helper antes de corregirlo. La transcripción también muestra `HASH/INCOMPLETE` en dry-run, aunque el mismo preset acaba de ejecutarse con éxito; se comprobará la semántica del validador antes de decidir si es un defecto de producto o una expectativa incorrecta.
 - El transcript de perfiles/preflight pasó todas las aserciones de comportamiento y privacidad. Su digest provisional con la excepción normalizada es `c8160b2b00c26b16ef19b4a43063f2c9685e058e112806dbbacf9f810596f5d1`.
 
-Los dos digests de esta sección se observaron con marcador cero deliberado; aún no están fijados.
+Los dos digests de esta sección se observaron con marcador cero deliberado y no son los definitivos.
+
+## Resultado tras la reparación y fijación
+
+La reparación se comprometió en `31e557d` (`fix: align process dry-run port aliases`), con una prueba unitaria nueva para el alias de target explícito `payload` y el target implícito de un puerto único. `ProcessValidatorTest` pasó sus 10 pruebas. El dry-run del preset de SHA-256 ahora presenta 3 nodos `READY`, en acuerdo con la ejecución real.
+
+`ProcessDesignerExecutionCharacterizationUITest` pasó 2/2 pruebas en JavaFX. Se fijaron los digests reproducidos en dos ejecuciones consecutivas:
+
+- Ejecución completa + dry-run + filtro de paleta: `b925165010bd8ff31c1645f094b3a8073ad12bfa834347cb91212425f987afd3`.
+- Secretos suministrados + perfiles + preflight: `c8160b2b00c26b16ef19b4a43063f2c9685e058e112806dbbacf9f810596f5d1`.
+
+Las duraciones se normalizan como `<duration>`, los textos de excepciones del JDK/proveedor como `<jdk-exception>`, y no se incluyen rutas ni valores aleatorios. Las claves de los escenarios son sintéticas y no se incorporan a la transcripción.
 
 Confirmación del dry-run divergente, antes de cualquier cambio de código:
 
