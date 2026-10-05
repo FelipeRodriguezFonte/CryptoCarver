@@ -5,3 +5,7 @@
 - Arreglo acotado previsto: declarar SECRET únicamente en la salida descifrada anidada, usando la API existente. Ningún cambio en crypto/, OperationResult, shell o políticas.
 - Error del fixture corregido antes: `JOSEService.verifyJws` solo admite Compact. Para JSON se verifica la firma reconstruyendo el payload mediante verifyDetachedJWS; no era un defecto de producción.
 - Privacidad: el fixture usa el renderer real que alimenta el visor expandido y la función real visibleOperationDetails del shell para historial; Shelf se evalúa con ResultPresentationPolicy y se comprueba inalterado. Historial aislado en memoria, settings restaurados. La fase no añade telemetría; revisión de fuentes: estos métodos no envían material a una API de telemetría. Las advertencias públicas se fijan en EN/ES.
+
+## Puerta default tras extracción
+
+2892 tests, 1 fallo, 0 errores, 1 omitido. Único fallo: `SpecializedFeedbackHeadlessTest.specializedValidationFeedbackHasDistinctEnglishAndSpanishKeys`, aserción de presencia de `module.jose.feedback.statusDetachedGenerated` en JOSEController. La clave se ha movido intacta a JoseJwtCoordinator. Se ajusta únicamente el propietario fuente de cuatro claves extraídas (`statusDetachedGenerated`, `statusJwtGenerated`, `statusJwtValidation`, `statusNested`) usando el mapa existente coordinatorKeys. Se mantienen las mismas aserciones de presencia y textos EN/ES distintos; no se relajan umbrales ni se cambian las cuatro pruebas JOSE exigidas. No es un defecto preexistente ni de comportamiento. Se repetirá la misma puerta antes de continuar.

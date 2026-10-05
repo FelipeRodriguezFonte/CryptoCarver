@@ -34,3 +34,5 @@ JWT/JWS comparten firmantes, validación y controles; un solo JoseJwtCoordinator
 Digest JWT/JWS fijado y verificado antes de extracción: `526ed1435a5950126aae7065abbaeee3b6c9bb81c8cee77c3a4841e7e599537e`. Las nuevas comprobaciones de algoritmos permitidos/RFC9068/OIDC/crit preservan el comportamiento observado; una prohibición de algoritmo impide verificar (rojo), no es solo una advertencia (naranja).
 
 Extracción: JOSEController pasa de 2141 a 1828 líneas. Se extraen 16 métodos (incluye sobrecargas), más helpers de avisos compartidos. Los proveedores de View/reporter son vivos y el getter del coordinador es perezoso: funciona tanto antes como después de FXML/setReporter. Los listeners de advertencias y su orden siguen en initialize. Las claves literales de los campos de validación permanecen intactas. Digest y cuatro pruebas JOSE originales pasan tras extracción.
+
+Aserción fuente obsoleta justificada: SpecializedFeedbackHeadlessTest buscaba los cuatro status JWT/JWS en el controlador; se verifican en JoseJwtCoordinator conservando el contrato de presencia y traducciones. Detalle en registro de fallos. No cambia ningún test JOSE existente.

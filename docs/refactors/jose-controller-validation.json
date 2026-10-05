@@ -1,0 +1,15 @@
+[
+  {
+    "phase": 1,
+    "gate": "default",
+    "exit": 1,
+    "reports": 435,
+    "tests": 2892,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 1,
+    "failed": [
+      "com.cryptocarver.ui.SpecializedFeedbackHeadlessTest"
+    ]
+  }
+]
