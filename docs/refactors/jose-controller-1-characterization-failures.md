@@ -9,3 +9,9 @@
 ## Puerta default tras extracción
 
 2892 tests, 1 fallo, 0 errores, 1 omitido. Único fallo: `SpecializedFeedbackHeadlessTest.specializedValidationFeedbackHasDistinctEnglishAndSpanishKeys`, aserción de presencia de `module.jose.feedback.statusDetachedGenerated` en JOSEController. La clave se ha movido intacta a JoseJwtCoordinator. Se ajusta únicamente el propietario fuente de cuatro claves extraídas (`statusDetachedGenerated`, `statusJwtGenerated`, `statusJwtValidation`, `statusNested`) usando el mapa existente coordinatorKeys. Se mantienen las mismas aserciones de presencia y textos EN/ES distintos; no se relajan umbrales ni se cambian las cuatro pruebas JOSE exigidas. No es un defecto preexistente ni de comportamiento. Se repetirá la misma puerta antes de continuar.
+
+## Revisión del fixture de crit
+
+El primer fixture intentaba generar un header custom con `crit`, que JOSEService rechaza explícitamente. Sus líneas crit_ignore/crit_understood caracterizaban los controles y el token anterior retenido, no la verificación de un token con crit. Se conserva ese digest, se afirma explícitamente el rechazo de generación y se añade una transcripción independiente con un token Nimbus que sí contiene un parámetro crítico inventado. No es un fallo de producción. El nuevo fixture se ejecutará aislado sobre el JOSEController previo a la extracción y sobre el extraído, sin cambiar la rama ni trabajar fuera de este worktree.
+
+El fixture adicional esperaba rojo para crit desconocido; en el código anterior a la extracción el resultado es naranja (firma verificada y finding unsupportedCrit). Se corrige la aserción para verificar el rechazo global de claims y el finding localizado, sin cambiar producción ni la transcripción semántica INVALID.

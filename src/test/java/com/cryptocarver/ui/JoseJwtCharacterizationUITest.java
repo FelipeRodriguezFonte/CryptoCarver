@@ -77,6 +77,8 @@ class JoseJwtCharacterizationUITest {
                 ((TextField)p.control("jwtExpectedNonceField")).clear();
                 p.area("jwtProtectedHeaderArea").setText("{\"crit\":[\"toy\"],\"toy\":true}");
                 p.invoke("handleGenerateSignedJWT");
+                assertEquals("Protected header JSON cannot override 'crit'.", p.reporter.error);
+                // Rejected generation retains the previous token; real crit is tested separately below.
                 p.area("jwtValidateTokenArea").setText(p.area("jwtOutputArea").getText());
                 p.check("jwtIgnoreCritCheck").setSelected(true);
                 p.invoke("handleValidateJWT");
@@ -124,6 +126,44 @@ class JoseJwtCharacterizationUITest {
                     p.line(language+"_invalid", "readable provider error normalized");
                 }
                 p.digest("526ed1435a5950126aae7065abbaeee3b6c9bb81c8cee77c3a4841e7e599537e");
+            } catch (Exception e) { throw new RuntimeException(e); }
+        });
+    }
+
+    @Test void criticalHeadersUseRealTokensAndVisibleLocalizedWarnings() throws Exception {
+        UiTestLifecycleExtension.onFx(() -> {
+            try (var p = new JoseCharacterizationSupport()) {
+                var header = new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.HS256)
+                        .criticalParams(java.util.Set.of("toy")).customParam("toy", true).build();
+                var signed = new com.nimbusds.jose.JWSObject(header, new com.nimbusds.jose.Payload(PAYLOAD));
+                signed.sign(new com.nimbusds.jose.crypto.MACSigner(KEY));
+                p.area("jwtValidateTokenArea").setText(signed.serialize());
+                p.area("jwtValidateKeyArea").setText(KEY);
+                for (var language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
+                    p.language(language);
+                    p.check("jwtIgnoreCritCheck").setSelected(false);
+                    ((TextField)p.control("jwtUnderstoodCritField")).clear();
+                    p.invoke("handleValidateJWT");
+                    assertTrue(p.label("jwtStatusLabel").getStyle().contains("orange"));
+                    assertTrue(p.area("jwtFindingsArea").getText().contains(
+                            I18nService.getInstance().text("module.jose.claim.unsupportedCrit", "toy")));
+                    p.line(language+"_unsupported", "INVALID");
+                    p.check("jwtIgnoreCritCheck").setSelected(true);
+                    p.invoke("handleValidateJWT");
+                    assertTrue(p.label("jwtStatusLabel").getStyle().contains("green"));
+                    String warning = I18nService.getInstance().text("module.jose.warning.ignoredCrit", "toy");
+                    assertTrue(p.area("jwtFindingsArea").getText().contains(warning));
+                    assertTrue(p.reporter.result.getDetails().stream().anyMatch(d -> warning.equals(d.value())
+                            && d.classification() == OperationDetail.Classification.PUBLIC));
+                    p.line(language+"_ignore", "VALID;PUBLIC_WARNING");
+                    p.check("jwtIgnoreCritCheck").setSelected(false);
+                    ((TextField)p.control("jwtUnderstoodCritField")).setText("toy");
+                    p.invoke("handleValidateJWT");
+                    assertTrue(p.label("jwtStatusLabel").getStyle().contains("green"));
+                    assertTrue(p.area("jwtFindingsArea").getText().isEmpty());
+                    p.line(language+"_understood", "VALID");
+                }
+                p.digest("0776e413f48a43f8d7afa8f0e4dadee462ef2aae969b4fb41d71e268fc7b499a");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }

@@ -11,5 +11,38 @@
     "failed": [
       "com.cryptocarver.ui.SpecializedFeedbackHeadlessTest"
     ]
+  },
+  {
+    "phase": 1,
+    "gate": "default-repeat",
+    "exit": 0,
+    "reports": 435,
+    "tests": 2892,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "failed": []
+  },
+  {
+    "phase": 1,
+    "gate": "ui",
+    "exit": 0,
+    "reports": 117,
+    "tests": 531,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failed": []
+  },
+  {
+    "phase": 1,
+    "gate": "ci",
+    "exit": 0,
+    "reports": 117,
+    "tests": 531,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failed": []
   }
 ]
