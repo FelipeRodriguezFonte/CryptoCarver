@@ -659,6 +659,13 @@ public class EMVController {
                 return;
             }
 
+            if (sk.length() != 32 && sk.length() != 48) {
+                arpcResultArea.setText(t("module.emv.error.arpcSessionKeyLength"));
+                arpcResultArea.setVisible(true);
+                arpcResultArea.setManaged(true);
+                return;
+            }
+
             StringBuilder result = new StringBuilder();
             result.append("ARPC GENERATION (Authorization Response Cryptogram)\n");
             result.append("═══════════════════════════════════════════════════\n\n");
