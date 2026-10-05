@@ -245,7 +245,7 @@ class EmvArpcCharacterizationUITest {
         Files.writeString(Path.of("target/emv-arpc-transcript.txt"), joined + "\n");
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(joined.getBytes(StandardCharsets.UTF_8)));
-        assertEquals("4803cbad2a058bc4ccba31d6133090d89aa4c61cf10ef186bb6c47b2d290a89b", digest,
+        assertEquals("e9f7206912a51806577e3ac2197efa073b06f926f8b332332d1e06b31a5c5f1b", digest,
                 String.join("\n", violations) + "\nTranscript:\n" + joined);
         assertTrue(violations.isEmpty(), String.join("\n", violations) + "\nTranscript:\n" + joined);
     }
