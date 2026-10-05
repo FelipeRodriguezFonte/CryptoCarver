@@ -1,0 +1,8 @@
+# Fase 2 — fallos antes de fijar digests
+
+- Baseline antes de extracción (fase 1 ya verificada): JoseJweCharacterizationUITest, 2 tests, 2 fallos `MASKED expanded output leaked secret`, en descifrado Compact con dir y RSA1_5. El helper construye captura real Shelf/expanded y el inspector, además de historial/status; ambas salidas son PUBLIC por omisión. Los 2 tests JWT pasan con las comprobaciones reforzadas y sus digests anteriores.
+- Compact usa buildJweDecryptionResult, cuya salida `.output(payload.getBytes(...))` no declara SECRET. El método es idéntico en main 4e44749 salvo los delegados de avisos. Se prevé clasificar únicamente el texto descifrado, sin editar servicios ni shell.
+- La rama JSON tiene su propio constructor de resultado; se comprobará después de arreglar Compact antes de fijar el digest.
+- Una ejecución previa no llegó a tests porque el test delegado estaba aún en escritura al compilar. Error de coordinación de este encargo, dentro del mismo worktree/rama; ninguna modificación ajena ni Maven paralelo. Se esperó a que el fichero estuviera cerrado antes de reanudar Maven.
+- Revisión del test delegado: JSON usa el handler real; kid se comprueba en header efectivo, no buscando un literal dentro del header protegido Base64URL. Los resultados/reportes se reinician entre acciones para evitar salidas anteriores.
+- Privacidad: inspector real y captura real del shell ejercitados con fixture aislado; Shelf global inalterado e historial del fixture limpiado, settings restaurados. Las claves RSA y CEKs aleatorias se usan solo en aserciones, nunca en la transcripción. No hay llamadas a telemetría en los métodos extraídos; los logs de JWE no adjuntan excepciones de proveedor.

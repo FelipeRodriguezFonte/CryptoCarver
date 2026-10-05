@@ -67,11 +67,39 @@ final class JoseCharacterizationSupport implements AutoCloseable {
             String history = method.invoke(shell, ResultPresentationPolicy.detailsForHistory(result)).toString();
             boolean blocked = ResultPresentationPolicy.isShelfCaptureBlockedByVisibility(
                     ResultPresentationPolicy.classifyPublishedResult(result), visibility);
+            // Exercise the actual capture coordinator, including a focused raw result area.
+            TextArea rawArea = new TextArea(result.getOutput() == null ? "" :
+                    new String(result.getOutput(), StandardCharsets.UTF_8));
+            rawArea.setId("josePrivacyOutputArea"); rawArea.setEditable(false);
+            ResultAreaTracker tracker = new ResultAreaTracker();
+            tracker.register(rawArea); tracker.markUpdated(rawArea); tracker.focus(rawArea);
+            ResultCaptureCoordinator capture = new ResultCaptureCoordinator(() -> null, () -> null,
+                    () -> null, () -> null, () -> tracker, () -> result, () -> "JOSE", () -> "JOSE",
+                    () -> visibility, message -> { }, (title, message) -> { }, (area, selected) -> { });
+            String shelfCapture = capture.resolveShelfCaptureText(rawArea);
+            String expandedCapture = capture.resolveCurrentOutputText();
+            Label operation = new Label(), in = new Label(), out = new Label(), tip = new Label();
+            javafx.scene.layout.VBox inspector = new javafx.scene.layout.VBox();
+            new OperationInspectorPresenter(operation, in, out, tip, inspector).present(result.getOperation(),
+                    result.getInput(), result.getOutput(), (List<OperationDetail>)method.invoke(shell,
+                            ResultPresentationPolicy.detailsForHistory(result)));
+            String inspectorText = inspector.getChildren().stream().map(javafx.scene.layout.VBox.class::cast)
+                    .flatMap(row -> row.getChildren().stream()).map(Label.class::cast).map(Label::getText)
+                    .reduce("", String::concat);
+            if (visibility == SecretVisibilityProfile.FULL_LAB && result.getOutput() != null
+                    && secrets.length > 0 && new String(result.getOutput(), StandardCharsets.UTF_8)
+                    .contains(secrets[secrets.length-1])) {
+                Assertions.assertTrue(expanded.contains(secrets[secrets.length-1]), "FULL_LAB output must remain visible");
+                Assertions.assertFalse(blocked, "FULL_LAB Shelf must remain available");
+            }
             if (visibility != SecretVisibilityProfile.FULL_LAB) {
                 for (String secret : secrets) {
                     Assertions.assertFalse(expanded.contains(secret), visibility + " expanded output leaked secret");
                     Assertions.assertFalse(history.contains(secret), visibility + " history leaked secret");
                     Assertions.assertFalse(status.contains(secret), visibility + " status leaked secret");
+                    Assertions.assertFalse(shelfCapture.contains(secret), visibility + " capture for Shelf leaked secret");
+                    Assertions.assertFalse(expandedCapture.contains(secret), visibility + " expanded capture leaked secret");
+                    Assertions.assertFalse(inspectorText.contains(secret), visibility + " inspector leaked secret");
                 }
                 if (result.getOutput() != null && secrets.length > 0
                         && new String(result.getOutput(), StandardCharsets.UTF_8).contains(secrets[secrets.length-1]))
