@@ -82,6 +82,11 @@ class JoseJwkPrivacyCharacterizationUITest {
             assertFalse(p.reporter.result.getDetails().stream().filter(d -> d.classification() == OperationDetail.Classification.PUBLIC).anyMatch(d -> d.value().contains(secret)), "public telemetry details leaked");
         }
         p.privacy(p.reporter.result, secrets.toArray(String[]::new));
+        for (SecretVisibilityProfile restricted : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
+            AppSettings.getInstance().setSecretVisibilityProfile(restricted);
+            String recipe = UiStateSnapshot.captureHistoryRecipe(p.controller).toString();
+            for (String secret : secrets) assertFalse(recipe.contains(secret), "history recipe retained private JWKS after profile change");
+        }
         AppSettings.getInstance().setSecretVisibilityProfile(profile);
         p.line("status", p.reporter.result.getStatusMessage());
         p.line(name + "_" + profile, "classified;copy/expand/shelf/history/status/telemetry-protected");
