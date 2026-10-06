@@ -26,3 +26,15 @@ A second pre-fix UI test confirmed a separate inspector leak: after inspecting a
 Intermediate full gate before the history-recipe refinement: `mvn -o -q test -Plow-cpu` passed; {'reports': 440, 'tests': 2899, 'failures': 0, 'errors': 0, 'skipped': 1}. The final phase gates will run again after the additional recipe regression.
 
 The history-recipe regression failed before its fix: `history recipe retained private JWKS after profile change`. `UiStateSnapshot.captureHistoryRecipe` is field-name based, and `jwksArea` has no recognized secret token. Rename this private FXML field to `jwksSecretArea`, preserving the public controller API and leaving `UiStateSnapshot` untouched. Explicitly update the three FXML lookups in the existing `JoseJwkCharacterizationUITest` for this binding rename only; its assertions and digest remain unchanged. The new privacy digest also remains unchanged because the added assertion checks the previously claimed history protection without adding transcript data. Full-lab field contents and operations remain the same; previously saved internal recipes using the old editor field name will need that JWKS pasted again.
+
+Implementation: private conversions and loaded/generated JWKS publish classified SECRET artifacts with only public status text; restricted result fields are masked/hidden, their native Copy/Cut/context menu is guarded by the live profile, and the editor retains its material in coordinator memory so public export and rotation still work. Invalid key errors use a localized, stable message without provider exception text. Private inspector headers/payloads/PEM are suppressed under restricted profiles and Copy/Expand re-check the current profile. The existing JWK and inspector transcript digests were verified unchanged in targeted regression. New digests verified: JWK privacy `3bd9891728349fad323eee284024eeaa03bf7a8548efe970a0bd41968d6d344c`; inspector privacy `c49261434dbb4b22f6fd78dff1d4782037eafeecb7e236cb109d4e754eeede72`. Synthetic private/symmetric JWK inputs follow the syntax in [RFC 7517 Appendices A.2/A.3](https://www.rfc-editor.org/rfc/rfc7517.html#appendix-A); privacy follows [Section 9.2](https://www.rfc-editor.org/rfc/rfc7517.html#section-9.2). No cryptographic algorithm changes in this phase.
+
+## Final phase Maven gates
+
+| Gate | Reports | Tests | Failures | Errors | Skipped |
+|---|---:|---:|---:|---:|---:|
+| `mvn -o -q test -Plow-cpu` | 440 | 2899 | 0 | 0 | 1 |
+| `mvn -o -q test -Plow-cpu -DrunUiTests=true` | 122 | 538 | 0 | 0 | 0 |
+| `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test` | 122 | 538 | 0 | 0 | 0 |
+
+All final phase gates passed. Hygiene at phase end: inline FXML styles 0; counted emojis 325. Controller 1063 → 1041 lines; crypto/ and pom.xml untouched.
