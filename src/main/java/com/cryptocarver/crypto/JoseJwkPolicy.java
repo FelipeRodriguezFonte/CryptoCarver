@@ -101,11 +101,8 @@ public final class JoseJwkPolicy {
                 leaf, "SHA-1", "x5t");
         checkThumbprint(header.getX509CertSHA256Thumbprint() == null ? null : header.getX509CertSHA256Thumbprint().decode(),
                 leaf, "SHA-256", "x5t#S256");
-        // Check that the supplied certificates form a linked signature chain. Trust-anchor
-        // validation remains the caller's responsibility; an in-token chain is not trusted.
-        for (int index = 0; index + 1 < chain.size(); index++) {
-            chain.get(index).verify(chain.get(index + 1).getPublicKey());
-        }
+        // Explicit header-key verification remains possible even when PKIX fails.
+        // JoseX5cValidation reports path signatures and trust separately in the UI.
         String type = leaf.getPublicKey().getFormat();
         if (type == null) throw new IllegalArgumentException("The x5c leaf certificate has no exportable public key.");
         return "-----BEGIN CERTIFICATE-----\n" + Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(leaf.getEncoded())

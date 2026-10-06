@@ -15,3 +15,9 @@ Tests con PKI inventada propia raíz/intermedia/hoja, fechas fijas, CA, longitud
 Referencias: [RFC 7515 §4.1.6–4.1.8](https://www.rfc-editor.org/rfc/rfc7515.html#section-4.1.6), [PKIXParameters Java 17](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/cert/PKIXParameters.html). La PKI inventada permite validar fechas y restricciones; el ejemplo x5c del apéndice B no aporta las anclas y claves privadas necesarias para estas variantes.
 
 Test UI en rojo, 1 test/1 fallo/0 errores: `x5c trust anchors control is missing`. JavaFX real disponible. Log target/jose-cap-6-red.log.
+
+## Implementación y verificación dirigida
+
+Se usa CertificateGenerator solo para lectura de DER/PEM; PKIX recibe el camino en memoria y las anclas locales. El resultado separa firmas por eslabón y hacia el ancla, autofirma de raíz, formación, vigencia, CA/longitud, uso de hoja, clave y huellas. Razones propias EXPIRED/NOT_YET_VALID/INVALID_SIGNATURE/INVALID_CA/PATH_LENGTH/NO_TRUST_ANCHOR/PKIX_FAILED sustituyen mensajes del proveedor.
+
+Cinco tests nuevos de JoseX5cValidationTest y los existentes JosePhase2Test pasan. La caracterización nueva y las de JWT, OKP y privacidad pasan. Digest nuevo verificado: `838c59482ac00cae7c56211e3f4d4029058c7aee35bd8c27819ab2b2fa8fad64`. El caso de firma de intermedia rota mantiene la firma del token válida con opción explícita, presenta aviso no modal y detalles públicos en ambos idiomas y tres perfiles. Los anteriores digests no cambian.

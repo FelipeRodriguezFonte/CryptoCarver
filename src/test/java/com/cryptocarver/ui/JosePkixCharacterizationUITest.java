@@ -21,6 +21,8 @@ class JosePkixCharacterizationUITest {
                 assertNotNull(p.<TextField>control("jwtCertificateDateField"), "x5c validation date control is missing");
                 var fixture = new com.cryptocarver.crypto.JoseTestPki();
                 String token = fixture.token(fixture.chain());
+                var brokenIntermediate=fixture.cert("Intermediate","Root",fixture.intermediateKey,fixture.otherKey,0,true);
+                String brokenToken=fixture.token(List.of(fixture.leaf,brokenIntermediate,fixture.root));
                 for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
                     p.language(language);
                     for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
@@ -44,6 +46,14 @@ class JosePkixCharacterizationUITest {
                         assertTrue(p.area("jwtFindingsArea").getText().contains(warning));
                         assertTrue(p.reporter.result.getDetails().stream().anyMatch(d -> d.name().equals("Signature") && d.value().equals("VALID")));
                         p.line(profile + "_warning", warning);
+                        p.area("jwtTrustAnchorsArea").setText(fixture.anchors());
+                        p.area("jwtValidateTokenArea").setText(brokenToken);
+                        p.invoke("handleValidateJWT");
+                        assertTrue(p.reporter.result.getDetails().stream().anyMatch(d -> d.name().equals("x5c Signature link 2") && d.value().equals("FAIL")));
+                        assertTrue(p.reporter.result.getDetails().stream().anyMatch(d -> d.name().equals("Signature") && d.value().equals("VALID")));
+                        assertTrue(p.area("jwtFindingsArea").getText().contains(warning));
+                        assertTrue(p.reporter.result.getDetails().stream().filter(d -> d.name().startsWith("x5c ")).allMatch(d -> d.classification()==OperationDetail.Classification.PUBLIC));
+                        p.line(profile + "_broken_chain", "link-2=FAIL;PKIX=FAIL;explicit-signature=VALID;warning-visible");
                         p.<CheckBox>control("jwtTrustHeaderKeyCheck").setSelected(false);
                     }
                     p.<TextField>control("jwtCertificateDateField").setText("invented-invalid-date");
@@ -52,7 +62,7 @@ class JosePkixCharacterizationUITest {
                     assertTrue(p.label("jwtStatusLabel").getText().contains(language == LanguagePreference.EN ? "ISO-8601" : "ISO-8601"));
                     p.line(language + "_error", p.label("jwtStatusLabel").getText());
                 }
-                p.digest("TO_BE_FILLED");
+                p.digest("838c59482ac00cae7c56211e3f4d4029058c7aee35bd8c27819ab2b2fa8fad64");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }

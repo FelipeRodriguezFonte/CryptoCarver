@@ -78,7 +78,7 @@ public class JOSEController implements Initializable {
     private JoseJwtCoordinator jwtCoordinator;
     private JoseJwtCoordinator jwtCoordinator() {
         if (jwtCoordinator == null) jwtCoordinator = new JoseJwtCoordinator(
-                () -> new JoseJwtCoordinator.View(detachedAlgoCombo, detachedPayloadArea, detachedSecretFormatCombo, detachedSerializationCombo, detachedSigningKeyArea, detachedStatusLabel, detachedTokenArea, detachedUnencodedCheck, detachedVerificationKeyArea, jwsSerializationCombo, jwsUnencodedPayloadCheck, jwtAcceptNoneCheck, jwtAccessTokenField, jwtAlgo2Combo, jwtAlgoCombo, jwtAllowedAlgorithmsField, jwtAudField, jwtAuthorizationCodeField, jwtCheckExpiryCheck, jwtClockSkewField, jwtDecodedHeaderArea, jwtDecodedPayloadArea, jwtExpField, jwtExpectedAudField, jwtExpectedContentTypeField, jwtExpectedIssField, jwtExpectedJktField, jwtExpectedNonceField, jwtExpectedTypeField, jwtExpectedX5tField, jwtFindingsArea, jwtIgnoreCritCheck, jwtIssField, jwtKeyArea, jwtKeyArea2, jwtOidcStrictCheck, jwtOutputArea, jwtPayloadArea, jwtProtectedHeaderArea, jwtRfc9068Check, jwtSecretFormatCombo, jwtStatusLabel, jwtSubField, jwtTrustHeaderKeyCheck, jwtUnderstoodCritField, jwtValidateKeyArea, jwtValidateSecretFormatCombo, jwtValidateTokenArea, nestedCompressCheck, nestedContentAlgoCombo, nestedEncryptionKeyArea, nestedKeyAlgoCombo, nestedOutputArea, nestedPayloadArea, nestedPayloadOutputArea, nestedSecretFormatCombo, nestedSignAlgoCombo, nestedSigningKeyArea, nestedStatusLabel), () -> statusReporter);
+                () -> new JoseJwtCoordinator.View(detachedAlgoCombo, detachedPayloadArea, detachedSecretFormatCombo, detachedSerializationCombo, detachedSigningKeyArea, detachedStatusLabel, detachedTokenArea, detachedUnencodedCheck, detachedVerificationKeyArea, jwsSerializationCombo, jwsUnencodedPayloadCheck, jwtAcceptNoneCheck, jwtAccessTokenField, jwtAlgo2Combo, jwtAlgoCombo, jwtAllowedAlgorithmsField, jwtAudField, jwtAuthorizationCodeField, jwtCheckExpiryCheck, jwtClockSkewField, jwtDecodedHeaderArea, jwtDecodedPayloadArea, jwtExpField, jwtExpectedAudField, jwtExpectedContentTypeField, jwtExpectedIssField, jwtExpectedJktField, jwtExpectedNonceField, jwtExpectedTypeField, jwtExpectedX5tField, jwtFindingsArea, jwtIgnoreCritCheck, jwtIssField, jwtKeyArea, jwtKeyArea2, jwtOidcStrictCheck, jwtOutputArea, jwtPayloadArea, jwtProtectedHeaderArea, jwtRfc9068Check, jwtSecretFormatCombo, jwtStatusLabel, jwtSubField, jwtTrustHeaderKeyCheck, jwtUnderstoodCritField, jwtValidateKeyArea, jwtValidateSecretFormatCombo, jwtValidateTokenArea, nestedCompressCheck, nestedContentAlgoCombo, nestedEncryptionKeyArea, nestedKeyAlgoCombo, nestedOutputArea, nestedPayloadArea, nestedPayloadOutputArea, nestedSecretFormatCombo, nestedSignAlgoCombo, nestedSigningKeyArea, nestedStatusLabel, jwtTrustAnchorsArea, jwtCertificateDateField, jwtTrustAnchorsLabel, jwtCertificateDateLabel), () -> statusReporter);
         return jwtCoordinator;
     }
 
@@ -105,6 +105,7 @@ public class JOSEController implements Initializable {
 
     private void refreshCapabilityLabels() {
         jwkCoordinator().refreshCurveLabel();
+        jwtCoordinator().refreshCertificateLabels();
         if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
         if (jwtTrustHeaderKeyCheck != null) jwtTrustHeaderKeyCheck.setText(t("module.jose.trustHeaderKey"));
         if (jwtProtectedHeaderLabel != null) jwtProtectedHeaderLabel.setText(t("module.jose.protectedHeaderAdditional"));
@@ -580,6 +581,10 @@ public class JOSEController implements Initializable {
     private CheckBox jwtCheckExpiryCheck;
     @FXML private CheckBox jwtAcceptNoneCheck;
     @FXML private CheckBox jwtTrustHeaderKeyCheck;
+    @FXML private TextArea jwtTrustAnchorsArea;
+    @FXML private TextField jwtCertificateDateField;
+    @FXML private Label jwtTrustAnchorsLabel;
+    @FXML private Label jwtCertificateDateLabel;
     @FXML private Label jwtSecurityWarningLabel, detachedSecurityWarningLabel;
     @FXML private Label jweSecurityWarningLabel, nestedSecurityWarningLabel;
 @FXML

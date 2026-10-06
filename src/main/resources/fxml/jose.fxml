@@ -192,6 +192,12 @@
                             </VBox>
                         </TitledPane>
 
+                        <Label fx:id="jwtTrustAnchorsLabel" text="x5c trust anchors (PEM):" styleClass="form-label"/>
+                        <TextArea fx:id="jwtTrustAnchorsArea" prefRowCount="3" wrapText="true" styleClass="form-field,monospace-field"/>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label fx:id="jwtCertificateDateLabel" text="Certificate validation date (ISO-8601, empty = now):" styleClass="form-label"/>
+                            <TextField fx:id="jwtCertificateDateField" styleClass="form-field"/>
+                        </HBox>
                         <HBox spacing="10" alignment="CENTER_LEFT">
                             <Button text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button,primary-action"/>
                             <Label fx:id="jwtStatusLabel" text="" styleClass="helper-text"/>
