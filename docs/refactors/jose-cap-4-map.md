@@ -1,0 +1,18 @@
+# JOSE capability phase 4 map — JWK privacy
+
+Base: `5f6dfcbe89011bfe808f12fd4c1b4fa5dd92d7aa` on `codex/jose-capabilities-2`.
+
+## Current state and gap
+
+JWK conversion writes private JWK JSON, symmetric oct material, and private PEM directly to `jwkOutputArea`; the JWKS editor can contain private and symmetric members. These operations do not publish an `OperationResult`, so history, status, and telemetry do not receive an explicit classification. The UI shell's result capture has a fallback classification based on text-area identity/content, but JWK JSON has no PEM marker and `jwksArea` is editable. The existing characterization covers FULL_LAB generation/conversion only and does not exercise MASKED/REDACTED shell copy, expansion, Shelf, history, or telemetry paths.
+
+## Files and decisions
+
+- Characterize with `JoseJwkCharacterizationUITest` and the real shell capture/render policies, using synthetic RSA/OKP/oct/JWKS material and fixed transcript labels. Snapshot and restore visibility, Shelf, and test-local history.
+- If capture classification misses private JWK data, fix through the JOSE coordinator/shell-supported reporting path while leaving FULL_LAB rendering intact. Do not alter `OperationResult`, `StatusReporter`, `ModernMainController`, or crypto code outside this task's allowlist.
+- Keep public certificate/anchor data public. Never put key material in status text or public telemetry details.
+- Relevant policy: `ResultCaptureCoordinator`, `ResultViewerCoordinator`, `ResultPresentationPolicy`, and `JoseJwkCoordinator`; permitted UI changes are coordinator changes and one-line controller delegates/fields only.
+
+## Test and control plan
+
+Exercise JSON private parameters (`d`; RSA also `p`, `q`, `dp`, `dq`, `qi`), oct `k`, JWK-to-PEM export, and private/symmetric JWKS. Check secure Copy, expanded capture, Add to Shelf, status, published-result/history/inspector details, and telemetry for FULL_LAB, MASKED, and REDACTED. Keep all generated key bytes out of the transcript and hash only normalized labels/outcomes. Validate English and Spanish warnings/errors. Run each of the three required Maven gates sequentially after the implementation, clearing Surefire reports before each gate.
