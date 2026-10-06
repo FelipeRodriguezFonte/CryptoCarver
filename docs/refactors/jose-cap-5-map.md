@@ -11,3 +11,9 @@ Sources: [RFC 8037 Sections 2/3 and Appendix A](https://www.rfc-editor.org/rfc/r
 ## Test en rojo
 
 `JoseOkpCharacterizationUITest` ejecutado con JavaFX real: 1 test, 1 fallo, 0 errores. Falla en `OKP curve selector is missing` antes de implementar. Log: `target/jose-cap-5-red.log`.
+
+## Implementación y transcripción
+
+Selector OKP en el coordinador: Ed25519 (predeterminado), Ed448, X25519 y X448; el cambio de curva selecciona sig/EdDSA o enc/ECDH-ES coherentemente. No se necesitan cambios criptográficos. Se añaden campos FXML y delegados de una línea. El constructor de View del test de privacidad se adapta mecánicamente a los dos controles nuevos; no cambian sus aserciones ni digest.
+
+El test nuevo tenía una aserción inglesa sobre la etiqueta española: corregida para comprobar Signature=VALID en el resultado estructurado. También se corrigió el nombre del accessor del detalle (name). Los fallos eran del test nuevo. Todas las comprobaciones funcionales pasaron antes de fijar el digest inicial: `3794f33085d21f997300f67535bdd7e731e7729e0573e82141fc16af1adc76b1`. Solo se registran etiquetas, estados y marcadores; ninguna salida aleatoria.

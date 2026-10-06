@@ -66,7 +66,7 @@ class JoseOkpCharacterizationUITest {
                             assertTrue(JWSObject.parse(nextToken).verify(JOSEService.resolveVerifier(JWSObject.parse(nextToken).getHeader(), publicSet, JoseKeyMaterial.SecretEncoding.UTF8)));
                             p.controller.validateJWTAdvanced(token, publicSet, null, null, 0, false, false, JoseKeyMaterial.SecretEncoding.UTF8,
                                     p.area("jwtDecodedHeaderArea"), p.area("jwtDecodedPayloadArea"), p.label("jwtStatusLabel"));
-                            assertTrue(p.label("jwtStatusLabel").getText().contains("VALID"));
+                            assertTrue(p.reporter.result.getDetails().stream().anyMatch(d -> "Signature".equals(d.name()) && "VALID".equals(d.value())));
                             p.line("Ed448_interop", "JDK-verifies-JOSE;JOSE-verifies-JDK;JWT/JWS-valid;both-rotation-kids-valid");
                         }
                         for (SecretVisibilityProfile profile : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
@@ -82,7 +82,7 @@ class JoseOkpCharacterizationUITest {
                     assertTrue(invalid.getText().startsWith("Error converting JWK to PEM:"));
                     p.line(language + "_error", "readable;provider-text-not-recorded");
                 }
-                p.digest("TO_BE_FILLED");
+                p.digest("3794f33085d21f997300f67535bdd7e731e7729e0573e82141fc16af1adc76b1");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }

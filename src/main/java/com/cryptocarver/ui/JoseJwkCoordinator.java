@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 final class JoseJwkCoordinator extends JoseCoordinatorSupport {
     record View(TextArea jwkInputArea, TextArea jwkOutputArea, ComboBox<String> jwkKeyTypeCombo,
             TextField jwkKeyIdField, ComboBox<String> jwkUseCombo, TextField jwkKeyOpsField,
-            TextArea jwksArea, ComboBox<String> jwksRotateAlgoCombo) { }
+            TextArea jwksArea, ComboBox<String> jwksRotateAlgoCombo, ComboBox<String> jwkCurveCombo, Label jwkCurveLabel) { }
 
     private static final Logger LOG = LoggerFactory.getLogger(JoseJwkCoordinator.class);
     private final Supplier<View> controls;
@@ -96,6 +96,26 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
     }
 
     private View view() { return controls.get(); }
+
+    void refreshCurveLabel() {
+        if (view().jwkCurveLabel() != null) view().jwkCurveLabel().setText(t("module.jose.okpCurve"));
+    }
+
+    void initializeCurveControls() {
+        ComboBox<String> curve = view().jwkCurveCombo();
+        if (curve == null) return;
+        curve.getItems().setAll("Ed25519", "Ed448", "X25519", "X448");
+        curve.setValue("Ed25519");
+        curve.setDisable(!"OKP".equals(view().jwkKeyTypeCombo().getValue()));
+        view().jwkKeyTypeCombo().valueProperty().addListener((obs, oldValue, value) -> curve.setDisable(!"OKP".equals(value)));
+        curve.valueProperty().addListener((obs, oldValue, value) -> {
+            if (value == null) return;
+            view().jwkKeyTypeCombo().setValue("OKP");
+            view().jwkUseCombo().setValue(value.startsWith("Ed") ? "sig" : "enc");
+            view().jwksRotateAlgoCombo().setValue(value.startsWith("Ed") ? "EdDSA" : value.equals("X448") ? "ECDH-ES-X448" : "ECDH-ES");
+        });
+        refreshCurveLabel();
+    }
 
     void handlePemToJwk() {
         if (isBlank(view().jwkInputArea())) {
@@ -186,12 +206,14 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
             return new RSAKeyGenerator(2048).keyUse(KeyUse.ENCRYPTION).algorithm(new JWEAlgorithm(alg))
                     .keyID(UUID.randomUUID().toString()).generate();
         } else if (alg.equals("EdDSA")) {
-            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
-            return new OctetKeyPair.Builder(Curve.Ed25519, Base64URL.encode(JoseKeyMaterial.rawEdPublicKey(pair.getPublic())))
+            String selected = view().jwkCurveCombo() == null ? null : view().jwkCurveCombo().getValue();
+            boolean ed448 = "Ed448".equals(selected);
+            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance(ed448 ? "Ed448" : "Ed25519").generateKeyPair();
+            return new OctetKeyPair.Builder(ed448 ? Curve.Ed448 : Curve.Ed25519, Base64URL.encode(JoseKeyMaterial.rawEdPublicKey(pair.getPublic())))
                     .d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(pair.getPrivate()))).keyUse(KeyUse.SIGNATURE)
                     .algorithm(JWSAlgorithm.EdDSA).keyID(UUID.randomUUID().toString()).build();
         } else if (alg.startsWith("ECDH-ES")) {
-            boolean x448 = alg.contains("X448");
+            boolean x448 = alg.contains("X448") || view().jwkCurveCombo() != null && "X448".equals(view().jwkCurveCombo().getValue());
             Curve curve = x448 ? Curve.X448 : Curve.X25519;
             String xdhAlgorithm = x448 ? "X448" : "X25519";
             java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance(xdhAlgorithm).generateKeyPair();

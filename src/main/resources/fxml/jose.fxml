@@ -278,6 +278,8 @@
                             <Label text="Key Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="120" styleClass="form-field"/>
+                                <Label fx:id="jwkCurveLabel" text="OKP curve:" styleClass="form-label"/>
+                                <ComboBox fx:id="jwkCurveCombo" prefWidth="120" styleClass="form-field"/>
                                 <Label text="Key ID (kid):" styleClass="form-label"/>
                                 <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" styleClass="form-field"/>
                                 <Label fx:id="jwkUseLabel" text="use:" styleClass="form-label"/>

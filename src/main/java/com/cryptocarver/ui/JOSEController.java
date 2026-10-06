@@ -63,7 +63,7 @@ public class JOSEController implements Initializable {
     private JoseJwkCoordinator jwkCoordinator() {
         if (jwkCoordinator == null) jwkCoordinator = new JoseJwkCoordinator(
                 () -> new JoseJwkCoordinator.View(jwkInputArea, jwkOutputArea, jwkKeyTypeCombo, jwkKeyIdField,
-                        jwkUseCombo, jwkKeyOpsField, jwksSecretArea, jwksRotateAlgoCombo), () -> statusReporter, dialogService);
+                        jwkUseCombo, jwkKeyOpsField, jwksSecretArea, jwksRotateAlgoCombo, jwkCurveCombo, jwkCurveLabel), () -> statusReporter, dialogService);
         return jwkCoordinator;
     }
 
@@ -104,6 +104,7 @@ public class JOSEController implements Initializable {
     }
 
     private void refreshCapabilityLabels() {
+        jwkCoordinator().refreshCurveLabel();
         if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
         if (jwtTrustHeaderKeyCheck != null) jwtTrustHeaderKeyCheck.setText(t("module.jose.trustHeaderKey"));
         if (jwtProtectedHeaderLabel != null) jwtProtectedHeaderLabel.setText(t("module.jose.protectedHeaderAdditional"));
@@ -182,6 +183,7 @@ public class JOSEController implements Initializable {
         localeChangeListener = locale -> {
             updateJwkInputPresentation();
             refreshCapabilityLabels();
+            jwkCoordinator().initializeCurveControls();
             for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
                     nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
                 markUnsafeOptions(combo);
@@ -278,6 +280,7 @@ public class JOSEController implements Initializable {
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
 
+            jwkCoordinator().initializeCurveControls();
             for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
                     nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
                 markUnsafeOptions(combo);
@@ -504,6 +507,8 @@ public class JOSEController implements Initializable {
     private VBox jwtSection;
 @FXML
     private ComboBox<String> jwkKeyTypeCombo;
+    @FXML private ComboBox<String> jwkCurveCombo;
+    @FXML private Label jwkCurveLabel;
 @FXML
     private TextArea jwtValidateKeyArea;
 @FXML
