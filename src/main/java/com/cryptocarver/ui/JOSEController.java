@@ -58,6 +58,14 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    private JoseJwkCoordinator jwkCoordinator;
+    private JoseJwkCoordinator jwkCoordinator() {
+        if (jwkCoordinator == null) jwkCoordinator = new JoseJwkCoordinator(
+                () -> new JoseJwkCoordinator.View(jwkInputArea, jwkOutputArea, jwkKeyTypeCombo, jwkKeyIdField,
+                        jwkUseCombo, jwkKeyOpsField, jwksArea, jwksRotateAlgoCombo), () -> statusReporter, dialogService);
+        return jwkCoordinator;
+    }
+
     private JoseJweCoordinator jweCoordinator;
     private JoseJweCoordinator jweCoordinator() {
         if (jweCoordinator == null) jweCoordinator = new JoseJweCoordinator(
@@ -625,18 +633,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    public void handlePemToJwk() {
-
-            if (isBlank(jwkInputArea)) {
-                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
-                return;
-            }
-
-            this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
-                    jwkUseCombo == null ? null : jwkUseCombo.getValue(), textOf(jwkKeyOpsField),
-                    jwkOutputArea);
-
-        }
+    public void handlePemToJwk() { jwkCoordinator().handlePemToJwk(); }
 
     @FXML
     private void handleLoadJWKS() {
@@ -647,8 +644,7 @@ public class JOSEController implements Initializable {
         if (file != null) {
             try {
                 String content = java.nio.file.Files.readString(file.toPath());
-                jwksArea.setText(content);
-                updateStatus(t("module.jose.feedback.jwksLoaded"));
+                jwkCoordinator().loadedJWKS(content);
 
             } catch (Exception e) {
                 showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
@@ -693,16 +689,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    public void handleCalculateThumbprint() {
-
-            if (isBlank(jwkInputArea)) {
-                showValidation(t("module.jose.feedback.thumbprintInput"), "jwkInputArea");
-                return;
-            }
-
-            this.calculateThumbprint(jwkInputArea.getText(), jwkOutputArea);
-
-        }
+    public void handleCalculateThumbprint() { jwkCoordinator().handleCalculateThumbprint(); }
 
     @FXML
     private void handleLoadJWEPrivateKey() {
@@ -748,51 +735,12 @@ public class JOSEController implements Initializable {
     private void handleGenerateSignedJWT() { jwtCoordinator().handleGenerateSignedJWT(); }
 
     @FXML
-    private void handleNewJWKS() {
-        if (jwksArea != null) {
-            jwksArea.setText("{\n  \"keys\": []\n}");
-        }
-    }
+    private void handleNewJWKS() { jwkCoordinator().handleNewJWKS(); }
     @FXML
     private void handleValidateJWT() { jwtCoordinator().handleValidateJWT(); }
 
     @FXML
-    private void handleRotateKey() {
-
-        try {
-            String alg = jwksRotateAlgoCombo.getValue();
-            if (alg == null) {
-                showValidation(t("module.jose.feedback.algorithmRequired"), "jwksRotateAlgoCombo", "preflight.remedy.algorithm");
-                return;
-            }
-            // Security Warning for Symmetric Keys in JWKS
-            if ((alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir"))
-                    && LabPrompt.JWKS_SECRET.shouldShow()) {
-                String warningText = "You are adding a SYMMETRIC key (Secret) to this JWK Set.\n\n" +
-                        "If you publish this JWKS file publicly (e.g. at .well-known/jwks.json), ANYONE will be able to read your secret key and forge tokens.\n\n"
-                        + "Are you sure you want to proceed?";
-                java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.WARNING, null,
-                        "Security Warning", "Symmetric Key in Public JWKS", new Label(warningText),
-                        ButtonType.NO, ButtonType.YES);
-                if (result.isEmpty() || result.get() != ButtonType.YES) {
-                    return;
-                }
-            }
-            String use = alg.startsWith("A") || alg.equals("dir") || alg.startsWith("RSA1_5")
-                    || alg.startsWith("RSA-OAEP") || alg.startsWith("ECDH-ES") ? "enc" : "sig";
-            com.nimbusds.jose.jwk.JWK newKey = JoseJwkPolicy.withMetadata(this.generateNewJWK(alg, use), use,
-                    textOf(jwkKeyOpsField));
-            String currentJson = jwksArea.getText();
-            if (currentJson == null || currentJson.isBlank())
-                currentJson = "{\"keys\":[]}";
-            String newJson = this.addToJWKSet(currentJson, newKey);
-            jwksArea.setText(newJson);
-            updateStatus(t("module.jose.feedback.keyAdded", alg));
-
-        } catch (Exception e) {
-            showError("Rotate Key Error", e.getMessage());
-        }
-    }
+    private void handleRotateKey() { jwkCoordinator().handleRotateKey(); }
     @FXML
     private void handleGenerateJWE() { jweCoordinator().handleGenerateJWE(); }
 
@@ -810,6 +758,8 @@ public class JOSEController implements Initializable {
 
         }
     }
+    @FXML
+    private void handleInspectJwkMetadata() { jwkCoordinator().handleInspectJwkMetadata(); }
     @FXML
     private void handleLoadJWTKey() {
         File file = chooseFile("Load Signing Key");
@@ -838,16 +788,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    public void handleJwkToPem() {
-
-            if (isBlank(jwkInputArea)) {
-                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
-                return;
-            }
-
-            this.convertJwkToPem(jwkInputArea.getText(), jwkOutputArea);
-
-        }
+    public void handleJwkToPem() { jwkCoordinator().handleJwkToPem(); }
 
     @FXML
     private void handleLoadJWTValidateKey() {
@@ -1048,117 +989,10 @@ public class JOSEController implements Initializable {
 
     // --- Enterprise Features (level 4 & 5) ---
 
-    // 1. JWK Managemen
-    public JWK generateNewJWK(String alg, String use) throws Exception {
-        if (java.util.Set.of("RS256", "RS384", "RS512", "PS256", "PS384", "PS512").contains(alg)) {
-            return new RSAKeyGenerator(2048)
-                    .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                    .algorithm(new JWSAlgorithm(alg))
-                    .keyID(UUID.randomUUID().toString())
-                    .generate();
-        } else if ("RSA1_5".equals(alg) || "RSA-OAEP".equals(alg)
-                || "RSA-OAEP-256".equals(alg) || "RSA-OAEP-384".equals(alg) || "RSA-OAEP-512".equals(alg)) {
-            return new RSAKeyGenerator(2048).keyUse(KeyUse.ENCRYPTION).algorithm(new JWEAlgorithm(alg))
-                    .keyID(UUID.randomUUID().toString()).generate();
-        } else if (alg.equals("EdDSA")) {
-            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
-            return new OctetKeyPair.Builder(Curve.Ed25519,
-                    Base64URL.encode(JoseKeyMaterial.rawEdPublicKey(pair.getPublic())))
-                    .d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(pair.getPrivate())))
-                    .keyUse(KeyUse.SIGNATURE)
-                    .algorithm(JWSAlgorithm.EdDSA)
-                    .keyID(UUID.randomUUID().toString())
-                    .build();
-        } else if (alg.startsWith("ECDH-ES")) {
-            boolean x448 = alg.contains("X448");
-            Curve curve = x448 ? Curve.X448 : Curve.X25519;
-            String xdhAlgorithm = x448 ? "X448" : "X25519";
-            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance(xdhAlgorithm).generateKeyPair();
-            return new OctetKeyPair.Builder(curve,
-                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(pair.getPublic())))
-                    .d(Base64URL.encode(JoseKeyMaterial.rawXPrivateKey(pair.getPrivate())))
-                    .keyUse(KeyUse.ENCRYPTION)
-                    .algorithm(new JWEAlgorithm("ECDH-ES-X448".equals(alg) ? "ECDH-ES" : alg))
-                    .keyID(UUID.randomUUID().toString())
-                    .build();
-        } else if (alg.startsWith("ES")) {
-            if ("ES256K".equals(alg)) {
-                java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC",
-                        new org.bouncycastle.jce.provider.BouncyCastleProvider());
-                generator.initialize(new java.security.spec.ECGenParameterSpec("secp256k1"));
-                java.security.KeyPair pair = generator.generateKeyPair();
-                return new ECKey.Builder(Curve.SECP256K1,
-                        (java.security.interfaces.ECPublicKey) pair.getPublic())
-                        .privateKey(pair.getPrivate())
-                        .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                        .algorithm(new JWSAlgorithm(alg))
-                        .keyID(UUID.randomUUID().toString())
-                        .build();
-            }
-            Curve curve = Curve.P_256;
-            if (alg.contains("384"))
-                curve = Curve.P_384;
-            if (alg.contains("512"))
-                curve = Curve.P_521;
-            return new ECKeyGenerator(curve)
-                    .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                    .algorithm(new JWSAlgorithm(alg))
-                    .keyID(UUID.randomUUID().toString())
-                    .generate();
-        } else if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
-            // Symmetric Key (oct)
-            int bitLength = 256;
-            if (alg.contains("128"))
-                bitLength = 128;
-            if (alg.contains("384"))
-                bitLength = 384;
-            if (alg.contains("512"))
-                bitLength = 512;
-
-            JWK key;
-            if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
-                LOG.debug("Generating symmetric JWK for algorithm {}", alg);
-                key = new OctetSequenceKeyGenerator(bitLength)
-                        .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                        .algorithm(new Algorithm(alg))
-                        .keyID(UUID.randomUUID().toString())
-                        .generate();
-                LOG.debug("Generated symmetric JWK (key material intentionally omitted from logs)");
-                return key;
-            } else {
-                return null;
-            }
-        } else {
-            throw new IllegalArgumentException("Unsupported algorithm for JWK generation: " + alg);
-        }
-    }
-
-    public String addToJWKSet(String currentJson, JWK newKey) throws Exception {
-        JWKSet jwkSet;
-        if (currentJson == null || currentJson.trim().isEmpty()) {
-            jwkSet = new JWKSet(newKey);
-        } else {
-            try {
-                jwkSet = JWKSet.parse(currentJson);
-                List<JWK> keys = new ArrayList<>(jwkSet.getKeys());
-                keys.add(newKey);
-                jwkSet = new JWKSet(keys);
-            } catch (java.text.ParseException e) {
-                // If parse fails, decide whether to start fresh or throw
-                if (currentJson.trim().length() > 20) {
-                    throw new Exception("Failed to parse existing JWK Set: " + e.getMessage());
-                }
-                jwkSet = new JWKSet(newKey);
-            }
-        }
-        // Force output of private/secret keys (false = do not exclude private keys)
-        return new com.google.gson.Gson().toJson(jwkSet.toJSONObject(false));
-    }
-
-    public String exportPublicJWKS(String json) throws Exception {
-        JWKSet jwkSet = JWKSet.parse(json);
-        return jwkSet.toPublicJWKSet().toString();
-    }
+    // JWK generation and JWKS manipulation are owned by the lazy coordinator.
+    public JWK generateNewJWK(String alg, String use) throws Exception { return jwkCoordinator().generateNewJWK(alg, use); }
+    public String addToJWKSet(String currentJson, JWK newKey) throws Exception { return jwkCoordinator().addToJWKSet(currentJson, newKey); }
+    public String exportPublicJWKS(String json) throws Exception { return jwkCoordinator().exportPublicJWKS(json); }
 
     // 2. Advanced Validation
     public void validateJWTAdvanced(String tokenString, String keyString,
@@ -1236,215 +1070,24 @@ public class JOSEController implements Initializable {
     }
 
     // --- JWK Logic (Capa 5) ---
-
     public void convertPemToJwk(String pem, String keyType, String keyId, TextArea outputArea) {
-        convertPemToJwk(pem, keyType, keyId, null, null, outputArea);
+        jwkCoordinator().convertPemToJwk(pem, keyType, keyId, outputArea);
     }
 
     public void convertPemToJwk(String pem, String keyType, String keyId, String use, String keyOps, TextArea outputArea) {
-        if (pem == null || pem.trim().isEmpty()) {
-            outputArea.setText("Error: Input PEM is empty.");
-            return;
-        }
-        try {
-            String kid = keyId == null || keyId.isBlank() ? null : keyId.trim();
-            JWK jwk = "OCT".equalsIgnoreCase(keyType)
-                    ? new OctetSequenceKey.Builder(DataConverter.decodeBase64Flexible(pem.replaceAll("\\s+", "")))
-                            .keyID(kid).build()
-                    : asymmetricJwk(pem, keyType, kid);
-            jwk = JoseJwkPolicy.withMetadata(jwk, use, keyOps);
-            String thumbprint = jwk.computeThumbprint().toString();
-            if (kid == null) jwk = withKeyId(jwk, thumbprint);
-
-            outputArea.setText(jwk.toJSONString());
-            outputArea.appendText("\n\n// Thumbprint (SHA-256): " + thumbprint);
-        } catch (Exception e) {
-            outputArea.setText("Error converting to JWK: " + e.getMessage());
-            // No exception attached: parser messages may echo key bytes.
-            LOG.error("PEM key import failed for key type {}", keyType);
-        }
+        jwkCoordinator().convertPemToJwk(pem, keyType, keyId, use, keyOps, outputArea);
     }
 
-    @FXML
-    private void handleInspectJwkMetadata() {
-        try {
-            JWK key = JWK.parse(jwkInputArea.getText());
-            Map<String, Object> metadata = new java.util.LinkedHashMap<>();
-            metadata.put("kty", key.getKeyType().getValue());
-            if (key.getKeyID() != null) metadata.put("kid", key.getKeyID());
-            if (key.getKeyUse() != null) metadata.put("use", key.getKeyUse().identifier());
-            if (key.getKeyOperations() != null) metadata.put("key_ops", key.getKeyOperations().stream()
-                    .map(KeyOperation::identifier).sorted().toList());
-            if (key.getAlgorithm() != null) metadata.put("alg", key.getAlgorithm().getName());
-            jwkOutputArea.setText(com.nimbusds.jose.util.JSONObjectUtils.toJSONString(metadata));
-        } catch (Exception e) {
-            jwkOutputArea.setText(t("module.jose.jwkMetadataReadError", e.getMessage()));
-        }
-    }
-
-    /** RSA or EC key as a JWK; keeps the private half when the input has one. */
     static JWK asymmetricJwk(String keyMaterial, String keyType, String kid) throws Exception {
-        PublicKey publicKey = JoseKeyMaterial.publicKey(keyMaterial);
-        PrivateKey privateKey = null;
-        try {
-            privateKey = JoseKeyMaterial.privateKey(keyMaterial);
-        } catch (IllegalArgumentException publicOnly) {
-            // public key, certificate or public JWK
-        }
-        if (publicKey instanceof RSAPublicKey rsa) {
-            if (keyType != null && !"RSA".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is RSA but key type " + keyType + " is selected.");
-            }
-            RSAKey.Builder builder = new RSAKey.Builder(rsa).keyID(kid);
-            if (privateKey != null) builder.privateKey(privateKey);
-            return builder.build();
-        }
-        if (publicKey instanceof java.security.interfaces.ECPublicKey ec) {
-            if (keyType != null && !"EC".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is EC but key type " + keyType + " is selected.");
-            }
-            ECKey.Builder builder = new ECKey.Builder(Curve.forECParameterSpec(ec.getParams()), ec).keyID(kid);
-            if (privateKey != null) builder.privateKey(privateKey);
-            return builder.build();
-        }
-        if (publicKey instanceof java.security.interfaces.EdECPublicKey) {
-            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is an Ed25519/Ed448 (OKP) key but key type " + keyType + " is selected.");
-            }
-            byte[] x = JoseKeyMaterial.rawEdPublicKey(publicKey);
-            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x.length == 32 ? Curve.Ed25519 : Curve.Ed448,
-                    Base64URL.encode(x)).keyID(kid);
-            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(privateKey)));
-            return builder.build();
-        }
-        if (publicKey instanceof java.security.interfaces.XECPublicKey) {
-            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is an X25519/X448 (OKP) key but key type " + keyType + " is selected.");
-            }
-            boolean x25519 = "X25519".equalsIgnoreCase(JoseKeyMaterial.xdhCurveName(publicKey));
-            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x25519 ? Curve.X25519 : Curve.X448,
-                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(publicKey))).keyID(kid);
-            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawXPrivateKey(privateKey)));
-            return builder.build();
-        }
-        throw new IllegalArgumentException("Unsupported key algorithm: " + publicKey.getAlgorithm());
-    }
-
-    private static String pem(String type, byte[] der) {
-        return "-----BEGIN " + type + "-----\n"
-                + java.util.Base64.getMimeEncoder(64, new byte[] { '\n' }).encodeToString(der)
-                + "\n-----END " + type + "-----\n";
-    }
-
-    private static JWK withKeyId(JWK jwk, String kid) {
-        if (jwk instanceof RSAKey rsa) return new RSAKey.Builder(rsa).keyID(kid).build();
-        if (jwk instanceof ECKey ec) return new ECKey.Builder(ec).keyID(kid).build();
-        if (jwk instanceof OctetSequenceKey oct) return new OctetSequenceKey.Builder(oct).keyID(kid).build();
-        if (jwk instanceof OctetKeyPair okp) return new OctetKeyPair.Builder(okp).keyID(kid).build();
-        return jwk;
+        return JoseJwkCoordinator.asymmetricJwk(keyMaterial, keyType, kid);
     }
 
     public void convertJwkToPem(String jwkJson, TextArea outputArea) {
-        try {
-            com.nimbusds.jose.jwk.JWK jwk = com.nimbusds.jose.jwk.JWK.parse(jwkJson);
-
-            StringBuilder sb = new StringBuilder();
-
-            if (jwk instanceof com.nimbusds.jose.jwk.RSAKey) {
-                com.nimbusds.jose.jwk.RSAKey rsaKey = (com.nimbusds.jose.jwk.RSAKey) jwk;
-
-                // Public
-                sb.append("=== Public Key (PEM) ===\n");
-                java.security.interfaces.RSAPublicKey pub = rsaKey.toRSAPublicKey();
-                String pubPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                        .encodeToString(pub.getEncoded());
-                sb.append("-----BEGIN PUBLIC KEY-----\n").append(pubPem).append("\n-----END PUBLIC KEY-----\n\n");
-
-                // Private
-                if (rsaKey.isPrivate()) {
-                    sb.append("=== Private Key (PEM) ===\n");
-                    java.security.interfaces.RSAPrivateKey priv = rsaKey.toRSAPrivateKey();
-                    String privPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                            .encodeToString(priv.getEncoded());
-                    sb.append("-----BEGIN PRIVATE KEY-----\n").append(privPem).append("\n-----END PRIVATE KEY-----\n");
-                }
-
-                outputArea.setText(sb.toString());
-
-            } else if (jwk instanceof com.nimbusds.jose.jwk.ECKey) {
-                com.nimbusds.jose.jwk.ECKey ecKey = (com.nimbusds.jose.jwk.ECKey) jwk;
-                // Public
-                sb.append("=== Public Key (PEM) ===\n");
-                java.security.Provider provider = Curve.SECP256K1.equals(ecKey.getCurve())
-                        ? new org.bouncycastle.jce.provider.BouncyCastleProvider() : null;
-                java.security.interfaces.ECPublicKey pub = provider == null ? ecKey.toECPublicKey()
-                        : ecKey.toECPublicKey(provider);
-                String pubPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                        .encodeToString(pub.getEncoded());
-                sb.append("-----BEGIN PUBLIC KEY-----\n").append(pubPem).append("\n-----END PUBLIC KEY-----\n\n");
-
-                if (ecKey.isPrivate()) {
-                    sb.append("=== Private Key (PEM) ===\n");
-                    java.security.interfaces.ECPrivateKey priv = provider == null ? ecKey.toECPrivateKey()
-                            : ecKey.toECPrivateKey(provider);
-                    String privPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                            .encodeToString(priv.getEncoded());
-                    sb.append("-----BEGIN PRIVATE KEY-----\n").append(privPem).append("\n-----END PRIVATE KEY-----\n");
-                }
-                outputArea.setText(sb.toString());
-            } else if (jwk instanceof com.nimbusds.jose.jwk.OctetSequenceKey) {
-                com.nimbusds.jose.jwk.OctetSequenceKey octKey = (com.nimbusds.jose.jwk.OctetSequenceKey) jwk;
-                sb.append("=== Symmetric Key (Secret) ===\n");
-                byte[] secret = octKey.toByteArray();
-
-                sb.append("Length: ").append(secret.length * 8).append(" bits (").append(secret.length)
-                        .append(" bytes)\n\n");
-
-                sb.append("Hex:\n");
-                for (byte b : secret) {
-                    sb.append(String.format("%02x", b));
-                }
-                sb.append("\n\n");
-
-                sb.append("Base64:\n");
-                sb.append(java.util.Base64.getEncoder().encodeToString(secret)).append("\n\n");
-
-                sb.append("Base64URL:\n");
-                sb.append(java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(secret));
-
-                outputArea.setText(sb.toString());
-            } else if (jwk instanceof OctetKeyPair okp) {
-                String json = okp.toJSONString();
-                sb.append("=== Public Key (PEM) ===\n");
-                sb.append(pem("PUBLIC KEY", JoseKeyMaterial.publicKey(json).getEncoded())).append("\n");
-                if (okp.isPrivate()) {
-                    sb.append("=== Private Key (PEM) ===\n");
-                    sb.append(pem("PRIVATE KEY", JoseKeyMaterial.privateKey(json).getEncoded()));
-                }
-                outputArea.setText(sb.toString());
-            } else {
-                outputArea.setText("Unsupported or Unknown Key Type for PEM export: " + jwk.getKeyType());
-            }
-
-        } catch (Exception e) {
-            outputArea.setText("Error converting JWK to PEM: " + e.getMessage());
-        }
+        jwkCoordinator().convertJwkToPem(jwkJson, outputArea);
     }
 
     public void calculateThumbprint(String input, TextArea outputArea) {
-        try {
-            // Heuristic: Is it JWK or PEM?
-            if (input.trim().startsWith("{")) {
-                // Assume JWK
-                com.nimbusds.jose.jwk.JWK jwk = com.nimbusds.jose.jwk.JWK.parse(input);
-                outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
-            } else {
-                JWK jwk = asymmetricJwk(input, null, null);
-                outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
-            }
-        } catch (Exception e) {
-            outputArea.setText("Error calculating thumbprint: " + e.getMessage());
-        }
+        jwkCoordinator().calculateThumbprint(input, outputArea);
     }
 
     private String addSection(TextFlow flow, String title, String part, Color color, boolean isJson, int depth) {
