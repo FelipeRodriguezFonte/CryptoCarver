@@ -24,6 +24,7 @@ class JoseJwkPrivacyCharacterizationUITest {
                 assertTrue(rsa.toJSONObject().keySet().containsAll(List.of("d", "p", "q", "dp", "dq", "qi")));
                 for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
                     p.language(language);
+                    p.line("language", language);
                     for (SecretVisibilityProfile profile : SecretVisibilityProfile.values()) {
                         AppSettings.getInstance().setSecretVisibilityProfile(profile);
                         p.controller.convertPemToJwk(rsaPem, "RSA", "invented-rsa", p.area("jwkOutputArea"));
@@ -36,10 +37,15 @@ class JoseJwkPrivacyCharacterizationUITest {
                         String jwks = com.nimbusds.jose.util.JSONObjectUtils.toJSONString(new JWKSet(List.of(rsa, oct)).toJSONObject(false));
                         coordinator.loadedJWKS(jwks);
                         audit(p, "private-and-oct-jwks", p.area("jwksArea"), privateValues(rsa, oct), profile);
-                        assertEquals(1, JWKSet.parse(coordinator.exportPublicJWKS(jwks)).getKeys().size());
+                        assertEquals(1, JWKSet.parse(coordinator.currentPublicJwks()).getKeys().size());
+                        p.combo("jwksRotateAlgoCombo").setValue("RS256");
+                        coordinator.handleRotateKey();
+                        JWKSet rotated = JWKSet.parse(new String(p.reporter.result.getOutput(), StandardCharsets.UTF_8));
+                        audit(p, "generated-private-jwks", p.area("jwksArea"), privateValues(rotated.getKeys().toArray(JWK[]::new)), profile);
+                        assertEquals(2, JWKSet.parse(coordinator.currentPublicJwks()).getKeys().size());
                     }
                 }
-                p.digest("TO_BE_FILLED");
+                p.digest("3bd9891728349fad323eee284024eeaa03bf7a8548efe970a0bd41968d6d344c");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }
@@ -76,6 +82,8 @@ class JoseJwkPrivacyCharacterizationUITest {
             assertFalse(p.reporter.result.getDetails().stream().filter(d -> d.classification() == OperationDetail.Classification.PUBLIC).anyMatch(d -> d.value().contains(secret)), "public telemetry details leaked");
         }
         p.privacy(p.reporter.result, secrets.toArray(String[]::new));
+        AppSettings.getInstance().setSecretVisibilityProfile(profile);
+        p.line("status", p.reporter.result.getStatusMessage());
         p.line(name + "_" + profile, "classified;copy/expand/shelf/history/status/telemetry-protected");
     }
 }

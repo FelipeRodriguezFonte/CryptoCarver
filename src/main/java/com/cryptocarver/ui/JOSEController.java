@@ -774,20 +774,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    private void handleExportPublicJWKS() {
-
-        try {
-            String json = jwksArea.getText();
-            String publicJson = this.exportPublicJWKS(json);
-            TextArea area = new TextArea(publicJson);
-            area.setEditable(false);
-            area.setWrapText(true);
-            area.setPrefSize(500, 300);
-            dialogService.show(Alert.AlertType.INFORMATION, null, "Public JWKS", "Public Keys Only", area, ButtonType.OK);
-        } catch (Exception e) {
-            showError("Export Error", e.getMessage());
-        }
-    }
+    private void handleExportPublicJWKS() { jwkCoordinator().handleExportPublicJWKS(); }
     @FXML
     public void handleJwkToPem() { jwkCoordinator().handleJwkToPem(); }
 
