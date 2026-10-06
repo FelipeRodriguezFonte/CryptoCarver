@@ -78,7 +78,7 @@ public class JOSEController implements Initializable {
     private JoseJwtCoordinator jwtCoordinator;
     private JoseJwtCoordinator jwtCoordinator() {
         if (jwtCoordinator == null) jwtCoordinator = new JoseJwtCoordinator(
-                () -> new JoseJwtCoordinator.View(detachedAlgoCombo, detachedPayloadArea, detachedSecretFormatCombo, detachedSerializationCombo, detachedSigningKeyArea, detachedStatusLabel, detachedTokenArea, detachedUnencodedCheck, detachedVerificationKeyArea, jwsSerializationCombo, jwsUnencodedPayloadCheck, jwtAcceptNoneCheck, jwtAccessTokenField, jwtAlgo2Combo, jwtAlgoCombo, jwtAllowedAlgorithmsField, jwtAudField, jwtAuthorizationCodeField, jwtCheckExpiryCheck, jwtClockSkewField, jwtDecodedHeaderArea, jwtDecodedPayloadArea, jwtExpField, jwtExpectedAudField, jwtExpectedContentTypeField, jwtExpectedIssField, jwtExpectedJktField, jwtExpectedNonceField, jwtExpectedTypeField, jwtExpectedX5tField, jwtFindingsArea, jwtIgnoreCritCheck, jwtIssField, jwtKeyArea, jwtKeyArea2, jwtOidcStrictCheck, jwtOutputArea, jwtPayloadArea, jwtProtectedHeaderArea, jwtRfc9068Check, jwtSecretFormatCombo, jwtStatusLabel, jwtSubField, jwtTrustHeaderKeyCheck, jwtUnderstoodCritField, jwtValidateKeyArea, jwtValidateSecretFormatCombo, jwtValidateTokenArea, nestedCompressCheck, nestedContentAlgoCombo, nestedEncryptionKeyArea, nestedKeyAlgoCombo, nestedOutputArea, nestedPayloadArea, nestedPayloadOutputArea, nestedSecretFormatCombo, nestedSignAlgoCombo, nestedSigningKeyArea, nestedStatusLabel, jwtTrustAnchorsArea, jwtCertificateDateField, jwtTrustAnchorsLabel, jwtCertificateDateLabel), () -> statusReporter);
+                () -> new JoseJwtCoordinator.View(detachedAlgoCombo, detachedPayloadArea, detachedSecretFormatCombo, detachedSerializationCombo, detachedSigningKeyArea, detachedStatusLabel, detachedTokenArea, detachedUnencodedCheck, detachedVerificationKeyArea, jwsSerializationCombo, jwsUnencodedPayloadCheck, jwtAcceptNoneCheck, jwtAccessTokenField, jwtAlgo2Combo, jwtAlgoCombo, jwtAllowedAlgorithmsField, jwtAudField, jwtAuthorizationCodeField, jwtCheckExpiryCheck, jwtClockSkewField, jwtDecodedHeaderArea, jwtDecodedPayloadArea, jwtExpField, jwtExpectedAudField, jwtExpectedContentTypeField, jwtExpectedIssField, jwtExpectedJktField, jwtExpectedNonceField, jwtExpectedTypeField, jwtExpectedX5tField, jwtFindingsArea, jwtIgnoreCritCheck, jwtIssField, jwtKeyArea, jwtKeyArea2, jwtOidcStrictCheck, jwtOutputArea, jwtPayloadArea, jwtProtectedHeaderArea, jwtRfc9068Check, jwtSecretFormatCombo, jwtStatusLabel, jwtSubField, jwtTrustHeaderKeyCheck, jwtUnderstoodCritField, jwtValidateKeyArea, jwtValidateSecretFormatCombo, jwtValidateTokenArea, nestedCompressCheck, nestedContentAlgoCombo, nestedEncryptionKeyArea, nestedKeyAlgoCombo, nestedOutputArea, nestedPayloadArea, nestedPayloadOutputArea, nestedSecretFormatCombo, nestedSignAlgoCombo, nestedSigningKeyArea, nestedStatusLabel, jwtTrustAnchorsArea, jwtCertificateDateField, jwtTrustAnchorsLabel, jwtCertificateDateLabel, detachedProtectedHeaderSecretArea, detachedProtectedHeaderLabel), () -> statusReporter);
         return jwtCoordinator;
     }
 
@@ -185,6 +185,7 @@ public class JOSEController implements Initializable {
             updateJwkInputPresentation();
             refreshCapabilityLabels();
             jwkCoordinator().initializeCurveControls();
+            jwtCoordinator().initializeDetachedHeaderControls();
             for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
                     nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
                 markUnsafeOptions(combo);
@@ -282,6 +283,7 @@ public class JOSEController implements Initializable {
             }
 
             jwkCoordinator().initializeCurveControls();
+            jwtCoordinator().initializeDetachedHeaderControls();
             for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
                     nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
                 markUnsafeOptions(combo);
@@ -517,6 +519,8 @@ public class JOSEController implements Initializable {
 @FXML
     private TableColumn<SimpleAlgo, String> jwaNameCol;
 @FXML private CheckBox detachedUnencodedCheck;
+    @FXML private TextArea detachedProtectedHeaderSecretArea;
+    @FXML private Label detachedProtectedHeaderLabel;
 @FXML
     private TextArea inspectorInputArea;
 @FXML

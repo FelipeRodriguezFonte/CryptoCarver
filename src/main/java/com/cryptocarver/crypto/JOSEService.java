@@ -163,6 +163,11 @@ public class JOSEService {
     }
 
     public static String generateDetachedJWS(String rawPayload, List<SignerConfig> signers, String serializationType, boolean unencodedPayload) throws Exception {
+        return generateDetachedJWS(rawPayload, signers, serializationType, unencodedPayload, null);
+    }
+
+    public static String generateDetachedJWS(String rawPayload, List<SignerConfig> signers, String serializationType,
+            boolean unencodedPayload, String customHeaderJson) throws Exception {
         if (signers == null || signers.isEmpty()) {
             throw new IllegalArgumentException("At least one signer must be provided.");
         }
@@ -171,6 +176,8 @@ public class JOSEService {
         }
 
         if (signers.size() == 1 && "none".equalsIgnoreCase(signers.get(0).getAlgorithm())) {
+            if(customHeaderJson!=null && !customHeaderJson.isBlank())
+                throw new IllegalArgumentException("Custom protected headers are not supported for alg=none.");
             return JoseNoneJws.detached(serializationType);
         }
 
@@ -184,7 +191,7 @@ public class JOSEService {
                 headerBuilder.base64URLEncodePayload(false);
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
-            JWSHeader header = headerBuilder.build();
+            JWSHeader header = withCustomJwsHeader(headerBuilder, customHeaderJson);
             JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
             JWSObject jwsObject = new JWSObject(header, payload);
             jwsObject.sign(signer);
@@ -203,7 +210,7 @@ public class JOSEService {
                 headerBuilder.base64URLEncodePayload(false);
                 headerBuilder.criticalParams(Collections.singleton("b64"));
             }
-            JWSHeader header = headerBuilder.build();
+            JWSHeader header = withCustomJwsHeader(headerBuilder, customHeaderJson);
             JWSSigner signer = createSigner(jwsAlgo, config.getSecretOrKey(), config.getSecretEncoding());
 
             JWSObject jwsObject = new JWSObject(header, payload);
@@ -396,12 +403,21 @@ public class JOSEService {
         try {
             custom = com.nimbusds.jose.util.JSONObjectUtils.parse(customHeaderJson);
         } catch (java.text.ParseException e) {
-            throw new IllegalArgumentException("Protected header parameters must be a JSON object: " + e.getMessage(), e);
+            throw new IllegalArgumentException("Protected header parameters must be a JSON object.", e);
         }
         for (String reserved : List.of("alg", "b64", "crit")) {
             if (custom.containsKey(reserved)) {
                 throw new IllegalArgumentException("Protected header JSON cannot override '" + reserved + "'.");
             }
+        }
+        if (custom.containsKey("jwk")) {
+            com.nimbusds.jose.jwk.JWK embedded;
+            try {
+                if (!(custom.get("jwk") instanceof Map<?, ?>)) throw new IllegalArgumentException();
+                embedded = com.nimbusds.jose.jwk.JWK.parse((Map<String,Object>)custom.get("jwk"));
+            } catch(Exception invalid) { throw new IllegalArgumentException("The embedded jwk must be a valid public key."); }
+            if (embedded.isPrivate() || embedded instanceof com.nimbusds.jose.jwk.OctetSequenceKey)
+                throw new IllegalArgumentException("The embedded jwk must not contain private or symmetric key material.");
         }
         Map<String, Object> merged = new java.util.LinkedHashMap<>(base.toJSONObject());
         merged.putAll(custom);
