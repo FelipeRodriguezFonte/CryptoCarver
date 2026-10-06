@@ -19,3 +19,11 @@ Selector OKP en el coordinador: Ed25519 (predeterminado), Ed448, X25519 y X448; 
 El test nuevo tenía una aserción inglesa sobre la etiqueta española: corregida para comprobar Signature=VALID en el resultado estructurado. También se corrigió el nombre del accessor del detalle (name). Los fallos eran del test nuevo. Todas las comprobaciones funcionales pasaron antes de fijar el digest inicial: `3794f33085d21f997300f67535bdd7e731e7729e0573e82141fc16af1adc76b1`. Solo se registran etiquetas, estados y marcadores; ninguna salida aleatoria.
 
 Primera ejecución general: {'reports': 441, 'tests': 2900, 'failures': 0, 'errors': 0, 'skipped': 1}. En la revisión se añadió sincronización también al cambiar el algoritmo, preservando las variantes ECDH-ES+KW. Se repetirán las puertas tras este arreglo.
+
+Puerta 1 final: `mvn -o -q test -Plow-cpu`: {'reports': 441, 'tests': 2900, 'failures': 0, 'errors': 0, 'skipped': 1}.
+
+Puerta 2: `mvn -o -q test -Plow-cpu -DrunUiTests=true`: {'reports': 123, 'tests': 539, 'failures': 0, 'errors': 0, 'skipped': 0}.
+
+Puerta 3: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test`: {'reports': 123, 'tests': 539, 'failures': 0, 'errors': 0, 'skipped': 0}.
+
+Las tres puertas finales pasan. Digest nuevo y anteriores verificados sin cambios. Presupuestos: estilos FXML 0, emojis 325.
