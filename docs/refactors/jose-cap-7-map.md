@@ -13,3 +13,5 @@ Se conserva la semántica existente de verificación de una firma matching algor
 Tests: UI real con los controles, EN/ES, perfiles, errores reservados legibles y avisos b64=false; integridad de cabeceras y contenido detached en tres serializaciones. Vector exacto [RFC 7797 §4.2](https://www.rfc-editor.org/rfc/rfc7797.html#section-4.2), control §4.1, clave HMAC de [RFC 7515 A.1](https://www.rfc-editor.org/rfc/rfc7515.html#appendix-A.1); solo material publicado/inventado. Cabeceras de certificados usan la PKI inventada de fase 3. No se fijan firmas ni DER aleatorias en el digest.
 
 Ficheros: JOSEService.java (autorizado), JoseJwtCoordinator.java, campos JOSEController.java, jose.fxml, test nuevo JoseDetachedHeadersCharacterizationUITest y test criptográfico JoseDetachedHeadersTest. Sin dependencias ni cambios en clases prohibidas.
+
+Test UI en rojo, 1 test/1 fallo/0 errores: `Detached protected header editor is missing`. Log target/jose-cap-7-red.log.
