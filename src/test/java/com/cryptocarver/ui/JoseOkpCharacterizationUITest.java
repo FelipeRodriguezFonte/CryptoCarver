@@ -22,6 +22,12 @@ class JoseOkpCharacterizationUITest {
             try (var p = new JoseCharacterizationSupport()) {
                 assertNotNull(p.combo("jwkCurveCombo"), "OKP curve selector is missing");
                 assertEquals(List.of("Ed25519", "Ed448", "X25519", "X448"), p.combo("jwkCurveCombo").getItems());
+                p.combo("jwkCurveCombo").setValue("X448");
+                p.combo("jwksRotateAlgoCombo").setValue("EdDSA");
+                assertEquals("Ed25519", p.combo("jwkCurveCombo").getValue());
+                p.combo("jwksRotateAlgoCombo").setValue("ECDH-ES+A128KW");
+                assertEquals("X25519", p.combo("jwkCurveCombo").getValue());
+                assertEquals("ECDH-ES+A128KW", p.combo("jwksRotateAlgoCombo").getValue());
                 for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {
                     p.language(language);
                     p.line("curve_label", p.label("jwkCurveLabel").getText());

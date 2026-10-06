@@ -38,6 +38,7 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
     private final Map<TextArea, String> originalIds = new WeakHashMap<>();
     private final Set<TextArea> guardedAreas = Collections.newSetFromMap(new WeakHashMap<>());
     private String jwksMaterial, jwksDisplay;
+    private boolean synchronizingCurve;
 
     private void present(String operation, String content, boolean secret, TextArea area) {
         originalIds.putIfAbsent(area, area.getId() == null ? "joseOutputArea" : area.getId());
@@ -109,10 +110,21 @@ final class JoseJwkCoordinator extends JoseCoordinatorSupport {
         curve.setDisable(!"OKP".equals(view().jwkKeyTypeCombo().getValue()));
         view().jwkKeyTypeCombo().valueProperty().addListener((obs, oldValue, value) -> curve.setDisable(!"OKP".equals(value)));
         curve.valueProperty().addListener((obs, oldValue, value) -> {
-            if (value == null) return;
+            if (value == null || synchronizingCurve) return;
             view().jwkKeyTypeCombo().setValue("OKP");
             view().jwkUseCombo().setValue(value.startsWith("Ed") ? "sig" : "enc");
             view().jwksRotateAlgoCombo().setValue(value.startsWith("Ed") ? "EdDSA" : value.equals("X448") ? "ECDH-ES-X448" : "ECDH-ES");
+        });
+        view().jwksRotateAlgoCombo().valueProperty().addListener((obs, oldValue, value) -> {
+            if (value == null || !(value.equals("EdDSA") || value.startsWith("ECDH-ES"))) return;
+            synchronizingCurve = true;
+            try {
+                view().jwkKeyTypeCombo().setValue("OKP");
+                view().jwkUseCombo().setValue(value.equals("EdDSA") ? "sig" : "enc");
+                if (value.equals("EdDSA") && !curve.getValue().startsWith("Ed")) curve.setValue("Ed25519");
+                else if (value.contains("X448")) curve.setValue("X448");
+                else if (!value.equals("EdDSA") && curve.getValue().startsWith("Ed")) curve.setValue("X25519");
+            } finally { synchronizingCurve = false; }
         });
         refreshCurveLabel();
     }

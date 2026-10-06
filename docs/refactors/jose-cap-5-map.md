@@ -17,3 +17,5 @@ Sources: [RFC 8037 Sections 2/3 and Appendix A](https://www.rfc-editor.org/rfc/r
 Selector OKP en el coordinador: Ed25519 (predeterminado), Ed448, X25519 y X448; el cambio de curva selecciona sig/EdDSA o enc/ECDH-ES coherentemente. No se necesitan cambios criptográficos. Se añaden campos FXML y delegados de una línea. El constructor de View del test de privacidad se adapta mecánicamente a los dos controles nuevos; no cambian sus aserciones ni digest.
 
 El test nuevo tenía una aserción inglesa sobre la etiqueta española: corregida para comprobar Signature=VALID en el resultado estructurado. También se corrigió el nombre del accessor del detalle (name). Los fallos eran del test nuevo. Todas las comprobaciones funcionales pasaron antes de fijar el digest inicial: `3794f33085d21f997300f67535bdd7e731e7729e0573e82141fc16af1adc76b1`. Solo se registran etiquetas, estados y marcadores; ninguna salida aleatoria.
+
+Primera ejecución general: {'reports': 441, 'tests': 2900, 'failures': 0, 'errors': 0, 'skipped': 1}. En la revisión se añadió sincronización también al cambiar el algoritmo, preservando las variantes ECDH-ES+KW. Se repetirán las puertas tras este arreglo.
