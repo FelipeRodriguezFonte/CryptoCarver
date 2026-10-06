@@ -13,3 +13,5 @@ El coordinador JWT añade controles de anclas y fecha ISO-8601 (vacío=actual), 
 Tests con PKI inventada propia raíz/intermedia/hoja, fechas fijas, CA, longitud, uso, firmas, anclas múltiples, huellas y clave equivocada. Transcripción UI estable en ambos idiomas y tres perfiles; no contiene DER, números de serie, fechas dinámicas, huellas ni mensajes PKIX del JDK.
 
 Referencias: [RFC 7515 §4.1.6–4.1.8](https://www.rfc-editor.org/rfc/rfc7515.html#section-4.1.6), [PKIXParameters Java 17](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/cert/PKIXParameters.html). La PKI inventada permite validar fechas y restricciones; el ejemplo x5c del apéndice B no aporta las anclas y claves privadas necesarias para estas variantes.
+
+Test UI en rojo, 1 test/1 fallo/0 errores: `x5c trust anchors control is missing`. JavaFX real disponible. Log target/jose-cap-6-red.log.
