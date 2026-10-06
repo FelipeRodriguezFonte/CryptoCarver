@@ -38,8 +38,7 @@ class SpecializedFeedbackHeadlessTest {
         controllerKeys.put("EMVController", List.of("module.emv.feedback.dolFormat"));
         controllerKeys.put("JOSEController", List.of(
                 "module.jose.feedback.fileRead", "module.jose.feedback.copyEmpty",
-                "module.jose.feedback.algorithmRequired", "module.jose.feedback.keyFormat",
-                "module.jose.feedback.keyAdded"));
+                "module.jose.feedback.keyFormat"));
         controllerKeys.put("PadesController", List.of(
                 "module.pades.feedback.required", "module.pades.feedback.fileMissing",
                 "module.pades.feedback.outputExists", "module.pades.feedback.fileTooLarge",
@@ -83,6 +82,8 @@ class SpecializedFeedbackHeadlessTest {
 
         Map<String, List<String>> coordinatorKeys = Map.of(
                 "JoseJweCoordinator", List.of("module.jose.feedback.statusJweDecrypted"),
+                "JoseJwkCoordinator", List.of("module.jose.feedback.algorithmRequired",
+                        "module.jose.feedback.keyAdded"),
                 "JoseJwtCoordinator", List.of("module.jose.feedback.statusDetachedGenerated",
                         "module.jose.feedback.statusJwtGenerated", "module.jose.feedback.statusJwtValidation",
                         "module.jose.feedback.statusNested"),

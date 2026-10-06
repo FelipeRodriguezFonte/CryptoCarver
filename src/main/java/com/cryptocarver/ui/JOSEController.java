@@ -58,6 +58,15 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class JOSEController implements Initializable {
+    private JoseJwkCoordinator jwkCoordinator;
+    private final JoseInspectorCoordinator inspectorCoordinator = new JoseInspectorCoordinator();
+    private JoseJwkCoordinator jwkCoordinator() {
+        if (jwkCoordinator == null) jwkCoordinator = new JoseJwkCoordinator(
+                () -> new JoseJwkCoordinator.View(jwkInputArea, jwkOutputArea, jwkKeyTypeCombo, jwkKeyIdField,
+                        jwkUseCombo, jwkKeyOpsField, jwksArea, jwksRotateAlgoCombo), () -> statusReporter, dialogService);
+        return jwkCoordinator;
+    }
+
     private JoseJweCoordinator jweCoordinator;
     private JoseJweCoordinator jweCoordinator() {
         if (jweCoordinator == null) jweCoordinator = new JoseJweCoordinator(
@@ -625,18 +634,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    public void handlePemToJwk() {
-
-            if (isBlank(jwkInputArea)) {
-                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
-                return;
-            }
-
-            this.convertPemToJwk(jwkInputArea.getText(), jwkKeyTypeCombo.getValue(), jwkKeyIdField.getText(),
-                    jwkUseCombo == null ? null : jwkUseCombo.getValue(), textOf(jwkKeyOpsField),
-                    jwkOutputArea);
-
-        }
+    public void handlePemToJwk() { jwkCoordinator().handlePemToJwk(); }
 
     @FXML
     private void handleLoadJWKS() {
@@ -647,8 +645,7 @@ public class JOSEController implements Initializable {
         if (file != null) {
             try {
                 String content = java.nio.file.Files.readString(file.toPath());
-                jwksArea.setText(content);
-                updateStatus(t("module.jose.feedback.jwksLoaded"));
+                jwkCoordinator().loadedJWKS(content);
 
             } catch (Exception e) {
                 showError("Load Error", t("module.jose.feedback.fileRead", e.getMessage()));
@@ -693,16 +690,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    public void handleCalculateThumbprint() {
-
-            if (isBlank(jwkInputArea)) {
-                showValidation(t("module.jose.feedback.thumbprintInput"), "jwkInputArea");
-                return;
-            }
-
-            this.calculateThumbprint(jwkInputArea.getText(), jwkOutputArea);
-
-        }
+    public void handleCalculateThumbprint() { jwkCoordinator().handleCalculateThumbprint(); }
 
     @FXML
     private void handleLoadJWEPrivateKey() {
@@ -748,51 +736,12 @@ public class JOSEController implements Initializable {
     private void handleGenerateSignedJWT() { jwtCoordinator().handleGenerateSignedJWT(); }
 
     @FXML
-    private void handleNewJWKS() {
-        if (jwksArea != null) {
-            jwksArea.setText("{\n  \"keys\": []\n}");
-        }
-    }
+    private void handleNewJWKS() { jwkCoordinator().handleNewJWKS(); }
     @FXML
     private void handleValidateJWT() { jwtCoordinator().handleValidateJWT(); }
 
     @FXML
-    private void handleRotateKey() {
-
-        try {
-            String alg = jwksRotateAlgoCombo.getValue();
-            if (alg == null) {
-                showValidation(t("module.jose.feedback.algorithmRequired"), "jwksRotateAlgoCombo", "preflight.remedy.algorithm");
-                return;
-            }
-            // Security Warning for Symmetric Keys in JWKS
-            if ((alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir"))
-                    && LabPrompt.JWKS_SECRET.shouldShow()) {
-                String warningText = "You are adding a SYMMETRIC key (Secret) to this JWK Set.\n\n" +
-                        "If you publish this JWKS file publicly (e.g. at .well-known/jwks.json), ANYONE will be able to read your secret key and forge tokens.\n\n"
-                        + "Are you sure you want to proceed?";
-                java.util.Optional<ButtonType> result = dialogService.show(Alert.AlertType.WARNING, null,
-                        "Security Warning", "Symmetric Key in Public JWKS", new Label(warningText),
-                        ButtonType.NO, ButtonType.YES);
-                if (result.isEmpty() || result.get() != ButtonType.YES) {
-                    return;
-                }
-            }
-            String use = alg.startsWith("A") || alg.equals("dir") || alg.startsWith("RSA1_5")
-                    || alg.startsWith("RSA-OAEP") || alg.startsWith("ECDH-ES") ? "enc" : "sig";
-            com.nimbusds.jose.jwk.JWK newKey = JoseJwkPolicy.withMetadata(this.generateNewJWK(alg, use), use,
-                    textOf(jwkKeyOpsField));
-            String currentJson = jwksArea.getText();
-            if (currentJson == null || currentJson.isBlank())
-                currentJson = "{\"keys\":[]}";
-            String newJson = this.addToJWKSet(currentJson, newKey);
-            jwksArea.setText(newJson);
-            updateStatus(t("module.jose.feedback.keyAdded", alg));
-
-        } catch (Exception e) {
-            showError("Rotate Key Error", e.getMessage());
-        }
-    }
+    private void handleRotateKey() { jwkCoordinator().handleRotateKey(); }
     @FXML
     private void handleGenerateJWE() { jweCoordinator().handleGenerateJWE(); }
 
@@ -810,6 +759,8 @@ public class JOSEController implements Initializable {
 
         }
     }
+    @FXML
+    private void handleInspectJwkMetadata() { jwkCoordinator().handleInspectJwkMetadata(); }
     @FXML
     private void handleLoadJWTKey() {
         File file = chooseFile("Load Signing Key");
@@ -838,16 +789,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    public void handleJwkToPem() {
-
-            if (isBlank(jwkInputArea)) {
-                showValidation(t("module.jose.feedback.inputPem"), "jwkInputArea");
-                return;
-            }
-
-            this.convertJwkToPem(jwkInputArea.getText(), jwkOutputArea);
-
-        }
+    public void handleJwkToPem() { jwkCoordinator().handleJwkToPem(); }
 
     @FXML
     private void handleLoadJWTValidateKey() {
@@ -1048,117 +990,10 @@ public class JOSEController implements Initializable {
 
     // --- Enterprise Features (level 4 & 5) ---
 
-    // 1. JWK Managemen
-    public JWK generateNewJWK(String alg, String use) throws Exception {
-        if (java.util.Set.of("RS256", "RS384", "RS512", "PS256", "PS384", "PS512").contains(alg)) {
-            return new RSAKeyGenerator(2048)
-                    .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                    .algorithm(new JWSAlgorithm(alg))
-                    .keyID(UUID.randomUUID().toString())
-                    .generate();
-        } else if ("RSA1_5".equals(alg) || "RSA-OAEP".equals(alg)
-                || "RSA-OAEP-256".equals(alg) || "RSA-OAEP-384".equals(alg) || "RSA-OAEP-512".equals(alg)) {
-            return new RSAKeyGenerator(2048).keyUse(KeyUse.ENCRYPTION).algorithm(new JWEAlgorithm(alg))
-                    .keyID(UUID.randomUUID().toString()).generate();
-        } else if (alg.equals("EdDSA")) {
-            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
-            return new OctetKeyPair.Builder(Curve.Ed25519,
-                    Base64URL.encode(JoseKeyMaterial.rawEdPublicKey(pair.getPublic())))
-                    .d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(pair.getPrivate())))
-                    .keyUse(KeyUse.SIGNATURE)
-                    .algorithm(JWSAlgorithm.EdDSA)
-                    .keyID(UUID.randomUUID().toString())
-                    .build();
-        } else if (alg.startsWith("ECDH-ES")) {
-            boolean x448 = alg.contains("X448");
-            Curve curve = x448 ? Curve.X448 : Curve.X25519;
-            String xdhAlgorithm = x448 ? "X448" : "X25519";
-            java.security.KeyPair pair = java.security.KeyPairGenerator.getInstance(xdhAlgorithm).generateKeyPair();
-            return new OctetKeyPair.Builder(curve,
-                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(pair.getPublic())))
-                    .d(Base64URL.encode(JoseKeyMaterial.rawXPrivateKey(pair.getPrivate())))
-                    .keyUse(KeyUse.ENCRYPTION)
-                    .algorithm(new JWEAlgorithm("ECDH-ES-X448".equals(alg) ? "ECDH-ES" : alg))
-                    .keyID(UUID.randomUUID().toString())
-                    .build();
-        } else if (alg.startsWith("ES")) {
-            if ("ES256K".equals(alg)) {
-                java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC",
-                        new org.bouncycastle.jce.provider.BouncyCastleProvider());
-                generator.initialize(new java.security.spec.ECGenParameterSpec("secp256k1"));
-                java.security.KeyPair pair = generator.generateKeyPair();
-                return new ECKey.Builder(Curve.SECP256K1,
-                        (java.security.interfaces.ECPublicKey) pair.getPublic())
-                        .privateKey(pair.getPrivate())
-                        .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                        .algorithm(new JWSAlgorithm(alg))
-                        .keyID(UUID.randomUUID().toString())
-                        .build();
-            }
-            Curve curve = Curve.P_256;
-            if (alg.contains("384"))
-                curve = Curve.P_384;
-            if (alg.contains("512"))
-                curve = Curve.P_521;
-            return new ECKeyGenerator(curve)
-                    .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                    .algorithm(new JWSAlgorithm(alg))
-                    .keyID(UUID.randomUUID().toString())
-                    .generate();
-        } else if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
-            // Symmetric Key (oct)
-            int bitLength = 256;
-            if (alg.contains("128"))
-                bitLength = 128;
-            if (alg.contains("384"))
-                bitLength = 384;
-            if (alg.contains("512"))
-                bitLength = 512;
-
-            JWK key;
-            if (alg.startsWith("HS") || alg.startsWith("A") || alg.equals("dir")) {
-                LOG.debug("Generating symmetric JWK for algorithm {}", alg);
-                key = new OctetSequenceKeyGenerator(bitLength)
-                        .keyUse(use.equals("sig") ? KeyUse.SIGNATURE : KeyUse.ENCRYPTION)
-                        .algorithm(new Algorithm(alg))
-                        .keyID(UUID.randomUUID().toString())
-                        .generate();
-                LOG.debug("Generated symmetric JWK (key material intentionally omitted from logs)");
-                return key;
-            } else {
-                return null;
-            }
-        } else {
-            throw new IllegalArgumentException("Unsupported algorithm for JWK generation: " + alg);
-        }
-    }
-
-    public String addToJWKSet(String currentJson, JWK newKey) throws Exception {
-        JWKSet jwkSet;
-        if (currentJson == null || currentJson.trim().isEmpty()) {
-            jwkSet = new JWKSet(newKey);
-        } else {
-            try {
-                jwkSet = JWKSet.parse(currentJson);
-                List<JWK> keys = new ArrayList<>(jwkSet.getKeys());
-                keys.add(newKey);
-                jwkSet = new JWKSet(keys);
-            } catch (java.text.ParseException e) {
-                // If parse fails, decide whether to start fresh or throw
-                if (currentJson.trim().length() > 20) {
-                    throw new Exception("Failed to parse existing JWK Set: " + e.getMessage());
-                }
-                jwkSet = new JWKSet(newKey);
-            }
-        }
-        // Force output of private/secret keys (false = do not exclude private keys)
-        return new com.google.gson.Gson().toJson(jwkSet.toJSONObject(false));
-    }
-
-    public String exportPublicJWKS(String json) throws Exception {
-        JWKSet jwkSet = JWKSet.parse(json);
-        return jwkSet.toPublicJWKSet().toString();
-    }
+    // JWK generation and JWKS manipulation are owned by the lazy coordinator.
+    public JWK generateNewJWK(String alg, String use) throws Exception { return jwkCoordinator().generateNewJWK(alg, use); }
+    public String addToJWKSet(String currentJson, JWK newKey) throws Exception { return jwkCoordinator().addToJWKSet(currentJson, newKey); }
+    public String exportPublicJWKS(String json) throws Exception { return jwkCoordinator().exportPublicJWKS(json); }
 
     // 2. Advanced Validation
     public void validateJWTAdvanced(String tokenString, String keyString,
@@ -1176,409 +1011,29 @@ public class JOSEController implements Initializable {
             TextArea headerOut, TextArea payloadOut, Label statusLabel) { jwtCoordinator().validateJWTAdvanced(tokenString, keyString, expectedIss, expectedAud, clockSkewSec, checkExpiry, oidcStrict, trustHeaderKey, advanced, secretEncoding, headerOut, payloadOut, statusLabel); }
 
     // --- Token Inspector (New Layer 6) ---
-    // --- Token Inspector (New Layer 6) ---
     public void inspectToken(String token, TextFlow outputFlow) {
-        outputFlow.getChildren().clear();
-        inspectTokenRecursive(token, outputFlow, 0);
-    }
-
-    private void inspectTokenRecursive(String token, TextFlow outputFlow, int depth) {
-        if (token == null || token.trim().isEmpty())
-            return;
-
-        String indent = "  ".repeat(depth);
-        String prefix = depth > 0 ? indent + "↳ " : "";
-        String[] parts = token.trim().split("\\.", -1);
-
-        try {
-            if (token.trim().startsWith("{")) {
-                inspectJsonSerialization(token.trim(), outputFlow, depth, prefix);
-            } else if (parts.length == 3) {
-                // JWS
-                addText(outputFlow, prefix + "[JWS Detected]\n", Color.LIGHTGREEN, true);
-                addSection(outputFlow, "HEADER", parts[0], Color.RED, true, depth);
-                String payload = addSection(outputFlow, "PAYLOAD", parts[1], Color.MAGENTA, true, depth);
-                addSection(outputFlow, "SIGNATURE", parts[2], Color.CYAN, false, depth);
-
-                // Recursion check on Payload
-                if (payload != null && (payload.startsWith("ey") || payload.startsWith("{"))) {
-                    // Check if it looks like a token
-                    if (payload.split("\\.").length >= 3) {
-                        addText(outputFlow, "\n" + indent + "=== NESTED TOKEN IN PAYLOAD ===\n", Color.GOLD, true);
-                        inspectTokenRecursive(payload, outputFlow, depth + 1);
-                    }
-                }
-
-            } else if (parts.length == 5) {
-                // JWE
-                addText(outputFlow, prefix + "[JWE Detected]\n", Color.LIGHTBLUE, true);
-                String header = addSection(outputFlow, "HEADER", parts[0], Color.RED, true, depth);
-                addSection(outputFlow, "ENCRYPTED KEY", parts[1], Color.ORANGE, false, depth);
-                addSection(outputFlow, "IV", parts[2], Color.GREEN, false, depth);
-                addSection(outputFlow, "CIPHERTEXT", parts[3], Color.BLUE, false, depth);
-                addSection(outputFlow, "TAG", parts[4], Color.YELLOW, false, depth);
-
-                // Hint for Nested JWE
-                if (header != null && (header.contains("\"cty\":\"JWT\"") || header.contains("\"cty\": \"JWT\""))) {
-                    addText(outputFlow, "\n" + indent
-                            + " > NOTE: Header indicates 'cty':'JWT'. This JWE contains a Nested Token (likely Signed).\n",
-                            Color.GOLD, true);
-                    addText(outputFlow, indent
-                            + " > Decrypt this token in the 'JWE' tab, then inspect the result to see the inner token.\n",
-                            Color.GOLD, false);
-                }
-            } else {
-                addText(outputFlow, prefix + "Unknown/Raw Data: " + token + "\n\n", Color.WHITE);
-            }
-        } catch (Exception e) {
-            addText(outputFlow, prefix + "Error: " + e.getMessage() + "\n", Color.RED);
-        }
+        inspectorCoordinator.inspectToken(token, outputFlow);
     }
 
     // --- JWK Logic (Capa 5) ---
-
     public void convertPemToJwk(String pem, String keyType, String keyId, TextArea outputArea) {
-        convertPemToJwk(pem, keyType, keyId, null, null, outputArea);
+        jwkCoordinator().convertPemToJwk(pem, keyType, keyId, outputArea);
     }
 
     public void convertPemToJwk(String pem, String keyType, String keyId, String use, String keyOps, TextArea outputArea) {
-        if (pem == null || pem.trim().isEmpty()) {
-            outputArea.setText("Error: Input PEM is empty.");
-            return;
-        }
-        try {
-            String kid = keyId == null || keyId.isBlank() ? null : keyId.trim();
-            JWK jwk = "OCT".equalsIgnoreCase(keyType)
-                    ? new OctetSequenceKey.Builder(DataConverter.decodeBase64Flexible(pem.replaceAll("\\s+", "")))
-                            .keyID(kid).build()
-                    : asymmetricJwk(pem, keyType, kid);
-            jwk = JoseJwkPolicy.withMetadata(jwk, use, keyOps);
-            String thumbprint = jwk.computeThumbprint().toString();
-            if (kid == null) jwk = withKeyId(jwk, thumbprint);
-
-            outputArea.setText(jwk.toJSONString());
-            outputArea.appendText("\n\n// Thumbprint (SHA-256): " + thumbprint);
-        } catch (Exception e) {
-            outputArea.setText("Error converting to JWK: " + e.getMessage());
-            // No exception attached: parser messages may echo key bytes.
-            LOG.error("PEM key import failed for key type {}", keyType);
-        }
+        jwkCoordinator().convertPemToJwk(pem, keyType, keyId, use, keyOps, outputArea);
     }
 
-    @FXML
-    private void handleInspectJwkMetadata() {
-        try {
-            JWK key = JWK.parse(jwkInputArea.getText());
-            Map<String, Object> metadata = new java.util.LinkedHashMap<>();
-            metadata.put("kty", key.getKeyType().getValue());
-            if (key.getKeyID() != null) metadata.put("kid", key.getKeyID());
-            if (key.getKeyUse() != null) metadata.put("use", key.getKeyUse().identifier());
-            if (key.getKeyOperations() != null) metadata.put("key_ops", key.getKeyOperations().stream()
-                    .map(KeyOperation::identifier).sorted().toList());
-            if (key.getAlgorithm() != null) metadata.put("alg", key.getAlgorithm().getName());
-            jwkOutputArea.setText(com.nimbusds.jose.util.JSONObjectUtils.toJSONString(metadata));
-        } catch (Exception e) {
-            jwkOutputArea.setText(t("module.jose.jwkMetadataReadError", e.getMessage()));
-        }
-    }
-
-    /** RSA or EC key as a JWK; keeps the private half when the input has one. */
     static JWK asymmetricJwk(String keyMaterial, String keyType, String kid) throws Exception {
-        PublicKey publicKey = JoseKeyMaterial.publicKey(keyMaterial);
-        PrivateKey privateKey = null;
-        try {
-            privateKey = JoseKeyMaterial.privateKey(keyMaterial);
-        } catch (IllegalArgumentException publicOnly) {
-            // public key, certificate or public JWK
-        }
-        if (publicKey instanceof RSAPublicKey rsa) {
-            if (keyType != null && !"RSA".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is RSA but key type " + keyType + " is selected.");
-            }
-            RSAKey.Builder builder = new RSAKey.Builder(rsa).keyID(kid);
-            if (privateKey != null) builder.privateKey(privateKey);
-            return builder.build();
-        }
-        if (publicKey instanceof java.security.interfaces.ECPublicKey ec) {
-            if (keyType != null && !"EC".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is EC but key type " + keyType + " is selected.");
-            }
-            ECKey.Builder builder = new ECKey.Builder(Curve.forECParameterSpec(ec.getParams()), ec).keyID(kid);
-            if (privateKey != null) builder.privateKey(privateKey);
-            return builder.build();
-        }
-        if (publicKey instanceof java.security.interfaces.EdECPublicKey) {
-            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is an Ed25519/Ed448 (OKP) key but key type " + keyType + " is selected.");
-            }
-            byte[] x = JoseKeyMaterial.rawEdPublicKey(publicKey);
-            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x.length == 32 ? Curve.Ed25519 : Curve.Ed448,
-                    Base64URL.encode(x)).keyID(kid);
-            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawEdPrivateKey(privateKey)));
-            return builder.build();
-        }
-        if (publicKey instanceof java.security.interfaces.XECPublicKey) {
-            if (keyType != null && !"OKP".equalsIgnoreCase(keyType)) {
-                throw new IllegalArgumentException("The key is an X25519/X448 (OKP) key but key type " + keyType + " is selected.");
-            }
-            boolean x25519 = "X25519".equalsIgnoreCase(JoseKeyMaterial.xdhCurveName(publicKey));
-            OctetKeyPair.Builder builder = new OctetKeyPair.Builder(x25519 ? Curve.X25519 : Curve.X448,
-                    Base64URL.encode(JoseKeyMaterial.rawXPublicKey(publicKey))).keyID(kid);
-            if (privateKey != null) builder.d(Base64URL.encode(JoseKeyMaterial.rawXPrivateKey(privateKey)));
-            return builder.build();
-        }
-        throw new IllegalArgumentException("Unsupported key algorithm: " + publicKey.getAlgorithm());
-    }
-
-    private static String pem(String type, byte[] der) {
-        return "-----BEGIN " + type + "-----\n"
-                + java.util.Base64.getMimeEncoder(64, new byte[] { '\n' }).encodeToString(der)
-                + "\n-----END " + type + "-----\n";
-    }
-
-    private static JWK withKeyId(JWK jwk, String kid) {
-        if (jwk instanceof RSAKey rsa) return new RSAKey.Builder(rsa).keyID(kid).build();
-        if (jwk instanceof ECKey ec) return new ECKey.Builder(ec).keyID(kid).build();
-        if (jwk instanceof OctetSequenceKey oct) return new OctetSequenceKey.Builder(oct).keyID(kid).build();
-        if (jwk instanceof OctetKeyPair okp) return new OctetKeyPair.Builder(okp).keyID(kid).build();
-        return jwk;
+        return JoseJwkCoordinator.asymmetricJwk(keyMaterial, keyType, kid);
     }
 
     public void convertJwkToPem(String jwkJson, TextArea outputArea) {
-        try {
-            com.nimbusds.jose.jwk.JWK jwk = com.nimbusds.jose.jwk.JWK.parse(jwkJson);
-
-            StringBuilder sb = new StringBuilder();
-
-            if (jwk instanceof com.nimbusds.jose.jwk.RSAKey) {
-                com.nimbusds.jose.jwk.RSAKey rsaKey = (com.nimbusds.jose.jwk.RSAKey) jwk;
-
-                // Public
-                sb.append("=== Public Key (PEM) ===\n");
-                java.security.interfaces.RSAPublicKey pub = rsaKey.toRSAPublicKey();
-                String pubPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                        .encodeToString(pub.getEncoded());
-                sb.append("-----BEGIN PUBLIC KEY-----\n").append(pubPem).append("\n-----END PUBLIC KEY-----\n\n");
-
-                // Private
-                if (rsaKey.isPrivate()) {
-                    sb.append("=== Private Key (PEM) ===\n");
-                    java.security.interfaces.RSAPrivateKey priv = rsaKey.toRSAPrivateKey();
-                    String privPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                            .encodeToString(priv.getEncoded());
-                    sb.append("-----BEGIN PRIVATE KEY-----\n").append(privPem).append("\n-----END PRIVATE KEY-----\n");
-                }
-
-                outputArea.setText(sb.toString());
-
-            } else if (jwk instanceof com.nimbusds.jose.jwk.ECKey) {
-                com.nimbusds.jose.jwk.ECKey ecKey = (com.nimbusds.jose.jwk.ECKey) jwk;
-                // Public
-                sb.append("=== Public Key (PEM) ===\n");
-                java.security.Provider provider = Curve.SECP256K1.equals(ecKey.getCurve())
-                        ? new org.bouncycastle.jce.provider.BouncyCastleProvider() : null;
-                java.security.interfaces.ECPublicKey pub = provider == null ? ecKey.toECPublicKey()
-                        : ecKey.toECPublicKey(provider);
-                String pubPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                        .encodeToString(pub.getEncoded());
-                sb.append("-----BEGIN PUBLIC KEY-----\n").append(pubPem).append("\n-----END PUBLIC KEY-----\n\n");
-
-                if (ecKey.isPrivate()) {
-                    sb.append("=== Private Key (PEM) ===\n");
-                    java.security.interfaces.ECPrivateKey priv = provider == null ? ecKey.toECPrivateKey()
-                            : ecKey.toECPrivateKey(provider);
-                    String privPem = java.util.Base64.getMimeEncoder(64, new byte[] { '\n' })
-                            .encodeToString(priv.getEncoded());
-                    sb.append("-----BEGIN PRIVATE KEY-----\n").append(privPem).append("\n-----END PRIVATE KEY-----\n");
-                }
-                outputArea.setText(sb.toString());
-            } else if (jwk instanceof com.nimbusds.jose.jwk.OctetSequenceKey) {
-                com.nimbusds.jose.jwk.OctetSequenceKey octKey = (com.nimbusds.jose.jwk.OctetSequenceKey) jwk;
-                sb.append("=== Symmetric Key (Secret) ===\n");
-                byte[] secret = octKey.toByteArray();
-
-                sb.append("Length: ").append(secret.length * 8).append(" bits (").append(secret.length)
-                        .append(" bytes)\n\n");
-
-                sb.append("Hex:\n");
-                for (byte b : secret) {
-                    sb.append(String.format("%02x", b));
-                }
-                sb.append("\n\n");
-
-                sb.append("Base64:\n");
-                sb.append(java.util.Base64.getEncoder().encodeToString(secret)).append("\n\n");
-
-                sb.append("Base64URL:\n");
-                sb.append(java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(secret));
-
-                outputArea.setText(sb.toString());
-            } else if (jwk instanceof OctetKeyPair okp) {
-                String json = okp.toJSONString();
-                sb.append("=== Public Key (PEM) ===\n");
-                sb.append(pem("PUBLIC KEY", JoseKeyMaterial.publicKey(json).getEncoded())).append("\n");
-                if (okp.isPrivate()) {
-                    sb.append("=== Private Key (PEM) ===\n");
-                    sb.append(pem("PRIVATE KEY", JoseKeyMaterial.privateKey(json).getEncoded()));
-                }
-                outputArea.setText(sb.toString());
-            } else {
-                outputArea.setText("Unsupported or Unknown Key Type for PEM export: " + jwk.getKeyType());
-            }
-
-        } catch (Exception e) {
-            outputArea.setText("Error converting JWK to PEM: " + e.getMessage());
-        }
+        jwkCoordinator().convertJwkToPem(jwkJson, outputArea);
     }
 
     public void calculateThumbprint(String input, TextArea outputArea) {
-        try {
-            // Heuristic: Is it JWK or PEM?
-            if (input.trim().startsWith("{")) {
-                // Assume JWK
-                com.nimbusds.jose.jwk.JWK jwk = com.nimbusds.jose.jwk.JWK.parse(input);
-                outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
-            } else {
-                JWK jwk = asymmetricJwk(input, null, null);
-                outputArea.setText("SHA-256 Thumbprint (RFC 7638):\n" + jwk.computeThumbprint().toString());
-            }
-        } catch (Exception e) {
-            outputArea.setText("Error calculating thumbprint: " + e.getMessage());
-        }
-    }
-
-    private String addSection(TextFlow flow, String title, String part, Color color, boolean isJson, int depth) {
-
-        String indent = "  ".repeat(depth);
-        addText(flow, indent + "=== " + title + " ===\n", color, true);
-        addText(flow, indent + "Raw: " + part + "\n", Color.GRAY);
-
-        String decodedContent = null;
-        try {
-            if (part.isEmpty()) {
-                addText(flow, indent + "(Empty)\n\n", Color.WHITE);
-                return null;
-            }
-            Base64URL b64 = new Base64URL(part);
-            String decoded = b64.decodeToString();
-            decodedContent = decoded;
-
-            if (isJson) {
-                try {
-                    if (title.contains("HEADER")) {
-                        decoded = prettyJson(decoded);
-                    } else if (title.equals("PAYLOAD")) {
-                        try {
-                            decoded = com.nimbusds.jwt.JWTClaimsSet.parse(decoded).toString();
-                        } catch (Exception e) {
-                            // Plain text or token string
-                        }
-                    }
-                } catch (Exception e) {
-                    /* ignore */ }
-            } else {
-                byte[] bytes = b64.decode();
-                decoded = "Hex: " + bytesToHex(bytes) + " (" + bytes.length + " bytes)";
-            }
-            // Indent decoded outpu
-            decoded = decoded.replace("\n", "\n" + indent);
-            addText(flow, indent + decoded + "\n\n", Color.WHITE);
-
-        } catch (Exception e) {
-            addText(flow, indent + "Could not decode: " + e.getMessage() + "\n\n", Color.RED);
-        }
-        return decodedContent;
-    }
-
-    /** Breaks down JWS or JWE JSON serialization (RFC 7515 §7.2, RFC 7516 §7.2). */
-    private void inspectJsonSerialization(String json, TextFlow flow, int depth, String prefix) throws Exception {
-        Map<String, Object> members = com.nimbusds.jose.util.JSONObjectUtils.parse(json);
-        String indent = "  ".repeat(depth);
-        if (members.containsKey("ciphertext")) {
-            boolean general = members.containsKey("recipients");
-            addText(flow, prefix + "[JWE JSON Detected — " + (general ? "General" : "Flattened") + "]\n", Color.LIGHTBLUE, true);
-            addOptionalSection(flow, "PROTECTED HEADER", members.get("protected"), Color.RED, true, depth);
-            if (members.get("unprotected") != null) addJsonMember(flow, "SHARED UNPROTECTED HEADER", members.get("unprotected"), depth);
-            addOptionalSection(flow, "AAD", members.get("aad"), Color.MAGENTA, true, depth);
-            List<Map<String, Object>> recipients = new ArrayList<>();
-            if (general) {
-                for (Map<String, Object> recipient : com.nimbusds.jose.util.JSONObjectUtils.getJSONObjectArray(members, "recipients")) {
-                    recipients.add(recipient);
-                }
-            } else {
-                recipients.add(members);
-            }
-            for (int i = 0; i < recipients.size(); i++) {
-                String label = general ? "RECIPIENT " + (i + 1) + " " : "";
-                if (recipients.get(i).get("header") != null) addJsonMember(flow, label + "HEADER", recipients.get(i).get("header"), depth);
-                addOptionalSection(flow, label + "ENCRYPTED KEY", recipients.get(i).get("encrypted_key"), Color.ORANGE, false, depth);
-            }
-            addOptionalSection(flow, "IV", members.get("iv"), Color.GREEN, false, depth);
-            addOptionalSection(flow, "CIPHERTEXT", members.get("ciphertext"), Color.BLUE, false, depth);
-            addOptionalSection(flow, "TAG", members.get("tag"), Color.YELLOW, false, depth);
-        } else if (members.containsKey("signatures") || members.containsKey("signature")) {
-            boolean general = members.containsKey("signatures");
-            addText(flow, prefix + "[JWS JSON Detected — " + (general ? "General" : "Flattened") + "]\n", Color.LIGHTGREEN, true);
-            if (members.get("payload") == null) {
-                addText(flow, indent + "=== PAYLOAD ===\n" + indent + "(Detached — not included)\n\n", Color.MAGENTA, true);
-            } else {
-                addSection(flow, "PAYLOAD", String.valueOf(members.get("payload")), Color.MAGENTA, true, depth);
-            }
-            List<Map<String, Object>> signatures = new ArrayList<>();
-            if (general) {
-                for (Map<String, Object> signature : com.nimbusds.jose.util.JSONObjectUtils.getJSONObjectArray(members, "signatures")) {
-                    signatures.add(signature);
-                }
-            } else {
-                signatures.add(members);
-            }
-            for (int i = 0; i < signatures.size(); i++) {
-                String label = general ? "SIGNATURE " + (i + 1) + " " : "";
-                addOptionalSection(flow, label + "PROTECTED HEADER", signatures.get(i).get("protected"), Color.RED, true, depth);
-                if (signatures.get(i).get("header") != null) addJsonMember(flow, label + "UNPROTECTED HEADER", signatures.get(i).get("header"), depth);
-                addOptionalSection(flow, label + "SIGNATURE", signatures.get(i).get("signature"), Color.CYAN, false, depth);
-            }
-        } else {
-            addText(flow, prefix + "JSON without JWS/JWE members (no 'ciphertext', 'signature' or 'signatures').\n\n", Color.WHITE);
-        }
-    }
-
-    private void addOptionalSection(TextFlow flow, String title, Object value, Color color, boolean isJson, int depth) {
-        if (value != null) addSection(flow, title, String.valueOf(value), color, isJson, depth);
-    }
-
-    private void addJsonMember(TextFlow flow, String title, Object value, int depth) {
-        String indent = "  ".repeat(depth);
-        addText(flow, indent + "=== " + title + " ===\n", Color.RED, true);
-        addText(flow, indent + prettyJson(new com.google.gson.Gson().toJson(value)).replace("\n", "\n" + indent) + "\n\n", Color.WHITE);
-    }
-
-    private static String prettyJson(String json) {
-        try {
-            return new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
-                    .toJson(com.google.gson.JsonParser.parseString(json));
-        } catch (Exception notJson) {
-            return json;
-        }
-    }
-
-    private void addText(TextFlow flow, String text, Color color) {
-        addText(flow, text, color, false);
-    }
-
-    private void addText(TextFlow flow, String text, Color color, boolean bold) {
-        Text t = new Text(text);
-        t.setFill(color);
-        t.setFont(Font.font("Monospaced", bold ? FontWeight.BOLD : FontWeight.NORMAL, 13));
-        flow.getChildren().add(t);
-    }
-
-    private String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X", b));
-        }
-        return sb.toString();
+        jwkCoordinator().calculateThumbprint(input, outputArea);
     }
 
     private void initJwaTable() {
