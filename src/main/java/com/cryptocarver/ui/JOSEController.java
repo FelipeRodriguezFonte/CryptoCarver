@@ -63,7 +63,7 @@ public class JOSEController implements Initializable {
     private JoseJwkCoordinator jwkCoordinator() {
         if (jwkCoordinator == null) jwkCoordinator = new JoseJwkCoordinator(
                 () -> new JoseJwkCoordinator.View(jwkInputArea, jwkOutputArea, jwkKeyTypeCombo, jwkKeyIdField,
-                        jwkUseCombo, jwkKeyOpsField, jwksArea, jwksRotateAlgoCombo), () -> statusReporter, dialogService);
+                        jwkUseCombo, jwkKeyOpsField, jwksSecretArea, jwksRotateAlgoCombo), () -> statusReporter, dialogService);
         return jwkCoordinator;
     }
 
@@ -550,7 +550,7 @@ public class JOSEController implements Initializable {
 @FXML
     private Label jwtStatusLabel;
 @FXML
-    private TextArea jwksArea;
+    private TextArea jwksSecretArea;
 @FXML
     private TextArea jwtValidateTokenArea;
 @FXML

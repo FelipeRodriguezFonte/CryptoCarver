@@ -33,15 +33,15 @@ class JoseJwkPrivacyCharacterizationUITest {
                         audit(p, "oct-json", p.area("jwkOutputArea"), privateValues(oct), profile);
                         p.controller.convertJwkToPem(rsa.toJSONString(), p.area("jwkOutputArea"));
                         audit(p, "private-pem", p.area("jwkOutputArea"), List.of(Base64.getEncoder().encodeToString(((RSAKey)rsa).toRSAPrivateKey().getEncoded()).substring(0, 40)), profile);
-                        var coordinator = new JoseJwkCoordinator(() -> new JoseJwkCoordinator.View(p.area("jwkInputArea"), p.area("jwkOutputArea"), p.combo("jwkKeyTypeCombo"), p.control("jwkKeyIdField"), p.combo("jwkUseCombo"), p.control("jwkKeyOpsField"), p.area("jwksArea"), p.combo("jwksRotateAlgoCombo")), () -> p.reporter, new DialogService());
+                        var coordinator = new JoseJwkCoordinator(() -> new JoseJwkCoordinator.View(p.area("jwkInputArea"), p.area("jwkOutputArea"), p.combo("jwkKeyTypeCombo"), p.control("jwkKeyIdField"), p.combo("jwkUseCombo"), p.control("jwkKeyOpsField"), p.area("jwksSecretArea"), p.combo("jwksRotateAlgoCombo")), () -> p.reporter, new DialogService());
                         String jwks = com.nimbusds.jose.util.JSONObjectUtils.toJSONString(new JWKSet(List.of(rsa, oct)).toJSONObject(false));
                         coordinator.loadedJWKS(jwks);
-                        audit(p, "private-and-oct-jwks", p.area("jwksArea"), privateValues(rsa, oct), profile);
+                        audit(p, "private-and-oct-jwks", p.area("jwksSecretArea"), privateValues(rsa, oct), profile);
                         assertEquals(1, JWKSet.parse(coordinator.currentPublicJwks()).getKeys().size());
                         p.combo("jwksRotateAlgoCombo").setValue("RS256");
                         coordinator.handleRotateKey();
                         JWKSet rotated = JWKSet.parse(new String(p.reporter.result.getOutput(), StandardCharsets.UTF_8));
-                        audit(p, "generated-private-jwks", p.area("jwksArea"), privateValues(rotated.getKeys().toArray(JWK[]::new)), profile);
+                        audit(p, "generated-private-jwks", p.area("jwksSecretArea"), privateValues(rotated.getKeys().toArray(JWK[]::new)), profile);
                         assertEquals(2, JWKSet.parse(coordinator.currentPublicJwks()).getKeys().size());
                     }
                 }
@@ -59,11 +59,41 @@ class JoseJwkPrivacyCharacterizationUITest {
         return values;
     }
 
+    private static void verifySecureActions(JoseCharacterizationSupport p, ResultAreaTracker tracker,
+            ResultCaptureCoordinator capture, TextArea area, SecretVisibilityProfile profile) {
+        List<String> clipboard = new ArrayList<>();
+        var viewer = new ResultViewerCoordinator(tracker, null, a -> { }, a -> { }, a -> { }, a -> { },
+                () -> "JOSE", () -> true, capture::resolveResultText, capture::classificationForResultArea,
+                () -> AppSettings.isFullLab(), message -> { }, clipboard::add, entry -> { },
+                new ResultViewerCoordinator.ShelfServices() {
+                    public String capture(TextArea a) { return capture.resolveShelfCaptureText(a); }
+                    public boolean blockedByVisibility(TextArea a) { return capture.isShelfCaptureBlockedByVisibility(a); }
+                    public boolean isCurrentSelection(TextArea a) { return tracker.isCurrentSelection(a, true); }
+                    public OperationResult snapshot() { return p.reporter.result; }
+                    public String activeOperation() { return "JOSE"; }
+                    public ClipboardShelfManager manager() { return ClipboardShelfManager.getInstance(); }
+                    public boolean isPrimaryCipherOutput(TextArea a) { return false; }
+                    public ShelfPackage createCipherPackage() { return null; }
+                });
+        viewer.copySecure(area, null, false);
+        viewer.copySecure(area, area.getText(), true);
+        viewer.addToClipboardShelfSecure(area, null);
+        assertTrue(clipboard.isEmpty(), profile + " secure Copy accepted protected output");
+        assertEquals(p.shelf, ClipboardShelfManager.getInstance().getEntries());
+        var reached = new java.util.concurrent.atomic.AtomicBoolean();
+        javafx.event.EventHandler<javafx.scene.input.KeyEvent> sink = event -> { reached.set(true); event.consume(); };
+        area.addEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, sink);
+        area.fireEvent(new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED, "c", "c",
+                javafx.scene.input.KeyCode.C, false, true, false, true));
+        area.removeEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, sink);
+        assertFalse(reached.get(), "native Copy shortcut bypassed the live visibility guard");
+    }
+
     private static void audit(JoseCharacterizationSupport p, String name, TextArea area, List<String> secrets, SecretVisibilityProfile profile) throws Exception {
         var tracker = new ResultAreaTracker();
         tracker.register(area); tracker.markUpdated(area); tracker.focus(area);
         var capture = new ResultCaptureCoordinator(() -> null, () -> null, () -> null, () -> null,
-                () -> tracker, () -> p.reporter.result, () -> "JOSE", () -> "JOSE", () -> profile,
+                () -> tracker, () -> p.reporter.result, () -> "JOSE", () -> "JOSE", () -> AppSettings.getInstance().getSecretVisibilityProfile(),
                 message -> { }, (title, message) -> { }, (control, selected) -> { });
         String copy = capture.resolveResultText(area), expanded = capture.resolveCurrentOutputText(), shelf = capture.resolveShelfCaptureText(area);
         if (profile != SecretVisibilityProfile.FULL_LAB) {
@@ -84,6 +114,7 @@ class JoseJwkPrivacyCharacterizationUITest {
         p.privacy(p.reporter.result, secrets.toArray(String[]::new));
         for (SecretVisibilityProfile restricted : List.of(SecretVisibilityProfile.MASKED, SecretVisibilityProfile.REDACTED)) {
             AppSettings.getInstance().setSecretVisibilityProfile(restricted);
+            verifySecureActions(p, tracker, capture, area, restricted);
             String recipe = UiStateSnapshot.captureHistoryRecipe(p.controller).toString();
             for (String secret : secrets) assertFalse(recipe.contains(secret), "history recipe retained private JWKS after profile change");
         }

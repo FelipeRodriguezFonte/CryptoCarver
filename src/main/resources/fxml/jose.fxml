@@ -309,7 +309,7 @@
                             <Button text="Load JWKS..." onAction="#handleLoadJWKS" styleClass="link-button"/>
                         </HBox>
 
-                        <TextArea fx:id="jwksArea" promptText="{ &quot;keys&quot;: [] }" prefRowCount="10" styleClass="monospace-field"/>
+                        <TextArea fx:id="jwksSecretArea" promptText="{ &quot;keys&quot;: [] }" prefRowCount="10" styleClass="monospace-field"/>
 
                         <TitledPane text="Key Rotation &amp; Operations" expanded="true">
                             <VBox spacing="12" styleClass="module-pane-content">
