@@ -118,11 +118,48 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             ComboBox<String> nestedSecretFormatCombo,
             ComboBox<String> nestedSignAlgoCombo,
             TextArea nestedSigningKeyArea,
-            Label nestedStatusLabel) { }
+            Label nestedStatusLabel, TextArea jwtTrustAnchorsArea, TextField jwtCertificateDateField,
+            Label jwtTrustAnchorsLabel, Label jwtCertificateDateLabel, TextArea detachedProtectedHeaderSecretArea, Label detachedProtectedHeaderLabel) { }
     private final Supplier<View> controls;
     private static final Logger LOG = LoggerFactory.getLogger(JoseJwtCoordinator.class);
     JoseJwtCoordinator(Supplier<View> controls, Supplier<StatusReporter> reporter) { super(reporter); this.controls = controls; }
     private View view() { return controls.get(); }
+    void initializeDetachedHeaderControls() {
+        TextArea area=view().detachedProtectedHeaderSecretArea();
+        if(area==null) return;
+        area.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED,event -> {
+            if(!com.cryptocarver.model.AppSettings.isFullLab() && event.isShortcutDown()
+                    && (event.getCode()==javafx.scene.input.KeyCode.C || event.getCode()==javafx.scene.input.KeyCode.X)) {
+                event.consume();updateStatus(t("module.jose.detachedHeaderCaptureHidden"));
+            }
+        });
+        area.addEventFilter(javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED,event -> {
+            if(!com.cryptocarver.model.AppSettings.isFullLab()) { event.consume();updateStatus(t("module.jose.detachedHeaderCaptureHidden")); }
+        });
+    }
+    void refreshCertificateLabels() {
+        if(view().detachedProtectedHeaderLabel()!=null) view().detachedProtectedHeaderLabel().setText(t("module.jose.protectedHeaderAdditional"));
+        if(view().jwtTrustAnchorsLabel()!=null) view().jwtTrustAnchorsLabel().setText(t("module.jose.x5cAnchors"));
+        if(view().jwtCertificateDateLabel()!=null) view().jwtCertificateDateLabel().setText(t("module.jose.x5cDate"));
+    }
+    private com.cryptocarver.crypto.JoseX5cValidation.Result certificateValidation(String token,String key,boolean trust) {
+        try {
+            JWSHeader header=JWSObject.parse(token).getHeader();
+            if(header.getX509CertChain()==null || header.getX509CertChain().isEmpty()) return null;
+            java.time.Instant date=java.time.Instant.now();
+            String configured=textOf(view().jwtCertificateDateField());
+            if(configured!=null && !configured.isBlank()) {
+                try { date=java.time.Instant.parse(configured.trim()); }
+                catch(java.time.format.DateTimeParseException invalid) { throw new IllegalArgumentException(t("module.jose.x5cDateInvalid")); }
+            }
+            return com.cryptocarver.crypto.JoseX5cValidation.validate(header,key,trust,textOf(view().jwtTrustAnchorsArea()),date);
+        } catch(java.text.ParseException invalidToken) { return null; }
+    }
+    private void certificateDetails(OperationResult.Builder result, com.cryptocarver.crypto.JoseX5cValidation.Result certificates,boolean trust) {
+        if(certificates==null) return;
+        certificates.checks().forEach((name,value)->result.detail("x5c "+name,value));
+        if(trust && !certificates.trusted()) result.detail("Security warning",t("module.jose.warning.x5cUntrusted"));
+    }
     void handleApplyJWTClaims() {
         if (view().jwtPayloadArea() == null) return;
         long expHours = 1;
@@ -273,11 +310,11 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             String serializationType, boolean unencodedPayload, TextArea output) {
         try {
             java.util.List<SignerConfig> signers = java.util.Collections.singletonList(new SignerConfig(algorithm, key, secretEncoding));
-            String serialized = JOSEService.generateDetachedJWS(payload, signers, serializationType, unencodedPayload);
+            String serialized = JOSEService.generateDetachedJWS(payload, signers, serializationType, unencodedPayload, textOf(view().detachedProtectedHeaderSecretArea()));
 
             output.setText(serialized);
             if (unencodedPayload) {
-                reporter().showInfo("JWS Unencoded Payload (b64=false)", "WARNING: b64=false is enabled. The payload is detached if using standard JSON parsing.");
+                reporter().showInfo(t("module.jose.detachedB64Title"), t("module.jose.detachedB64Warning"));
             }
             OperationResult.Builder result = OperationResult.forOperation("Detached JWS Generation")
                     .input(payload.getBytes(StandardCharsets.UTF_8)).output(serialized.getBytes(StandardCharsets.US_ASCII))
@@ -288,7 +325,10 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             String metadataWarning = metadataWarning(key, JoseJwkPolicy.Operation.SIGN);
             if (metadataWarning != null) result.detail("Security warning", metadataWarning);
             reporter().publish(result.status(t("module.jose.feedback.statusDetachedGenerated")).build());
-        } catch (Exception e) { reporter().showError("Detached JWS", t("module.jose.error", e.getMessage())); }
+        } catch (Exception e) {
+            String message = textOf(view().detachedProtectedHeaderSecretArea()).isBlank() ? e.getMessage() : t("module.jose.detachedHeaderInvalid");
+            reporter().showError("Detached JWS", t("module.jose.error", message));
+        }
     }
 
     public void verifyDetachedJWS(String detached, String payload, String algorithm, String key,
@@ -409,7 +449,9 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             boolean trustHeaderKey, JwtValidator.Advanced advanced, JoseKeyMaterial.SecretEncoding secretEncoding,
             TextArea headerOut, TextArea payloadOut, Label statusLabel) {
         if (view().jwtFindingsArea() != null) view().jwtFindingsArea().clear();
+        com.cryptocarver.crypto.JoseX5cValidation.Result certificates = null;
         try {
+            certificates = certificateValidation(tokenString,keyString,trustHeaderKey);
             JwtValidator.Result result = JwtValidator.validate(tokenString, keyString,
                     new JwtValidator.Options(expectedIss, expectedAud, clockSkewSec, checkExpiry, oidcStrict,
                             secretEncoding, view().jwtAcceptNoneCheck() != null && view().jwtAcceptNoneCheck().isSelected(), trustHeaderKey, advanced),
@@ -425,6 +467,7 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             for (JwtValidator.Warning warning : result.warnings()) {
                 securityWarnings.add(t("module.jose.warning." + warning.code(), warning.argument()));
             }
+            if (certificates != null && trustHeaderKey && !certificates.trusted()) securityWarnings.add(t("module.jose.warning.x5cUntrusted"));
             if (view().jwtFindingsArea() != null) view().jwtFindingsArea().setText(String.join("\n", findings)
                     + (securityWarnings.isEmpty() ? "" : (findings.isEmpty() ? "" : "\n") + String.join("\n", securityWarnings)));
 
@@ -452,6 +495,7 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             for (String warning : securityWarnings) {
                 validationResult.detail("Security warning", warning);
             }
+            certificateDetails(validationResult,certificates,trustHeaderKey);
             reporter().publish(validationResult.status(t("module.jose.feedback.statusJwtValidation", status)).build());
         } catch (Exception e) {
             headerOut.setText("");
@@ -459,6 +503,10 @@ final class JoseJwtCoordinator extends JoseCoordinatorSupport {
             statusLabel.setText(t("module.jose.error", e.getMessage()));
             statusLabel.setStyle("-fx-text-fill: red;");
             // No exception attached: key parsers may echo key material.
+            if(certificates!=null) {
+                OperationResult.Builder failed=OperationResult.forOperation("JWT Validation").detail("Signature","INVALID").status(t("module.jose.invalidSignature"));
+                certificateDetails(failed,certificates,trustHeaderKey);reporter().publish(failed.build());
+            }
             LOG.error("JWT validation failed: {}", e.getClass().getSimpleName());
         }
     }

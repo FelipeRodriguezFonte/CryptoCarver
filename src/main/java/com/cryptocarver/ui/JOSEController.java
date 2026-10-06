@@ -63,7 +63,7 @@ public class JOSEController implements Initializable {
     private JoseJwkCoordinator jwkCoordinator() {
         if (jwkCoordinator == null) jwkCoordinator = new JoseJwkCoordinator(
                 () -> new JoseJwkCoordinator.View(jwkInputArea, jwkOutputArea, jwkKeyTypeCombo, jwkKeyIdField,
-                        jwkUseCombo, jwkKeyOpsField, jwksArea, jwksRotateAlgoCombo), () -> statusReporter, dialogService);
+                        jwkUseCombo, jwkKeyOpsField, jwksSecretArea, jwksRotateAlgoCombo, jwkCurveCombo, jwkCurveLabel), () -> statusReporter, dialogService);
         return jwkCoordinator;
     }
 
@@ -78,7 +78,7 @@ public class JOSEController implements Initializable {
     private JoseJwtCoordinator jwtCoordinator;
     private JoseJwtCoordinator jwtCoordinator() {
         if (jwtCoordinator == null) jwtCoordinator = new JoseJwtCoordinator(
-                () -> new JoseJwtCoordinator.View(detachedAlgoCombo, detachedPayloadArea, detachedSecretFormatCombo, detachedSerializationCombo, detachedSigningKeyArea, detachedStatusLabel, detachedTokenArea, detachedUnencodedCheck, detachedVerificationKeyArea, jwsSerializationCombo, jwsUnencodedPayloadCheck, jwtAcceptNoneCheck, jwtAccessTokenField, jwtAlgo2Combo, jwtAlgoCombo, jwtAllowedAlgorithmsField, jwtAudField, jwtAuthorizationCodeField, jwtCheckExpiryCheck, jwtClockSkewField, jwtDecodedHeaderArea, jwtDecodedPayloadArea, jwtExpField, jwtExpectedAudField, jwtExpectedContentTypeField, jwtExpectedIssField, jwtExpectedJktField, jwtExpectedNonceField, jwtExpectedTypeField, jwtExpectedX5tField, jwtFindingsArea, jwtIgnoreCritCheck, jwtIssField, jwtKeyArea, jwtKeyArea2, jwtOidcStrictCheck, jwtOutputArea, jwtPayloadArea, jwtProtectedHeaderArea, jwtRfc9068Check, jwtSecretFormatCombo, jwtStatusLabel, jwtSubField, jwtTrustHeaderKeyCheck, jwtUnderstoodCritField, jwtValidateKeyArea, jwtValidateSecretFormatCombo, jwtValidateTokenArea, nestedCompressCheck, nestedContentAlgoCombo, nestedEncryptionKeyArea, nestedKeyAlgoCombo, nestedOutputArea, nestedPayloadArea, nestedPayloadOutputArea, nestedSecretFormatCombo, nestedSignAlgoCombo, nestedSigningKeyArea, nestedStatusLabel), () -> statusReporter);
+                () -> new JoseJwtCoordinator.View(detachedAlgoCombo, detachedPayloadArea, detachedSecretFormatCombo, detachedSerializationCombo, detachedSigningKeyArea, detachedStatusLabel, detachedTokenArea, detachedUnencodedCheck, detachedVerificationKeyArea, jwsSerializationCombo, jwsUnencodedPayloadCheck, jwtAcceptNoneCheck, jwtAccessTokenField, jwtAlgo2Combo, jwtAlgoCombo, jwtAllowedAlgorithmsField, jwtAudField, jwtAuthorizationCodeField, jwtCheckExpiryCheck, jwtClockSkewField, jwtDecodedHeaderArea, jwtDecodedPayloadArea, jwtExpField, jwtExpectedAudField, jwtExpectedContentTypeField, jwtExpectedIssField, jwtExpectedJktField, jwtExpectedNonceField, jwtExpectedTypeField, jwtExpectedX5tField, jwtFindingsArea, jwtIgnoreCritCheck, jwtIssField, jwtKeyArea, jwtKeyArea2, jwtOidcStrictCheck, jwtOutputArea, jwtPayloadArea, jwtProtectedHeaderArea, jwtRfc9068Check, jwtSecretFormatCombo, jwtStatusLabel, jwtSubField, jwtTrustHeaderKeyCheck, jwtUnderstoodCritField, jwtValidateKeyArea, jwtValidateSecretFormatCombo, jwtValidateTokenArea, nestedCompressCheck, nestedContentAlgoCombo, nestedEncryptionKeyArea, nestedKeyAlgoCombo, nestedOutputArea, nestedPayloadArea, nestedPayloadOutputArea, nestedSecretFormatCombo, nestedSignAlgoCombo, nestedSigningKeyArea, nestedStatusLabel, jwtTrustAnchorsArea, jwtCertificateDateField, jwtTrustAnchorsLabel, jwtCertificateDateLabel, detachedProtectedHeaderSecretArea, detachedProtectedHeaderLabel), () -> statusReporter);
         return jwtCoordinator;
     }
 
@@ -104,6 +104,8 @@ public class JOSEController implements Initializable {
     }
 
     private void refreshCapabilityLabels() {
+        jwkCoordinator().refreshCurveLabel();
+        jwtCoordinator().refreshCertificateLabels();
         if (jwtAcceptNoneCheck != null) jwtAcceptNoneCheck.setText(t("module.jose.acceptNone"));
         if (jwtTrustHeaderKeyCheck != null) jwtTrustHeaderKeyCheck.setText(t("module.jose.trustHeaderKey"));
         if (jwtProtectedHeaderLabel != null) jwtProtectedHeaderLabel.setText(t("module.jose.protectedHeaderAdditional"));
@@ -182,6 +184,8 @@ public class JOSEController implements Initializable {
         localeChangeListener = locale -> {
             updateJwkInputPresentation();
             refreshCapabilityLabels();
+            jwkCoordinator().initializeCurveControls();
+            jwtCoordinator().initializeDetachedHeaderControls();
             for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
                     nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
                 markUnsafeOptions(combo);
@@ -278,6 +282,8 @@ public class JOSEController implements Initializable {
                 jwksRotateAlgoCombo.getSelectionModel().selectFirst();
             }
 
+            jwkCoordinator().initializeCurveControls();
+            jwtCoordinator().initializeDetachedHeaderControls();
             for (ComboBox<String> combo : java.util.Arrays.asList(jwtAlgoCombo, jwtAlgo2Combo, detachedAlgoCombo,
                     nestedSignAlgoCombo, jweKeyAlgoCombo, nestedKeyAlgoCombo, jwksRotateAlgoCombo)) {
                 markUnsafeOptions(combo);
@@ -504,6 +510,8 @@ public class JOSEController implements Initializable {
     private VBox jwtSection;
 @FXML
     private ComboBox<String> jwkKeyTypeCombo;
+    @FXML private ComboBox<String> jwkCurveCombo;
+    @FXML private Label jwkCurveLabel;
 @FXML
     private TextArea jwtValidateKeyArea;
 @FXML
@@ -511,6 +519,8 @@ public class JOSEController implements Initializable {
 @FXML
     private TableColumn<SimpleAlgo, String> jwaNameCol;
 @FXML private CheckBox detachedUnencodedCheck;
+    @FXML private TextArea detachedProtectedHeaderSecretArea;
+    @FXML private Label detachedProtectedHeaderLabel;
 @FXML
     private TextArea inspectorInputArea;
 @FXML
@@ -550,7 +560,7 @@ public class JOSEController implements Initializable {
 @FXML
     private Label jwtStatusLabel;
 @FXML
-    private TextArea jwksArea;
+    private TextArea jwksSecretArea;
 @FXML
     private TextArea jwtValidateTokenArea;
 @FXML
@@ -575,6 +585,10 @@ public class JOSEController implements Initializable {
     private CheckBox jwtCheckExpiryCheck;
     @FXML private CheckBox jwtAcceptNoneCheck;
     @FXML private CheckBox jwtTrustHeaderKeyCheck;
+    @FXML private TextArea jwtTrustAnchorsArea;
+    @FXML private TextField jwtCertificateDateField;
+    @FXML private Label jwtTrustAnchorsLabel;
+    @FXML private Label jwtCertificateDateLabel;
     @FXML private Label jwtSecurityWarningLabel, detachedSecurityWarningLabel;
     @FXML private Label jweSecurityWarningLabel, nestedSecurityWarningLabel;
 @FXML
@@ -774,20 +788,7 @@ public class JOSEController implements Initializable {
         }
     }
     @FXML
-    private void handleExportPublicJWKS() {
-
-        try {
-            String json = jwksArea.getText();
-            String publicJson = this.exportPublicJWKS(json);
-            TextArea area = new TextArea(publicJson);
-            area.setEditable(false);
-            area.setWrapText(true);
-            area.setPrefSize(500, 300);
-            dialogService.show(Alert.AlertType.INFORMATION, null, "Public JWKS", "Public Keys Only", area, ButtonType.OK);
-        } catch (Exception e) {
-            showError("Export Error", e.getMessage());
-        }
-    }
+    private void handleExportPublicJWKS() { jwkCoordinator().handleExportPublicJWKS(); }
     @FXML
     public void handleJwkToPem() { jwkCoordinator().handleJwkToPem(); }
 
@@ -881,16 +882,7 @@ public class JOSEController implements Initializable {
         }
     }
 
-    public String getInspectorReportText() {
-        if (inspectorOutputFlow == null) return "";
-        StringBuilder sb = new StringBuilder();
-        for (javafx.scene.Node node : inspectorOutputFlow.getChildren()) {
-            if (node instanceof javafx.scene.text.Text) {
-                sb.append(((javafx.scene.text.Text)node).getText());
-            }
-        }
-        return sb.toString();
-    }
+    public String getInspectorReportText() { return inspectorCoordinator.reportText(inspectorOutputFlow); }
 
 
 

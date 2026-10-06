@@ -69,15 +69,15 @@ class JoseJwkCharacterizationUITest {
                 p.line("oct_roundtrip", "oct:metadata-preserved;secret-bytes=" + ((OctetSequenceKey)oct).toByteArray().length);
 
                 JWK rsa = p.controller.generateNewJWK("RS256", "sig");
-                p.area("jwksArea").setText("{\"keys\":[]}");
+                p.area("jwksSecretArea").setText("{\"keys\":[]}");
                 p.combo("jwksRotateAlgoCombo").setValue("RS256");
                 p.invoke("handleRotateKey");
-                String set = p.area("jwksArea").getText();
+                String set = p.area("jwksSecretArea").getText();
                 assertEquals(1, JWKSet.parse(set).getKeys().size());
                 String publicSet = p.controller.exportPublicJWKS(set);
                 JWK publicKey = JWKSet.parse(publicSet).getKeys().get(0);
                 assertFalse(publicKey.isPrivate());
-                p.area("jwksArea").setText(set);
+                p.area("jwksSecretArea").setText(set);
                 p.line("jwks_rotate_export", "one-private-key;public-export-contains-no-private-half");
 
                 for (LanguagePreference language : List.of(LanguagePreference.EN, LanguagePreference.ES)) {

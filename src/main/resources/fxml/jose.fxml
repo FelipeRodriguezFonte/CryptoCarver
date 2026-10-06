@@ -192,6 +192,12 @@
                             </VBox>
                         </TitledPane>
 
+                        <Label fx:id="jwtTrustAnchorsLabel" text="x5c trust anchors (PEM):" styleClass="form-label"/>
+                        <TextArea fx:id="jwtTrustAnchorsArea" prefRowCount="3" wrapText="true" styleClass="form-field,monospace-field"/>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label fx:id="jwtCertificateDateLabel" text="Certificate validation date (ISO-8601, empty = now):" styleClass="form-label"/>
+                            <TextField fx:id="jwtCertificateDateField" styleClass="form-field"/>
+                        </HBox>
                         <HBox spacing="10" alignment="CENTER_LEFT">
                             <Button text="Verify &amp; Decode" onAction="#handleValidateJWT" styleClass="action-button,primary-action"/>
                             <Label fx:id="jwtStatusLabel" text="" styleClass="helper-text"/>
@@ -247,6 +253,8 @@
                             </ComboBox>
                         </GridPane>
 
+                        <Label fx:id="detachedProtectedHeaderLabel" text="Additional protected header (JSON):" styleClass="form-label"/>
+                        <TextArea fx:id="detachedProtectedHeaderSecretArea" prefRowCount="3" wrapText="true" promptText="kid, typ, cty, x5c, x5t, x5t#S256, public jwk" styleClass="form-field,monospace-field"/>
                         <HBox spacing="10" alignment="CENTER_LEFT">
                             <Button text="Generate Detached JWS" onAction="#handleGenerateDetachedJWS" styleClass="action-button,primary-action"/>
                             <Button text="Verify Detached JWS" onAction="#handleVerifyDetachedJWS" styleClass="secondary-button"/>
@@ -278,6 +286,8 @@
                             <Label text="Key Type:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                 <ComboBox fx:id="jwkKeyTypeCombo" prefWidth="120" styleClass="form-field"/>
+                                <Label fx:id="jwkCurveLabel" text="OKP curve:" styleClass="form-label"/>
+                                <ComboBox fx:id="jwkCurveCombo" prefWidth="120" styleClass="form-field"/>
                                 <Label text="Key ID (kid):" styleClass="form-label"/>
                                 <TextField fx:id="jwkKeyIdField" promptText="Optional / Auto" styleClass="form-field"/>
                                 <Label fx:id="jwkUseLabel" text="use:" styleClass="form-label"/>
@@ -309,7 +319,7 @@
                             <Button text="Load JWKS..." onAction="#handleLoadJWKS" styleClass="link-button"/>
                         </HBox>
 
-                        <TextArea fx:id="jwksArea" promptText="{ &quot;keys&quot;: [] }" prefRowCount="10" styleClass="monospace-field"/>
+                        <TextArea fx:id="jwksSecretArea" promptText="{ &quot;keys&quot;: [] }" prefRowCount="10" styleClass="monospace-field"/>
 
                         <TitledPane text="Key Rotation &amp; Operations" expanded="true">
                             <VBox spacing="12" styleClass="module-pane-content">
