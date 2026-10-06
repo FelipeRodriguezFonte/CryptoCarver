@@ -21,3 +21,11 @@ Test UI en rojo, 1 test/1 fallo/0 errores: `x5c trust anchors control is missing
 Se usa CertificateGenerator solo para lectura de DER/PEM; PKIX recibe el camino en memoria y las anclas locales. El resultado separa firmas por eslabón y hacia el ancla, autofirma de raíz, formación, vigencia, CA/longitud, uso de hoja, clave y huellas. Razones propias EXPIRED/NOT_YET_VALID/INVALID_SIGNATURE/INVALID_CA/PATH_LENGTH/NO_TRUST_ANCHOR/PKIX_FAILED sustituyen mensajes del proveedor.
 
 Cinco tests nuevos de JoseX5cValidationTest y los existentes JosePhase2Test pasan. La caracterización nueva y las de JWT, OKP y privacidad pasan. Digest nuevo verificado: `838c59482ac00cae7c56211e3f4d4029058c7aee35bd8c27819ab2b2fa8fad64`. El caso de firma de intermedia rota mantiene la firma del token válida con opción explícita, presenta aviso no modal y detalles públicos en ambos idiomas y tres perfiles. Los anteriores digests no cambian.
+
+Puerta 1: `mvn -o -q test -Plow-cpu`: {'reports': 443, 'tests': 2906, 'failures': 0, 'errors': 0, 'skipped': 1}.
+
+Puerta 2: `mvn -o -q test -Plow-cpu -DrunUiTests=true`: {'reports': 124, 'tests': 540, 'failures': 0, 'errors': 0, 'skipped': 0}.
+
+Puerta 3: `mvn -o -q -Plow-cpu -DrunUiTests=true -Dtest.mode=true -Dprism.order=sw -Dgroups=ui -Dsurefire.reuseForks=false test`: {'reports': 124, 'tests': 540, 'failures': 0, 'errors': 0, 'skipped': 0}.
+
+Las tres puertas pasan limpiamente, sin cambios de digests anteriores.
