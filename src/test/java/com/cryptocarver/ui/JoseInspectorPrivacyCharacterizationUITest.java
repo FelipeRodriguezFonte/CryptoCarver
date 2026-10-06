@@ -38,7 +38,7 @@ class JoseInspectorPrivacyCharacterizationUITest {
                         }
                     }
                 }
-                p.digest("TO_BE_FILLED");
+                p.digest("c49261434dbb4b22f6fd78dff1d4782037eafeecb7e236cb109d4e754eeede72");
             } catch (Exception e) { throw new RuntimeException(e); }
         });
     }

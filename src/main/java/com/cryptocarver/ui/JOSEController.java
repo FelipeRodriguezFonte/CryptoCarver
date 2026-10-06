@@ -868,16 +868,7 @@ public class JOSEController implements Initializable {
         }
     }
 
-    public String getInspectorReportText() {
-        if (inspectorOutputFlow == null) return "";
-        StringBuilder sb = new StringBuilder();
-        for (javafx.scene.Node node : inspectorOutputFlow.getChildren()) {
-            if (node instanceof javafx.scene.text.Text) {
-                sb.append(((javafx.scene.text.Text)node).getText());
-            }
-        }
-        return sb.toString();
-    }
+    public String getInspectorReportText() { return inspectorCoordinator.reportText(inspectorOutputFlow); }
 
 
 
